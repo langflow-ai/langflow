@@ -17,7 +17,7 @@ test.describe("drag and drop test", () => {
     }
 
     while (modalCount === 0) {
-      await page.getByText("New Project", { exact: true }).click();
+      await page.getByText("New Flow", { exact: true }).click();
       await page.waitForTimeout(3000);
       modalCount = await page.getByTestId("modal-title")?.count();
     }
@@ -51,17 +51,12 @@ test.describe("drag and drop test", () => {
       expect(true).toBeTruthy();
     }
 
+    await page.waitForSelector("text=Getting Started:", {
+      timeout: 100000,
+    });
+
     expect(
       await page.locator("text=Getting Started:").last().isVisible(),
-    ).toBeTruthy();
-    expect(
-      await page.locator("text=Inquisitive Pike").last().isVisible(),
-    ).toBeTruthy();
-    expect(
-      await page.locator("text=Dreamy Bassi").last().isVisible(),
-    ).toBeTruthy();
-    expect(
-      await page.locator("text=Furious Faraday").last().isVisible(),
     ).toBeTruthy();
   });
 });

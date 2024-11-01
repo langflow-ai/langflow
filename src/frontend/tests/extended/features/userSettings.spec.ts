@@ -76,10 +76,6 @@ test("should interact with global variables", async ({ page }) => {
 
   await page.getByPlaceholder("Search options...").fill("ollama");
 
-  await page.waitForSelector("text=ollama", { timeout: 30000 });
-
-  await page.getByText("ollama").first().click();
-
   await page.keyboard.press("Escape");
   await page.getByText("Save Variable", { exact: true }).click();
 

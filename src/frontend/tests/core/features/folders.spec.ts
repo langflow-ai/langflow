@@ -22,7 +22,7 @@ test("CRUD folders", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -74,7 +74,7 @@ test("CRUD folders", async ({ page }) => {
 test("add a flow into a folder by drag and drop", async ({ page }) => {
   await page.goto("/");
 
-  await page.waitForSelector("text=my collection", {
+  await page.waitForSelector("text=New Flow", {
     timeout: 50000,
   });
 
@@ -113,6 +113,10 @@ test("add a flow into a folder by drag and drop", async ({ page }) => {
 
   await page.waitForTimeout(3000);
 
+  await page.waitForSelector("text=Getting Started:", {
+    timeout: 100000,
+  });
+
   expect(
     await page.locator("text=Getting Started:").last().isVisible(),
   ).toBeTruthy();
@@ -148,7 +152,7 @@ test("change flow folder", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }

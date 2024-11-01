@@ -34,6 +34,20 @@ const MyCollectionComponent = ({ type }: MyCollectionComponentProps) => {
     search: search,
   });
 
+  const data = {
+    flows: folderData?.flows?.items ?? [],
+    name: folderData?.folder?.name ?? "",
+    description: folderData?.folder?.description ?? "",
+    parent_id: folderData?.folder?.parent_id ?? "",
+    components: folderData?.folder?.components ?? [],
+    pagination: {
+      page: folderData?.flows?.page ?? 1,
+      size: folderData?.flows?.size ?? 10,
+      total: folderData?.flows?.total ?? 0,
+      pages: folderData?.flows?.pages ?? 0,
+    },
+  };
+
   const isLoadingFolders = !!useIsFetching({
     queryKey: ["useGetFolders"],
     exact: false,
@@ -63,20 +77,6 @@ const MyCollectionComponent = ({ type }: MyCollectionComponentProps) => {
     setSearch(newSearch);
     setPageIndex(1);
   }, []);
-
-  const data = {
-    flows: folderData?.flows?.items ?? [],
-    name: folderData?.folder?.name ?? "",
-    description: folderData?.folder?.description ?? "",
-    parent_id: folderData?.folder?.parent_id ?? "",
-    components: folderData?.folder?.components ?? [],
-    pagination: {
-      page: folderData?.flows?.page ?? 1,
-      size: folderData?.flows?.size ?? 10,
-      total: folderData?.flows?.total ?? 0,
-      pages: folderData?.flows?.pages ?? 0,
-    },
-  };
 
   return (
     <>

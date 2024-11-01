@@ -315,7 +315,6 @@ export async function buildFlowVertices({
       }
       case "error": {
         const errorMessage = data.error;
-        console.log(data);
         onBuildError!("Error Running Flow", [errorMessage], []);
         buildResults.push(false);
         useFlowStore.getState().setIsBuilding(false);

@@ -10,3 +10,4 @@ export const ENABLE_INTEGRATIONS = false;
 export const ENABLE_NEW_IO_MODAL = false;
 export const ENABLE_NEW_LOGO = false;
 export const ENABLE_DATASTAX_LANGFLOW = false;
+export const ENABLE_HOMEPAGE = true;

@@ -153,9 +153,9 @@ async function moveElementByX(
       );
       await page.waitForTimeout(2000);
       await page.getByTestId("fit_view").click();
+      throw lastError;
     }
   }
-  throw lastError;
 }
 
 test("should create a flow with decision", async ({ page }) => {

@@ -13,10 +13,10 @@ import {
   USER_PROJECTS_HEADER,
 } from "../../../../constants/constants";
 import { useFolderStore } from "../../../../stores/foldersStore";
-import ModalsComponent from "../../components/modalsComponent";
 import useDropdownOptions from "../../hooks/use-dropdown-options";
+import ModalsComponent from "../../oldComponents/modalsComponent";
 
-export default function HomePage(): JSX.Element {
+export default function OldHomePage(): JSX.Element {
   const location = useLocation();
   const pathname = location.pathname;
   const [openModal, setOpenModal] = useState(false);
