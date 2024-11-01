@@ -24,18 +24,8 @@ test("TextAreaModalComponent", async ({ page }) => {
   });
   await page.getByTestId("blank-flow").click();
 
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  const focusElementsOnBoard = async ({ page }) => {
-    const focusElements = await page.getByTestId("extended-disclosure");
-    await focusElements.click();
-  };
-
-  await focusElementsOnBoard({ page });
-
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("prompt");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("prompt");
 
   await page.waitForTimeout(1000);
 
@@ -69,7 +59,9 @@ test("TextAreaModalComponent", async ({ page }) => {
       "test test test test test test test test test test test !@#%*)( 123456789101010101010101111111111 !!!!!!!!!!",
     );
 
-  await page.getByTestId("textarea_str_text-ExternalLink").click();
+  await page
+    .getByTestId("button_open_text_area_modal_textarea_str_text")
+    .click();
 
   await page.waitForTimeout(500);
 

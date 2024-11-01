@@ -29,12 +29,8 @@ test("PromptTemplateComponent", async ({ page }) => {
     timeout: 30000,
   });
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("prompt");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("prompt");
 
   await page.waitForTimeout(1000);
 
@@ -105,7 +101,7 @@ test("PromptTemplateComponent", async ({ page }) => {
   }
 
   await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("advanced-button-modal").click();
 
   value =
     (await page.locator('//*[@id="textarea_str_edit_prompt"]').inputValue()) ??
@@ -131,14 +127,23 @@ test("PromptTemplateComponent", async ({ page }) => {
     expect(false).toBeTruthy();
   }
 
-  await page.getByTestId("textarea_str_edit_prompt1-ExternalLink").click();
+  await page
+    .getByTestId(
+      "button_open_text_area_modal_textarea_str_edit_prompt1_advanced",
+    )
+    .click();
   await page
     .getByTestId("text-area-modal")
     .fill("prompt_edit_test_12312312321!@#$");
 
   await page.getByText("Finish Editing", { exact: true }).click();
 
-  await page.getByTestId("textarea_str_edit_prompt-ExternalLink").click();
+  await page
+    .getByTestId(
+      "button_open_text_area_modal_textarea_str_edit_prompt_advanced",
+    )
+    .nth(0)
+    .click();
   await page
     .getByTestId("text-area-modal")
     .fill("prompt_edit_test_44444444444!@#$");
@@ -185,7 +190,7 @@ test("PromptTemplateComponent", async ({ page }) => {
   await page.getByText("Close").last().click();
 
   await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("advanced-button-modal").click();
 
   await page.locator('//*[@id="showprompt1"]').click();
   expect(await page.locator('//*[@id="showprompt1"]').isChecked()).toBeTruthy();

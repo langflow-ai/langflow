@@ -103,6 +103,9 @@ jobs:
           ref: ${{ inputs.nightly_tag_main || github.ref }}
           persist-credentials: true
 
+      - name: "Setup Environment"
+        uses: ./.github/actions/setup-uv
+
       - name: Get Version from Input
         if: ${{ inputs.version != '' }}
         id: get-version-input
@@ -150,6 +153,10 @@ jobs:
         id: get-version-base
         run: |
           version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//')
+          if [ -z "$version" ]; then
+            echo "Failed to extract version from uv tree output"
+            exit 1
+          fi
           echo version=$version
           echo version=$version >> $GITHUB_OUTPUT
       - name: Get Version Main
@@ -208,7 +215,8 @@ jobs:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.get-version.outputs.version || github.ref }}
+          ref: ${{ inputs.nightly_tag_main || github.ref }}
+          #ref: ${{ needs.get-version.outputs.version && format('v{0}', needs.get-version.outputs.version) || github.ref }}
           persist-credentials: true
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
@@ -284,7 +292,7 @@ jobs:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.get-version.outputs.version || github.ref }}
+          ref: ${{ inputs.nightly_tag_main || github.ref }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -332,7 +340,7 @@ jobs:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.get-version.outputs.version || github.ref }}
+          ref: ${{ inputs.nightly_tag_main || github.ref }}
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
 

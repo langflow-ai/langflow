@@ -1,6 +1,6 @@
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
-import { ENABLE_BRANDING } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
@@ -14,7 +14,7 @@ import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import Page from "./components/PageComponent";
-import ExtraSidebar from "./components/extraSidebarComponent";
+import { FlowSidebarComponent } from "./components/flowSidebarComponent";
 
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
@@ -165,16 +165,17 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       <div className="flow-page-positioning">
         {currentFlow && (
           <div className="flex h-full overflow-hidden">
-            {!view && <ExtraSidebar />}
-            <main className="flex flex-1">
-              {/* Primary column */}
-              <div className="h-full w-full">
-                <Page />
-              </div>
-            </main>
+            <SidebarProvider>
+              {!view && <FlowSidebarComponent />}
+              <main className="flex flex-1">
+                <div className="h-full w-full">
+                  <Page />
+                </div>
+              </main>
+            </SidebarProvider>
           </div>
         )}
-        {ENABLE_BRANDING && version && (
+        {/* {ENABLE_BRANDING && version && (
           <a
             target={"_blank"}
             href="https://medium.com/logspace/langflow-datastax-better-together-1b7462cebc4d"
@@ -184,7 +185,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
             <div className={version ? "mt-2" : "mt-1"}>⛓️ v{version}</div>
           </a>
-        )}
+        )} */}
       </div>
       {blocker.state === "blocked" && (
         <>

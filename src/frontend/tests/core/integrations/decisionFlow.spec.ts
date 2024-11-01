@@ -1,83 +1,150 @@
-import { expect, test } from "@playwright/test";
+import { Page, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+// Helper function to wait for element to be ready
+async function waitForElement(page: Page, elementId: string, nth: number) {
+  const element = page.getByTestId(`title-${elementId}`).nth(nth);
 
-// Add this function at the beginning of the file, after the imports
+  // Wait for element to be visible and stable
+  await element.waitFor({
+    state: "visible",
+    timeout: 30000,
+  });
+
+  // Additional wait to ensure element is fully rendered and interactive
+  await page.waitForTimeout(1000);
+
+  return element;
+}
+
+// Improved version of moveElementByX with better error handling and waits
 async function moveElementByX(
-  page: any,
+  page: Page,
   elementId: string,
   moveX: number,
   nth: number,
 ) {
-  const element = await page.getByTestId(`title-${elementId}`).nth(nth);
-  await element.hover();
+  try {
+    const element = await waitForElement(page, elementId, nth);
+    await element.hover();
 
-  const boundingBox = await element.boundingBox();
+    const boundingBox = await element.boundingBox();
+    if (!boundingBox) {
+      throw new Error(
+        `Unable to get bounding box for the element: ${elementId}`,
+      );
+    }
 
-  if (boundingBox) {
     const startX = boundingBox.x + boundingBox.width / 2;
     const startY = boundingBox.y + boundingBox.height / 2;
 
+    // Break down mouse movements into smaller steps for more reliability
     await page.mouse.move(startX, startY);
+    await page.waitForTimeout(50);
     await page.mouse.down();
-    await page.mouse.move(startX + moveX, startY);
+    await page.waitForTimeout(50);
+
+    // Move in smaller increments
+    const steps = 3;
+    const stepX = moveX / steps;
+    for (let i = 1; i <= steps; i++) {
+      await page.mouse.move(startX + stepX * i, startY);
+      await page.waitForTimeout(50);
+    }
+
     await page.mouse.up();
-  } else {
-    throw new Error(`Unable to get bounding box for the element: ${elementId}`);
+    await page.waitForTimeout(100);
+  } catch (error) {
+    console.error(`Failed to move element ${elementId}:`, error);
+    throw error;
   }
 }
 
-// Add this function at the beginning of the file, after the imports
+// Improved version of moveElementByY with better error handling and waits
 async function moveElementByY(
-  page: any,
+  page: Page,
   elementId: string,
   moveY: number,
   nth: number,
 ) {
-  const element = await page.getByTestId(`title-${elementId}`).nth(nth);
-  await element.hover();
+  try {
+    const element = await waitForElement(page, elementId, nth);
+    await element.hover();
 
-  const boundingBox = await element.boundingBox();
+    const boundingBox = await element.boundingBox();
+    if (!boundingBox) {
+      throw new Error(
+        `Unable to get bounding box for the element: ${elementId}`,
+      );
+    }
 
-  if (boundingBox) {
     const startX = boundingBox.x + boundingBox.width / 2;
     const startY = boundingBox.y + boundingBox.height / 2;
 
     await page.mouse.move(startX, startY);
+    await page.waitForTimeout(100);
     await page.mouse.down();
-    await page.mouse.move(startX, startY + moveY);
+    await page.waitForTimeout(100);
+
+    // Move in smaller increments
+    const steps = 5;
+    const stepY = moveY / steps;
+    for (let i = 1; i <= steps; i++) {
+      await page.mouse.move(startX, startY + stepY * i);
+      await page.waitForTimeout(50);
+    }
+
     await page.mouse.up();
-  } else {
-    throw new Error(`Unable to get bounding box for the element: ${elementId}`);
+    await page.waitForTimeout(100);
+  } catch (error) {
+    console.error(`Failed to move element ${elementId}:`, error);
+    throw error;
   }
 }
 
-// Add this function at the beginning of the file, after the imports
+// Improved version of moveElementByXY with better error handling and waits
 async function moveElementByXY(
-  page: any,
+  page: Page,
   elementId: string,
   moveX: number,
   moveY: number,
   nth: number,
 ) {
-  const element = await page.getByTestId(`title-${elementId}`).nth(nth);
-  await element.hover();
+  try {
+    const element = await waitForElement(page, elementId, nth);
+    await element.hover();
 
-  const boundingBox = await element.boundingBox();
+    const boundingBox = await element.boundingBox();
+    if (!boundingBox) {
+      throw new Error(
+        `Unable to get bounding box for the element: ${elementId}`,
+      );
+    }
 
-  if (boundingBox) {
     const startX = boundingBox.x + boundingBox.width / 2;
     const startY = boundingBox.y + boundingBox.height / 2;
 
     await page.mouse.move(startX, startY);
+    await page.waitForTimeout(100);
     await page.mouse.down();
-    await page.mouse.move(startX + moveX, startY + moveY);
+    await page.waitForTimeout(100);
+
+    // Move in smaller increments
+    const steps = 5;
+    const stepX = moveX / steps;
+    const stepY = moveY / steps;
+    for (let i = 1; i <= steps; i++) {
+      await page.mouse.move(startX + stepX * i, startY + stepY * i);
+      await page.waitForTimeout(50);
+    }
+
     await page.mouse.up();
-  } else {
-    throw new Error(`Unable to get bounding box for the element: ${elementId}`);
+    await page.waitForTimeout(100);
+  } catch (error) {
+    console.error(`Failed to move element ${elementId}:`, error);
+    throw error;
   }
 }
-
 test("should create a flow with decision", async ({ page }) => {
   test.skip(
     !process?.env?.OPENAI_API_KEY,
@@ -111,21 +178,17 @@ test("should create a flow with decision", async ({ page }) => {
     timeout: 30000,
   });
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("extended-disclosure").click();
   //---------------------------------- CHAT INPUT
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat input");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("chat input");
   await page.waitForTimeout(500);
   await page
     .getByTestId("inputsChat Input")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
   //---------------------------------- CREATE LIST
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("list");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("list");
   await page.waitForTimeout(500);
   await page
     .getByTestId("helpersCreate List")
@@ -158,8 +221,8 @@ test("should create a flow with decision", async ({ page }) => {
   await page.getByTestId("inputlist_str_texts_2").last().fill("not cool..");
 
   //---------------------------------- PARSE DATA
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("parse data");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("parse data");
   await page.waitForTimeout(500);
 
   await page
@@ -170,8 +233,8 @@ test("should create a flow with decision", async ({ page }) => {
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
   //---------------------------------- PASS
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("pass");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("pass");
   await page.waitForTimeout(500);
   await page
     .getByTestId("prototypesPass")
@@ -185,30 +248,30 @@ test("should create a flow with decision", async ({ page }) => {
     .getByTestId("prototypesPass")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   //---------------------------------- PROMPT
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("prompt");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("prompt");
   await page.waitForTimeout(500);
   await page
     .getByTestId("promptsPrompt")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   //---------------------------------- OPENAI
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("openai");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("openai");
   await page.waitForTimeout(500);
   await page
     .getByTestId("modelsOpenAI")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
   //---------------------------------- CONDITIONAL ROUTER
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("conditional router");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("conditional router");
   await page.waitForTimeout(500);
   await page
     .getByTestId("prototypesConditional Router")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   //---------------------------------- CHAT OUTPUT
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat output");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("chat output");
   await page.waitForTimeout(500);
   await page
     .getByTestId("outputsChat Output")
@@ -222,32 +285,42 @@ test("should create a flow with decision", async ({ page }) => {
 
   await page.getByTestId("fit_view").click();
 
-  await moveElementByX(page, "Chat Output", 500, 1);
   await page.waitForTimeout(500);
-  await moveElementByX(page, "Chat Output", 1000, 0);
+
+  await moveElementByX(page, "Chat Output", 400, 1);
   await page.waitForTimeout(500);
-  await moveElementByX(page, "Conditional Router", 1500, 0);
+  await moveElementByX(page, "Chat Output", 700, 0);
   await page.waitForTimeout(500);
-  await moveElementByX(page, "OpenAI", 2000, 0);
+  await moveElementByX(page, "Conditional Router", 1000, 0);
   await page.waitForTimeout(500);
-  await moveElementByX(page, "Prompt", 2500, 0);
+  await page.getByTestId("fit_view").click();
+  await moveElementByX(page, "OpenAI", 980, 0);
+  await page.getByTestId("fit_view").click();
+
   await page.waitForTimeout(500);
-  await moveElementByX(page, "Pass", 3000, 2);
+  await moveElementByX(page, "Prompt", 990, 0);
+  await page.getByTestId("fit_view").click();
+
+  await page.waitForTimeout(500);
+  await moveElementByX(page, "Pass", 1000, 2);
   await page.getByTestId("fit_view").click();
   await page.waitForTimeout(500);
   await moveElementByXY(page, "Pass", 0, 200, 1);
+  await page.getByTestId("fit_view").click();
   await page.waitForTimeout(500);
   await moveElementByXY(page, "Pass", 150, 200, 0);
+  await page.getByTestId("fit_view").click();
+
   await page.waitForTimeout(500);
   await moveElementByXY(page, "Parse Data", 300, 200, 1);
+  await page.getByTestId("fit_view").click();
+
   await page.waitForTimeout(500);
   await moveElementByXY(page, "Parse Data", 450, 200, 0);
   await page.waitForTimeout(500);
   await moveElementByXY(page, "Create List", 600, 200, 1);
   await page.waitForTimeout(500);
   await moveElementByXY(page, "Create List", 800, 200, 0);
-  await page.waitForTimeout(500);
-  await moveElementByXY(page, "Chat Input", 1000, 200, 0);
 
   await page.waitForTimeout(500);
   await page.getByTestId("fit_view").click();
@@ -333,7 +406,7 @@ test("should create a flow with decision", async ({ page }) => {
 
   await page.getByTestId("title-Pass").nth(1).click();
 
-  await page.getByTestId("advanced-button-modal").click();
+  await page.getByTestId("edit-button-modal").click();
 
   await page
     .getByTestId("popover-anchor-input-input_message-edit")
@@ -346,7 +419,7 @@ test("should create a flow with decision", async ({ page }) => {
 
   await page.getByTestId("title-Pass").nth(0).click();
 
-  await page.getByTestId("advanced-button-modal").click();
+  await page.getByTestId("edit-button-modal").click();
 
   await page
     .getByTestId("popover-anchor-input-input_message-edit")
@@ -390,9 +463,13 @@ test("should create a flow with decision", async ({ page }) => {
 
   await page.getByTestId("handle-chatoutput-shownode-text-left").nth(1).click();
 
-  await page
-    .getByTestId("popover-anchor-input-api_key")
-    .fill(process.env.OPENAI_API_KEY ?? "");
+  const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
+  const isApiKeyInputVisible = await apiKeyInput.isVisible();
+
+  if (isApiKeyInputVisible) {
+    await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+  }
+
   await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
   await page.getByTestId("fit_view").click();

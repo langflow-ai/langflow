@@ -9,6 +9,7 @@ class VectorStoreInfoComponent(Component):
     display_name = "VectorStoreInfo"
     description = "Information about a VectorStore"
     name = "VectorStoreInfo"
+    legacy: bool = True
 
     inputs = [
         MessageTextInput(
@@ -41,5 +42,7 @@ class VectorStoreInfoComponent(Component):
             "description": self.vectorstore_description,
         }
         return VectorStoreInfo(
-            vectorstore=self.input_vectorstore, description=self.vectorstore_description, name=self.vectorstore_name
+            vectorstore=self.input_vectorstore,
+            description=self.vectorstore_description,
+            name=self.vectorstore_name,
         )
