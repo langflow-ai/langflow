@@ -18,7 +18,8 @@ class AstraDBCQLToolComponent(LCToolComponent):
     icon: str = "AstraDB"
 
     inputs = [
-        StrInput(name="tool_name", display_name="Tool Name", info="The name of the tool.", required=True),
+        StrInput(name="tool_name", display_name="Tool Name",
+                 info="The name of the tool.", required=True),
         StrInput(
             name="tool_description",
             display_name="Tool Description",
@@ -91,12 +92,13 @@ class AstraDBCQLToolComponent(LCToolComponent):
     ]
 
     def astra_rest(self, args):
-        headers = {"Accept": "application/json", "X-Cassandra-Token": f"{self.token}"}
+        headers = {"Accept": "application/json",
+                   "X-Cassandra-Token": f"{self.token}"}
         astra_url = f"{self.api_endpoint}/api/rest/v2/keyspaces/{self.keyspace}/{self.table_name}/"
         key = []
+
         # Partition keys are mandatory
-        for k in self.partition_keys:
-            key.append(self.partition_keys[k])
+        key = [self.partition_keys[k] for k in self.partition_keys]
 
         # Clustering keys are optional
         for k in self.clustering_keys:
@@ -133,9 +135,11 @@ class AstraDBCQLToolComponent(LCToolComponent):
             # Partition keys are mandatory if has the exclamation mark and doesn't have a static filter
             if key not in self.static_filters:
                 if key.startswith("!"):  # Mandatory
-                    args[key[1:]] = (str, Field(description=self.clustering_keys[key]))
+                    args[key[1:]] = (str, Field(
+                        description=self.clustering_keys[key]))
                 else:  # Optional
-                    args[key] = (str | None, Field(description=self.clustering_keys[key], default=None))
+                    args[key] = (str | None, Field(
+                        description=self.clustering_keys[key], default=None))
 
         model = create_model("ToolInput", **args, __base__=BaseModel)
         return {"ToolInput": model}
