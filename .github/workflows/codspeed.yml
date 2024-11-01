@@ -24,6 +24,6 @@ jobs:
         uses: CodSpeedHQ/action@v3
         with:
             token: ${{ secrets.CODSPEED_TOKEN }}
-            run: make unit_tests args="--codspeed"
+            run: make unit_tests args="--codspeed -n auto"
       - name: Minimize uv cache
         run: uv cache prune --ci
