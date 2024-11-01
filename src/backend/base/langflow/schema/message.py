@@ -22,7 +22,7 @@ from langflow.schema.content_block import ContentBlock
 from langflow.schema.content_types import ErrorContent
 from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
-from langflow.schema.properties import Properties
+from langflow.schema.properties import Properties, Source
 from langflow.schema.utils import timestamp_to_str_validator  # noqa: TCH001
 from langflow.utils.constants import (
     MESSAGE_SENDER_AI,
@@ -339,7 +339,7 @@ class ErrorMessage(Message):
         self,
         exception: Exception,
         session_id: str,
-        display_name: str,
+        source: Source,
         trace_name: str | None = None,
     ) -> None:
         # Get the error reason
@@ -350,22 +350,21 @@ class ErrorMessage(Message):
             reason = exception.code
 
         # Get the sender ID
-        sender_id = display_name
         if trace_name:
             match = re.search(r"\((.*?)\)", trace_name)
             if match:
-                sender_id = match.group(1)
+                match.group(1)
 
         super().__init__(
             session_id=session_id,
-            sender=display_name,
-            sender_name=display_name,
+            sender=source.display_name,
+            sender_name=source.display_name,
             text=reason,
             properties=Properties(
                 text_color="red",
                 background_color="red",
                 edited=False,
-                source=sender_id,
+                source=source,
                 icon="error",
                 allow_markdown=False,
                 targets=[],
@@ -377,7 +376,7 @@ class ErrorMessage(Message):
                     title="Error",
                     content=ErrorContent(
                         type="error",
-                        component=display_name,
+                        component=source.display_name,
                         field=str(exception.field) if hasattr(exception, "field") else None,
                         reason=reason,
                         solution=str(exception.solution) if hasattr(exception, "solution") else None,
