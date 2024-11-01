@@ -62,7 +62,7 @@ class Component(CustomComponent):
     inputs: list[InputTypes] = []
     outputs: list[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
-    _output_logs: dict[str, Log] = {}
+    _output_logs: dict[str, list[Log]] = {}
     _current_output: str = ""
     _metadata: dict = {}
 
@@ -858,7 +858,7 @@ class Component(CustomComponent):
         if next((output for output in self.outputs if output.name == TOOL_OUTPUT_NAME), None) is None:
             self.outputs.append(Output(name=TOOL_OUTPUT_NAME, display_name="Tool", method="to_toolkit", types=["Tool"]))
 
-    def send_message(self, message: Message | None = None, id_: str | None = None):
+    def send_message(self, message: Message, id_: str | None = None):
         if self.graph.session_id and message is not None and message.session_id is None:
             message.session_id = self.graph.session_id
         stored_message = self._store_message(message)
@@ -866,7 +866,11 @@ class Component(CustomComponent):
         self._stored_message_id = stored_message.id
         try:
             complete_message = ""
-            if self._should_stream_message(stored_message, message) and message is not None:
+            if (
+                self._should_stream_message(stored_message, message)
+                and message is not None
+                and isinstance(message.text, AsyncIterator | Iterator)
+            ):
                 complete_message = self._stream_message(message.text, stored_message)
                 stored_message.text = complete_message
                 stored_message = self._update_stored_message(stored_message)
@@ -970,8 +974,8 @@ class Component(CustomComponent):
         self,
         exception: Exception,
         session_id: str,
-        trace_name: str | None = None,
-        source: Source | None = None,
+        trace_name: str,
+        source: Source,
     ) -> None:
         """Send an error message to the frontend."""
         error_message = ErrorMessage(

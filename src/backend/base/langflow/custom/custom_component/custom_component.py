@@ -83,7 +83,7 @@ class CustomComponent(BaseComponent):
     _flows_data: list[Data] | None = None
     _outputs: list[OutputValue] = []
     _logs: list[Log] = []
-    _output_logs: dict[str, Log] = {}
+    _output_logs: dict[str, list[Log] | Log] = {}
     _tracing_service: TracingService | None = None
     _tree: dict | None = None
 
