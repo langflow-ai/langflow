@@ -32,13 +32,8 @@ test("user must see on handle click the possibility connections - LLMChain", asy
   await page.getByTestId("blank-flow").click();
   await page.waitForTimeout(3000);
 
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 100000,
-  });
-
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("api request");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("api request");
 
   await page.waitForTimeout(1000);
   await page
@@ -46,10 +41,10 @@ test("user must see on handle click the possibility connections - LLMChain", asy
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
   await page.waitForTimeout(500);
 
   await page.getByTestId("handle-apirequest-shownode-urls-left").click();
@@ -77,6 +72,14 @@ test("user must see on handle click the possibility connections - LLMChain", asy
   await expect(page.getByTestId("disclosure-models")).toBeVisible();
   await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
   await expect(page.getByTestId("disclosure-agents")).toBeVisible();
+  await expect(page.getByTestId("disclosure-chains")).not.toBeVisible();
+
+  await page.getByTestId("sidebar-options-trigger").click();
+  await page.getByTestId("sidebar-legacy-switch").isVisible({ timeout: 5000 });
+  await page.getByTestId("sidebar-legacy-switch").click();
+  await expect(page.getByTestId("sidebar-legacy-switch")).toBeChecked();
+  await page.getByTestId("sidebar-options-trigger").click();
+
   await expect(page.getByTestId("disclosure-chains")).toBeVisible();
   await expect(page.getByTestId("disclosure-prototypes")).toBeVisible();
 
@@ -89,7 +92,17 @@ test("user must see on handle click the possibility connections - LLMChain", asy
   await expect(page.getByTestId("chainsConversationChain")).toBeVisible();
   await expect(page.getByTestId("prototypesConditional Router")).toBeVisible();
 
-  await page.getByPlaceholder("Search").click();
+  await expect(page.getByTestId("helpersCurrent Date")).toBeVisible();
+
+  await page.getByTestId("sidebar-options-trigger").click();
+  await page.getByTestId("sidebar-beta-switch").isVisible({ timeout: 5000 });
+  await page.getByTestId("sidebar-beta-switch").click();
+  await expect(page.getByTestId("sidebar-beta-switch")).not.toBeChecked();
+  await page.getByTestId("sidebar-options-trigger").click();
+
+  await expect(page.getByTestId("helpersCurrent Date")).not.toBeVisible();
+
+  await page.getByTestId("sidebar-filter-reset").click();
 
   await expect(page.getByTestId("inputsChat Input")).not.toBeVisible();
   await expect(page.getByTestId("outputsChat Output")).not.toBeVisible();
@@ -117,7 +130,16 @@ test("user must see on handle click the possibility connections - LLMChain", asy
   await expect(page.getByTestId("helpersChat Memory")).toBeVisible();
   await expect(page.getByTestId("vectorstoresAstra DB")).toBeVisible();
   await expect(page.getByTestId("toolsSearch API")).toBeVisible();
+  await expect(page.getByTestId("prototypesSub Flow")).not.toBeVisible();
+
+  await page.getByTestId("sidebar-options-trigger").click();
+  await page.getByTestId("sidebar-beta-switch").isVisible({ timeout: 5000 });
+  await page.getByTestId("sidebar-beta-switch").click();
+  await expect(page.getByTestId("sidebar-beta-switch")).toBeChecked();
+  await page.getByTestId("sidebar-options-trigger").click();
+
   await expect(page.getByTestId("prototypesSub Flow")).toBeVisible();
+
   await expect(
     page.getByTestId("retrieversSelf Query Retriever"),
   ).toBeVisible();

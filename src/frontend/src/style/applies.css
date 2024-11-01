@@ -12,6 +12,7 @@
     font-feature-settings:
       "rlig" 1,
       "calt" 1;
+    font-family: Inter, system-ui, sans-serif;
   }
 }
 
@@ -97,9 +98,6 @@
   .extra-side-bar-save-disable {
     @apply text-muted-foreground;
   }
-  .extra-side-bar-save-disable:hover {
-    @apply hover:text-accent-foreground;
-  }
   .side-bar-button-size {
     @apply h-5 w-5;
   }
@@ -176,7 +174,7 @@
     @apply flex gap-2;
   }
   .primary-input {
-    @apply form-input block w-full truncate rounded-md border-border bg-background px-3 text-left text-sm shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50;
+    @apply form-input block w-full truncate rounded-md border-[1px] border-border bg-background px-3 text-left text-sm placeholder:text-muted-foreground hover:border-muted-foreground focus:border-foreground focus:placeholder-transparent focus:ring-0 focus:ring-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground;
   }
 
   .skeleton-card {
@@ -193,7 +191,7 @@
 
   /* The same as primary-input but no-truncate */
   .textarea-primary {
-    @apply form-input block w-full rounded-md border-border bg-background px-3 text-left shadow-sm placeholder:text-muted-foreground focus:border-ring focus:placeholder-transparent focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm;
+    @apply placeholder:text-placeholder-foreground form-input block w-full rounded-md border-[1px] border-border bg-background px-3 text-left shadow-sm hover:border-muted focus:border-muted focus:placeholder-transparent focus:ring-[0.75px] focus:ring-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-secondary disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground sm:text-sm;
   }
 
   .input-edit-node {
@@ -222,7 +220,7 @@
     @apply w-6 fill-build-trigger stroke-build-trigger stroke-1;
   }
   .message-button-position {
-    @apply fixed bottom-4 right-4;
+    @apply fixed right-4 top-20;
   }
   .message-button-icon {
     @apply fill-medium-indigo stroke-medium-indigo stroke-1;
@@ -324,13 +322,13 @@
     @apply relative flex flex-col justify-center bg-background transition-all;
   }
   .generic-node-div-title {
-    @apply flex w-full items-center gap-2 border-b p-5;
+    @apply flex w-full items-center gap-2;
   }
   .generic-node-title-arrangement {
     @apply flex-max-width items-center truncate;
   }
   .generic-node-icon {
-    @apply h-8 w-8 rounded;
+    @apply h-12 w-12 rounded;
   }
   .generic-node-tooltip-div {
     @apply ml-2 flex w-full truncate;
@@ -376,7 +374,7 @@
     @apply border-none ring ring-[#751C1C];
   }
   .building-status {
-    @apply border-none ring;
+    @apply border-blue-400;
   }
   .status-build-animation {
     @apply opacity-0;
@@ -1190,5 +1188,90 @@
   }
   .color-option-container {
     @apply w-fit;
+  }
+
+  .x-gradient {
+    @apply stroke-[url(#x-gradient)] bg-blend-hard-light;
+  }
+
+  .button-run-bg {
+    @apply flex h-7 w-7 cursor-pointer items-center justify-center rounded-sm bg-transparent p-0 hover:bg-muted hover:p-1;
+  }
+
+  .play-button-icon {
+    @apply h-4 w-4 transition-all group-hover/node:opacity-100;
+  }
+
+  .lucide-icon {
+    @apply h-5 w-5;
+  }
+
+  .bg-lucide-icon {
+    @apply flex h-8 w-8 items-center justify-center rounded-[6px] bg-muted p-[6px];
+  }
+
+  .integration-icon {
+    @apply h-8 w-8;
+  }
+
+  .show-node-icon {
+    @apply absolute inset-x-6;
+  }
+
+  .disabled-state {
+    @apply text-hard-zinc pointer-events-none bg-secondary;
+  }
+
+  .background-fade-input {
+    @apply absolute right-[0.9px] h-6 w-7 bg-background;
+  }
+
+  .gradient-fade-input {
+    @apply absolute right-7 h-6 w-12 rounded-l-xl;
+  }
+
+  .background-fade-input-edit-node {
+    @apply absolute right-[0.9px] h-4 w-7 bg-background;
+  }
+
+  .gradient-fade-input-edit-node {
+    @apply absolute right-7 h-4 w-12 rounded-l-xl bg-background;
+  }
+
+  .fade-top-position {
+    @apply top-[-35px];
+  }
+  .icon-top-position {
+    @apply top-[-30px];
+  }
+  .edit-node-icon-top-position {
+    @apply top-[-23px];
+  }
+  .popover-input {
+    @apply h-fit w-fit flex-1 border-none bg-transparent p-0 shadow-none outline-none ring-0 ring-offset-0 placeholder:text-muted-foreground focus:border-foreground focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .beta-badge {
+    @apply flex h-6 w-11 items-center justify-center rounded-lg bg-accent-pink p-2 text-center text-xs font-medium text-accent-pink-foreground;
+  }
+
+  .icon-size {
+    @apply h-[18px] w-[18px];
+  }
+
+  .hit-area-icon {
+    @apply h-[32px] w-[32px] rounded-md;
+  }
+
+  .node-toolbar-buttons {
+    @apply flex w-max min-w-10 items-center gap-1 rounded-lg text-foreground;
+  }
+
+  .share-button {
+    @apply relative inline-flex h-full w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-accent;
+  }
+
+  .last-output-border {
+    @apply rounded-b-[12px];
   }
 }

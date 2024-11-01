@@ -30,12 +30,8 @@ test("user should be able to connect RetrieverTool to another components", async
     timeout: 30000,
   });
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("retriever");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("retriever");
 
   await page.waitForTimeout(1000);
 
@@ -46,12 +42,12 @@ test("user should be able to connect RetrieverTool to another components", async
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.waitForTimeout(1000);
 
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
@@ -62,8 +58,8 @@ test("user should be able to connect RetrieverTool to another components", async
 
   await page.mouse.up();
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chroma");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("chroma");
 
   await page.waitForTimeout(1000);
 
@@ -76,8 +72,8 @@ test("user should be able to connect RetrieverTool to another components", async
 
   await page.waitForTimeout(1000);
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("fit_view").click();
 
   //connection
   const chromaDbOutput = await page

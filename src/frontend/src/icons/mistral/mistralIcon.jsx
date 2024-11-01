@@ -6,6 +6,7 @@ const SvgMistralIcon = (props) => (
     viewBox="0 0 256 233"
     xmlns="http://www.w3.org/2000/svg"
     preserveAspectRatio="xMidYMid"
+    {...props}
   >
     <title>Mistral AI</title>
     <g>

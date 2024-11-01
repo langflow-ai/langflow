@@ -27,21 +27,11 @@ test("should be able to see error when something goes wrong on Code Modal", asyn
   });
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("custom component");
-  await page.waitForTimeout(1000);
+  await page.getByTestId("sidebar-custom-component-button").click();
 
-  await page
-    .getByTestId("helpersCustom Component")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("div-generic-node").click();
   await page.getByTestId("code-button-modal").click();

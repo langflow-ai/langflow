@@ -32,13 +32,8 @@ test("LangflowShortcuts", async ({ page }) => {
   });
   await page.getByTestId("blank-flow").click();
 
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("ollama");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("ollama");
 
   await page.waitForTimeout(1000);
 
@@ -50,14 +45,14 @@ test("LangflowShortcuts", async ({ page }) => {
 
   await page.locator('//*[@id="react-flow-id"]/div/div[2]/button[3]').click();
 
-  await page.waitForSelector('[title="fit view"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
   });
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
   await page.getByTestId("generic-node-title-arrangement").click();
   await page.keyboard.press(`${control}+Shift+A`);
   await page.getByText("Close").last().click();

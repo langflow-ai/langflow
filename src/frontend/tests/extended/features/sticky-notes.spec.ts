@@ -1,4 +1,3 @@
-import { ENABLE_MVPS } from "@/../../src/customization/feature-flags";
 import { expect, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 
@@ -67,9 +66,6 @@ The future of AI is both exciting and uncertain. As the technology continues to 
     timeout: 30000,
   });
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
   await page.getByTestId("add_note").click();
 
   await page.waitForTimeout(1000);
@@ -80,17 +76,17 @@ The future of AI is both exciting and uncertain. As the technology continues to 
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.waitForSelector('[title="fit view"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
   });
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("note_node").click();
 
-  await page.locator(".generic-node-desc").last().dblclick();
+  await page.locator(".generic-node-desc-text").last().dblclick();
   await page.getByTestId("textarea").fill(noteText);
 
   expect(await page.getByText("2500/2500")).toBeVisible();
@@ -145,9 +141,9 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
   await page.waitForTimeout(1000);
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   targetElement.focus();
   targetElement.click();
