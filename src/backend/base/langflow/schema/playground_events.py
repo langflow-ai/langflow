@@ -1,3 +1,5 @@
+import inspect
+from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Annotated, Literal
 from uuid import UUID
@@ -54,11 +56,12 @@ class MessageEvent(PlaygroundEvent):
         return v
 
 
-class ErrorEvent(PlaygroundEvent):
+class ErrorEvent(MessageEvent):
     background_color: str = Field(default="#FF0000")
     text_color: str = Field(default="#FFFFFF")
     format_type: Literal["default", "error", "warning", "info"] = Field(default="error")
     allow_markdown: bool = Field(default=False)
+    category: Literal["error"] = "error"
 
 
 class WarningEvent(PlaygroundEvent):
@@ -81,7 +84,7 @@ class TokenEvent(BaseModel):
     )
 
 
-# Factory functions
+# Factory functions first
 def create_message(
     text: str,
     category: Literal["message", "error", "warning", "info"] = "message",
@@ -98,9 +101,7 @@ def create_message(
     *,
     error: bool = False,
     edit: bool = False,
-):
-    # Extract properties values or use defaults
-
+) -> MessageEvent:
     return MessageEvent(
         text=text,
         properties=properties,
@@ -119,38 +120,48 @@ def create_message(
     )
 
 
-def create_error(error_message: str, traceback: str | None = None, title: str = "Error", timestamp: str | None = None):
+def create_error(
+    text: str,
+    properties: dict | None = None,
+    traceback: str | None = None,
+    title: str = "Error",
+    timestamp: str | None = None,
+    id: UUID | str | None = None,  # noqa: A002
+) -> ErrorEvent:
     content_blocks = [ContentBlock(title=title, content=traceback)] if traceback else None
-    return ErrorEvent(text=error_message, content_blocks=content_blocks, timestamp=timestamp)
+    return ErrorEvent(text=text, properties=properties, content_blocks=content_blocks, timestamp=timestamp, id=id)
 
 
-def create_warning(message: str):
+def create_warning(message: str) -> WarningEvent:
     return WarningEvent(text=message)
 
 
-def create_info(message: str):
+def create_info(message: str) -> InfoEvent:
     return InfoEvent(text=message)
 
 
-def create_token(chunk: str, id: str):  # noqa: A002
+def create_token(chunk: str, id: str) -> TokenEvent:  # noqa: A002
     return TokenEvent(
         chunk=chunk,
         id=id,
     )
 
 
+_EVENT_CREATORS: dict[str, tuple[Callable, inspect.Signature]] = {
+    "message": (create_message, inspect.signature(create_message)),
+    "error": (create_error, inspect.signature(create_error)),
+    "warning": (create_warning, inspect.signature(create_warning)),
+    "info": (create_info, inspect.signature(create_info)),
+    "token": (create_token, inspect.signature(create_token)),
+}
+
+
 def create_event_by_type(
     event_type: Literal["message", "error", "warning", "info", "token"], **kwargs
-) -> PlaygroundEvent:
-    if event_type == "message":
-        return create_message(**kwargs)
-    if event_type == "error":
-        return create_error(**kwargs)
-    if event_type == "warning":
-        return create_warning(**kwargs)
-    if event_type == "info":
-        return create_info(**kwargs)
-    if event_type == "token":
-        return create_token(**kwargs)
-    msg = f"Invalid event type: {event_type}"
-    raise TypeError(msg)
+) -> PlaygroundEvent | dict:
+    if event_type not in _EVENT_CREATORS:
+        return kwargs
+
+    creator_func, signature = _EVENT_CREATORS[event_type]
+    valid_params = {k: v for k, v in kwargs.items() if k in signature.parameters}
+    return creator_func(**valid_params)
