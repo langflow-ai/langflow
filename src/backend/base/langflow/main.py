@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import re
+import time
 import warnings
 from contextlib import asynccontextmanager
 from http import HTTPStatus
@@ -30,6 +31,9 @@ from langflow.interface.utils import setup_llm_caching
 from langflow.logging.logger import configure
 from langflow.services.deps import get_settings_service, get_telemetry_service
 from langflow.services.utils import initialize_services, teardown_services
+
+
+time_start = time.time()
 
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
@@ -102,10 +106,13 @@ def get_lifespan(*, fix_migration=False, version=None):
             rprint("[bold green]Starting Langflow...[/bold green]")
         try:
             await asyncio.to_thread(_initialize)
-            all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
-            await asyncio.to_thread(create_or_update_starter_projects, all_types_dict)
+            # all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
+            # await asyncio.to_thread(create_or_update_starter_projects, all_types_dict)
             get_telemetry_service().start()
             await asyncio.to_thread(load_flows_from_directory)
+            time_end = time.time()
+            time_delta = time_end - time_start
+            rprint(f"[bold purple]Langflow started in {time_delta:.2f} seconds.[/bold purple]")
             yield
         except Exception as exc:
             if "langflow migration --fix" not in str(exc):
@@ -139,6 +146,15 @@ def create_app():
         allow_headers=["*"],
     )
     app.add_middleware(JavaScriptMIMETypeMiddleware)
+
+    @app.on_event("startup")
+    async def startup_event():
+        async def delayed_task():
+            all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
+            await asyncio.to_thread(create_or_update_starter_projects, all_types_dict)
+
+        task = asyncio.create_task(delayed_task())
+        await task
 
     @app.middleware("http")
     async def check_boundary(request: Request, call_next):

@@ -7,6 +7,8 @@ from loguru import logger
 
 from langflow.custom.utils import abuild_custom_components, build_custom_components
 
+# from langflow.custom.utils_optimized import abuild_custom_components
+
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
 
