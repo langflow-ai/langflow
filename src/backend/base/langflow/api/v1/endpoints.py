@@ -6,7 +6,16 @@ from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
 import sqlalchemy as sa
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Body,
+    Depends,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
 from loguru import logger
 from sqlmodel import select
 
@@ -17,7 +26,6 @@ from langflow.api.v1.schemas import (
     CustomComponentResponse,
     InputValueRequest,
     RunResponse,
-    SidebarCategoriesResponse,
     SimplifiedAPIRequest,
     TaskStatusResponse,
     UpdateCustomComponentRequest,
@@ -37,7 +45,9 @@ from langflow.services.auth.utils import api_key_security, get_current_active_us
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.flow.model import FlowRead
-from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
+from langflow.services.database.models.flow.utils import (
+    get_all_webhook_components_in_flow,
+)
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import (
     get_session_service,
@@ -47,7 +57,6 @@ from langflow.services.deps import (
 )
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.telemetry.schema import RunPayload
-from langflow.utils.constants import SIDEBAR_CATEGORIES
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
@@ -110,7 +119,11 @@ async def simple_run_flow(
         graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
         graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name)
         inputs = [
-            InputValueRequest(components=[], input_value=input_request.input_value, type=input_request.input_type)
+            InputValueRequest(
+                components=[],
+                input_value=input_request.input_value,
+                type=input_request.input_type,
+            )
         ]
         if input_request.output_component:
             outputs = [input_request.output_component]
@@ -248,7 +261,10 @@ async def simplified_run_flow(
         background_tasks.add_task(
             telemetry_service.log_package_run,
             RunPayload(
-                run_is_webhook=False, run_seconds=int(end_time - start_time), run_success=True, run_error_message=""
+                run_is_webhook=False,
+                run_seconds=int(end_time - start_time),
+                run_success=True,
+                run_error_message="",
             ),
         )
 
@@ -360,7 +376,11 @@ async def webhook_run_flow(
     return {"message": "Task started in the background", "status": "in progress"}
 
 
-@router.post("/run/advanced/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
+@router.post(
+    "/run/advanced/{flow_id}",
+    response_model=RunResponse,
+    response_model_exclude_none=True,
+)
 async def experimental_run_flow(
     *,
     session: DbSession,
@@ -631,11 +651,9 @@ async def get_config():
 
         settings_service: SettingsService = get_settings_service()
 
-        return {"feature_flags": FEATURE_FLAGS, **settings_service.settings.model_dump()}
+        return {
+            "feature_flags": FEATURE_FLAGS,
+            **settings_service.settings.model_dump(),
+        }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-
-@router.get("/sidebar_categories")
-async def get_sidebar_categories() -> SidebarCategoriesResponse:
-    return SidebarCategoriesResponse(categories=SIDEBAR_CATEGORIES)

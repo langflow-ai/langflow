@@ -1,6 +1,7 @@
 from . import (
     agents,
     chains,
+    custom_component,
     documentloaders,
     embeddings,
     helpers,
@@ -26,6 +27,7 @@ __all__ = [
     "helpers",
     "inputs",
     "link_extractors",
+    "custom_component",
     "memories",
     "models",
     "output_parsers",

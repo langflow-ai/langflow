@@ -326,6 +326,7 @@
             ],
             "frozen": false,
             "icon": "CrewAI",
+            "legacy": false,
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -576,6 +577,7 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
+            "legacy": false,
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -906,6 +908,7 @@
             ],
             "frozen": false,
             "icon": "MessagesSquare",
+            "legacy": false,
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -1097,6 +1100,7 @@
             ],
             "frozen": false,
             "icon": "CrewAI",
+            "legacy": false,
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -1242,6 +1246,7 @@
             ],
             "frozen": false,
             "icon": "CrewAI",
+            "legacy": false,
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -1501,6 +1506,7 @@
             ],
             "frozen": false,
             "icon": "CrewAI",
+            "legacy": false,
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -1763,6 +1769,7 @@
             ],
             "frozen": false,
             "icon": "OpenAI",
+            "legacy": false,
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -2097,6 +2104,7 @@
             "is_composition": null,
             "is_input": null,
             "is_output": null,
+            "legacy": false,
             "metadata": {},
             "name": "",
             "output_types": [],
@@ -2216,6 +2224,7 @@
             ],
             "frozen": false,
             "icon": "MessagesSquare",
+            "legacy": false,
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -2436,6 +2445,7 @@
             ],
             "frozen": false,
             "icon": "CrewAI",
+            "legacy": false,
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -2687,6 +2697,7 @@
               "search_params"
             ],
             "frozen": false,
+            "legacy": false,
             "metadata": {},
             "output_types": [],
             "outputs": [
