@@ -29,12 +29,10 @@ const TextAreaWrapper = ({
     }
   };
 
-  const lockClass = noInput ? "form-modal-no-input" : "form-modal-lock-false";
-
   const fileClass = files.length > 0 ? "!rounded-t-none border-t-0" : "";
 
   const additionalClassNames =
-    "form-input block w-full border-0 custom-scroll focus:border-ring rounded-none shadow-none focus:ring-0 p-0 sm:text-sm bg-transparent";
+    "form-input block w-full border-0 custom-scroll focus:border-ring rounded-none shadow-none focus:ring-0 p-0 sm:text-sm !bg-transparent";
 
   useEffect(() => {
     if (!lockChat && !noInput) {
@@ -71,7 +69,7 @@ const TextAreaWrapper = ({
       onChange={(event): void => {
         setChatValue(event.target.value);
       }}
-      className={classNames(lockClass, fileClass, additionalClassNames)}
+      className={classNames(fileClass, additionalClassNames)}
       placeholder={getPlaceholderText(isDragging, noInput)}
     />
   );
