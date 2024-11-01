@@ -406,6 +406,11 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 ),
             }
 
+        # Get the indexing parameters, set to None if not provided
+        indexing_include = [s for s in self.metadata_indexing_include if s]
+        if not indexing_include:
+            indexing_include = None
+
         try:
             vector_store = AstraDBVectorStore(
                 collection_name=self.collection_name,
@@ -420,8 +425,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 bulk_delete_concurrency=self.bulk_delete_concurrency or None,
                 setup_mode=setup_mode_value,
                 pre_delete_collection=self.pre_delete_collection,
-                metadata_indexing_include=[s for s in self.metadata_indexing_include if s],
-                metadata_indexing_exclude=[s for s in self.metadata_indexing_exclude if s],
+                metadata_indexing_include=[s for s in self.metadata_indexing_include if s] or None,
+                metadata_indexing_exclude=[s for s in self.metadata_indexing_exclude if s] or None,
                 collection_indexing_policy=orjson.dumps(self.collection_indexing_policy)
                 if self.collection_indexing_policy
                 else None,
