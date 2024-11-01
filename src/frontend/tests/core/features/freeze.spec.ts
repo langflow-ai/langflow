@@ -30,9 +30,8 @@ test.skip("user must be able to freeze a component", async ({ page }) => {
 
   //first component
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("text input");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("text input");
   await page.waitForTimeout(1000);
 
   await page
@@ -52,9 +51,8 @@ test.skip("user must be able to freeze a component", async ({ page }) => {
 
   //second component
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("url");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("url");
   await page.waitForTimeout(1000);
 
   await page
@@ -74,9 +72,8 @@ test.skip("user must be able to freeze a component", async ({ page }) => {
 
   //third component
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("split text");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("split text");
   await page.waitForTimeout(1000);
 
   await page
@@ -96,9 +93,8 @@ test.skip("user must be able to freeze a component", async ({ page }) => {
 
   //fourth component
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("parse data");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("parse data");
   await page.waitForTimeout(1000);
 
   await page
@@ -118,9 +114,8 @@ test.skip("user must be able to freeze a component", async ({ page }) => {
 
   //fifth component
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat output");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("chat output");
   await page.waitForTimeout(1000);
 
   await page
