@@ -406,11 +406,6 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 ),
             }
 
-        # Get the indexing parameters, set to None if not provided
-        indexing_include = [s for s in self.metadata_indexing_include if s]
-        if not indexing_include:
-            indexing_include = None
-
         try:
             vector_store = AstraDBVectorStore(
                 collection_name=self.collection_name,
