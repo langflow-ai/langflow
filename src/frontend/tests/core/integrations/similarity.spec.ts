@@ -339,14 +339,13 @@ test("user must be able to check similarity between embedding texts", async ({
   await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
   await page.waitForTimeout(1000);
-  await page.getByText("Playground", { exact: true }).last().click();
-  await page.waitForTimeout(1000);
-
   await page
-    .getByPlaceholder("Empty")
-    .waitFor({ state: "visible", timeout: 30000 });
+    .getByTestId(/rf__node-TextOutput-[a-zA-Z0-9]{5}/)
+    .getByTestId("output-inspection-text")
+    .first()
+    .click();
+  const valueSimilarity = await page.getByTestId("textarea").textContent();
 
-  const valueSimilarity = await page.getByPlaceholder("Empty").textContent();
   expect(valueSimilarity).toContain("cosine_similarity");
   const valueLength = valueSimilarity!.length;
   expect(valueLength).toBeGreaterThan(20);
