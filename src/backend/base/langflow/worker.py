@@ -29,10 +29,10 @@ def build_vertex(self, vertex: Vertex) -> Vertex:
 
 @celery_app.task(acks_late=True)
 def process_graph_cached_task(
-    data_graph: dict[str, Any],  # noqa: ARG001
-    inputs: dict | list[dict] | None = None,  # noqa: ARG001
-    clear_cache=False,  # noqa: ARG001, FBT002
-    session_id=None,  # noqa: ARG001
+    data_graph: dict[str, Any],
+    inputs: dict | list[dict] | None = None,
+    clear_cache=False,  # noqa: FBT002
+    session_id=None,
 ) -> dict[str, Any]:
     msg = "This task is not implemented yet"
     raise NotImplementedError(msg)
