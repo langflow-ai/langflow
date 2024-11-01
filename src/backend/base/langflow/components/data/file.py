@@ -70,11 +70,7 @@ class FileComponent(Component):
 
         with ZipFile(zip_path, "r") as zip_file:
             # Filter out valid files from the zip
-            valid_files = [
-                file
-                for file in zip_file.namelist()
-                if Path(file).suffix[1:].lower() in TEXT_FILE_TYPES
-            ]
+            valid_files = [file for file in zip_file.namelist() if Path(file).suffix[1:].lower() in TEXT_FILE_TYPES]
 
             # Raise an error if no valid files are found
             if not valid_files:
@@ -85,9 +81,7 @@ class FileComponent(Component):
                 with zip_file.open(file_name) as file:
                     try:
                         # Process each file within the zip
-                        file_data = self._process_single_file(
-                            file, file_name, silent_errors=silent_errors
-                        )
+                        file_data = self._process_single_file(file, file_name, silent_errors=silent_errors)
 
                         # Aggregate data from all files
                         if file_data:
@@ -121,9 +115,7 @@ class FileComponent(Component):
         try:
             # Determine and validate file extension
             file_path_str = file_name or (
-                file_path_or_obj.name
-                if hasattr(file_path_or_obj, "name")
-                else str(file_path_or_obj)
+                file_path_or_obj.name if hasattr(file_path_or_obj, "name") else str(file_path_or_obj)
             )
             extension = Path(file_path_str).suffix[1:].lower()
 
@@ -136,9 +128,7 @@ class FileComponent(Component):
                 raise ValueError(msg)
 
             # Parse the file data
-            data = parse_text_file_to_data(
-                file_path_or_obj, silent_errors=silent_errors
-            )
+            data = parse_text_file_to_data(file_path_or_obj, silent_errors=silent_errors)
 
             # Log success or error message
             logging_info = (
@@ -153,9 +143,7 @@ class FileComponent(Component):
 
             return data or Data()
         except Exception as e:
-            error_message = (
-                f"Error processing file {file_name or file_path_or_obj}: {e}"
-            )
+            error_message = f"Error processing file {file_name or file_path_or_obj}: {e}"
 
             # Raise an error or log the error message
             if not silent_errors:
