@@ -83,7 +83,7 @@ except ImportError:
     upload_file = None
 
 BASE_API_URL = "http://127.0.0.1:7860"
-FLOW_ID = "fff8dcaa-f0f6-4136-9df0-b7cb38de42e0"
+FLOW_ID = "*`YOUR_FLOW_ID`*"
 ENDPOINT = "" # You can set a specific endpoint name in the flow settings
 
 # You can tweak the flow by adding a tweaks dictionary
@@ -169,7 +169,7 @@ if __name__ == "__main__":
 To pass the API key to your script with a command line argument, do the following:
 
 ```shell
-python your_script.py "Your message" --api_key "*`YOUR_API_KEY`*"
+python your_script.py "*`YOUR_INPUT_MESSAGE`*" --api_key "*`YOUR_API_KEY`*"
 ```
 
 ## Security considerations
