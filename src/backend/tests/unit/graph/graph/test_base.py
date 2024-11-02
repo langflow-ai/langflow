@@ -10,7 +10,6 @@ from langflow.graph import Graph
 from langflow.graph.graph.constants import Finish
 
 
-@pytest.mark.asyncio
 async def test_graph_not_prepared():
     chat_input = ChatInput()
     chat_output = ChatOutput()
@@ -21,7 +20,6 @@ async def test_graph_not_prepared():
         await graph.astep()
 
 
-@pytest.mark.asyncio
 async def test_graph(caplog: pytest.LogCaptureFixture):
     chat_input = ChatInput()
     chat_output = ChatOutput()
@@ -34,7 +32,6 @@ async def test_graph(caplog: pytest.LogCaptureFixture):
         assert "Graph has vertices but no edges" in caplog.text
 
 
-@pytest.mark.asyncio
 async def test_graph_with_edge():
     chat_input = ChatInput()
     chat_output = ChatOutput()
@@ -55,7 +52,6 @@ async def test_graph_with_edge():
     assert graph.edges[0].target_id == output_id
 
 
-@pytest.mark.asyncio
 async def test_graph_functional():
     chat_input = ChatInput(_id="chat_input")
     chat_output = ChatOutput(input_value="test", _id="chat_output")
@@ -71,7 +67,6 @@ async def test_graph_functional():
     assert graph.edges[0].target_id == "chat_output"
 
 
-@pytest.mark.asyncio
 async def test_graph_functional_async_start():
     chat_input = ChatInput(_id="chat_input")
     chat_output = ChatOutput(input_value="test", _id="chat_output")

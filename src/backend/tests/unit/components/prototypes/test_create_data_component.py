@@ -54,7 +54,6 @@ def test_update_build_config_exceed_limit(create_data_component):
         create_data_component.update_build_config(build_config, 16, "number_of_fields")
 
 
-@pytest.mark.asyncio
 async def test_build_data(create_data_component):
     create_data_component._attributes = {
         "field_1_key": {"key1": "value1"},

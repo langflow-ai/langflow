@@ -6,7 +6,6 @@ from langflow.components.tools.calculator import CalculatorToolComponent
 
 
 @pytest.mark.api_key_required
-@pytest.mark.asyncio
 async def test_agent_component_with_calculator():
     # Mock inputs
     tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
