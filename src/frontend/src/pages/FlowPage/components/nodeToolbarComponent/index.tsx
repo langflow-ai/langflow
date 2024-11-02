@@ -336,7 +336,7 @@ export default function NodeToolbarComponent({
   const postToolModeValue = usePostTemplateValue({
     node: data.node!,
     nodeId: data.id,
-    parameterId: name,
+    parameterId: "tool_mode",
   });
 
   return (
