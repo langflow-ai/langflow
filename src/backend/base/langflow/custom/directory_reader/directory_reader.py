@@ -257,7 +257,7 @@ class DirectoryReader:
 
     async def process_file_async(self, file_path):
         try:
-            file_content = self.read_file_content(file_path)
+            file_content = await asyncio.to_thread(self.read_file_content, file_path)
         except Exception:  # noqa: BLE001
             logger.exception(f"Error while reading file {file_path}")
             return False, f"Could not read {file_path}"

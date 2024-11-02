@@ -40,6 +40,7 @@ class TelemetryService(Service):
         self._stopping = False
 
         self.ot = OpenTelemetry(prometheus_enabled=settings_service.settings.prometheus_enabled)
+        self.architecture: str | None = None
 
         # Check for do-not-track settings
         self.do_not_track = (
@@ -93,7 +94,8 @@ class TelemetryService(Service):
     async def log_package_version(self) -> None:
         python_version = ".".join(platform.python_version().split(".")[:2])
         version_info = get_version_info()
-        architecture = platform.architecture()[0]
+        if self.architecture is None:
+            self.architecture = (await asyncio.to_thread(platform.architecture))[0]
         payload = VersionPayload(
             package=version_info["package"].lower(),
             version=version_info["version"],
@@ -101,7 +103,7 @@ class TelemetryService(Service):
             python=python_version,
             cache_type=self.settings_service.settings.cache_type,
             backend_only=self.settings_service.settings.backend_only,
-            arch=architecture,
+            arch=self.architecture,
             auto_login=self.settings_service.auth_settings.AUTO_LOGIN,
         )
         await self._queue_event((self.send_telemetry_data, payload, None))
