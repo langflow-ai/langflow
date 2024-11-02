@@ -194,6 +194,7 @@ export default function GenericNode({
         showNode={showNode}
         outputName={output.name}
         colorName={getNodeOutputColorsName(output, data, types)}
+        isToolMode={isToolMode}
       />
     );
   };
