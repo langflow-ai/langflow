@@ -24,7 +24,7 @@ test("user should be able to download a flow or a component", async ({
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -62,22 +62,28 @@ test("user should be able to download a flow or a component", async ({
   }
 
   await page.getByTestId("icon-ChevronLeft").last().click();
-  await page.getByRole("checkbox").nth(1).click();
-  await page.getByTestId("icon-FileDown").last().click();
+  await page.getByTestId("home-dropdown-menu").nth(0).click();
+  await page.getByTestId("btn-download-json").last().click();
   await page.waitForTimeout(1000);
-  await page.getByText("Items exported successfully").isVisible();
+  await page.getByText(/.*exported successfully/).isVisible();
 
   await page.getByText("Flows", { exact: true }).click();
-  await page.getByRole("checkbox").nth(1).click();
-  await page.getByTestId("icon-FileDown").last().click();
+  await page.getByTestId("home-dropdown-menu").nth(0).click();
+  await page.getByTestId("btn-download-json").last().click();
   await page.waitForTimeout(1000);
-  await page.getByText("Items exported successfully").isVisible();
+  await page
+    .getByText(/.*exported successfully/)
+    .last()
+    .isVisible();
 
   await page.getByText("Components", { exact: true }).click();
-  await page.getByRole("checkbox").nth(1).click();
-  await page.getByTestId("icon-FileDown").last().click();
+  await page.getByTestId("home-dropdown-menu").nth(0).click();
+  await page.getByTestId("btn-download-json").last().click();
   await page.waitForTimeout(1000);
-  await page.getByText("Components exported successfully").isVisible();
+  await page
+    .getByText(/.*exported successfully/)
+    .last()
+    .isVisible();
 });
 
 test("user should be able to upload a flow or a component", async ({
@@ -128,7 +134,7 @@ test("user should be able to duplicate a flow or a component", async ({
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -171,9 +177,9 @@ test("user should be able to duplicate a flow or a component", async ({
   }
 
   await page.getByTestId("icon-ChevronLeft").last().click();
-  await page.getByRole("checkbox").nth(1).click();
+  await page.getByTestId("home-dropdown-menu").nth(1).click();
+  await page.getByTestId("btn-duplicate-flow").last().click();
 
-  await page.getByTestId("icon-Copy").last().click();
   await page.waitForTimeout(1000);
   await page.getByText("Items duplicated successfully").isVisible();
 });
