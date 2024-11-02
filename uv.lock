@@ -3592,6 +3592,7 @@ dev = [
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
+    { name = "pytest-codspeed" },
     { name = "pytest-cov" },
     { name = "pytest-flakefinder" },
     { name = "pytest-github-actions-annotate-failures" },
@@ -3718,6 +3719,7 @@ dev = [
     { name = "pre-commit", specifier = ">=3.7.0" },
     { name = "pytest", specifier = ">=8.2.0" },
     { name = "pytest-asyncio", specifier = ">=0.23.0" },
+    { name = "pytest-codspeed", specifier = ">=3.0.0" },
     { name = "pytest-cov", specifier = ">=5.0.0" },
     { name = "pytest-flakefinder", specifier = ">=1.1.0" },
     { name = "pytest-github-actions-annotate-failures", specifier = ">=0.2.0" },
@@ -3860,6 +3862,7 @@ local = [
 [package.dev-dependencies]
 dev = [
     { name = "asgi-lifespan" },
+    { name = "pytest-codspeed" },
     { name = "pytest-github-actions-annotate-failures" },
 ]
 
@@ -3968,6 +3971,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
+    { name = "pytest-codspeed", specifier = ">=3.0.0" },
     { name = "pytest-github-actions-annotate-failures", specifier = ">=0.2.0" },
 ]
 
@@ -6094,6 +6098,22 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/52/6d/c6cf50ce320cf8611df7a1254d86233b3df7cc07f9b5f5cbcb82e08aa534/pytest_asyncio-0.24.0.tar.gz", hash = "sha256:d081d828e576d85f875399194281e92bf8a68d60d72d1a2faf2feddb6c46b276", size = 49855 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/96/31/6607dab48616902f76885dfcf62c08d929796fc3b2d2318faf9fd54dbed9/pytest_asyncio-0.24.0-py3-none-any.whl", hash = "sha256:a811296ed596b69bf0b6f3dc40f83bcaf341b155a269052d82efa2b25ac7037b", size = 18024 },
+]
+
+[[package]]
+name = "pytest-codspeed"
+version = "3.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cffi" },
+    { name = "filelock" },
+    { name = "pytest" },
+    { name = "rich" },
+    { name = "setuptools", marker = "python_full_version >= '3.12'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ba/78/40e613268cce75b11cd35ea9fdc280fb648e2233fc4187c76112377b1869/pytest_codspeed-3.0.0.tar.gz", hash = "sha256:c5b80100ea32dd44079bb2db298288763eb8fe859eafa1650a8711bd2c32fd06", size = 12540 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a6/79/fa067436033410ac16e5d14b61b1a5f355688930ca8c6a8c61a52b2cbe0a/pytest_codspeed-3.0.0-py3-none-any.whl", hash = "sha256:ab1b8cb9da72e0d394718333d1abc7bea38524e09fd4854bc70a91abbcdcb20e", size = 15640 },
 ]
 
 [[package]]
