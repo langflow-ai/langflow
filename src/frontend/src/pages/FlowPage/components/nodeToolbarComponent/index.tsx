@@ -1,7 +1,9 @@
 import { countHandlesFn } from "@/CustomNodes/helpers/count-handles";
+import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import { Button } from "@/components/ui/button";
+import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import CodeAreaModal from "@/modals/codeAreaModal";
@@ -34,12 +36,7 @@ import {
   expandGroupNode,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
-import {
-  classNames,
-  cn,
-  getNodeLength,
-  openInNewTab,
-} from "../../../../utils/utils";
+import { cn, getNodeLength, openInNewTab } from "../../../../utils/utils";
 import useShortcuts from "./hooks/use-shortcuts";
 import ShortcutDisplay from "./shortcutDisplay";
 import ToolbarSelectItem from "./toolbarSelectItem";
@@ -287,6 +284,18 @@ export default function NodeToolbarComponent({
           },
         );
         break;
+      case "toolMode":
+        const newValue = !toolMode;
+        setToolMode(newValue);
+        mutateTemplate(
+          newValue,
+          data.node!,
+          handleNodeClass,
+          postToolModeValue,
+          setNoticeData,
+          "tool_mode",
+        );
+        break;
     }
 
     setSelectedValue(null);
@@ -321,6 +330,14 @@ export default function NodeToolbarComponent({
   const handleButtonClick = () => {
     (selectTriggerRef.current! as HTMLElement)?.click();
   };
+
+  const [toolMode, setToolMode] = useState(false);
+
+  const postToolModeValue = usePostTemplateValue({
+    node: data.node!,
+    nodeId: data.id,
+    parameterId: name,
+  });
 
   return (
     <>
@@ -410,6 +427,35 @@ export default function NodeToolbarComponent({
                 )}
               />
               <span className="text-[13px] font-medium">Freeze Path</span>
+            </Button>
+          </ShadTooltip>
+          <ShadTooltip
+            content={
+              <ShortcutDisplay
+                {...shortcuts.find(
+                  ({ name }) => name.toLowerCase() === "tool mode",
+                )!}
+              />
+            }
+            side="top"
+          >
+            <Button
+              className={cn("node-toolbar-buttons", toolMode && "text-primary")}
+              variant="ghost"
+              onClick={(event) => {
+                event.preventDefault();
+                handleSelectChange("toolMode");
+              }}
+              size="node-toolbar"
+            >
+              <IconComponent
+                name="Hammer"
+                className={cn(
+                  "h-4 w-4 transition-all",
+                  toolMode ? "text-primary" : "",
+                )}
+              />
+              <span className="text-[13px] font-medium">Tool Mode</span>
             </Button>
           </ShadTooltip>
           <ShadTooltip
@@ -624,6 +670,17 @@ export default function NodeToolbarComponent({
                   ></IconComponent>
                 </span>
               </div>
+            </SelectItem>
+            <SelectItem value="toolMode">
+              <ToolbarSelectItem
+                shortcut={
+                  shortcuts.find((obj) => obj.name === "Tool Mode")?.shortcut!
+                }
+                value={"Tool Mode"}
+                icon={"Tool"}
+                dataTestId="tool-mode-button"
+                style={`${toolMode ? " text-ice" : ""} transition-all`}
+              />
             </SelectItem>
           </SelectContent>
         </Select>
