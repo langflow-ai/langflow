@@ -115,7 +115,7 @@ class TestEventManager:
         assert manager.events["on_test_event"].func.__name__ == "send_event"
 
     # Ensuring thread-safety when accessing the events dictionary
-    def test_thread_safety_accessing_events_dictionary(self):
+    async def test_thread_safety_accessing_events_dictionary(self):
         def mock_callback(event_type: str, data: LoggableType):
             pass
 
@@ -130,8 +130,7 @@ class TestEventManager:
         queue = asyncio.Queue()
         manager = EventManager(queue)
 
-        tasks = [register_events(manager), access_events(manager)]
-        asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks))
+        await asyncio.gather(register_events(manager), access_events(manager))
 
     # Checking the performance impact of frequent event registrations
     def test_performance_impact_frequent_registrations(self):

@@ -17,7 +17,7 @@ def is_image_file(file_path) -> bool:
     return True
 
 
-async def get_file_paths(files: list[str]):
+def get_file_paths(files: list[str]):
     storage_service = get_storage_service()
     file_paths = []
     for file in files:
