@@ -325,6 +325,10 @@ class Component(CustomComponent):
 
     def run_and_validate_update_outputs(self, frontend_node: dict, field_name: str, field_value: Any):
         frontend_node = self.update_outputs(frontend_node, field_name, field_value)
+        if field_name == "tool_mode":
+            # Replace all outputs with the tool_output value if tool_mode is True
+            # else replace it with the original outputs
+            frontend_node["outputs"] = [self._build_tool_output()] if field_value else frontend_node["outputs"]
         return self._validate_frontend_node(frontend_node)
 
     def _validate_frontend_node(self, frontend_node: dict):
@@ -1032,3 +1036,6 @@ class Component(CustomComponent):
             source=source,
         )
         self.send_message(error_message)
+
+    def _build_tool_output(self) -> Output:
+        return Output(name=TOOL_OUTPUT_NAME, display_name="Tool", method="to_toolkit", types=["Tool"])
