@@ -276,7 +276,6 @@ async def test_delete_flows(client: AsyncClient, logged_in_headers):
     assert response.json().get("deleted") == number_of_flows
 
 
-@pytest.mark.asyncio
 @pytest.mark.usefixtures("active_user")
 async def test_delete_flows_with_transaction_and_build(client: AsyncClient, logged_in_headers):
     # Create ten flows
@@ -335,7 +334,6 @@ async def test_delete_flows_with_transaction_and_build(client: AsyncClient, logg
         assert response.json() == {"vertex_builds": {}}
 
 
-@pytest.mark.asyncio
 @pytest.mark.usefixtures("active_user")
 async def test_delete_folder_with_flows_with_transaction_and_build(client: AsyncClient, logged_in_headers):
     # Create a new folder

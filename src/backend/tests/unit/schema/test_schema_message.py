@@ -1,9 +1,7 @@
-import pytest
 from langchain_core.prompts.chat import ChatPromptTemplate
 from langflow.schema.message import Message
 
 
-@pytest.mark.asyncio
 async def test_message_async_prompt_serialization():
     template = "Hello, {name}!"
     message = await Message.from_template_and_variables(template, name="Langflow")
