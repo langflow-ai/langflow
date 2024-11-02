@@ -18,11 +18,13 @@ export const mutateTemplate = debounce(
       any
     >,
     setErrorData,
+    parameterName?: string,
   ) => {
     try {
       const newNode = cloneDeep(node);
       const newTemplate = await postTemplateValue.mutateAsync({
         value: newValue,
+        field_name: parameterName,
       });
       if (newTemplate) {
         newNode.template = newTemplate.template;
