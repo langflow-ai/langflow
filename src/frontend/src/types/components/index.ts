@@ -90,6 +90,7 @@ export type NodeOutputFieldComponentType = {
   outputProxy?: OutputFieldProxyType;
   lastOutput?: boolean;
   colorName?: string[];
+  isToolMode?: boolean;
 };
 
 export type NodeInputFieldComponentType = {
