@@ -18,7 +18,7 @@ async def test_graph_not_prepared():
     graph.add_component(chat_input)
     graph.add_component(chat_output)
     with pytest.raises(ValueError, match="Graph not prepared"):
-        await graph.astep()
+        await graph.step()
 
 
 async def test_graph(caplog: pytest.LogCaptureFixture):
@@ -44,7 +44,7 @@ async def test_graph_with_edge():
     # ensure prepare is idempotent
     graph.prepare()
     assert graph._run_queue == deque([input_id])
-    await graph.astep()
+    await graph.step()
     assert graph._run_queue == deque([output_id])
 
     assert graph.vertices[0].id == input_id
@@ -59,7 +59,7 @@ async def test_graph_functional():
     chat_output.set(sender_name=chat_input.message_response)
     graph = await asyncio.to_thread(Graph, chat_input, chat_output)
     assert graph._run_queue == deque(["chat_input"])
-    await graph.astep()
+    await graph.step()
     assert graph._run_queue == deque(["chat_output"])
 
     assert graph.vertices[0].id == "chat_input"

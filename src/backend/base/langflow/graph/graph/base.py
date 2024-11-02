@@ -318,7 +318,7 @@ class Graph:
         yielded_counts: dict[str, int] = defaultdict(int)
 
         while should_continue(yielded_counts, max_iterations):
-            result = await self.astep(event_manager=event_manager)
+            result = await self.step(event_manager=event_manager)
             yield result
             if hasattr(result, "vertex"):
                 yielded_counts[result.vertex.id] += 1
@@ -1196,7 +1196,7 @@ class Graph:
     def extend_run_queue(self, vertices: list[str]) -> None:
         self._run_queue.extend(vertices)
 
-    async def astep(
+    async def step(
         self,
         inputs: InputValueRequest | None = None,
         files: list[str] | None = None,
@@ -1250,16 +1250,6 @@ class Graph:
         self._snapshots.append(self.get_snapshot())
         if vertex_id:
             self._call_order.append(vertex_id)
-
-    def step(
-        self,
-        inputs: InputValueRequest | None = None,
-        files: list[str] | None = None,
-        user_id: str | None = None,
-    ):
-        # Call astep but synchronously
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self.astep(inputs, files, user_id))
 
     async def build_vertex(
         self,

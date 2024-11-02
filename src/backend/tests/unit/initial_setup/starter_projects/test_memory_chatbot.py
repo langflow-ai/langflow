@@ -44,7 +44,7 @@ AI: """
 
 
 @pytest.mark.usefixtures("client")
-def test_memory_chatbot(memory_chatbot_graph):
+async def test_memory_chatbot(memory_chatbot_graph):
     # Now we run step by step
     expected_order = deque(["chat_input", "chat_memory", "prompt", "openai", "chat_output"])
     assert memory_chatbot_graph.in_degree_map == {
@@ -58,7 +58,7 @@ def test_memory_chatbot(memory_chatbot_graph):
     assert memory_chatbot_graph.first_layer == ["chat_input", "chat_memory"]
 
     for step in expected_order:
-        result = memory_chatbot_graph.step()
+        result = await memory_chatbot_graph.step()
         if isinstance(result, Finish):
             break
 
