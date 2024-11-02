@@ -170,3 +170,28 @@ async def test_read_basic_examples(client: AsyncClient, logged_in_headers):
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(result, list), "The result must be a list"
     assert len(result) > 0, "The result must have at least one flow"
+
+
+async def test_upload_file(client: AsyncClient, logged_in_headers):
+    response = await client.post("api/v1/flows/upload/", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_201_CREATED
+
+
+async def test_delete_flow(client: AsyncClient, logged_in_headers):
+    flow_id = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+    response = await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+
+
+async def test_delete_multiple_flows(client: AsyncClient, logged_in_headers):
+    response = await client.delete("api/v1/flows/", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+
+
+async def test_download_multiple_file(client: AsyncClient, logged_in_headers):
+    response = await client.post("api/v1/flows/", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
