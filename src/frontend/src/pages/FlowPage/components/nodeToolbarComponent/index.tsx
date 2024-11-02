@@ -127,6 +127,11 @@ export default function NodeToolbarComponent({
     setSuccessData({ title: `${data.id} saved successfully` });
     return;
   }
+  // Check if any of the data.node.template fields have tool_mode as True
+  // if so we can show the tool mode button
+  const hasToolMode = Object.values(data.node!.template).some(
+    (field) => field.tool_mode,
+  );
 
   function openDocs() {
     if (data.node?.documentation) {
@@ -331,7 +336,12 @@ export default function NodeToolbarComponent({
     (selectTriggerRef.current! as HTMLElement)?.click();
   };
 
-  const [toolMode, setToolMode] = useState(false);
+  const [toolMode, setToolMode] = useState(() => {
+    // Check if any template field has tool_mode set to true
+    return Object.values(data.node!.template).some(
+      (field) => field.tool_mode === true,
+    );
+  });
 
   const postToolModeValue = usePostTemplateValue({
     node: data.node!,
@@ -429,35 +439,40 @@ export default function NodeToolbarComponent({
               <span className="text-[13px] font-medium">Freeze Path</span>
             </Button>
           </ShadTooltip>
-          <ShadTooltip
-            content={
-              <ShortcutDisplay
-                {...shortcuts.find(
-                  ({ name }) => name.toLowerCase() === "tool mode",
-                )!}
-              />
-            }
-            side="top"
-          >
-            <Button
-              className={cn("node-toolbar-buttons", toolMode && "text-primary")}
-              variant="ghost"
-              onClick={(event) => {
-                event.preventDefault();
-                handleSelectChange("toolMode");
-              }}
-              size="node-toolbar"
+          {hasToolMode && (
+            <ShadTooltip
+              content={
+                <ShortcutDisplay
+                  {...shortcuts.find(
+                    ({ name }) => name.toLowerCase() === "tool mode",
+                  )!}
+                />
+              }
+              side="top"
             >
-              <IconComponent
-                name="Hammer"
+              <Button
                 className={cn(
-                  "h-4 w-4 transition-all",
-                  toolMode ? "text-primary" : "",
+                  "node-toolbar-buttons",
+                  toolMode && "text-primary",
                 )}
-              />
-              <span className="text-[13px] font-medium">Tool Mode</span>
-            </Button>
-          </ShadTooltip>
+                variant="ghost"
+                onClick={(event) => {
+                  event.preventDefault();
+                  handleSelectChange("toolMode");
+                }}
+                size="node-toolbar"
+              >
+                <IconComponent
+                  name="Hammer"
+                  className={cn(
+                    "h-4 w-4 transition-all",
+                    toolMode ? "text-primary" : "",
+                  )}
+                />
+                <span className="text-[13px] font-medium">Tool Mode</span>
+              </Button>
+            </ShadTooltip>
+          )}
           <ShadTooltip
             content={
               <ShortcutDisplay
@@ -671,17 +686,19 @@ export default function NodeToolbarComponent({
                 </span>
               </div>
             </SelectItem>
-            <SelectItem value="toolMode">
-              <ToolbarSelectItem
-                shortcut={
-                  shortcuts.find((obj) => obj.name === "Tool Mode")?.shortcut!
-                }
-                value={"Tool Mode"}
-                icon={"Tool"}
-                dataTestId="tool-mode-button"
-                style={`${toolMode ? " text-ice" : ""} transition-all`}
-              />
-            </SelectItem>
+            {hasToolMode && (
+              <SelectItem value="toolMode">
+                <ToolbarSelectItem
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Tool Mode")?.shortcut!
+                  }
+                  value={"Tool Mode"}
+                  icon={"Hammer"}
+                  dataTestId="tool-mode-button"
+                  style={`${toolMode ? "text-primary" : ""} transition-all`}
+                />
+              </SelectItem>
+            )}
           </SelectContent>
         </Select>
 
