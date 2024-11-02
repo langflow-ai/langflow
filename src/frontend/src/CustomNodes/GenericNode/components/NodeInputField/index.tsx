@@ -37,6 +37,7 @@ export default function NodeInputField({
   proxy,
   showNode,
   colorName,
+  isToolMode = false,
 }: NodeInputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const nodes = useFlowStore((state) => state.nodes);
@@ -104,19 +105,20 @@ export default function NodeInputField({
   ) : (
     <div
       ref={ref}
-      className={
-        "relative mt-1 flex min-h-10 w-full flex-wrap items-center justify-between px-5 py-2" +
-        ((name === "code" && type === "code") ||
-        (name.includes("code") && proxy)
-          ? " hidden"
-          : "")
-      }
+      className={cn(
+        "relative mt-1 flex min-h-10 w-full flex-wrap items-center justify-between px-5 py-2",
+        isToolMode && "rounded-md bg-primary/10",
+        (name === "code" && type === "code") || (name.includes("code") && proxy)
+          ? "hidden"
+          : "",
+      )}
     >
       {displayHandle && Handle}
       <div
         className={cn(
           "flex w-full flex-col gap-2",
           isFlexView ? "flex-row" : "flex-col",
+          isToolMode && "border-l-2 border-primary pl-2",
         )}
       >
         <div className="flex w-full items-center justify-between text-sm">
