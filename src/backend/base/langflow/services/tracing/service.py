@@ -107,9 +107,9 @@ class TracingService(Service):
     async def initialize_tracers(self) -> None:
         try:
             await self.start()
-            self._initialize_langsmith_tracer()
-            self._initialize_langwatch_tracer()
-            self._initialize_langfuse_tracer()
+            await asyncio.to_thread(self._initialize_langsmith_tracer)
+            await asyncio.to_thread(self._initialize_langwatch_tracer)
+            await asyncio.to_thread(self._initialize_langfuse_tracer)
         except Exception:  # noqa: BLE001
             logger.opt(exception=True).debug("Error initializing tracers")
 
