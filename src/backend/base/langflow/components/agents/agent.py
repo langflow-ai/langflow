@@ -18,7 +18,7 @@ def set_advanced_true(component_input):
     return component_input
 
 
-class SimpleAgentComponent(ToolCallingAgentComponent):
+class AgentComponent(ToolCallingAgentComponent):
     display_name: str = "Agent"
     description: str = "Define the agent's instructions, then enter a task to complete using tools."
     icon = "bot"
