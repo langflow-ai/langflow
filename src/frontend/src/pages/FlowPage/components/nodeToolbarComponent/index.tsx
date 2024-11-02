@@ -484,35 +484,6 @@ export default function NodeToolbarComponent({
             content={
               <ShortcutDisplay
                 {...shortcuts.find(
-                  ({ name }) => name.toLowerCase() === "tool mode",
-                )!}
-              />
-            }
-            side="top"
-          >
-            <Button
-              className={cn("node-toolbar-buttons", toolMode && "text-primary")}
-              variant="ghost"
-              onClick={(event) => {
-                event.preventDefault();
-                handleSelectChange("toolMode");
-              }}
-              size="node-toolbar"
-            >
-              <IconComponent
-                name="Hammer"
-                className={cn(
-                  "h-4 w-4 transition-all",
-                  toolMode ? "text-primary" : "",
-                )}
-              />
-              <span className="text-[13px] font-medium">Tool Mode</span>
-            </Button>
-          </ShadTooltip>
-          <ShadTooltip
-            content={
-              <ShortcutDisplay
-                {...shortcuts.find(
                   ({ name }) => name.toLowerCase() === "copy",
                 )!}
               />
