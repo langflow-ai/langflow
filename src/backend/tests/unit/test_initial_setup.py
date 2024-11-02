@@ -1,8 +1,11 @@
+import asyncio
 from datetime import datetime
 from pathlib import Path
 
 import pytest
-from langflow.custom.directory_reader.utils import build_custom_component_list_from_path
+from langflow.custom.directory_reader.utils import (
+    abuild_custom_component_list_from_path,
+)
 from langflow.initial_setup.setup import (
     STARTER_FOLDER_NAME,
     get_project_data,
@@ -51,7 +54,7 @@ def test_get_project_data():
 async def test_create_or_update_starter_projects():
     with session_scope() as session:
         # Get the number of projects returned by load_starter_projects
-        num_projects = len(load_starter_projects())
+        num_projects = len(await asyncio.to_thread(load_starter_projects))
 
         # Get the number of projects in the database
         folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
@@ -128,7 +131,7 @@ def add_edge(source, target, from_output, to_input):
 
 async def test_refresh_starter_projects():
     data_path = str(Path(__file__).parent.parent.parent.absolute() / "base" / "langflow" / "components")
-    components = build_custom_component_list_from_path(data_path)
+    components = await abuild_custom_component_list_from_path(data_path)
 
     chat_input = find_component_by_name(components, "ChatInput")
     chat_output = find_component_by_name(components, "ChatOutput")
