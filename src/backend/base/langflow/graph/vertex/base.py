@@ -462,9 +462,9 @@ class Vertex:
         self.params = self.raw_params.copy()
         self.updated_raw_params = True
 
-    async def instantiate_component(self, user_id=None) -> None:
+    def instantiate_component(self, user_id=None) -> None:
         if not self.custom_component:
-            self.custom_component, _ = await initialize.loading.instantiate_class(
+            self.custom_component, _ = initialize.loading.instantiate_class(
                 user_id=user_id,
                 vertex=self,
             )
@@ -484,7 +484,7 @@ class Vertex:
             raise ValueError(msg)
 
         if not self.custom_component:
-            custom_component, custom_params = await initialize.loading.instantiate_class(
+            custom_component, custom_params = initialize.loading.instantiate_class(
                 user_id=user_id, vertex=self, event_manager=event_manager
             )
         else:

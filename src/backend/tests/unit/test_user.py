@@ -155,7 +155,7 @@ async def test_inactive_user(client: AsyncClient):
 
 
 @pytest.mark.api_key_required
-async def test_add_user(test_user):
+def test_add_user(test_user):
     assert test_user["username"] == "testuser"
 
 
