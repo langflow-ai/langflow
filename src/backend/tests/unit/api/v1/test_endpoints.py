@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 from fastapi import status
@@ -5,8 +6,10 @@ from httpx import AsyncClient
 from langflow.api.v1.schemas import UpdateCustomComponentRequest
 
 
-def get_dynamic_output_component_code():
-    return Path("src/backend/tests/data/dynamic_output_component.py").read_text(encoding="utf-8")
+async def get_dynamic_output_component_code():
+    return await asyncio.to_thread(Path("src/backend/tests/data/dynamic_output_component.py").read_text)(
+        encoding="utf-8"
+    )
 
 
 async def test_get_version(client: AsyncClient):
