@@ -407,7 +407,6 @@ export function FlowSidebarComponent() {
                           Object.keys(dataFilter[item.name]).length > 0 && (
                             <Disclosure
                               key={item.name}
-                              className="group/collapsible"
                               open={openCategories.includes(item.name)}
                               onOpenChange={(isOpen) => {
                                 setOpenCategories((prev) =>
@@ -418,7 +417,7 @@ export function FlowSidebarComponent() {
                               }}
                             >
                               <SidebarMenuItem>
-                                <DisclosureTrigger>
+                                <DisclosureTrigger className="group/collapsible">
                                   <SidebarMenuButton asChild>
                                     <div
                                       data-testid={`disclosure-${item.display_name.toLocaleLowerCase()}`}
@@ -430,14 +429,14 @@ export function FlowSidebarComponent() {
                                     >
                                       <ForwardedIconComponent
                                         name={item.icon}
-                                        className="h-4 w-4 text-muted-foreground group-data-[state=open]/collapsible:text-pink-600 group-data-[state=open]/collapsible:dark:text-pink-400"
+                                        className="group-aria-expanded/collapsible:x-gradient h-4 w-4"
                                       />
-                                      <span className="group-data-[state=open]/collapsible:font-semibold">
+                                      <span className="group-aria-expanded/collapsible:font-semibold">
                                         {item.display_name}
                                       </span>
                                       <ForwardedIconComponent
                                         name="ChevronRight"
-                                        className="h-4 w-4 text-muted-foreground transition-all group-data-[state=open]/collapsible:rotate-90"
+                                        className="h-4 w-4 text-muted-foreground transition-all group-aria-expanded/collapsible:rotate-90"
                                       />
                                     </div>
                                   </SidebarMenuButton>
@@ -535,7 +534,6 @@ export function FlowSidebarComponent() {
                           Object.keys(dataFilter[item.name]).length > 0 && (
                             <Disclosure
                               key={item.name}
-                              className="group/collapsible"
                               open={openCategories.includes(item.name)}
                               onOpenChange={(isOpen) => {
                                 setOpenCategories((prev) =>
@@ -546,7 +544,7 @@ export function FlowSidebarComponent() {
                               }}
                             >
                               <SidebarMenuItem>
-                                <DisclosureTrigger>
+                                <DisclosureTrigger className="group/collapsible">
                                   <SidebarMenuButton asChild>
                                     <div
                                       tabIndex={0}
@@ -557,14 +555,14 @@ export function FlowSidebarComponent() {
                                     >
                                       <ForwardedIconComponent
                                         name={item.icon}
-                                        className="h-4 w-4 text-muted-foreground group-data-[state=open]/collapsible:text-pink-600 group-data-[state=open]/collapsible:dark:text-pink-400"
+                                        className="h-4 w-4 text-muted-foreground group-aria-expanded/collapsible:text-primary"
                                       />
-                                      <span className="group-data-[state=open]/collapsible:font-semibold">
+                                      <span className="group-aria-expanded/collapsible:font-semibold">
                                         {item.display_name}
                                       </span>
                                       <ForwardedIconComponent
                                         name="ChevronRight"
-                                        className="h-4 w-4 text-muted-foreground transition-all group-data-[state=open]/collapsible:rotate-90"
+                                        className="h-4 w-4 text-muted-foreground transition-all group-aria-expanded/collapsible:rotate-90"
                                       />
                                     </div>
                                   </SidebarMenuButton>
