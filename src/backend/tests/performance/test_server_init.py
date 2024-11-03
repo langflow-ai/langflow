@@ -1,5 +1,6 @@
 import asyncio
 
+import pytest
 from asgi_lifespan import LifespanManager
 
 
@@ -17,13 +18,11 @@ async def test_database_initialization(benchmark):
     assert result is not None
 
 
-async def test_app_startup(benchmark):
+@pytest.mark.benchmark
+async def test_app_startup():
     """Test application startup performance."""
+    from langflow.main import create_app
 
-    @benchmark
-    async def startup():
-        from langflow.main import create_app
-
-        app = await asyncio.to_thread(create_app)
-        async with LifespanManager(app):
-            return app
+    app = await asyncio.to_thread(create_app)
+    async with LifespanManager(app):
+        assert app is not None
