@@ -302,6 +302,12 @@ export function FlowSidebarComponent() {
       dataFilter[item.name] && Object.keys(dataFilter[item.name]).length > 0,
   );
 
+  function handleClearSearch() {
+    setSearch("");
+    setFilterData(data);
+    setOpenCategories([]);
+  }
+
   return (
     <Sidebar collapsible="offcanvas" data-testid="shad-sidebar">
       <SidebarHeader className="flex w-full flex-col gap-4 p-4 pb-1">
@@ -649,15 +655,16 @@ export function FlowSidebarComponent() {
             )}
           </>
         ) : (
-          <div className="flex h-full flex-col items-center justify-center p-4 text-center">
-            <ForwardedIconComponent
-              name="Search"
-              className="mb-4 h-8 w-8 text-muted-foreground"
-            />
-            <h3 className="mb-2 text-lg font-semibold">No results found</h3>
-            <p className="text-sm text-muted-foreground">
-              Try adjusting your search or filter to find what you're looking
-              for.
+          <div className="flex h-full flex-col items-center justify-center text-center">
+            <p className="text-sm text-secondary-foreground">
+              No components found.{" "}
+              <a
+                className="cursor-pointer underline underline-offset-4"
+                onClick={handleClearSearch}
+              >
+                Clear your search
+              </a>{" "}
+              or filter and try a different query.
             </p>
           </div>
         )}
