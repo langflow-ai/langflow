@@ -430,11 +430,6 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Agents", name: "agents", icon: "Bot" },
   { display_name: "Chains", name: "chains", icon: "Link" },
   { display_name: "Loaders", name: "documentloaders", icon: "Paperclip" },
-  {
-    display_name: "Utilities",
-    name: "langchain_utilities",
-    icon: "PocketKnife",
-  },
   { display_name: "Link Extractors", name: "link_extractors", icon: "Link2" },
   { display_name: "Memories", name: "memories", icon: "Cpu" },
   { display_name: "Output Parsers", name: "output_parsers", icon: "Compass" },
