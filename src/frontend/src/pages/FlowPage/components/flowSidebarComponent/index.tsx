@@ -363,6 +363,7 @@ export function FlowSidebarComponent() {
             type="search"
             data-testid="sidebar-search-input"
             className="w-full rounded-lg bg-background pl-8 text-sm"
+            placeholder=""
             onFocus={() => setIsInputFocused(true)}
             onBlur={() => setIsInputFocused(false)}
             value={search}
