@@ -166,7 +166,7 @@ export const SidebarDraggableComponent = forwardRef(
               >
                 <ForwardedIconComponent
                   name="Plus"
-                  className="h-4 w-4 shrink-0 opacity-0 transition-all group-hover/draggable:opacity-100 group-focus/draggable:opacity-100"
+                  className="h-4 w-4 shrink-0 transition-all group-hover/draggable:opacity-100 group-focus/draggable:opacity-100 sm:opacity-0"
                 />
               </Button>
               <div ref={popoverRef}>
