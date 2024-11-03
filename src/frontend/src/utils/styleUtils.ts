@@ -445,9 +445,9 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
   { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
   {
-    display_name: "Astra Assistants",
+    display_name: "DataStax",
     name: "astra_assistants",
-    icon: "Sparkles",
+    icon: "AstraDB",
   },
   { display_name: "Google", name: "google", icon: "Google" },
   { display_name: "Firecrawl", name: "firecrawl", icon: "FirecrawlCrawlApi" },
