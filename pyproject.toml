@@ -109,6 +109,7 @@ dependencies = [
     "langchain-milvus>=0.1.1",
     "langchain-google-community~=2.0.1",
     "langchain-elasticsearch>=0.2.0",
+    "langchain-ollama>=0.2.0",
 ]
 
 [project.urls]
