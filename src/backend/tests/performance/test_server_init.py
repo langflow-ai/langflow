@@ -4,7 +4,8 @@ import pytest
 from asgi_lifespan import LifespanManager
 
 
-async def test_database_initialization(benchmark):
+@pytest.mark.benchmark
+async def test_database_initialization():
     """Test database initialization performance."""
 
     async def init_db():
@@ -14,7 +15,7 @@ async def test_database_initialization(benchmark):
         await asyncio.to_thread(create_app)
         return get_db_service()
 
-    result = benchmark(init_db)
+    result = await init_db()
     assert result is not None
 
 
