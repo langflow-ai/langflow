@@ -11,7 +11,7 @@ from langflow.services.deps import session_scope
 
 
 @pytest.fixture
-async def created_message():
+def created_message():
     with session_scope() as session:
         message = MessageCreate(text="Test message", sender="User", sender_name="User", session_id="session_id")
         messagetable = MessageTable.model_validate(message, from_attributes=True)

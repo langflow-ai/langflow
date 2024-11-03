@@ -7,7 +7,7 @@ from httpx import AsyncClient
 
 
 @pytest.fixture
-async def body():
+def body():
     return {
         "name": "test_variable",
         "value": "test_value",

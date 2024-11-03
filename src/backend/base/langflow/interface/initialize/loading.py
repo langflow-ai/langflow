@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
 
 
-async def instantiate_class(
+def instantiate_class(
     vertex: Vertex,
     user_id=None,
     event_manager: EventManager | None = None,

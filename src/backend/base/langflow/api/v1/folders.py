@@ -206,7 +206,7 @@ async def update_folder(
 
 
 @router.delete("/{folder_id}", status_code=204)
-async def delete_folder(
+def delete_folder(
     *,
     session: DbSession,
     folder_id: str,
@@ -216,7 +216,7 @@ async def delete_folder(
         flows = session.exec(select(Flow).where(Flow.folder_id == folder_id, Flow.user_id == current_user.id)).all()
         if len(flows) > 0:
             for flow in flows:
-                await cascade_delete_flow(session, flow)
+                cascade_delete_flow(session, flow)
 
         folder = session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id)).first()
     except Exception as e:

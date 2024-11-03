@@ -1,3 +1,4 @@
+import asyncio
 from typing import Annotated
 from uuid import UUID
 
@@ -67,7 +68,7 @@ async def share_component(
     store_api_key: Annotated[str, Depends(get_user_store_api_key)],
 ) -> CreateComponentResponse:
     try:
-        await check_langflow_version(component)
+        await asyncio.to_thread(check_langflow_version, component)
         return await get_store_service().upload(store_api_key, component)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -80,7 +81,7 @@ async def update_shared_component(
     store_api_key: Annotated[str, Depends(get_user_store_api_key)],
 ) -> CreateComponentResponse:
     try:
-        await check_langflow_version(component)
+        await asyncio.to_thread(check_langflow_version, component)
         return await get_store_service().update(store_api_key, component_id, component)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import random
 import warnings
@@ -32,7 +33,7 @@ MINIMUM_KEY_LENGTH = 32
 
 
 # Source: https://github.com/mrtolkien/fastapi_simple_security/blob/master/fastapi_simple_security/security_api_key.py
-async def api_key_security(
+def api_key_security(
     query_param: Annotated[str, Security(api_key_query)],
     header_param: Annotated[str, Security(api_key_header)],
     db: Annotated[Session, Depends(get_session)],
@@ -82,7 +83,7 @@ async def get_current_user(
 ) -> User:
     if token:
         return await get_current_user_by_jwt(token, db)
-    user = await api_key_security(query_param, header_param, db)
+    user = await asyncio.to_thread(api_key_security, query_param, header_param, db)
     if user:
         return user
 
@@ -163,7 +164,7 @@ async def get_current_user_for_websocket(
     if token:
         return await get_current_user_by_jwt(token, db)
     if api_key:
-        return await api_key_security(api_key, query_param, db)
+        return await asyncio.to_thread(api_key_security, api_key, query_param, db)
     return None
 
 
