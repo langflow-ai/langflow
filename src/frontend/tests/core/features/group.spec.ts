@@ -16,7 +16,7 @@ test.describe("group node test", () => {
     }
 
     while (modalCount === 0) {
-      await page.getByText("New Project", { exact: true }).click();
+      await page.getByText("New Flow", { exact: true }).click();
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 

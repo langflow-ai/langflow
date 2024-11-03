@@ -98,7 +98,7 @@ def get_is_component_from_data(data: dict):
     return data.get("is_component")
 
 
-async def check_langflow_version(component: StoreComponentCreate) -> None:
+def check_langflow_version(component: StoreComponentCreate) -> None:
     from langflow.utils.version import get_version_info
 
     __version__ = get_version_info()["version"]
@@ -264,7 +264,7 @@ def parse_value(value: Any, input_type: str) -> Any:
     return value
 
 
-async def cascade_delete_flow(session: Session, flow: Flow) -> None:
+def cascade_delete_flow(session: Session, flow: Flow) -> None:
     try:
         session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow.id))
         session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow.id))

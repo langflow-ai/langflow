@@ -1,4 +1,3 @@
-import pytest
 from langflow.components.inputs import ChatInput
 from langflow.components.outputs import ChatOutput
 from langflow.components.prompts import PromptComponent
@@ -8,7 +7,6 @@ from langflow.schema.message import Message
 from tests.integration.utils import run_flow
 
 
-@pytest.mark.asyncio
 async def test_simple_no_llm():
     graph = Graph()
     flow_input = graph.add_component(ChatInput())
