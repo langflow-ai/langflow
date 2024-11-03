@@ -161,7 +161,7 @@ export const SidebarDraggableComponent = forwardRef(
                 variant="ghost"
                 size="icon"
                 tabIndex={-1}
-                className="text-muted-foreground hover:text-primary group-focus/draggable:text-primary"
+                className="text-primary"
                 onClick={() => addComponent(apiClass, itemName)}
               >
                 <ForwardedIconComponent
@@ -172,7 +172,7 @@ export const SidebarDraggableComponent = forwardRef(
               <div ref={popoverRef}>
                 <ForwardedIconComponent
                   name="GripVertical"
-                  className="h-4 w-4 shrink-0 text-muted-foreground"
+                  className="h-4 w-4 shrink-0 text-muted-foreground group-hover/draggable:text-primary"
                 />
                 <SelectTrigger tabIndex={-1}></SelectTrigger>
                 <SelectContent
