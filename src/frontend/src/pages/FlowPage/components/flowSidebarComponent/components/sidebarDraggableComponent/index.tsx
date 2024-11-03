@@ -6,6 +6,7 @@ import { DragEventHandler, forwardRef, useRef, useState } from "react";
 import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../../../components/genericIconComponent";
+import ShadTooltip from "../../../../../../components/shadTooltipComponent";
 import {
   Select,
   SelectContent,
@@ -134,9 +135,11 @@ export const SidebarDraggableComponent = forwardRef(
           >
             <ForwardedIconComponent name={icon} className="h-5 w-5 shrink-0" />
             <div className="flex flex-1 items-center overflow-hidden">
-              <span className="truncate text-sm font-semibold">
-                {display_name}
-              </span>
+              <ShadTooltip content={display_name} styleClasses="z-50">
+                <span className="truncate text-sm font-semibold">
+                  {display_name}
+                </span>
+              </ShadTooltip>
               {beta && (
                 <Badge
                   variant="pinkStatic"
