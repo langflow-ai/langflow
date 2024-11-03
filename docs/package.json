@@ -15,7 +15,7 @@
     "@docusaurus/core": "^3.2.0",
     "@docusaurus/plugin-google-tag-manager": "^3.2.0",
     "@docusaurus/preset-classic": "^3.5.0",
-    "@easyops-cn/docusaurus-search-local": "^0.44.3",
+    "@easyops-cn/docusaurus-search-local": "^0.45.0",
     "@mdx-js/react": "^3.0.1",
     "@mendable/search": "^0.0.206",
     "@sillsdev/docu-notion": "^0.16.0",
