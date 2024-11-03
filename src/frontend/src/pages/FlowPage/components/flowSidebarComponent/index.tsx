@@ -663,15 +663,24 @@ export function FlowSidebarComponent() {
       <SidebarFooter className="border-t p-4 py-3">
         {hasStore && (
           <SidebarMenuButton asChild>
-            <CustomLink to="/store">
-              <div className="flex items-center gap-2">
+            <CustomLink
+              to="/store"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group/discover"
+            >
+              <div className="flex w-full items-center gap-2">
                 <ForwardedIconComponent
                   name="Store"
                   className="h-4 w-4 text-muted-foreground"
                 />
-                <span className="group-data-[state=open]/collapsible:font-semibold">
+                <span className="flex-1 group-data-[state=open]/collapsible:font-semibold">
                   Discover more components
                 </span>
+                <ForwardedIconComponent
+                  name="SquareArrowOutUpRight"
+                  className="h-4 w-4 opacity-0 group-hover/discover:opacity-100"
+                />
               </div>
             </CustomLink>
           </SidebarMenuButton>
