@@ -1,5 +1,6 @@
 import asyncio
 from pathlib import Path
+from typing import Any
 
 from fastapi import status
 from httpx import AsyncClient
@@ -47,8 +48,8 @@ async def test_get_sidebar_components(client: AsyncClient):
 
 
 async def test_update_component_outputs(client: AsyncClient, logged_in_headers: dict):
-    code = get_dynamic_output_component_code()
-    frontend_node = {"outputs": []}
+    code = await get_dynamic_output_component_code()
+    frontend_node: dict[str, Any] = {"outputs": []}
     request = UpdateCustomComponentRequest(
         code=code,
         frontend_node=frontend_node,
