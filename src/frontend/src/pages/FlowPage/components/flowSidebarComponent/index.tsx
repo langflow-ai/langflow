@@ -309,16 +309,18 @@ export function FlowSidebarComponent() {
           <div className="flex w-full items-center justify-between">
             <h3 className="text-sm font-semibold">Components</h3>
             <DisclosureTrigger>
-              <Button
-                variant={showConfig ? "ghostActive" : "ghost"}
-                size="iconMd"
-                data-testid="sidebar-options-trigger"
-              >
-                <ForwardedIconComponent
-                  name="SlidersHorizontal"
-                  className="h-4 w-4"
-                />
-              </Button>
+              <ShadTooltip content="Component settings" styleClasses="z-50">
+                <Button
+                  variant={showConfig ? "ghostActive" : "ghost"}
+                  size="iconMd"
+                  data-testid="sidebar-options-trigger"
+                >
+                  <ForwardedIconComponent
+                    name="SlidersHorizontal"
+                    className="h-4 w-4"
+                  />
+                </Button>
+              </ShadTooltip>
             </DisclosureTrigger>
           </div>
           <DisclosureContent>
