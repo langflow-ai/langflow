@@ -7,11 +7,6 @@ import ShadTooltip from "@/components/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
   Disclosure,
   DisclosureContent,
   DisclosureTrigger,
@@ -303,7 +298,7 @@ export function FlowSidebarComponent() {
   };
 
   return (
-    <Sidebar data-testid="shad-sidebar">
+    <Sidebar collapsible="offcanvas" data-testid="shad-sidebar">
       <SidebarHeader className="flex w-full flex-col gap-4 p-4 pb-1">
         <Disclosure open={showConfig} onOpenChange={setShowConfig}>
           <div className="flex w-full items-center justify-between">
@@ -410,7 +405,7 @@ export function FlowSidebarComponent() {
                         (item) =>
                           dataFilter[item.name] &&
                           Object.keys(dataFilter[item.name]).length > 0 && (
-                            <Collapsible
+                            <Disclosure
                               key={item.name}
                               className="group/collapsible"
                               open={openCategories.includes(item.name)}
@@ -423,7 +418,7 @@ export function FlowSidebarComponent() {
                               }}
                             >
                               <SidebarMenuItem>
-                                <CollapsibleTrigger asChild>
+                                <DisclosureTrigger>
                                   <SidebarMenuButton asChild>
                                     <div
                                       data-testid={`disclosure-${item.display_name.toLocaleLowerCase()}`}
@@ -446,8 +441,8 @@ export function FlowSidebarComponent() {
                                       />
                                     </div>
                                   </SidebarMenuButton>
-                                </CollapsibleTrigger>
-                                <CollapsibleContent>
+                                </DisclosureTrigger>
+                                <DisclosureContent>
                                   <div className="flex flex-col gap-1 py-2">
                                     {Object.keys(dataFilter[item.name])
                                       .sort((a, b) =>
@@ -516,9 +511,9 @@ export function FlowSidebarComponent() {
                                         </ShadTooltip>
                                       ))}
                                   </div>
-                                </CollapsibleContent>
+                                </DisclosureContent>
                               </SidebarMenuItem>
-                            </Collapsible>
+                            </Disclosure>
                           ),
                       )}
                 </SidebarMenu>
@@ -538,7 +533,7 @@ export function FlowSidebarComponent() {
                         (item) =>
                           dataFilter[item.name] &&
                           Object.keys(dataFilter[item.name]).length > 0 && (
-                            <Collapsible
+                            <Disclosure
                               key={item.name}
                               className="group/collapsible"
                               open={openCategories.includes(item.name)}
@@ -551,7 +546,7 @@ export function FlowSidebarComponent() {
                               }}
                             >
                               <SidebarMenuItem>
-                                <CollapsibleTrigger asChild>
+                                <DisclosureTrigger>
                                   <SidebarMenuButton asChild>
                                     <div
                                       tabIndex={0}
@@ -573,8 +568,8 @@ export function FlowSidebarComponent() {
                                       />
                                     </div>
                                   </SidebarMenuButton>
-                                </CollapsibleTrigger>
-                                <CollapsibleContent>
+                                </DisclosureTrigger>
+                                <DisclosureContent>
                                   <div className="flex flex-col gap-1 py-2">
                                     {Object.keys(dataFilter[item.name])
                                       .sort((a, b) =>
@@ -643,9 +638,9 @@ export function FlowSidebarComponent() {
                                         </ShadTooltip>
                                       ))}
                                   </div>
-                                </CollapsibleContent>
+                                </DisclosureContent>
                               </SidebarMenuItem>
-                            </Collapsible>
+                            </Disclosure>
                           ),
                       )}
                 </SidebarMenu>
