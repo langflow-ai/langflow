@@ -124,6 +124,7 @@ export type outputComponentType = {
   idx: number;
   name: string;
   proxy?: OutputFieldProxyType;
+  isToolMode?: boolean;
 };
 
 export type DisclosureComponentType = {

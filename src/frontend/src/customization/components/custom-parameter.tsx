@@ -12,6 +12,7 @@ export function CustomParameterComponent({
   handleNodeClass,
   nodeClass,
   disabled,
+  placeholder,
 }: {
   handleOnNewValue: handleOnNewValueType;
   name: string;
@@ -22,6 +23,7 @@ export function CustomParameterComponent({
   handleNodeClass: (value: any, code?: string, type?: string) => void;
   nodeClass: APIClassType;
   disabled: boolean;
+  placeholder?: string;
 }) {
   return (
     <ParameterRenderComponent
@@ -34,6 +36,7 @@ export function CustomParameterComponent({
       handleNodeClass={handleNodeClass}
       nodeClass={nodeClass}
       disabled={disabled}
+      placeholder={placeholder}
     />
   );
 }
