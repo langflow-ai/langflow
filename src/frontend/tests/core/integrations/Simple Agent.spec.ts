@@ -132,11 +132,6 @@ test("Simple Agent", async ({ page }) => {
     state: "visible",
   });
 
-  await page.waitForSelector("role=tab", {
-    timeout: 100000,
-    state: "visible",
-  });
-
   await page.waitForTimeout(1000);
 
   await page.getByTestId("copy-code-button").last().click();
