@@ -292,6 +292,7 @@ export default function NodeToolbarComponent({
       case "toolMode":
         const newValue = !toolMode;
         setToolMode(newValue);
+
         mutateTemplate(
           newValue,
           data.node!,
