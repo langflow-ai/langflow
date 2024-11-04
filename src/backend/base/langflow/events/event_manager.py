@@ -60,7 +60,7 @@ class EventManager:
             _callback = partial(callback, manager=self, event_type=event_type)
         self.events[name] = _callback
 
-    def send_event(self, *, event_type: str, data: LoggableType):
+    def send_event(self, *, event_type: Literal["message", "error", "warning", "info", "token"], data: LoggableType):
         try:
             if isinstance(data, dict) and event_type in ["message", "error", "warning", "info", "token"]:
                 data = create_event_by_type(event_type, **data)
