@@ -31,7 +31,6 @@ async def test_build_flow_from_request_data(client, json_memory_chatbot_no_llm, 
     check_messages(flow_id)
 
 
-@pytest.mark.benchmark
 async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, logged_in_headers):
     flow_id = await _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
 
