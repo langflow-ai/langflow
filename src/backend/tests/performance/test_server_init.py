@@ -24,7 +24,9 @@ async def test_setup_llm_caching():
 async def test_initialize_super_user():
     """Benchmark super user initialization."""
     from langflow.initial_setup.setup import initialize_super_user_if_needed
+    from langflow.services.utils import initialize_services
 
+    await asyncio.to_thread(initialize_services, fix_migration=False)
     await asyncio.to_thread(initialize_super_user_if_needed)
 
 
