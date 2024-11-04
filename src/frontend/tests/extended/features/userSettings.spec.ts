@@ -106,10 +106,12 @@ test("should interact with global variables", async ({ page }) => {
 
   await page.getByText(randomName3).last().isVisible();
 
+  await page.waitForTimeout(2000);
+
   const focusElementsOnBoard = async ({ page }) => {
     await page.waitForSelector(
       '[aria-label="Press Space to toggle all rows selection (unchecked)"]',
-      { timeout: 30000 },
+      { timeout: 30000, state: "visible" },
     );
     const focusElements = await page
       .getByLabel("Press Space to toggle all rows selection (unchecked)")
