@@ -84,4 +84,4 @@ class GoogleOAuthToken(Component):
             with open(token_path, "w") as token_file:
                 token_file.write(creds.to_json())
 
-        return creds.to_json()
+        return Data(data=creds.to_json())
