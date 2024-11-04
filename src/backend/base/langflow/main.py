@@ -87,6 +87,8 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
 
 
 def get_lifespan(*, fix_migration=False, version=None):
+    telemetry_service = get_telemetry_service()
+
     def _initialize():
         initialize_services(fix_migration=fix_migration)
         setup_llm_caching()
@@ -104,7 +106,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             await asyncio.to_thread(_initialize)
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
             await asyncio.to_thread(create_or_update_starter_projects, all_types_dict)
-            get_telemetry_service().start()
+            telemetry_service.start()
             await asyncio.to_thread(load_flows_from_directory)
             yield
         except Exception as exc:

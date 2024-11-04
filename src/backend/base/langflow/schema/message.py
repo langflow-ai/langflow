@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import json
 from collections.abc import AsyncIterator, Iterator
 from datetime import datetime, timezone
@@ -117,7 +116,7 @@ class Message(Data):
         if self.sender == MESSAGE_SENDER_USER or not self.sender:
             if self.files:
                 contents = [{"type": "text", "text": text}]
-                contents.extend(self.sync_get_file_content_dicts())
+                contents.extend(self.get_file_content_dicts())
                 human_message = HumanMessage(content=contents)
             else:
                 human_message = HumanMessage(content=text)
@@ -170,15 +169,10 @@ class Message(Data):
             return ""
         return value
 
-    def sync_get_file_content_dicts(self):
-        coro = self.get_file_content_dicts()
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(coro)
-
     # Keep this async method for backwards compatibility
-    async def get_file_content_dicts(self):
+    def get_file_content_dicts(self):
         content_dicts = []
-        files = await get_file_paths(self.files)
+        files = get_file_paths(self.files)
 
         for file in files:
             if isinstance(file, Image):
@@ -227,7 +221,7 @@ class Message(Data):
         return formatted_prompt
 
     @classmethod
-    async def from_template_and_variables(cls, template: str, **variables):
+    def from_template_and_variables(cls, template: str, **variables):
         instance = cls(template=template, variables=variables)
         text = instance.format_text()
         # Get all Message instances from the kwargs
@@ -235,7 +229,7 @@ class Message(Data):
         contents = []
         for value in variables.values():
             if isinstance(value, cls) and value.files:
-                content_dicts = await value.get_file_content_dicts()
+                content_dicts = value.get_file_content_dicts()
                 contents.extend(content_dicts)
         if contents:
             message = HumanMessage(content=[{"type": "text", "text": text}, *contents])
@@ -245,16 +239,6 @@ class Message(Data):
         instance.prompt = jsonable_encoder(prompt_template.to_json())
         instance.messages = instance.prompt.get("kwargs", {}).get("messages", [])
         return instance
-
-    @classmethod
-    def sync_from_template_and_variables(cls, template: str, **variables):
-        # Run the async version in a sync way
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            return asyncio.run(cls.from_template_and_variables(template, **variables))
-        else:
-            return loop.run_until_complete(cls.from_template_and_variables(template, **variables))
 
 
 class DefaultModel(BaseModel):

@@ -155,7 +155,7 @@
 
   .dark {
     --foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
-    --background: 0 0% 0%; /* hsl(0, 0%, 0%) */
+    --background: 240 6% 10%; /* hsl(240, 6%, 10%) */
     --muted: 240 4% 16%; /* hsl(240, 4%, 16%) */
     --muted-foreground: 240 5% 65%; /* hsl(240, 5%, 65%) */
     --card: 0 0% 0%; /* hsl(0, 0%, 0%) */
