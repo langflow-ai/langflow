@@ -1,4 +1,4 @@
-from langchain_community.embeddings import OllamaEmbeddings
+from langchain_ollama import OllamaEmbeddings
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Embeddings

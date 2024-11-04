@@ -2,7 +2,7 @@ from typing import Any
 from urllib.parse import urljoin
 
 import httpx
-from langchain_community.chat_models import ChatOllama
+from langchain_ollama import ChatOllama
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
