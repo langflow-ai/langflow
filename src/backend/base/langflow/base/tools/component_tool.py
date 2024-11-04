@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import re
 from typing import TYPE_CHECKING
 
@@ -66,6 +67,25 @@ def _build_output_function(component: Component, output_method: Callable, event_
     return output_function
 
 
+def _build_output_async_function(
+    component: Component, output_method: Callable, event_manager: EventManager | None = None
+):
+    async def output_function(*args, **kwargs):
+        # set the component with the arguments
+        try:
+            if event_manager:
+                event_manager.on_build_start(data={"id": component._id})
+            component.set(*args, **kwargs)
+            result = await output_method()
+            if event_manager:
+                event_manager.on_build_end(data={"id": component._id})
+        except Exception as e:
+            raise ToolException(e) from e
+        return result
+
+    return output_function
+
+
 def _format_tool_name(name: str):
     # format to '^[a-zA-Z0-9_-]+$'."
     # to do that we must remove all non-alphanumeric characters
@@ -96,16 +116,23 @@ class ComponentToolkit:
                 args_schema = create_input_schema(self.component.inputs)
             name = f"{self.component.name}.{output.method}"
             formatted_name = _format_tool_name(name)
-            tools.append(
-                StructuredTool(
-                    name=formatted_name,
-                    description=build_description(component=self.component, output=output),
-                    func=_build_output_function(
-                        component=self.component,
-                        output_method=output_method,
-                        event_manager=self.component._event_manager,
-                    ),
-                    args_schema=args_schema,
+            event_manager = self.component._event_manager
+            if asyncio.iscoroutinefunction(output_method):
+                tools.append(
+                    StructuredTool(
+                        name=formatted_name,
+                        description=build_description(self.component, output),
+                        coroutine=_build_output_async_function(self.component, output_method, event_manager),
+                        args_schema=args_schema,
+                    )
                 )
-            )
+            else:
+                tools.append(
+                    StructuredTool(
+                        name=formatted_name,
+                        description=build_description(self.component, output),
+                        func=_build_output_function(self.component, output_method, event_manager),
+                        args_schema=args_schema,
+                    )
+                )
         return tools
