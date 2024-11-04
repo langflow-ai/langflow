@@ -10,6 +10,7 @@ import { useEffect, useRef } from "react";
 import { default as IconComponent } from "../../../../components/genericIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import {
+  DEFAULT_TOOLSET_PLACEHOLDER,
   FLEX_VIEW_TYPES,
   ICON_STROKE_WIDTH,
   LANGFLOW_SUPPORTED_TYPES,
@@ -106,7 +107,7 @@ export default function NodeInputField({
       ref={ref}
       className={cn(
         "relative mt-1 flex min-h-10 w-full flex-wrap items-center justify-between px-5 py-2",
-        isToolMode && "rounded-md bg-primary/10",
+        isToolMode && "bg-primary/10",
         (name === "code" && type === "code") || (name.includes("code") && proxy)
           ? "hidden"
           : "",
@@ -117,7 +118,6 @@ export default function NodeInputField({
         className={cn(
           "flex w-full flex-col gap-2",
           isFlexView ? "flex-row" : "flex-col",
-          isToolMode && "border-l-2 border-primary pl-2",
         )}
       >
         <div className="flex w-full items-center justify-between text-sm">
@@ -176,6 +176,7 @@ export default function NodeInputField({
             handleNodeClass={handleNodeClass}
             nodeClass={data.node!}
             disabled={disabled}
+            placeholder={isToolMode ? DEFAULT_TOOLSET_PLACEHOLDER : undefined}
           />
         )}
       </div>
