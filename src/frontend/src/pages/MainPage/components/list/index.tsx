@@ -21,6 +21,8 @@ import useDescriptionModal from "../../oldComponents/componentsComponent/hooks/u
 import { getTemplateStyle } from "../../utils/get-template-style";
 import { timeElapsed } from "../../utils/time-elapse";
 import DropdownComponent from "../dropdown";
+import { Card } from "@/components/ui/card";
+import useDragStart from "@/components/cardComponent/hooks/use-on-drag-start";
 
 const ListComponent = ({ flowData }: { flowData: FlowType }) => {
   const navigate = useCustomNavigate();
@@ -94,14 +96,18 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
       });
   };
 
+  const { onDragStart } = useDragStart(flowData);
+
   const descriptionModal = useDescriptionModal([flowData?.id], "flow");
 
   return (
     <>
-      <div
+      <Card
         key={flowData.id}
+        draggable
+        onDragStart={onDragStart}
         onClick={handleClick}
-        className={`my-2 flex h-[110px] ${
+        className={`my-2 flex flex-row h-[110px] bg-background ${
           isComponent ? "cursor-default" : "cursor-pointer"
         } justify-between rounded-lg border border-zinc-100 p-5 shadow-sm hover:border-border dark:border-zinc-800 dark:hover:border-muted-foreground`}
       >
@@ -185,7 +191,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </div>
+      </Card>
       {openPlayground && (
         <IOModal
           key={flowData.id}

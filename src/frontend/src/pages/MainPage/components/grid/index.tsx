@@ -20,6 +20,8 @@ import useDescriptionModal from "../../oldComponents/componentsComponent/hooks/u
 import { getTemplateStyle } from "../../utils/get-template-style";
 import { timeElapsed } from "../../utils/time-elapse";
 import DropdownComponent from "../dropdown";
+import useDragStart from "@/components/cardComponent/hooks/use-on-drag-start";
+import { Card } from "@/components/ui/card";
 
 const GridComponent = ({ flowData }: { flowData: FlowType }) => {
   const navigate = useCustomNavigate();
@@ -97,12 +99,16 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
 
   const descriptionModal = useDescriptionModal([flowData?.id], "flow");
 
+  const { onDragStart } = useDragStart(flowData);
+
   return (
     <>
-      <div
+      <Card
         key={flowData.id}
+        draggable
+        onDragStart={onDragStart}
         onClick={handleClick}
-        className={`my-1 flex flex-col rounded-lg border border-zinc-100 p-5 shadow-sm hover:border-border dark:border-zinc-800 dark:hover:border-muted-foreground ${
+        className={`my-1 flex flex-col rounded-lg bg-background border border-zinc-100 p-5 shadow-sm hover:border-border dark:border-zinc-800 dark:hover:border-muted-foreground ${
           isComponent ? "cursor-default" : "cursor-pointer"
         }`}
       >
@@ -175,7 +181,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
             </Button>
           )}
         </div>
-      </div>
+      </Card>
       {openPlayground && (
         <IOModal
           key={flowData.id}

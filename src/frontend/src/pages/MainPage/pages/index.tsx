@@ -108,7 +108,7 @@ export default function CollectionPage(): JSX.Element {
         >
           <CardsWrapComponent
             onFileDrop={handleFileDrop}
-            dragMessage={`Drag your ${folderData?.folder?.name} here`}
+            dragMessage={`Drop your file(s) here`}
           >
             {folderData && folderData?.flows?.items?.length !== 0 ? (
               <Outlet />
