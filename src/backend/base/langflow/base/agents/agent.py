@@ -293,7 +293,7 @@ async def process_agent_events(
                 )
                 agent_message.properties.icon = "⚠️"
                 agent_message = send_message_method(message=agent_message)
-            
+
             case "on_chain_stream":
                 # this is similar to the on_chain_end but here we stream tokens
                 data_chunk = event["data"].get("chunk", {})
