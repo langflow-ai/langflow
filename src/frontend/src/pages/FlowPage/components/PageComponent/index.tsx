@@ -648,7 +648,9 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             <Panel
               className={cn(
                 "react-flow__controls !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
-                open ? "-translate-x-full opacity-0" : "opacity-100",
+                open
+                  ? "pointer-events-none -translate-x-full opacity-0"
+                  : "pointer-events-auto opacity-100",
               )}
               position="top-left"
             >
