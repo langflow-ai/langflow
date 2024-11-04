@@ -21,7 +21,7 @@ router = APIRouter(tags=["Login"])
 
 
 @router.post("/login", response_model=Token)
-async def login_to_get_access_token(
+def login_to_get_access_token(
     response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: DbSession,

@@ -1,3 +1,5 @@
+import asyncio
+
 from loguru import logger
 from sqlmodel import Session, select
 
@@ -110,10 +112,15 @@ def teardown_superuser(settings_service, session) -> None:
             raise RuntimeError(msg) from exc
 
 
+def _teardown_superuser():
+    with get_db_service().with_session() as session:
+        teardown_superuser(get_settings_service(), session)
+
+
 async def teardown_services() -> None:
     """Teardown all the services."""
     try:
-        teardown_superuser(get_settings_service(), next(get_session()))
+        await asyncio.to_thread(_teardown_superuser)
     except Exception as exc:  # noqa: BLE001
         logger.exception(exc)
     try:
