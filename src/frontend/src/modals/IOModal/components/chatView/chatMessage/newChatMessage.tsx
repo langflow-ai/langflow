@@ -1,4 +1,5 @@
 import { ProfileIcon } from "@/components/appHeaderComponent/components/ProfileIcon";
+import { ContentBlockDisplay } from "@/components/chatComponents/ContentBlockDisplay";
 import { TextShimmer } from "@/components/ui/TextShimmer";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -393,6 +394,12 @@ export default function ChatMessage({
                 )}
               </div>
             </div>
+            {chat.content_blocks && chat.content_blocks.length > 0 && (
+              <ContentBlockDisplay
+                contentBlocks={chat.content_blocks}
+                isLoading={chatMessage === "" && lockChat}
+              />
+            )}
             {!chat.isSend ? (
               <div className="form-modal-chat-text-position flex-grow">
                 <div className="form-modal-chat-text">
