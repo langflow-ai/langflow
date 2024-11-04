@@ -4,8 +4,9 @@ import CanvasControls, {
   CustomControlButton,
 } from "@/components/canvasControlsComponent";
 import FlowToolbar from "@/components/flowToolbarComponent";
+import ForwardedIconComponent from "@/components/genericIconComponent";
 import LoadingComponent from "@/components/loadingComponent";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import {
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
@@ -17,7 +18,7 @@ import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useAddComponent } from "@/hooks/useAddComponent";
 import { nodeColorsName } from "@/utils/styleUtils";
-import { isSupportedNodeTypes } from "@/utils/utils";
+import { cn, isSupportedNodeTypes } from "@/utils/utils";
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -585,6 +586,8 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     document.documentElement.style.setProperty("--selected", innerColor);
   };
 
+  const { open } = useSidebar();
+
   return (
     <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
       {showCanvas ? (
@@ -643,10 +646,19 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
               </>
             )}
             <Panel
-              className="react-flow__controls !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent"
+              className={cn(
+                "react-flow__controls !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
+                open ? "-translate-x-full opacity-0" : "opacity-100",
+              )}
               position="top-left"
             >
-              <SidebarTrigger />
+              <SidebarTrigger className="h-fit w-fit px-3 py-1.5">
+                <ForwardedIconComponent
+                  name="PanelRightClose"
+                  className="h-4 w-4"
+                />
+                Components
+              </SidebarTrigger>
             </Panel>
             <SelectionMenu
               lastSelection={lastSelection}
