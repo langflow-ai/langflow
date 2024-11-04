@@ -95,7 +95,7 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
     flow_id: UUID | None = Field(default=None, foreign_key="flow.id")
     flow: "Flow" = Relationship(back_populates="messages")
     files: list[str] = Field(sa_column=Column(JSON))
-    properties: Properties = Field(default_factory=Properties, sa_column=Column(JSON))  # type: ignore[assignment]
+    properties: Properties = Field(default_factory=lambda: Properties().model_dump(), sa_column=Column(JSON))  # type: ignore[assignment]
     category: str = Field(sa_column=Column(Text))
     content_blocks: list[ContentBlockDict] = Field(default_factory=list, sa_column=Column(JSON))  # type: ignore[assignment]
 
