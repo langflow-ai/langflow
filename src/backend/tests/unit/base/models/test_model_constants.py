@@ -1,4 +1,4 @@
-from src.backend.base.langflow.base.models.model_constants import ModelConstants
+from langflow.base.models.model_constants import ModelConstants
 
 
 def test_provider_names():
