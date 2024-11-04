@@ -3,11 +3,7 @@ import {
   SAVE_DEBOUNCE_TIME,
   TITLE_ERROR_UPDATING_COMPONENT,
 } from "@/constants/constants";
-import {
-  APIClassType,
-  APITemplateType,
-  ResponseErrorDetailAPI,
-} from "@/types/api";
+import { APIClassType, ResponseErrorDetailAPI } from "@/types/api";
 import { UseMutationResult } from "@tanstack/react-query";
 import { cloneDeep, debounce } from "lodash";
 
@@ -17,7 +13,7 @@ export const mutateTemplate = debounce(
     node: APIClassType,
     setNodeClass,
     postTemplateValue: UseMutationResult<
-      APITemplateType | undefined,
+      APIClassType | undefined,
       ResponseErrorDetailAPI,
       any
     >,
@@ -29,7 +25,8 @@ export const mutateTemplate = debounce(
         value: newValue,
       });
       if (newTemplate) {
-        newNode.template = newTemplate;
+        newNode.template = newTemplate.template;
+        newNode.outputs = newTemplate.outputs;
       }
       setNodeClass(newNode);
     } catch (e) {
