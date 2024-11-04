@@ -9,7 +9,6 @@ import { useTypesStore } from "@/stores/typesStore";
 import { customStringify } from "@/utils/reactflowUtils";
 import { useEffect } from "react";
 import { useBlocker, useParams } from "react-router-dom";
-import FlowToolbar from "../../components/flowToolbarComponent";
 import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -165,7 +164,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       <div className="flow-page-positioning">
         {currentFlow && (
           <div className="flex h-full overflow-hidden">
-            <SidebarProvider>
+            <SidebarProvider width="19rem" defaultOpen={true}>
               {!view && <FlowSidebarComponent />}
               <main className="flex flex-1">
                 <div className="h-full w-full">
