@@ -1,68 +1,63 @@
 import asyncio
-import shutil
-import tempfile
-from contextlib import suppress
-from pathlib import Path
 
 import pytest
-from asgi_lifespan import LifespanManager
-from httpx import ASGITransport, AsyncClient
-from langflow.services.deps import get_db_service
+from langflow.services.deps import get_db_service, get_settings_service
 
 
 @pytest.mark.benchmark
-async def test_database_initialization():
-    """Test database initialization performance."""
+async def test_initialize_services():
+    """Benchmark the initialization of services."""
+    from langflow.services.utils import initialize_services
 
-    async def init_db():
-        from langflow.main import create_app
-        from langflow.services.deps import get_db_service
+    await asyncio.to_thread(initialize_services, fix_migration=False)
 
-        await asyncio.to_thread(create_app)
-        return get_db_service()
 
-    result = await init_db()
+@pytest.mark.benchmark
+async def test_setup_llm_caching():
+    """Benchmark LLM caching setup."""
+    from langflow.interface.utils import setup_llm_caching
+
+    await asyncio.to_thread(setup_llm_caching)
+
+
+@pytest.mark.benchmark
+async def test_initialize_super_user():
+    """Benchmark super user initialization."""
+    from langflow.initial_setup.setup import initialize_super_user_if_needed
+
+    await asyncio.to_thread(initialize_super_user_if_needed)
+
+
+async def test_get_and_cache_all_types_dict(benchmark):
+    """Benchmark get_and_cache_all_types_dict function."""
+    from langflow.interface.types import get_and_cache_all_types_dict
+
+    settings_service = await asyncio.to_thread(get_settings_service)
+    result = await benchmark(get_and_cache_all_types_dict, settings_service)
     assert result is not None
 
 
 @pytest.mark.benchmark
-async def test_app_startup(
-    monkeypatch,
-    request,
-    load_flows_dir,
-):
-    """Test application startup performance."""
-    # Set the database url to a test database
+async def test_create_starter_projects():
+    """Benchmark creation of starter projects."""
+    from langflow.initial_setup.setup import create_or_update_starter_projects
+    from langflow.interface.types import get_and_cache_all_types_dict
 
-    def init_app():
-        db_dir = tempfile.mkdtemp()
-        db_path = Path(db_dir) / "test.db"
-        monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
-        monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
-        if "load_flows" in request.keywords:
-            shutil.copyfile(
-                pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"
-            )
-            monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
-            monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
+    settings_service = await asyncio.to_thread(get_settings_service)
+    types_dict = await get_and_cache_all_types_dict(settings_service)
+    await asyncio.to_thread(create_or_update_starter_projects, types_dict)
 
-        from langflow.main import create_app
 
-        app = create_app()
-        db_service = get_db_service()
-        db_service.database_url = f"sqlite:///{db_path}"
-        db_service.reload_engine()
-        return app, db_path
+@pytest.mark.benchmark
+async def test_load_flows():
+    """Benchmark loading flows from directory."""
+    from langflow.initial_setup.setup import load_flows_from_directory
 
-    app, db_path = await asyncio.to_thread(init_app)
-    # app.dependency_overrides[get_session] = get_session_override
-    async with (
-        LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager,
-        AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/", http2=True) as client,
-    ):
-        assert client is not None
-    # app.dependency_overrides.clear()
-    monkeypatch.undo()
-    # clear the temp db
-    with suppress(FileNotFoundError):
-        db_path.unlink()
+    await asyncio.to_thread(load_flows_from_directory)
+
+
+@pytest.mark.benchmark
+async def test_database_initialization():
+    """Benchmark database initialization performance."""
+    result = await asyncio.to_thread(get_db_service)
+    assert result is not None
