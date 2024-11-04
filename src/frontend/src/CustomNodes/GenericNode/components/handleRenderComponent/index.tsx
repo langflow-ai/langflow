@@ -265,27 +265,45 @@ export default function HandleRenderComponent({
   const handleRef = useRef<HTMLDivElement>(null);
   const invisibleDivRef = useRef<HTMLDivElement>(null);
 
-  const { zoom } = useViewport();
+  // State to store node dimensions
+  const [nodeDimensions, setNodeDimensions] = useState({ width: 0, height: 0 });
 
-  const getTranslateX = () => {
-    if (left) {
-      if (zoom > 4) return "-translate-x-2/3";
-      if (zoom > 1.5) return "-translate-x-24";
-      return "-translate-x-12";
+  // Effect to measure node dimensions
+  useEffect(() => {
+    if (showNode) return;
+    const updateDimensions = () => {
+      // Find the node element using the nodeId
+      const nodeElement = document.querySelector(`[data-id="${nodeId}"]`);
+      if (nodeElement) {
+        const { width, height } = nodeElement.getBoundingClientRect();
+        setNodeDimensions({ width, height });
+      }
+    };
+
+    // Initial measurement
+    updateDimensions();
+
+    // Set up resize observer to update dimensions when node size changes
+    const resizeObserver = new ResizeObserver(updateDimensions);
+    const nodeElement = document.querySelector(
+      `[data-testid="${nodeId}-main-node"]`,
+    );
+    if (nodeElement) {
+      resizeObserver.observe(nodeElement);
     }
-    if (zoom > 4) return "translate-x-2/3";
-    if (zoom > 1.5) return "translate-x-24";
-    return "translate-x-12";
-  };
+
+    return () => {
+      if (nodeElement) {
+        resizeObserver.unobserve(nodeElement);
+      }
+    };
+  }, [showNode]);
 
   return (
     <ShadTooltip
       open={openTooltip}
       setOpen={setOpenTooltip}
-      styleClasses={cn(
-        "tooltip-fixed-width custom-scroll nowheel bottom-2 ",
-        getTranslateX(),
-      )}
+      styleClasses={cn("tooltip-fixed-width custom-scroll nowheel bottom-2 ")}
       delayDuration={1000}
       content={
         <HandleTooltipComponent
@@ -300,7 +318,7 @@ export default function HandleRenderComponent({
       side={left ? "left" : "right"}
     >
       <div>
-        <div className="relative">
+        <div className={`${!showNode ? "" : "relative"}`}>
           <Handle
             ref={handleRef}
             data-testid={`handle-${testIdComplement}-${title.toLowerCase()}-${
@@ -313,8 +331,9 @@ export default function HandleRenderComponent({
             isValidConnection={(connection) =>
               isValidConnection(connection, nodes, edges)
             }
-            className={classNames(
-              `group/handle z-50 h-12 w-12 border-none bg-transparent transition-all`,
+            className={cn(
+              `group/handle z-50 transition-all`,
+              !showNode && "no-show",
             )}
             onClick={() => {
               setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
@@ -357,6 +376,8 @@ export default function HandleRenderComponent({
             className={cn(
               "noflow nowheel nopan noselect absolute left-3.5 -translate-y-1/2 translate-x-1/3 cursor-crosshair rounded-full",
               left && "-left-5 -translate-x-1/2",
+              left && !showNode && "-translate-y-5 translate-x-4",
+              !left && !showNode && "-translate-y-5 translate-x-[10.8rem]",
             )}
             style={{
               background: isNullHandle ? "hsl(var(--border))" : handleColor,
