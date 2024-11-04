@@ -106,7 +106,7 @@ export default function CodeTabsComponent({
                           </Label>
                           <IconComponent
                             name="info"
-                            className="mr-4 h-5 w-5"
+                            className="h-3.5 w-3.5 text-placeholder-foreground"
                           />
                         </div>
                       </ShadTooltip>
