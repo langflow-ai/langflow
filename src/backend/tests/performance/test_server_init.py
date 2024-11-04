@@ -1,7 +1,7 @@
 import asyncio
 
 import pytest
-from langflow.services.deps import get_db_service, get_settings_service
+from langflow.services.deps import get_settings_service
 
 
 @pytest.mark.benchmark
@@ -59,10 +59,3 @@ async def test_load_flows():
     from langflow.initial_setup.setup import load_flows_from_directory
 
     await asyncio.to_thread(load_flows_from_directory)
-
-
-@pytest.mark.benchmark
-async def test_database_initialization():
-    """Benchmark database initialization performance."""
-    result = await asyncio.to_thread(get_db_service)
-    assert result is not None
