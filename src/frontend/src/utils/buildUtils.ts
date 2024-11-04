@@ -2,7 +2,6 @@ import { BASE_URL_API } from "@/constants/constants";
 import { performStreamingRequest } from "@/controllers/API/api";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { AxiosError } from "axios";
-import { timeStamp } from "console";
 import { flushSync } from "react-dom";
 import { Edge, Node } from "reactflow";
 import { BuildStatus } from "../constants/enums";
@@ -321,6 +320,14 @@ export async function buildFlowVertices({
         buildResults.push(false);
         return true;
       }
+      case "build_start":
+        useFlowStore
+          .getState()
+          .updateBuildStatus([data.id], BuildStatus.BUILDING);
+        break;
+      case "build_end":
+        useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILT);
+        break;
       default:
         return true;
     }
