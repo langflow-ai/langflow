@@ -397,7 +397,11 @@ export default function ChatMessage({
             {chat.content_blocks && chat.content_blocks.length > 0 && (
               <ContentBlockDisplay
                 contentBlocks={chat.content_blocks}
-                isLoading={chatMessage === "" && lockChat && chat.properties?.state === "partial"}
+                isLoading={
+                  chatMessage === "" &&
+                  lockChat &&
+                  chat.properties?.state === "partial"
+                }
               />
             )}
             {!chat.isSend ? (
