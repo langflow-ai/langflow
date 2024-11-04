@@ -5,6 +5,7 @@ import CanvasControls, {
 } from "@/components/canvasControlsComponent";
 import FlowToolbar from "@/components/flowToolbarComponent";
 import LoadingComponent from "@/components/loadingComponent";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
@@ -33,6 +34,7 @@ import ReactFlow, {
   Edge,
   NodeDragHandler,
   OnSelectionChangeParams,
+  Panel,
   SelectionDragHandler,
   updateEdge,
   useReactFlow,
@@ -640,6 +642,12 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
                 <FlowToolbar />
               </>
             )}
+            <Panel
+              className="react-flow__controls !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent"
+              position="top-left"
+            >
+              <SidebarTrigger />
+            </Panel>
             <SelectionMenu
               lastSelection={lastSelection}
               isVisible={selectionMenuVisible}
