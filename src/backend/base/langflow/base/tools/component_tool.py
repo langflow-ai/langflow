@@ -109,11 +109,23 @@ class ComponentToolkit:
 
             output_method: Callable = getattr(self.component, output.method)
             args_schema = None
+            tool_mode_inputs = [_input for _input in self.component.inputs if getattr(_input, "tool_mode", False)]
             if output.required_inputs:
                 inputs = [self.component._inputs[input_name] for input_name in output.required_inputs]
+                # If any of the required inputs are not in tool mode, this means
+                # that when the tool is called it will raise an error.
+                # so we should raise an error here.
+                if not all(getattr(_input, "tool_mode", False) for _input in inputs):
+                    non_tool_mode_inputs = [input_.name for input_ in inputs if not getattr(input_, "tool_mode", False)]
+                    msg = (
+                        f"Output '{output.name}' requires inputs that are not in tool mode. "
+                        f"The following inputs are not in tool mode: {', '.join(non_tool_mode_inputs)}. "
+                        "Please ensure all required inputs are set to tool mode."
+                    )
+                    raise ValueError(msg)
                 args_schema = create_input_schema(inputs)
             else:
-                args_schema = create_input_schema(self.component.inputs)
+                args_schema = create_input_schema(tool_mode_inputs)
             name = f"{self.component.name}.{output.method}"
             formatted_name = _format_tool_name(name)
             event_manager = self.component._event_manager
