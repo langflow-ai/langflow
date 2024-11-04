@@ -126,7 +126,12 @@ export default function FlowToolbar(): JSX.Element {
           <div className="flex gap-1.5">
             <div className="flex h-full w-full gap-1.5 rounded-sm transition-all">
               {hasIO ? (
-                <IOModal open={open} setOpen={setOpen} disable={!hasIO}>
+                <IOModal
+                  open={open}
+                  setOpen={setOpen}
+                  disable={!hasIO}
+                  canvasOpen
+                >
                   <div
                     data-testid="playground-btn-flow-io"
                     className="relative inline-flex w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-accent"
@@ -139,16 +144,18 @@ export default function FlowToolbar(): JSX.Element {
                   </div>
                 </IOModal>
               ) : (
-                <div
-                  className={`relative inline-flex w-full cursor-not-allowed items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out`}
-                  data-testid="playground-btn-flow"
-                >
-                  <ForwardedIconComponent
-                    name="Play"
-                    className={"h-4 w-4 transition-all"}
-                  />
-                  Playground
-                </div>
+                <ShadTooltip content="Add a Chat Input or Chat Output to use the playground">
+                  <div
+                    className={`relative inline-flex w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out`}
+                    data-testid="playground-btn-flow"
+                  >
+                    <ForwardedIconComponent
+                      name="BotMessageSquareIcon"
+                      className={"h-5 w-5 transition-all"}
+                    />
+                    Playground
+                  </div>
+                </ShadTooltip>
               )}
             </div>
             {ENABLE_API && (
