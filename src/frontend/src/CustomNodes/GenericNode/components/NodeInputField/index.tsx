@@ -118,7 +118,6 @@ export default function NodeInputField({
         className={cn(
           "flex w-full flex-col gap-2",
           isFlexView ? "flex-row" : "flex-col",
-          isToolMode && "border-l-2 border-primary pl-2",
         )}
       >
         <div className="flex w-full items-center justify-between text-sm">
