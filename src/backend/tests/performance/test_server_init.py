@@ -20,10 +20,17 @@ async def test_database_initialization():
 
 
 @pytest.mark.benchmark
-async def test_app_startup():
+async def test_app_startup(monkeypatch, tmp_path):
     """Test application startup performance."""
-    from langflow.main import create_app
 
-    app = await asyncio.to_thread(create_app)
-    async with LifespanManager(app):
-        assert app is not None
+    async def init_app():
+        from langflow.main import create_app
+
+        monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{tmp_path}/test.db")
+        app = await asyncio.to_thread(create_app)
+        async with LifespanManager(app):
+            return app
+
+    app = await init_app()
+    assert app is not None
+    monkeypatch.undo()
