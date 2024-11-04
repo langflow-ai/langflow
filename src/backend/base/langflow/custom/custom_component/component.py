@@ -23,7 +23,6 @@ from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import ErrorMessage, Message
 from langflow.schema.properties import Source
-from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
@@ -98,8 +97,6 @@ class Component(CustomComponent):
         self.__config = config
         self._reset_all_output_values()
         super().__init__(**config)
-        if (FEATURE_FLAGS.add_toolkit_output) and hasattr(self, "_append_tool_output") and self.add_tool_output:
-            self._append_tool_output()
         if hasattr(self, "_trace_type"):
             self.trace_type = self._trace_type
         if not hasattr(self, "trace_type"):
@@ -770,7 +767,10 @@ class Component(CustomComponent):
     async def _build_results(self) -> tuple[dict, dict]:
         _results = {}
         _artifacts = {}
+
         if hasattr(self, "outputs"):
+            if any(getattr(_input, "tool_mode", False) for _input in self.inputs):
+                self._append_tool_to_outputs_map()
             for output in self._outputs_map.values():
                 # Build the output if it's connected to some other vertex
                 # or if it's not connected to any vertex
@@ -1043,6 +1043,9 @@ class Component(CustomComponent):
             source=source,
         )
         self.send_message(error_message)
+
+    def _append_tool_to_outputs_map(self):
+        self._outputs_map[TOOL_OUTPUT_NAME] = self._build_tool_output()
 
     def _build_tool_output(self) -> Output:
         return Output(name=TOOL_OUTPUT_NAME, display_name=TOOL_OUTPUT_DISPLAY_NAME, method="to_toolkit", types=["Tool"])
