@@ -903,7 +903,7 @@ class Component(CustomComponent):
             self.outputs.append(Output(name=TOOL_OUTPUT_NAME, display_name="Tool", method="to_toolkit", types=["Tool"]))
 
     def send_message(self, message: Message, id_: str | None = None):
-        if self.graph.session_id and message is not None and message.session_id is None:
+        if self.graph.session_id and message is not None and not message.session_id:
             message.session_id = self.graph.session_id
         stored_message = self._store_message(message)
 
