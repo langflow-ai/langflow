@@ -28,7 +28,7 @@ const ShadTooltip: React.FC<ShadToolTipType> = ({
       <TooltipTrigger asChild={asChild}>{children}</TooltipTrigger>
       <TooltipContent
         className={cn(
-          "max-w-96 bg-tooltip text-[12px] text-tooltip-foreground",
+          "max-w-96 bg-tooltip text-[12px] text-tooltip-foreground z-50",
           styleClasses,
         )}
         side={side}

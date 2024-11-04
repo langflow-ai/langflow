@@ -20,7 +20,6 @@ type CustomControlButtonProps = {
   iconClasses?: string;
   testId?: string;
 };
-
 export const CustomControlButton = ({
   iconName,
   tooltipText,

@@ -16,6 +16,7 @@ import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
 import { TweaksComponent } from "./components/tweaksComponent";
+import ShadTooltip from "@/components/shadTooltipComponent";
 
 export default function CodeTabsComponent({
   open,
@@ -95,12 +96,20 @@ export default function CodeTabsComponent({
                   tabs.find((tab) => tab.name.toLowerCase() === "tweaks") &&
                   tabs[activeTab].hasTweaks && (
                     <div className="flex items-center gap-2">
-                      <Label
-                        className={"text-xs font-medium text-white"}
-                        htmlFor="tweaks-switch"
-                      >
-                        Enable Tweaks
-                      </Label>
+                      <ShadTooltip content="Makes temporary adjustments managed in 'Tweaks'">
+                        <div className="flex items-center gap-2">
+                          <Label
+                            className={"text-xs font-medium text-white"}
+                            htmlFor="tweaks-switch"
+                          >
+                            Enable Tweaks
+                          </Label>
+                          <IconComponent
+                            name="info"
+                            className="mr-4 h-5 w-5"
+                          />
+                        </div>
+                      </ShadTooltip>
                       <Switch
                         style={{
                           transform: `scaleX(${0.85}) scaleY(${0.85})`,
