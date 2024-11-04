@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Switch } from "@/components/ui/switch";
 import { CustomLink } from "@/customization/components/custom-link";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useAddComponent } from "@/hooks/useAddComponent";
 import { useStoreStore } from "@/stores/storeStore";
 import {
@@ -309,14 +310,21 @@ export function FlowSidebarComponent() {
     setOpenCategories([]);
   }
 
+  const isMobile = useIsMobile();
+
   return (
-    <Sidebar collapsible="offcanvas" data-testid="shad-sidebar">
+    <Sidebar
+      collapsible={isMobile ? "offcanvas" : "none"}
+      data-testid="shad-sidebar"
+    >
       <SidebarHeader className="flex w-full flex-col gap-4 p-4 pb-1">
         <Disclosure open={showConfig} onOpenChange={setShowConfig}>
           <div className="flex w-full items-center gap-2">
-            <SidebarTrigger className="text-muted-foreground">
-              <ForwardedIconComponent name="PanelLeftClose" />
-            </SidebarTrigger>
+            {isMobile && (
+              <SidebarTrigger className="text-muted-foreground">
+                <ForwardedIconComponent name="PanelLeftClose" />
+              </SidebarTrigger>
+            )}
             <h3 className="flex-1 text-sm font-semibold">Components</h3>
             <DisclosureTrigger>
               <ShadTooltip content="Component settings" styleClasses="z-50">

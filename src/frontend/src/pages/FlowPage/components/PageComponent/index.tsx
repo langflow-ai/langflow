@@ -16,6 +16,7 @@ import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
 import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useAddComponent } from "@/hooks/useAddComponent";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { cn, isSupportedNodeTypes } from "@/utils/utils";
@@ -587,6 +588,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   };
 
   const { open } = useSidebar();
+  const isMobile = useIsMobile();
 
   return (
     <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
@@ -645,23 +647,25 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
                 <FlowToolbar />
               </>
             )}
-            <Panel
-              className={cn(
-                "react-flow__controls !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
-                open
-                  ? "pointer-events-none -translate-x-full opacity-0"
-                  : "pointer-events-auto opacity-100",
-              )}
-              position="top-left"
-            >
-              <SidebarTrigger className="h-fit w-fit px-3 py-1.5">
-                <ForwardedIconComponent
-                  name="PanelRightClose"
-                  className="h-4 w-4"
-                />
-                Components
-              </SidebarTrigger>
-            </Panel>
+            {isMobile && (
+              <Panel
+                className={cn(
+                  "react-flow__controls !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
+                  open
+                    ? "pointer-events-none -translate-x-full opacity-0"
+                    : "pointer-events-auto opacity-100",
+                )}
+                position="top-left"
+              >
+                <SidebarTrigger className="h-fit w-fit px-3 py-1.5">
+                  <ForwardedIconComponent
+                    name="PanelRightClose"
+                    className="h-4 w-4"
+                  />
+                  Components
+                </SidebarTrigger>
+              </Panel>
+            )}
             <SelectionMenu
               lastSelection={lastSelection}
               isVisible={selectionMenuVisible}
