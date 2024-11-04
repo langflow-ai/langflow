@@ -144,12 +144,16 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
 
   await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
     timeout: 100000,
+    state: "visible",
   });
+
+  await page.waitForTimeout(2000);
 
   await page.getByTestId("icon-ChevronLeft").first().click();
 
   await page.waitForSelector('[data-testid="search-store-input"]:enabled', {
     timeout: 30000,
+    state: "visible",
   });
 
   expect(
