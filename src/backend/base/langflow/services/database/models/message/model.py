@@ -2,12 +2,12 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from pydantic import field_validator
+from pydantic import field_serializer, field_validator
 from sqlalchemy import Text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.schema.content_block import ContentBlock, ContentBlockDict
-from langflow.schema.properties import Properties, PropertiesDict
+from langflow.schema.properties import Properties
 
 if TYPE_CHECKING:
     from langflow.schema.message import Message
@@ -95,7 +95,7 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
     flow_id: UUID | None = Field(default=None, foreign_key="flow.id")
     flow: "Flow" = Relationship(back_populates="messages")
     files: list[str] = Field(sa_column=Column(JSON))
-    properties: PropertiesDict = Field(default_factory=PropertiesDict, sa_column=Column(JSON))  # type: ignore[assignment]
+    properties: Properties = Field(default_factory=Properties, sa_column=Column(JSON))  # type: ignore[assignment]
     category: str = Field(sa_column=Column(Text))
     content_blocks: list[ContentBlockDict] = Field(default_factory=list, sa_column=Column(JSON))  # type: ignore[assignment]
 
@@ -106,6 +106,20 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
             return value
         if isinstance(value, str):
             value = UUID(value)
+        return value
+
+    @field_validator("properties")
+    @classmethod
+    def validate_properties(cls, value):
+        if hasattr(value, "model_dump"):
+            return value.model_dump()
+        return value
+
+    @field_serializer("properties")
+    @classmethod
+    def serialize_properties(cls, value):
+        if hasattr(value, "model_dump"):
+            return value.model_dump()
         return value
 
     # Needed for Column(JSON)
