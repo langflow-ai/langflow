@@ -292,6 +292,7 @@ export default function NodeToolbarComponent({
       case "toolMode":
         const newValue = !toolMode;
         setToolMode(newValue);
+
         mutateTemplate(
           newValue,
           data.node!,
@@ -408,39 +409,44 @@ export default function NodeToolbarComponent({
               </Button>
             </ShadTooltip>
           )}
-          <ShadTooltip
-            content={
-              <ShortcutDisplay
-                {...shortcuts.find(
-                  ({ name }) => name.toLowerCase() === "freeze path",
-                )!}
-              />
-            }
-            side="top"
-          >
-            <Button
-              className={cn("node-toolbar-buttons", frozen && "text-blue-500")}
-              variant="ghost"
-              onClick={(event) => {
-                event.preventDefault();
-                takeSnapshot();
-                FreezeAllVertices({
-                  flowId: currentFlowId,
-                  stopNodeId: data.id,
-                });
-              }}
-              size="node-toolbar"
+          {!hasToolMode && (
+            <ShadTooltip
+              content={
+                <ShortcutDisplay
+                  {...shortcuts.find(
+                    ({ name }) => name.toLowerCase() === "freeze path",
+                  )!}
+                />
+              }
+              side="top"
             >
-              <IconComponent
-                name="FreezeAll"
+              <Button
                 className={cn(
-                  "h-4 w-4 transition-all",
-                  frozen ? "animate-wiggle text-ice" : "",
+                  "node-toolbar-buttons",
+                  frozen && "text-blue-500",
                 )}
-              />
-              <span className="text-[13px] font-medium">Freeze Path</span>
-            </Button>
-          </ShadTooltip>
+                variant="ghost"
+                onClick={(event) => {
+                  event.preventDefault();
+                  takeSnapshot();
+                  FreezeAllVertices({
+                    flowId: currentFlowId,
+                    stopNodeId: data.id,
+                  });
+                }}
+                size="node-toolbar"
+              >
+                <IconComponent
+                  name="FreezeAll"
+                  className={cn(
+                    "h-4 w-4 transition-all",
+                    frozen ? "animate-wiggle text-ice" : "",
+                  )}
+                />
+                <span className="text-[13px] font-medium">Freeze Path</span>
+              </Button>
+            </ShadTooltip>
+          )}
           {hasToolMode && (
             <ShadTooltip
               content={
