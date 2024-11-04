@@ -30,17 +30,18 @@ async def test_initialize_super_user():
     await asyncio.to_thread(initialize_super_user_if_needed)
 
 
-async def test_get_and_cache_all_types_dict(benchmark):
+@pytest.mark.benchmark
+async def test_get_and_cache_all_types_dict():
     """Benchmark get_and_cache_all_types_dict function."""
     from langflow.interface.types import get_and_cache_all_types_dict
 
     settings_service = await asyncio.to_thread(get_settings_service)
-    result = await benchmark(get_and_cache_all_types_dict, settings_service)
+    result = await asyncio.to_thread(get_and_cache_all_types_dict, settings_service)
     assert result is not None
 
 
 @pytest.mark.benchmark
-async def test_create_starter_projects(benchmark):
+async def test_create_starter_projects():
     """Benchmark creation of starter projects."""
     from langflow.initial_setup.setup import create_or_update_starter_projects
     from langflow.interface.types import get_and_cache_all_types_dict
@@ -49,8 +50,7 @@ async def test_create_starter_projects(benchmark):
     await asyncio.to_thread(initialize_services, fix_migration=False)
     settings_service = await asyncio.to_thread(get_settings_service)
     types_dict = await get_and_cache_all_types_dict(settings_service)
-    coro = asyncio.to_thread(create_or_update_starter_projects, types_dict)
-    await benchmark(coro)
+    await asyncio.to_thread(create_or_update_starter_projects, types_dict)
 
 
 @pytest.mark.benchmark
