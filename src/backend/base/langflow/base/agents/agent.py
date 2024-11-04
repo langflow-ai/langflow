@@ -229,7 +229,7 @@ async def process_agent_events(
 
             case "on_chain_end":
                 data_output = event["data"].get("output", {})
-                if data_output and "agent_scratchpad" in data_output and data_output["agent_scratchpad"]:
+                if data_output:
                     # Agent Strachpad floods the chat
                     # agent_scratchpad_messages = data_output["agent_scratchpad"]
                     # json_encoded_messages = jsonable_encoder(agent_scratchpad_messages)
@@ -242,9 +242,9 @@ async def process_agent_events(
                     #         for json_encoded_message in json_encoded_messages
                     #     ]
                     # )
-                    if data_output.get("output"):
+                    if hasattr(data_output, "return_values") and data_output.return_values.get("output"):
                         agent_message.properties.state = "complete"
-                        agent_message.text = data_output.get("output")
+                        agent_message.text = data_output.return_values.get("output")
                         icon = "🤖"
                     else:
                         icon = "🔍"
