@@ -1,6 +1,7 @@
 import os
 
 import orjson
+from astrapy.admin import parse_api_endpoint
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers import docs_to_data
@@ -410,6 +411,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 token=self.token,
                 api_endpoint=self.api_endpoint,
                 namespace=self.namespace or None,
+                environment=parse_api_endpoint(self.api_endpoint).environment if self.api_endpoint else None,
                 metric=self.metric or None,
                 batch_size=self.batch_size or None,
                 bulk_insert_batch_concurrency=self.bulk_insert_batch_concurrency or None,
