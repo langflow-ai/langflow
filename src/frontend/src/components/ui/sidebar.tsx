@@ -206,7 +206,9 @@ const Sidebar = React.forwardRef<
               ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
               : "group-data-[collapsible=icon]:w-[--sidebar-width-icon]",
             // Keep icon width on mobile when collapsed
-            "max-sm:w-[--sidebar-width-icon]",
+            collapsible === "icon"
+              ? "max-sm:w-[--sidebar-width-icon]"
+              : "max-sm:w-0",
           )}
         />
         <div
