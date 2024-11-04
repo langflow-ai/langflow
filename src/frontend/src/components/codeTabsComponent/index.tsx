@@ -1,3 +1,4 @@
+import ShadTooltip from "@/components/shadTooltipComponent";
 import { useTweaksStore } from "@/stores/tweaksStore";
 import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -16,7 +17,6 @@ import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
 import { TweaksComponent } from "./components/tweaksComponent";
-import ShadTooltip from "@/components/shadTooltipComponent";
 
 export default function CodeTabsComponent({
   open,
