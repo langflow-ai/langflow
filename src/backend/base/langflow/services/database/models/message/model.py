@@ -25,7 +25,7 @@ class MessageBase(SQLModel):
     edit: bool = Field(default=False)
 
     properties: Properties = Field(default_factory=Properties)
-    category: str = Field()
+    category: str = Field(default="message")
     content_blocks: list[ContentBlock] = Field(default_factory=list)
 
     @field_validator("files", mode="before")
