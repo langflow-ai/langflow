@@ -80,6 +80,16 @@ class ChatOutput(ChatComponent):
         ),
     ]
 
+    def _build_source(self, _id: str | None, display_name: str | None, source: str | None) -> Source:
+        source_dict = {}
+        if _id:
+            source_dict["id"] = _id
+        if display_name:
+            source_dict["display_name"] = display_name
+        if source:
+            source_dict["source"] = source
+        return Source(**source_dict)
+
     def message_response(self) -> Message:
         _source, _icon, _display_name, _source_id = self.get_properties_from_source_component()
         _background_color = self.background_color
@@ -93,7 +103,7 @@ class ChatOutput(ChatComponent):
             session_id=self.session_id,
             flow_id=self.graph.flow_id,
             properties=Properties(
-                source=Source(id=_source_id, display_name=_display_name, source=_source),
+                source=self._build_source(_source_id, _display_name, _source),
                 icon=_icon,
                 background_color=_background_color,
                 text_color=_text_color,
