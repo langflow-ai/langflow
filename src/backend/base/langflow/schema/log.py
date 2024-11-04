@@ -1,4 +1,4 @@
-from typing import Literal, TypeAlias
+from typing import Any, Literal, TypeAlias
 
 from pydantic import BaseModel
 from typing_extensions import Protocol
@@ -27,3 +27,7 @@ class SendMessageFunctionType(Protocol):
         *,
         allow_markdown: bool = True,
     ) -> None: ...
+
+
+class OnTokenFunctionType(Protocol):
+    def __call__(self, data: dict[str, Any]) -> None: ...
