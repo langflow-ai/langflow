@@ -8,7 +8,6 @@ from langflow.components.prompts import PromptComponent
 from tests.integration.utils import ComponentInputHandle, run_single_component
 
 
-@pytest.mark.asyncio
 @pytest.mark.api_key_required
 async def test_csv_output_parser_openai():
     format_instructions = ComponentInputHandle(

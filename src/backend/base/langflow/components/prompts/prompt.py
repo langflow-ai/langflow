@@ -21,10 +21,8 @@ class PromptComponent(Component):
         Output(display_name="Prompt Message", name="prompt", method="build_prompt"),
     ]
 
-    async def build_prompt(
-        self,
-    ) -> Message:
-        prompt = await Message.from_template_and_variables(**self._attributes)
+    async def build_prompt(self) -> Message:
+        prompt = Message.from_template_and_variables(**self._attributes)
         self.status = prompt.text
         return prompt
 

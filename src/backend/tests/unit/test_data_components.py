@@ -15,7 +15,6 @@ def api_request():
     return data.APIRequestComponent()
 
 
-@pytest.mark.asyncio
 @respx.mock
 async def test_successful_get_request(api_request):
     # Mocking a successful GET request
@@ -53,7 +52,6 @@ def test_parse_curl(api_request):
     assert new_build_config["body"]["value"] == {"key": "value"}
 
 
-@pytest.mark.asyncio
 @respx.mock
 async def test_failed_request(api_request):
     # Mocking a failed GET request
@@ -68,7 +66,6 @@ async def test_failed_request(api_request):
     assert result.data["status_code"] == 404
 
 
-@pytest.mark.asyncio
 @respx.mock
 async def test_timeout(api_request):
     # Mocking a timeout
@@ -84,7 +81,6 @@ async def test_timeout(api_request):
     assert result.data["error"] == "Request timed out"
 
 
-@pytest.mark.asyncio
 @respx.mock
 async def test_build_with_multiple_urls(api_request):
     # This test depends on having a working internet connection and accessible URLs
