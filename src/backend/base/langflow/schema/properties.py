@@ -1,3 +1,4 @@
+from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -17,6 +18,7 @@ class Properties(BaseModel):
     source: Source = Field(default_factory=Source)
     icon: str | None = None
     allow_markdown: bool = False
+    state: Literal["partial", "complete"] = "complete"
     targets: list = []
 
     @field_validator("source", mode="before")

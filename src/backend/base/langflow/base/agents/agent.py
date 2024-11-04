@@ -205,7 +205,7 @@ async def process_agent_events(
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
-        properties={"icon": "🤖"},
+        properties={"icon": "🤖", "state": "partial"},
         content_blocks=[],
     )
     # Store the initial message
@@ -243,6 +243,7 @@ async def process_agent_events(
                     #     ]
                     # )
                     if data_output.get("output"):
+                        agent_message.properties.state = "complete"
                         agent_message.text = data_output.get("output")
                         icon = "🤖"
                     else:
@@ -292,14 +293,16 @@ async def process_agent_events(
                 )
                 agent_message.properties.icon = "⚠️"
                 agent_message = send_message_method(message=agent_message)
+            
             case "on_chain_stream":
                 # this is similar to the on_chain_end but here we stream tokens
                 data_chunk = event["data"].get("chunk", {})
                 if isinstance(data_chunk, dict) and data_chunk.get("output"):
                     agent_message.text = data_chunk.get("output")
+                    agent_message.properties.state = "complete"
                     agent_message = send_message_method(message=agent_message)
             case _:
                 # Handle any other event types or ignore them
                 pass
-
+    agent_message.properties.state = "complete"
     return Message(**agent_message.model_dump())
