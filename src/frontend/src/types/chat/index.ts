@@ -33,6 +33,10 @@ export type PropertiesType = {
   icon?: string;
   background_color?: string;
   text_color?: string;
+  targets?: string[];
+  edited?: boolean;
+  allow_markdown?: boolean;
+  state?: string;
 };
 
 export type ChatOutputType = {
