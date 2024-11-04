@@ -12,7 +12,7 @@ import nanoid
 import yaml
 from pydantic import BaseModel, ValidationError
 
-from langflow.base.tools.constants import TOOL_OUTPUT_NAME
+from langflow.base.tools.constants import TOOL_OUTPUT_DISPLAY_NAME, TOOL_OUTPUT_NAME
 from langflow.custom.tree_visitor import RequiredInputsVisitor
 from langflow.exceptions.component import StreamingError
 from langflow.field_typing import Tool  # noqa: TCH001 Needed by _add_toolkit_output
@@ -904,7 +904,14 @@ class Component(CustomComponent):
 
     def _append_tool_output(self) -> None:
         if next((output for output in self.outputs if output.name == TOOL_OUTPUT_NAME), None) is None:
-            self.outputs.append(Output(name=TOOL_OUTPUT_NAME, display_name="Tool", method="to_toolkit", types=["Tool"]))
+            self.outputs.append(
+                Output(
+                    name=TOOL_OUTPUT_NAME,
+                    display_name=TOOL_OUTPUT_DISPLAY_NAME,
+                    method="to_toolkit",
+                    types=["Tool"],
+                )
+            )
 
     def send_message(self, message: Message, id_: str | None = None):
         if self.graph.session_id and message is not None and not message.session_id:
@@ -1038,4 +1045,4 @@ class Component(CustomComponent):
         self.send_message(error_message)
 
     def _build_tool_output(self) -> Output:
-        return Output(name=TOOL_OUTPUT_NAME, display_name="Tool", method="to_toolkit", types=["Tool"])
+        return Output(name=TOOL_OUTPUT_NAME, display_name=TOOL_OUTPUT_DISPLAY_NAME, method="to_toolkit", types=["Tool"])
