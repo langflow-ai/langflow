@@ -1,7 +1,7 @@
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
 
-from langflow.base.models.aiml_constants import AIML_CHAT_MODELS
+from langflow.base.models.aiml_constants import AimlModels
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
@@ -37,8 +37,8 @@ class AIMLModelComponent(LCModelComponent):
             name="model_name",
             display_name="Model Name",
             advanced=False,
-            options=AIML_CHAT_MODELS,
-            value=AIML_CHAT_MODELS[0],
+            options=[],
+            refresh_button=True,
         ),
         StrInput(
             name="aiml_api_base",
@@ -55,13 +55,6 @@ class AIMLModelComponent(LCModelComponent):
             value="AIML_API_KEY",
         ),
         FloatInput(name="temperature", display_name="Temperature", value=0.1),
-        IntInput(
-            name="seed",
-            display_name="Seed",
-            info="The seed controls the reproducibility of the job.",
-            advanced=True,
-            value=1,
-        ),
         HandleInput(
             name="output_parser",
             display_name="Output Parser",
@@ -71,24 +64,31 @@ class AIMLModelComponent(LCModelComponent):
         ),
     ]
 
+    def update_build_config(self, build_config: dict, field_name: str | None = None):
+        if field_name == "api_key" or field_name == "aiml_api_base" or field_name == "model_name":
+            aiml = AimlModels()
+            aiml.get_aiml_models()
+            build_config["model_name"]["options"] = aiml.chat_models
+        return build_config
+
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         aiml_api_key = self.api_key
         temperature = self.temperature
         model_name: str = self.model_name
         max_tokens = self.max_tokens
         model_kwargs = self.model_kwargs or {}
-        aiml_api_base = self.aiml_api_base or "https://api.aimlapi.com"
-        seed = self.seed
+        aiml_api_base = self.aiml_api_base or "https://api-staging.aimlapi.com/v2"
 
         openai_api_key = aiml_api_key.get_secret_value() if isinstance(aiml_api_key, SecretStr) else aiml_api_key
 
+        if "o1" in model_name:
+            temperature = 1
         return ChatOpenAI(
             model=model_name,
             temperature=temperature,
             api_key=openai_api_key,
             base_url=aiml_api_base,
             max_tokens=max_tokens or None,
-            seed=seed,
             **model_kwargs,
         )
 
