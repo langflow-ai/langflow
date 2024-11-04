@@ -1,8 +1,4 @@
-import {
-  APIClassType,
-  APITemplateType,
-  ResponseErrorDetailAPI,
-} from "@/types/api";
+import { APIClassType, ResponseErrorDetailAPI } from "@/types/api";
 import { UseMutationResult } from "@tanstack/react-query";
 import { useEffect } from "react";
 import useAlertStore from "../../stores/alertStore";
@@ -13,7 +9,7 @@ const useFetchDataOnMount = (
   setNodeClass: (node: APIClassType) => void,
   name: string,
   postTemplateValue: UseMutationResult<
-    APITemplateType | undefined,
+    APIClassType | undefined,
     ResponseErrorDetailAPI,
     any
   >,

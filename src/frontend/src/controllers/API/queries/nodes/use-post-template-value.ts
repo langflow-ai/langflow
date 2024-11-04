@@ -1,6 +1,5 @@
 import {
   APIClassType,
-  APITemplateType,
   ResponseErrorDetailAPI,
   useMutationFunctionType,
 } from "@/types/api";
@@ -22,14 +21,14 @@ interface IPostTemplateValueParams {
 export const usePostTemplateValue: useMutationFunctionType<
   IPostTemplateValueParams,
   IPostTemplateValue,
-  APITemplateType | undefined,
+  APIClassType,
   ResponseErrorDetailAPI
 > = ({ parameterId, nodeId, node }, options?) => {
   const { mutate } = UseRequestProcessor();
 
   const postTemplateValueFn = async (
     payload: IPostTemplateValue,
-  ): Promise<APITemplateType | undefined> => {
+  ): Promise<APIClassType | undefined> => {
     const template = node.template;
 
     if (!template) return;
@@ -44,11 +43,11 @@ export const usePostTemplateValue: useMutationFunctionType<
       },
     );
 
-    return response.data.template;
+    return response.data;
   };
 
   const mutation: UseMutationResult<
-    APITemplateType | undefined,
+    APIClassType,
     ResponseErrorDetailAPI,
     IPostTemplateValue
   > = mutate(

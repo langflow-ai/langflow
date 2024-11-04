@@ -228,7 +228,7 @@ class CustomComponent(BaseComponent):
         field_value: Any,
         field_name: str | None = None,
     ):
-        build_config[field_name] = field_value
+        build_config[field_name]["value"] = field_value
         return build_config
 
     @property
