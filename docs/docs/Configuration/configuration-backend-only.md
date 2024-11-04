@@ -12,7 +12,8 @@ To start Langflow in backend-only mode, pass the `--backend-only` flag at startu
 python3 -m langflow run --backend-only
 ```
 
-The terminal prints `Welcome to ⛓ Langflow`, and a blank window opens at `http://127.0.0.1:7864/all`.
+The terminal prints `Welcome to ⛓ Langflow`, and a blank window opens at `http://127.0.0.1:7860/all`.
+
 Langflow will now serve requests to its API without the frontend running.
 
 This page demonstrates serving the basic prompting flow as an endpoint in backend-only mode.
@@ -92,6 +93,15 @@ print(json.dumps(result, indent=2))
 2. Run the script with `python langflow_api_demo.py`.
 3. Enter your message when prompted.
 You will get a prettified JSON response back containing a response to your message.
+
+## Configuration
+
+To change the host and port, pass the values as additional flags.
+
+```python
+python -m langflow run --host 127.0.0.1 --port 7860 --backend-only
+```
+
 
 
 
