@@ -1,5 +1,7 @@
+import useDragStart from "@/components/cardComponent/hooks/use-on-drag-start";
 import ForwardedIconComponent from "@/components/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,8 +23,6 @@ import useDescriptionModal from "../../oldComponents/componentsComponent/hooks/u
 import { getTemplateStyle } from "../../utils/get-template-style";
 import { timeElapsed } from "../../utils/time-elapse";
 import DropdownComponent from "../dropdown";
-import { Card } from "@/components/ui/card";
-import useDragStart from "@/components/cardComponent/hooks/use-on-drag-start";
 
 const ListComponent = ({ flowData }: { flowData: FlowType }) => {
   const navigate = useCustomNavigate();
@@ -107,7 +107,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
         draggable
         onDragStart={onDragStart}
         onClick={handleClick}
-        className={`my-2 flex flex-row h-[110px] bg-background ${
+        className={`my-2 flex h-[110px] flex-row bg-background ${
           isComponent ? "cursor-default" : "cursor-pointer"
         } justify-between rounded-lg border border-zinc-100 p-5 shadow-sm hover:border-border dark:border-zinc-800 dark:hover:border-muted-foreground`}
       >
