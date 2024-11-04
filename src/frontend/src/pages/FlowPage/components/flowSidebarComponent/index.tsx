@@ -28,7 +28,6 @@ import {
 } from "@/components/ui/sidebar";
 import { Switch } from "@/components/ui/switch";
 import { CustomLink } from "@/customization/components/custom-link";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useAddComponent } from "@/hooks/useAddComponent";
 import { useStoreStore } from "@/stores/storeStore";
 import {
@@ -310,21 +309,14 @@ export function FlowSidebarComponent() {
     setOpenCategories([]);
   }
 
-  const isMobile = useIsMobile();
-
   return (
-    <Sidebar
-      collapsible={isMobile ? "offcanvas" : "none"}
-      data-testid="shad-sidebar"
-    >
+    <Sidebar collapsible="offcanvas" data-testid="shad-sidebar">
       <SidebarHeader className="flex w-full flex-col gap-4 p-4 pb-1">
         <Disclosure open={showConfig} onOpenChange={setShowConfig}>
           <div className="flex w-full items-center gap-2">
-            {isMobile && (
-              <SidebarTrigger className="text-muted-foreground">
-                <ForwardedIconComponent name="PanelLeftClose" />
-              </SidebarTrigger>
-            )}
+            <SidebarTrigger className="text-muted-foreground">
+              <ForwardedIconComponent name="PanelLeftClose" />
+            </SidebarTrigger>
             <h3 className="flex-1 text-sm font-semibold">Components</h3>
             <DisclosureTrigger>
               <div>
@@ -702,7 +694,7 @@ export function FlowSidebarComponent() {
                 </span>
                 <ForwardedIconComponent
                   name="SquareArrowOutUpRight"
-                  className="h-4 w-4 opacity-0 group-hover/discover:opacity-100"
+                  className="h-4 w-4 opacity-0 transition-all group-hover/discover:opacity-100"
                 />
               </div>
             </CustomLink>

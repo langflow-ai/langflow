@@ -3,6 +3,7 @@ import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
 import useAlertStore from "@/stores/alertStore";
 import { useTypesStore } from "@/stores/typesStore";
@@ -159,12 +160,14 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
     setCurrentFlow(flow);
   };
 
+  const isMobile = useIsMobile();
+
   return (
     <>
       <div className="flow-page-positioning">
         {currentFlow && (
           <div className="flex h-full overflow-hidden">
-            <SidebarProvider width="19rem" defaultOpen={false}>
+            <SidebarProvider width="19rem" defaultOpen={!isMobile}>
               {!view && <FlowSidebarComponent />}
               <main className="flex flex-1">
                 <div className="h-full w-full">
