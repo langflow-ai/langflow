@@ -1,3 +1,4 @@
+import asyncio
 import json
 from typing import NamedTuple
 from uuid import UUID, uuid4
@@ -276,7 +277,6 @@ async def test_delete_flows(client: AsyncClient, logged_in_headers):
     assert response.json().get("deleted") == number_of_flows
 
 
-@pytest.mark.asyncio
 @pytest.mark.usefixtures("active_user")
 async def test_delete_flows_with_transaction_and_build(client: AsyncClient, logged_in_headers):
     # Create ten flows
@@ -335,7 +335,6 @@ async def test_delete_flows_with_transaction_and_build(client: AsyncClient, logg
         assert response.json() == {"vertex_builds": {}}
 
 
-@pytest.mark.asyncio
 @pytest.mark.usefixtures("active_user")
 async def test_delete_folder_with_flows_with_transaction_and_build(client: AsyncClient, logged_in_headers):
     # Create a new folder
@@ -606,7 +605,7 @@ async def test_delete_nonexistent_flow(client: AsyncClient, logged_in_headers):
 @pytest.mark.usefixtures("active_user")
 async def test_read_only_starter_projects(client: AsyncClient, logged_in_headers):
     response = await client.get("api/v1/flows/basic_examples/", headers=logged_in_headers)
-    starter_projects = load_starter_projects()
+    starter_projects = await asyncio.to_thread(load_starter_projects)
     assert response.status_code == 200
     assert len(response.json()) == len(starter_projects)
 
