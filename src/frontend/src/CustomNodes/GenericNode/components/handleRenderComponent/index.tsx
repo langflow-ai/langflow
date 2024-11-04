@@ -265,39 +265,30 @@ export default function HandleRenderComponent({
   const handleRef = useRef<HTMLDivElement>(null);
   const invisibleDivRef = useRef<HTMLDivElement>(null);
 
-  // State to store node dimensions
-  const [nodeDimensions, setNodeDimensions] = useState({ width: 0, height: 0 });
-
-  // Effect to measure node dimensions
-  useEffect(() => {
-    if (showNode) return;
-    const updateDimensions = () => {
-      // Find the node element using the nodeId
-      const nodeElement = document.querySelector(`[data-id="${nodeId}"]`);
-      if (nodeElement) {
-        const { width, height } = nodeElement.getBoundingClientRect();
-        setNodeDimensions({ width, height });
-      }
-    };
-
-    // Initial measurement
-    updateDimensions();
-
-    // Set up resize observer to update dimensions when node size changes
-    const resizeObserver = new ResizeObserver(updateDimensions);
-    const nodeElement = document.querySelector(
-      `[data-testid="${nodeId}-main-node"]`,
+  const getHandleClasses = ({
+    left,
+    showNode,
+  }: {
+    left: boolean;
+    showNode: boolean;
+  }) => {
+    return cn(
+      "noflow nowheel nopan noselect absolute left-3.5 -translate-y-1/2 translate-x-1/3 cursor-crosshair rounded-full",
+      left && "-left-5 -translate-x-1/2",
+      left && !showNode && "-translate-y-5 translate-x-4",
+      !left && !showNode && "-translate-y-5 translate-x-[10.8rem]",
     );
-    if (nodeElement) {
-      resizeObserver.observe(nodeElement);
-    }
+  };
 
-    return () => {
-      if (nodeElement) {
-        resizeObserver.unobserve(nodeElement);
-      }
-    };
-  }, [showNode]);
+  const handleClick = () => {
+    setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
+    setFilterType(currentFilter);
+    if (filterOpenHandle && filterType) {
+      onConnect(getConnection(filterType));
+      setFilterType(undefined);
+      setFilterEdge([]);
+    }
+  };
 
   return (
     <ShadTooltip
@@ -335,15 +326,7 @@ export default function HandleRenderComponent({
               `group/handle z-50 transition-all`,
               !showNode && "no-show",
             )}
-            onClick={() => {
-              setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
-              setFilterType(currentFilter);
-              if (filterOpenHandle && filterType) {
-                onConnect(getConnection(filterType));
-                setFilterType(undefined);
-                setFilterEdge([]);
-              }
-            }}
+            onClick={handleClick}
             onMouseUp={() => {
               setOpenTooltip(false);
             }}
@@ -373,12 +356,7 @@ export default function HandleRenderComponent({
               !showNode ? (left ? "target" : "source") : left ? "left" : "right"
             }`}
             ref={invisibleDivRef}
-            className={cn(
-              "noflow nowheel nopan noselect absolute left-3.5 -translate-y-1/2 translate-x-1/3 cursor-crosshair rounded-full",
-              left && "-left-5 -translate-x-1/2",
-              left && !showNode && "-translate-y-5 translate-x-4",
-              !left && !showNode && "-translate-y-5 translate-x-[10.8rem]",
-            )}
+            className={getHandleClasses({ left, showNode })}
             style={{
               background: isNullHandle ? "hsl(var(--border))" : handleColor,
               width: "10px",
