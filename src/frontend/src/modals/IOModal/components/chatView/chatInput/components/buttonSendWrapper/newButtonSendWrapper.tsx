@@ -1,6 +1,5 @@
 import Loading from "@/components/ui/loading";
 import useFlowStore from "@/stores/flowStore";
-import IconComponent from "../../../../../../../components/genericIconComponent";
 import { Button } from "../../../../../../../components/ui/button";
 import { Case } from "../../../../../../../shared/components/caseComponent";
 import { FilePreviewType } from "../../../../../../../types/components";
@@ -9,8 +8,10 @@ import { classNames } from "../../../../../../../utils/utils";
 const BUTTON_STATES = {
   NO_INPUT: "bg-high-indigo text-background",
   HAS_CHAT_VALUE: "text-primary",
-  SHOW_STOP: "bg-zinc-400 text-white cursor-pointer",
-  DEFAULT: "bg-chat-send text-background",
+  SHOW_STOP:
+    "bg-muted hover:bg-secondary-hover dark:hover:bg-input text-foreground cursor-pointer",
+  DEFAULT:
+    "bg-primary text-primary-foreground hover:bg-primary-hover hover:text-secondary",
 };
 
 type ButtonSendWrapperProps = {
@@ -60,24 +61,27 @@ const ButtonSendWrapper = ({
       disabled={lockChat && !isBuilding}
       onClick={handleClick}
       unstyled
+      data-testid={showStopButton ? "button-stop" : "button-send"}
     >
       <Case condition={showStopButton}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 rounded-md text-[14px] font-medium">
           Stop
-          <Loading className="text-black" />
+          <Loading className="h-[16px] w-[16px]" />
         </div>
       </Case>
 
-      <Case condition={showPlayButton}>
+      {/* <Case condition={showPlayButton}>
         <IconComponent
           name="Zap"
           className="form-modal-play-icon"
           aria-hidden="true"
         />
-      </Case>
+      </Case> */}
 
       <Case condition={showSendButton}>
-        <div className="flex items-center gap-2">Send</div>
+        <div className="flex h-fit w-fit items-center gap-2 text-[14px] font-medium">
+          Send
+        </div>
       </Case>
     </Button>
   );

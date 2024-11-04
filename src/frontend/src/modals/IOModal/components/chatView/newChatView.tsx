@@ -1,15 +1,16 @@
-import { useDeleteBuilds } from "@/controllers/API/queries/_builds";
-import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
+import { TextEffectPerChar } from "@/components/ui/textAnimation";
+import { TextShimmer } from "@/components/ui/TextShimmer";
 import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useEffect, useRef, useState } from "react";
-import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import useFlowStore from "../../../../stores/flowStore";
 import { ChatMessageType } from "../../../../types/chat";
 import { chatViewProps } from "../../../../types/components";
 import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 import { useFileHandler } from "./chatInput/hooks/use-file-handler";
 import ChatInput from "./chatInput/newChatInput";
+import LogoIcon from "./chatMessage/components/chatLogoIcon";
 import ChatMessage from "./chatMessage/newChatMessage";
 
 export default function ChatView({
@@ -20,6 +21,7 @@ export default function ChatView({
   setLockChat,
   visibleSession,
   focusChat,
+  closeChat,
 }: chatViewProps): JSX.Element {
   const { flowPool, inputs, CleanFlowPool } = useFlowStore();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
@@ -29,7 +31,6 @@ export default function ChatView({
 
   const inputTypes = inputs.map((obj) => obj.type);
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
-  const { mutate: mutateDeleteFlowPool } = useDeleteBuilds();
 
   //build chat history
   useEffect(() => {
@@ -37,13 +38,22 @@ export default function ChatView({
       .filter(
         (message) =>
           message.flow_id === currentFlowId &&
-          (visibleSession === message.session_id ?? true),
+          (visibleSession === message.session_id || visibleSession === null),
       )
       .map((message) => {
         let files = message.files;
-        //HANDLE THE "[]" case
-        if (typeof files === "string") {
-          files = JSON.parse(files);
+        // Handle the "[]" case, empty string, or already parsed array
+        if (Array.isArray(files)) {
+          // files is already an array, no need to parse
+        } else if (files === "[]" || files === "") {
+          files = [];
+        } else if (typeof files === "string") {
+          try {
+            files = JSON.parse(files);
+          } catch (error) {
+            console.error("Error parsing files:", error);
+            files = [];
+          }
         }
         return {
           isSend: message.sender === "User",
@@ -54,6 +64,11 @@ export default function ChatView({
           timestamp: message.timestamp,
           session: message.session_id,
           edit: message.edit,
+          background_color: message.background_color || "",
+          text_color: message.text_color || "",
+          content_blocks: message.content_blocks || [],
+          category: message.category || "",
+          properties: message.properties || {},
         };
       });
     const finalChatHistory = [...messagesFromMessagesStore].sort((a, b) => {
@@ -105,11 +120,9 @@ export default function ChatView({
     setIsDragging(false);
   };
 
-  const { mutate } = usePostUploadFile();
-
   return (
     <div
-      className="background flex h-full w-full flex-col rounded-md"
+      className="flex h-full w-full flex-col rounded-md"
       onDragOver={dragOver}
       onDragEnter={dragEnter}
       onDragLeave={dragLeave}
@@ -125,47 +138,53 @@ export default function ChatView({
               lastMessage={chatHistory.length - 1 === index ? true : false}
               key={`${chat.id}-${index}`}
               updateChat={updateChat}
+              closeChat={closeChat}
             />
           ))
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center">
-            <div className="flex flex-col items-center justify-center bg-background p-8">
-              <span className="pb-5 text-4xl">⛓️</span>
-              <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
-                New chat
-              </h3>
-              <p className="text-lg text-muted-foreground">
-                Test your flow with a chat prompt
-              </p>
+            <div className="flex flex-col items-center justify-center gap-4 p-8">
+              <img
+                src="/src/assets/logo.svg"
+                alt="Chain logo"
+                className="h-[40px] w-[40px] scale-[1.5]"
+              />
+              <div className="flex flex-col items-center justify-center">
+                <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
+                  New chat
+                </h3>
+                <p className="text-lg text-muted-foreground">
+                  <TextEffectPerChar>
+                    Test your flow with a chat prompt
+                  </TextEffectPerChar>
+                </p>
+              </div>
             </div>
           </div>
         )}
         <div
-          className={lockChat ? "flex-max-width px-2 py-6 pl-32 pr-9" : ""}
+          className={
+            lockChat ? "w-5/6 max-w-[768px] py-4 word-break-break-word" : ""
+          }
           ref={ref}
         >
-          {lockChat && (
-            <div className={"mr-3 mt-1 flex w-full overflow-hidden pb-3"}>
-              <div className="flex w-full gap-4">
-                <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-zinc-800 p-5">
-                  <span>
-                    <div className="text-3xl">⛓️</div>
-                  </span>
-                </div>
+          {lockChat &&
+            chatHistory.length > 0 &&
+            !(chatHistory[chatHistory.length - 1]?.category === "error") && (
+              <div className="flex w-full gap-4 rounded-md p-2">
+                <LogoIcon />
                 <div className="flex items-center">
                   <div>
-                    <span className="animate-pulse text-muted-foreground">
+                    <TextShimmer className="" duration={1}>
                       Flow running...
-                    </span>
-                    {/* TODO: ADD MODEL RELATED NAME */}
+                    </TextShimmer>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
       </div>
-      <div className="m-auto w-5/6">
+      <div className="m-auto w-5/6 max-w-[768px]">
         <ChatInput
           chatValue={chatValue}
           noInput={!inputTypes.includes("ChatInput")}

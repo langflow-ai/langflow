@@ -198,7 +198,16 @@ class TestEventManager:
 
         assert len(queue.data) == 1
         event_id, str_data, timestamp = queue.data[0]
-        assert isinstance(event_id, uuid.UUID)
+        # event_id follows this pattern: f"{event_type}-{uuid.uuid4()}"
+        event_type_from_id = event_id.split("-")[0]
+        assert event_type_from_id == "test_type"
+        uuid_from_id = event_id.split(event_type_from_id)[1]
+        assert isinstance(uuid_from_id, str)
+        # assert that the uuid_from_id is a valid uuid
+        try:
+            uuid.UUID(uuid_from_id)
+        except ValueError:
+            pytest.fail(f"Invalid UUID: {uuid_from_id}")
         assert isinstance(str_data, bytes)
         assert isinstance(timestamp, float)
 

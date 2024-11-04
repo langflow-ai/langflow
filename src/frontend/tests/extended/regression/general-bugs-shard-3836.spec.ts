@@ -105,7 +105,7 @@ test("user must be able to send an image on chat using advanced tool on ChatInpu
 
   await page.waitForTimeout(500);
 
-  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
+  await page.waitForSelector('[data-testid="button-send"]', {
     timeout: 100000,
   });
 

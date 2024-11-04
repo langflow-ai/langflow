@@ -94,7 +94,7 @@ class Vertex:
         self.result: ResultData | None = None
         self.results: dict[str, Any] = {}
         self.outputs_logs: dict[str, OutputValue] = {}
-        self.logs: dict[str, Log] = {}
+        self.logs: dict[str, list[Log]] = {}
         self.has_cycle_edges = False
         try:
             self.is_interface_component = self.vertex_type in InterfaceComponentTypes
@@ -227,6 +227,7 @@ class Vertex:
             self.output = self.data["node"]["base_classes"]
 
         self.display_name: str = self.data["node"].get("display_name", self.id.split("-")[0])
+        self.icon: str = self.data["node"].get("icon", self.id.split("-")[0])
 
         self.description: str = self.data["node"].get("description", "")
         self.frozen: bool = self.data["node"].get("frozen", False)
@@ -803,9 +804,9 @@ class Vertex:
                     inputs
                     and isinstance(inputs, dict)
                     and "input_value" in inputs
-                    and inputs["input_value"] is not None
+                    and inputs.get("input_value") is not None
                 ):
-                    chat_input.update({"input_value": inputs[INPUT_FIELD_NAME]})
+                    chat_input.update({"input_value": inputs.get(INPUT_FIELD_NAME, "")})
                 if files:
                     chat_input.update({"files": files})
 

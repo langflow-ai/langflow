@@ -10,7 +10,7 @@ from langflow.template import Output
 
 
 class LogComponent(Component):
-    name = "LogComponent"
+    display_name = "LogComponent"
     inputs = [IntInput(name="times", value=1)]
     outputs = [Output(name="call_log", method="call_log_method")]
 

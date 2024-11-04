@@ -1,3 +1,4 @@
+import ShadTooltip from "@/components/shadTooltipComponent";
 import ForwardedIconComponent from "../../../../../../../components/genericIconComponent";
 import { Button } from "../../../../../../../components/ui/button";
 
@@ -8,25 +9,33 @@ const UploadFileButton = ({
   lockChat,
 }) => {
   return (
-    <div>
-      <input
-        disabled={lockChat}
-        type="file"
-        ref={fileInputRef}
-        style={{ display: "none" }}
-        onChange={handleFileChange}
-      />
-      <Button
-        disabled={lockChat}
-        className={`rounded-md bg-zinc-500 p-1 font-bold transition-all ${
-          lockChat ? "cursor-not-allowed" : "hover:text-muted-foreground"
-        }`}
-        onClick={handleButtonClick}
-        unstyled
-      >
-        <ForwardedIconComponent name="Image" />
-      </Button>
-    </div>
+    <ShadTooltip
+      styleClasses="z-50"
+      side="right"
+      content="Attach image (png, jpg, jpeg)"
+    >
+      <div>
+        <input
+          disabled={lockChat}
+          type="file"
+          ref={fileInputRef}
+          style={{ display: "none" }}
+          onChange={handleFileChange}
+        />
+        <Button
+          disabled={lockChat}
+          className={`flex h-[32px] w-[32px] items-center justify-center rounded-md bg-muted font-bold transition-all ${
+            lockChat
+              ? "cursor-not-allowed"
+              : "text-muted-foreground hover:text-primary"
+          }`}
+          onClick={handleButtonClick}
+          unstyled
+        >
+          <ForwardedIconComponent className="h-[18px] w-[18px]" name="Image" />
+        </Button>
+      </div>
+    </ShadTooltip>
   );
 };
 

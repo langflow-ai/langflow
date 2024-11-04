@@ -117,12 +117,12 @@ export default function SessionSelector({
         else toggleVisibility();
       }}
       className={cn(
-        "file-component-accordion-div group cursor-pointer rounded-md hover:bg-muted-foreground/30",
-        isVisible ? "bg-muted-foreground/15" : "",
+        "file-component-accordion-div group cursor-pointer rounded-md text-left text-[13px] hover:bg-secondary-hover",
+        isVisible ? "bg-secondary-hover font-semibold" : "font-normal",
       )}
     >
-      <div className="flex w-full items-center justify-between gap-2 overflow-hidden px-2 py-1 align-middle">
-        <div className="flex min-w-0 items-center gap-2">
+      <div className="flex w-full items-center justify-between overflow-hidden px-2 py-1 align-middle">
+        <div className="flex w-full min-w-0 items-center">
           {isEditing ? (
             <div className="flex items-center">
               <Input
@@ -150,28 +150,37 @@ export default function SessionSelector({
             </div>
           ) : (
             <ShadTooltip styleClasses="z-50" content={session}>
-              <div>
+              <div
+                className={cn(
+                  "h-4 w-full group-hover:truncate-secondary-hover",
+                  isVisible
+                    ? "truncate-secondary-hover"
+                    : "truncate-muted dark:truncate-background",
+                )}
+              >
                 {session === currentFlowId ? "Default Session" : session}
               </div>
             </ShadTooltip>
           )}
         </div>
         <Select value={""} onValueChange={handleSelectChange}>
-          <SelectTrigger
-            onClick={(e) => {
-              e.stopPropagation();
-            }}
-            onFocusCapture={() => {
-              inputRef.current?.focus();
-            }}
-            data-confirm="true"
-            className={cn(
-              "h-8 w-fit border-none bg-transparent p-2 focus:ring-0",
-              isVisible ? "visible" : "invisible group-hover:visible",
-            )}
-          >
-            <IconComponent name="MoreHorizontal" className="h-4 w-4" />
-          </SelectTrigger>
+          <ShadTooltip styleClasses="z-50" side="right" content="Options">
+            <SelectTrigger
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+              onFocusCapture={() => {
+                inputRef.current?.focus();
+              }}
+              data-confirm="true"
+              className={cn(
+                "h-8 w-fit border-none bg-transparent p-2 focus:ring-0",
+                isVisible ? "visible" : "invisible group-hover:visible",
+              )}
+            >
+              <IconComponent name="MoreHorizontal" className="h-4 w-4" />
+            </SelectTrigger>
+          </ShadTooltip>
           <SelectContent side="right" align="start" className="p-0">
             <SelectItem
               value="rename"
@@ -191,10 +200,6 @@ export default function SessionSelector({
                   <IconComponent name="Scroll" className="mr-2 h-4 w-4" />
                   Message logs
                 </div>
-                <IconComponent
-                  name="ArrowUpRight"
-                  className="absolute right-2 h-4 w-4"
-                />
               </div>
             </SelectItem>
             <SelectItem

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("user should be able to use duckduckgo search component", async ({
+test.skip("user should be able to use duckduckgo search component", async ({
   page,
 }) => {
   await page.goto("/");

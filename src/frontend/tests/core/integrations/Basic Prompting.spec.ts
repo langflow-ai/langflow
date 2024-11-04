@@ -98,11 +98,11 @@ test("Basic Prompting (Hello, World)", async ({ page }) => {
     .last()
     .fill("Say hello as a pirate");
 
-  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
+  await page.waitForSelector('[data-testid="button-send"]', {
     timeout: 100000,
   });
 
-  await page.getByTestId("icon-LucideSend").last().click();
+  await page.getByTestId("button-send").last().click();
 
   await page.waitForSelector("text=matey", {
     timeout: 100000,

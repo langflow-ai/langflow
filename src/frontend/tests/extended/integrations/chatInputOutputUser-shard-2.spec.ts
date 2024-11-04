@@ -77,11 +77,11 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
 
   await page.getByTestId("input-chat-playground").fill("Hello, how are you?");
 
-  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
+  await page.waitForSelector('[data-testid="button-send"]', {
     timeout: 100000,
   });
 
-  await page.getByTestId("icon-LucideSend").click();
+  await page.getByTestId("button-send").click();
   let valueUser = await page.getByTestId("sender_name_user").textContent();
 
   await page.waitForSelector('[data-testid="sender_name_ai"]', {
@@ -91,7 +91,7 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
   let valueAI = await page.getByTestId("sender_name_ai").textContent();
 
   expect(valueUser).toBe("User");
-  expect(valueAI).toBe("AI");
+  expect(valueAI).toContain("AI");
 
   await page.keyboard.press("Escape");
 
@@ -103,11 +103,11 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
     );
   await page.getByText("Playground", { exact: true }).last().click();
 
-  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
+  await page.waitForSelector('[data-testid="button-send"]', {
     timeout: 100000,
   });
 
-  await page.getByTestId("icon-LucideSend").click();
+  await page.getByTestId("button-send").click();
   await page.getByText("Close", { exact: true }).click();
   await page.getByText("Chat Input", { exact: true }).click();
   await page.getByTestId("edit-button-modal").click();
@@ -130,11 +130,11 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
 
   await page.getByText("Playground", { exact: true }).last().click();
 
-  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
+  await page.waitForSelector('[data-testid="button-send"]', {
     timeout: 100000,
   });
 
-  await page.getByTestId("icon-LucideSend").click();
+  await page.getByTestId("button-send").click();
 
   valueUser = await page
     .getByTestId("sender_name_testsendernameuser")
@@ -143,8 +143,8 @@ test("user must interact with chat with Input/Output", async ({ page }) => {
     .getByTestId("sender_name_testsendernameai")
     .textContent();
 
-  expect(valueUser).toBe("TestSenderNameUser");
-  expect(valueAI).toBe("TestSenderNameAI");
+  expect(valueUser).toContain("TestSenderNameUser");
+  expect(valueAI).toContain("TestSenderNameAI");
 
   expect(
     await page

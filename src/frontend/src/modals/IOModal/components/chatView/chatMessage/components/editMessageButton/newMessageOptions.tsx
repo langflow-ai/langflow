@@ -31,14 +31,14 @@ export function EditMessageButton({
   return (
     <div className="flex items-center rounded-md border border-border bg-background">
       <ShadTooltip styleClasses="z-50" content="Edit message" side="top">
-        <div>
+        <div className="p-1">
           <Button
             variant="ghost"
             size="icon"
             onClick={onEdit}
-            className="h-8 w-8 rounded-none p-0"
+            className="h-8 w-8"
           >
-            <IconComponent name="Pencil" className="h-4 w-4" />
+            <IconComponent name="Pen" className="h-4 w-4" />
           </Button>
         </div>
       </ShadTooltip>
@@ -48,12 +48,12 @@ export function EditMessageButton({
         content={isCopied ? "Copied!" : "Copy message"}
         side="top"
       >
-        <div>
+        <div className="p-1">
           <Button
             variant="ghost"
             size="icon"
             onClick={handleCopy}
-            className="h-8 w-8 rounded-none p-0"
+            className="h-8 w-8"
           >
             <IconComponent
               name={isCopied ? "Check" : "Copy"}

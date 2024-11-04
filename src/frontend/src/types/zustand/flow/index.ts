@@ -54,6 +54,7 @@ export type FlowPoolType = {
 };
 
 export type FlowStoreType = {
+  fitViewNode: (nodeId: string) => void;
   autoSaveFlow: (() => void) | undefined;
   componentsToUpdate: boolean;
   updateComponentsToUpdate: (nodes: Node[]) => void;

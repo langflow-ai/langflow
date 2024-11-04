@@ -17,6 +17,10 @@ const past = {};
 const future = {};
 
 const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
+  IOModalOpen: false,
+  setIOModalOpen: (IOModalOpen: boolean) => {
+    set({ IOModalOpen });
+  },
   healthCheckMaxRetries: 5,
   setHealthCheckMaxRetries: (healthCheckMaxRetries: number) =>
     set({ healthCheckMaxRetries }),

@@ -53,7 +53,7 @@ const DropdownComponent = ({
         />
         Edit details
       </DropdownMenuItem> */}
-      {handlePlaygroundClick && (
+      {/* {handlePlaygroundClick && (
         <DropdownMenuItem
           onClick={(e) => {
             e.stopPropagation();
@@ -68,7 +68,7 @@ const DropdownComponent = ({
           />
           Playground
         </DropdownMenuItem>
-      )}
+      )} */}
       <DropdownMenuItem
         onClick={(e) => {
           e.stopPropagation();

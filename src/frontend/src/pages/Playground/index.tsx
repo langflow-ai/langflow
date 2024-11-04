@@ -1,9 +1,8 @@
-import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
+import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { ENABLE_NEW_IO_MODAL } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import { useStoreStore } from "@/stores/storeStore";
-import { useTypesStore } from "@/stores/typesStore";
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { getComponent } from "../../controllers/API";
@@ -14,51 +13,54 @@ import cloneFLowWithParent from "../../utils/storeUtils";
 const IOModal = ENABLE_NEW_IO_MODAL ? IOModalNew : IOModalOld;
 
 export default function PlaygroundPage() {
-  const flows = useFlowsManagerStore((state) => state.flows);
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const validApiKey = useStoreStore((state) => state.validApiKey);
-
   const { id } = useParams();
-  async function getFlowData() {
-    const res = await getComponent(id!);
-    const newFlow = cloneFLowWithParent(res, res.id, false, true);
-    return newFlow;
-  }
+  const { mutateAsync: getFlow } = useGetFlow();
 
   const navigate = useCustomNavigate();
 
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const { mutateAsync: refreshFlows } = useGetRefreshFlows();
   const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
-  const getTypes = useTypesStore((state) => state.getTypes);
-  const types = useTypesStore((state) => state.types);
 
-  // Set flow tab id
-  useEffect(() => {
-    const awaitgetTypes = async () => {
-      if (flows && currentFlowId === "") {
-        const isAnExistingFlow = flows.find((flow) => flow.id === id);
-
-        if (!isAnExistingFlow) {
-          if (validApiKey) {
-            getFlowData().then((flow) => {
-              setCurrentFlow(flow);
-            });
-          } else {
-            navigate("/");
-          }
+  async function getFlowData() {
+    try {
+      const flow = await getFlow({ id: id! });
+      return flow;
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        if (!validApiKey) {
+          return null;
         }
-        setCurrentFlow(isAnExistingFlow);
-      } else if (!flows) {
-        setIsLoading(true);
-        await refreshFlows({ get_all: true, header_flows: true });
-        if (!types || Object.keys(types).length === 0) await getTypes();
-        setIsLoading(false);
+        try {
+          const res = await getComponent(id!);
+          const newFlow = cloneFLowWithParent(res, res.id, false, true);
+          return newFlow;
+        } catch (componentError) {
+          return null;
+        }
+      }
+      return null;
+    }
+  }
+
+  useEffect(() => {
+    const initializeFlow = async () => {
+      setIsLoading(true);
+      if (currentFlowId === "") {
+        const flow = await getFlowData();
+        if (flow) {
+          setCurrentFlow(flow);
+        } else {
+          navigate("/");
+        }
       }
     };
-    awaitgetTypes();
-  }, [id, flows, validApiKey]);
+
+    initializeFlow();
+    setIsLoading(false);
+  }, [id, validApiKey]);
 
   useEffect(() => {
     if (id) track("Playground Page Loaded", { flowId: id });

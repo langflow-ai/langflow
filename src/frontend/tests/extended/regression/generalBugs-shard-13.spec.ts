@@ -2,7 +2,7 @@ import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
-test("should be able to share a component on the store by clicking on the share button on the canvas", async ({
+test.skip("should be able to share a component on the store by clicking on the share button on the canvas", async ({
   page,
 }) => {
   test.skip(

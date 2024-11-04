@@ -9,12 +9,6 @@ import IconComponent from "../../components/genericIconComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "../../components/ui/tabs";
 import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
 import { InputOutput } from "../../constants/enums";
 import useAlertStore from "../../stores/alertStore";
@@ -36,8 +30,10 @@ export default function IOModal({
   setOpen,
   disable,
   isPlayground,
+  canvasOpen,
 }: IOModalPropsType): JSX.Element {
   const allNodes = useFlowStore((state) => state.nodes);
+  const setIOModalOpen = useFlowsManagerStore((state) => state.setIOModalOpen);
   const inputs = useFlowStore((state) => state.inputs).filter(
     (input) => input.type !== "ChatInput",
   );
@@ -60,7 +56,6 @@ export default function IOModal({
     inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0,
   );
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const deleteSession = useMessagesStore((state) => state.deleteSession);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
@@ -70,6 +65,13 @@ export default function IOModal({
   const [visibleSession, setvisibleSession] = useState<string | undefined>(
     currentFlowId,
   );
+
+  useEffect(() => {
+    setIOModalOpen(open);
+    return () => {
+      setIOModalOpen(false);
+    };
+  }, [open]);
 
   function handleDeleteSession(session_id: string) {
     deleteSessionFunction(
@@ -169,8 +171,9 @@ export default function IOModal({
     if (chatInput) {
       setNode(chatInput.id, (node: NodeType) => {
         const newNode = { ...node };
-
-        newNode.data.node!.template["input_value"].value = chatValue;
+        if (newNode.data.node?.template) {
+          newNode.data.node!.template["input_value"].value = chatValue;
+        }
         return newNode;
       });
     }
@@ -224,6 +227,28 @@ export default function IOModal({
     }
   }, [open]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        // 1024px is Tailwind's 'lg' breakpoint
+        setSidebarOpen(false);
+      } else {
+        setSidebarOpen(true);
+      }
+    };
+
+    // Initial check
+    handleResize();
+
+    // Add event listener
+    window.addEventListener("resize", handleResize);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
   return (
     <BaseModal
       open={open}
@@ -232,7 +257,7 @@ export default function IOModal({
       type={isPlayground ? "modal" : undefined}
       onSubmit={() => sendMessage({ repeat: 1 })}
       size="x-large"
-      className="p-0"
+      className="!rounded-[12px] p-0"
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
@@ -241,21 +266,29 @@ export default function IOModal({
           <div
             className={cn(
               "flex h-full flex-shrink-0 flex-col justify-start transition-all duration-300",
-              sidebarOpen ? "w-1/5" : "w-16",
+              sidebarOpen
+                ? "absolute z-50 lg:relative lg:w-1/5 lg:max-w-[280px]"
+                : "w-0",
             )}
           >
-            <div className="flex h-full flex-col overflow-y-auto border-r border-border bg-zinc-950 p-6 text-center custom-scroll">
+            <div className="flex h-full flex-col overflow-y-auto border-r border-border bg-muted p-6 text-center custom-scroll dark:bg-background">
               <div className="flex items-center gap-2 pb-8">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                <ShadTooltip
+                  styleClasses="z-50"
+                  side="right"
+                  content="Hide sidebar"
                 >
-                  <IconComponent
-                    name={sidebarOpen ? "PanelLeftClose" : "PanelLeftOpen"}
-                    className="h-6 w-6 text-ring"
-                  />
-                </Button>
+                  <Button
+                    variant="ghost"
+                    className="flex h-8 w-8 items-center justify-center !p-0"
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                  >
+                    <IconComponent
+                      name={sidebarOpen ? "PanelLeftClose" : "PanelLeftOpen"}
+                      className="h-[18px] w-[18px] text-ring"
+                    />
+                  </Button>
+                </ShadTooltip>
                 {sidebarOpen && <div className="font-semibold">Playground</div>}
               </div>
               {sidebarOpen && (
@@ -265,23 +298,28 @@ export default function IOModal({
                       <div className="flex items-center gap-2">
                         <IconComponent
                           name="MessagesSquare"
-                          className="h-6 w-6 text-ring"
+                          className="h-[18px] w-[18px] text-ring"
                         />
-                        <div className="font-semibold">Chat</div>
+                        <div className="text-[13px] font-normal">Chat</div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(_) => {
-                          setvisibleSession(undefined);
-                          setSelectedViewField(undefined);
-                        }}
-                      >
-                        <IconComponent
-                          name="Plus"
-                          className="h-6 w-6 text-ring"
-                        />
-                      </Button>
+                      <ShadTooltip styleClasses="z-50" content="New Chat">
+                        <div>
+                          <Button
+                            data-testid="new-chat"
+                            variant="ghost"
+                            className="flex h-8 w-8 items-center justify-center !p-0"
+                            onClick={(_) => {
+                              setvisibleSession(undefined);
+                              setSelectedViewField(undefined);
+                            }}
+                          >
+                            <IconComponent
+                              name="Plus"
+                              className="h-[18px] w-[18px] text-ring"
+                            />
+                          </Button>
+                        </div>
+                      </ShadTooltip>
                     </div>
                   </div>
                   <div className="flex flex-col">
@@ -317,11 +355,11 @@ export default function IOModal({
               )}
             </div>
           </div>
-          <div className="flex h-full min-w-96 flex-grow">
+          <div className="flex h-full min-w-96 flex-grow bg-background dark:bg-accent">
             {selectedViewField && (
               <div
                 className={cn(
-                  "flex h-full w-full flex-col items-start gap-4 pt-4",
+                  "flex h-full w-full flex-col items-start gap-4 p-4",
                   !selectedViewField ? "hidden" : "",
                 )}
               >
@@ -373,19 +411,66 @@ export default function IOModal({
             )}
             <div
               className={cn(
-                "flex h-full w-full flex-col p-6",
+                "flex h-full w-full flex-col justify-between p-6",
                 selectedViewField ? "hidden" : "",
               )}
             >
-              {visibleSession && (
-                <div className="mb-4 h-[5%] text-xl font-semibold">
-                  {visibleSession === currentFlowId
-                    ? "Default Session"
-                    : `${visibleSession}`}
+              <div className="mb-4 h-[5%] text-[16px] font-semibold">
+                {visibleSession && sessions.length > 0 && sidebarOpen && (
+                  <div className="hidden lg:block">
+                    {visibleSession === currentFlowId
+                      ? "Default Session"
+                      : `${visibleSession}`}
+                  </div>
+                )}
+                <div className={cn(sidebarOpen ? "lg:hidden" : "")}>
+                  <div className="-ml-4 -mt-4 flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setSidebarOpen(true)}
+                      className="h-8 w-8"
+                    >
+                      <IconComponent
+                        name={"PanelLeftOpen"}
+                        className="h-[18px] w-[18px] text-ring"
+                      />
+                    </Button>
+                    <div className="font-semibold">Playground</div>
+                  </div>
                 </div>
-              )}
+                <div
+                  className={cn(
+                    sidebarOpen ? "pointer-events-none opacity-0" : "",
+                    "absolute right-10 top-2 flex h-8 w-8 items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                  )}
+                >
+                  <ShadTooltip styleClasses="z-50" content="New Chat">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(_) => {
+                        setvisibleSession(undefined);
+                        setSelectedViewField(undefined);
+                      }}
+                    >
+                      <IconComponent
+                        name="Plus"
+                        className="h-[18px] w-[18px] text-ring"
+                      />
+                    </Button>
+                  </ShadTooltip>
+                </div>
+              </div>
               {haveChat ? (
-                <div className={visibleSession ? "h-[95%]" : "h-full"}>
+                <div
+                  className={cn(
+                    visibleSession ? "h-[95%]" : "h-full",
+                    sidebarOpen
+                      ? "pointer-events-none blur-sm lg:pointer-events-auto lg:blur-0"
+                      : "",
+                  )}
+                >
                   <ChatView
                     focusChat={sessionId}
                     sendMessage={sendMessage}
@@ -394,6 +479,13 @@ export default function IOModal({
                     lockChat={lockChat}
                     setLockChat={setLockChat}
                     visibleSession={visibleSession}
+                    closeChat={
+                      !canvasOpen
+                        ? undefined
+                        : () => {
+                            setOpen(false);
+                          }
+                    }
                   />
                 </div>
               ) : (

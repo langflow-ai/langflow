@@ -177,6 +177,9 @@ async def build_flow(
             else:
                 first_layer = graph.sort_vertices()
 
+            if inputs is not None and hasattr(inputs, "session") and inputs.session is not None:
+                graph.session_id = inputs.session
+
             for vertex_id in first_layer:
                 graph.run_manager.add_to_vertices_being_run(vertex_id)
 

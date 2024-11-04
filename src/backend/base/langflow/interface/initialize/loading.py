@@ -42,6 +42,7 @@ def instantiate_class(
         _parameters=custom_params,
         _vertex=vertex,
         _tracing_service=get_tracing_service(),
+        _id=vertex.id,
     )
     if hasattr(custom_component, "set_event_manager"):
         custom_component.set_event_manager(event_manager)

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test.skip("user must be able to freeze a component", async ({ page }) => {
+test("user must be able to freeze a component", async ({ page }) => {
   await page.goto("/");
   await page.waitForSelector('[data-testid="mainpage_title"]', {
     timeout: 30000,
