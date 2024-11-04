@@ -1,4 +1,4 @@
-from langchain_openai.embeddings.base import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
@@ -38,9 +38,9 @@ class OpenAIEmbeddingsComponent(LCEmbeddingsModel):
             value="text-embedding-3-small",
         ),
         DictInput(name="model_kwargs", display_name="Model Kwargs", advanced=True),
-        SecretStrInput(name="openai_api_base", display_name="OpenAI API Base", advanced=True),
         SecretStrInput(name="openai_api_key", display_name="OpenAI API Key", value="OPENAI_API_KEY"),
-        SecretStrInput(name="openai_api_type", display_name="OpenAI API Type", advanced=True),
+        MessageTextInput(name="openai_api_base", display_name="OpenAI API Base", advanced=True),
+        MessageTextInput(name="openai_api_type", display_name="OpenAI API Type", advanced=True),
         MessageTextInput(name="openai_api_version", display_name="OpenAI API Version", advanced=True),
         MessageTextInput(
             name="openai_organization",
@@ -74,26 +74,27 @@ class OpenAIEmbeddingsComponent(LCEmbeddingsModel):
 
     def build_embeddings(self) -> Embeddings:
         return OpenAIEmbeddings(
-            tiktoken_enabled=self.tiktoken_enable,
-            default_headers=self.default_headers,
-            default_query=self.default_query,
+            client=self.client or None,
+            model=self.model,
+            dimensions=self.dimensions or None,
+            deployment=self.deployment or None,
+            api_version=self.openai_api_version or None,
+            base_url=self.openai_api_base or None,
+            openai_api_type=self.openai_api_type or None,
+            openai_proxy=self.openai_proxy or None,
+            embedding_ctx_length=self.embedding_ctx_length,
+            api_key=self.openai_api_key or None,
+            organization=self.openai_organization or None,
             allowed_special="all",
             disallowed_special="all",
             chunk_size=self.chunk_size,
-            deployment=self.deployment,
-            embedding_ctx_length=self.embedding_ctx_length,
             max_retries=self.max_retries,
-            model=self.model,
-            model_kwargs=self.model_kwargs,
-            base_url=self.openai_api_base,
-            api_key=self.openai_api_key,
-            openai_api_type=self.openai_api_type,
-            api_version=self.openai_api_version,
-            organization=self.openai_organization,
-            openai_proxy=self.openai_proxy,
             timeout=self.request_timeout or None,
+            tiktoken_enabled=self.tiktoken_enable,
+            tiktoken_model_name=self.tiktoken_model_name or None,
             show_progress_bar=self.show_progress_bar,
+            model_kwargs=self.model_kwargs,
             skip_empty=self.skip_empty,
-            tiktoken_model_name=self.tiktoken_model_name,
-            dimensions=self.dimensions or None,
+            default_headers=self.default_headers or None,
+            default_query=self.default_query or None,
         )

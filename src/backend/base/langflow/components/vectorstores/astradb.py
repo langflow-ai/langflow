@@ -389,7 +389,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             msg = f"Invalid setup mode: {self.setup_mode}"
             raise ValueError(msg) from e
 
-        if self.embedding:
+        if self.embedding_service == "Embedding Model":
             embedding_dict = {"embedding": self.embedding}
         else:
             from astrapy.info import CollectionVectorServiceOptions
