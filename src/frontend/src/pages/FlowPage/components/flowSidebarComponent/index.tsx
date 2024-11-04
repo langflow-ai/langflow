@@ -327,18 +327,20 @@ export function FlowSidebarComponent() {
             )}
             <h3 className="flex-1 text-sm font-semibold">Components</h3>
             <DisclosureTrigger>
-              <ShadTooltip content="Component settings" styleClasses="z-50">
-                <Button
-                  variant={showConfig ? "ghostActive" : "ghost"}
-                  size="iconMd"
-                  data-testid="sidebar-options-trigger"
-                >
-                  <ForwardedIconComponent
-                    name="SlidersHorizontal"
-                    className="h-4 w-4"
-                  />
-                </Button>
-              </ShadTooltip>
+              <div>
+                <ShadTooltip content="Component settings" styleClasses="z-50">
+                  <Button
+                    variant={showConfig ? "ghostActive" : "ghost"}
+                    size="iconMd"
+                    data-testid="sidebar-options-trigger"
+                  >
+                    <ForwardedIconComponent
+                      name="SlidersHorizontal"
+                      className="h-4 w-4"
+                    />
+                  </Button>
+                </ShadTooltip>
+              </div>
             </DisclosureTrigger>
           </div>
           <DisclosureContent>
