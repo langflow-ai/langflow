@@ -50,12 +50,11 @@ export default function NodeInputField({
   });
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const { handleNodeClass } = useHandleNodeClass(data.id);
-
   let disabled =
     edges.some(
       (edge) =>
         edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
-    ) ?? false;
+    ) || isToolMode;
 
   const { handleOnNewValue } = useHandleOnNewValue({
     node: data.node!,
