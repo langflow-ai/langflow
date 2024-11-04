@@ -29,7 +29,7 @@ test("user must be able to send an image on chat using advanced tool on ChatInpu
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -53,9 +53,19 @@ test("user must be able to send an image on chat using advanced tool on ChatInpu
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
-  await page
-    .getByTestId("popover-anchor-input-api_key")
-    .fill(process.env.OPENAI_API_KEY ?? "");
+  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  while (filledApiKey > 0) {
+    await page.getByTestId("remove-icon-badge").first().click();
+    await page.waitForTimeout(1000);
+    filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  }
+
+  const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
+  const isApiKeyInputVisible = await apiKeyInput.isVisible();
+
+  if (isApiKeyInputVisible) {
+    await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+  }
 
   await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
@@ -64,7 +74,7 @@ test("user must be able to send an image on chat using advanced tool on ChatInpu
 
   await page.getByText("Chat Input", { exact: true }).click();
   await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("advanced-button-modal").click();
   await page.getByTestId("showfiles").click();
   await page.getByText("Close").last().click();
 
@@ -75,11 +85,11 @@ test("user must be able to send an image on chat using advanced tool on ChatInpu
 
   const filePath = "tests/assets/chain.png";
 
-  await page.click('[data-testid="inputfile_file_files"]');
+  await page.click('[data-testid="button_upload_file"]');
 
   const [fileChooser] = await Promise.all([
     page.waitForEvent("filechooser"),
-    page.click('[data-testid="inputfile_file_files"]'),
+    page.click('[data-testid="button_upload_file"]'),
   ]);
 
   await fileChooser.setFiles(filePath);

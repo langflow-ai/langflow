@@ -8,6 +8,7 @@ class VectoStoreRetrieverComponent(CustomComponent):
     display_name = "VectorStore Retriever"
     description = "A vector store retriever"
     name = "VectorStoreRetriever"
+    legacy: bool = True
 
     def build_config(self):
         return {

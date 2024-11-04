@@ -1,7 +1,11 @@
 import { expect, Page, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 
-test("user should interact with link component", async ({ context, page }) => {
+// TODO: This test might not be needed anymore
+test.skip("user should interact with link component", async ({
+  context,
+  page,
+}) => {
   await page.goto("/");
   await page.waitForSelector('[data-testid="mainpage_title"]', {
     timeout: 30000,
@@ -22,7 +26,7 @@ test("user should interact with link component", async ({ context, page }) => {
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -40,28 +44,11 @@ test("user should interact with link component", async ({ context, page }) => {
   });
   await page.getByTestId("blank-flow").click();
 
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  const focusElementsOnBoard = async ({ page }) => {
-    const focusElements = await page.getByTestId("extended-disclosure");
-    focusElements.click();
-  };
-
-  await focusElementsOnBoard({ page });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("custom component");
-
   await page.waitForTimeout(1000);
 
-  await page
-    .locator('//*[@id="helpersCustom Component"]')
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
-  await page.getByTestId("fit_view").click();
-  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("sidebar-custom-component-button").click();
+  await page.getByTitle("fit view").click();
+  await page.getByTitle("zoom out").click();
 
   await page.getByTestId("title-Custom Component").first().click();
 

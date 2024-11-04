@@ -17,7 +17,7 @@ test("should be able to see error when something goes wrong on Code Modal", asyn
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -27,18 +27,8 @@ test("should be able to see error when something goes wrong on Code Modal", asyn
   });
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("custom component");
-  await page.waitForTimeout(1000);
-
-  await page
-    .getByTestId("helpersCustom Component")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
+  await page.getByTestId("sidebar-custom-component-button").click();
 
   await page.getByTestId("zoom_out").click();
   await page.getByTestId("zoom_out").click();

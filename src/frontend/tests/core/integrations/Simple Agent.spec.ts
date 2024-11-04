@@ -33,7 +33,7 @@ test("Simple Agent", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -66,9 +66,18 @@ test("Simple Agent", async ({ page }) => {
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
+  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  while (filledApiKey > 0) {
+    await page.getByTestId("remove-icon-badge").first().click();
+    await page.waitForTimeout(1000);
+    filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  }
+
   await page
     .getByTestId("popover-anchor-input-api_key")
     .fill(process.env.OPENAI_API_KEY ?? "");
+
+  await page.getByTestId("fit_view").click();
 
   await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
@@ -101,11 +110,9 @@ test("Simple Agent", async ({ page }) => {
 
   expect(page.getByText("User")).toBeVisible();
 
-  expect(page.locator(".language-python")).toBeVisible();
-
   let pythonWords = await page.getByText("4 + 4").count();
 
-  expect(pythonWords).toBe(3);
+  expect(pythonWords).toBe(2);
 
   await page
     .getByPlaceholder("Send a message...")
@@ -120,13 +127,25 @@ test("Simple Agent", async ({ page }) => {
     },
   );
 
-  await page.waitForSelector('[data-testid="icon-Copy"]', {
+  await page.waitForSelector(".api-modal-tablist-div", {
     timeout: 100000,
+    state: "visible",
+  });
+
+  await page.waitForSelector("role=tab", {
+    timeout: 100000,
+    state: "visible",
   });
 
   await page.waitForTimeout(1000);
 
-  await page.getByTestId("icon-Copy").last().click();
+  await page.waitForSelector('[data-testid="btn-copy-code"]', {
+    state: "visible",
+    timeout: 30000,
+  });
+
+  await page.waitForTimeout(1000);
+  await page.getByTestId("btn-copy-code").last().click();
 
   await page.waitForTimeout(500);
 

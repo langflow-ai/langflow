@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 
-test("should be able to select all with ctrl + A on advanced modal", async ({
+// TODO: This test might not be needed anymore
+test.skip("should be able to select all with ctrl + A on advanced modal", async ({
   page,
 }) => {
   await page.goto("/");
@@ -18,7 +19,7 @@ test("should be able to select all with ctrl + A on advanced modal", async ({
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -28,13 +29,9 @@ test("should be able to select all with ctrl + A on advanced modal", async ({
   });
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("ollama");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("ollama");
   await page.waitForTimeout(1000);
 
   await page

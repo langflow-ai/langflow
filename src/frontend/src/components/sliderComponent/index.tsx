@@ -13,10 +13,10 @@ const BACKGROUND_COLORS = ["#4f46e5", "#7c3aed", "#a21caf", "#c026d3"];
 const TEXT_COLORS = ["#fff", "#fff", "#fff", "#fff"];
 const PERCENTAGES = [0.125, 0.375, 0.625, 0.875];
 
-const DARK_COLOR_BACKGROUND = "#09090b";
+const DARK_COLOR_BACKGROUND = "#27272a";
 const DARK_COLOR_TEXT = "#52525b";
 const LIGHT_COLOR_BACKGROUND = "#e4e4e7";
-const LIGHT_COLOR_TEXT = "#000";
+const LIGHT_COLOR_TEXT = "#52525b";
 
 const DEFAULT_SLIDER_BUTTONS_OPTIONS = [
   { id: 0, label: "Precise" },
@@ -171,7 +171,7 @@ export default function SliderComponent({
             data-testid={`slider_track${editNode ? "_advanced" : ""}`}
             className={clsx(
               "relative h-1 w-full grow rounded-full",
-              isDark ? "bg-zinc-800" : "bg-zinc-200",
+              isDark ? "bg-muted" : "bg-border",
             )}
           >
             <SliderPrimitive.Range className="absolute h-full rounded-full bg-gradient-to-r from-indigo-600 to-pink-500" />
@@ -179,7 +179,7 @@ export default function SliderComponent({
           <SliderPrimitive.Thumb
             data-testid={`slider_thumb${editNode ? "_advanced" : ""}`}
             className={clsx(
-              "block h-6 w-6 rounded-full border-2 border-muted bg-pink-500 shadow-lg",
+              "block h-6 w-6 rounded-full border-2 border-background bg-pink-500 shadow-lg",
             )}
           />
         </SliderPrimitive.Root>
@@ -190,10 +190,7 @@ export default function SliderComponent({
             value={valueAsNumber.toFixed(2)}
             onChange={(e) => handleChange([parseFloat(e.target.value)])}
             className={clsx(
-              "ml-2 h-10 w-16 rounded-md border px-2 py-1 text-sm arrow-hide",
-              isDark
-                ? "border-zinc-700 bg-zinc-800 text-white"
-                : "border-zinc-300 bg-white text-black",
+              "primary-input ml-2 h-10 w-16 rounded-md border px-2 py-1 text-sm arrow-hide",
             )}
             min={min}
             max={max}
@@ -205,12 +202,7 @@ export default function SliderComponent({
 
       {sliderButtons && (
         <div className="my-3">
-          <div
-            className={clsx(
-              "flex rounded-md",
-              isDark ? "bg-zinc-950" : "bg-zinc-200",
-            )}
-          >
+          <div className={clsx("flex rounded-md bg-background")}>
             {sliderButtonsOptions?.map((option) => (
               <button
                 key={option.id}
@@ -231,19 +223,23 @@ export default function SliderComponent({
         </div>
       )}
 
-      <div className="mt-2 grid grid-cols-2 gap-x-2 text-sm text-gray-500">
+      <div className="text mt-2 grid grid-cols-2 gap-x-2 text-sm">
         <div className="flex items-center">
           <IconComponent
-            className="mr-1 h-4 w-4"
+            className="mr-1 h-4 w-4 text-placeholder-foreground"
             name={minLabelIcon}
             aria-hidden="true"
           />
-          <span data-testid="min_label">{minLabel}</span>
+          <span data-testid="min_label" className="text-muted-foreground">
+            {minLabel}
+          </span>
         </div>
         <div className="flex items-center justify-end">
-          <span data-testid="max_label">{maxLabel}</span>
+          <span data-testid="max_label" className="text-muted-foreground">
+            {maxLabel}
+          </span>
           <IconComponent
-            className="ml-1 h-4 w-4"
+            className="ml-1 h-4 w-4 text-placeholder-foreground"
             name={maxLabelIcon}
             aria-hidden="true"
           />

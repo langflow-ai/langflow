@@ -37,7 +37,7 @@ class LocalStorageService(StorageService):
             file_path.write_bytes(data)
 
         try:
-            await asyncio.get_event_loop().run_in_executor(None, write_file, file_path, data)
+            await asyncio.to_thread(write_file, file_path, data)
             logger.info(f"File {file_name} saved successfully in flow {flow_id}.")
         except Exception:
             logger.exception(f"Error saving file {file_name} in flow {flow_id}")
@@ -60,7 +60,7 @@ class LocalStorageService(StorageService):
         def read_file(file_path: Path) -> bytes:
             return file_path.read_bytes()
 
-        content = await asyncio.get_event_loop().run_in_executor(None, read_file, file_path)
+        content = await asyncio.to_thread(read_file, file_path)
         logger.debug(f"File {file_name} retrieved successfully from flow {flow_id}.")
         return content
 

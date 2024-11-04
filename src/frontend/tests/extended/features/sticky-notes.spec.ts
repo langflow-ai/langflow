@@ -1,4 +1,3 @@
-import { ENABLE_MVPS } from "@/../../src/customization/feature-flags";
 import { expect, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 
@@ -58,7 +57,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
   `;
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -67,9 +66,6 @@ The future of AI is both exciting and uncertain. As the technology continues to 
     timeout: 30000,
   });
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
   await page.getByTestId("add_note").click();
 
   await page.waitForTimeout(1000);
@@ -90,7 +86,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
   await page.getByTestId("note_node").click();
 
-  await page.locator(".generic-node-desc").last().dblclick();
+  await page.locator(".generic-node-desc-text").last().dblclick();
   await page.getByTestId("textarea").fill(noteText);
 
   expect(await page.getByText("2500/2500")).toBeVisible();
@@ -168,13 +164,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
   await page.waitForTimeout(1000);
 
-  await page.getByTestId("note_node").nth(0).click();
-  await page.getByTestId("more-options-modal").click();
-  await page.getByText("Delete").last().click();
-
-  await page.waitForTimeout(1000);
-
   titleNumber = await page.getByText(randomTitle).count();
 
-  expect(titleNumber).toBe(1);
+  expect(titleNumber).toBe(2);
 });

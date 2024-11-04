@@ -29,7 +29,7 @@ test("freeze must work correctly", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -61,7 +61,7 @@ test("freeze must work correctly", async ({ page }) => {
 
   await page.locator('//*[@id="react-flow-id"]').hover();
 
-  await page.getByTestId("promptarea_prompt_template-ExternalLink").click();
+  await page.getByTestId("button_open_prompt_modal").click();
 
   await page.getByTestId("modal-promptarea_prompt_template").fill(promptText);
 
@@ -106,7 +106,7 @@ test("freeze must work correctly", async ({ page }) => {
 
   await page.locator('//*[@id="react-flow-id"]').click();
 
-  await page.getByTestId("promptarea_prompt_template-ExternalLink").click();
+  await page.getByTestId("button_open_prompt_modal").click();
 
   await page.getByTestId("edit-prompt-sanitized").first().click();
 
