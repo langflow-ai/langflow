@@ -39,7 +39,6 @@ from langflow.logging.logger import LogConfig, configure
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.deps import get_chat_service, get_tracing_service
-from langflow.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import InputValueRequest
@@ -1135,7 +1134,7 @@ class Graph:
         # This is a hack to make sure that the LLM vertex is sent to
         # the toolkit vertex
         self._build_vertex_params()
-        run_until_complete(self._instantiate_components_in_vertices())
+        self._instantiate_components_in_vertices()
         self._set_cache_to_vertices_in_cycle()
 
     def _get_edges_as_list_of_tuples(self) -> list[tuple[str, str]]:
@@ -1150,10 +1149,10 @@ class Graph:
             if vertex.id in cycle_vertices:
                 vertex.apply_on_outputs(lambda output_object: setattr(output_object, "cache", False))
 
-    async def _instantiate_components_in_vertices(self) -> None:
+    def _instantiate_components_in_vertices(self) -> None:
         """Instantiates the components in the vertices."""
         for vertex in self.vertices:
-            await vertex.instantiate_component(self.user_id)
+            vertex.instantiate_component(self.user_id)
 
     def remove_vertex(self, vertex_id: str) -> None:
         """Removes a vertex from the graph."""

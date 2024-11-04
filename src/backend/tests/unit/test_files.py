@@ -1,3 +1,4 @@
+import asyncio
 import re
 import shutil
 import tempfile
@@ -37,20 +38,25 @@ async def files_client_fixture(
     if "noclient" in request.keywords:
         yield
     else:
-        db_dir = tempfile.mkdtemp()
-        db_path = Path(db_dir) / "test.db"
-        monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
-        monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
-        if "load_flows" in request.keywords:
-            shutil.copyfile(
-                pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"
-            )
-            monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
-            monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
 
-        from langflow.main import create_app
+        def init_app():
+            db_dir = tempfile.mkdtemp()
+            db_path = Path(db_dir) / "test.db"
+            monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
+            monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+            if "load_flows" in request.keywords:
+                shutil.copyfile(
+                    pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"
+                )
+                monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
+                monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
 
-        app = create_app()
+            from langflow.main import create_app
+
+            app = create_app()
+            return app, db_path
+
+        app, db_path = await asyncio.to_thread(init_app)
 
         app.dependency_overrides[get_storage_service] = lambda: mock_storage_service
         async with (

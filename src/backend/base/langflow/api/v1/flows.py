@@ -299,7 +299,7 @@ async def update_flow(
 
 
 @router.delete("/{flow_id}", status_code=200)
-async def delete_flow(
+def delete_flow(
     *,
     session: DbSession,
     flow_id: UUID,
@@ -314,7 +314,7 @@ async def delete_flow(
     )
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
-    await cascade_delete_flow(session, flow)
+    cascade_delete_flow(session, flow)
     session.commit()
     return {"message": "Flow deleted successfully"}
 
