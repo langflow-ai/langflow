@@ -2,7 +2,6 @@ from abc import abstractmethod
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, cast
 
-from fastapi.encoders import jsonable_encoder
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.agents.agent import RunnableAgent
 from langchain_core.runnables import Runnable
@@ -14,7 +13,9 @@ from langflow.field_typing import Text
 from langflow.inputs.inputs import InputTypes
 from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
 from langflow.schema import Data
-from langflow.schema.log import LogFunctionType
+from langflow.schema.content_block import ContentBlock
+from langflow.schema.content_types import ToolEndContent, ToolErrorContent, ToolStartContent
+from langflow.schema.log import SendMessageFunctionType
 from langflow.schema.message import Message
 from langflow.template import Output
 from langflow.utils.constants import MESSAGE_SENDER_AI
@@ -59,11 +60,8 @@ class LCAgentComponent(Component):
     async def message_response(self) -> Message:
         """Run the agent and return the response."""
         agent = self.build_agent()
-        result = await self.run_agent(agent=agent)
+        message = await self.run_agent(agent=agent)
 
-        if isinstance(result, list):
-            result = "\n".join([result_dict["text"] for result_dict in result])
-        message = Message(text=result, sender=MESSAGE_SENDER_AI)
         self.status = message
         return message
 
@@ -153,7 +151,7 @@ class LCToolsAgentComponent(LCAgentComponent):
     async def run_agent(
         self,
         agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor,
-    ) -> Text:
+    ) -> Message:
         if isinstance(agent, AgentExecutor):
             runnable = agent
         else:
@@ -174,11 +172,11 @@ class LCToolsAgentComponent(LCAgentComponent):
                 config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]},
                 version="v2",
             ),
-            self.log,
+            self.send_message,
         )
 
         self.status = result
-        return cast(str, result)
+        return result
 
     @abstractmethod
     def create_agent_runnable(self) -> Runnable:
@@ -188,56 +186,120 @@ class LCToolsAgentComponent(LCAgentComponent):
 # Add this function near the top of the file, after the imports
 
 
-async def process_agent_events(agent_executor: AsyncIterator[dict[str, Any]], log_callback: LogFunctionType) -> str:
+async def process_agent_events(
+    agent_executor: AsyncIterator[dict[str, Any]],
+    send_message_method: SendMessageFunctionType,
+) -> Message:
     """Process agent events and return the final output.
+
+    Uses a single message that gets updated throughout the agent's execution.
 
     Args:
         agent_executor: An async iterator of agent events
-        log_callback: A callable function for logging messages
-
+        send_message_method: A callable function for sending messages
+        on_token: A callable function for streaming tokens
     Returns:
         str: The final output from the agent
     """
-    final_output = ""
+    # Initialize a single message that will be updated throughout
+    agent_message = Message(
+        sender=MESSAGE_SENDER_AI,
+        sender_name="Agent",
+        properties={"icon": "🤖"},
+        content_blocks=[],
+    )
+    # Store the initial message
+    agent_message = send_message_method(message=agent_message)
+
     async for event in agent_executor:
         match event["event"]:
             case "on_chain_start":
                 if event["data"].get("input"):
-                    log_callback(f"Agent initiated with input: {event['data'].get('input')}", name="🚀 Agent Start")
+                    agent_message.content_blocks.append(
+                        ContentBlock(
+                            title="Agent Input",
+                            content={
+                                "type": "text",
+                                "text": f"Agent initiated with input: {event['data'].get('input')}",
+                            },
+                        )
+                    )
+                    agent_message.properties.icon = "🚀"
+                    agent_message = send_message_method(message=agent_message)
 
             case "on_chain_end":
                 data_output = event["data"].get("output", {})
-                if data_output and "output" in data_output:
-                    final_output = data_output["output"]
-                    log_callback(f"{final_output}", name="✅ Agent End")
-                elif data_output and "agent_scratchpad" in data_output and data_output["agent_scratchpad"]:
-                    agent_scratchpad_messages = data_output["agent_scratchpad"]
-                    json_encoded_messages = jsonable_encoder(agent_scratchpad_messages)
-                    log_callback(json_encoded_messages, name="🔍 Agent Scratchpad")
+                if data_output and "agent_scratchpad" in data_output and data_output["agent_scratchpad"]:
+                    # Agent Strachpad floods the chat
+                    # agent_scratchpad_messages = data_output["agent_scratchpad"]
+                    # json_encoded_messages = jsonable_encoder(agent_scratchpad_messages)
+                    # agent_message.content_blocks.extend(
+                    #     [
+                    #         ContentBlock(
+                    #             title="Agent Scratchpad",
+                    #             content=JSONContent(type="json", data=json_encoded_message),
+                    #         )
+                    #         for json_encoded_message in json_encoded_messages
+                    #     ]
+                    # )
+                    if data_output.get("output"):
+                        agent_message.text = data_output.get("output")
+                        icon = "🤖"
+                    else:
+                        icon = "🔍"
+                    agent_message.properties.icon = icon
+                    agent_message = send_message_method(message=agent_message)
 
             case "on_tool_start":
-                log_callback(
-                    f"Initiating tool: '{event['name']}' with inputs: {event['data'].get('input')}",
-                    name="🔧 Tool Start",
+                agent_message.content_blocks.append(
+                    ContentBlock(
+                        title="Tool Input",
+                        content=ToolStartContent(
+                            type="tool_start",
+                            tool_name=event["name"],
+                            tool_input=event["data"].get("input"),
+                        ),
+                    )
                 )
+                agent_message.properties.icon = "🔧"
+                agent_message = send_message_method(message=agent_message)
 
             case "on_tool_end":
-                log_callback(f"Tool '{event['name']}' execution completed", name="🏁 Tool End")
-                log_callback(f"{event['data'].get('output')}", name="📊 Tool Output")
+                agent_message.content_blocks.append(
+                    ContentBlock(
+                        title="Tool Output",
+                        content=ToolEndContent(
+                            type="tool_end",
+                            tool_name=event["name"],
+                            tool_output=event["data"].get("output"),
+                        ),
+                    )
+                )
+                agent_message = send_message_method(message=agent_message)
 
             case "on_tool_error":
                 tool_name = event.get("name", "Unknown tool")
                 error_message = event["data"].get("error", "Unknown error")
-                log_callback(f"Tool '{tool_name}' failed with error: {error_message}", name="❌ Tool Error")
-
-                if "stack_trace" in event["data"]:
-                    log_callback(f"{event['data']['stack_trace']}", name="🔍 Tool Error")
-
-                if "recovery_attempt" in event["data"]:
-                    log_callback(f"{event['data']['recovery_attempt']}", name="🔄 Tool Error")
-
+                agent_message.content_blocks.append(
+                    ContentBlock(
+                        title="Tool Error",
+                        content=ToolErrorContent(
+                            type="tool_error",
+                            tool_name=tool_name,
+                            tool_error=error_message,
+                        ),
+                    )
+                )
+                agent_message.properties.icon = "⚠️"
+                agent_message = send_message_method(message=agent_message)
+            case "on_chain_stream":
+                # this is similar to the on_chain_end but here we stream tokens
+                data_chunk = event["data"].get("chunk", {})
+                if isinstance(data_chunk, dict) and data_chunk.get("output"):
+                    agent_message.text = data_chunk.get("output")
+                    agent_message = send_message_method(message=agent_message)
             case _:
                 # Handle any other event types or ignore them
                 pass
 
-    return final_output
+    return Message(**agent_message.model_dump())
