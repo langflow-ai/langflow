@@ -333,9 +333,7 @@ export default function ChatMessage({
 
                                         return !inline ? (
                                           <CodeTabsComponent
-                                            language={
-                                              (match && match[1]) || ""
-                                            }
+                                            language={(match && match[1]) || ""}
                                             code={String(content).replace(
                                               /\n$/,
                                               "",
