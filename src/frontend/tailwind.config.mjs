@@ -121,6 +121,7 @@ const config = {
         "chat-user-icon": "var(--chat-user-icon)",
         "code-background": "hsl(var(--code-background))",
         canvas: "hsl(var(--canvas))",
+        "canvas-dot": "hsl(var(--canvas-dot))",
         ice: "var(--ice)",
         selected: "var(--selected)",
         hover: "var(--hover)",
