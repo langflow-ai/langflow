@@ -12,8 +12,8 @@ import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
 import { Separator } from "../ui/separator";
-import DurationDisplay from "./DurationDisplay";
 import ContentDisplay from "./ContentDisplay";
+import DurationDisplay from "./DurationDisplay";
 
 interface ContentBlockDisplayProps {
   contentBlocks: ContentBlock[];
@@ -87,7 +87,9 @@ export function ContentBlockDisplay({
                       {contentIndex > 0 && <Separator className="my-2" />}
                       {Object.entries(content)
                         .filter(([key]) => key !== "type")
-                        .map(([key, value], entryIndex) => <ContentDisplay type={key} content={value} />)}
+                        .map(([key, value], entryIndex) => (
+                          <ContentDisplay type={key} content={value} />
+                        ))}
                     </div>
                   ))}
                 </div>
