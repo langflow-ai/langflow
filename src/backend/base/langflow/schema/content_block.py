@@ -34,7 +34,11 @@ class ContentBlock(BaseModel):
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
-        fields = self.__pydantic_core_schema__["schema"]["fields"]
+        schema_dict = self.__pydantic_core_schema__["schema"]
+        if "fields" in schema_dict:
+            fields = schema_dict["fields"]
+        elif "schema" in schema_dict:
+            fields = schema_dict["schema"]["fields"]
         fields_with_default = (f for f, d in fields.items() if "default" in d["schema"])
         self.model_fields_set.update(fields_with_default)
 
