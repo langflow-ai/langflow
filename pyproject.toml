@@ -49,7 +49,7 @@ dependencies = [
     "pymongo>=4.6.0",
     "supabase~=2.6.0",
     "certifi>=2023.11.17,<2025.0.0",
-    "psycopg>=3.1.9",
+    "psycopg[binary,pool]>=3.1.9",
     "fastavro>=1.8.0",
     "redis>=5.0.1",
     "metaphor-python>=0.1.11",
@@ -111,6 +111,7 @@ dependencies = [
     "langchain-elasticsearch>=0.2.0",
     "langchain-ollama>=0.2.0",
     "pymupdf~=1.24.13",
+    "aiosqlite>=0.20.0",
 ]
 
 [project.urls]
