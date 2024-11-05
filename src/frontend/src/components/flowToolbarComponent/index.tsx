@@ -1,6 +1,7 @@
 import ShadTooltip from "@/components/shadTooltipComponent";
 import { ENABLE_API } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
+import IOModal from "@/modals/IOModal/newModal";
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { Panel } from "reactflow";
@@ -11,8 +12,6 @@ import { useShortcutsStore } from "../../stores/shortcuts";
 import { useStoreStore } from "../../stores/storeStore";
 import { classNames, isThereModal } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
-import IOModal from "@/modals/IOModal/newModal";
-
 
 export default function FlowToolbar(): JSX.Element {
   const preventDefault = true;

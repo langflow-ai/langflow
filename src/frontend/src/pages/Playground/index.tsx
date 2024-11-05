@@ -1,13 +1,13 @@
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
+import IOModal from "@/modals/IOModal/newModal";
 import { useStoreStore } from "@/stores/storeStore";
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { getComponent } from "../../controllers/API";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import cloneFLowWithParent from "../../utils/storeUtils";
-import IOModal from "@/modals/IOModal/newModal";
 
 export default function PlaygroundPage() {
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
