@@ -78,7 +78,7 @@ export default function FlowToolbar(): JSX.Element {
             className={classNames(
               "relative inline-flex h-8 w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out",
               !hasApiKey || !validApiKey || !hasStore
-                ? "text-muted-foreground cursor-not-allowed"
+                ? "cursor-not-allowed text-muted-foreground"
                 : "hover:bg-accent",
             )}
             data-testid="shared-button-flow"
