@@ -35,16 +35,13 @@ async def handle_on_chain_start(
     event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType
 ) -> Message:
     if event["data"].get("input"):
-        agent_message.content_blocks.append(
-            ContentBlock(
-                title="Agent Input",
-                contents=[
-                    TextContent(
-                        type="text",
-                        text=_build_agent_input_text_content(event["data"].get("input")),
-                    )
-                ],
-                allow_markdown=True,
+        if not agent_message.content_blocks:
+            agent_message.content_blocks = [ContentBlock(title="Agent Execution", contents=[])]
+
+        agent_message.content_blocks[0].contents.append(
+            TextContent(
+                type="text",
+                text=_build_agent_input_text_content(event["data"].get("input")),
             )
         )
         agent_message.properties.icon = "🚀"
@@ -66,38 +63,20 @@ async def handle_on_chain_end(
     return agent_message
 
 
-def _find_or_create_tool_content_block(
-    tool_blocks_map: dict[str, ContentBlock],
-    run_id: str,
+def _find_or_create_tool_content(
     tool_name: str,
     tool_input: Any | None = None,
     tool_output: Any | None = None,
     tool_error: Any | None = None,
-) -> tuple[ContentBlock, bool]:
-    """Find an existing tool content block or create a new one using run_id.
-
-    Returns:
-        Tuple of (ContentBlock, bool) where bool indicates if block was created
-    """
-    # Check if we have a block for this run_id
-    if run_id in tool_blocks_map:
-        return tool_blocks_map[run_id], False
-
-    # Create new block
-    new_block = ContentBlock(
-        title=f"{tool_name} Execution",
-        contents=[
-            ToolContent(
-                type="tool_use",
-                name=tool_name,
-                tool_input=tool_input,
-                output=tool_output,
-                error=tool_error,
-            )
-        ],
+) -> ToolContent:
+    """Create a new ToolContent object."""
+    return ToolContent(
+        type="tool_use",
+        name=tool_name,
+        tool_input=tool_input,
+        output=tool_output,
+        error=tool_error,
     )
-    tool_blocks_map[run_id] = new_block
-    return new_block, True
 
 
 async def handle_on_tool_start(
@@ -108,16 +87,14 @@ async def handle_on_tool_start(
 ) -> Message:
     tool_name = event["name"]
     tool_input = event["data"].get("input")
-    run_id = event.get("run_id", "")
 
-    block, is_new = _find_or_create_tool_content_block(tool_blocks_map, run_id, tool_name, tool_input=tool_input)
+    if not agent_message.content_blocks:
+        agent_message.content_blocks = [ContentBlock(title="Agent Execution", contents=[])]
 
-    if isinstance(block.contents, ToolContent):
-        block.title = f"Accessing **{tool_name}**..."
-        block.contents.tool_input = tool_input
+    tool_content = _find_or_create_tool_content(agent_message, tool_name, tool_input=tool_input)
 
-    if is_new:
-        agent_message.content_blocks.append(block)
+    agent_message.content_blocks[0].contents.append(tool_content)
+    tool_blocks_map[event.get("run_id", "")] = tool_content
 
     agent_message.properties.icon = "🔨"
     return send_message_method(message=agent_message)
@@ -129,18 +106,11 @@ async def handle_on_tool_end(
     send_message_method: SendMessageFunctionType,
     tool_blocks_map: dict[str, ContentBlock],
 ) -> Message:
-    tool_name = event["name"]
-    tool_output = event["data"].get("output")
     run_id = event.get("run_id", "")
+    tool_content = tool_blocks_map.get(run_id)
 
-    block, is_new = _find_or_create_tool_content_block(tool_blocks_map, run_id, tool_name, tool_output=tool_output)
-
-    if isinstance(block.contents, ToolContent):
-        block.title = f"**{tool_name}** Executed Successfully"
-        block.contents.output = tool_output
-
-    if is_new:  # Shouldn't happen but handle just in case
-        agent_message.content_blocks.append(block)
+    if tool_content and isinstance(tool_content, ToolContent):
+        tool_content.output = event["data"].get("output")
 
     return send_message_method(message=agent_message)
 
@@ -151,18 +121,11 @@ async def handle_on_tool_error(
     send_message_method: SendMessageFunctionType,
     tool_blocks_map: dict[str, ContentBlock],
 ) -> Message:
-    tool_name = event.get("name", "Unknown tool")
-    error_message = event["data"].get("error", "Unknown error")
     run_id = event.get("run_id", "")
+    tool_content = tool_blocks_map.get(run_id)
 
-    block, is_new = _find_or_create_tool_content_block(tool_blocks_map, run_id, tool_name, tool_error=error_message)
-
-    if isinstance(block.contents, ToolContent):
-        block.title = f"**{tool_name}** Execution Failed"
-        block.contents.error = error_message
-
-    if is_new:  # Shouldn't happen but handle just in case
-        agent_message.content_blocks.append(block)
+    if tool_content and isinstance(tool_content, ToolContent):
+        tool_content.error = event["data"].get("error", "Unknown error")
 
     agent_message.properties.icon = "⚠️"
     return send_message_method(message=agent_message)
@@ -223,13 +186,13 @@ async def process_agent_events(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "🤖", "state": "partial"},
-        content_blocks=[],
+        content_blocks=[ContentBlock(title="Agent Execution", contents=[])],
     )
     # Store the initial message
     agent_message = send_message_method(message=agent_message)
 
-    # Create a mapping of run_ids to tool content blocks
-    tool_blocks_map: dict[str, ContentBlock] = {}
+    # Create a mapping of run_ids to tool contents
+    tool_blocks_map: dict[str, ToolContent] = {}
 
     async for event in agent_executor:
         if event["event"] in TOOL_EVENT_HANDLERS:
