@@ -660,22 +660,22 @@ export const priorityFields = new Set(["code", "template"]);
 
 export const INPUT_TYPES = new Set([
   "ChatInput",
-  "TextInput",
-  "KeyPairInput",
-  "JsonInput",
-  "StringListInput",
+  // "TextInput",
+  // "KeyPairInput",
+  // "JsonInput",
+  // "StringListInput",
 ]);
 export const OUTPUT_TYPES = new Set([
   "ChatOutput",
-  "TextOutput",
-  "PDFOutput",
-  "ImageOutput",
-  "CSVOutput",
-  "JsonOutput",
-  "KeyPairOutput",
-  "StringListOutput",
-  "DataOutput",
-  "TableOutput",
+  // "TextOutput",
+  // "PDFOutput",
+  // "ImageOutput",
+  // "CSVOutput",
+  // "JsonOutput",
+  // "KeyPairOutput",
+  // "StringListOutput",
+  // "DataOutput",
+  // "TableOutput",
 ]);
 
 export const CHAT_FIRST_INITIAL_TEXT =
@@ -891,7 +891,7 @@ export const EMPTY_INPUT_SEND_MESSAGE = "No input message provided.";
 export const EMPTY_OUTPUT_SEND_MESSAGE = "Message empty.";
 
 export const TABS_ORDER = [
-  "run curl",
+  "curl",
   "python api",
   "js api",
   "python code",

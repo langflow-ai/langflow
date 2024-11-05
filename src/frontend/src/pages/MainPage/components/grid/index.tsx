@@ -25,7 +25,7 @@ import DropdownComponent from "../dropdown";
 
 const GridComponent = ({ flowData }: { flowData: FlowType }) => {
   const navigate = useCustomNavigate();
-  const [openPlayground, setOpenPlayground] = useState(false);
+  // const [openPlayground, setOpenPlayground] = useState(false);
   const [loadingPlayground, setLoadingPlayground] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -65,7 +65,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
         return;
       }
       setCurrentFlow(flowData);
-      setOpenPlayground(true);
+      // setOpenPlayground(true);
       setLoadingPlayground(false);
     } else {
       setErrorData({
@@ -164,7 +164,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
           {flowData.description}
         </div>
 
-        <div className="flex justify-end pt-[24px]">
+        {/* <div className="flex justify-end pt-[24px]">
           {flowData.is_component ? (
             <></>
           ) : (
@@ -180,9 +180,9 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
               Playground
             </Button>
           )}
-        </div>
+        </div> */}
       </Card>
-      {openPlayground && (
+      {/* {openPlayground && (
         <IOModal
           key={flowData.id}
           cleanOnClose={true}
@@ -191,7 +191,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
         >
           <></>
         </IOModal>
-      )}
+      )} */}
       {openDelete && (
         <DeleteConfirmationModal
           open={openDelete}

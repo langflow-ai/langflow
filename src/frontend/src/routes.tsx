@@ -201,9 +201,9 @@ const router = createBrowserRouter(
                 </Route>
                 <Route path="view" element={<ViewPage />} />
               </Route>
-              <Route path="playground/:id/">
+              {/* <Route path="playground/:id/">
                 <Route path="" element={<PlaygroundPage />} />
-              </Route>
+              </Route> */}
             </Route>
           </Route>
           <Route

@@ -286,8 +286,10 @@ export default function GenericNode({
       <div
         className={cn(
           borderColor,
-          showNode ? "w-80 rounded-xl" : "w-26 h-26 rounded-full",
-          "generic-node-div group/node",
+          showNode
+            ? "w-80 rounded-xl"
+            : `h-[4.065rem] w-48 rounded-[0.75rem] ${!selected ? "border-[1px] border-border ring-[0.5px] ring-border" : ""}`,
+          "generic-node-div group/node relative",
           !hasOutputs && "pb-4",
         )}
       >
@@ -308,21 +310,23 @@ export default function GenericNode({
           )}
         </div>
 
-        <div className="grid gap-3 truncate text-wrap border-b p-4 leading-5">
+        <div
+          data-testid={`${data.id}-main-node`}
+          className={cn(
+            "grid gap-3 truncate text-wrap p-4 leading-5",
+            showNode && "border-b",
+          )}
+        >
           <div
             data-testid={"div-generic-node"}
             className={
-              "generic-node-div-title justify-between" +
-              (!showNode
-                ? " relative h-24 w-24 rounded-full"
-                : " justify-between rounded-t-lg")
+              !showNode
+                ? ""
+                : "generic-node-div-title justify-between rounded-t-lg"
             }
           >
             <div
-              className={
-                "generic-node-title-arrangement " +
-                (!showNode ? " justify-center" : "")
-              }
+              className={"generic-node-title-arrangement"}
               data-testid="generic-node-title-arrangement"
             >
               <NodeIcon
@@ -331,18 +335,16 @@ export default function GenericNode({
                 icon={data.node?.icon}
                 isGroup={!!data.node?.flow}
               />
-              {showNode && (
-                <div className="generic-node-tooltip-div">
-                  <NodeName
-                    display_name={data.node?.display_name}
-                    nodeId={data.id}
-                    selected={selected}
-                    showNode={showNode}
-                    validationStatus={validationStatus}
-                    isOutdated={isOutdated}
-                  />
-                </div>
-              )}
+              <div className="generic-node-tooltip-div">
+                <NodeName
+                  display_name={data.node?.display_name}
+                  nodeId={data.id}
+                  selected={selected}
+                  showNode={showNode}
+                  validationStatus={validationStatus}
+                  isOutdated={isOutdated}
+                />
+              </div>
             </div>
             <div>
               {!showNode && (
@@ -378,13 +380,15 @@ export default function GenericNode({
               />
             )}
           </div>
-          <div>
-            <NodeDescription
-              description={data.node?.description}
-              nodeId={data.id}
-              selected={selected}
-            />
-          </div>
+          {showNode && (
+            <div>
+              <NodeDescription
+                description={data.node?.description}
+                nodeId={data.id}
+                selected={selected}
+              />
+            </div>
+          )}
         </div>
 
         {showNode && (

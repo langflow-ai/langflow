@@ -102,7 +102,7 @@ test("Document QA", async ({ page }) => {
     .getByTestId("input-chat-playground")
     .last()
     .fill("whats the text in the file?");
-  await page.getByTestId("icon-LucideSend").last().click();
+  await page.getByTestId("button-send").last().click();
 
   await page.waitForTimeout(3000);
 

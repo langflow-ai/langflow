@@ -113,26 +113,28 @@ test("Blog Writer", async ({ page }) => {
   await page.getByText("sea").last().isVisible();
   await page.getByText("survival").last().isVisible();
 
-  await page.getByText("Instructions").last().click();
+  //commented out for now because text input is not available in the playground
 
-  const value = await page
-    .getByPlaceholder("Enter text...")
-    .last()
-    .inputValue();
+  // await page.getByText("Instructions").last().click();
 
-  expect(value).toBe(
-    "Use the references above for style to write a new blog/tutorial about turtles. Suggest non-covered topics.",
-  );
+  // const value = await page
+  //   .getByPlaceholder("Enter text...")
+  //   .last()
+  //   .inputValue();
 
-  await page.getByTestId("icon-ExternalLink").last().click();
+  // expect(value).toBe(
+  //   "Use the references above for style to write a new blog/tutorial about turtles. Suggest non-covered topics.",
+  // );
 
-  const count = await page
-    .getByText(
-      "Use the references above for style to write a new blog/tutorial about turtles. Suggest non-covered topics.",
-    )
-    .count();
+  // await page.getByTestId("icon-ExternalLink").last().click();
 
-  if (count <= 1) {
-    expect(false).toBe(true);
-  }
+  // const count = await page
+  //   .getByText(
+  //     "Use the references above for style to write a new blog/tutorial about turtles. Suggest non-covered topics.",
+  //   )
+  //   .count();
+
+  // if (count <= 1) {
+  //   expect(false).toBe(true);
+  // }
 });
