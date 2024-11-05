@@ -3,15 +3,15 @@ from typing import Annotated, Any, Literal, TypeAlias
 
 from pydantic import BaseModel, Field
 
-from langflow.schema.validators import timestamp_to_str_validator
+from langflow.schema.validators import timestamp_with_fractional_seconds_validator
 
 
 class BaseContent(BaseModel):
     """Base class for all content types."""
 
     type: str = Field(..., description="Type of the content")
-    timestamp: Annotated[str, timestamp_to_str_validator] = Field(
-        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S:%f %Z")
+    timestamp: Annotated[str, timestamp_with_fractional_seconds_validator] = Field(
+        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f %Z")
     )
 
     def to_dict(self) -> dict[str, Any]:
