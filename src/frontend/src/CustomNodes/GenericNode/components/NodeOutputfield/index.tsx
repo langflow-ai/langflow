@@ -124,7 +124,7 @@ export default function NodeOutputField({
   );
 
   return !showNode ? (
-    <></>
+    <>{Handle}</>
   ) : (
     <div
       ref={ref}

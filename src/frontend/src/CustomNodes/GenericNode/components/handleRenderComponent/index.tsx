@@ -265,9 +265,34 @@ export default function HandleRenderComponent({
   const handleRef = useRef<HTMLDivElement>(null);
   const invisibleDivRef = useRef<HTMLDivElement>(null);
 
+  const getHandleClasses = ({
+    left,
+    showNode,
+  }: {
+    left: boolean;
+    showNode: boolean;
+  }) => {
+    return cn(
+      "noflow nowheel nopan noselect absolute left-3.5 -translate-y-1/2 translate-x-1/3 cursor-crosshair rounded-full",
+      left && "-left-5 -translate-x-1/2",
+      left && !showNode && "-translate-y-5 translate-x-4",
+      !left && !showNode && "-translate-y-5 translate-x-[10.8rem]",
+    );
+  };
+
+  const handleClick = () => {
+    setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
+    setFilterType(currentFilter);
+    if (filterOpenHandle && filterType) {
+      onConnect(getConnection(filterType));
+      setFilterType(undefined);
+      setFilterEdge([]);
+    }
+  };
+
   return (
     <div>
-      <div className="relative">
+      <div className={`${!showNode ? "" : "relative"}`}>
         <ShadTooltip
           open={openTooltip}
           setOpen={setOpenTooltip}
@@ -299,18 +324,11 @@ export default function HandleRenderComponent({
             isValidConnection={(connection) =>
               isValidConnection(connection, nodes, edges)
             }
-            className={classNames(
-              `group/handle z-50 h-12 w-12 border-none bg-transparent transition-all`,
+            className={cn(
+              `group/handle z-50 transition-all`,
+              !showNode && "no-show",
             )}
-            onClick={() => {
-              setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
-              setFilterType(currentFilter);
-              if (filterOpenHandle && filterType) {
-                onConnect(getConnection(filterType));
-                setFilterType(undefined);
-                setFilterEdge([]);
-              }
-            }}
+            onClick={handleClick}
             onMouseUp={() => {
               setOpenTooltip(false);
             }}
@@ -342,10 +360,7 @@ export default function HandleRenderComponent({
             !showNode ? (left ? "target" : "source") : left ? "left" : "right"
           }`}
           ref={invisibleDivRef}
-          className={cn(
-            "noflow nowheel nopan noselect absolute left-3.5 -translate-y-1/2 translate-x-1/3 cursor-crosshair rounded-full",
-            left && "-left-5 -translate-x-1/2",
-          )}
+          className={getHandleClasses({ left, showNode })}
           style={{
             background: isNullHandle ? "hsl(var(--border))" : handleColor,
             width: "10px",
