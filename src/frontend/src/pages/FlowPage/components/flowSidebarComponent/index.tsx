@@ -406,10 +406,10 @@ export function FlowSidebarComponent() {
           />
         )}
       </SidebarHeader>
-      <SidebarContent className="p-2">
+      <SidebarContent>
         {hasResults ? (
           <>
-            <SidebarGroup>
+            <SidebarGroup className="p-3">
               <SidebarGroupContent>
                 <SidebarMenu>
                   {!data
@@ -448,12 +448,12 @@ export function FlowSidebarComponent() {
                                         name={item.icon}
                                         className="h-4 w-4 group-aria-expanded/collapsible:text-accent-pink-foreground"
                                       />
-                                      <span className="group-aria-expanded/collapsible:font-semibold">
+                                      <span className="flex-1 group-aria-expanded/collapsible:font-semibold">
                                         {item.display_name}
                                       </span>
                                       <ForwardedIconComponent
                                         name="ChevronRight"
-                                        className="h-4 w-4 text-muted-foreground transition-all group-aria-expanded/collapsible:rotate-90"
+                                        className="-mr-1 h-4 w-4 text-muted-foreground transition-all group-aria-expanded/collapsible:rotate-90"
                                       />
                                     </div>
                                   </SidebarMenuButton>
@@ -536,7 +536,7 @@ export function FlowSidebarComponent() {
               </SidebarGroupContent>
             </SidebarGroup>
             {hasBundleItems && (
-              <SidebarGroup>
+              <SidebarGroup className="p-3">
                 <SidebarGroupLabel>Bundles</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
@@ -569,12 +569,12 @@ export function FlowSidebarComponent() {
                                       name={item.icon}
                                       className="h-4 w-4 text-muted-foreground group-aria-expanded/collapsible:text-primary"
                                     />
-                                    <span className="group-aria-expanded/collapsible:font-semibold">
+                                    <span className="flex-1 group-aria-expanded/collapsible:font-semibold">
                                       {item.display_name}
                                     </span>
                                     <ForwardedIconComponent
                                       name="ChevronRight"
-                                      className="h-4 w-4 text-muted-foreground transition-all group-aria-expanded/collapsible:rotate-90"
+                                      className="-mr-1 h-4 w-4 text-muted-foreground transition-all group-aria-expanded/collapsible:rotate-90"
                                     />
                                   </div>
                                 </SidebarMenuButton>
