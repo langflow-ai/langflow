@@ -926,19 +926,19 @@ export const NOTE_NODE_MAX_HEIGHT = 800;
 export const NOTE_NODE_MAX_WIDTH = 600;
 
 export const COLOR_OPTIONS = {
-  default: "var(--note-default)",
-  indigo: "var(--note-indigo)",
-  emerald: "var(--note-emerald)",
-  amber: "var(--note-amber)",
-  red: "var(--note-red)",
+  amber: "hsl(var(--note-amber))",
+  neutral: "hsl(var(--note-neutral))",
+  rose: "hsl(var(--note-rose))",
+  blue: "hsl(var(--note-blue))",
+  lime: "hsl(var(--note-lime))",
 };
 
 export const SHADOW_COLOR_OPTIONS = {
-  default: "var(--note-default-opacity)",
-  indigo: "var(--note-indigo-opacity)",
-  emerald: "var(--note-emerald-opacity)",
-  amber: "var(--note-amber-opacity)",
-  red: "var(--note-red-opacity)",
+  amber: "hsla(var(--note-amber-opacity))",
+  neutral: "hsla(var(--note-neutral-opacity))",
+  rose: "hsla(var(--note-rose-opacity))",
+  blue: "hsla(var(--note-blue-opacity))",
+  lime: "hsla(var(--note-lime-opacity))",
 };
 
 export const maxSizeFilesInBytes = 10 * 1024 * 1024; // 10MB in bytes
