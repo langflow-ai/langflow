@@ -1,4 +1,5 @@
 # Add helper functions for each event type
+import time
 from collections.abc import AsyncIterator
 from typing import Any, Protocol
 
@@ -31,6 +32,11 @@ def _build_agent_input_text_content(agent_input_dict: InputDict) -> ContentBlock
     return "\n\n".join(messages)
 
 
+def _calculate_duration(start_time: float) -> int:
+    """Calculate duration in milliseconds from start time to now."""
+    return int((time.time() - start_time) * 1000)
+
+
 async def handle_on_chain_start(
     event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType
 ) -> Message:
@@ -38,12 +44,12 @@ async def handle_on_chain_start(
         if not agent_message.content_blocks:
             agent_message.content_blocks = [ContentBlock(title="Agent Execution", contents=[])]
 
-        agent_message.content_blocks[0].contents.append(
-            TextContent(
-                type="text",
-                text=_build_agent_input_text_content(event["data"].get("input")),
-            )
+        text_content = TextContent(
+            type="text",
+            text=_build_agent_input_text_content(event["data"].get("input")),
+            duration=_calculate_duration(event.get("start_time", time.time())),
         )
+        agent_message.content_blocks[0].contents.append(text_content)
         agent_message.properties.icon = "🚀"
         agent_message = send_message_method(message=agent_message)
     return agent_message
@@ -56,9 +62,14 @@ async def handle_on_chain_end(
     if data_output:
         if isinstance(data_output, AgentFinish) and data_output.return_values.get("output"):
             agent_message.text = data_output.return_values.get("output")
-            agent_message.properties.icon = "🤖"
+            # Add duration to the last content if it exists
+            if agent_message.content_blocks and agent_message.content_blocks[0].contents:
+                last_content = agent_message.content_blocks[0].contents[-1]
+                if not getattr(last_content, "duration", None):
+                    last_content.duration = _calculate_duration(event.get("start_time", time.time()))
+            agent_message.properties.icon = "Bot"
         else:
-            agent_message.properties.icon = "🔍"
+            agent_message.properties.icon = "CheckCircle"
         agent_message = send_message_method(message=agent_message)
     return agent_message
 
@@ -68,6 +79,7 @@ def _find_or_create_tool_content(
     tool_input: Any | None = None,
     tool_output: Any | None = None,
     tool_error: Any | None = None,
+    start_time: float | None = None,
 ) -> ToolContent:
     """Create a new ToolContent object."""
     return ToolContent(
@@ -76,6 +88,7 @@ def _find_or_create_tool_content(
         tool_input=tool_input,
         output=tool_output,
         error=tool_error,
+        duration=_calculate_duration(start_time) if start_time else None,
     )
 
 
@@ -91,12 +104,14 @@ async def handle_on_tool_start(
     if not agent_message.content_blocks:
         agent_message.content_blocks = [ContentBlock(title="Agent Execution", contents=[])]
 
-    tool_content = _find_or_create_tool_content(agent_message, tool_name, tool_input=tool_input)
+    tool_content = _find_or_create_tool_content(
+        tool_name, tool_input=tool_input, start_time=event.get("start_time", time.time())
+    )
 
     agent_message.content_blocks[0].contents.append(tool_content)
     tool_blocks_map[event.get("run_id", "")] = tool_content
 
-    agent_message.properties.icon = "🔨"
+    agent_message.properties.icon = "Hammer"
     return send_message_method(message=agent_message)
 
 
@@ -111,6 +126,8 @@ async def handle_on_tool_end(
 
     if tool_content and isinstance(tool_content, ToolContent):
         tool_content.output = event["data"].get("output")
+        # Calculate duration only when tool ends
+        tool_content.duration = _calculate_duration(event.get("start_time", time.time()))
 
     return send_message_method(message=agent_message)
 
@@ -127,7 +144,7 @@ async def handle_on_tool_error(
     if tool_content and isinstance(tool_content, ToolContent):
         tool_content.error = event["data"].get("error", "Unknown error")
 
-    agent_message.properties.icon = "⚠️"
+    agent_message.properties.icon = "OctagonAlert"
     return send_message_method(message=agent_message)
 
 
@@ -182,6 +199,7 @@ async def process_agent_events(
     send_message_method: SendMessageFunctionType,
 ) -> Message:
     """Process agent events and return the final output."""
+    time.time()
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
@@ -195,6 +213,9 @@ async def process_agent_events(
     tool_blocks_map: dict[str, ToolContent] = {}
 
     async for event in agent_executor:
+        # Add start_time to event
+        event["start_time"] = time.time()
+
         if event["event"] in TOOL_EVENT_HANDLERS:
             tool_handler = TOOL_EVENT_HANDLERS[event["event"]]
             agent_message = await tool_handler(event, agent_message, send_message_method, tool_blocks_map)
