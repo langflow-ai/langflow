@@ -10,6 +10,9 @@ class BaseContent(BaseModel):
     """Base class for all content types."""
 
     type: str = Field(..., description="Type of the content")
+    timestamp: Annotated[str, timestamp_to_str_validator] = Field(
+        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S:%f %Z")
+    )
 
     def to_dict(self) -> dict[str, Any]:
         return self.model_dump()
@@ -69,9 +72,6 @@ class ToolContent(BaseContent):
     tool_input: dict[str, Any] = Field(default_factory=dict, alias="input")
     output: Any | None = None
     error: Any | None = None
-    timestamp: Annotated[str, timestamp_to_str_validator] = Field(
-        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
-    )
 
 
 ContentTypes: TypeAlias = ToolContent | ErrorContent | TextContent | MediaContent | CodeContent | JSONContent
