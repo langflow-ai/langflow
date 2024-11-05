@@ -701,9 +701,9 @@ class Component(CustomComponent):
                 raise ValueError(msg)
             _attributes[key] = value
         for key, input_obj in self._inputs.items():
-            if key not in _attributes:
+            if key not in _attributes and key not in self._attributes:
                 _attributes[key] = input_obj.value or None
-        self._attributes = _attributes
+        self._attributes.update(_attributes)
 
     def _set_outputs(self, outputs: list[dict]) -> None:
         self.outputs = [Output(**output) for output in outputs]
