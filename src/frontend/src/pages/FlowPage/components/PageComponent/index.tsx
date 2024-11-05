@@ -431,6 +431,9 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
+      document.body.removeChild(
+        document.getElementsByClassName("cursor-grabbing")[0],
+      );
       if (event.dataTransfer.types.some((type) => isSupportedNodeTypes(type))) {
         takeSnapshot();
 

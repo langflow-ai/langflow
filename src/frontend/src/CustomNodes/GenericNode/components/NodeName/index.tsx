@@ -58,7 +58,7 @@ export default function NodeName({
         value={nodeName}
         autoFocus
         onChange={(e) => setNodeName(e.target.value)}
-        id={`input-title-${display_name}`}
+        data-testid={`input-title-${display_name}`}
       />
     </div>
   ) : (
