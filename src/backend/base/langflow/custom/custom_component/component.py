@@ -369,8 +369,6 @@ class Component(CustomComponent):
 
     def _set_output_required_inputs(self) -> None:
         for output in self.outputs:
-            if output.required_inputs:
-                continue
             if not output.method:
                 continue
             method = getattr(self, output.method, None)
