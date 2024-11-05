@@ -32,7 +32,7 @@
     --secondary-hover: 240 6% 90%; /* hsl(240, 6%, 90%) */
     --placeholder-foreground: 240 5% 65%; /* hsl(240, 5%, 65%) */
     --canvas: 240 5% 96%; /* hsl(240, 5%, 96%) */
-    --canvas-dot: 240 4% 46%; /* hsl(240, 4%, 46%) */
+    --canvas-dot: 240 5% 65%; /* hsl(240, 5%, 65%) */
     --accent-emerald: 149 80% 90%; /* hsl(149, 80%, 90%) */
     --accent-emerald-foreground: 161 41% 30%; /* hsl(161, 41%, 30%) */
     --accent-emerald-hover: 152.4 76% 80.4%; /* hsl(152.4, 76%, 80.4%) */
