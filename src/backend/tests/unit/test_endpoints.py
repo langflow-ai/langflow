@@ -108,6 +108,7 @@ PROMPT_REQUEST = {
 }
 
 
+@pytest.mark.benchmark
 async def test_get_all(client: AsyncClient, logged_in_headers):
     response = await client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
@@ -329,6 +330,7 @@ async def test_successful_run_with_output_type_text(client, simple_api_test, cre
     assert all(key in result for result in inner_results for key in expected_keys), outputs_dict
 
 
+@pytest.mark.benchmark
 async def test_successful_run_with_output_type_any(client, simple_api_test, created_api_key):
     # This one should have both the ChatOutput and TextOutput components
     headers = {"x-api-key": created_api_key.api_key}
@@ -360,6 +362,7 @@ async def test_successful_run_with_output_type_any(client, simple_api_test, crea
     assert all(key in result for result in inner_results for key in expected_keys), outputs_dict
 
 
+@pytest.mark.benchmark
 async def test_successful_run_with_output_type_debug(client, simple_api_test, created_api_key):
     # This one should return outputs for all components
     # Let's just check the amount of outputs(there should be 7)
@@ -385,6 +388,7 @@ async def test_successful_run_with_output_type_debug(client, simple_api_test, cr
     assert len(outputs_dict.get("outputs")) == 3
 
 
+@pytest.mark.benchmark
 async def test_successful_run_with_input_type_text(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
@@ -419,6 +423,7 @@ async def test_successful_run_with_input_type_text(client, simple_api_test, crea
 
 
 @pytest.mark.api_key_required
+@pytest.mark.benchmark
 async def test_successful_run_with_input_type_chat(client: AsyncClient, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
@@ -451,6 +456,7 @@ async def test_successful_run_with_input_type_chat(client: AsyncClient, simple_a
     ), chat_input_outputs
 
 
+@pytest.mark.benchmark
 async def test_invalid_run_with_input_type_chat(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
@@ -465,6 +471,7 @@ async def test_invalid_run_with_input_type_chat(client, simple_api_test, created
     assert "If you pass an input_value to the chat input, you cannot pass a tweak with the same name." in response.text
 
 
+@pytest.mark.benchmark
 async def test_successful_run_with_input_type_any(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
@@ -517,6 +524,7 @@ async def test_invalid_flow_id(client, created_api_key):
     # Check if the error detail is as expected
 
 
+@pytest.mark.benchmark
 async def test_starter_projects(client, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     response = await client.get("api/v1/starter-projects/", headers=headers)
