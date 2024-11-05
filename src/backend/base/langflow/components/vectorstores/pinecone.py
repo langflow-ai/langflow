@@ -3,16 +3,31 @@ from langchain_pinecone import Pinecone
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
-from langflow.io import (
-    DataInput,
-    DropdownInput,
-    HandleInput,
-    IntInput,
-    MultilineInput,
-    SecretStrInput,
-    StrInput,
-)
+from langflow.io import DataInput, DropdownInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput
 from langflow.schema import Data
+
+
+class Float32Embeddings:
+    """Wrapper class to ensure float32 embeddings."""
+
+    def __init__(self, base_embeddings):
+        self.base_embeddings = base_embeddings
+
+    def embed_documents(self, texts):
+        embeddings = self.base_embeddings.embed_documents(texts)
+        if isinstance(embeddings, np.ndarray):
+            return [[self._force_float32(x) for x in vec] for vec in embeddings]
+        return [[self._force_float32(x) for x in vec] for vec in embeddings]
+
+    def embed_query(self, text):
+        embedding = self.base_embeddings.embed_query(text)
+        if isinstance(embedding, np.ndarray):
+            return [self._force_float32(x) for x in embedding]
+        return [self._force_float32(x) for x in embedding]
+
+    def _force_float32(self, value):
+        """Convert any numeric type to Python float."""
+        return float(np.float32(value))
 
 
 class PineconeVectorStoreComponent(LCVectorStoreComponent):
@@ -55,29 +70,6 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
-    def _force_float32(self, value):
-        """Convert any numeric type to Python float."""
-        return float(np.float32(value))
-
-    class Float32Embeddings:
-        """Wrapper class to ensure float32 embeddings."""
-
-        def __init__(self, base_embeddings, parent):
-            self.base_embeddings = base_embeddings
-            self.parent = parent
-
-        def embed_documents(self, texts):
-            embeddings = self.base_embeddings.embed_documents(texts)
-            if isinstance(embeddings, np.ndarray):
-                return [[self.parent._force_float32(x) for x in vec] for vec in embeddings]
-            return [[self.parent._force_float32(x) for x in vec] for vec in embeddings]
-
-        def embed_query(self, text):
-            embedding = self.base_embeddings.embed_query(text)
-            if isinstance(embedding, np.ndarray):
-                return [self.parent._force_float32(x) for x in embedding]
-            return [self.parent._force_float32(x) for x in embedding]
-
     @check_cached_vector_store
     def build_vector_store(self) -> Pinecone:
         """Build and return a Pinecone vector store instance."""
@@ -85,7 +77,7 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
             from langchain_pinecone._utilities import DistanceStrategy
 
             # Wrap the embedding model to ensure float32 output
-            wrapped_embeddings = self.Float32Embeddings(self.embedding, self)
+            wrapped_embeddings = Float32Embeddings(self.embedding)
 
             # Convert distance strategy
             distance_strategy = self.distance_strategy.replace(" ", "_").upper()
