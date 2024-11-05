@@ -1,6 +1,7 @@
 import { LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
 import { useCustomApiHeaders } from "@/customization/hooks/use-custom-api-headers";
 import useAuthStore from "@/stores/authStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 import * as fetchIntercept from "fetch-intercept";
 import { useEffect } from "react";
@@ -33,6 +34,10 @@ function ApiInterceptor() {
   const isLoginPage = location.pathname.includes("login");
   const customHeaders = useCustomApiHeaders();
 
+  const setHealthCheckTimeout = useUtilityStore(
+    (state) => state.setHealthCheckTimeout,
+  );
+
   useEffect(() => {
     const unregister = fetchIntercept.register({
       request: function (url, config) {
@@ -49,7 +54,10 @@ function ApiInterceptor() {
     });
 
     const interceptor = api.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        setHealthCheckTimeout(null);
+        return response;
+      },
       async (error: AxiosError) => {
         const isAuthenticationError =
           error?.response?.status === 403 || error?.response?.status === 401;
