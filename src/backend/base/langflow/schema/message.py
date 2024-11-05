@@ -74,7 +74,7 @@ class Message(Data):
             value = json.loads(value) if value.startswith("[") else [ContentBlock.model_validate_json(value)]
         return value
 
-    @field_validator("properties")
+    @field_validator("properties", mode="before")
     @classmethod
     def validate_properties(cls, value):
         if isinstance(value, str):
