@@ -29,7 +29,7 @@ class AgentComponent(ToolCallingAgentComponent):
         DropdownInput(
             name="agent_llm",
             display_name="Model Provider",
-            options=[*MODEL_PROVIDERS_DICT.keys(), "Custom"],
+            options=sorted([*list(MODEL_PROVIDERS_DICT.keys()), "Custom"]),
             value="OpenAI",
             real_time_refresh=True,
             refresh_button=True,
