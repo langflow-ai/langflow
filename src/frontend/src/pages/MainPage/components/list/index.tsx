@@ -1,5 +1,7 @@
+import useDragStart from "@/components/cardComponent/hooks/use-on-drag-start";
 import ForwardedIconComponent from "@/components/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -94,14 +96,18 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
       });
   };
 
+  const { onDragStart } = useDragStart(flowData);
+
   const descriptionModal = useDescriptionModal([flowData?.id], "flow");
 
   return (
     <>
-      <div
+      <Card
         key={flowData.id}
+        draggable
+        onDragStart={onDragStart}
         onClick={handleClick}
-        className={`my-2 flex h-[110px] ${
+        className={`my-2 flex h-[110px] flex-row bg-background ${
           isComponent ? "cursor-default" : "cursor-pointer"
         } justify-between rounded-lg border border-zinc-100 p-5 shadow-sm hover:border-border dark:border-zinc-800 dark:hover:border-muted-foreground`}
       >
@@ -185,7 +191,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </div>
+      </Card>
       {/* {openPlayground && (
         <IOModal
           key={flowData.id}
