@@ -104,7 +104,7 @@ const SideBarFoldersButtonsComponent = ({
                 onError: (err) => {
                   console.log(err);
                   setErrorData({
-                    title: `Error on upload`,
+                    title: `Error on uploading your folder, try dragging it into an existing folder.`,
                     list: [err["response"]["data"]["message"]],
                   });
                 },
@@ -289,7 +289,8 @@ const SideBarFoldersButtonsComponent = ({
   );
 
   const UploadFolderButton = ({ onClick, disabled }) => (
-    <ShadTooltip content="Upload a folder" styleClasses="z-10">
+    /* Todo: change this back to being a folder upload */
+    <ShadTooltip content="Upload a flow" styleClasses="z-10">
       <Button
         variant="ghost"
         className="h-7 w-7 border-0 text-zinc-500 hover:bg-zinc-200 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
