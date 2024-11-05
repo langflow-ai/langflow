@@ -61,6 +61,26 @@ class Message(Data):
             value = str(value)
         return value
 
+    @field_validator("content_blocks", mode="before")
+    @classmethod
+    def validate_content_blocks(cls, value):
+        # value may start with [ or not
+        if isinstance(value, list):
+            return [
+                ContentBlock.model_validate_json(v) if isinstance(v, str) else ContentBlock.model_validate(v)
+                for v in value
+            ]
+        if isinstance(value, str):
+            value = json.loads(value) if value.startswith("[") else [ContentBlock.model_validate_json(value)]
+        return value
+
+    @field_validator("properties")
+    @classmethod
+    def validate_properties(cls, value):
+        if isinstance(value, str):
+            value = Properties.model_validate_json(value)
+        return value
+
     @field_serializer("flow_id")
     def serialize_flow_id(self, value):
         if isinstance(value, UUID):
