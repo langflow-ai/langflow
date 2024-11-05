@@ -4,9 +4,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import TypedDict
 
 
-class HeaderDict(TypedDict):
-    title: str
-    icon: str
+class HeaderDict(TypedDict, total=False):
+    title: str | None
+    icon: str | None
 
 
 class BaseContent(BaseModel):
@@ -14,7 +14,7 @@ class BaseContent(BaseModel):
 
     type: str = Field(..., description="Type of the content")
     duration: float | None = None
-    header: HeaderDict = Field(default_factory=dict)
+    header: HeaderDict | None = Field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return self.model_dump()
