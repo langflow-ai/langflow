@@ -27,17 +27,9 @@ export const GradientSave = forwardRef<
 >((props, ref) => {
   return (
     <>
-      <svg width="0" height="0" style={{ position: "absolute" }}>
-        <defs>
-          <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop className="gradient-start" offset="0%" />
-            <stop className="gradient-end" offset="100%" />
-          </linearGradient>
-        </defs>
-      </svg>
       <ForwardedIconComponent
         name="Save"
-        stroke="url(#grad2)"
+        stroke="url(#x-gradient)"
         ref={ref}
         {...props}
       />

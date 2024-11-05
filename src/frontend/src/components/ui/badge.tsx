@@ -15,8 +15,8 @@ const badgeVariants = cva(
         destructive:
           "bg-destructive hover:bg-destructive/80 border-transparent text-destructive-foreground",
         outline: "text-primary/80 border-ring/60",
-        secondaryStatic: "bg-input text-muted-foreground",
-        pinkStatic: "bg-accent-pink text-accent-pink-foreground",
+        secondaryStatic: "bg-input text-muted-foreground border-0",
+        pinkStatic: "bg-accent-pink text-accent-pink-foreground border-0",
       },
       size: {
         sm: "h-4 text-xs",

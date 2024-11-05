@@ -6,6 +6,7 @@ import { DragEventHandler, forwardRef, useRef, useState } from "react";
 import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../../../components/genericIconComponent";
+import ShadTooltip from "../../../../../../components/shadTooltipComponent";
 import {
   Select,
   SelectContent,
@@ -118,7 +119,7 @@ export const SidebarDraggableComponent = forwardRef(
             data-testid={sectionName + display_name}
             id={sectionName + display_name}
             className={cn(
-              "group/draggable flex cursor-grab items-center gap-2 rounded-md bg-muted p-3 hover:bg-accent",
+              "group/draggable flex cursor-grab items-center gap-2 rounded-md bg-muted p-3 hover:bg-secondary-hover/75",
               error ? "cursor-not-allowed select-none" : "",
             )}
             draggable={!error}
@@ -134,9 +135,11 @@ export const SidebarDraggableComponent = forwardRef(
           >
             <ForwardedIconComponent name={icon} className="h-5 w-5 shrink-0" />
             <div className="flex flex-1 items-center overflow-hidden">
-              <span className="truncate text-sm font-semibold">
-                {display_name}
-              </span>
+              <ShadTooltip content={display_name} styleClasses="z-50">
+                <span className="truncate text-sm font-semibold">
+                  {display_name}
+                </span>
+              </ShadTooltip>
               {beta && (
                 <Badge
                   variant="pinkStatic"
@@ -161,18 +164,18 @@ export const SidebarDraggableComponent = forwardRef(
                 variant="ghost"
                 size="icon"
                 tabIndex={-1}
-                className="text-muted-foreground hover:text-primary group-focus/draggable:text-primary"
+                className="text-primary"
                 onClick={() => addComponent(apiClass, itemName)}
               >
                 <ForwardedIconComponent
                   name="Plus"
-                  className="h-4 w-4 shrink-0 opacity-0 transition-all group-hover/draggable:opacity-100 group-focus/draggable:opacity-100"
+                  className="h-4 w-4 shrink-0 transition-all group-hover/draggable:opacity-100 group-focus/draggable:opacity-100 sm:opacity-0"
                 />
               </Button>
               <div ref={popoverRef}>
                 <ForwardedIconComponent
                   name="GripVertical"
-                  className="h-4 w-4 shrink-0 text-muted-foreground"
+                  className="h-4 w-4 shrink-0 text-muted-foreground group-hover/draggable:text-primary"
                 />
                 <SelectTrigger tabIndex={-1}></SelectTrigger>
                 <SelectContent
