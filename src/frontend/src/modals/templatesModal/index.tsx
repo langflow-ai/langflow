@@ -32,9 +32,9 @@ export default function TemplatesModal({
       ],
     },
     {
-      title: "Usecase",
+      title: "Methodology",
       items: [
-        { title: "Chatbots", icon: "MessagesSquare", id: "chatbots" },
+        { title: "Prompting", icon: "MessagesSquare", id: "chatbots" },
         { title: "RAG", icon: "Database", id: "rag" },
         { title: "Agents", icon: "Bot", id: "agents" },
       ],
