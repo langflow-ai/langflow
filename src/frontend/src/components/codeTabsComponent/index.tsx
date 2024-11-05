@@ -2,7 +2,7 @@ import ShadTooltip from "@/components/shadTooltipComponent";
 import { useTweaksStore } from "@/stores/tweaksStore";
 import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { tomorrow } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { tomorrow, oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import {
   Tabs,
   TabsContent,
@@ -80,18 +80,18 @@ export default function CodeTabsComponent({
       {tabs.map((tab, idx) => (
         <TabsContent
           value={idx.toString()}
-          className="api-modal-tabs-content overflow-hidden"
+          className="api-modal-tabs-content overflow-hidden dark"
           key={idx} // Remember to add a unique key prop
         >
           {tab.name.toLowerCase() !== "tweaks" ? (
-            <div className="flex h-full w-full flex-col">
+            <div className="flex h-full w-full flex-col mt-2">
               {tab.description && (
                 <div
                   className="mb-2 w-full text-left text-sm"
                   dangerouslySetInnerHTML={{ __html: tab.description }}
                 ></div>
               )}
-              <div className="mt-2 flex w-full items-center justify-end gap-4 rounded-t-md bg-canvas-dark px-4 py-2">
+              <div className="flex w-full items-center justify-end gap-4 rounded-t-md border border-input border-b-0 bg-secondary px-4 py-2">
                 {nodes.length > 0 &&
                   tabs.find((tab) => tab.name.toLowerCase() === "tweaks") &&
                   tabs[activeTab].hasTweaks && (
@@ -119,7 +119,7 @@ export default function CodeTabsComponent({
                         checked={activeTweaks}
                         autoFocus={false}
                       />
-                      <span className="text-lg text-primary dark:text-primary-foreground">
+                      <span className="text-lg text-accent">
                         |
                       </span>
                     </div>
@@ -130,14 +130,13 @@ export default function CodeTabsComponent({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="text-[#A1A1AA]"
                       onClick={copyToClipboard}
                       data-testid="btn-copy-code"
                     >
                       {isCopied ? (
-                        <IconComponent name="Check" className="h-4 w-4" />
+                        <IconComponent name="Check" className="h-4 w-4 text-muted-foreground" />
                       ) : (
-                        <IconComponent name="Copy" className="h-4 w-4" />
+                        <IconComponent name="Copy" className="h-4 w-4 text-muted-foreground" />
                       )}
                     </Button>
                   </>
@@ -145,8 +144,8 @@ export default function CodeTabsComponent({
               </div>
               <SyntaxHighlighter
                 language={tab.language}
-                style={tomorrow}
-                className="!mt-0 h-full overflow-auto rounded-sm !rounded-t-none bg-code-block text-left custom-scroll"
+                style={oneDark}
+                className="!my-0 h-full overflow-auto rounded-sm !rounded-t-none bg-code-block border border-input border-t-0 text-left custom-scroll"
               >
                 {tab.code}
               </SyntaxHighlighter>
