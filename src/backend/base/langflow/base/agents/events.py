@@ -46,6 +46,7 @@ def handle_on_chain_start(
             type="text",
             text=_build_agent_input_text_content(event["data"].get("input")),
             duration=_calculate_duration(event.get("start_time", perf_counter())),
+            header={"title": "Input", "icon": "MessageSquare"},
         )
         agent_message.content_blocks[0].contents.append(text_content)
 
@@ -86,6 +87,7 @@ def _find_or_create_tool_content(
             tool_input=tool_input,
             output=tool_output,
             error=tool_error,
+            header={"title": f"Accessing **{tool_name}**", "icon": "Hammer"},
         )
         tool_blocks_map[run_id] = tool_content
     return tool_content
@@ -138,6 +140,8 @@ def handle_on_tool_error(
 
     if tool_content and isinstance(tool_content, ToolContent):
         tool_content.error = event["data"].get("error", "Unknown error")
+        tool_content.duration = _calculate_duration(event.get("start_time", perf_counter()))
+        tool_content.header = {"title": tool_content.name, "icon": "Hammer"}
 
     return send_message_method(message=agent_message)
 
