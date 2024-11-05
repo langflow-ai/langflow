@@ -1,5 +1,4 @@
-import InputComponent from "@/components/inputComponent";
-import { BuildStatus } from "@/constants/enums";
+import { Input } from "@/components/ui/input";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { VertexBuildTypeAPI } from "@/types/api";
@@ -37,7 +36,7 @@ export default function NodeName({
 
   return inputName ? (
     <div className="m-[1px] w-full">
-      <InputComponent
+      <Input
         onBlur={() => {
           setInputName(false);
           if (nodeName?.trim() !== "") {
@@ -58,9 +57,7 @@ export default function NodeName({
         }}
         value={nodeName}
         autoFocus
-        onChange={setNodeName}
-        password={false}
-        blurOnEnter={true}
+        onChange={(e) => setNodeName(e.target.value)}
         id={`input-title-${display_name}`}
       />
     </div>
