@@ -281,3 +281,7 @@ pre {
   height: 20px;
   width: 20px;
 }
+
+.react-flow__background pattern circle {
+  fill: hsl(var(--canvas-dot)) !important;
+}
