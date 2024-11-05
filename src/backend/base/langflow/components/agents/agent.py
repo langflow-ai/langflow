@@ -4,11 +4,7 @@ from langflow.components.agents.tool_calling import ToolCallingAgentComponent
 from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.models.azure_openai import AzureChatOpenAIComponent
 from langflow.components.models.openai import OpenAIModelComponent
-from langflow.io import (
-    DropdownInput,
-    MultilineInput,
-    Output,
-)
+from langflow.io import DropdownInput, MultilineInput, Output
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
 
@@ -68,7 +64,11 @@ class AgentComponent(ToolCallingAgentComponent):
             raise ValueError(msg)
         self.chat_history = self.get_memory_data()
 
-        agent = ToolCallingAgentComponent().set(
+        agent = ToolCallingAgentComponent(
+            _user_id=self._user_id,
+            _vertex=self._vertex,
+            _tracing_service=self._tracing_service,
+        ).set(
             llm=llm_model,
             tools=[self.tools],
             chat_history=self.chat_history,
