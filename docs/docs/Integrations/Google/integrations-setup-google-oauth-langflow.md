@@ -92,13 +92,9 @@ By following these steps, your Langflow environment will be fully integrated wit
 
 - **Token Expiration**: Ensure to refresh your tokens periodically if you encounter authentication errors.
 - **Permission Errors**: Double-check your OAuth consent settings and scopes in your Google Cloud account as well as in your Langflow component settings to ensure you’ve granted the necessary permissions.
-- **A new window for authentication did not open?**: Don't worry, you can check the Langflow Logs and look for the following text below.
+- **A new window for authentication did not open?**: Check the Langflow Logs and look for text similar to **Please visit this URL to authorize this application: https://accounts.google.com/...**
+Visit this message's URL for authentication.
 
-Example:
-
-```
-Please visit this URL to authorize this application: https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=156549873216-fa86b6a74ff8ee9a69d2b98e0bc478e8.apps.googleusercontent.com&redirect_uri=http%3A%2F%2Flocalhost%3A54899%2F&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive.readonly&state=75gxTJWwpUZjSWeyWDL81BmJAzGt1Q&access_type=offline
-```
 
 ---
 
