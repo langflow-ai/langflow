@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
+import inspect
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from langchain_core.tools.structured import StructuredTool
 from loguru import logger
@@ -46,13 +48,67 @@ def build_description(component: Component, output: Output) -> str:
 
 
 def _build_output_function(component: Component, output_method: Callable):
-    def output_function(*args, **kwargs):
-        # set the component with the arguments
-        # set functionality was updatedto handle list of components and other values separately
-        component.set(*args, **kwargs)
-        return output_method()
+    """Build a wrapper function that handles both synchronous and asynchronous output methods.
 
-    return output_function
+    This function creates a wrapper that:
+    1. For synchronous methods: Creates a simple wrapper that sets component args and executes the method
+    2. For asynchronous methods: Creates a wrapper that handles different event loop scenarios safely
+
+    Args:
+        component (Component): The component instance that contains the method
+        output_method (Callable): The method to be wrapped, can be either sync or async
+
+    Returns:
+        Callable: A wrapped function that handles the appropriate execution context.
+    """
+    # Handle synchronous methods with a simple wrapper
+    if not is_async_callable(output_method):
+
+        def sync_function(*args, **kwargs):
+            """Synchronous wrapper that sets component arguments and executes the method.
+
+            Args:
+                *args: Positional arguments to be passed to component.set()
+                **kwargs: Keyword arguments to be passed to component.set()
+
+            Returns:
+                Any: The result of the output_method execution
+            """
+            component.set(*args, **kwargs)
+            return output_method()
+
+        return sync_function
+
+    # Handle asynchronous methods with a wrapper that manages event loops
+    def async_wrapper(*args, **kwargs):
+        """Asynchronous wrapper that handles event loop management.
+
+        This wrapper handles two scenarios:
+        1. No event loop running: Creates a new one using asyncio.run()
+        2. Existing event loop: Creates a separate loop to prevent blocking
+
+        Args:
+            *args: Positional arguments to be passed to component.set()
+            **kwargs: Keyword arguments to be passed to component.set()
+
+        Returns:
+            Any: The result of the async output_method execution
+        """
+        # Set component arguments before execution
+        component.set(*args, **kwargs)
+        try:
+            # Check if we're already in an event loop
+            asyncio.get_running_loop()
+        except RuntimeError:
+            # No loop running - create one using asyncio.run()
+            # This handles the creation and cleanup of the event loop
+            return asyncio.run(output_method())
+        else:
+            # We're in a running loop - create a new one to prevent blocking
+            # This is useful in contexts like FastAPI where a loop is already running
+            return asyncio.new_event_loop().run_until_complete(output_method())
+
+    return async_wrapper
 
 
 def _format_tool_name(name: str):
@@ -60,6 +116,18 @@ def _format_tool_name(name: str):
     # to do that we must remove all non-alphanumeric characters
 
     return re.sub(r"[^a-zA-Z0-9_-]", "-", name)
+
+
+def is_async_callable(obj: Any) -> bool:
+    if not callable(obj):
+        return False
+    if asyncio.iscoroutinefunction(obj):
+        return True
+    if inspect.isclass(obj):
+        return False
+    if callable(obj):
+        return asyncio.iscoroutinefunction(obj.__call__)
+    return False
 
 
 class ComponentToolkit:
@@ -77,6 +145,8 @@ class ComponentToolkit:
                 raise ValueError(msg)
 
             output_method: Callable = getattr(self.component, output.method)
+            # TODO: check if the coutput method is async and make it synchronousd
+
             args_schema = None
             if output.required_inputs:
                 inputs = [self.component._inputs[input_name] for input_name in output.required_inputs]

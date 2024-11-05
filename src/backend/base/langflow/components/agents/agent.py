@@ -59,14 +59,17 @@ class AgentComponent(ToolCallingAgentComponent):
         *LCToolsAgentComponent._base_inputs,
         *memory_inputs,
     ]
-    outputs = [Output(name="response", display_name="Response", method="get_response")]
+    outputs = [Output(name="response", display_name="Response", method="get_response",required_inputs=["input_value"])]
 
     async def get_response(self) -> Message:
         llm_model = self.get_llm()
         if llm_model is None:
             msg = "No language model selected"
             raise ValueError(msg)
-        self.chat_history = self.get_memory_data()
+        try:
+            self.chat_history = self.get_memory_data()
+        except:  # noqa: E722
+            self.chat_history = []
 
         agent = ToolCallingAgentComponent().set(
             llm=llm_model,
