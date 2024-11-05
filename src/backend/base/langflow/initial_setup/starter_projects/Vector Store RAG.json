@@ -889,7 +889,7 @@
                 "title_case": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": ""
+                "value": "cosine"
               },
               "namespace": {
                 "advanced": true,
@@ -2222,7 +2222,7 @@
                 "title_case": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": ""
+                "value": "cosine"
               },
               "namespace": {
                 "advanced": true,
