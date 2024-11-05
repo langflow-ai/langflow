@@ -1,28 +1,29 @@
 import os
 import re
 
-from google.auth.transport.requests import Request  # Importação corrigida
+from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 
 from langflow.custom import Component
-from langflow.io import FileInput, Output
+from langflow.io import FileInput, MultilineInput, Output
 from langflow.schema import Data
 
 
 class GoogleOAuthToken(Component):
-    display_name = "Google OAuth Token "
+    display_name = "Google OAuth Token"
     description = "A component to generate a json string containing your Google OAuth token."
     documentation: str = "https://developers.google.com/identity/protocols/oauth2/web-server?hl=pt-br#python_1"
     icon = "Google"
     name = "GoogleOAuthToken"
 
     inputs = [
-        StrInput(
+        MultilineInput(
             name="scopes",
             display_name="Scopes",
             info="Input a comma-separated list of scopes with the permissions required for your application.",
             required=True,
+            value="https://www.googleapis.com/auth/drive.readonly,\n https://www.googleapis.com/auth/drive.activity.readonly"
         ),
         FileInput(
             name="oauth_credentials",
@@ -84,4 +85,7 @@ class GoogleOAuthToken(Component):
             with open(token_path, "w") as token_file:
                 token_file.write(creds.to_json())
 
-        return Data(data=creds.to_json())
+        creds_json = json.loads(creds.to_json())
+
+        return Data(data=creds_json)
+
