@@ -40,7 +40,7 @@ export default function CollectionCardComponent({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const getFlowById = useFlowsManagerStore((state) => state.getFlowById);
-  const [openPlayground, setOpenPlayground] = useState(false);
+  // const [openPlayground, setOpenPlayground] = useState(false);
   const [loadingPlayground, setLoadingPlayground] = useState(false);
   const selectedFlowsComponentsCards = useFlowsManagerStore(
     (state) => state.selectedFlowsComponentsCards,
@@ -75,7 +75,7 @@ export default function CollectionCardComponent({
         return;
       }
       setCurrentFlow(data);
-      setOpenPlayground(true);
+      // setOpenPlayground(true);
       setLoadingPlayground(false);
     } else {
       setErrorData({
@@ -156,7 +156,7 @@ export default function CollectionCardComponent({
         <CardFooter>
           <div className="z-50 flex w-full items-center justify-between gap-2">
             <div className="flex w-full flex-wrap items-end justify-end gap-2">
-              {playground && (
+              {/* {playground && (
                 <Button
                   disabled={loadingPlayground || !hasPlayground(data)}
                   key={data.id}
@@ -177,12 +177,12 @@ export default function CollectionCardComponent({
                   )}
                   Playground
                 </Button>
-              )}
+              )} */}
             </div>
           </div>
         </CardFooter>
       </Card>
-      {openPlayground && (
+      {/* {openPlayground && (
         <IOModal
           key={data.id}
           cleanOnClose={true}
@@ -191,7 +191,7 @@ export default function CollectionCardComponent({
         >
           <></>
         </IOModal>
-      )}
+      )} */}
     </>
   );
 }

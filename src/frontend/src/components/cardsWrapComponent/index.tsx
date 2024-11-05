@@ -1,3 +1,4 @@
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useEffect, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import { cn } from "../../utils/utils";
@@ -12,6 +13,7 @@ export default function CardsWrapComponent({
   dragMessage?: string;
 }) {
   const [isDragging, setIsDragging] = useState(false);
+  const isIOModalOpen = useFlowsManagerStore((state) => state.IOModalOpen);
   useEffect(() => {
     // Function to handle visibility change
     const handleVisibilityChange = () => {
@@ -32,13 +34,21 @@ export default function CardsWrapComponent({
 
   const dragOver = (e) => {
     e.preventDefault();
-    if (e.dataTransfer.types.some((types) => types === "Files") && onFileDrop) {
+    if (
+      e.dataTransfer.types.some((types) => types === "Files") &&
+      onFileDrop &&
+      !isIOModalOpen
+    ) {
       setIsDragging(true);
     }
   };
 
   const dragEnter = (e) => {
-    if (e.dataTransfer.types.some((types) => types === "Files") && onFileDrop) {
+    if (
+      e.dataTransfer.types.some((types) => types === "Files") &&
+      onFileDrop &&
+      !isIOModalOpen
+    ) {
       setIsDragging(true);
     }
     e.preventDefault();
@@ -46,12 +56,12 @@ export default function CardsWrapComponent({
 
   const dragLeave = (e) => {
     e.preventDefault();
-    if (onFileDrop) setIsDragging(false);
+    if (onFileDrop && !isIOModalOpen) setIsDragging(false);
   };
 
   const onDrop = (e) => {
     e.preventDefault();
-    if (onFileDrop) onFileDrop(e);
+    if (onFileDrop && !isIOModalOpen) onFileDrop(e);
     setIsDragging(false);
   };
 

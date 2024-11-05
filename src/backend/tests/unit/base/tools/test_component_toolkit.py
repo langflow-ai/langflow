@@ -72,6 +72,24 @@ def test_component_tool():
             "title": "Files",
             "type": "array",
         },
+        "background_color": {
+            "default": "",
+            "description": "The background color of the icon.",
+            "title": "Background Color",
+            "type": "string",
+        },
+        "chat_icon": {
+            "default": "",
+            "description": "The icon of the message.",
+            "title": "Chat Icon",
+            "type": "string",
+        },
+        "text_color": {
+            "default": "",
+            "description": "The text color of the name",
+            "title": "Text Color",
+            "type": "string",
+        },
     }
     assert component_toolkit.component == chat_input
 
