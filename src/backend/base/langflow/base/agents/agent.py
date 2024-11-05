@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 class LCAgentComponent(Component):
     trace_type = "agent"
     _base_inputs: list[InputTypes] = [
-        MessageTextInput(name="input_value", display_name="Input"),
+        MessageTextInput(name="input_value", display_name="Input", tool_mode=True),
         BoolInput(
             name="handle_parsing_errors",
             display_name="Handle Parse Errors",
