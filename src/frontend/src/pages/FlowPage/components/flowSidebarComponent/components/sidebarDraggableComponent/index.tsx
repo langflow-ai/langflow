@@ -143,7 +143,7 @@ export const SidebarDraggableComponent = forwardRef(
               {beta && (
                 <Badge
                   variant="pinkStatic"
-                  size="sq"
+                  size="xq"
                   className="ml-1.5 shrink-0"
                 >
                   BETA
@@ -152,7 +152,7 @@ export const SidebarDraggableComponent = forwardRef(
               {legacy && (
                 <Badge
                   variant="secondaryStatic"
-                  size="sq"
+                  size="xq"
                   className="ml-1.5 shrink-0"
                 >
                   LEGACY

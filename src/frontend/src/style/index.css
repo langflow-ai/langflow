@@ -104,9 +104,6 @@
     --smooth-red: 0 93.3% 94.1%;
     --radius: 0.5rem;
 
-    --accent-pink: 327.3 73.3% 97.1%;
-    --accent-pink-foreground: 333.3 71.4% 50.6%;
-
     --inner-yellow: 40.6 96.1% 40.4%;
     --inner-yellow-foreground: 50.4 97.8% 63.5%;
     --inner-yellow-muted-foreground: 35.5 91.7% 32.9%;
@@ -182,7 +179,7 @@
     --accent-emerald-hover: 163.1 88.1% 19.8%; /* hsl(163.1, 88.1%, 19.8%) */
     --accent-indigo: 242 25% 34%; /* hsl(242, 25%, 34%) */
     --accent-indigo-foreground: 234 89% 74%; /* hsl(234, 89%, 74%) */
-    --accent-pink: 336 30% 30%; /* hsl(336, 30%, 30%) */
+    --accent-pink: 336 69% 30%; /* hsl(336, 69%, 30%) */
     --accent-pink-foreground: 329 86% 70%; /* hsl(329, 86%, 70%) */
     --tooltip: 0 0% 100%; /* hsl(0, 0%, 100%) */
 
@@ -254,9 +251,6 @@
     --placeholder: 240 5% 64.9%;
     --hard-zinc: 240 5.2% 33.9%;
     --smooth-red: 0 93.3% 94.1%;
-
-    --accent-pink: 327.3 73.3% 97.1%;
-    --accent-pink-foreground: 333.3 71.4% 50.6%;
 
     --inner-yellow: 47.9 95.8% 53.1%;
     --inner-yellow-foreground: 35.5 91.7% 32.9%;

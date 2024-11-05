@@ -339,12 +339,11 @@ export function FlowSidebarComponent() {
             <div className="flex flex-col gap-7 border-b pb-7 pt-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm font-medium">
-                    Show{" "}
-                    <Badge variant="pinkStatic" size="sq">
+                  <span className="flex gap-2 text-sm font-medium">
+                    Show
+                    <Badge variant="pinkStatic" size="xq">
                       BETA
-                    </Badge>{" "}
-                    Components
+                    </Badge>
                   </span>
                 </div>
                 <Switch
@@ -355,12 +354,11 @@ export function FlowSidebarComponent() {
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm font-medium">
-                    Show{" "}
-                    <Badge variant="secondaryStatic" size="sq">
+                  <span className="flex gap-2 text-sm font-medium">
+                    Show
+                    <Badge variant="secondaryStatic" size="xq">
                       LEGACY
-                    </Badge>{" "}
-                    Components
+                    </Badge>
                   </span>
                 </div>
                 <Switch
