@@ -2,6 +2,7 @@ from collections.abc import AsyncIterator
 from typing import Any
 from unittest.mock import MagicMock
 
+from langchain_core.agents import AgentFinish
 from langflow.base.agents.agent import process_agent_events
 from langflow.base.agents.events import (
     handle_on_chain_end,
@@ -11,6 +12,8 @@ from langflow.base.agents.events import (
     handle_on_tool_error,
     handle_on_tool_start,
 )
+from langflow.schema.content_block import ContentBlock
+from langflow.schema.content_types import ToolContent
 from langflow.schema.message import Message
 from langflow.utils.constants import MESSAGE_SENDER_AI
 
@@ -23,87 +26,125 @@ async def create_event_iterator(events: list[dict[str, Any]]) -> AsyncIterator[d
 
 async def test_chain_start_event():
     """Test handling of on_chain_start event."""
-    # Mock the send_message function
     send_message = MagicMock(side_effect=lambda message: message)
 
-    events = [{"event": "on_chain_start", "data": {"input": "test input"}}]
+    events = [{"event": "on_chain_start", "data": {"input": {"input": "test input", "chat_history": []}}}]
+
+    # Initialize message with content blocks
+    initial_message = Message(
+        sender=MESSAGE_SENDER_AI,
+        sender_name="Agent",
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+    )
+    send_message.return_value = initial_message
 
     result = await process_agent_events(create_event_iterator(events), send_message)
 
-    assert result.properties.icon == "🚀"
+    assert result.properties.icon == "Bot"
     assert len(result.content_blocks) == 1
-    assert result.content_blocks[0].title == "Agent Input"
-    assert "test input" in result.content_blocks[0].contents.text
+    assert result.content_blocks[0].title == "Agent Steps"
 
 
 async def test_chain_end_event():
     """Test handling of on_chain_end event."""
     send_message = MagicMock(side_effect=lambda message: message)
 
-    # Create a mock output object with return_values attribute
-    class MockOutput:
-        def __init__(self):
-            self.return_values = {"output": "final output"}
+    # Create a mock AgentFinish output
+    output = AgentFinish(return_values={"output": "final output"}, log="test log")
 
-    events = [{"event": "on_chain_end", "data": {"output": MockOutput()}}]
+    events = [{"event": "on_chain_end", "data": {"output": output}}]
+
+    # Initialize message with content blocks
+    initial_message = Message(
+        sender=MESSAGE_SENDER_AI,
+        sender_name="Agent",
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+    )
+    send_message.return_value = initial_message
 
     result = await process_agent_events(create_event_iterator(events), send_message)
 
-    assert result.properties.icon == "🤖"
+    assert result.properties.icon == "Bot"
     assert result.properties.state == "complete"
     assert result.text == "final output"
 
 
 async def test_tool_start_event():
     """Test handling of on_tool_start event."""
-    send_message = MagicMock(side_effect=lambda message: message)
+    send_message = MagicMock()
+
+    # Set up the send_message mock to return the modified message
+    def update_message(message):
+        # Return a copy of the message to simulate real behavior
+        return Message(**message.model_dump())
+
+    send_message.side_effect = update_message
 
     events = [
         {
             "event": "on_tool_start",
             "name": "test_tool",
-            "data": {
-                "input": {"query": "tool input"}  # Changed to dictionary
-            },
+            "run_id": "test_run",
+            "data": {"input": {"query": "tool input"}},
         }
     ]
 
     result = await process_agent_events(create_event_iterator(events), send_message)
 
-    assert result.properties.icon == "🔧"
+    assert result.properties.icon == "Bot"
     assert len(result.content_blocks) == 1
-    assert result.content_blocks[0].title == "Tool Input"
-    assert result.content_blocks[0].contents.tool_name == "test_tool"
-    assert result.content_blocks[0].contents.tool_input == {"query": "tool input"}  # Updated assertion
+    assert result.content_blocks[0].title == "Agent Steps"
+    assert len(result.content_blocks[0].contents) > 0
+    tool_content = result.content_blocks[0].contents[-1]
+    assert isinstance(tool_content, ToolContent)
+    assert tool_content.name == "test_tool"
+    assert tool_content.tool_input == {"query": "tool input"}, tool_content
 
 
 async def test_tool_end_event():
     """Test handling of on_tool_end event."""
     send_message = MagicMock(side_effect=lambda message: message)
 
-    events = [{"event": "on_tool_end", "name": "test_tool", "data": {"output": "tool output"}}]
+    events = [
+        {
+            "event": "on_tool_start",
+            "name": "test_tool",
+            "run_id": "test_run",
+            "data": {"input": {"query": "tool input"}},
+        },
+        {"event": "on_tool_end", "name": "test_tool", "run_id": "test_run", "data": {"output": "tool output"}},
+    ]
 
     result = await process_agent_events(create_event_iterator(events), send_message)
 
     assert len(result.content_blocks) == 1
-    assert result.content_blocks[0].title == "Tool Output"
-    assert result.content_blocks[0].contents.tool_name == "test_tool"
-    assert result.content_blocks[0].contents.tool_output == "tool output"
+    tool_content = result.content_blocks[0].contents[-1]
+    assert tool_content.name == "test_tool"
+    assert tool_content.output == "tool output"
 
 
 async def test_tool_error_event():
     """Test handling of on_tool_error event."""
     send_message = MagicMock(side_effect=lambda message: message)
 
-    events = [{"event": "on_tool_error", "name": "test_tool", "data": {"error": "error message"}}]
+    events = [
+        {
+            "event": "on_tool_start",
+            "name": "test_tool",
+            "run_id": "test_run",
+            "data": {"input": {"query": "tool input"}},
+        },
+        {"event": "on_tool_error", "name": "test_tool", "run_id": "test_run", "data": {"error": "error message"}},
+    ]
 
     result = await process_agent_events(create_event_iterator(events), send_message)
 
-    assert result.properties.icon == "⚠️"
-    assert len(result.content_blocks) == 1
-    assert result.content_blocks[0].title == "Tool Error"
-    assert result.content_blocks[0].contents.tool_name == "test_tool"
-    assert result.content_blocks[0].contents.tool_error == "error message"
+    tool_content = result.content_blocks[0].contents[-1]
+    assert tool_content.name == "test_tool"
+    assert tool_content.error == "error message"
+    assert tool_content.header["title"] == "Error using **test_tool**"
 
 
 async def test_chain_stream_event():
@@ -122,33 +163,48 @@ async def test_multiple_events():
     """Test handling of multiple events in sequence."""
     send_message = MagicMock(side_effect=lambda message: message)
 
-    # Create a mock output object with return_values attribute
-    class MockOutput:
-        def __init__(self):
-            self.return_values = {"output": "final output"}
+    # Create a mock AgentFinish output instead of MockOutput
+    output = AgentFinish(return_values={"output": "final output"}, log="test log")
 
     events = [
-        {"event": "on_chain_start", "data": {"input": "initial input"}},
+        {"event": "on_chain_start", "data": {"input": {"input": "initial input", "chat_history": []}}},
         {
             "event": "on_tool_start",
             "name": "test_tool",
-            "data": {"input": {"query": "tool input"}},  # Changed to dictionary
+            "run_id": "test_run",
+            "data": {"input": {"query": "tool input"}},
         },
-        {"event": "on_tool_end", "name": "test_tool", "data": {"output": "tool output"}},
-        {"event": "on_chain_end", "data": {"output": MockOutput()}},  # Using MockOutput
+        {"event": "on_tool_end", "name": "test_tool", "run_id": "test_run", "data": {"output": "tool output"}},
+        {"event": "on_chain_end", "data": {"output": output}},  # Use AgentFinish instead
     ]
+
+    # Initialize message with content blocks
+    initial_message = Message(
+        sender=MESSAGE_SENDER_AI,
+        sender_name="Agent",
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+    )
+    send_message.return_value = initial_message
 
     result = await process_agent_events(create_event_iterator(events), send_message)
 
     assert result.properties.state == "complete"
-    assert result.properties.icon == "🤖"
-    assert len(result.content_blocks) == 3  # Start, Tool Start, Tool End
+    assert result.properties.icon == "Bot"
+    assert len(result.content_blocks) == 1
     assert result.text == "final output"
 
 
 async def test_unknown_event():
     """Test handling of unknown event type."""
     send_message = MagicMock(side_effect=lambda message: message)
+    initial_message = Message(
+        sender=MESSAGE_SENDER_AI,
+        sender_name="Agent",
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],  # Initialize with empty content block
+    )
+    send_message.return_value = initial_message
 
     events = [{"event": "unknown_event", "data": {"some": "data"}}]
 
@@ -156,7 +212,9 @@ async def test_unknown_event():
 
     # Should complete without error and maintain default state
     assert result.properties.state == "complete"
-    assert len(result.content_blocks) == 0
+    # Content blocks should be empty but present
+    assert len(result.content_blocks) == 1
+    assert len(result.content_blocks[0].contents) == 0
 
 
 # Additional tests for individual handler functions
@@ -164,110 +222,99 @@ async def test_unknown_event():
 
 async def test_handle_on_chain_start_with_input():
     """Test handle_on_chain_start with input."""
-    send_message = MagicMock(side_effect=lambda message: message)
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
-        properties={"icon": "🤖", "state": "partial"},
-        content_blocks=[],
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
     )
-    event = {"event": "on_chain_start", "data": {"input": "test input"}}
+    event = {"event": "on_chain_start", "data": {"input": {"input": "test input", "chat_history": []}}}
 
-    updated_message = await handle_on_chain_start(event, agent_message, send_message)
+    updated_message = handle_on_chain_start(event, agent_message)
 
-    assert updated_message.properties.icon == "🚀"
+    assert updated_message.properties.icon == "Bot"
     assert len(updated_message.content_blocks) == 1
-    assert updated_message.content_blocks[0].title == "Agent Input"
-    assert "test input" in updated_message.content_blocks[0].contents.text
+    assert updated_message.content_blocks[0].title == "Agent Steps"
 
 
 async def test_handle_on_chain_start_no_input():
     """Test handle_on_chain_start without input."""
-    send_message = MagicMock(side_effect=lambda message: message)
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
-        properties={"icon": "🤖", "state": "partial"},
-        content_blocks=[],
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
     )
     event = {"event": "on_chain_start", "data": {}}
 
-    updated_message = await handle_on_chain_start(event, agent_message, send_message)
+    updated_message = handle_on_chain_start(event, agent_message)
 
-    assert updated_message.properties.icon == "🤖"
-    assert len(updated_message.content_blocks) == 0
+    assert updated_message.properties.icon == "Bot"
+    # Content blocks should be present but empty
+    assert len(updated_message.content_blocks) == 1
+    assert len(updated_message.content_blocks[0].contents) == 0
 
 
 async def test_handle_on_chain_end_with_output():
     """Test handle_on_chain_end with output."""
-    send_message = MagicMock(side_effect=lambda message: message)
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
-        properties={"icon": "🤖", "state": "partial"},
-        content_blocks=[],
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
     )
 
-    class MockOutput:
-        def __init__(self):
-            self.return_values = {"output": "final output"}
+    output = AgentFinish(return_values={"output": "final output"}, log="test log")
+    event = {"event": "on_chain_end", "data": {"output": output}}
 
-    event = {"event": "on_chain_end", "data": {"output": MockOutput()}}
+    updated_message = handle_on_chain_end(event, agent_message)
 
-    updated_message = await handle_on_chain_end(event, agent_message, send_message)
-
-    assert updated_message.properties.icon == "🤖"
+    assert updated_message.properties.icon == "Bot"
     assert updated_message.properties.state == "complete"
     assert updated_message.text == "final output"
-    assert send_message.called
 
 
 async def test_handle_on_chain_end_no_output():
     """Test handle_on_chain_end without output key in data."""
-    send_message = MagicMock(side_effect=lambda message: message)
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
-        properties={"icon": "🤖", "state": "partial"},
-        content_blocks=[],
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
     )
-    event = {"event": "on_chain_end", "data": {}}  # No output key in data
+    event = {"event": "on_chain_end", "data": {}}
 
-    updated_message = await handle_on_chain_end(event, agent_message, send_message)
+    updated_message = handle_on_chain_end(event, agent_message)
 
-    assert updated_message.properties.icon == "🤖"  # Icon remains unchanged
-    assert updated_message.properties.state == "partial"  # State remains unchanged
-    assert updated_message.text == ""  # Text remains unchanged
-    assert not send_message.called  # send_message should not be called
+    assert updated_message.properties.icon == "Bot"
+    assert updated_message.properties.state == "partial"
+    assert updated_message.text == ""
 
 
 async def test_handle_on_chain_end_empty_data():
     """Test handle_on_chain_end with empty data."""
-    send_message = MagicMock(side_effect=lambda message: message)
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
-        properties={"icon": "🤖", "state": "partial"},
-        content_blocks=[],
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
     )
     event = {"event": "on_chain_end", "data": {"output": None}}
 
-    updated_message = await handle_on_chain_end(event, agent_message, send_message)
+    updated_message = handle_on_chain_end(event, agent_message)
 
-    assert updated_message.properties.icon == "🤖"  # Icon remains unchanged
-    assert updated_message.properties.state == "partial"  # State remains unchanged
-    assert updated_message.text == ""  # Text remains unchanged
-    assert not send_message.called  # send_message should not be called
+    assert updated_message.properties.icon == "Bot"
+    assert updated_message.properties.state == "partial"
+    assert updated_message.text == ""
 
 
 async def test_handle_on_chain_end_with_empty_return_values():
     """Test handle_on_chain_end with empty return_values."""
-    send_message = MagicMock(side_effect=lambda message: message)
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
-        properties={"icon": "🤖", "state": "partial"},
-        content_blocks=[],
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
     )
 
     class MockOutputEmptyReturnValues:
@@ -276,100 +323,125 @@ async def test_handle_on_chain_end_with_empty_return_values():
 
     event = {"event": "on_chain_end", "data": {"output": MockOutputEmptyReturnValues()}}
 
-    updated_message = await handle_on_chain_end(event, agent_message, send_message)
+    updated_message = handle_on_chain_end(event, agent_message)
 
-    assert updated_message.properties.icon == "🔍"
-    assert updated_message.properties.state == "partial"  # State remains unchanged
-    assert updated_message.text == ""  # Text remains unchanged
-    assert send_message.called
+    assert updated_message.properties.icon == "Bot"
+    assert updated_message.properties.state == "partial"
+    assert updated_message.text == ""
 
 
-async def test_handle_on_tool_start():
+def test_handle_on_tool_start():
     """Test handle_on_tool_start event."""
-    send_message = MagicMock(side_effect=lambda message: message)
+    tool_blocks_map = {}
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
-        properties={"icon": "🤖", "state": "partial"},
-        content_blocks=[],
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
     )
     event = {
         "event": "on_tool_start",
         "name": "test_tool",
+        "run_id": "test_run",
         "data": {"input": {"query": "tool input"}},
     }
 
-    updated_message = await handle_on_tool_start(event, agent_message, send_message)
+    updated_message = handle_on_tool_start(event, agent_message, tool_blocks_map)
 
-    assert updated_message.properties.icon == "🔧"
     assert len(updated_message.content_blocks) == 1
-    assert updated_message.content_blocks[0].title == "Tool Input"
-    assert updated_message.content_blocks[0].content.tool_name == "test_tool"
-    assert updated_message.content_blocks[0].content.tool_input == {"query": "tool input"}
+    assert len(updated_message.content_blocks[0].contents) > 0
+    tool_content = updated_message.content_blocks[0].contents[-1]
+    assert tool_content == tool_blocks_map.get("test_run")
+    assert isinstance(tool_content, ToolContent)
+    assert tool_content.name == "test_tool"
+    assert tool_content.tool_input == {"query": "tool input"}, tool_content
 
 
 async def test_handle_on_tool_end():
     """Test handle_on_tool_end event."""
-    send_message = MagicMock(side_effect=lambda message: message)
+    tool_blocks_map = {}
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
-        properties={"icon": "🤖", "state": "partial"},
-        content_blocks=[],
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
     )
-    event = {
+
+    # First create a tool content with start event
+    start_event = {
+        "event": "on_tool_start",
+        "name": "test_tool",
+        "run_id": "test_run",
+        "data": {"input": {"query": "tool input"}},
+    }
+    agent_message = handle_on_tool_start(start_event, agent_message, tool_blocks_map)
+
+    # Then handle the end event
+    end_event = {
         "event": "on_tool_end",
         "name": "test_tool",
+        "run_id": "test_run",
         "data": {"output": "tool output"},
     }
 
-    updated_message = await handle_on_tool_end(event, agent_message, send_message)
+    updated_message = handle_on_tool_end(end_event, agent_message, tool_blocks_map)
 
-    assert len(updated_message.content_blocks) == 1
-    assert updated_message.content_blocks[0].title == "Tool Output"
-    assert updated_message.content_blocks[0].content.tool_name == "test_tool"
-    assert updated_message.content_blocks[0].content.tool_output == "tool output"
+    tool_content = updated_message.content_blocks[0].contents[-1]
+    assert tool_content.name == "test_tool"
+    assert tool_content.output == "tool output"
+    assert hasattr(tool_content, "duration")
 
 
 async def test_handle_on_tool_error():
     """Test handle_on_tool_error event."""
-    send_message = MagicMock(side_effect=lambda message: message)
+    tool_blocks_map = {}
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
-        properties={"icon": "🤖", "state": "partial"},
-        content_blocks=[],
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
     )
-    event = {
+
+    # First create a tool content with start event
+    start_event = {
+        "event": "on_tool_start",
+        "name": "test_tool",
+        "run_id": "test_run",
+        "data": {"input": {"query": "tool input"}},
+    }
+    agent_message = handle_on_tool_start(start_event, agent_message, tool_blocks_map)
+
+    # Then handle the error event
+    error_event = {
         "event": "on_tool_error",
         "name": "test_tool",
+        "run_id": "test_run",
         "data": {"error": "error message"},
     }
 
-    updated_message = await handle_on_tool_error(event, agent_message, send_message)
+    updated_message = handle_on_tool_error(error_event, agent_message, tool_blocks_map)
 
-    assert updated_message.properties.icon == "⚠️"
-    assert len(updated_message.content_blocks) == 1
-    assert updated_message.content_blocks[0].title == "Tool Error"
-    assert updated_message.content_blocks[0].content.tool_name == "test_tool"
-    assert updated_message.content_blocks[0].content.tool_error == "error message"
+    tool_content = updated_message.content_blocks[0].contents[-1]
+    assert tool_content.name == "test_tool"
+    assert tool_content.error == "error message"
+    assert tool_content.header["title"] == "Error using **test_tool**"
+    assert hasattr(tool_content, "duration")
 
 
 async def test_handle_on_chain_stream_with_output():
     """Test handle_on_chain_stream with output."""
-    send_message = MagicMock(side_effect=lambda message: message)
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
-        properties={"icon": "🤖", "state": "partial"},
-        content_blocks=[],
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
     )
     event = {
         "event": "on_chain_stream",
         "data": {"chunk": {"output": "streamed output"}},
     }
 
-    updated_message = await handle_on_chain_stream(event, agent_message, send_message)
+    updated_message = handle_on_chain_stream(event, agent_message)
 
     assert updated_message.text == "streamed output"
     assert updated_message.properties.state == "complete"
@@ -377,19 +449,18 @@ async def test_handle_on_chain_stream_with_output():
 
 async def test_handle_on_chain_stream_no_output():
     """Test handle_on_chain_stream without output."""
-    send_message = MagicMock(side_effect=lambda message: message)
     agent_message = Message(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
-        properties={"icon": "🤖", "state": "partial"},
-        content_blocks=[],
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
     )
     event = {
         "event": "on_chain_stream",
         "data": {"chunk": {}},
     }
 
-    updated_message = await handle_on_chain_stream(event, agent_message, send_message)
+    updated_message = handle_on_chain_stream(event, agent_message)
 
     assert updated_message.text == ""
     assert updated_message.properties.state == "partial"
