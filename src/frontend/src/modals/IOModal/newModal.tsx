@@ -307,7 +307,7 @@ export default function IOModal({
                           <Button
                             data-testid="new-chat"
                             variant="ghost"
-                            className="flex h-8 w-8 items-center justify-center !p-0"
+                            className="flex h-8 w-8 hover:bg-secondary-hover items-center justify-center !p-0"
                             onClick={(_) => {
                               setvisibleSession(undefined);
                               setSelectedViewField(undefined);
@@ -447,6 +447,7 @@ export default function IOModal({
                 >
                   <ShadTooltip styleClasses="z-50" content="New Chat">
                     <Button
+                      className="hover:bg-secondary-hover h-[32px] w-[32px]"
                       variant="ghost"
                       size="icon"
                       onClick={(_) => {
