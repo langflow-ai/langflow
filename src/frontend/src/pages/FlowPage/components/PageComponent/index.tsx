@@ -560,20 +560,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     [isAddingNote, setNodes, reactFlowInstance, getNodeId, setFilterEdge],
   );
 
-  const onPaneMouseMove = useCallback(
-    (event: React.MouseEvent) => {
-      if (isAddingNote) {
-        const shadowBox = document.getElementById("shadow-box");
-        if (shadowBox) {
-          shadowBox.style.display = "block";
-          shadowBox.style.left = `${event.clientX - shadowBoxWidth / 2}px`;
-          shadowBox.style.top = `${event.clientY - shadowBoxHeight / 2}px`;
-        }
-      }
-    },
-    [isAddingNote],
-  );
-
   const handleEdgeClick = (event, edge) => {
     const color =
       nodeColorsName[edge?.data?.targetHandle?.inputTypes[0]] ||
@@ -586,6 +572,25 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   };
 
   const { open } = useSidebar();
+
+  useEffect(() => {
+    const handleGlobalMouseMove = (event) => {
+      if (isAddingNote) {
+        const shadowBox = document.getElementById("shadow-box");
+        if (shadowBox) {
+          shadowBox.style.display = "block";
+          shadowBox.style.left = `${event.clientX - shadowBoxWidth / 2}px`;
+          shadowBox.style.top = `${event.clientY - shadowBoxHeight / 2}px`;
+        }
+      }
+    };
+
+    document.addEventListener("mousemove", handleGlobalMouseMove);
+
+    return () => {
+      document.removeEventListener("mousemove", handleGlobalMouseMove);
+    };
+  }, [isAddingNote, shadowBoxWidth, shadowBoxHeight]);
 
   return (
     <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
@@ -624,7 +629,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             panActivationKeyCode={""}
             proOptions={{ hideAttribution: true }}
             onPaneClick={onPaneClick}
-            onPaneMouseMove={onPaneMouseMove}
             onEdgeClick={handleEdgeClick}
           >
             <Background className="" />
@@ -636,6 +640,12 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
                     tooltipText="Add Note"
                     onClick={() => {
                       setIsAddingNote(true);
+                      const shadowBox = document.getElementById("shadow-box");
+                      if (shadowBox) {
+                        shadowBox.style.display = "block";
+                        shadowBox.style.left = `${position.current.x - shadowBoxWidth / 2}px`;
+                        shadowBox.style.top = `${position.current.y - shadowBoxHeight / 2}px`;
+                      }
                     }}
                     iconClasses="text-primary"
                     testId="add_note"
