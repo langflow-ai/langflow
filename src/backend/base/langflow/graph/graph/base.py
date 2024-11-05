@@ -160,6 +160,7 @@ class Graph:
             value = dotdict(value)
         self._context = value
 
+    @property
     def session_id(self):
         return self._session_id
 
