@@ -933,14 +933,6 @@ export const COLOR_OPTIONS = {
   lime: "hsl(var(--note-lime))",
 };
 
-export const SHADOW_COLOR_OPTIONS = {
-  amber: "hsla(var(--note-amber-opacity))",
-  neutral: "hsla(var(--note-neutral-opacity))",
-  rose: "hsla(var(--note-rose-opacity))",
-  blue: "hsla(var(--note-blue-opacity))",
-  lime: "hsla(var(--note-lime-opacity))",
-};
-
 export const maxSizeFilesInBytes = 10 * 1024 * 1024; // 10MB in bytes
 export const MAX_TEXT_LENGTH = 99999;
 

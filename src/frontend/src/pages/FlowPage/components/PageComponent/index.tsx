@@ -8,9 +8,9 @@ import ForwardedIconComponent from "@/components/genericIconComponent";
 import LoadingComponent from "@/components/loadingComponent";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import {
+  COLOR_OPTIONS,
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
-  SHADOW_COLOR_OPTIONS,
 } from "@/constants/constants";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
 import { track } from "@/customization/utils/analytics";
@@ -196,8 +196,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   const zoomLevel = reactFlowInstance?.getZoom();
   const shadowBoxWidth = NOTE_NODE_MIN_WIDTH * (zoomLevel || 1);
   const shadowBoxHeight = NOTE_NODE_MIN_HEIGHT * (zoomLevel || 1);
-  const shadowBoxBackgroundColor =
-    SHADOW_COLOR_OPTIONS[Object.keys(SHADOW_COLOR_OPTIONS)[0]];
+  const shadowBoxBackgroundColor = COLOR_OPTIONS[Object.keys(COLOR_OPTIONS)[0]];
 
   function handleGroupNode() {
     takeSnapshot();
@@ -678,6 +677,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
               width: `${shadowBoxWidth}px`,
               height: `${shadowBoxHeight}px`,
               backgroundColor: `${shadowBoxBackgroundColor}`,
+              opacity: 0.7,
               pointerEvents: "none",
             }}
           ></div>
