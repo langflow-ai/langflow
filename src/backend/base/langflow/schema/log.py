@@ -26,7 +26,7 @@ class SendMessageFunctionType(Protocol):
         id_: str | None = None,
         *,
         allow_markdown: bool = True,
-    ) -> None: ...
+    ) -> Message: ...
 
 
 class OnTokenFunctionType(Protocol):
