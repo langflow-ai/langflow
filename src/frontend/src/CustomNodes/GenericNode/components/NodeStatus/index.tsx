@@ -3,6 +3,7 @@ import useIconStatus from "@/CustomNodes/hooks/use-icons-status";
 import useUpdateValidationStatus from "@/CustomNodes/hooks/use-update-validation-status";
 import useValidationStatusString from "@/CustomNodes/hooks/use-validation-status-string";
 import ShadTooltip from "@/components/shadTooltipComponent";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   ICON_STROKE_WIDTH,
@@ -187,7 +188,7 @@ export default function NodeStatus({
 
   return (
     <>
-      <div className="flex flex-shrink-0 items-center gap-1">
+      <div className="flex flex-shrink-0 items-center">
         {isOutdated && !isUserEdited && (
           <ShadTooltip content={TOOLTIP_OUTDATED_NODE}>
             <Button
@@ -203,53 +204,69 @@ export default function NodeStatus({
             </Button>
           </ShadTooltip>
         )}
-        <ShadTooltip
-          content={
-            buildStatus === BuildStatus.BUILDING ? (
-              <span> {STATUS_BUILDING} </span>
-            ) : buildStatus === BuildStatus.INACTIVE ? (
-              <span> {STATUS_INACTIVE} </span>
-            ) : !validationStatus ? (
-              <span className="flex">{STATUS_BUILD}</span>
-            ) : (
-              <div className="max-h-100 p-2">
-                <div className="max-h-80 overflow-auto">
-                  {validationString && (
-                    <div className="ml-1 pb-2 text-status-red">
-                      {validationString}
+
+        <div className="flex items-center gap-2 self-center">
+          <ShadTooltip
+            content={
+              buildStatus === BuildStatus.BUILDING ? (
+                <span> {STATUS_BUILDING} </span>
+              ) : buildStatus === BuildStatus.INACTIVE ? (
+                <span> {STATUS_INACTIVE} </span>
+              ) : !validationStatus ? (
+                <span className="flex">{STATUS_BUILD}</span>
+              ) : (
+                <div className="max-h-100 p-2">
+                  <div className="max-h-80 overflow-auto">
+                    {validationString && (
+                      <div className="ml-1 pb-2 text-status-red">
+                        {validationString}
+                      </div>
+                    )}
+                    {lastRunTime && (
+                      <div className={runClass}>
+                        <div>{RUN_TIMESTAMP_PREFIX}</div>
+                        <div className="ml-1 text-status-blue">
+                          {lastRunTime}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className={runClass}>
+                    <div>Duration:</div>
+                    <div className="ml-1 text-status-blue">
+                      {validationStatus?.data.duration}
                     </div>
-                  )}
-                  {lastRunTime && (
-                    <div className={runClass}>
-                      <div>{RUN_TIMESTAMP_PREFIX}</div>
-                      <div className="ml-1 text-status-blue">{lastRunTime}</div>
-                    </div>
-                  )}
-                </div>
-                <div className={runClass}>
-                  <div>Duration:</div>
-                  <div className="ml-1 text-status-blue">
-                    {validationStatus?.data.duration}
                   </div>
                 </div>
-              </div>
-            )
-          }
-          side="bottom"
-        >
-          <div className="cursor-help">
-            {conditionSuccess && validationStatus?.data?.duration ? (
-              <div className="font-jetbrains mr-1 flex gap-1 rounded-sm bg-emerald-50 px-1 text-[11px] font-bold text-emerald-500">
-                <Check className="h-4 w-4 items-center self-center" />
-                <span>
-                  {normalizeTimeString(validationStatus?.data?.duration)}
-                </span>
-              </div>
-            ) : (
-              iconStatus
-            )}
-          </div>
-        </ShadTooltip>
+              )
+            }
+            side="bottom"
+          >
+            <div className="cursor-help">
+              {conditionSuccess && validationStatus?.data?.duration ? (
+                <div className="font-jetbrains mr-1 flex gap-1 rounded-sm bg-accent-emerald px-1 text-[11px] font-bold text-accent-emerald-foreground">
+                  <Check className="h-4 w-4 items-center self-center" />
+                  <span>
+                    {normalizeTimeString(validationStatus?.data?.duration)}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center self-center">
+                  {iconStatus}
+                </div>
+              )}
+            </div>
+          </ShadTooltip>
+
+          {data.node?.beta && showNode && (
+            <Badge
+              size="sq"
+              className="pointer-events-none mr-1 flex h-[22px] w-10 justify-center rounded-[8px] bg-accent-pink text-accent-pink-foreground"
+            >
+              <span className="text-[11px]">BETA</span>
+            </Badge>
+          )}
+        </div>
 
         <ShadTooltip content={getTooltipContent()}>
           <div
