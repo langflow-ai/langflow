@@ -1,8 +1,6 @@
 "use client";
-import CodeTabsComponent from "@/components/codeTabsComponent/ChatCodeTabComponent";
 import { BorderTrail } from "@/components/core/border-trail";
 import { TextShimmer } from "@/components/ui/TextShimmer";
-import { CodeBlock } from "@/modals/IOModal/components/chatView/chatMessage/codeBlock";
 import { ContentBlock } from "@/types/chat";
 import { cn } from "@/utils/utils";
 import { motion } from "framer-motion";
@@ -13,7 +11,6 @@ import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
 import { Separator } from "../ui/separator";
 import ContentDisplay from "./ContentDisplay";
-import DurationDisplay from "./DurationDisplay";
 
 interface ContentBlockDisplayProps {
   contentBlocks: ContentBlock[];
@@ -72,6 +69,8 @@ export function ContentBlockDisplay({
                 <div className="mb-2 font-medium">
                   <Markdown
                     remarkPlugins={[remarkGfm]}
+                    linkTarget="_blank"
+                    rehypePlugins={[rehypeMathjax]}
                     components={{
                       p({ node, ...props }) {
                         return <span className="inline">{props.children}</span>;
