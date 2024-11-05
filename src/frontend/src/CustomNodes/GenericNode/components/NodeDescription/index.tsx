@@ -62,7 +62,7 @@ export default function NodeDescription({
       className={cn(
         !inputDescription ? "overflow-auto" : "",
         hasScroll ? "nowheel" : "",
-        charLimit ? "px-2 pb-2" : "",
+        charLimit ? "px-2 pb-4" : "",
         "w-full",
       )}
     >
@@ -115,7 +115,7 @@ export default function NodeDescription({
           {charLimit && (
             <div
               className={cn(
-                "text-left text-[13px]",
+                "pt-1 text-left text-[13px]",
                 (nodeDescription?.length ?? 0) >= charLimit
                   ? "text-error"
                   : "text-primary",

@@ -80,7 +80,7 @@ function NoteNode({
           }}
         >
           <NodeDescription
-            inputClassName="border-0 ring-transparent resize-none rounded-none shadow-none h-full w-full"
+            inputClassName="border-0 ring-transparent resize-none rounded-none shadow-none rounded-sm h-full w-full"
             style={{ backgroundColor: COLOR_OPTIONS[bgColor] ?? "#00000000" }}
             charLimit={2500}
             nodeId={data.id}
