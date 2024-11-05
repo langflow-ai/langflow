@@ -393,8 +393,7 @@ export function FlowSidebarComponent() {
               Type{" "}
               <span>
                 <ShortcutDisplay sidebar shortcut="/" />
-              </span>{" "}
-              to search components
+              </span>
             </div>
           )}
         </div>
