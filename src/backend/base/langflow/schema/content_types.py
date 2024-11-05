@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import TypedDict
 
 
@@ -69,6 +69,8 @@ class CodeContent(BaseContent):
 
 class ToolContent(BaseContent):
     """Content type for tool start content."""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     type: Literal["tool_use"] = Field(default="tool_use")
     name: str | None = None
