@@ -64,11 +64,7 @@ class AgentComponent(ToolCallingAgentComponent):
             raise ValueError(msg)
         self.chat_history = self.get_memory_data()
 
-        agent = ToolCallingAgentComponent(
-            _user_id=self._user_id,
-            _vertex=self._vertex,
-            _tracing_service=self._tracing_service,
-        ).set(
+        agent = self.set(
             llm=llm_model,
             tools=[self.tools],
             chat_history=self.chat_history,
