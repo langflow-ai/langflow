@@ -20,7 +20,7 @@ class InputDict(TypedDict):
     chat_history: list[BaseMessage]
 
 
-def _build_agent_input_text_content(agent_input_dict: InputDict) -> ContentBlock:
+def _build_agent_input_text_content(agent_input_dict: InputDict) -> str:
     chat_history = agent_input_dict.get("chat_history", [])
     messages = [
         f"**{message.type.upper()}**: {message.content}"
@@ -141,7 +141,7 @@ def handle_on_tool_error(
     if tool_content and isinstance(tool_content, ToolContent):
         tool_content.error = event["data"].get("error", "Unknown error")
         tool_content.duration = _calculate_duration(event.get("start_time", perf_counter()))
-        tool_content.header = {"title": tool_content.name, "icon": "Hammer"}
+        tool_content.header = {"title": f"Error using **{tool_content.name}**", "icon": "Hammer"}
 
     return send_message_method(message=agent_message)
 
