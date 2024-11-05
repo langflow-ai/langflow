@@ -68,13 +68,20 @@ export default function NodeName({
     <div className="group flex w-full items-center gap-1">
       <div
         onDoubleClick={(event) => {
+          if (!showNode) {
+            return;
+          }
           setInputName(true);
           takeSnapshot();
           event.stopPropagation();
           event.preventDefault();
         }}
         data-testid={"title-" + display_name}
-        className="nodoubleclick w-full cursor-text truncate font-medium text-primary"
+        className={
+          showNode
+            ? "nodoubleclick w-full cursor-text truncate font-medium text-primary"
+            : "cursor-default"
+        }
       >
         <div className="flex items-center gap-2">
           <span
@@ -82,6 +89,7 @@ export default function NodeName({
               "max-w-44 truncate text-[14px]",
               validationStatus?.data?.duration && "max-w-36",
               isOutdated && "max-w-40",
+              !showNode && "max-w-28",
             )}
           >
             {display_name}
