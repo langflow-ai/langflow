@@ -5,7 +5,6 @@ import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import { ContentBlock, ErrorContent } from "@/types/chat";
 import Convert from "ansi-to-html";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
@@ -216,8 +215,8 @@ export default function ChatMessage({
   ) : null;
 
   if (chat.category === "error") {
-    const block = (chat.content_blocks?.[0] ?? {}) as ContentBlock;
-    const errorContent = (block.content as ErrorContent) ?? {};
+    const blocks = chat.content_blocks ?? [];
+
     return (
       <div className="w-5/6 max-w-[768px] py-4 word-break-break-word">
         <AnimatePresence mode="wait">
@@ -252,61 +251,76 @@ export default function ChatMessage({
                   />
                   <span className="">An error stopped your flow.</span>
                 </div>
-                <div className="mb-4">
-                  <h3 className="pb-3 font-semibold">Error details:</h3>
-                  <p className="pb-1">
-                    Component:{" "}
-                    <span
-                      className={cn(
-                        closeChat ? "cursor-pointer underline" : "",
-                      )}
-                      onClick={() => {
-                        fitViewNode(chat.properties?.source?.id ?? "");
-                        closeChat?.();
-                      }}
-                    >
-                      {errorContent.component}
-                    </span>
-                  </p>
-                  {errorContent.field && (
-                    <p className="pb-1">Field: {errorContent.field}</p>
-                  )}
-                  {errorContent.reason && (
-                    <span className="">
-                      Reason:{" "}
-                      <Markdown
-                        linkTarget="_blank"
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          a: ({ node, ...props }) => {
-                            return (
-                              <a
-                                href={props.href}
-                                target="_blank"
-                                className="underline"
-                                rel="noopener noreferrer"
-                              >
-                                {props.children}
-                              </a>
-                            );
-                          },
-                        }}
-                      >
-                        {errorContent.reason}
-                      </Markdown>
-                    </span>
-                  )}
-                </div>
-                {errorContent.solution && (
-                  <div>
-                    <h3 className="pb-3 font-semibold">Steps to fix:</h3>
-                    <ol className="list-decimal pl-5">
-                      <li>Check the component settings</li>
-                      <li>Ensure all required fields are filled</li>
-                      <li>Re-run your flow</li>
-                    </ol>
+                {blocks.map((block, blockIndex) => (
+                  <div key={blockIndex} className="mb-4">
+                    <h3 className="pb-3 font-semibold">{block.title}:</h3>
+                    {block.contents.map((content, contentIndex) => {
+                      if (content.type === "error") {
+                        return (
+                          <div key={contentIndex}>
+                            {content.component && (
+                              <p className="pb-1">
+                                Component:{" "}
+                                <span
+                                  className={cn(
+                                    closeChat ? "cursor-pointer underline" : "",
+                                  )}
+                                  onClick={() => {
+                                    fitViewNode(
+                                      chat.properties?.source?.id ?? "",
+                                    );
+                                    closeChat?.();
+                                  }}
+                                >
+                                  {content.component}
+                                </span>
+                              </p>
+                            )}
+                            {content.field && (
+                              <p className="pb-1">Field: {content.field}</p>
+                            )}
+                            {content.reason && (
+                              <span className="">
+                                Reason:{" "}
+                                <Markdown
+                                  linkTarget="_blank"
+                                  remarkPlugins={[remarkGfm]}
+                                  components={{
+                                    a: ({ node, ...props }) => (
+                                      <a
+                                        href={props.href}
+                                        target="_blank"
+                                        className="underline"
+                                        rel="noopener noreferrer"
+                                      >
+                                        {props.children}
+                                      </a>
+                                    ),
+                                  }}
+                                >
+                                  {content.reason}
+                                </Markdown>
+                              </span>
+                            )}
+                            {content.solution && (
+                              <div>
+                                <h3 className="pb-3 font-semibold">
+                                  Steps to fix:
+                                </h3>
+                                <ol className="list-decimal pl-5">
+                                  <li>Check the component settings</li>
+                                  <li>Ensure all required fields are filled</li>
+                                  <li>Re-run your flow</li>
+                                </ol>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
                   </div>
-                )}
+                ))}
               </div>
             </motion.div>
           )}
