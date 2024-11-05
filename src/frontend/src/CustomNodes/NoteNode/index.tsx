@@ -80,13 +80,26 @@ function NoteNode({
           }}
         >
           <NodeDescription
-            inputClassName="border-0 ring-transparent resize-none rounded-none shadow-none rounded-sm h-full w-full"
+            inputClassName={cn(
+              "border-0 ring-transparent resize-none shadow-none rounded-sm h-full w-full",
+              COLOR_OPTIONS[bgColor] === null
+                ? ""
+                : "dark:!ring-background dark:text-background",
+            )}
+            mdClassName={
+              COLOR_OPTIONS[bgColor] === null
+                ? "dark:prose-invert"
+                : "dark:!text-background"
+            }
             style={{ backgroundColor: COLOR_OPTIONS[bgColor] ?? "#00000000" }}
             charLimit={2500}
             nodeId={data.id}
             selected={selected}
             description={data.node?.description}
             emptyPlaceholder="Double-click to start typing or enter Markdown..."
+            placeholderClassName={
+              COLOR_OPTIONS[bgColor] === null ? "" : "dark:!text-background"
+            }
           />
         </div>
       </div>

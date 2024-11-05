@@ -11,6 +11,7 @@ export default function NodeDescription({
   selected,
   nodeId,
   emptyPlaceholder = "Double Click to Edit Description",
+  placeholderClassName,
   charLimit,
   inputClassName,
   mdClassName,
@@ -20,6 +21,7 @@ export default function NodeDescription({
   selected: boolean;
   nodeId: string;
   emptyPlaceholder?: string;
+  placeholderClassName?: string;
   charLimit?: number;
   inputClassName?: string;
   mdClassName?: string;
@@ -119,6 +121,7 @@ export default function NodeDescription({
                 (nodeDescription?.length ?? 0) >= charLimit
                   ? "text-error"
                   : "text-primary",
+                placeholderClassName,
               )}
               data-testid="note_char_limit"
             >
@@ -133,6 +136,7 @@ export default function NodeDescription({
           className={cn(
             "nodoubleclick generic-node-desc-text h-full cursor-text text-[13px] word-break-break-word",
             description === "" || !description ? "font-light italic" : "",
+            placeholderClassName,
           )}
           onDoubleClick={(e) => {
             setInputDescription(true);
@@ -145,7 +149,7 @@ export default function NodeDescription({
             <Markdown
               linkTarget="_blank"
               className={cn(
-                "markdown prose flex h-full w-full flex-col text-[13px] leading-5 text-foreground word-break-break-word dark:text-background",
+                "markdown prose flex h-full w-full flex-col text-[13px] leading-5 text-foreground word-break-break-word",
                 mdClassName,
               )}
             >
