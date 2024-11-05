@@ -302,7 +302,7 @@ export async function buildFlowVertices({
         // flushSync and timeout is needed to avoid react batched updates
         setTimeout(() => {
           flushSync(() => {
-            useMessagesStore.getState().updateMessagePartial(data);
+            useMessagesStore.getState().updateMessageText(data.id, data.chunk);
           });
         }, 10);
         return true;
@@ -314,10 +314,11 @@ export async function buildFlowVertices({
         return true;
       }
       case "error": {
-        const errorMessage = data.error;
-        onBuildError!("Error Running Flow", [errorMessage], []);
-        buildResults.push(false);
         useFlowStore.getState().setIsBuilding(false);
+        if (data.category === "error") {
+          useMessagesStore.getState().addMessage(data);
+        }
+        buildResults.push(false);
         return true;
       }
       default:
