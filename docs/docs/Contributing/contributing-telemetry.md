@@ -4,7 +4,7 @@ sidebar_position: 0
 slug: /contributing-telemetry
 ---
 
-Our system uses anonymous telemetry to collect essential usage statistics to enhance functionality and user experience. This data helps us identify popular features and areas needing improvement, and ensures development efforts align with what you need.
+Langflow uses anonymous telemetry to collect essential usage statistics to enhance functionality and user experience. This data helps us identify popular features and areas needing improvement, and ensures development efforts align with what you need.
 
 We respect your privacy and are committed to protecting your data. We do not collect any personal information or sensitive data. All telemetry data is anonymized and used solely for improving Langflow.
 
