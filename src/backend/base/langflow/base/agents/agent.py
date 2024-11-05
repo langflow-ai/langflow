@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.agents.agent import RunnableAgent
@@ -120,7 +120,7 @@ class LCAgentComponent(Component):
                 config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]},
                 version="v2",
             ),
-            self.send_message,
+            cast(SendMessageFunctionType, self.send_message),
         )
 
         self.status = result
