@@ -399,6 +399,7 @@ export function FlowSidebarComponent() {
           <SidebarFilterComponent
             isInput={!!filterType.source}
             type={filterType.type}
+            color={filterType.color}
             resetFilters={() => {
               setFilterEdge([]);
               setFilterData(data);
