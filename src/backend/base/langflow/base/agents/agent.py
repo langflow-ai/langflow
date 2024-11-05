@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.agents.agent import RunnableAgent
@@ -9,7 +9,6 @@ from langchain_core.runnables import Runnable
 from langflow.base.agents.callback import AgentAsyncHandler
 from langflow.base.agents.utils import data_to_messages
 from langflow.custom import Component
-from langflow.field_typing import Text
 from langflow.inputs.inputs import InputTypes
 from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
 from langflow.schema import Data
@@ -97,57 +96,6 @@ class LCAgentComponent(Component):
         # might be overridden in subclasses
         return None
 
-    async def run_agent(self, agent: AgentExecutor) -> Text:
-        input_dict: dict[str, str | list[BaseMessage]] = {"input": self.input_value}
-        self.chat_history = self.get_chat_history_data()
-        if self.chat_history:
-            input_dict["chat_history"] = data_to_messages(self.chat_history)
-        result = agent.invoke(
-            input_dict, config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]}
-        )
-        self.status = result
-        if "output" not in result:
-            msg = "Output key not found in result. Tried 'output'."
-            raise ValueError(msg)
-
-        return cast(str, result)
-
-    async def handle_chain_start(self, event: dict[str, Any]) -> None:
-        if event["name"] == "Agent":
-            self.log(f"Starting agent: {event['name']} with input: {event['data'].get('input')}")
-
-    async def handle_chain_end(self, event: dict[str, Any]) -> None:
-        if event["name"] == "Agent":
-            self.log(f"Done agent: {event['name']} with output: {event['data'].get('output', {}).get('output', '')}")
-
-    async def handle_tool_start(self, event: dict[str, Any]) -> None:
-        self.log(f"Starting tool: {event['name']} with inputs: {event['data'].get('input')}")
-
-    async def handle_tool_end(self, event: dict[str, Any]) -> None:
-        self.log(f"Done tool: {event['name']}")
-        self.log(f"Tool output was: {event['data'].get('output')}")
-
-    @abstractmethod
-    def create_agent_runnable(self) -> Runnable:
-        """Create the agent."""
-
-
-class LCToolsAgentComponent(LCAgentComponent):
-    _base_inputs = [
-        HandleInput(
-            name="tools", display_name="Tools", input_types=["Tool", "BaseTool", "StructuredTool"], is_list=True
-        ),
-        *LCAgentComponent._base_inputs,
-    ]
-
-    def build_agent(self) -> AgentExecutor:
-        agent = self.create_agent_runnable()
-        return AgentExecutor.from_agent_and_tools(
-            agent=RunnableAgent(runnable=agent, input_keys_arg=["input"], return_keys_arg=["output"]),
-            tools=self.tools,
-            **self.get_agent_kwargs(flatten=True),
-        )
-
     async def run_agent(
         self,
         agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor,
@@ -177,6 +125,27 @@ class LCToolsAgentComponent(LCAgentComponent):
 
         self.status = result
         return result
+
+    @abstractmethod
+    def create_agent_runnable(self) -> Runnable:
+        """Create the agent."""
+
+
+class LCToolsAgentComponent(LCAgentComponent):
+    _base_inputs = [
+        HandleInput(
+            name="tools", display_name="Tools", input_types=["Tool", "BaseTool", "StructuredTool"], is_list=True
+        ),
+        *LCAgentComponent._base_inputs,
+    ]
+
+    def build_agent(self) -> AgentExecutor:
+        agent = self.create_agent_runnable()
+        return AgentExecutor.from_agent_and_tools(
+            agent=RunnableAgent(runnable=agent, input_keys_arg=["input"], return_keys_arg=["output"]),
+            tools=self.tools,
+            **self.get_agent_kwargs(flatten=True),
+        )
 
     @abstractmethod
     def create_agent_runnable(self) -> Runnable:
