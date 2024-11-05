@@ -19,7 +19,9 @@ function NoteNode({
   selected: boolean;
 }) {
   const bgColor =
-    data.node?.template.backgroundColor ?? Object.keys(COLOR_OPTIONS)[0];
+    Object.keys(COLOR_OPTIONS).find(
+      (key) => key === data.node?.template.backgroundColor,
+    ) ?? Object.keys(COLOR_OPTIONS)[0];
   const nodeDiv = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   //tricky to start the description with the right size
