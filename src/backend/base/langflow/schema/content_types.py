@@ -1,18 +1,13 @@
-from datetime import datetime, timezone
-from typing import Annotated, Any, Literal, TypeAlias
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
-
-from langflow.schema.validators import timestamp_with_fractional_seconds_validator
 
 
 class BaseContent(BaseModel):
     """Base class for all content types."""
 
     type: str = Field(..., description="Type of the content")
-    timestamp: Annotated[str, timestamp_with_fractional_seconds_validator] = Field(
-        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f %Z")
-    )
+    duration: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return self.model_dump()
@@ -38,6 +33,7 @@ class TextContent(BaseContent):
 
     type: Literal["text"] = Field(default="text")
     text: str
+    duration: int | None = None
 
 
 class MediaContent(BaseContent):
@@ -72,6 +68,4 @@ class ToolContent(BaseContent):
     tool_input: dict[str, Any] = Field(default_factory=dict, alias="input")
     output: Any | None = None
     error: Any | None = None
-
-
-ContentTypes: TypeAlias = ToolContent | ErrorContent | TextContent | MediaContent | CodeContent | JSONContent
+    duration: int | None = None
