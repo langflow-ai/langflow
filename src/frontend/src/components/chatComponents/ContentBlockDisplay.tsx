@@ -115,7 +115,7 @@ export function ContentBlockDisplay({
             }}
           />
           <div className="relative z-10 flex flex-col space-y-3">
-            <TextShimmer className="w-24">Processing...</TextShimmer>
+            <TextShimmer className="w-25">Processing...</TextShimmer>
             <div className="flex animate-pulse flex-col space-y-2">
               <div className="h-2 w-1/4 rounded bg-muted"></div>
               <div className="h-2 w-1/2 rounded bg-muted"></div>
