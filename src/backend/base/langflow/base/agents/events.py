@@ -1,4 +1,5 @@
 # Add helper functions for each event type
+import asyncio
 from collections.abc import AsyncIterator
 from time import perf_counter
 from typing import Any, Protocol
@@ -29,7 +30,7 @@ def _build_agent_input_text_content(agent_input_dict: InputDict) -> ContentBlock
     final_input = agent_input_dict.get("input", "")
     if final_input not in messages[-1]:
         messages.append(f"**HUMAN**: {final_input}")
-    return "\n\n".join(messages)
+    return "  \n".join(messages)
 
 
 def _calculate_duration(start_time: float) -> int:
@@ -37,7 +38,7 @@ def _calculate_duration(start_time: float) -> int:
     return int((perf_counter() - start_time) * 1000)
 
 
-async def handle_on_chain_start(
+def handle_on_chain_start(
     event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType
 ) -> Message:
     if event["data"].get("input"):
@@ -52,7 +53,7 @@ async def handle_on_chain_start(
     return agent_message
 
 
-async def handle_on_chain_end(
+def handle_on_chain_end(
     event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType
 ) -> Message:
     data_output = event["data"].get("output", {})
@@ -93,7 +94,7 @@ def _find_or_create_tool_content(
     return tool_content
 
 
-async def handle_on_tool_start(
+def handle_on_tool_start(
     event: dict[str, Any],
     agent_message: Message,
     send_message_method: SendMessageFunctionType,
@@ -108,10 +109,12 @@ async def handle_on_tool_start(
     agent_message.content_blocks[0].contents.append(tool_content)
 
     agent_message.properties.icon = "Hammer"
-    return send_message_method(message=agent_message)
+    agent_message = send_message_method(message=agent_message)
+    tool_blocks_map[event.get("run_id", "")] = agent_message.content_blocks[0].contents[-1]
+    return agent_message
 
 
-async def handle_on_tool_end(
+def handle_on_tool_end(
     event: dict[str, Any],
     agent_message: Message,
     send_message_method: SendMessageFunctionType,
@@ -128,7 +131,7 @@ async def handle_on_tool_end(
     return send_message_method(message=agent_message)
 
 
-async def handle_on_tool_error(
+def handle_on_tool_error(
     event: dict[str, Any],
     agent_message: Message,
     send_message_method: SendMessageFunctionType,
@@ -144,7 +147,7 @@ async def handle_on_tool_error(
     return send_message_method(message=agent_message)
 
 
-async def handle_on_chain_stream(
+def handle_on_chain_stream(
     event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType
 ) -> Message:
     data_chunk = event["data"].get("chunk", {})
@@ -156,7 +159,7 @@ async def handle_on_chain_stream(
 
 
 class ToolEventHandler(Protocol):
-    async def __call__(
+    def __call__(
         self,
         event: dict[str, Any],
         agent_message: Message,
@@ -166,7 +169,7 @@ class ToolEventHandler(Protocol):
 
 
 class ChainEventHandler(Protocol):
-    async def __call__(
+    def __call__(
         self,
         event: dict[str, Any],
         agent_message: Message,
@@ -213,10 +216,12 @@ async def process_agent_events(
 
         if event["event"] in TOOL_EVENT_HANDLERS:
             tool_handler = TOOL_EVENT_HANDLERS[event["event"]]
-            agent_message = await tool_handler(event, agent_message, send_message_method, tool_blocks_map)
+            agent_message = await asyncio.to_thread(
+                tool_handler, event, agent_message, send_message_method, tool_blocks_map
+            )
         elif event["event"] in CHAIN_EVENT_HANDLERS:
             chain_handler = CHAIN_EVENT_HANDLERS[event["event"]]
-            agent_message = await chain_handler(event, agent_message, send_message_method)
+            agent_message = await asyncio.to_thread(chain_handler, event, agent_message, send_message_method)
         else:
             # Handle any other event types or ignore them
             pass
