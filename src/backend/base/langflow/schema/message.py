@@ -328,11 +328,15 @@ class ErrorMessage(Message):
         flow_id: str | None = None,
     ) -> None:
         # Get the error reason
-        reason = exception.__class__.__name__
+        reason = f"**{exception.__class__.__name__}**\n"
         if hasattr(exception, "body") and "message" in exception.body:
-            reason = exception.body.get("message")
+            reason += f" - **{exception.body.get('message')}**\n"
         elif hasattr(exception, "code"):
-            reason = exception.code
+            reason += f" - **Code: {exception.code}**\n"
+        elif hasattr(exception, "args") and exception.args:
+            reason += f" - **Details: {exception.args[0]}**\n"
+        else:
+            reason += " - **An unknown error occurred.**\n"
 
         # Get the sender ID
         if trace_name:
