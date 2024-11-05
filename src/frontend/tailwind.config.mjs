@@ -120,8 +120,10 @@ const config = {
         "chat-bot-icon": "var(--chat-bot-icon)",
         "chat-user-icon": "var(--chat-user-icon)",
         "code-background": "hsl(var(--code-background))",
-        canvas: "hsl(var(--canvas))",
-        "canvas-dot": "hsl(var(--canvas-dot))",
+        canvas: {
+          DEFAULT: "hsl(var(--canvas))",
+          dot: "hsl(var(--canvas-dot))",
+        },
         ice: "var(--ice)",
         selected: "var(--selected)",
         hover: "var(--hover)",
@@ -189,6 +191,10 @@ const config = {
         tooltip: {
           DEFAULT: "hsl(var(--tooltip))",
           foreground: "hsl(var(--tooltip-foreground))",
+        },
+        "code-block": {
+          DEFAULT: "#18181B",
+          muted: "#27272A",
         },
         "inner-yellow": {
           DEFAULT: "hsl(var(--inner-yellow))",

@@ -43,6 +43,8 @@
     --tooltip: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --tooltip-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
 
+    --canvas-dark: 240 6% 10%; /* hsl(240, 6%, 10%) */
+
     --node-selected: 243 75% 59%;
     --round-btn-shadow: #00000063;
     --ice: #31a3cc;
