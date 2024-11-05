@@ -325,7 +325,7 @@ export default function NodeToolbarComponent({
   return (
     <>
       <div className="noflow nowheel nopan nodelete nodrag">
-        <div className="flex items-center gap-1 rounded-lg bg-background p-1 shadow-sm">
+        <div className="flex items-center gap-1 rounded-lg border-[1px] border-border bg-background p-1 shadow-sm">
           {hasCode && (
             <ShadTooltip
               content={
