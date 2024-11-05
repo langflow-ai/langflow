@@ -23,7 +23,7 @@ class GoogleOAuthToken(Component):
             display_name="Scopes",
             info="Input a comma-separated list of scopes with the permissions required for your application.",
             required=True,
-            value="https://www.googleapis.com/auth/drive.readonly,\n https://www.googleapis.com/auth/drive.activity.readonly"
+            value="https://www.googleapis.com/auth/drive.readonly,\n https://www.googleapis.com/auth/drive.activity.readonly",
         ),
         FileInput(
             name="oauth_credentials",
@@ -88,4 +88,3 @@ class GoogleOAuthToken(Component):
         creds_json = json.loads(creds.to_json())
 
         return Data(data=creds_json)
-
