@@ -197,7 +197,7 @@ class FileComponent(Component):
             if file_path.suffix == ".pdf":
                 data = Data(data={"file_path": file_path, "text": pdf_to_text(file_path)})
             else:
-                data = parse_text_file_to_data(str(file_path), silent_errors=silent_errors)  # type: ignore[return-value]
+                data = parse_text_file_to_data(str(file_path), silent_errors=silent_errors)  # type: ignore[assignment]
                 if not data:
                     data = Data()
 
