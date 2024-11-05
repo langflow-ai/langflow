@@ -117,7 +117,7 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
 
     @field_serializer("properties")
     @classmethod
-    def serialize_properties(cls, value):
+    def serialize_properties(cls, value) -> dict:
         if hasattr(value, "model_dump"):
             return value.model_dump()
         return value
