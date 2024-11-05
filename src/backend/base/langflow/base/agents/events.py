@@ -48,7 +48,7 @@ def handle_on_chain_start(
             duration=_calculate_duration(event.get("start_time", perf_counter())),
         )
         agent_message.content_blocks[0].contents.append(text_content)
-        agent_message.properties.icon = "🚀"
+
         agent_message = send_message_method(message=agent_message)
     return agent_message
 
@@ -65,9 +65,6 @@ def handle_on_chain_end(
                 last_content = agent_message.content_blocks[0].contents[-1]
                 if not getattr(last_content, "duration", None):
                     last_content.duration = _calculate_duration(event.get("start_time", perf_counter()))
-            agent_message.properties.icon = "Bot"
-        else:
-            agent_message.properties.icon = "CheckCircle"
         agent_message = send_message_method(message=agent_message)
     return agent_message
 
@@ -108,7 +105,6 @@ def handle_on_tool_start(
     )
     agent_message.content_blocks[0].contents.append(tool_content)
 
-    agent_message.properties.icon = "Hammer"
     agent_message = send_message_method(message=agent_message)
     tool_blocks_map[event.get("run_id", "")] = agent_message.content_blocks[0].contents[-1]
     return agent_message
@@ -143,7 +139,6 @@ def handle_on_tool_error(
     if tool_content and isinstance(tool_content, ToolContent):
         tool_content.error = event["data"].get("error", "Unknown error")
 
-    agent_message.properties.icon = "OctagonAlert"
     return send_message_method(message=agent_message)
 
 
@@ -202,7 +197,7 @@ async def process_agent_events(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Execution", contents=[])],
+        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
     )
     # Store the initial message
     agent_message = send_message_method(message=agent_message)
