@@ -1,5 +1,4 @@
 from langchain_core.prompts.chat import ChatPromptTemplate
-
 from langflow.schema.message import Message
 
 

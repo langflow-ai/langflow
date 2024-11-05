@@ -2,10 +2,9 @@ import json
 from uuid import UUID
 
 import pytest
-from orjson import orjson
-
 from langflow.memory import get_messages
 from langflow.services.database.models.flow import FlowCreate, FlowUpdate
+from orjson import orjson
 
 
 @pytest.mark.benchmark
