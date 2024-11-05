@@ -104,7 +104,7 @@ const SideBarFoldersButtonsComponent = ({
                 onError: (err) => {
                   console.log(err);
                   setErrorData({
-                    title: `Error on upload`,
+                    title: `Error on uploading your folder, try dragging it into an existing folder.`,
                     list: [err["response"]["data"]["message"]],
                   });
                 },
@@ -125,10 +125,8 @@ const SideBarFoldersButtonsComponent = ({
       },
       {
         onSuccess: (data) => {
-          const folder = folders.find((f) => f.id === data.folderId);
-
-          data.folder_name = folder?.name || "folder";
-          data.folder_description = folder?.description || "";
+          data.folder_name = data?.name || "folder";
+          data.folder_description = data?.description || "";
 
           const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
             JSON.stringify(data),
@@ -136,7 +134,7 @@ const SideBarFoldersButtonsComponent = ({
 
           const link = document.createElement("a");
           link.href = jsonString;
-          link.download = `${data.folder_name}.json`;
+          link.download = `${data?.name}.json`;
 
           link.click();
           track("Folder Exported", { folderId: id! });
@@ -291,7 +289,8 @@ const SideBarFoldersButtonsComponent = ({
   );
 
   const UploadFolderButton = ({ onClick, disabled }) => (
-    <ShadTooltip content="Upload a folder" styleClasses="z-10">
+    /* Todo: change this back to being a folder upload */
+    <ShadTooltip content="Upload a flow" styleClasses="z-10">
       <Button
         variant="ghost"
         className="h-7 w-7 border-0 text-zinc-500 hover:bg-zinc-200 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"

@@ -1,3 +1,4 @@
+import CardsWrapComponent from "@/components/cardsWrapComponent";
 import FolderSidebarNav from "@/components/folderSidebarComponent";
 import { useDeleteFolders } from "@/controllers/API/queries/folders";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
@@ -9,6 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Outlet, useParams } from "react-router-dom";
 import { PaginatedFolderType } from "../entities";
+import useFileDrop from "../hooks/use-on-file-drop";
 import ModalsComponent from "../oldComponents/modalsComponent";
 import EmptyPage from "./emptyPage";
 
@@ -19,7 +21,7 @@ export default function CollectionPage(): JSX.Element {
   const navigate = useCustomNavigate();
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
-
+  const handleFileDrop = useFileDrop("flow");
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const folderToEdit = useFolderStore((state) => state.folderToEdit);
@@ -34,7 +36,7 @@ export default function CollectionPage(): JSX.Element {
     return () => queryClient.removeQueries({ queryKey: ["useGetFolder"] });
   }, []);
 
-  const { data, isFetching } = useGetFolderQuery({
+  const { isFetching, data } = useGetFolderQuery({
     id: folderId ?? myCollectionId!,
   });
 
@@ -104,15 +106,20 @@ export default function CollectionPage(): JSX.Element {
             }
           }}
         >
-          {folderData && folderData?.flows?.items?.length !== 0 ? (
-            <Outlet />
-          ) : (
-            <EmptyPage
-              setOpenModal={setOpenModal}
-              setShowFolderModal={setShowFolderModal}
-              folderData={folderData}
-            />
-          )}
+          <CardsWrapComponent
+            onFileDrop={handleFileDrop}
+            dragMessage={`Drop your file(s) here`}
+          >
+            {folderData && folderData?.flows?.items?.length !== 0 ? (
+              <Outlet />
+            ) : (
+              <EmptyPage
+                setOpenModal={setOpenModal}
+                setShowFolderModal={setShowFolderModal}
+                folderData={folderData}
+              />
+            )}
+          </CardsWrapComponent>
         </div>
       ) : (
         <LoadingPage />
