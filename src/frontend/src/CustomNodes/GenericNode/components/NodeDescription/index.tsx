@@ -62,7 +62,8 @@ export default function NodeDescription({
       className={cn(
         !inputDescription ? "overflow-auto" : "",
         hasScroll ? "nowheel" : "",
-        charLimit ? "px-2" : "",
+        charLimit ? "px-2 pb-2" : "",
+        "w-full",
       )}
     >
       {inputDescription ? (
