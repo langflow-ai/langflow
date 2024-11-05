@@ -28,7 +28,6 @@ async def test_agent_component_with_calculator():
     assert "4" in response.data.get("text")
 
 
-
 @pytest.mark.api_key_required
 async def test_agent_as_tool():
     tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
@@ -57,4 +56,3 @@ async def test_agent_as_tool():
     )
     response = await agent_two.get_response()
     assert "4" in response.data.get("text")
-

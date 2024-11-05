@@ -59,7 +59,7 @@ class AgentComponent(ToolCallingAgentComponent):
         *LCToolsAgentComponent._base_inputs,
         *memory_inputs,
     ]
-    outputs = [Output(name="response", display_name="Response", method="get_response",required_inputs=["input_value"])]
+    outputs = [Output(name="response", display_name="Response", method="get_response", required_inputs=["input_value"])]
 
     async def get_response(self) -> Message:
         llm_model = self.get_llm()
