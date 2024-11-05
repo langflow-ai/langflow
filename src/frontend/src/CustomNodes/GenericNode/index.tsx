@@ -337,7 +337,7 @@ export default function GenericNode({
                   showNode={showNode}
                   validationStatus={validationStatus}
                   isOutdated={isOutdated}
-                  beta={data.node?.beta!}
+                  beta={data.node?.beta || false}
                 />
               </div>
             </div>
