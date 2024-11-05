@@ -55,7 +55,7 @@ The repo includes a `.vscode/launch.json` file for debugging the backend in VSCo
 
 ### Run Langflow locally (Poetry and Node.js)
 
-Run Langflow locally by cloning the repository and installing the dependencies. We recommend using a virtual environment like venv or conda to isolate dependencies.
+Run Langflow locally by cloning the repository and installing the dependencies. We recommend using a virtual environment like [venv](https://docs.python.org/3/library/venv.html) or [conda](https://anaconda.org/anaconda/conda) to isolate dependencies.
 
 Before you begin, ensure you have [uv](https://docs.astral.sh/uv/getting-started/installation/) and [Node.js](https://nodejs.org/en/download/package-manager) installed.
 
@@ -85,13 +85,18 @@ The documentation will be available at `localhost:3000` and all the files are lo
 
 ## Open a pull request
 
-Once you wrote and manually tested your change, you can start sending the patch to the main repository.
+Once you have written and manually tested your changes with `make lint` and `make unit_tests`, open a pull request to send your changes upstream to the main Langflow repository.
 
-- Open a new GitHub pull request with the patch against the `main` branch.
-- Ensure the PR title follows semantic commits conventions.
-  - For example, `feat: add new feature`, `fix: correct issue with X`.
-- Ensure the PR description clearly describes the problem and solution. Include the relevant issue number if applicable.
+1. Open a new GitHub pull request with your patch against the `main` branch.
+2. Ensure the PR title follows semantic commits conventions. For example, features are `feat: add new feature` and fixes are `fix: correct issue with X`.
+3. A Langflow maintainer will review your pull request. Thanks for your contribution!
 
+Some additional guidance on pull request titles:
+* Ensure the pull request description clearly describes the problem and solution. If the PR fixes an issue, include a link to the fixed issue in the PR description with `Fixes #1234`.
+* Pull request titles appear in Langflow's release notes, so they should explain what the PR does as explicitly as possible.
+* Pull requests should strive to fix one thing **only**, and should contain a good description of what is being fixed.
+
+For more information, see the [Python Developer's Guide](https://devguide.python.org/getting-started/pull-request-lifecycle/index.html#making-good-commits).
 
 ## Report bugs or suggest improvements
 
