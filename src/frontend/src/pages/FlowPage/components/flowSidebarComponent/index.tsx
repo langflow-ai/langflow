@@ -30,6 +30,7 @@ import { Switch } from "@/components/ui/switch";
 import { CustomLink } from "@/customization/components/custom-link";
 import { useAddComponent } from "@/hooks/useAddComponent";
 import { useStoreStore } from "@/stores/storeStore";
+import { checkChatInput } from "@/utils/reactflowUtils";
 import {
   nodeColors,
   SIDEBAR_BUNDLES,
@@ -309,6 +310,10 @@ export function FlowSidebarComponent() {
     setOpenCategories([]);
   }
 
+  const nodes = useFlowStore((state) => state.nodes);
+
+  const chatInputAdded = checkChatInput(nodes);
+
   return (
     <Sidebar collapsible="offcanvas" data-testid="shad-sidebar">
       <SidebarHeader className="flex w-full flex-col gap-4 p-4 pb-1">
@@ -524,6 +529,11 @@ export function FlowSidebarComponent() {
                                               dataFilter[item.name][SBItemName]
                                                 .legacy ?? false
                                             }
+                                            disabled={
+                                              SBItemName === "ChatInput" &&
+                                              chatInputAdded
+                                            }
+                                            disabledTooltip="Chat input already added"
                                           />
                                         </ShadTooltip>
                                       ))}
@@ -644,6 +654,11 @@ export function FlowSidebarComponent() {
                                             dataFilter[item.name][SBItemName]
                                               .legacy ?? false
                                           }
+                                          disabled={
+                                            SBItemName === "ChatInput" &&
+                                            chatInputAdded
+                                          }
+                                          disabledTooltip="Chat input already added"
                                         />
                                       </ShadTooltip>
                                     ))}
