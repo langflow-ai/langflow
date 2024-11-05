@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import time
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -317,7 +318,7 @@ class DatabaseService(Service):
 
         logger.debug("Database and tables created successfully")
 
-    async def teardown(self) -> None:
+    def _teardown(self) -> None:
         logger.debug("Tearing down database")
         try:
             settings_service = get_settings_service()
@@ -330,3 +331,6 @@ class DatabaseService(Service):
             logger.exception("Error tearing down database")
 
         self.engine.dispose()
+
+    async def teardown(self) -> None:
+        await asyncio.to_thread(self._teardown)
