@@ -27,6 +27,8 @@ jobs:
             run: |
               uv run pytest src/backend/tests \
                 --ignore=src/backend/tests/integration \
-                --codspeed
+                --codspeed \
+                -m "not api_key_required" \
+                -n auto
       - name: Minimize uv cache
         run: uv cache prune --ci
