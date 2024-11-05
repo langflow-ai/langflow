@@ -99,8 +99,8 @@ const CustomInputPopover = ({
             <Badge
               variant={nodeStyle ? "emerald" : "secondary"}
               className={cn(
-                "flex items-center gap-1 truncate bg-muted",
-                nodeStyle && "font-jetbrains rounded-[3px] px-1",
+                "flex items-center gap-1 truncate",
+                nodeStyle ? "font-jetbrains rounded-[3px] px-1" : "bg-muted",
               )}
             >
               <div className="max-w-36 truncate">{selectedOption}</div>
