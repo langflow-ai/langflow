@@ -290,6 +290,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 "https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html):\n\n"
                 f"{', '.join(model_options)}",
                 options=model_options,
+                placeholder="Select a model",
+                value=model_options[0],
                 required=True,
             ).to_dict()
 
@@ -403,8 +405,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 "collection_vector_service_options": CollectionVectorServiceOptions.from_dict(
                     dict_options.get("collection_vector_service_options", {})
                 ),
+                "collection_embedding_api_key": dict_options.get("collection_embedding_api_key"),
             }
-
         try:
             vector_store = AstraDBVectorStore(
                 collection_name=self.collection_name,
