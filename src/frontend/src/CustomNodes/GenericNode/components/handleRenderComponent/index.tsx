@@ -291,25 +291,27 @@ export default function HandleRenderComponent({
   };
 
   return (
-    <ShadTooltip
-      open={openTooltip}
-      setOpen={setOpenTooltip}
-      styleClasses={cn("tooltip-fixed-width custom-scroll nowheel bottom-2 ")}
-      delayDuration={1000}
-      content={
-        <HandleTooltipComponent
-          isInput={left}
-          colors={colors}
-          tooltipTitle={tooltipTitle}
-          isConnecting={!!filterPresent && !ownHandle}
-          isCompatible={openHandle}
-          isSameNode={sameNode && !ownHandle}
-        />
-      }
-      side={left ? "left" : "right"}
-    >
-      <div>
-        <div className={`${!showNode ? "" : "relative"}`}>
+    <div>
+      <div className={`${!showNode ? "" : "relative"}`}>
+        <ShadTooltip
+          open={openTooltip}
+          setOpen={setOpenTooltip}
+          styleClasses={cn(
+            "tooltip-fixed-width custom-scroll nowheel bottom-2 ",
+          )}
+          delayDuration={1000}
+          content={
+            <HandleTooltipComponent
+              isInput={left}
+              colors={colors}
+              tooltipTitle={tooltipTitle}
+              isConnecting={!!filterPresent && !ownHandle}
+              isCompatible={openHandle}
+              isSameNode={sameNode && !ownHandle}
+            />
+          }
+          side={left ? "left" : "right"}
+        >
           <Handle
             ref={handleRef}
             data-testid={`handle-${testIdComplement}-${title.toLowerCase()}-${
@@ -351,40 +353,41 @@ export default function HandleRenderComponent({
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           />
-          <div
-            data-testid={`div-handle-${testIdComplement}-${title.toLowerCase()}-${
-              !showNode ? (left ? "target" : "source") : left ? "left" : "right"
-            }`}
-            ref={invisibleDivRef}
-            className={getHandleClasses({ left, showNode })}
-            style={{
-              background: isNullHandle ? "hsl(var(--border))" : handleColor,
-              width: "10px",
-              height: "10px",
-              transition: "all 0.2s",
-              boxShadow: getNeonShadow(
-                innerForegroundColorName,
-                isHovered || openHandle,
-              ),
-              animation:
-                (isHovered || openHandle) && !isNullHandle
-                  ? "pulseNeon 0.7s ease-in-out infinite"
-                  : "none",
-              border: isNullHandle ? "2px solid hsl(var(--muted))" : "none",
-            }}
-            onClick={(e) => {
-              handleRef.current?.dispatchEvent(
-                new MouseEvent("mousedown", { bubbles: true }),
-              );
-            }}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            onContextMenu={(event) => {
-              event.preventDefault();
-            }}
-          />
-        </div>
+        </ShadTooltip>
+
+        <div
+          data-testid={`div-handle-${testIdComplement}-${title.toLowerCase()}-${
+            !showNode ? (left ? "target" : "source") : left ? "left" : "right"
+          }`}
+          ref={invisibleDivRef}
+          className={getHandleClasses({ left, showNode })}
+          style={{
+            background: isNullHandle ? "hsl(var(--border))" : handleColor,
+            width: "10px",
+            height: "10px",
+            transition: "all 0.2s",
+            boxShadow: getNeonShadow(
+              innerForegroundColorName,
+              isHovered || openHandle,
+            ),
+            animation:
+              (isHovered || openHandle) && !isNullHandle
+                ? "pulseNeon 0.7s ease-in-out infinite"
+                : "none",
+            border: isNullHandle ? "2px solid hsl(var(--muted))" : "none",
+          }}
+          onClick={(e) => {
+            handleRef.current?.dispatchEvent(
+              new MouseEvent("mousedown", { bubbles: true }),
+            );
+          }}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          onContextMenu={(event) => {
+            event.preventDefault();
+          }}
+        />
       </div>
-    </ShadTooltip>
+    </div>
   );
 }

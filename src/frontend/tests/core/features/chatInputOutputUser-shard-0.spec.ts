@@ -109,11 +109,11 @@ test("user must be able to send an image on chat", async ({ page }) => {
   // Dispatch the drop event on the target element
   await element.dispatchEvent("drop", { dataTransfer });
 
-  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
+  await page.waitForSelector('[data-testid="button-send"]', {
     timeout: 100000,
   });
 
-  await page.getByTestId("icon-LucideSend").click();
+  await page.getByTestId("button-send").click();
 
   await page.waitForSelector("text=chain.png", { timeout: 30000 });
 

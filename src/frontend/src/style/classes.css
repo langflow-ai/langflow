@@ -259,17 +259,17 @@ span.token {
   max-width: 100%;
 }
 
-code {
+pre code {
   max-width: 100%;
   display: inline-block;
   width: 100%;
-  /* bg ignored now */
-  background-color: var(--canvas);
+  /* Background color */
+  background-color: hsl(var(--code-background)) !important;
 }
 
 pre {
-  /* bg ignored now */
-  background-color: var(--canvas);
+  /* Background color */
+  background-color: hsl(var(--code-background)) !important;
 }
 
 [type="search"]::-webkit-search-cancel-button {
