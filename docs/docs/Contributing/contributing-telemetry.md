@@ -12,7 +12,7 @@ You can opt-out of telemetry by setting the `LANGFLOW_DO_NOT_TRACK` or `DO_NO
 
 This telemetry data is crucial for enhancing Langflow and ensuring that our development efforts align with your needs. Your feedback and suggestions are invaluable in shaping the future of Langflow, and we appreciate your support in making Langflow better for everyone.
 
-## Data Collected
+## Telemetry Data Collected
 
 ### Run {#2d427dca4f0148ae867997f6789e8bfb}
 
