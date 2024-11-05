@@ -83,7 +83,7 @@ class CustomComponent(BaseComponent):
     _flows_data: list[Data] | None = None
     _outputs: list[OutputValue] = []
     _logs: list[Log] = []
-    _output_logs: dict[str, Log] = {}
+    _output_logs: dict[str, list[Log] | Log] = {}
     _tracing_service: TracingService | None = None
     _tree: dict | None = None
 
@@ -93,8 +93,8 @@ class CustomComponent(BaseComponent):
         Args:
             **data: Additional keyword arguments to initialize the custom component.
         """
-        self.cache = TTLCache(maxsize=1024, ttl=60)
-        self._logs = []
+        self.cache: TTLCache = TTLCache(maxsize=1024, ttl=60)
+        self._logs: list[Log] = []
         self._results: dict = {}
         self._artifacts: dict = {}
         super().__init__(**data)

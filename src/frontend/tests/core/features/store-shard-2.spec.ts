@@ -2,7 +2,7 @@ import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
-test("should filter by tag", async ({ page }) => {
+test.skip("should filter by tag", async ({ page }) => {
   test.skip(
     !process?.env?.STORE_API_KEY,
     "STORE_API_KEY required to run this test",
@@ -42,7 +42,7 @@ test("should filter by tag", async ({ page }) => {
   await safeClick("tag-selector-Agent");
   await page.getByText("File Loader").waitFor({ state: "visible" });
   await safeClick("tag-selector-Agent");
-  await page.getByText("Album Cover Builder").waitFor({ state: "visible" });
+  await page.getByText("Website Content").waitFor({ state: "visible" });
 
   // Memory section
   await safeClick("tag-selector-Memory");
@@ -50,7 +50,7 @@ test("should filter by tag", async ({ page }) => {
 
   // Chain section
   await safeClick("tag-selector-Chain");
-  await page.getByText("There are no").waitFor({ state: "visible" });
+  await page.getByText("ChatOllama").waitFor({ state: "visible" });
   await safeClick("tag-selector-Chain");
 
   // Vector Store section

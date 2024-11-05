@@ -17,7 +17,7 @@ import {
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import { ChatMessageType } from "../../../../types/chat";
+import { ChatMessageType, PlaygroundEvent } from "../../../../types/chat";
 import { FilePreviewType, chatViewProps } from "../../../../types/components";
 import ChatInput from "./chatInput";
 import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
@@ -51,13 +51,22 @@ export default function ChatView({
       .filter(
         (message) =>
           message.flow_id === currentFlowId &&
-          (visibleSession === message.session_id ?? true),
+          (visibleSession === message.session_id || visibleSession === null),
       )
       .map((message) => {
         let files = message.files;
-        //HANDLE THE "[]" case
-        if (typeof files === "string") {
-          files = JSON.parse(files);
+        // Handle the "[]" case, empty string, or already parsed array
+        if (Array.isArray(files)) {
+          // files is already an array, no need to parse
+        } else if (files === "[]" || files === "") {
+          files = [];
+        } else if (typeof files === "string") {
+          try {
+            files = JSON.parse(files);
+          } catch (error) {
+            console.error("Error parsing files:", error);
+            files = [];
+          }
         }
         return {
           isSend: message.sender === "User",
@@ -68,6 +77,8 @@ export default function ChatView({
           timestamp: message.timestamp,
           session: message.session_id,
           edit: message.edit,
+          background_color: message.background_color || "",
+          text_color: message.text_color || "",
         };
       });
     const finalChatHistory = [...messagesFromMessagesStore].sort((a, b) => {
@@ -208,6 +219,57 @@ export default function ChatView({
         },
       );
     }
+  };
+
+  const handlePlaygroundEvent = (event: PlaygroundEvent) => {
+    switch (event.event_type) {
+      case "message":
+        setChatHistory((prev) => [
+          ...prev,
+          {
+            isSend: event.sender_name === "User",
+            message: event.text || "",
+            sender_name: event.sender_name,
+            files: event.files,
+            id: event.id || "",
+            timestamp: event.timestamp || "",
+            content_blocks: event.content_blocks || undefined,
+            background_color: event.background_color || "",
+            text_color: event.text_color || "",
+          },
+        ]);
+        break;
+      case "error":
+        // Handle error event (e.g., display error message)
+        setErrorData({
+          title: "Error",
+          list: event.text ? [event.text] : [],
+        });
+        break;
+      case "warning":
+        // Handle warning event
+        break;
+      case "info":
+        // Handle info event
+        break;
+      case "token":
+        // Update the last message with the new token
+        setChatHistory((prev) => {
+          const newHistory = [...prev];
+          const lastMessage = newHistory[newHistory.length - 1];
+          if (lastMessage && event.token) {
+            lastMessage.message += event.token;
+          }
+          return newHistory;
+        });
+        break;
+    }
+  };
+
+  // Use this function in your streaming logic
+  const handleStreamedEvent = (event: any) => {
+    const playgroundEvent = event.data as PlaygroundEvent;
+    handlePlaygroundEvent(playgroundEvent);
   };
 
   return (

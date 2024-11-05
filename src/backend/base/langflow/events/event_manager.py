@@ -4,12 +4,14 @@ import json
 import time
 import uuid
 from functools import partial
+from typing import Literal
 
 from fastapi.encoders import jsonable_encoder
+from loguru import logger
 from typing_extensions import Protocol
 
-from langflow.schema.artifact import CUSTOM_ENCODERS
 from langflow.schema.log import LoggableType
+from langflow.schema.playground_events import create_event_by_type
 
 
 class EventCallback(Protocol):
@@ -40,7 +42,12 @@ class EventManager:
             msg = "Callback must have exactly 3 parameters: manager, event_type, and data"
             raise ValueError(msg)
 
-    def register_event(self, name: str, event_type: str, callback: EventCallback | None = None) -> None:
+    def register_event(
+        self,
+        name: str,
+        event_type: Literal["message", "error", "warning", "info", "token"],
+        callback: EventCallback | None = None,
+    ) -> None:
         if not name:
             msg = "Event name cannot be empty"
             raise ValueError(msg)
@@ -53,10 +60,17 @@ class EventManager:
             _callback = partial(callback, manager=self, event_type=event_type)
         self.events[name] = _callback
 
-    def send_event(self, *, event_type: str, data: LoggableType) -> None:
-        jsonable_data = jsonable_encoder(data, custom_encoder=CUSTOM_ENCODERS)
+    def send_event(self, *, event_type: Literal["message", "error", "warning", "info", "token"], data: LoggableType):
+        try:
+            if isinstance(data, dict) and event_type in ["message", "error", "warning", "info", "token"]:
+                data = create_event_by_type(event_type, **data)
+        except TypeError as e:
+            logger.debug(f"Error creating playground event: {e}")
+        except Exception:
+            raise
+        jsonable_data = jsonable_encoder(data)
         json_data = {"event": event_type, "data": jsonable_data}
-        event_id = uuid.uuid4()
+        event_id = f"{event_type}-{uuid.uuid4()}"
         str_data = json.dumps(json_data) + "\n\n"
         self.queue.put_nowait((event_id, str_data.encode("utf-8"), time.time()))
 

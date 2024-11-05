@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 
-test.skip("User must be able to stop building from inside Playground", async ({
+test("User must be able to stop building from inside Playground", async ({
   page,
 }) => {
   await page.goto("/");
@@ -129,20 +129,20 @@ class CustomComponent(Component):
 
   await page.waitForTimeout(1000);
 
-  await page.waitForSelector('[data-testid="icon-Square"]', {
+  await page.waitForSelector('[data-testid="button-stop"]', {
     timeout: 30000,
   });
 
-  const elements = await page.$$('[data-testid="icon-Square"]');
+  const elements = await page.$$('[data-testid="button-stop"]');
 
   if (elements.length > 0) {
     const lastElement = elements[elements.length - 1];
     await lastElement.waitForElementState("visible");
   }
 
-  expect(await page.getByTestId("icon-Square").last()).toBeVisible();
+  expect(await page.getByTestId("button-stop").last()).toBeVisible();
 
-  await page.getByTestId("icon-Square").last().click();
+  await page.getByTestId("button-stop").last().click();
 
   await page.waitForSelector("text=build stopped", { timeout: 30000 });
   expect(await page.getByText("build stopped").isVisible()).toBeTruthy();

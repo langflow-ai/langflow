@@ -20,7 +20,7 @@ const buttonVariants = cva(
           "border border-muted bg-muted text-secondary-foreground hover:bg-secondary-foreground/5",
         ghost: "text-foreground hover:bg-accent hover:text-accent-foreground",
         ghostActive:
-          "bg-muted text-foreground hover:bg-accent hover:text-accent-foreground",
+          "bg-muted text-foreground hover:bg-secondary-hover hover:text-accent-foreground",
         menu: "hover:bg-muted hover:text-accent-foreground focus:!ring-0 focus-visible:!ring-0",
         "menu-active":
           "font-semibold hover:bg-muted hover:text-accent-foreground focus-visible:!ring-offset-0",

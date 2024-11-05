@@ -24,8 +24,8 @@ import DropdownComponent from "../dropdown";
 
 const ListComponent = ({ flowData }: { flowData: FlowType }) => {
   const navigate = useCustomNavigate();
-  const [openPlayground, setOpenPlayground] = useState(false);
-  const [loadingPlayground, setLoadingPlayground] = useState(false);
+  // const [openPlayground, setOpenPlayground] = useState(false);
+  // const [loadingPlayground, setLoadingPlayground] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const { deleteFlow } = useDeleteFlow();
@@ -48,29 +48,29 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
     return inputs.length > 0 || outputs.length > 0;
   }
 
-  const handlePlaygroundClick = () => {
-    track("Playground Button Clicked", { flowId: flowData.id });
-    setLoadingPlayground(true);
+  // const handlePlaygroundClick = () => {
+  //   track("Playground Button Clicked", { flowId: flowData.id });
+  //   setLoadingPlayground(true);
 
-    if (flowData) {
-      if (!hasPlayground(flowData)) {
-        setErrorData({
-          title: "Error",
-          list: ["This flow doesn't have a playground."],
-        });
-        setLoadingPlayground(false);
-        return;
-      }
-      setCurrentFlow(flowData);
-      setOpenPlayground(true);
-      setLoadingPlayground(false);
-    } else {
-      setErrorData({
-        title: "Error",
-        list: ["Error getting flow data."],
-      });
-    }
-  };
+  //   if (flowData) {
+  //     if (!hasPlayground(flowData)) {
+  //       setErrorData({
+  //         title: "Error",
+  //         list: ["This flow doesn't have a playground."],
+  //       });
+  //       setLoadingPlayground(false);
+  //       return;
+  //     }
+  //     setCurrentFlow(flowData);
+  //     setOpenPlayground(true);
+  //     setLoadingPlayground(false);
+  //   } else {
+  //     setErrorData({
+  //       title: "Error",
+  //       list: ["Error getting flow data."],
+  //     });
+  //   }
+  // };
 
   const handleClick = async () => {
     if (!isComponent) {
@@ -139,7 +139,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
 
         {/* right side */}
         <div className="ml-5 flex items-center gap-2">
-          {flowData.is_component ? (
+          {/* {flowData.is_component ? (
             <></>
           ) : (
             <Button
@@ -154,7 +154,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
             >
               Playground
             </Button>
-          )}
+          )} */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -179,14 +179,14 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
                 flowData={flowData}
                 setOpenDelete={setOpenDelete}
                 handlePlaygroundClick={() => {
-                  handlePlaygroundClick();
+                  // handlePlaygroundClick();
                 }}
               />
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
-      {openPlayground && (
+      {/* {openPlayground && (
         <IOModal
           key={flowData.id}
           cleanOnClose={true}
@@ -195,7 +195,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
         >
           <></>
         </IOModal>
-      )}
+      )} */}
       {openDelete && (
         <DeleteConfirmationModal
           open={openDelete}

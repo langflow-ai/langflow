@@ -91,13 +91,14 @@
     --note-indigo: #e0e7ff;
     --note-emerald: #d1fae5;
     --note-red: #fee2e2;
-
+    --error-red:0,86%,97%; /*hsla(0, 86%, 97%)*/
+    --error-red-border: 0,96%,89%; /*hsla(0,96%,89%)*/
     --note-default-opacity: #f1f5f980;
     --note-indigo-opacity: #312e8180;
     --note-emerald-opacity: #064e3b80;
     --note-amber-opacity: #78350f80;
     --note-red-opacity: #7f1d1d80;
-
+    --code-background: var(--canvas);
     --emerald-success: 160.1 84.1% 39.4%;
     --accent-emerald-foreground: 161.4 93.5% 30.4%;
     --placeholder: 240 5% 64.9%;
@@ -158,7 +159,7 @@
     --background: 240 6% 10%; /* hsl(240, 6%, 10%) */
     --muted: 240 4% 16%; /* hsl(240, 4%, 16%) */
     --muted-foreground: 240 5% 65%; /* hsl(240, 5%, 65%) */
-    --card: 0 0% 0%; /* hsl(0, 0%, 0%) */
+    --card: 0 0% 0%; /* hsl(0, 0, 0%) */
     --card-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --popover: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --popover-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
@@ -185,7 +186,10 @@
     --accent-pink-foreground: 329 86% 70%; /* hsl(329, 86%, 70%) */
     --note-amber: 46 97% 65%; /* hsl(46, 97%, 65%) */
     --tooltip: 0 0% 100%; /* hsl(0, 0%, 100%) */
+
     --tooltip-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
+    --error-red:0,75%,15%; /*hsla(0, 75%, 15%)*/
+    --error-red-border: 0,70%,35%; /*hsla(0,70%,35%)*/
 
     --note-default: #0f172a;
     --note-indigo: #312e81;
@@ -239,6 +243,7 @@
     --status-green: #4ade80;
     --status-blue: #2563eb;
     --connection: #6d6c6c;
+    --code-background: var(--background);
 
     --beta-background: rgb(37 99 235);
     --beta-foreground: rgb(219 234 254);

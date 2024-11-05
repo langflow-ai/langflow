@@ -194,23 +194,23 @@ test("should copy code from playground modal", async ({ page }) => {
     .getByTestId("input-chat-playground")
     .fill("Could you provide a Python example for a 'Hello, World!' program?");
 
-  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
+  await page.waitForSelector('[data-testid="button-send"]', {
     timeout: 100000,
   });
 
-  await page.getByTestId("icon-LucideSend").click();
+  await page.getByTestId("button-send").click();
 
   await page.getByRole("tab", { name: "python" }).isVisible({
     timeout: 100000,
   });
 
-  await page.waitForSelector('[data-testid="btn-copy-code"]', {
+  await page.waitForSelector('[data-testid="copy-code-button"]', {
     state: "visible",
     timeout: 30000,
   });
 
   await page.waitForTimeout(1000);
-  await page.getByTestId("btn-copy-code").last().click();
+  await page.getByTestId("copy-code-button").last().click();
 
   const handle = await page.evaluateHandle(() =>
     navigator.clipboard.readText(),
