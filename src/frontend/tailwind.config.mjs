@@ -69,7 +69,6 @@ const config = {
         "build-trigger": "var(--build-trigger)",
         "chat-trigger": "var(--chat-trigger)",
         "chat-trigger-disabled": "var(--chat-trigger-disabled)",
-        "blur-shared": "var(--blur-shared)",
         "dark-blue": "var(--dark-blue)",
         "dark-gray": "var(--dark-gray)",
         "dark-red": "var(--dark-red)",
@@ -125,8 +124,8 @@ const config = {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
-        "error-red":"hsl(var(--error-red))",
-        "error-red-border":"hsl(var(--error-red-border))",
+        "error-red": "hsl(var(--error-red))",
+        "error-red-border": "hsl(var(--error-red-border))",
         "node-selected": "hsl(var(--node-selected))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
@@ -370,34 +369,34 @@ const config = {
     tailwindcssTypography,
     tailwindcssDottedBackground,
     plugin(function ({ addUtilities, theme, e }) {
-      const colors = theme('colors');
+      const colors = theme("colors");
 
-      const generateUtilities = (colors, prefix = '') => {
+      const generateUtilities = (colors, prefix = "") => {
         return Object.keys(colors).reduce((acc, colorName) => {
           const colorValue = colors[colorName];
           const className = prefix ? `${prefix}-${e(colorName)}` : e(colorName);
 
-          if (typeof colorValue === 'string') {
+          if (typeof colorValue === "string") {
             acc[`.truncate-${className}`] = {
-              position: 'relative',
-              overflow: 'hidden',
-              '&::after': {
+              position: "relative",
+              overflow: "hidden",
+              "&::after": {
                 content: '""',
-                position: 'absolute',
-                inset: '0 0 0 0',
+                position: "absolute",
+                inset: "0 0 0 0",
                 background: `linear-gradient(to right, transparent, 75%, ${colorValue})`,
               },
             };
-          } else if (typeof colorValue === 'object') {
+          } else if (typeof colorValue === "object") {
             // Use the DEFAULT value for the base class if it exists
             if (colorValue.DEFAULT) {
               acc[`.truncate-${className}`] = {
-                position: 'relative',
-                overflow: 'hidden',
-                '&::after': {
+                position: "relative",
+                overflow: "hidden",
+                "&::after": {
                   content: '""',
-                  position: 'absolute',
-                  inset: '0 0 0 0',
+                  position: "absolute",
+                  inset: "0 0 0 0",
                   background: `linear-gradient(to right, transparent, ${colorValue.DEFAULT})`,
                 },
               };
@@ -412,7 +411,7 @@ const config = {
 
       const newUtilities = generateUtilities(colors);
 
-      addUtilities(newUtilities, ['responsive', 'hover']);
+      addUtilities(newUtilities, ["responsive", "hover"]);
     }),
     plugin(({ addVariant }) => {
       addVariant("group-increment-hover", ":merge(.group-increment):hover &");

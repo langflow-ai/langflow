@@ -232,8 +232,6 @@
     --component-icon: #c35f85;
     --flow-icon: #2467e4;
 
-    /* Colors that are shared in dark and light mode */
-    --blur-shared: #151923d2;
     --build-trigger: #dc735b;
     --chat-trigger: #5c8be1;
     --chat-trigger-disabled: #2d3b54;
