@@ -209,6 +209,12 @@ textarea[class^="ag-"]:focus {
   transform: translate(-50%, -50%) !important;
 }
 
+/* Modified transform when showNode is false */
+.react-flow__handle-right.no-show,
+.react-flow__handle-left.no-show {
+  transform: translate(0%, -50%) !important;
+}
+
 .react-flow__node-noteNode:not(.selected) {
   z-index: -1 !important;
 }
@@ -253,17 +259,17 @@ span.token {
   max-width: 100%;
 }
 
-code {
+pre code {
   max-width: 100%;
   display: inline-block;
   width: 100%;
-  /* bg ignored now */
-  background-color: var(--canvas);
+  /* Background color */
+  background-color: hsl(var(--code-background)) !important;
 }
 
 pre {
-  /* bg ignored now */
-  background-color: var(--canvas);
+  /* Background color */
+  background-color: hsl(var(--code-background)) !important;
 }
 
 [type="search"]::-webkit-search-cancel-button {

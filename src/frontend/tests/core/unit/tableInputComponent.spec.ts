@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 
 // TODO: This component doesn't have table input needs updating
-test.skip("user must be able to interact with table input component", async ({
+test("user must be able to interact with table input component", async ({
   page,
 }) => {
   await page.goto("/");

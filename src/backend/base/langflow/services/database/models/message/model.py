@@ -2,9 +2,12 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from pydantic import field_validator
+from pydantic import field_serializer, field_validator
 from sqlalchemy import Text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
+
+from langflow.schema.content_block import ContentBlock, ContentBlockDict
+from langflow.schema.properties import Properties
 
 if TYPE_CHECKING:
     from langflow.schema.message import Message
@@ -20,6 +23,10 @@ class MessageBase(SQLModel):
     files: list[str] = Field(default_factory=list)
     error: bool = Field(default=False)
     edit: bool = Field(default=False)
+
+    properties: Properties = Field(default_factory=Properties)
+    category: str = Field(default="message")
+    content_blocks: list[ContentBlock] = Field(default_factory=list)
 
     @field_validator("files", mode="before")
     @classmethod
@@ -44,10 +51,12 @@ class MessageBase(SQLModel):
                 message.files = image_paths
 
         if isinstance(message.timestamp, str):
-            # The message.timestamp is created using strftime("%Y-%m-%dT%H:%M:%S").
-            # This format is not fully ISO 8601 compliant because it lacks timezone information.
-            # Aadd timezone info (UTC) back to the timestamp here.
-            timestamp = datetime.fromisoformat(message.timestamp).replace(tzinfo=timezone.utc)
+            # Convert timestamp string in format "YYYY-MM-DD HH:MM:SS UTC" to datetime
+            try:
+                timestamp = datetime.strptime(message.timestamp, "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
+            except ValueError:
+                # Fallback for ISO format if the above fails
+                timestamp = datetime.fromisoformat(message.timestamp).replace(tzinfo=timezone.utc)
         else:
             timestamp = message.timestamp
         if not flow_id and message.flow_id:
@@ -55,6 +64,17 @@ class MessageBase(SQLModel):
         # If the text is not a string, it means it could be
         # async iterator so we simply add it as an empty string
         message_text = "" if not isinstance(message.text, str) else message.text
+
+        properties = (
+            message.properties.model_dump_json()
+            if hasattr(message.properties, "model_dump_json")
+            else message.properties
+        )
+        content_blocks = []
+        for content_block in message.content_blocks or []:
+            content = content_block.model_dump_json() if hasattr(content_block, "model_dump_json") else content_block
+            content_blocks.append(content)
+
         return cls(
             sender=message.sender,
             sender_name=message.sender_name,
@@ -63,6 +83,9 @@ class MessageBase(SQLModel):
             files=message.files or [],
             timestamp=timestamp,
             flow_id=flow_id,
+            properties=properties,
+            category=message.category,
+            content_blocks=content_blocks,
         )
 
 
@@ -72,6 +95,9 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
     flow_id: UUID | None = Field(default=None, foreign_key="flow.id")
     flow: "Flow" = Relationship(back_populates="messages")
     files: list[str] = Field(sa_column=Column(JSON))
+    properties: Properties = Field(default_factory=lambda: Properties().model_dump(), sa_column=Column(JSON))  # type: ignore[assignment]
+    category: str = Field(sa_column=Column(Text))
+    content_blocks: list[ContentBlockDict] = Field(default_factory=list, sa_column=Column(JSON))  # type: ignore[assignment]
 
     @field_validator("flow_id", mode="before")
     @classmethod
@@ -80,6 +106,20 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
             return value
         if isinstance(value, str):
             value = UUID(value)
+        return value
+
+    @field_validator("properties")
+    @classmethod
+    def validate_properties(cls, value):
+        if hasattr(value, "model_dump"):
+            return value.model_dump()
+        return value
+
+    @field_serializer("properties")
+    @classmethod
+    def serialize_properties(cls, value):
+        if hasattr(value, "model_dump"):
+            return value.model_dump()
         return value
 
     # Needed for Column(JSON)

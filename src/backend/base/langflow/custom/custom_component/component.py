@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import inspect
+from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, ClassVar, get_type_hints
@@ -13,12 +14,15 @@ from pydantic import BaseModel, ValidationError
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
 from langflow.custom.tree_visitor import RequiredInputsVisitor
+from langflow.exceptions.component import StreamingError
 from langflow.field_typing import Tool  # noqa: TCH001 Needed by _add_toolkit_output
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
+from langflow.memory import delete_message, store_message, update_messages
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
-from langflow.schema.message import Message
+from langflow.schema.message import ErrorMessage, Message
+from langflow.schema.properties import Source
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Input, Output
@@ -59,7 +63,7 @@ class Component(CustomComponent):
     inputs: list[InputTypes] = []
     outputs: list[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
-    _output_logs: dict[str, Log] = {}
+    _output_logs: dict[str, list[Log]] = {}
     _current_output: str = ""
     _metadata: dict = {}
 
@@ -365,6 +369,8 @@ class Component(CustomComponent):
 
     def _set_output_required_inputs(self) -> None:
         for output in self.outputs:
+            if output.required_inputs:
+                continue
             if not output.method:
                 continue
             method = getattr(self, output.method, None)
@@ -736,14 +742,30 @@ class Component(CustomComponent):
     async def _build_without_tracing(self):
         return await self._build_results()
 
-    async def build_results(
-        self,
-    ):
-        if self._tracing_service:
-            return await self._build_with_tracing()
-        return await self._build_without_tracing()
+    async def build_results(self):
+        """Build the results of the component."""
+        try:
+            if self._tracing_service:
+                return await self._build_with_tracing()
+            return await self._build_without_tracing()
+        except StreamingError as e:
+            self.send_error(
+                exception=e.cause,
+                session_id=self.graph.session_id,
+                trace_name=getattr(self, "trace_name", None),
+                source=e.source,
+            )
+            raise e.cause  # noqa: B904
+        except Exception as e:
+            self.send_error(
+                exception=e,
+                session_id=self.graph.session_id,
+                source=Source(id=self._id, display_name=self.display_name, source=self.display_name),
+                trace_name=getattr(self, "trace_name", None),
+            )
+            raise
 
-    async def _build_results(self):
+    async def _build_results(self) -> tuple[dict, dict]:
         _results = {}
         _artifacts = {}
         if hasattr(self, "outputs"):
@@ -881,3 +903,132 @@ class Component(CustomComponent):
     def _append_tool_output(self) -> None:
         if next((output for output in self.outputs if output.name == TOOL_OUTPUT_NAME), None) is None:
             self.outputs.append(Output(name=TOOL_OUTPUT_NAME, display_name="Tool", method="to_toolkit", types=["Tool"]))
+
+    def send_message(self, message: Message, id_: str | None = None):
+        if self.graph.session_id and message is not None and message.session_id is None:
+            message.session_id = self.graph.session_id
+        stored_message = self._store_message(message)
+
+        self._stored_message_id = stored_message.id
+        try:
+            complete_message = ""
+            if (
+                self._should_stream_message(stored_message, message)
+                and message is not None
+                and isinstance(message.text, AsyncIterator | Iterator)
+            ):
+                complete_message = self._stream_message(message.text, stored_message)
+                stored_message.text = complete_message
+                stored_message = self._update_stored_message(stored_message)
+            else:
+                # Only send message event for non-streaming messages
+                self._send_message_event(stored_message, id_=id_)
+        except Exception:
+            # remove the message from the database
+            delete_message(stored_message.id)
+            raise
+        self.status = stored_message
+        return stored_message
+
+    def _store_message(self, message: Message) -> Message:
+        messages = store_message(message, flow_id=self.graph.flow_id)
+        if len(messages) != 1:
+            msg = "Only one message can be stored at a time."
+            raise ValueError(msg)
+
+        return messages[0]
+
+    def _send_message_event(self, message: Message, id_: str | None = None):
+        if hasattr(self, "_event_manager") and self._event_manager:
+            data_dict = message.data.copy() if hasattr(message, "data") else message.model_dump()
+            if id_ and not data_dict.get("id"):
+                data_dict["id"] = id_
+            category = data_dict.get("category", None)
+            match category:
+                case "error":
+                    self._event_manager.on_error(data=data_dict)
+                case _:
+                    self._event_manager.on_message(data=data_dict)
+
+    def _should_stream_message(self, stored_message: Message, original_message: Message) -> bool:
+        return bool(
+            hasattr(self, "_event_manager")
+            and self._event_manager
+            and stored_message.id
+            and not isinstance(original_message.text, str)
+        )
+
+    def _update_stored_message(self, stored_message: Message) -> Message:
+        message_tables = update_messages(stored_message)
+        if len(message_tables) != 1:
+            msg = "Only one message can be updated at a time."
+            raise ValueError(msg)
+        message_table = message_tables[0]
+        updated_message = Message(**message_table.model_dump())
+        self.vertex._added_message = updated_message
+        return updated_message
+
+    def _stream_message(self, iterator: AsyncIterator | Iterator, message: Message) -> str:
+        if not isinstance(iterator, AsyncIterator | Iterator):
+            msg = "The message must be an iterator or an async iterator."
+            raise TypeError(msg)
+
+        if isinstance(iterator, AsyncIterator):
+            return run_until_complete(self._handle_async_iterator(iterator, message.id, message))
+        try:
+            complete_message = ""
+            first_chunk = True
+            for chunk in iterator:
+                complete_message = self._process_chunk(
+                    chunk.content, complete_message, message.id, message, first_chunk=first_chunk
+                )
+                first_chunk = False
+        except Exception as e:
+            raise StreamingError(cause=e, source=message.properties.source) from e
+        else:
+            return complete_message
+
+    async def _handle_async_iterator(self, iterator: AsyncIterator, message_id: str, message: Message) -> str:
+        complete_message = ""
+        first_chunk = True
+        async for chunk in iterator:
+            complete_message = self._process_chunk(
+                chunk.content, complete_message, message_id, message, first_chunk=first_chunk
+            )
+            first_chunk = False
+        return complete_message
+
+    def _process_chunk(
+        self, chunk: str, complete_message: str, message_id: str, message: Message, *, first_chunk: bool = False
+    ) -> str:
+        complete_message += chunk
+        if self._event_manager:
+            if first_chunk:
+                # Send the initial message only on the first chunk
+                msg_copy = message.model_copy()
+                msg_copy.text = complete_message
+                self._send_message_event(msg_copy, id_=message_id)
+            self._event_manager.on_token(
+                data={
+                    "chunk": chunk,
+                    "id": str(message_id),
+                }
+            )
+        return complete_message
+
+    def send_error(
+        self,
+        exception: Exception,
+        session_id: str,
+        trace_name: str,
+        source: Source,
+    ) -> None:
+        """Send an error message to the frontend."""
+        error_message = ErrorMessage(
+            flow_id=self.graph.flow_id,
+            exception=exception,
+            session_id=session_id,
+            trace_name=trace_name,
+            source=source,
+        )
+        self.send_message(error_message)

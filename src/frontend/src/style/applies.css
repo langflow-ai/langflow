@@ -191,7 +191,7 @@
 
   /* The same as primary-input but no-truncate */
   .textarea-primary {
-    @apply placeholder:text-placeholder-foreground form-input block w-full rounded-md border-[1px] border-border bg-background px-3 text-left shadow-sm hover:border-muted focus:border-muted focus:placeholder-transparent focus:ring-[0.75px] focus:ring-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-secondary disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground sm:text-sm;
+    @apply form-input block w-full rounded-md border-[1px] border-border bg-background px-3 text-left shadow-sm placeholder:text-placeholder-foreground hover:border-muted focus:border-muted focus:placeholder-transparent focus:ring-[0.75px] focus:ring-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-secondary disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground sm:text-sm;
   }
 
   .input-edit-node {
@@ -319,7 +319,7 @@
     @apply grid w-full gap-4 p-4 md:grid-cols-2 lg:grid-cols-4;
   }
   .generic-node-div {
-    @apply relative flex flex-col justify-center bg-background transition-all;
+    @apply flex flex-col justify-center bg-background transition-all;
   }
   .generic-node-div-title {
     @apply flex w-full items-center gap-2;
@@ -965,7 +965,7 @@
     @apply absolute bottom-2 right-4;
   }
   .form-modal-send-button {
-    @apply rounded-md p-1.5 px-2.5 transition-all duration-300;
+    @apply rounded-md p-1.5 px-2.5;
   }
   .form-modal-lock-icon {
     @apply ml-1 mr-1 h-5 w-5 animate-pulse;
@@ -1219,7 +1219,7 @@
   }
 
   .disabled-state {
-    @apply text-hard-zinc pointer-events-none bg-secondary;
+    @apply pointer-events-none bg-secondary text-hard-zinc;
   }
 
   .background-fade-input {

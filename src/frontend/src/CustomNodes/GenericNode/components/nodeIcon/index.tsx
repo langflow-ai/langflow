@@ -39,11 +39,19 @@ export function NodeIcon({
 
     if (isLucideIcon) {
       return (
-        <div className="bg-lucide-icon text-foreground">
+        <div
+          className={cn(
+            "bg-lucide-icon text-foreground",
+            !showNode && "min-h-8 min-w-8",
+          )}
+        >
           <IconComponent
             strokeWidth={ICON_STROKE_WIDTH}
             name={iconName}
-            className={iconClassName}
+            className={cn(
+              iconClassName,
+              !showNode && "absolute -translate-x-0.5",
+            )}
           />
         </div>
       );

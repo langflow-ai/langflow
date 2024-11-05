@@ -2,7 +2,6 @@ import os
 
 import orjson
 from astrapy.admin import parse_api_endpoint
-from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers import docs_to_data
@@ -219,7 +218,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
 
             # Find the index of the key to insert after
             idx = len(items)
-            for i, (key, _value) in enumerate(items):
+            for i, (key, _) in enumerate(items):
                 if key == field_name:
                     idx = i + 1
                     break
@@ -389,7 +388,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             msg = f"Invalid setup mode: {self.setup_mode}"
             raise ValueError(msg) from e
 
-        if self.embedding:
+        if self.embedding_service == "Embedding Model":
             embedding_dict = {"embedding": self.embedding}
         else:
             from astrapy.info import CollectionVectorServiceOptions
@@ -412,8 +411,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 token=self.token,
                 api_endpoint=self.api_endpoint,
                 namespace=self.namespace or None,
-                environment=parse_api_endpoint(self.api_endpoint).environment,
-                metric=self.metric,
+                environment=parse_api_endpoint(self.api_endpoint).environment if self.api_endpoint else None,
+                metric=self.metric or None,
                 batch_size=self.batch_size or None,
                 bulk_insert_batch_concurrency=self.bulk_insert_batch_concurrency or None,
                 bulk_insert_overwrite_concurrency=self.bulk_insert_overwrite_concurrency or None,
@@ -445,14 +444,14 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 raise TypeError(msg)
 
         if documents:
-            logger.debug(f"Adding {len(documents)} documents to the Vector Store.")
+            self.log(f"Adding {len(documents)} documents to the Vector Store.")
             try:
                 vector_store.add_documents(documents)
             except Exception as e:
                 msg = f"Error adding documents to AstraDBVectorStore: {e}"
                 raise ValueError(msg) from e
         else:
-            logger.debug("No documents to add to the Vector Store.")
+            self.log("No documents to add to the Vector Store.")
 
     def _map_search_type(self) -> str:
         if self.search_type == "Similarity with score threshold":
@@ -477,9 +476,9 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         if not vector_store:
             vector_store = self.build_vector_store()
 
-        logger.debug(f"Search input: {self.search_input}")
-        logger.debug(f"Search type: {self.search_type}")
-        logger.debug(f"Number of results: {self.number_of_results}")
+        self.log(f"Search input: {self.search_input}")
+        self.log(f"Search type: {self.search_type}")
+        self.log(f"Number of results: {self.number_of_results}")
 
         if self.search_input and isinstance(self.search_input, str) and self.search_input.strip():
             try:
@@ -491,13 +490,13 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 msg = f"Error performing search in AstraDBVectorStore: {e}"
                 raise ValueError(msg) from e
 
-            logger.debug(f"Retrieved documents: {len(docs)}")
+            self.log(f"Retrieved documents: {len(docs)}")
 
             data = docs_to_data(docs)
-            logger.debug(f"Converted documents to data: {len(data)}")
+            self.log(f"Converted documents to data: {len(data)}")
             self.status = data
             return data
-        logger.debug("No search input provided. Skipping search.")
+        self.log("No search input provided. Skipping search.")
         return []
 
     def get_retriever_kwargs(self):

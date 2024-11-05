@@ -265,42 +265,53 @@ export default function HandleRenderComponent({
   const handleRef = useRef<HTMLDivElement>(null);
   const invisibleDivRef = useRef<HTMLDivElement>(null);
 
-  const { zoom } = useViewport();
+  const getHandleClasses = ({
+    left,
+    showNode,
+  }: {
+    left: boolean;
+    showNode: boolean;
+  }) => {
+    return cn(
+      "noflow nowheel nopan noselect absolute left-3.5 -translate-y-1/2 translate-x-1/3 cursor-crosshair rounded-full",
+      left && "-left-5 -translate-x-1/2",
+      left && !showNode && "-translate-y-5 translate-x-4",
+      !left && !showNode && "-translate-y-5 translate-x-[10.8rem]",
+    );
+  };
 
-  const getTranslateX = () => {
-    if (left) {
-      if (zoom > 4) return "-translate-x-2/3";
-      if (zoom > 1.5) return "-translate-x-24";
-      return "-translate-x-12";
+  const handleClick = () => {
+    setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
+    setFilterType(currentFilter);
+    if (filterOpenHandle && filterType) {
+      onConnect(getConnection(filterType));
+      setFilterType(undefined);
+      setFilterEdge([]);
     }
-    if (zoom > 4) return "translate-x-2/3";
-    if (zoom > 1.5) return "translate-x-24";
-    return "translate-x-12";
   };
 
   return (
-    <ShadTooltip
-      open={openTooltip}
-      setOpen={setOpenTooltip}
-      styleClasses={cn(
-        "tooltip-fixed-width custom-scroll nowheel bottom-2 ",
-        getTranslateX(),
-      )}
-      delayDuration={1000}
-      content={
-        <HandleTooltipComponent
-          isInput={left}
-          colors={colors}
-          tooltipTitle={tooltipTitle}
-          isConnecting={!!filterPresent && !ownHandle}
-          isCompatible={openHandle}
-          isSameNode={sameNode && !ownHandle}
-        />
-      }
-      side={left ? "left" : "right"}
-    >
-      <div>
-        <div className="relative">
+    <div>
+      <div className={`${!showNode ? "" : "relative"}`}>
+        <ShadTooltip
+          open={openTooltip}
+          setOpen={setOpenTooltip}
+          styleClasses={cn(
+            "tooltip-fixed-width custom-scroll nowheel bottom-2 ",
+          )}
+          delayDuration={1000}
+          content={
+            <HandleTooltipComponent
+              isInput={left}
+              colors={colors}
+              tooltipTitle={tooltipTitle}
+              isConnecting={!!filterPresent && !ownHandle}
+              isCompatible={openHandle}
+              isSameNode={sameNode && !ownHandle}
+            />
+          }
+          side={left ? "left" : "right"}
+        >
           <Handle
             ref={handleRef}
             data-testid={`handle-${testIdComplement}-${title.toLowerCase()}-${
@@ -313,18 +324,11 @@ export default function HandleRenderComponent({
             isValidConnection={(connection) =>
               isValidConnection(connection, nodes, edges)
             }
-            className={classNames(
-              `group/handle z-50 h-12 w-12 border-none bg-transparent transition-all`,
+            className={cn(
+              `group/handle z-50 transition-all`,
+              !showNode && "no-show",
             )}
-            onClick={() => {
-              setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
-              setFilterType(currentFilter);
-              if (filterOpenHandle && filterType) {
-                onConnect(getConnection(filterType));
-                setFilterType(undefined);
-                setFilterEdge([]);
-              }
-            }}
+            onClick={handleClick}
             onMouseUp={() => {
               setOpenTooltip(false);
             }}
@@ -349,43 +353,41 @@ export default function HandleRenderComponent({
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
           />
-          <div
-            data-testid={`div-handle-${testIdComplement}-${title.toLowerCase()}-${
-              !showNode ? (left ? "target" : "source") : left ? "left" : "right"
-            }`}
-            ref={invisibleDivRef}
-            className={cn(
-              "noflow nowheel nopan noselect absolute left-3.5 -translate-y-1/2 translate-x-1/3 cursor-crosshair rounded-full",
-              left && "-left-5 -translate-x-1/2",
-            )}
-            style={{
-              background: isNullHandle ? "hsl(var(--border))" : handleColor,
-              width: "10px",
-              height: "10px",
-              transition: "all 0.2s",
-              boxShadow: getNeonShadow(
-                innerForegroundColorName,
-                isHovered || openHandle,
-              ),
-              animation:
-                (isHovered || openHandle) && !isNullHandle
-                  ? "pulseNeon 0.7s ease-in-out infinite"
-                  : "none",
-              border: isNullHandle ? "2px solid hsl(var(--muted))" : "none",
-            }}
-            onClick={(e) => {
-              handleRef.current?.dispatchEvent(
-                new MouseEvent("mousedown", { bubbles: true }),
-              );
-            }}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            onContextMenu={(event) => {
-              event.preventDefault();
-            }}
-          />
-        </div>
+        </ShadTooltip>
+
+        <div
+          data-testid={`div-handle-${testIdComplement}-${title.toLowerCase()}-${
+            !showNode ? (left ? "target" : "source") : left ? "left" : "right"
+          }`}
+          ref={invisibleDivRef}
+          className={getHandleClasses({ left, showNode })}
+          style={{
+            background: isNullHandle ? "hsl(var(--border))" : handleColor,
+            width: "10px",
+            height: "10px",
+            transition: "all 0.2s",
+            boxShadow: getNeonShadow(
+              innerForegroundColorName,
+              isHovered || openHandle,
+            ),
+            animation:
+              (isHovered || openHandle) && !isNullHandle
+                ? "pulseNeon 0.7s ease-in-out infinite"
+                : "none",
+            border: isNullHandle ? "2px solid hsl(var(--muted))" : "none",
+          }}
+          onClick={(e) => {
+            handleRef.current?.dispatchEvent(
+              new MouseEvent("mousedown", { bubbles: true }),
+            );
+          }}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          onContextMenu={(event) => {
+            event.preventDefault();
+          }}
+        />
       </div>
-    </ShadTooltip>
+    </div>
   );
 }

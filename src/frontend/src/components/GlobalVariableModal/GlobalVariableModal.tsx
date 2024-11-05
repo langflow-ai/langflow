@@ -170,6 +170,7 @@ export default function GlobalVariableModal({
                 setValue(e);
               }}
               placeholder="Insert a value for the variable..."
+              nodeStyle
             />
           ) : (
             <Textarea
