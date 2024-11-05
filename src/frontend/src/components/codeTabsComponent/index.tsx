@@ -1,7 +1,11 @@
+import ShadTooltip from "@/components/shadTooltipComponent";
 import { useTweaksStore } from "@/stores/tweaksStore";
 import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import {
+  oneDark,
+  tomorrow,
+} from "react-syntax-highlighter/dist/cjs/styles/prism";
 import {
   Tabs,
   TabsContent,
@@ -58,7 +62,7 @@ export default function CodeTabsComponent({
     >
       <div className="api-modal-tablist-div">
         {tabs.length > 0 && tabs[0].name !== "" ? (
-          <TabsList>
+          <TabsList className="mt-[-1px] border-b">
             {tabs.map((tab, index) => (
               <TabsTrigger
                 className={
@@ -74,71 +78,81 @@ export default function CodeTabsComponent({
         ) : (
           <div></div>
         )}
-
-        <div className="float-right mx-2 mb-1 mt-2 flex items-center gap-4">
-          {nodes.length > 0 &&
-            tabs.find((tab) => tab.name.toLowerCase() === "tweaks") &&
-            tabs[activeTab].hasTweaks && (
-              <div className="flex gap-2">
-                <Switch
-                  style={{
-                    transform: `scaleX(${0.7}) scaleY(${0.7})`,
-                  }}
-                  id="tweaks-switch"
-                  onCheckedChange={setActiveTweaks}
-                  checked={activeTweaks}
-                  autoFocus={false}
-                />
-                <Label
-                  className={cn(
-                    "relative right-1 top-[4px] text-xs font-medium text-muted-foreground",
-                    activeTweaks ? "text-primary" : "",
-                  )}
-                  htmlFor="tweaks-switch"
-                >
-                  Tweaks
-                </Label>
-              </div>
-            )}
-
-          {tabs[activeTab].name.toLowerCase !== "tweaks" && (
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground"
-                onClick={copyToClipboard}
-                data-testid="btn-copy-code"
-              >
-                {isCopied ? (
-                  <IconComponent name="Check" className="h-4 w-4" />
-                ) : (
-                  <IconComponent name="Copy" className="h-4 w-4" />
-                )}
-              </Button>
-            </>
-          )}
-        </div>
       </div>
 
       {tabs.map((tab, idx) => (
         <TabsContent
           value={idx.toString()}
-          className="api-modal-tabs-content overflow-hidden"
+          className="api-modal-tabs-content overflow-hidden dark"
           key={idx} // Remember to add a unique key prop
         >
           {tab.name.toLowerCase() !== "tweaks" ? (
-            <div className="flex h-full w-full flex-col">
+            <div className="mt-2 flex h-full w-full flex-col">
               {tab.description && (
                 <div
                   className="mb-2 w-full text-left text-sm"
                   dangerouslySetInnerHTML={{ __html: tab.description }}
                 ></div>
               )}
+              <div className="flex w-full items-center justify-end gap-4 rounded-t-md border border-b-0 border-input bg-secondary px-4 py-2">
+                {nodes.length > 0 &&
+                  tabs.find((tab) => tab.name.toLowerCase() === "tweaks") &&
+                  tabs[activeTab].hasTweaks && (
+                    <div className="flex items-center gap-2">
+                      <ShadTooltip content="Makes temporary adjustments managed in 'Tweaks'">
+                        <div className="flex items-center gap-2">
+                          <Label
+                            className={"text-xs font-medium text-white"}
+                            htmlFor="tweaks-switch"
+                          >
+                            Enable Tweaks
+                          </Label>
+                          <IconComponent
+                            name="info"
+                            className="h-3.5 w-3.5 text-placeholder-foreground"
+                          />
+                        </div>
+                      </ShadTooltip>
+                      <Switch
+                        style={{
+                          transform: `scaleX(${0.85}) scaleY(${0.85})`,
+                        }}
+                        id="tweaks-switch"
+                        onCheckedChange={setActiveTweaks}
+                        checked={activeTweaks}
+                        autoFocus={false}
+                      />
+                      <span className="text-lg text-accent">|</span>
+                    </div>
+                  )}
+
+                {tabs[activeTab].name.toLowerCase !== "tweaks" && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={copyToClipboard}
+                      data-testid="btn-copy-code"
+                    >
+                      {isCopied ? (
+                        <IconComponent
+                          name="Check"
+                          className="h-4 w-4 text-muted-foreground"
+                        />
+                      ) : (
+                        <IconComponent
+                          name="Copy"
+                          className="h-4 w-4 text-muted-foreground"
+                        />
+                      )}
+                    </Button>
+                  </>
+                )}
+              </div>
               <SyntaxHighlighter
                 language={tab.language}
                 style={oneDark}
-                className="mt-0 h-full overflow-auto rounded-sm text-left custom-scroll"
+                className="!my-0 h-full overflow-auto rounded-sm !rounded-t-none border border-t-0 border-input bg-code-block text-left custom-scroll"
               >
                 {tab.code}
               </SyntaxHighlighter>

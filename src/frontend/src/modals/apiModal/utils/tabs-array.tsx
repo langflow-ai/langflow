@@ -7,7 +7,7 @@ export function createTabsArray(
   const tabs: tabsArrayType[] = [];
   if (codes.runCurlCode) {
     tabs.push({
-      name: "Run cURL",
+      name: "cURL",
       mode: "bash",
       image: "https://curl.se/logo/curl-symbol-transparent.png",
       language: "sh",

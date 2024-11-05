@@ -77,10 +77,10 @@ const Header: React.FC<{
 }> = ({ children, description }: modalHeaderType): JSX.Element => {
   return (
     <DialogHeader>
-      <DialogTitle className="line-clamp-1 flex items-center pb-0.5">
+      <DialogTitle className="line-clamp-1 flex items-center pb-0.5 text-base">
         {children}
       </DialogTitle>
-      <DialogDescription className="line-clamp-3">
+      <DialogDescription className="line-clamp-2 text-sm">
         {description}
       </DialogDescription>
     </DialogHeader>
