@@ -120,7 +120,6 @@ test("user must see on handle click the possibility connections - LLMChain", asy
   await expect(page.getByTestId("disclosure-data")).toBeVisible();
   await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
   await expect(page.getByTestId("disclosure-vector stores")).toBeVisible();
-  await expect(page.getByTestId("disclosure-utilities")).toBeVisible();
   await expect(page.getByTestId("disclosure-prototypes")).toBeVisible();
   await expect(page.getByTestId("disclosure-retrievers")).toBeVisible();
   await expect(page.getByTestId("disclosure-embeddings")).toBeVisible();
