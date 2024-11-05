@@ -53,6 +53,6 @@ class ContentBlock(BaseModel):
 
 class ContentBlockDict(TypedDict):
     title: str
-    contents: list[ContentType]
+    contents: list[dict]
     allow_markdown: bool
     media_url: list[str] | None
