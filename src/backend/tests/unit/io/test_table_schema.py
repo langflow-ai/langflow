@@ -5,11 +5,6 @@ import pytest
 from langflow.schema.table import Column, FormatterType
 
 
-@pytest.fixture
-def client():
-    pass
-
-
 class TestColumn:
     # Creating a Column instance without display_name sets it to the name
     def test_create_column_without_display_name(self):
@@ -39,7 +34,7 @@ class TestColumn:
 
     # Invalid formatter raises ValueError
     def test_invalid_formatter_raises_value_error(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="'invalid' is not a valid FormatterType"):
             Column(display_name="Invalid Column", name="invalid_column", formatter="invalid")
 
     # Formatter is None when not provided

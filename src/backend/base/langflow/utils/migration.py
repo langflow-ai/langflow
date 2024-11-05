@@ -2,8 +2,7 @@ from sqlalchemy.engine.reflection import Inspector
 
 
 def table_exists(name, conn):
-    """
-    Check if a table exists.
+    """Check if a table exists.
 
     Parameters:
     name (str): The name of the table to check.
@@ -17,8 +16,7 @@ def table_exists(name, conn):
 
 
 def column_exists(table_name, column_name, conn):
-    """
-    Check if a column exists in a table.
+    """Check if a column exists in a table.
 
     Parameters:
     table_name (str): The name of the table to check.
@@ -33,8 +31,7 @@ def column_exists(table_name, column_name, conn):
 
 
 def foreign_key_exists(table_name, fk_name, conn):
-    """
-    Check if a foreign key exists in a table.
+    """Check if a foreign key exists in a table.
 
     Parameters:
     table_name (str): The name of the table to check.
@@ -49,8 +46,7 @@ def foreign_key_exists(table_name, fk_name, conn):
 
 
 def constraint_exists(table_name, constraint_name, conn):
-    """
-    Check if a constraint exists in a table.
+    """Check if a constraint exists in a table.
 
     Parameters:
     table_name (str): The name of the table to check.

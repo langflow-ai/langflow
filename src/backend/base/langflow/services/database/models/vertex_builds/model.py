@@ -49,6 +49,10 @@ class VertexBuildBase(SQLModel):
     def serialize_artifacts(self, data) -> dict:
         return truncate_long_strings(data)
 
+    @field_serializer("params")
+    def serialize_params(self, data) -> str:
+        return truncate_long_strings(data)
+
 
 class VertexBuildTable(VertexBuildBase, table=True):  # type: ignore[call-arg]
     __tablename__ = "vertex_build"

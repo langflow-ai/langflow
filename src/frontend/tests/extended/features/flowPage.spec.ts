@@ -22,26 +22,17 @@ test.describe("Flow Page tests", () => {
     }
 
     while (modalCount === 0) {
-      await page.getByText("New Project", { exact: true }).click();
+      await page.getByText("New Flow", { exact: true }).click();
       await page.waitForTimeout(3000);
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
     await page.getByTestId("blank-flow").click();
-    await page.waitForSelector('[data-testid="extended-disclosure"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("extended-disclosure").click();
-    await page.getByPlaceholder("Search").click();
-    await page.getByPlaceholder("Search").fill("custom");
 
     await page.waitForTimeout(1000);
 
-    await page
-      .locator('//*[@id="helpersCustom Component"]')
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
+    await page.getByTestId("sidebar-custom-component-button").click();
+
     await page.getByTitle("fit view").click();
     await page.getByTitle("zoom out").click();
     await page.getByTitle("zoom out").click();

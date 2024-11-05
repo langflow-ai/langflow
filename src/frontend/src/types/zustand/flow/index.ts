@@ -54,6 +54,7 @@ export type FlowPoolType = {
 };
 
 export type FlowStoreType = {
+  fitViewNode: (nodeId: string) => void;
   autoSaveFlow: (() => void) | undefined;
   componentsToUpdate: boolean;
   updateComponentsToUpdate: (nodes: Node[]) => void;
@@ -130,6 +131,7 @@ export type FlowStoreType = {
     files,
     silent,
     setLockChat,
+    session,
   }: {
     setLockChat?: (lock: boolean) => void;
     startNodeId?: string;
@@ -137,6 +139,7 @@ export type FlowStoreType = {
     input_value?: string;
     files?: string[];
     silent?: boolean;
+    session?: string;
   }) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
   updateVerticesBuild: (
@@ -229,4 +232,7 @@ export type FlowStoreType = {
   stopBuilding: () => void;
   buildController: AbortController;
   setBuildController: (controller: AbortController) => void;
+  currentBuildingNodeId: string[] | undefined;
+  setCurrentBuildingNodeId: (nodeIds: string[] | undefined) => void;
+  clearEdgesRunningByNodes: () => Promise<void>;
 };

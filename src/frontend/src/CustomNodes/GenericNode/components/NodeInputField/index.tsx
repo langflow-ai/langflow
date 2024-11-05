@@ -5,10 +5,15 @@ import {
   CustomParameterLabel,
   getCustomParameterTitle,
 } from "@/customization/components/custom-parameter";
+import { cn } from "@/utils/utils";
 import { useEffect, useRef } from "react";
 import { default as IconComponent } from "../../../../components/genericIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
-import { LANGFLOW_SUPPORTED_TYPES } from "../../../../constants/constants";
+import {
+  FLEX_VIEW_TYPES,
+  ICON_STROKE_WIDTH,
+  LANGFLOW_SUPPORTED_TYPES,
+} from "../../../../constants/constants";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { NodeInputFieldComponentType } from "../../../../types/components";
@@ -31,6 +36,7 @@ export default function NodeInputField({
   info = "",
   proxy,
   showNode,
+  colorName,
 }: NodeInputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const nodes = useFlowStore((state) => state.nodes);
@@ -68,6 +74,8 @@ export default function NodeInputField({
     !LANGFLOW_SUPPORTED_TYPES.has(type ?? "") ||
     (optionalHandle && optionalHandle.length > 0);
 
+  const isFlexView = FLEX_VIEW_TYPES.includes(type ?? "");
+
   const Handle = (
     <HandleRenderComponent
       left={true}
@@ -83,6 +91,7 @@ export default function NodeInputField({
       showNode={showNode}
       testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
       nodeId={data.id}
+      colorName={colorName}
     />
   );
 
@@ -96,7 +105,7 @@ export default function NodeInputField({
     <div
       ref={ref}
       className={
-        "relative mt-1 flex min-h-10 w-full flex-wrap items-center justify-between bg-muted px-5 py-2" +
+        "relative mt-1 flex min-h-10 w-full flex-wrap items-center justify-between px-5 py-2" +
         ((name === "code" && type === "code") ||
         (name.includes("code") && proxy)
           ? " hidden"
@@ -104,7 +113,12 @@ export default function NodeInputField({
       }
     >
       {displayHandle && Handle}
-      <div className="flex w-full flex-col gap-2">
+      <div
+        className={cn(
+          "flex w-full flex-col gap-2",
+          isFlexView ? "flex-row" : "flex-col",
+        )}
+      >
         <div className="flex w-full items-center justify-between text-sm">
           <div className="flex w-full items-center truncate">
             {proxy ? (
@@ -119,24 +133,23 @@ export default function NodeInputField({
               <div className="flex gap-2">
                 <span>
                   {
-                    <span>
+                    <span className="text-sm font-medium">
                       {getCustomParameterTitle({ title, nodeId: data.id })}
                     </span>
                   }
                 </span>
               </div>
             )}
-            <span className={(required ? "ml-2 " : "") + "text-status-red"}>
-              {required ? "*" : ""}
-            </span>
-            <div className="">
+            <span className={"text-status-red"}>{required ? "*" : ""}</span>
+            <div>
               {info !== "" && (
                 <ShadTooltip content={<NodeInputInfo info={info} />}>
                   {/* put div to avoid bug that does not display tooltip */}
                   <div className="cursor-help">
                     <IconComponent
                       name="Info"
-                      className="relative bottom-px ml-1.5 h-3 w-4"
+                      strokeWidth={ICON_STROKE_WIDTH}
+                      className="relative bottom-px ml-1 h-3 w-3 text-placeholder"
                     />
                   </div>
                 </ShadTooltip>

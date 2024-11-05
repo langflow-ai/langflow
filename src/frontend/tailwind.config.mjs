@@ -11,6 +11,7 @@ const config = {
   variants: {
     extend: {
       display: ["group-hover"],
+      textColor: ["group-increment-hover", "group-decrement-hover"],
     },
   },
   darkMode: ["class"],
@@ -26,11 +27,10 @@ const config = {
     "bg-status-red",
     "bg-status-yellow",
   ],
-  important: true,
+  important: false,
   theme: {
     container: {
       center: true,
-      padding: "2rem",
       screens: {
         "2xl": "1400px",
       },
@@ -41,10 +41,16 @@ const config = {
           "0%, 100%": { transform: "scale(100%)" },
           "50%": { transform: "scale(120%)" },
         },
+        "border-beam": {
+          "100%": {
+            "offset-distance": "100%",
+          },
+        },
       },
       animation: {
         wiggle: "wiggle 150ms ease-in-out 1",
         "slow-wiggle": "wiggle 500ms ease-in-out 1",
+        "border-beam": "border-beam calc(var(--duration)*1s) infinite linear",
       },
       colors: {
         "frozen-blue": "rgba(128, 190, 219, 0.86)", // Custom blue color for the frozen effect
@@ -91,12 +97,15 @@ const config = {
         "medium-high-indigo": "var(--medium-high-indigo)",
         "medium-indigo": "var(--medium-indigo)",
         "medium-low-gray": "var(--medium-low-gray)",
+        "note-amber": "var(--note-amber)",
         "status-green": "var(--status-green)",
         "status-red": "var(--status-red)",
         "status-yellow": "var(--status-yellow)",
         "status-gray": "var(--status-gray)",
         "success-background": "var(--success-background)",
         "success-foreground": "var(--success-foreground)",
+        "accent-pink": "hsl(var(--accent-pink))",
+        "accent-pink-foreground": "hsl(var(--accent-pink-foreground))",
         filter: {
           foreground: "var(--filter-foreground)",
           background: "var(--filter-background)",
@@ -108,23 +117,39 @@ const config = {
         },
         "chat-bot-icon": "var(--chat-bot-icon)",
         "chat-user-icon": "var(--chat-user-icon)",
+        "code-background": "hsl(var(--code-background))",
+        canvas: {
+          DEFAULT: "hsl(var(--canvas))",
+          dark: "hsl(var(--canvas-dark))",
+        },
         ice: "var(--ice)",
         selected: "var(--selected)",
         hover: "var(--hover)",
-        white: "var(--white)",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
+        "error-red":"hsl(var(--error-red))",
+        "error-red-border":"hsl(var(--error-red-border))",
         "node-selected": "hsl(var(--node-selected))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        "emerald-success": "hsl(var(--emerald-success))",
+        "accent-emerald-foreground": "hsl(var(--accent-emerald-foreground))",
+        "emerald-smooth": "hsl(var(--emaral-smooth))",
+        "emerald-hard": "hsl(var(--emeral-hard))",
+        placeholder: "hsl(var(--placeholder))",
+        "hard-zinc": "hsl(var(--hard-zinc))",
+        "smooth-red": "hsl(var(--smooth-red))",
+        "placeholder-foreground": "hsl(var(--placeholder-foreground))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          hover: "hsl(var(--primary-hover))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
+          hover: "hsl(var(--secondary-hover))",
         },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
@@ -138,6 +163,18 @@ const config = {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
+        "accent-emerald": {
+          DEFAULT: "hsl(var(--accent-emerald))",
+          foreground: "hsl(var(--accent-emerald-foreground))",
+        },
+        "accent-indigo": {
+          DEFAULT: "hsl(var(--accent-indigo))",
+          foreground: "hsl(var(--accent-indigo-foreground))",
+        },
+        "accent-pink": {
+          DEFAULT: "hsl(var(--accent-pink))",
+          foreground: "hsl(var(--accent-pink-foreground))",
+        },
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
@@ -146,14 +183,82 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        tooltip: {
+          DEFAULT: "hsl(var(--tooltip))",
+          foreground: "hsl(var(--tooltip-foreground))",
+        },
+        "code-block": {
+          DEFAULT: "#18181B",
+          muted: "#27272A",
+        },
+        "inner-yellow": {
+          DEFAULT: "hsl(var(--inner-yellow))",
+          foreground: "hsl(var(--inner-foreground-yellow))",
+          muted: "hsl(var(--inner-yellow-muted-foreground))",
+        },
+        "inner-blue": {
+          DEFAULT: "hsl(var(--inner-blue))",
+          foreground: "hsl(var(--inner-foreground-blue))",
+          muted: "hsl(var(--inner-blue-muted-foreground))",
+        },
+        "inner-gray": {
+          DEFAULT: "hsl(var(--inner-gray))",
+          foreground: "hsl(var(--inner-foreground-gray))",
+          muted: "hsl(var(--inner-gray-muted-foreground))",
+        },
+        "inner-lime": {
+          DEFAULT: "hsl(var(--inner-lime))",
+          foreground: "hsl(var(--inner-foreground-lime))",
+          muted: "hsl(var(--inner-lime-muted-foreground))",
+        },
+        "inner-red": {
+          DEFAULT: "hsl(var(--inner-red))",
+          foreground: "hsl(var(--inner-foreground-red))",
+          muted: "hsl(var(--inner-red-muted-foreground))",
+        },
+        "inner-violet": {
+          DEFAULT: "hsl(var(--inner-violet))",
+          foreground: "hsl(var(--inner-foreground-violet))",
+          muted: "hsl(var(--inner-violet-muted-foreground))",
+        },
+        "inner-emerald": {
+          DEFAULT: "hsl(var(--inner-emerald))",
+          foreground: "hsl(var(--inner-foreground-emerald))",
+          muted: "hsl(var(--inner-emerald-muted-foreground))",
+        },
+        "inner-fuchsia": {
+          DEFAULT: "hsl(var(--inner-fuchsia))",
+          foreground: "hsl(var(--inner-foreground-fuchsia))",
+          muted: "hsl(var(--inner-fuchsia-muted-foreground))",
+        },
+        "inner-purple": {
+          DEFAULT: "hsl(var(--inner-purple))",
+          foreground: "hsl(var(--inner-foreground-purple))",
+          muted: "hsl(var(--inner-purple-muted-foreground))",
+        },
+        "inner-cyan": {
+          DEFAULT: "hsl(var(--inner-cyan))",
+          foreground: "hsl(var(--inner-foreground-cyan))",
+          muted: "hsl(var(--inner-cyan-muted-foreground))",
+        },
+        "inner-indigo": {
+          DEFAULT: "hsl(var(--inner-indigo))",
+          foreground: "hsl(var(--inner-foreground-indigo))",
+          muted: "hsl(var(--inner-indigo-muted-foreground))",
+        },
       },
       borderRadius: {
         lg: `var(--radius)`,
         md: `calc(var(--radius) - 2px)`,
         sm: "calc(var(--radius) - 4px)",
       },
+      borderWidth: {
+        1.75: "1.75px",
+        1.5: "1.5px",
+      },
       fontFamily: {
         sans: ["var(--font-sans)", ...fontFamily.sans],
+        mono: ["var(--font-mono)", ...fontFamily.mono],
       },
       boxShadow: {
         "frozen-ring": "0 0 10px 2px rgba(128, 190, 230, 0.5)",
@@ -271,6 +376,55 @@ const config = {
     }),
     tailwindcssTypography,
     tailwindcssDottedBackground,
+    plugin(function ({ addUtilities, theme, e }) {
+      const colors = theme('colors');
+
+      const generateUtilities = (colors, prefix = '') => {
+        return Object.keys(colors).reduce((acc, colorName) => {
+          const colorValue = colors[colorName];
+          const className = prefix ? `${prefix}-${e(colorName)}` : e(colorName);
+
+          if (typeof colorValue === 'string') {
+            acc[`.truncate-${className}`] = {
+              position: 'relative',
+              overflow: 'hidden',
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                inset: '0 0 0 0',
+                background: `linear-gradient(to right, transparent, 75%, ${colorValue})`,
+              },
+            };
+          } else if (typeof colorValue === 'object') {
+            // Use the DEFAULT value for the base class if it exists
+            if (colorValue.DEFAULT) {
+              acc[`.truncate-${className}`] = {
+                position: 'relative',
+                overflow: 'hidden',
+                '&::after': {
+                  content: '""',
+                  position: 'absolute',
+                  inset: '0 0 0 0',
+                  background: `linear-gradient(to right, transparent, ${colorValue.DEFAULT})`,
+                },
+              };
+            }
+            // Recursively generate utilities for nested color objects
+            Object.assign(acc, generateUtilities(colorValue, className));
+          }
+
+          return acc;
+        }, {});
+      };
+
+      const newUtilities = generateUtilities(colors);
+
+      addUtilities(newUtilities, ['responsive', 'hover']);
+    }),
+    plugin(({ addVariant }) => {
+      addVariant("group-increment-hover", ":merge(.group-increment):hover &");
+      addVariant("group-decrement-hover", ":merge(.group-decrement):hover &");
+    }),
   ],
 };
 

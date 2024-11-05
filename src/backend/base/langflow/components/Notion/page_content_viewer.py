@@ -55,7 +55,7 @@ class NotionPageContent(LCToolComponent):
             "Notion-Version": "2022-06-28",
         }
         try:
-            blocks_response = requests.get(blocks_url, headers=headers)
+            blocks_response = requests.get(blocks_url, headers=headers, timeout=10)
             blocks_response.raise_for_status()
             blocks_data = blocks_response.json()
             return self.parse_blocks(blocks_data.get("results", []))
@@ -72,9 +72,9 @@ class NotionPageContent(LCToolComponent):
         content = ""
         for block in blocks:
             block_type = block.get("type")
-            if block_type in ["paragraph", "heading_1", "heading_2", "heading_3", "quote"]:
+            if block_type in {"paragraph", "heading_1", "heading_2", "heading_3", "quote"}:
                 content += self.parse_rich_text(block[block_type].get("rich_text", [])) + "\n\n"
-            elif block_type in ["bulleted_list_item", "numbered_list_item"]:
+            elif block_type in {"bulleted_list_item", "numbered_list_item"}:
                 content += self.parse_rich_text(block[block_type].get("rich_text", [])) + "\n"
             elif block_type == "to_do":
                 content += self.parse_rich_text(block["to_do"].get("rich_text", [])) + "\n"

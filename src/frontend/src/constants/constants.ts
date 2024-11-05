@@ -651,28 +651,31 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "NestedDict",
   "table",
   "link",
+  "slider",
 ]);
+
+export const FLEX_VIEW_TYPES = ["bool"];
 
 export const priorityFields = new Set(["code", "template"]);
 
 export const INPUT_TYPES = new Set([
   "ChatInput",
-  "TextInput",
-  "KeyPairInput",
-  "JsonInput",
-  "StringListInput",
+  // "TextInput",
+  // "KeyPairInput",
+  // "JsonInput",
+  // "StringListInput",
 ]);
 export const OUTPUT_TYPES = new Set([
   "ChatOutput",
-  "TextOutput",
-  "PDFOutput",
-  "ImageOutput",
-  "CSVOutput",
-  "JsonOutput",
-  "KeyPairOutput",
-  "StringListOutput",
-  "DataOutput",
-  "TableOutput",
+  // "TextOutput",
+  // "PDFOutput",
+  // "ImageOutput",
+  // "CSVOutput",
+  // "JsonOutput",
+  // "KeyPairOutput",
+  // "StringListOutput",
+  // "DataOutput",
+  // "TableOutput",
 ]);
 
 export const CHAT_FIRST_INITIAL_TEXT =
@@ -682,6 +685,9 @@ export const TOOLTIP_OUTDATED_NODE =
   "Your component is outdated. Click to update (data may be lost)";
 
 export const CHAT_SECOND_INITIAL_TEXT = "to inspect previous messages.";
+
+export const TOOLTIP_OPEN_HIDDEN_OUTPUTS = "Show hidden outputs";
+export const TOOLTIP_HIDDEN_OUTPUTS = "Hide outputs";
 
 export const ZERO_NOTIFICATIONS = "No new notifications";
 
@@ -885,7 +891,7 @@ export const EMPTY_INPUT_SEND_MESSAGE = "No input message provided.";
 export const EMPTY_OUTPUT_SEND_MESSAGE = "Message empty.";
 
 export const TABS_ORDER = [
-  "run curl",
+  "curl",
   "python api",
   "js api",
   "python code",
@@ -902,7 +908,7 @@ export const LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV =
   Number(process.env.ACCESS_TOKEN_EXPIRE_SECONDS) -
   Number(process.env.ACCESS_TOKEN_EXPIRE_SECONDS) * 0.1;
 export const TEXT_FIELD_TYPES: string[] = ["str", "SecretStr"];
-export const NODE_WIDTH = 400;
+export const NODE_WIDTH = 384;
 export const NODE_HEIGHT = NODE_WIDTH * 3;
 
 export const SHORTCUT_KEYS = ["cmd", "ctrl", "alt", "shift"];
@@ -937,3 +943,20 @@ export const SHADOW_COLOR_OPTIONS = {
 
 export const maxSizeFilesInBytes = 10 * 1024 * 1024; // 10MB in bytes
 export const MAX_TEXT_LENGTH = 99999;
+
+export const SEARCH_TABS = ["All", "Flows", "Components"];
+export const PAGINATION_SIZE = 10;
+export const PAGINATION_PAGE = 1;
+
+export const STORE_PAGINATION_SIZE = 12;
+export const STORE_PAGINATION_PAGE = 1;
+
+export const PAGINATION_ROWS_COUNT = [10, 20, 50, 100];
+export const STORE_PAGINATION_ROWS_COUNT = [12, 24, 48, 96];
+
+export const GRADIENT_CLASS =
+  "linear-gradient(to right, hsl(var(--background) / 0.3), hsl(var(--background)))";
+
+export const RECEIVING_INPUT_VALUE = "Receiving input";
+
+export const ICON_STROKE_WIDTH = 1.25;

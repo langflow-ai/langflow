@@ -1,3 +1,4 @@
+import asyncio
 import json
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from langflow.utils.util import update_settings
 
 def load_flow_from_json(
     flow: Path | str | dict,
+    *,
     tweaks: dict | None = None,
     log_level: str | None = None,
     log_file: str | None = None,
@@ -20,8 +22,7 @@ def load_flow_from_json(
     cache: str | None = None,
     disable_logs: bool | None = True,
 ) -> Graph:
-    """
-    Load a flow graph from a JSON file or a JSON object.
+    """Load a flow graph from a JSON file or a JSON object.
 
     Args:
         flow (Union[Path, str, dict]): The flow to load. It can be a file path (str or Path object)
@@ -43,7 +44,7 @@ def load_flow_from_json(
     """
     # If input is a file path, load JSON from the file
     log_file_path = Path(log_file) if log_file else None
-    configure(log_level=log_level, log_file=log_file_path, disable=disable_logs)
+    configure(log_level=log_level, log_file=log_file_path, disable=disable_logs, async_file=True)
 
     # override env variables with .env file
     if env_file:
@@ -69,9 +70,10 @@ def load_flow_from_json(
     return Graph.from_payload(graph_data)
 
 
-def run_flow_from_json(
+async def arun_flow_from_json(
     flow: Path | str | dict,
     input_value: str,
+    *,
     session_id: str | None = None,
     tweaks: dict | None = None,
     input_type: str = "chat",
@@ -84,8 +86,7 @@ def run_flow_from_json(
     disable_logs: bool | None = True,
     fallback_to_env_vars: bool = False,
 ) -> list[RunOutputs]:
-    """
-    Run a flow from a JSON file or dictionary.
+    """Run a flow from a JSON file or dictionary.
 
     Args:
         flow (Union[Path, str, dict]): The path to the JSON file or the JSON dictionary representing the flow.
@@ -106,17 +107,11 @@ def run_flow_from_json(
     Returns:
         List[RunOutputs]: A list of RunOutputs objects representing the results of running the flow.
     """
-    # Set all streaming to false
-    try:
-        import nest_asyncio
-
-        nest_asyncio.apply()
-    except Exception:  # noqa: BLE001
-        logger.opt(exception=True).warning("Could not apply nest_asyncio")
     if tweaks is None:
         tweaks = {}
     tweaks["stream"] = False
-    graph = load_flow_from_json(
+    graph = await asyncio.to_thread(
+        load_flow_from_json,
         flow=flow,
         tweaks=tweaks,
         log_level=log_level,
@@ -125,7 +120,7 @@ def run_flow_from_json(
         cache=cache,
         disable_logs=disable_logs,
     )
-    return run_graph(
+    result = await run_graph(
         graph=graph,
         session_id=session_id,
         input_value=input_value,
@@ -134,3 +129,45 @@ def run_flow_from_json(
         output_component=output_component,
         fallback_to_env_vars=fallback_to_env_vars,
     )
+    await logger.complete()
+    return result
+
+
+def run_flow_from_json(
+    flow: Path | str | dict,
+    input_value: str,
+    *,
+    session_id: str | None = None,
+    tweaks: dict | None = None,
+    input_type: str = "chat",
+    output_type: str = "chat",
+    output_component: str | None = None,
+    log_level: str | None = None,
+    log_file: str | None = None,
+    env_file: str | None = None,
+    cache: str | None = None,
+    disable_logs: bool | None = True,
+    fallback_to_env_vars: bool = False,
+) -> list[RunOutputs]:
+    coro = arun_flow_from_json(
+        flow,
+        input_value,
+        session_id=session_id,
+        tweaks=tweaks,
+        input_type=input_type,
+        output_type=output_type,
+        output_component=output_component,
+        log_level=log_level,
+        log_file=log_file,
+        env_file=env_file,
+        cache=cache,
+        disable_logs=disable_logs,
+        fallback_to_env_vars=fallback_to_env_vars,
+    )
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+
+    return loop.run_until_complete(coro)

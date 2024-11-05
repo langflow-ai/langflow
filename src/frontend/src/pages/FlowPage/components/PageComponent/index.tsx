@@ -1,8 +1,12 @@
 import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
-import IconComponent from "@/components/genericIconComponent";
+import CanvasControls, {
+  CustomControlButton,
+} from "@/components/canvasControlsComponent";
+import FlowToolbar from "@/components/flowToolbarComponent";
+import ForwardedIconComponent from "@/components/genericIconComponent";
 import LoadingComponent from "@/components/loadingComponent";
-import ShadTooltip from "@/components/shadTooltipComponent";
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import {
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
@@ -12,7 +16,9 @@ import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
 import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
-import { getNodeRenderType, isSupportedNodeTypes } from "@/utils/utils";
+import { useAddComponent } from "@/hooks/useAddComponent";
+import { nodeColorsName } from "@/utils/styleUtils";
+import { cn, isSupportedNodeTypes } from "@/utils/utils";
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -26,13 +32,14 @@ import { useHotkeys } from "react-hotkeys-hook";
 import ReactFlow, {
   Background,
   Connection,
-  ControlButton,
-  Controls,
   Edge,
   NodeDragHandler,
   OnSelectionChangeParams,
+  Panel,
   SelectionDragHandler,
   updateEdge,
+  useReactFlow,
+  useViewport,
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import {
@@ -116,6 +123,10 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
 
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [isHighlightingCursor, setIsHighlightingCursor] = useState(false);
+
+  const addComponent = useAddComponent();
+  const { zoomIn, zoomOut, fitView } = useReactFlow();
+  const { zoom } = useViewport();
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -392,6 +403,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
 
   const onNodeDragStart: NodeDragHandler = useCallback(() => {
     // 👇 make dragging a node undoable
+
     takeSnapshot();
     // 👉 you can place your event handlers here
   }, [takeSnapshot]);
@@ -404,6 +416,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
 
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
     // 👇 make dragging a selection undoable
+
     takeSnapshot();
   }, [takeSnapshot]);
 
@@ -431,23 +444,10 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
           event.dataTransfer.getData(datakey!),
         );
 
-        track("Component Added", { componentType: data.node?.display_name });
-
-        const newId = getNodeId(data.type);
-
-        const newNode: NodeType = {
-          id: newId,
-          type: getNodeRenderType(datakey!),
-          position: { x: 0, y: 0 },
-          data: {
-            ...data,
-            id: newId,
-          },
-        };
-        paste(
-          { nodes: [newNode], edges: [] },
-          { x: event.clientX, y: event.clientY },
-        );
+        addComponent(data.node!, data.type, {
+          x: event.clientX,
+          y: event.clientY,
+        });
       } else if (event.dataTransfer.types.some((types) => types === "Files")) {
         takeSnapshot();
         const position = {
@@ -470,8 +470,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
         });
       }
     },
-    // Specify dependencies for useCallback
-    [getNodeId, setNodes, takeSnapshot, paste],
+    [takeSnapshot, addComponent],
   );
 
   const onEdgeUpdateStart = useCallback(() => {
@@ -576,10 +575,23 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     [isAddingNote],
   );
 
+  const handleEdgeClick = (event, edge) => {
+    const color =
+      nodeColorsName[edge?.data?.targetHandle?.inputTypes[0]] ||
+      "hsl(var(--foreground))";
+
+    console.log(edge?.data?.targetHandle);
+
+    const innerColor = `hsl(var(--inner-${color}-muted-foreground))`;
+    document.documentElement.style.setProperty("--selected", innerColor);
+  };
+
+  const { open } = useSidebar();
+
   return (
-    <div className="h-full w-full" ref={reactFlowWrapper}>
+    <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
       {showCanvas ? (
-        <div id="react-flow-id" className="h-full w-full">
+        <div id="react-flow-id" className="h-full w-full bg-canvas">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -596,7 +608,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             onSelectionDragStart={onSelectionDragStart}
             onSelectionEnd={onSelectionEnd}
             onSelectionStart={onSelectionStart}
-            connectionRadius={25}
+            connectionRadius={30}
             edgeTypes={edgeTypes}
             connectionLineComponent={ConnectionLineComponent}
             onDragOver={onDragOver}
@@ -614,29 +626,42 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             proOptions={{ hideAttribution: true }}
             onPaneClick={onPaneClick}
             onPaneMouseMove={onPaneMouseMove}
+            onEdgeClick={handleEdgeClick}
           >
             <Background className="" />
             {!view && (
-              <Controls className="fill-foreground stroke-foreground text-primary [&>button]:border-b-border [&>button]:bg-muted hover:[&>button]:bg-border">
-                <ControlButton
-                  data-testid="add_note"
-                  onClick={() => {
-                    setIsAddingNote(true);
-                  }}
-                  className="postion react-flow__controls absolute -top-10"
-                >
-                  <ShadTooltip content="Add note">
-                    <div>
-                      <IconComponent
-                        name="SquarePen"
-                        aria-hidden="true"
-                        className="scale-125"
-                      />
-                    </div>
-                  </ShadTooltip>
-                </ControlButton>
-              </Controls>
+              <>
+                <CanvasControls>
+                  <CustomControlButton
+                    iconName="sticky-note"
+                    tooltipText="Add Note"
+                    onClick={() => {
+                      setIsAddingNote(true);
+                    }}
+                    iconClasses="text-primary"
+                    testId="add_note"
+                  />
+                </CanvasControls>
+                <FlowToolbar />
+              </>
             )}
+            <Panel
+              className={cn(
+                "react-flow__controls !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
+                open
+                  ? "pointer-events-none -translate-x-full opacity-0"
+                  : "pointer-events-auto opacity-100",
+              )}
+              position="top-left"
+            >
+              <SidebarTrigger className="h-fit w-fit px-3 py-1.5">
+                <ForwardedIconComponent
+                  name="PanelRightClose"
+                  className="h-4 w-4"
+                />
+                Components
+              </SidebarTrigger>
+            </Panel>
             <SelectionMenu
               lastSelection={lastSelection}
               isVisible={selectionMenuVisible}

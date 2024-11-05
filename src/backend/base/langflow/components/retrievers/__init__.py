@@ -1,8 +1,8 @@
-from .AmazonKendra import AmazonKendraRetrieverComponent
-from .MetalRetriever import MetalRetrieverComponent
-from .MultiQueryRetriever import MultiQueryRetrieverComponent
-from .VectaraSelfQueryRetriver import VectaraSelfQueryRetriverComponent
-from .VectorStoreRetriever import VectoStoreRetrieverComponent
+from .amazon_kendra import AmazonKendraRetrieverComponent
+from .metal import MetalRetrieverComponent
+from .multi_query import MultiQueryRetrieverComponent
+from .vectara_self_query import VectaraSelfQueryRetriverComponent
+from .vector_store import VectoStoreRetrieverComponent
 
 __all__ = [
     "AmazonKendraRetrieverComponent",

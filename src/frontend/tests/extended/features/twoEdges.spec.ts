@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { test } from "@playwright/test";
 
 test("user should be able to see multiple edges and interact with them", async ({
   page,
@@ -23,28 +23,28 @@ test("user should be able to see multiple edges and interact with them", async (
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
   await page.waitForTimeout(1000);
 
-  await page.getByText("Vector Store RAG", { exact: true }).last().click();
+  await page.getByText("Vector RAG", { exact: true }).last().click();
   await page.waitForTimeout(3000);
   await page.getByText("Retriever", { exact: true }).first().isVisible();
   await page.getByText("Search Results", { exact: true }).first().isVisible();
 
   const focusElementsOnBoard = async ({ page }) => {
-    await page.waitForSelector('[title="fit view"]', { timeout: 30000 });
-    const focusElements = await page.getByTitle("fit view");
+    await page.waitForSelector('[data-testid="fit_view"]', { timeout: 30000 });
+    const focusElements = await page.getByTestId("fit_view");
     await focusElements.click();
   };
 
   await focusElementsOnBoard({ page });
 
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("input-inspection-retriever").first().click();
   await page.getByText("Retriever", { exact: true }).first().isHidden();

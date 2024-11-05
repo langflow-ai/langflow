@@ -26,11 +26,6 @@ from langflow.inputs.utils import instantiate_input
 from langflow.schema.message import Message
 
 
-@pytest.fixture
-def client():
-    pass
-
-
 def test_table_input_valid():
     data = TableInput(name="valid_table", value=[{"key": "value"}, {"key2": "value2"}])
     assert data.value == [{"key": "value"}, {"key2": "value2"}]
@@ -76,7 +71,7 @@ def test_instantiate_input_valid():
 
 
 def test_instantiate_input_invalid():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid input type: InvalidInput"):
         instantiate_input("InvalidInput", {"name": "invalid_input", "value": "This is a string"})
 
 
@@ -230,5 +225,5 @@ def test_instantiate_input_comprehensive():
         input_instance = instantiate_input(input_type, data)
         assert isinstance(input_instance, InputTypesMap[input_type])
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid input type: InvalidInput"):
         instantiate_input("InvalidInput", {"name": "invalid_input", "value": "Invalid"})

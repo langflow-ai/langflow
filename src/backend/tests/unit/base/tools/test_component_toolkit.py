@@ -3,22 +3,17 @@ import os
 import pytest
 
 from langflow.base.tools.component_tool import ComponentToolkit
-from langflow.components.agents.ToolCallingAgent import ToolCallingAgentComponent
-from langflow.components.inputs.ChatInput import ChatInput
-from langflow.components.models.OpenAIModel import OpenAIModelComponent
+from langflow.components.agents import ToolCallingAgentComponent
+from langflow.components.inputs import ChatInput
+from langflow.components.models import OpenAIModelComponent
 from langflow.components.outputs import ChatOutput
-from langflow.graph.graph.base import Graph
+from langflow.graph import Graph
 from langflow.schema.message import Message
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 
 
 @pytest.fixture
-def client():
-    pass
-
-
-@pytest.fixture
-def add_toolkit_output():
+def _add_toolkit_output():
     FEATURE_FLAGS.add_toolkit_output = True
     yield
     FEATURE_FLAGS.add_toolkit_output = False
@@ -78,16 +73,35 @@ def test_component_tool():
             "title": "Files",
             "type": "array",
         },
+        "background_color": {
+            "default": "",
+            "description": "The background color of the icon.",
+            "title": "Background Color",
+            "type": "string",
+        },
+        "chat_icon": {
+            "default": "",
+            "description": "The icon of the message.",
+            "title": "Chat Icon",
+            "type": "string",
+        },
+        "text_color": {
+            "default": "",
+            "description": "The text color of the name",
+            "title": "Text Color",
+            "type": "string",
+        },
     }
     assert component_toolkit.component == chat_input
 
-    result = component_tool.invoke(input=dict(input_value="test"))
+    result = component_tool.invoke(input={"input_value": "test"})
     assert isinstance(result, Message)
     assert result.get_text() == "test"
 
 
 @pytest.mark.api_key_required
-def test_component_tool_with_api_key(client, add_toolkit_output):
+@pytest.mark.usefixtures("_add_toolkit_output")
+def test_component_tool_with_api_key():
     chat_output = ChatOutput()
     openai_llm = OpenAIModelComponent()
     openai_llm.set(api_key=os.environ["OPENAI_API_KEY"])

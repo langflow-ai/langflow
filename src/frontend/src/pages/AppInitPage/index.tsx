@@ -1,5 +1,8 @@
 import { useGetAutoLogin } from "@/controllers/API/queries/auth";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
+import { useGetBasicExamplesQuery } from "@/controllers/API/queries/flows/use-get-basic-examples";
+import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
+import { useGetTagsQuery } from "@/controllers/API/queries/store";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import { useGetVersionQuery } from "@/controllers/API/queries/version";
 import { CustomLoadingPage } from "@/customization/components/custom-loading-page";
@@ -21,10 +24,14 @@ export function AppInitPage() {
   useGetVersionQuery({ enabled: isFetched });
   useGetConfig({ enabled: isFetched });
   useGetGlobalVariables({ enabled: isFetched });
+  useGetBasicExamplesQuery({ enabled: isFetched });
+  useGetTagsQuery({ enabled: isFetched });
 
+  const { refetch: refetchFolders } = useGetFoldersQuery();
   useEffect(() => {
     if (isFetched) {
       refreshStars();
+      refetchFolders();
     }
   }, [isFetched]);
 

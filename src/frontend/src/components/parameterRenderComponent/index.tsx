@@ -2,6 +2,7 @@ import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { useMemo } from "react";
+import SliderComponent from "../sliderComponent";
 import TableNodeComponent from "./components/TableNodeComponent";
 import CodeAreaComponent from "./components/codeAreaComponent";
 import DictComponent from "./components/dictComponent";
@@ -95,7 +96,13 @@ export function ParameterRenderComponent({
     }
     switch (templateData.type) {
       case "NestedDict":
-        return <DictComponent {...baseInputProps} id={`dict_${id}`} />;
+        return (
+          <DictComponent
+            name={name ?? ""}
+            {...baseInputProps}
+            id={`dict_${id}`}
+          />
+        );
       case "dict":
         return (
           <KeypairListComponent
@@ -105,7 +112,13 @@ export function ParameterRenderComponent({
           />
         );
       case "bool":
-        return <ToggleShadComponent {...baseInputProps} id={`toggle_${id}`} />;
+        return (
+          <ToggleShadComponent
+            size="medium"
+            {...baseInputProps}
+            id={`toggle_${id}`}
+          />
+        );
       case "link":
         return (
           <LinkComponent
@@ -157,6 +170,22 @@ export function ParameterRenderComponent({
             description={templateData.info || "Add or edit data"}
             columns={templateData?.table_schema?.columns}
             tableTitle={templateData?.display_name ?? "Table"}
+          />
+        );
+      case "slider":
+        return (
+          <SliderComponent
+            {...baseInputProps}
+            value={templateValue}
+            rangeSpec={templateData.range_spec}
+            minLabel={templateData?.min_label}
+            maxLabel={templateData?.max_label}
+            minLabelIcon={templateData?.min_label_icon}
+            maxLabelIcon={templateData?.max_label_icon}
+            sliderButtons={templateData?.slider_buttons}
+            sliderButtonsOptions={templateData?.slider_buttons_options}
+            sliderInput={templateData?.slider_input}
+            id={`slider_${id}`}
           />
         );
       default:

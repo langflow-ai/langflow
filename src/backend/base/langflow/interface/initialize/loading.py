@@ -20,13 +20,12 @@ if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
 
 
-async def instantiate_class(
+def instantiate_class(
     vertex: Vertex,
     user_id=None,
     event_manager: EventManager | None = None,
 ) -> Any:
-    """Instantiate class from module type and key, and params"""
-
+    """Instantiate class from module type and key, and params."""
     vertex_type = vertex.vertex_type
     base_type = vertex.base_type
     logger.debug(f"Instantiating {vertex_type} of type {base_type}")
@@ -43,6 +42,7 @@ async def instantiate_class(
         _parameters=custom_params,
         _vertex=vertex,
         _tracing_service=get_tracing_service(),
+        _id=vertex.id,
     )
     if hasattr(custom_component, "set_event_manager"):
         custom_component.set_event_manager(event_manager)
@@ -53,11 +53,12 @@ async def get_instance_results(
     custom_component,
     custom_params: dict,
     vertex: Vertex,
+    *,
     fallback_to_env_vars: bool = False,
     base_type: str = "component",
 ):
     custom_params = update_params_with_load_from_db_fields(
-        custom_component, custom_params, vertex.load_from_db_fields, fallback_to_env_vars
+        custom_component, custom_params, vertex.load_from_db_fields, fallback_to_env_vars=fallback_to_env_vars
     )
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
@@ -77,7 +78,7 @@ def get_params(vertex_params):
 
 
 def convert_params_to_sets(params):
-    """Convert certain params to sets"""
+    """Convert certain params to sets."""
     if "allowed_special" in params:
         params["allowed_special"] = set(params["allowed_special"])
     if "disallowed_special" in params:
@@ -106,40 +107,31 @@ def update_params_with_load_from_db_fields(
     custom_component: CustomComponent,
     params,
     load_from_db_fields,
+    *,
     fallback_to_env_vars=False,
 ):
-    # For each field in load_from_db_fields, we will check if it's in the params
-    # and if it is, we will get the value from the custom_component.keys(name)
-    # and update the params with the value
     for field in load_from_db_fields:
-        if field in params:
-            try:
-                key = None
-                try:
-                    key = custom_component.variables(params[field], field)
-                except ValueError as e:
-                    # check if "User id is not set" is in the error message, this is an internal bug
-                    if "User id is not set" in str(e):
-                        raise
-                    logger.debug(str(e))
-                if fallback_to_env_vars and key is None:
-                    var = os.getenv(params[field])
-                    if var is None:
-                        msg = f"Environment variable {params[field]} is not set."
-                        raise ValueError(msg)
-                    key = var
-                    logger.info(f"Using environment variable {params[field]} for {field}")
-                if key is None:
-                    logger.warning(f"Could not get value for {field}. Setting it to None.")
+        if field not in params:
+            continue
 
-                params[field] = key
-
-            except TypeError:
+        try:
+            key = custom_component.variables(params[field], field)
+        except ValueError as e:
+            if any(reason in str(e) for reason in ["User id is not set", "variable not found."]):
                 raise
+            logger.debug(str(e))
+            key = None
 
-            except Exception:  # noqa: BLE001
-                logger.exception(f"Failed to get value for {field} from custom component. Setting it to None.")
-                params[field] = None
+        if fallback_to_env_vars and key is None:
+            key = os.getenv(params[field])
+            if key:
+                logger.info(f"Using environment variable {params[field]} for {field}")
+            else:
+                logger.error(f"Environment variable {params[field]} is not set.")
+
+        params[field] = key if key is not None else None
+        if key is None:
+            logger.warning(f"Could not get value for {field}. Setting it to None.")
 
     return params
 

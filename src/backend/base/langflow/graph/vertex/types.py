@@ -12,7 +12,7 @@ from loguru import logger
 from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, log_vertex_build, rewrite_file_path, serialize_field
 from langflow.graph.vertex.base import Vertex
-from langflow.graph.vertex.exceptions import NoComponentInstance
+from langflow.graph.vertex.exceptions import NoComponentInstanceError
 from langflow.schema import Data
 from langflow.schema.artifact import ArtifactType
 from langflow.schema.message import Message
@@ -31,9 +31,9 @@ class CustomComponentVertex(Vertex):
     def __init__(self, data: NodeData, graph):
         super().__init__(data, graph=graph, base_type="custom_components")
 
-    def _built_object_repr(self):
+    def built_object_repr(self):
         if self.artifacts and "repr" in self.artifacts:
-            return self.artifacts["repr"] or super()._built_object_repr()
+            return self.artifacts["repr"] or super().built_object_repr()
         return None
 
 
@@ -42,43 +42,40 @@ class ComponentVertex(Vertex):
         super().__init__(data, graph=graph, base_type="component")
 
     def get_input(self, name: str) -> InputTypes:
-        if self._custom_component is None:
+        if self.custom_component is None:
             msg = f"Vertex {self.id} does not have a component instance."
             raise ValueError(msg)
-        return self._custom_component.get_input(name)
+        return self.custom_component.get_input(name)
 
     def get_output(self, name: str) -> Output:
-        if self._custom_component is None:
-            raise NoComponentInstance(self.id)
-        return self._custom_component.get_output(name)
+        if self.custom_component is None:
+            raise NoComponentInstanceError(self.id)
+        return self.custom_component.get_output(name)
 
-    def _built_object_repr(self):
+    def built_object_repr(self):
         if self.artifacts and "repr" in self.artifacts:
-            return self.artifacts["repr"] or super()._built_object_repr()
+            return self.artifacts["repr"] or super().built_object_repr()
         return None
 
-    def _update_built_object_and_artifacts(self, result):
-        """
-        Updates the built object and its artifacts.
-        """
+    def _update_built_object_and_artifacts(self, result) -> None:
+        """Updates the built object and its artifacts."""
         if isinstance(result, tuple):
             if len(result) == 2:  # noqa: PLR2004
-                self._built_object, self.artifacts = result
+                self.built_object, self.artifacts = result
             elif len(result) == 3:  # noqa: PLR2004
-                self._custom_component, self._built_object, self.artifacts = result
-                self.logs = self._custom_component._output_logs
+                self.custom_component, self.built_object, self.artifacts = result
+                self.logs = self.custom_component._output_logs
                 for key in self.artifacts:
                     self.artifacts_raw[key] = self.artifacts[key].get("raw", None)
                     self.artifacts_type[key] = self.artifacts[key].get("type", None) or ArtifactType.UNKNOWN.value
         else:
-            self._built_object = result
+            self.built_object = result
 
-        for key, value in self._built_object.items():
+        for key, value in self.built_object.items():
             self.add_result(key, value)
 
     def get_edge_with_target(self, target_id: str) -> Generator[CycleEdge, None, None]:
-        """
-        Get the edge with the target id.
+        """Get the edge with the target id.
 
         Args:
             target_id: The target id of the edge.
@@ -91,8 +88,7 @@ class ComponentVertex(Vertex):
                 yield edge
 
     async def _get_result(self, requester: Vertex, target_handle_name: str | None = None) -> Any:
-        """
-        Retrieves the result of the built component.
+        """Retrieves the result of the built component.
 
         If the component has not been built yet, a ValueError is raised.
 
@@ -100,7 +96,7 @@ class ComponentVertex(Vertex):
             The built result if use_result is True, else the built object.
         """
         flow_id = self.graph.flow_id
-        if not self._built:
+        if not self.built:
             default_value = UNDEFINED
             for edge in self.get_edge_with_target(requester.id):
                 # We need to check if the edge is a normal edge
@@ -134,7 +130,7 @@ class ComponentVertex(Vertex):
                         result = self.results[edge.source_handle.name]
                     else:
                         result = cast(Any, output.value)
-                except NoComponentInstance:
+                except NoComponentInstanceError:
                     result = self.results[edge.source_handle.name]
                 break
         if result is UNDEFINED:
@@ -151,8 +147,7 @@ class ComponentVertex(Vertex):
         return result
 
     def extract_messages_from_artifacts(self, artifacts: dict[str, Any]) -> list[dict]:
-        """
-        Extracts messages from the artifacts.
+        """Extracts messages from the artifacts.
 
         Args:
             artifacts (Dict[str, Any]): The artifacts to extract messages from.
@@ -161,10 +156,9 @@ class ComponentVertex(Vertex):
             List[str]: The extracted messages.
         """
         messages = []
-        for key in artifacts:
-            artifact = artifacts[key]
+        for key, artifact in artifacts.items():
             if any(
-                key not in artifact for key in ["text", "sender", "sender_name", "session_id", "stream_url"]
+                k not in artifact for k in ["text", "sender", "sender_name", "session_id", "stream_url"]
             ) and not isinstance(artifact, Message):
                 continue
             message_dict = artifact if isinstance(artifact, dict) else artifact.model_dump()
@@ -187,7 +181,7 @@ class ComponentVertex(Vertex):
                 )
         return messages
 
-    def _finalize_build(self):
+    def finalize_build(self) -> None:
         result_dict = self.get_built_result()
         # We need to set the artifacts to pass information
         # to the frontend
@@ -207,14 +201,14 @@ class ComponentVertex(Vertex):
 class InterfaceVertex(ComponentVertex):
     def __init__(self, data: NodeData, graph):
         super().__init__(data, graph=graph)
-        self._added_message = None
+        self.added_message = None
         self.steps = [self._build, self._run]
         self.is_interface_component = True
 
-    def build_stream_url(self):
+    def build_stream_url(self) -> str:
         return f"/api/v1/build/{self.graph.flow_id}/{self.id}/stream"
 
-    def _built_object_repr(self):
+    def built_object_repr(self):
         if self.task_id and self.is_task:
             if task := self.get_task():
                 return str(task.info)
@@ -233,23 +227,22 @@ class InterfaceVertex(ComponentVertex):
                 _artifact = {k.title().replace("_", " "): v for k, v in artifact.items() if v is not None}
                 artifacts.append(_artifact)
             return yaml.dump(artifacts, default_flow_style=False, allow_unicode=True)
-        return super()._built_object_repr()
+        return super().built_object_repr()
 
     def _process_chat_component(self):
-        """
-        Process the chat component and return the message.
+        """Process the chat component and return the message.
 
         This method processes the chat component by extracting the necessary parameters
         such as sender, sender_name, and message from the `params` dictionary. It then
-        performs additional operations based on the type of the `_built_object` attribute.
-        If `_built_object` is an instance of `AIMessage`, it creates a `ChatOutputResponse`
-        object using the `from_message` method. If `_built_object` is not an instance of
-        `UnbuiltObject`, it checks the type of `_built_object` and performs specific
-        operations accordingly. If `_built_object` is a dictionary, it converts it into a
-        code block. If `_built_object` is an instance of `Data`, it assigns the `text`
+        performs additional operations based on the type of the `built_object` attribute.
+        If `built_object` is an instance of `AIMessage`, it creates a `ChatOutputResponse`
+        object using the `from_message` method. If `built_object` is not an instance of
+        `UnbuiltObject`, it checks the type of `built_object` and performs specific
+        operations accordingly. If `built_object` is a dictionary, it converts it into a
+        code block. If `built_object` is an instance of `Data`, it assigns the `text`
         attribute to the `message` variable. If `message` is an instance of `AsyncIterator`
         or `Iterator`, it builds a stream URL and sets `message` to an empty string. If
-        `_built_object` is not a string, it converts it to a string. If `message` is a
+        `built_object` is not a string, it converts it to a string. If `message` is a
         generator or iterator, it assigns it to the `message` variable. Finally, it creates
         a `ChatOutputResponse` object using the extracted parameters and assigns it to the
         `artifacts` attribute. If `artifacts` is not None, it calls the `model_dump` method
@@ -295,7 +288,7 @@ class InterfaceVertex(ComponentVertex):
                 message = ""
                 self.results["text"] = message
                 self.results["message"].text = message
-                self._built_object = self.results
+                self.built_object = self.results
             elif not isinstance(text_output, str):
                 message = str(text_output)
             # if the message is a generator or iterator
@@ -324,8 +317,7 @@ class InterfaceVertex(ComponentVertex):
         return message
 
     def _process_data_component(self):
-        """
-        Process the record component of the vertex.
+        """Process the record component of the vertex.
 
         If the built object is an instance of `Data`, it calls the `model_dump` method
         and assigns the result to the `artifacts` attribute.
@@ -343,12 +335,12 @@ class InterfaceVertex(ComponentVertex):
             ValueError: If an element in the list is not an instance of `Data` and
                 `ignore_errors` is set to `False`.
         """
-        if isinstance(self._built_object, Data):
-            artifacts = [self._built_object.data]
-        elif isinstance(self._built_object, list):
+        if isinstance(self.built_object, Data):
+            artifacts = [self.built_object.data]
+        elif isinstance(self.built_object, list):
             artifacts = []
             ignore_errors = self.params.get("ignore_errors", False)
-            for value in self._built_object:
+            for value in self.built_object:
                 if isinstance(value, Data):
                     artifacts.append(value.data)
                 elif ignore_errors:
@@ -357,23 +349,19 @@ class InterfaceVertex(ComponentVertex):
                     msg = f"Data expected, but got {value} of type {type(value)}"
                     raise ValueError(msg)
         self.artifacts = DataOutputResponse(data=artifacts)
-        return self._built_object
+        return self.built_object
 
-    async def _run(self, *args, **kwargs):
-        if self.is_interface_component:
-            if self.vertex_type in CHAT_COMPONENTS:
-                message = self._process_chat_component()
-            elif self.vertex_type in RECORDS_COMPONENTS:
-                message = self._process_data_component()
-            if isinstance(self._built_object, AsyncIterator | Iterator):
-                if self.params.get("return_data", False):
-                    self._built_object = Data(text=message, data=self.artifacts)
-                else:
-                    self._built_object = message
-            self._built_result = self._built_object
-
-        else:
-            await super()._run(*args, **kwargs)
+    async def _run(self, *args, **kwargs) -> None:  # noqa: ARG002
+        if self.vertex_type in CHAT_COMPONENTS:
+            message = self._process_chat_component()
+        elif self.vertex_type in RECORDS_COMPONENTS:
+            message = self._process_data_component()
+        if isinstance(self.built_object, AsyncIterator | Iterator):
+            if self.params.get("return_data", False):
+                self.built_object = Data(text=message, data=self.artifacts)
+            else:
+                self.built_object = message
+        self.built_result = self.built_object
 
     async def stream(self):
         iterator = self.params.get(INPUT_FIELD_NAME, None)
@@ -422,17 +410,17 @@ class InterfaceVertex(ComponentVertex):
             session_id=self.params.get("session_id", ""),
         )
         self.params[INPUT_FIELD_NAME] = complete_message
-        if isinstance(self._built_object, dict):
-            for key, value in self._built_object.items():
+        if isinstance(self.built_object, dict):
+            for key, value in self.built_object.items():
                 if hasattr(value, "text") and (isinstance(value.text, AsyncIterator | Iterator) or value.text == ""):
-                    self._built_object[key] = message
+                    self.built_object[key] = message
         else:
-            self._built_object = message
+            self.built_object = message
             self.artifacts_type = ArtifactType.MESSAGE
 
         # Update artifacts with the message
         # and remove the stream_url
-        self._finalize_build()
+        self.finalize_build()
         logger.debug(f"Streamed message: {complete_message}")
         # Set the result in the vertex of origin
         edges = self.get_edge_with_target(self.id)
@@ -442,24 +430,24 @@ class InterfaceVertex(ComponentVertex):
                 if isinstance(value, AsyncIterator | Iterator):
                     origin_vertex.results[key] = complete_message
         if (
-            self._custom_component
-            and hasattr(self._custom_component, "should_store_message")
-            and hasattr(self._custom_component, "store_message")
+            self.custom_component
+            and hasattr(self.custom_component, "should_store_message")
+            and hasattr(self.custom_component, "store_message")
         ):
-            self._custom_component.store_message(message)
+            self.custom_component.store_message(message)
         log_vertex_build(
             flow_id=self.graph.flow_id,
             vertex_id=self.id,
             valid=True,
-            params=self._built_object_repr(),
+            params=self.built_object_repr(),
             data=self.result,
             artifacts=self.artifacts,
         )
 
         self._validate_built_object()
-        self._built = True
+        self.built = True
 
-    async def consume_async_generator(self):
+    async def consume_async_generator(self) -> None:
         async for _ in self.stream():
             pass
 
@@ -480,9 +468,9 @@ class StateVertex(ComponentVertex):
             return super().successors_ids
         return self._successors_ids
 
-    def _built_object_repr(self):
+    def built_object_repr(self):
         if self.artifacts and "repr" in self.artifacts:
-            return self.artifacts["repr"] or super()._built_object_repr()
+            return self.artifacts["repr"] or super().built_object_repr()
         return None
 
 

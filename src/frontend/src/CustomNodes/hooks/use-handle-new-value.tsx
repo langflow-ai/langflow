@@ -80,7 +80,7 @@ const useHandleOnNewValue = ({
       });
     };
 
-    if (shouldUpdate && changes.value) {
+    if (shouldUpdate && changes.value !== undefined) {
       mutateTemplate(
         changes.value,
         newNode,

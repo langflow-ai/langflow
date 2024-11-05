@@ -1,6 +1,6 @@
 import pytest
 
-from langflow.components.prototypes.UpdateData import UpdateDataComponent
+from langflow.components.prototypes import UpdateDataComponent
 from langflow.schema import Data
 
 
@@ -53,7 +53,6 @@ def test_update_build_config_exceed_limit(update_data_component):
         update_data_component.update_build_config(build_config, 16, "number_of_fields")
 
 
-@pytest.mark.asyncio
 async def test_build_data(update_data_component):
     update_data_component._attributes = {
         "field_1_key": {"key1": "new_value1"},
@@ -94,10 +93,8 @@ def test_validate_text_key_valid(update_data_component):
 def test_validate_text_key_invalid(update_data_component):
     data = Data(data={"key1": "value1", "key2": "value2"}, text_key="key1")
     update_data_component.text_key = "invalid_key"
-
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(ValueError) as exc_info:  # noqa: PT011
         update_data_component.validate_text_key(data)
-
     expected_error_message = (
         f"Text Key: '{update_data_component.text_key}' not found in the Data keys: {', '.join(data.data.keys())}"
     )

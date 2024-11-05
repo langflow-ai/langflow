@@ -16,16 +16,17 @@ test.describe("group node test", () => {
     }
 
     while (modalCount === 0) {
-      await page.getByText("New Project", { exact: true }).click();
+      await page.getByText("New Flow", { exact: true }).click();
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
+    await page.getByTestId("side_nav_options_all-templates").click();
     await page
       .getByRole("heading", { name: "Basic Prompting" })
       .first()
       .click();
     await page.waitForTimeout(1000);
-    await page.getByLabel("fit view").first().click();
+    await page.getByTestId("fit_view").first().click();
 
     await page.getByTestId("title-OpenAI").click();
     await page.getByTestId("title-OpenAI").click({ modifiers: ["Control"] });

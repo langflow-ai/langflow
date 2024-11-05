@@ -15,4 +15,9 @@ export const useFolderStore = create<FoldersStoreType>((set, get) => ({
   setFolderIdDragging: (id) => set(() => ({ folderIdDragging: id })),
   starterProjectId: "",
   setStarterProjectId: (id) => set(() => ({ starterProjectId: id })),
+  folders: [],
+  setFolders: (folders) => set(() => ({ folders: folders })),
+  showFolderModal: false,
+  setShowFolderModal: (showFolderModal) =>
+    set(() => ({ showFolderModal: showFolderModal })),
 }));

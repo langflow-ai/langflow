@@ -6,27 +6,45 @@
 
 @layer base {
   :root {
+    --font-sans: "Inter", sans-serif;
+    --font-mono: "JetBrains Mono", monospace;
+
+    --foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
+    --background: 0 0% 100%; /* hsl(0, 0%, 100%) */
+    --muted: 240 5% 96%; /* hsl(240, 5%, 96%) */
+    --muted-foreground: 240 4% 46%; /* hsl(240, 4%, 46%) */
+    --card: 0 0% 100%; /* hsl(0, 0%, 100%) */
+    --card-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
+    --popover: 0 0% 100%; /* hsl(0, 0%, 100%) */
+    --popover-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
+    --border: 240 6% 90%; /* hsl(240, 6%, 90%) */
+    --input: 240 6% 90%; /* hsl(240, 6%, 90%) */
+    --primary-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
+    --primary: 0 0% 0%; /* hsl(0, 0%, 0%) */
+    --secondary: 0 0% 100%; /* hsl(0, 0%, 100%) */
+    --secondary-foreground: 240 4% 16%; /* hsl(240, 4%, 16%) */
+    --accent: 240 5% 96%; /* hsl(240, 5%, 96%) */
+    --accent-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
+    --destructive: 0 72% 51%; /* hsl(0, 72%, 51%) */
+    --destructive-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
+    --ring: 0 0% 0%; /* hsl(0, 0%, 0%) */
+    --primary-hover: 240 4% 16%; /* hsl(240, 4%, 16%) */
+    --secondary-hover: 240 6% 90%; /* hsl(240, 6%, 90%) */
+    --placeholder-foreground: 240 5% 65%; /* hsl(240, 5%, 65%) */
+    --canvas: 240 5% 96%; /* hsl(240, 5%, 96%) */
+    --accent-emerald: 149 80% 90%; /* hsl(149, 80%, 90%) */
+    --accent-emerald-foreground: 161 41% 30%; /* hsl(161, 41%, 30%) */
+    --accent-indigo: 226 100% 94%; /* hsl(226, 100%, 94%) */
+    --accent-indigo-foreground: 243 75% 59%; /* hsl(243, 75%, 59%) */
+    --accent-pink: 326 78% 95%; /* hsl(326, 78%, 95%) */
+    --accent-pink-foreground: 333 71% 51%; /* hsl(333, 71%, 51%) */
+    --note-amber: 48 97% 77%; /* hsl(48, 97%, 77%) */
+    --tooltip: 0 0% 0%; /* hsl(0, 0%, 0%) */
+    --tooltip-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
+
+    --canvas-dark: 240 6% 10%; /* hsl(240, 6%, 10%) */
+
     --node-selected: 243 75% 59%;
-    --background: 0 0% 100%; /* hsl(0 0% 100%) */
-    --foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
-    --muted: 210 40% 98%; /* hsl(210 40% 98%) */
-    --muted-foreground: 215.4 16.3% 46.9%; /* hsl(215 16% 46%) */
-    --popover: 0 0% 100%; /* hsl(0 0% 100%) */
-    --popover-foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
-    --card: 0 0% 100%; /* hsl(0 0% 100%) */
-    --card-foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
-    --border: 214.3 21.8% 91.4%; /* hsl(214 32% 91%) */
-    --input: 214.3 21.8% 91.4%; /* hsl(214 32% 91%) */
-    --primary: 222.2 27% 11.2%; /* hsl(222 27% 18%) */
-    --primary-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
-    --secondary: 210 40% 96.1%; /* hsl(210 40% 96%) */
-    --secondary-foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
-    --accent: 210 30% 96.1%; /* hsl(210 30% 96%) */
-    --accent-foreground: 222.2 47.4% 11.2%; /* hsl(222 47% 11%) */
-    --destructive: 0 60% 40%; /* hsl(0 60% 40%) */
-    --destructive-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
-    --radius: 0.5rem;
-    --ring: 215 20.2% 65.1%; /* hsl(215 20% 65%) */
     --round-btn-shadow: #00000063;
     --ice: #31a3cc;
     --selected: #2196f3;
@@ -66,7 +84,7 @@
     --chat-trigger-disabled: #b4c3da;
     --status-red: #ef4444;
     --status-yellow: #eab308;
-    --chat-send: #059669;
+    --chat-send: #000000;
     --status-green: #4ade80;
     --status-blue: #2563eb;
     --status-gray: #6b7280;
@@ -74,21 +92,110 @@
     --note-default: #f1f5f9;
     --note-indigo: #e0e7ff;
     --note-emerald: #d1fae5;
-    --note-amber: #fef3c7;
     --note-red: #fee2e2;
-
+    --error-red: 0, 86%, 97%; /*hsla(0, 86%, 97%)*/
+    --error-red-border: 0, 96%, 89%; /*hsla(0,96%,89%)*/
     --note-default-opacity: #f1f5f980;
     --note-indigo-opacity: #312e8180;
     --note-emerald-opacity: #064e3b80;
     --note-amber-opacity: #78350f80;
     --note-red-opacity: #7f1d1d80;
+    --code-background: var(--canvas);
+    --emerald-success: 160.1 84.1% 39.4%;
+    --accent-emerald-foreground: 161.4 93.5% 30.4%;
+    --placeholder: 240 5% 64.9%;
+    --hard-zinc: 240 5.2% 33.9%;
+    --smooth-red: 0 93.3% 94.1%;
+    --radius: 0.5rem;
+
+    --accent-pink: 327.3 73.3% 97.1%;
+    --accent-pink-foreground: 333.3 71.4% 50.6%;
+
+    --inner-yellow: 40.6 96.1% 40.4%;
+    --inner-yellow-foreground: 50.4 97.8% 63.5%;
+    --inner-yellow-muted-foreground: 35.5 91.7% 32.9%;
+
+    --inner-blue: 221.2 83.2% 53.3%;
+    --inner-blue-foreground: 211.7 96.4% 78.4%;
+    --inner-blue-muted-foreground: 224.3 76.3% 48%;
+
+    --inner-gray: 215 13.8% 34.1%;
+    --inner-gray-foreground: 216 12.2% 83.9%;
+    --inner-gray-muted-foreground: 216.9 19.1% 26.7%;
+
+    --inner-lime: 84.8 85.2% 34.5%;
+    --inner-lime-foreground: 82 84.5% 67.1%;
+    --inner-lime-muted-foreground: 85.9 78.4% 27.3%;
+
+    --inner-red: 0 72.2% 50.6%;
+    --inner-red-foreground: 0 93.5% 81.8%;
+    --inner-red-muted-foreground: 345.3 82.7% 40.8%;
+
+    --inner-violet: 262.1 83.3% 57.8%;
+    --inner-violet-foreground: 252.5 94.7% 85.1%;
+    --inner-violet-muted-foreground: 263.4 70% 50.4%;
+
+    --inner-emerald: 161.4 93.5% 30.4%;
+    --inner-emerald-foreground: 156.2 71.6% 66.9%;
+    --inner-emerald-muted-foreground: 162.9 93.5% 24.3%;
+
+    --inner-fuchsia: 293.4 69.5% 48.8%;
+    --inner-fuchsia-foreground: 291.1 93.1% 82.9%;
+    --inner-fuchsia-muted-foreground: 294.7 72.4% 39.8%;
+
+    --inner-purple: 271.5 81.3% 55.9%;
+    --inner-purple-foreground: 269.2 97.4% 85.1%;
+    --inner-purple-muted-foreground: 272.1 71.7% 47.1%;
+
+    --inner-cyan: 191.6 91.4% 36.5%;
+    --inner-cyan-foreground: 187 92.4% 69%;
+    --inner-cyan-muted-foreground: 192.9 82.3% 31%;
+
+    --inner-indigo: 243.4 75.4% 58.6%;
+    --inner-indigo-foreground: 229.7 93.5% 81.8%;
+    --inner-indigo-muted-foreground: 244.5 57.9% 50.6%;
   }
 
   .dark {
+    --foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
+    --background: 240 6% 10%; /* hsl(240, 6%, 10%) */
+    --muted: 240 4% 16%; /* hsl(240, 4%, 16%) */
+    --muted-foreground: 240 5% 65%; /* hsl(240, 5%, 65%) */
+    --card: 240 6% 10%; /* hsl(240, 6%, 10%) */
+    --card-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
+    --popover: 240 6% 10%; /* hsl(240, 6%, 10%) */
+    --popover-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
+    --border: 240 5% 26%; /* hsl(240, 5%, 26%) */
+    --input: 240 5% 34%; /* hsl(240, 5%, 34%) */
+    --primary-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
+    --primary: 0 0% 100%; /* hsl(0, 0%, 100%) */
+    --secondary: 0 0% 0%; /* hsl(0, 0%, 0%) */
+    --secondary-foreground: 240 6% 90%; /* hsl(240, 6%, 90%) */
+    --accent: 240 4% 16%; /* hsl(240, 4%, 16%) */
+    --accent-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
+    --destructive: 0 84% 60%; /* hsl(0, 84%, 60%) */
+    --destructive-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
+    --ring: 0 0% 100%; /* hsl(0, 0%, 100%) */
+    --primary-hover: 240 6% 90%; /* hsl(240, 6%, 90%) */
+    --secondary-hover: 240 4% 16%; /* hsl(240, 4%, 16%) */
+    --placeholder-foreground: 240 4% 46%; /* hsl(240, 4%, 46%) */
+    --canvas: 0 0% 0%; /* hsl(0, 0%, 0%) */
+    --accent-emerald: 164 86% 16%; /* hsl(164, 86%, 16%) */
+    --accent-emerald-foreground: 158 64% 52%; /* hsl(158, 64%, 52%) */
+    --accent-indigo: 242 25% 34%; /* hsl(242, 25%, 34%) */
+    --accent-indigo-foreground: 234 89% 74%; /* hsl(234, 89%, 74%) */
+    --accent-pink: 336 30% 30%; /* hsl(336, 30%, 30%) */
+    --accent-pink-foreground: 329 86% 70%; /* hsl(329, 86%, 70%) */
+    --note-amber: 46 97% 65%; /* hsl(46, 97%, 65%) */
+    --tooltip: 0 0% 100%; /* hsl(0, 0%, 100%) */
+
+    --tooltip-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
+    --error-red: 0, 75%, 15%; /*hsla(0, 75%, 15%)*/
+    --error-red-border: 0, 70%, 35%; /*hsla(0,70%,35%)*/
+
     --note-default: #0f172a;
     --note-indigo: #312e81;
     --note-emerald: #064e3b;
-    --note-amber: #78350f;
     --note-red: #7f1d1d;
     --note-placeholder: 216 12% 84%; /* hsl(216 12% 84%) */
 
@@ -99,43 +206,14 @@
     --note-red-opacity: #7f1d1d80;
 
     --node-selected: 234 89% 74%;
-    --background: 224 28% 7.5%; /* hsl(224 10% 7.5%) */
-    --foreground: 213 31% 80%; /* hsl(213 31% 91%) */
+
     --ice: #60a5fa;
     --hover: #1a202e;
     --disabled-run: #6366f1;
     --selected: #0369a1;
 
-    --muted: 223 27% 11%; /* hsl(223 27% 11%) */
-    --muted-foreground: 215.4 16.3% 56.9%; /* hsl(215 16% 56%) */
-
-    --popover: 224 71% 4%; /* hsl(224 71% 4%) */
-    --popover-foreground: 215 20.2% 65.1%; /* hsl(215 20% 65%) */
-
-    --card: 224 25% 15.5%; /* hsl(224 71% 4%) */
-    --card-foreground: 213 31% 80%; /* hsl(213 31% 91%) */
-
-    --border: 216 24% 17%; /* hsl(216 34% 17%) */
-    --input: 216 24% 17%; /* hsl(216 34% 17%) */
-
-    --primary: 210 20% 80%; /* hsl(210 20% 80%) */
-    --primary-foreground: 222.2 27.4% 1.2%; /* hsl(222 47% 1%) */
-
-    --secondary: 222.2 30.4% 7.2%; /* hsl(222 47% 11%) */
-    --secondary-foreground: 210 40% 80%; /* hsl(210 40% 80%) */
-
-    --accent: 216 24% 20%; /* hsl(216 34% 17%) */
-    --accent-foreground: 210 30% 98%; /* hsl(210 40% 98%) */
-
-    --destructive: 0 60% 25%; /* hsl(0 60% 25%) */
-    --destructive-foreground: 210 40% 98%; /* hsl(210 40% 98%) */
-
     --filter-foreground: #eef2ff;
     --filter-background: #4e46e599;
-
-    --ring: 216 24% 30%; /* hsl(216 24% 30%) */
-
-    --radius: 0.5rem;
 
     --round-btn-shadow: #00000063;
 
@@ -163,10 +241,11 @@
     --chat-trigger-disabled: #2d3b54;
     --status-red: #ef4444;
     --status-yellow: #eab308;
-    --chat-send: #059669;
+    --chat-send: #ffffff;
     --status-green: #4ade80;
     --status-blue: #2563eb;
     --connection: #6d6c6c;
+    --code-background: var(--background);
 
     --beta-background: rgb(37 99 235);
     --beta-foreground: rgb(219 234 254);
@@ -174,5 +253,66 @@
 
     --chat-bot-icon: #235d70;
     --chat-user-icon: #4f3d6e;
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+    --emerald-success: 160.1 84.1% 39.4%;
+    --accent-emerald-foreground: 161.4 93.5% 30.4%;
+    --placeholder: 240 5% 64.9%;
+    --hard-zinc: 240 5.2% 33.9%;
+    --smooth-red: 0 93.3% 94.1%;
+
+    --accent-pink: 327.3 73.3% 97.1%;
+    --accent-pink-foreground: 333.3 71.4% 50.6%;
+
+    --inner-yellow: 47.9 95.8% 53.1%;
+    --inner-yellow-foreground: 35.5 91.7% 32.9%;
+    --inner-yellow-muted-foreground: 50.4 97.8% 63.5%;
+
+    --inner-blue: 213.1 93.9% 67.8%;
+    --inner-blue-foreground: 224.3 76.3% 48%;
+    --inner-blue-muted-foreground: 211.7 96.4% 78.4%;
+
+    --inner-gray: 217.9 10.6% 64.9%;
+    --inner-gray-foreground: 216.9 19.1% 26.7%;
+    --inner-gray-muted-foreground: 216 12.2% 83.9%;
+
+    --inner-lime: 82.7 78% 55.5%;
+    --inner-lime-foreground: 85.9 78.4% 27.3%;
+    --inner-lime-muted-foreground: 82 84.5% 67.1%;
+
+    --inner-red: 0 90.6% 70.8%;
+    --inner-red-foreground: 0 73.7% 41.8%;
+    --inner-red-muted-foreground: 0 93.5% 81.8%;
+
+    --inner-violet: 255.1 91.7% 76.3%;
+    --inner-violet-foreground: 263.4 70% 50.4%;
+    --inner-violet-muted-foreground: 252.5 94.7% 85.1%;
+
+    --inner-emerald: 158.1 64.4% 51.6%;
+    --inner-emerald-foreground: 162.9 93.5% 24.3%;
+    --inner-emerald-muted-foreground: 156.2 71.6% 66.9%;
+
+    --inner-fuchsia: 292 91.4% 72.5%;
+    --inner-fuchsia-foreground: 294.7 72.4% 39.8%;
+    --inner-fuchsia-muted-foreground: 291.1 93.1% 82.9%;
+
+    --inner-purple: 270 95.2% 75.3%;
+    --inner-purple-foreground: 272.1 71.7% 47.1%;
+    --inner-purple-muted-foreground: 269.2 97.4% 85.1%;
+
+    --inner-cyan: 187.9 85.7% 53.3%;
+    --inner-cyan-foreground: 192.9 82.3% 31%;
+    --inner-cyan-muted-foreground: 187 92.4% 69%;
+
+    --inner-indigo: 234.5 89.5% 73.9%;
+    --inner-indigo-foreground: 244.5 57.9% 50.6%;
+    --inner-indigo-muted-foreground: 229.7 93.5% 81.8%;
   }
 }

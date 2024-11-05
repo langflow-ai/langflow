@@ -12,11 +12,11 @@ export function SidebarFilterComponent({
   resetFilters: () => void;
 }) {
   return (
-    <div className="mb-0.5 flex w-full items-center justify-between rounded border bg-muted p-1 px-2 text-xs font-medium text-primary">
+    <div className="mb-0.5 flex w-full items-center justify-between rounded border bg-accent-indigo p-2 text-sm text-foreground">
       <div className="flex flex-1 items-center gap-1.5">
         <ForwardedIconComponent
           name="ListFilter"
-          className="h-4 w-4 shrink-0 stroke-2"
+          className="h-4 w-4 shrink-0 stroke-2 text-accent-indigo-foreground"
         />
         <div className="flex flex-1">
           {isInput ? "Input" : "Output"}:{" "}
@@ -30,7 +30,12 @@ export function SidebarFilterComponent({
         styleClasses="max-w-full"
         content="Remove filter"
       >
-        <Button unstyled className="shrink-0" onClick={resetFilters}>
+        <Button
+          unstyled
+          className="shrink-0"
+          onClick={resetFilters}
+          data-testid="sidebar-filter-reset"
+        >
           <ForwardedIconComponent
             name="X"
             className="h-4 w-4 stroke-2"

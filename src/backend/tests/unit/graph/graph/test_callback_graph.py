@@ -1,23 +1,16 @@
 import asyncio
 
-import pytest
-
-from langflow.components.outputs.ChatOutput import ChatOutput
-from langflow.custom.custom_component.component import Component
+from langflow.components.outputs import ChatOutput
+from langflow.custom import Component
 from langflow.events.event_manager import EventManager
-from langflow.graph.graph.base import Graph
-from langflow.inputs.inputs import IntInput
+from langflow.graph import Graph
+from langflow.inputs import IntInput
 from langflow.schema.message import Message
-from langflow.template.field.base import Output
-
-
-@pytest.fixture
-def client():
-    pass
+from langflow.template import Output
 
 
 class LogComponent(Component):
-    name = "LogComponent"
+    display_name = "LogComponent"
     inputs = [IntInput(name="times", value=1)]
     outputs = [Output(name="call_log", method="call_log_method")]
 
@@ -30,7 +23,7 @@ class LogComponent(Component):
 def test_callback_graph():
     logs: list[tuple[str, dict]] = []
 
-    def mock_callback(manager, event_type: str, data: dict):
+    def mock_callback(manager, event_type: str, data: dict):  # noqa: ARG001
         logs.append((event_type, data))
 
     event_manager = EventManager(queue=asyncio.Queue())

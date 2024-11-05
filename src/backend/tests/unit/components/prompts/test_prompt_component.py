@@ -1,11 +1,4 @@
-import pytest
-
-from langflow.components.prompts.Prompt import PromptComponent  # type: ignore
-
-
-@pytest.fixture
-def client():
-    pass
+from langflow.components.prompts import PromptComponent
 
 
 class TestPromptComponent:

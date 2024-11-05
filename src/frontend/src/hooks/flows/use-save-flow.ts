@@ -1,9 +1,11 @@
+import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { FlowType } from "@/types/flow";
 import { customStringify } from "@/utils/reactflowUtils";
+import { ReactFlowJsonObject } from "reactflow";
 
 const useSaveFlow = () => {
   const flows = useFlowsManagerStore((state) => state.flows);
@@ -16,10 +18,11 @@ const useSaveFlow = () => {
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
 
+  const { mutate: getFlow } = useGetFlow();
+  const { mutate } = usePatchUpdateFlow();
+
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const flowData = currentFlow?.data;
-
-  const { mutate } = usePatchUpdateFlow();
 
   const saveFlow = async (flow?: FlowType): Promise<void> => {
     if (
@@ -42,12 +45,24 @@ const useSaveFlow = () => {
             },
           };
         }
-        if (flow && flow.data) {
+
+        if (flow) {
+          if (!flow?.data) {
+            getFlow(
+              { id: flow!.id },
+              {
+                onSuccess: (flowResponse) => {
+                  flow!.data = flowResponse.data as ReactFlowJsonObject;
+                },
+              },
+            );
+          }
+
           const { id, name, data, description, folder_id, endpoint_name } =
             flow;
-          if (!currentSavedFlow?.data?.nodes.length || data.nodes.length > 0) {
+          if (!currentSavedFlow?.data?.nodes.length || data!.nodes.length > 0) {
             mutate(
-              { id, name, data, description, folder_id, endpoint_name },
+              { id, name, data: data!, description, folder_id, endpoint_name },
               {
                 onSuccess: (updatedFlow) => {
                   setSaveLoading(false);
@@ -83,7 +98,6 @@ const useSaveFlow = () => {
             );
           } else {
             setSaveLoading(false);
-            reject(new Error("Can't save empty flow"));
           }
         } else {
           setErrorData({

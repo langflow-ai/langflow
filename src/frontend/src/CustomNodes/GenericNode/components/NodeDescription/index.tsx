@@ -36,10 +36,6 @@ export default function NodeDescription({
     //timeout to wait for the dom to update
     setTimeout(() => {
       if (overflowRef.current) {
-        console.log(
-          overflowRef.current.clientHeight,
-          overflowRef.current.scrollHeight,
-        );
         if (
           overflowRef.current.clientHeight < overflowRef.current.scrollHeight
         ) {
@@ -64,7 +60,6 @@ export default function NodeDescription({
   return (
     <div
       className={cn(
-        "generic-node-desc",
         !inputDescription ? "overflow-auto" : "",
         hasScroll ? "nowheel" : "",
         charLimit ? "px-2" : "",
@@ -119,7 +114,7 @@ export default function NodeDescription({
           {charLimit && (
             <div
               className={cn(
-                "text-left text-xs",
+                "text-left text-[13px]",
                 (nodeDescription?.length ?? 0) >= charLimit
                   ? "text-error"
                   : "text-primary",
@@ -132,9 +127,10 @@ export default function NodeDescription({
         </>
       ) : (
         <div
+          data-testid="generic-node-desc"
           ref={overflowRef}
           className={cn(
-            "nodoubleclick generic-node-desc-text h-full cursor-text word-break-break-word dark:text-note-placeholder",
+            "nodoubleclick generic-node-desc-text h-full cursor-text text-[13px] word-break-break-word dark:text-note-placeholder",
             description === "" || !description ? "font-light italic" : "",
           )}
           onDoubleClick={(e) => {
@@ -148,7 +144,7 @@ export default function NodeDescription({
             <Markdown
               linkTarget="_blank"
               className={cn(
-                "markdown prose flex h-full w-full flex-col text-primary word-break-break-word note-node-markdown dark:prose-invert",
+                "markdown prose flex h-full w-full flex-col text-[13px] leading-5 text-muted-foreground word-break-break-word dark:prose-invert",
                 mdClassName,
               )}
             >

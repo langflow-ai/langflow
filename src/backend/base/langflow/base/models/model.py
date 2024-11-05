@@ -1,3 +1,4 @@
+import importlib
 import json
 import warnings
 from abc import abstractmethod
@@ -42,7 +43,7 @@ class LCModelComponent(Component):
     def _get_exception_message(self, e: Exception):
         return str(e)
 
-    def _validate_outputs(self):
+    def _validate_outputs(self) -> None:
         # At least these two outputs must be defined
         required_output_methods = ["text_response", "build_model"]
         output_names = [output.name for output in self.outputs]
@@ -59,16 +60,17 @@ class LCModelComponent(Component):
         stream = self.stream
         system_message = self.system_message
         output = self.build_model()
-        result = self.get_chat_result(output, stream, input_value, system_message)
+        result = self.get_chat_result(
+            runnable=output, stream=stream, input_value=input_value, system_message=system_message
+        )
         self.status = result
         return result
 
-    def get_result(self, runnable: LLM, stream: bool, input_value: str):
-        """
-        Retrieves the result from the output of a Runnable object.
+    def get_result(self, *, runnable: LLM, stream: bool, input_value: str):
+        """Retrieves the result from the output of a Runnable object.
 
         Args:
-            output (Runnable): The output object to retrieve the result from.
+            runnable (Runnable): The runnable to retrieve the result from.
             stream (bool): Indicates whether to use streaming or invocation mode.
             input_value (str): The input value to pass to the output object.
 
@@ -82,15 +84,15 @@ class LCModelComponent(Component):
                 message = runnable.invoke(input_value)
                 result = message.content if hasattr(message, "content") else message
                 self.status = result
-            return result
         except Exception as e:
             if message := self._get_exception_message(e):
                 raise ValueError(message) from e
             raise
 
+        return result
+
     def build_status_message(self, message: AIMessage):
-        """
-        Builds a status message from an AIMessage object.
+        """Builds a status message from an AIMessage object.
 
         Args:
             message (AIMessage): The AIMessage object to build the status message from.
@@ -140,6 +142,7 @@ class LCModelComponent(Component):
 
     def get_chat_result(
         self,
+        *,
         runnable: LanguageModel,
         stream: bool,
         input_value: str | Message,
@@ -173,7 +176,7 @@ class LCModelComponent(Component):
         inputs: list | dict = messages or {}
         try:
             if self.output_parser is not None:
-                runnable = runnable | self.output_parser
+                runnable |= self.output_parser
 
             runnable = runnable.with_config(
                 {
@@ -194,14 +197,73 @@ class LCModelComponent(Component):
                 self.status = result
             else:
                 self.status = result
-            return result
         except Exception as e:
             if message := self._get_exception_message(e):
                 raise ValueError(message) from e
             raise
 
+        return result
+
     @abstractmethod
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
+        """Implement this method to build the model."""
+
+    def get_llm(self, provider_name: str, model_info: dict[str, dict[str, str | list[InputTypes]]]) -> LanguageModel:
+        """Get LLM model based on provider name and inputs.
+
+        Args:
+            provider_name: Name of the model provider (e.g., "OpenAI", "Azure OpenAI")
+            inputs: Dictionary of input parameters for the model
+            model_info: Dictionary of model information
+
+        Returns:
+            Built LLM model instance
         """
-        Implement this method to build the model.
+        try:
+            if provider_name not in [model.get("display_name") for model in model_info.values()]:
+                msg = f"Unknown model provider: {provider_name}"
+                raise ValueError(msg)
+
+            # Find the component class name from MODEL_INFO in a single iteration
+            component_info, module_name = next(
+                ((info, key) for key, info in model_info.items() if info.get("display_name") == provider_name),
+                (None, None),
+            )
+            if not component_info:
+                msg = f"Component information not found for {provider_name}"
+                raise ValueError(msg)
+            component_inputs = component_info.get("inputs", [])
+            # Get the component class from the models module
+            # Ensure component_inputs is a list of the expected types
+            if not isinstance(component_inputs, list):
+                component_inputs = []
+            models_module = importlib.import_module("langflow.components.models")
+            component_class = getattr(models_module, str(module_name))
+            component = component_class()
+
+            return self.build_llm_model_from_inputs(component, component_inputs)
+        except Exception as e:
+            msg = f"Error building {provider_name} language model"
+            raise ValueError(msg) from e
+
+    def build_llm_model_from_inputs(
+        self, component: Component, inputs: list[InputTypes], prefix: str = ""
+    ) -> LanguageModel:
+        """Build LLM model from component and inputs.
+
+        Args:
+            component: LLM component instance
+            inputs: Dictionary of input parameters for the model
+            prefix: Prefix for the input names
+        Returns:
+            Built LLM model instance
         """
+        # Ensure prefix is a string
+        prefix = prefix or ""
+        # Filter inputs to only include valid component input names
+        input_data = {
+            str(component_input.name): getattr(self, f"{prefix}{component_input.name}", None)
+            for component_input in inputs
+        }
+
+        return component.set(**input_data).build_model()

@@ -11,6 +11,7 @@ from loguru import logger
 from pydantic import field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
+from typing_extensions import override
 
 from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 
@@ -19,8 +20,7 @@ BASE_COMPONENTS_PATH = str(Path(__file__).parent.parent.parent / "components")
 
 
 def is_list_of_any(field: FieldInfo) -> bool:
-    """
-    Check if the given field is a list or an optional list of any type.
+    """Check if the given field is a list or an optional list of any type.
 
     Args:
         field (FieldInfo): The field to be checked.
@@ -41,7 +41,8 @@ def is_list_of_any(field: FieldInfo) -> bool:
 
 
 class MyCustomSource(EnvSettingsSource):
-    def prepare_field_value(self, field_name: str, field: FieldInfo, value: Any, value_is_complex: bool) -> Any:
+    @override
+    def prepare_field_value(self, field_name: str, field: FieldInfo, value: Any, value_is_complex: bool) -> Any:  # type: ignore[misc]
         # allow comma-separated list parsing
 
         # fieldInfo contains the annotation of the field
@@ -156,6 +157,8 @@ class Settings(BaseSettings):
     """The log level for Langflow."""
     log_file: str | None = "logs/langflow.log"
     """The path to log file for Langflow."""
+    alembic_log_file: str = "alembic/alembic.log"
+    """The path to log file for Alembic for SQLAlchemy."""
     frontend_path: str | None = None
     """The path to the frontend directory containing build files. This is for development purposes only.."""
     open_browser: bool = False
@@ -187,6 +190,13 @@ class Settings(BaseSettings):
         os.environ["USER_AGENT"] = value
         logger.debug(f"Setting user agent to {value}")
         return value
+
+    @field_validator("variables_to_get_from_environment", mode="before")
+    @classmethod
+    def set_variables_to_get_from_environment(cls, value):
+        if isinstance(value, str):
+            value = value.split(",")
+        return list(set(VARIABLES_TO_GET_FROM_ENVIRONMENT + value))
 
     @field_validator("log_file", mode="before")
     @classmethod
@@ -291,6 +301,7 @@ class Settings(BaseSettings):
         return value
 
     @field_validator("components_path", mode="before")
+    @classmethod
     def set_components_path(cls, value):
         if os.getenv("LANGFLOW_COMPONENTS_PATH"):
             logger.debug("Adding LANGFLOW_COMPONENTS_PATH to components_path")
@@ -317,12 +328,12 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
-    def update_from_yaml(self, file_path: str, dev: bool = False):
+    def update_from_yaml(self, file_path: str, *, dev: bool = False) -> None:
         new_settings = load_settings_from_yaml(file_path)
         self.components_path = new_settings.components_path or []
         self.dev = dev
 
-    def update_settings(self, **kwargs):
+    def update_settings(self, **kwargs) -> None:
         logger.debug("Updating settings")
         for key, value in kwargs.items():
             # value may contain sensitive information, so we don't want to log it
@@ -353,7 +364,8 @@ class Settings(BaseSettings):
             logger.debug(f"{key}: {getattr(self, key)}")
 
     @classmethod
-    def settings_customise_sources(
+    @override
+    def settings_customise_sources(  # type: ignore[misc]
         cls,
         settings_cls: type[BaseSettings],
         init_settings: PydanticBaseSettingsSource,
@@ -364,8 +376,8 @@ class Settings(BaseSettings):
         return (MyCustomSource(settings_cls),)
 
 
-def save_settings_to_yaml(settings: Settings, file_path: str):
-    with Path(file_path).open("w") as f:
+def save_settings_to_yaml(settings: Settings, file_path: str) -> None:
+    with Path(file_path).open("w", encoding="utf-8") as f:
         settings_dict = settings.model_dump()
         yaml.dump(settings_dict, f)
 
@@ -379,7 +391,7 @@ def load_settings_from_yaml(file_path: str) -> Settings:
     else:
         _file_path = Path(file_path)
 
-    with _file_path.open() as f:
+    with _file_path.open(encoding="utf-8") as f:
         settings_dict = yaml.safe_load(f)
         settings_dict = {k.upper(): v for k, v in settings_dict.items()}
 

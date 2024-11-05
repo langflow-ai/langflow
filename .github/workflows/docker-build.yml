@@ -104,11 +104,15 @@ jobs:
           ref: ${{ inputs.version || inputs.nightly_tag_main || github.ref }}
           persist-credentials: true
 
+      - name: "Setup Environment"
+        uses: ./.github/actions/setup-uv
+
       - name: Get Version from Input
         if: ${{ inputs.version != '' }}
         id: get-version-input
         run: |
-          # Base version cannot have a version input, since you have to specify a valid main tag to checkout. 
+          # Base version cannot have a version input, since you have to specify a valid main tag to checkout.
+          # Base version cannot have a version input, since you have to specify a valid main tag to checkout.
           if [[ "${{ inputs.release_type }}" == "base" && "${{ inputs.version }}" != '' ]]; then
             echo "Cannot specify version for base release."
             echo "Build type is 'base' and version is non-empty. Exiting the workflow."
@@ -149,6 +153,16 @@ jobs:
             version=${version#v}
             echo version_no_v=$version
             echo version_no_v=$version >> $GITHUB_OUTPUT
+            # Strip leading v from nightly tag main if present
+            version=${{ inputs.nightly_tag_main }}
+            version=${version#v}
+            echo version=$version >> $GITHUB_OUTPUT
+          elif [[ "${{ inputs.version }}" != '' ]]; then
+            # strip leading v if present
+            version=${{ inputs.version }}
+            version=${version#v}
+            echo version=$version
+            echo version=$version >> $GITHUB_OUTPUT
           else
             echo "No version or ref specified. Exiting the workflow."
             exit 1
@@ -158,6 +172,11 @@ jobs:
         id: get-version-base
         run: |
           version=$(uv tree | grep 'langflow-base' | awk '{print $3}')
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//')
+          if [ -z "$version" ]; then
+            echo "Failed to extract version from uv tree output"
+            exit 1
+          fi
           echo version=$version
           echo version=$version >> $GITHUB_OUTPUT
 
@@ -197,6 +216,8 @@ jobs:
             # LANGFLOW-BASE RELEASE
             echo "docker_tags=langflowai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version-no-v }},langflowai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
             echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version-no-v }},ghcr.io/langflow-ai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
+            echo "docker_tags=langflowai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
+            echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
             echo "file=./docker/build_and_push_base.Dockerfile" >> $GITHUB_OUTPUT
           else
             if [[ "${{ inputs.pre_release }}" == "true" ]]; then
@@ -214,7 +235,21 @@ jobs:
               echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version-no-v }},langflowai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
               echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version-no-v }},ghcr.io/langflow-ai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
               echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
-            else 
+            else
+              echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}" >> $GITHUB_OUTPUT
+              echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}" >> $GITHUB_OUTPUT
+              echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
+            elif [[ "${{ inputs.release_type }}" == "main-ep" ]]; then
+              # LANGFLOW-MAIN (ENTRYPOINT) RELEASE
+              echo "docker_tags=langflowai/langflow-ep${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow-ep${nightly_suffix}:latest" >> $GITHUB_OUTPUT
+              echo "ghcr_tags=ghcr.io/langflow-ai/langflow-ep${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow-ep${nightly_suffix}:latest" >> $GITHUB_OUTPUT
+              echo "file=./docker/build_and_push_ep.Dockerfile" >> $GITHUB_OUTPUT
+            elif [[ "${{ inputs.release_type }}" == "main" ]]; then
+              # LANGFLOW-MAIN RELEASE
+              echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
+              echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
+              echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
+            else
               echo "Invalid release type. Exiting the workflow."
               exit 1
             fi
@@ -227,6 +262,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.get-version.outputs.version || github.ref }}
+          ref: ${{ inputs.nightly_tag_main || github.ref }}
+          #ref: ${{ needs.get-version.outputs.version && format('v{0}', needs.get-version.outputs.version) || github.ref }}
           persist-credentials: true
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv

@@ -11,7 +11,7 @@ export function getNodeOutputColors(
   const getColorByType = (type) => nodeColors[type] ?? nodeColors.unknown;
 
   // Try to get the color based on the selected node
-  let color: string = nodeColors[output.selected];
+  let color: string = nodeColors[output.selected as keyof typeof nodeColors];
   if (color) return [color];
 
   // Try to get the colors based on the output types
@@ -21,7 +21,7 @@ export function getNodeOutputColors(
   if (colors.length > 0) return colors;
 
   // Try to get the color based on the type of the selected node
-  color = nodeColors[types[output.selected]];
+  color = nodeColors[types[output.selected as keyof typeof types]];
   if (color) return [color];
 
   // Try to get the colors based on the types of output
