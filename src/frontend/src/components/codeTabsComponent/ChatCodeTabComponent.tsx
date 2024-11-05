@@ -31,13 +31,14 @@ export default function SimplifiedCodeTabComponent({
   };
 
   return (
-    <div className="flex w-full flex-col overflow-hidden rounded-md text-left">
-      <div className="flex w-full items-center justify-between bg-zinc-700 px-4 py-2">
-        <span className="text-sm font-semibold">{language}</span>
+    <div className="flex w-full flex-col overflow-hidden rounded-md text-left dark">
+      <div className="flex w-full items-center justify-between rounded-t-md border border-border bg-accent px-4 py-2">
+        <span className="dar text-sm font-semibold text-white">{language}</span>
         <Button
           variant="ghost"
           size="icon"
-          className="text-gray-400 hover:bg-[#3a3a3a]"
+          className="bg-card text-muted-foreground"
+          data-testid="copy-code-button"
           onClick={copyToClipboard}
         >
           {isCopied ? (
@@ -50,7 +51,7 @@ export default function SimplifiedCodeTabComponent({
       <SyntaxHighlighter
         language={language.toLowerCase()}
         style={oneDark}
-        className="!mt-0 h-full w-full overflow-scroll !rounded-b-md !rounded-t-none text-left !custom-scroll"
+        className="!mt-0 h-full w-full overflow-scroll !rounded-b-md !rounded-t-none border border-border text-left !custom-scroll"
       >
         {code}
       </SyntaxHighlighter>

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import re
+import traceback
 from collections.abc import AsyncIterator, Iterator
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 from uuid import UUID
 
 from fastapi.encoders import jsonable_encoder
@@ -12,11 +14,15 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 from langchain_core.prompts import BaseChatPromptTemplate, ChatPromptTemplate, PromptTemplate
 from langchain_core.prompts.image import ImagePromptTemplate
 from loguru import logger
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_serializer, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 from langflow.base.prompts.utils import dict_values_to_string
+from langflow.schema.content_block import ContentBlock
+from langflow.schema.content_types import ErrorContent
 from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
+from langflow.schema.properties import Properties, Source
+from langflow.schema.utils import timestamp_to_str_validator  # noqa: TCH001
 from langflow.utils.constants import (
     MESSAGE_SENDER_AI,
     MESSAGE_SENDER_NAME_AI,
@@ -28,18 +34,6 @@ if TYPE_CHECKING:
     from langchain_core.prompt_values import ImagePromptValue
 
 
-def _timestamp_to_str(timestamp: datetime | str) -> str:
-    if isinstance(timestamp, str):
-        # Just check if the string is a valid datetime
-        try:
-            datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")  # noqa: DTZ007
-        except ValueError as e:
-            msg = f"Invalid timestamp: {timestamp}"
-            raise ValueError(msg) from e
-        return timestamp
-    return timestamp.strftime("%Y-%m-%d %H:%M:%S")
-
-
 class Message(Data):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     # Helper class to deal with image data
@@ -49,12 +43,16 @@ class Message(Data):
     sender_name: str | None = None
     files: list[str | Image] | None = Field(default=[])
     session_id: str | None = Field(default="")
-    timestamp: Annotated[str, BeforeValidator(_timestamp_to_str)] = Field(
-        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    timestamp: Annotated[str, timestamp_to_str_validator] = Field(
+        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
     )
     flow_id: str | UUID | None = None
     error: bool = Field(default=False)
     edit: bool = Field(default=False)
+
+    properties: Properties = Field(default_factory=Properties)
+    category: Literal["message", "error", "warning", "info"] | None = "message"
+    content_blocks: list[ContentBlock] = Field(default_factory=list)
 
     @field_validator("flow_id", mode="before")
     @classmethod
@@ -71,7 +69,12 @@ class Message(Data):
 
     @field_serializer("timestamp")
     def serialize_timestamp(self, value):
-        return datetime.strptime(value, "%Y-%m-%d %H:%M:%S").astimezone(timezone.utc)
+        try:
+            # Try parsing with timezone
+            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S %Z").astimezone(timezone.utc)
+        except ValueError:
+            # Try parsing without timezone
+            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
 
     @field_validator("files", mode="before")
     @classmethod
@@ -270,6 +273,11 @@ class MessageResponse(DefaultModel):
     session_id: str
     text: str
     files: list[str] = []
+    edit: bool
+
+    properties: Properties | None = None
+    category: str | None = None
+    content_blocks: list[ContentBlock] | None = None
 
     @field_validator("files", mode="before")
     @classmethod
@@ -282,7 +290,7 @@ class MessageResponse(DefaultModel):
     @classmethod
     def serialize_timestamp(cls, v):
         v = v.replace(microsecond=0)
-        return v.strftime("%Y-%m-%d %H:%M:%S")
+        return v.strftime("%Y-%m-%d %H:%M:%S %Z")
 
     @field_serializer("files")
     @classmethod
@@ -304,5 +312,62 @@ class MessageResponse(DefaultModel):
             session_id=message.session_id,
             files=message.files or [],
             timestamp=message.timestamp,
+            flow_id=flow_id,
+        )
+
+
+class ErrorMessage(Message):
+    """A message class specifically for error messages with predefined error-specific attributes."""
+
+    def __init__(
+        self,
+        exception: Exception,
+        session_id: str,
+        source: Source,
+        trace_name: str | None = None,
+        flow_id: str | None = None,
+    ) -> None:
+        # Get the error reason
+        reason = exception.__class__.__name__
+        if hasattr(exception, "body") and "message" in exception.body:
+            reason = exception.body.get("message")
+        elif hasattr(exception, "code"):
+            reason = exception.code
+
+        # Get the sender ID
+        if trace_name:
+            match = re.search(r"\((.*?)\)", trace_name)
+            if match:
+                match.group(1)
+
+        super().__init__(
+            session_id=session_id,
+            sender=source.display_name,
+            sender_name=source.display_name,
+            text=reason,
+            properties=Properties(
+                text_color="red",
+                background_color="red",
+                edited=False,
+                source=source,
+                icon="error",
+                allow_markdown=False,
+                targets=[],
+            ),
+            category="error",
+            error=True,
+            content_blocks=[
+                ContentBlock(
+                    title="Error",
+                    content=ErrorContent(
+                        type="error",
+                        component=source.display_name,
+                        field=str(exception.field) if hasattr(exception, "field") else None,
+                        reason=reason,
+                        solution=str(exception.solution) if hasattr(exception, "solution") else None,
+                        traceback=traceback.format_exc(),
+                    ),
+                )
+            ],
             flow_id=flow_id,
         )

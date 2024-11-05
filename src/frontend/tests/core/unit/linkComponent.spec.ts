@@ -2,10 +2,7 @@ import { expect, Page, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 
 // TODO: This test might not be needed anymore
-test.skip("user should interact with link component", async ({
-  context,
-  page,
-}) => {
+test("user should interact with link component", async ({ context, page }) => {
   await page.goto("/");
   await page.waitForSelector('[data-testid="mainpage_title"]', {
     timeout: 30000,

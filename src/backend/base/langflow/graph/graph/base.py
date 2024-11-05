@@ -97,6 +97,7 @@ class Graph:
         self.has_session_id_vertices: list[str] = []
         self._sorted_vertices_layers: list[list[str]] = []
         self._run_id = ""
+        self._session_id = ""
         self._start_time = datetime.now(timezone.utc)
         self.inactivated_vertices: set = set()
         self.activated_vertices: list[str] = []
@@ -158,6 +159,13 @@ class Graph:
         if isinstance(value, dict):
             value = dotdict(value)
         self._context = value
+        
+    def session_id(self):
+        return self._session_id
+
+    @session_id.setter
+    def session_id(self, value: str):
+        self._session_id = value
 
     @property
     def state_model(self):
@@ -857,7 +865,7 @@ class Graph:
         Returns:
             dict: The metadata of the graph.
         """
-        time_format = "%Y-%m-%d %H:%M:%S"
+        time_format = "%Y-%m-%d %H:%M:%S %Z"
         return {
             "start_time": self._start_time.strftime(time_format),
             "end_time": self._end_time.strftime(time_format),
