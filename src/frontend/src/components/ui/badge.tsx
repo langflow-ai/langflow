@@ -17,6 +17,11 @@ const badgeVariants = cva(
         outline: "text-primary/80 border-ring/60",
         secondaryStatic: "bg-input text-muted-foreground border-0",
         pinkStatic: "bg-accent-pink text-accent-pink-foreground border-0",
+        emerald:
+          "bg-accent-emerald text-accent-emerald-foreground hover:bg-accent-emerald-hover",
+        successStatic:
+          "bg-accent-emerald text-accent-emerald-foreground border-0",
+        errorStatic: "bg-error-background text-error-foreground border-0",
       },
       size: {
         sm: "h-4 text-xs",

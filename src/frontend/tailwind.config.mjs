@@ -133,8 +133,10 @@ const config = {
         "node-selected": "hsl(var(--node-selected))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
-        "emerald-success": "hsl(var(--emerald-success))",
-        "accent-emerald-foreground": "hsl(var(--accent-emerald-foreground))",
+        "accent-emerald": {
+          DEFAULT: "hsl(var(--accent-emerald))",
+          foreground: "hsl(var(--accent-emerald-foreground))",
+        },
         "emerald-smooth": "hsl(var(--emaral-smooth))",
         "emerald-hard": "hsl(var(--emeral-hard))",
         placeholder: "hsl(var(--placeholder))",
@@ -166,6 +168,7 @@ const config = {
         "accent-emerald": {
           DEFAULT: "hsl(var(--accent-emerald))",
           foreground: "hsl(var(--accent-emerald-foreground))",
+          hover: "hsl(var(--accent-emerald-hover))",
         },
         "accent-indigo": {
           DEFAULT: "hsl(var(--accent-indigo))",
