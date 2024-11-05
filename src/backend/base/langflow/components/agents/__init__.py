@@ -1,4 +1,3 @@
-from .agent import AgentComponent
 from .crewai import CrewAIAgentComponent
 from .csv import CSVAgentComponent
 from .hierarchical_crew import HierarchicalCrewComponent
@@ -27,5 +26,4 @@ __all__ = [
     "VectorStoreAgentComponent",
     "VectorStoreRouterAgentComponent",
     "XMLAgentComponent",
-    "AgentComponent",
 ]

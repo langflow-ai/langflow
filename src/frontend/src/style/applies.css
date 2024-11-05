@@ -923,13 +923,13 @@
   }
 
   .api-modal-tabs {
-    @apply flex h-full flex-col overflow-hidden rounded-md border bg-muted text-center;
+    @apply flex h-full flex-col overflow-hidden text-center;
   }
   .api-modal-tablist-div {
     @apply flex items-center justify-between px-2 py-2;
   }
   .api-modal-tabs-content {
-    @apply -mt-1 h-full w-full px-4 pb-4;
+    @apply -mt-1 h-full w-full pb-4;
   }
   .api-modal-accordion-display {
     @apply mt-2 flex h-full w-full;
@@ -1265,10 +1265,6 @@
 
   .node-toolbar-buttons {
     @apply flex w-max min-w-10 items-center gap-1 rounded-lg text-foreground;
-  }
-
-  .share-button {
-    @apply relative inline-flex h-full w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-accent;
   }
 
   .last-output-border {
