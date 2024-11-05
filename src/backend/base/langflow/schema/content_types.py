@@ -1,6 +1,9 @@
-from typing import Any, Literal, TypeAlias
+from datetime import datetime, timezone
+from typing import Annotated, Any, Literal, TypeAlias
 
 from pydantic import BaseModel, Field
+
+from langflow.schema.validators import timestamp_to_str_validator
 
 
 class BaseContent(BaseModel):
@@ -58,37 +61,17 @@ class CodeContent(BaseContent):
     title: str | None = None
 
 
-class ToolStartContent(BaseContent):
+class ToolContent(BaseContent):
     """Content type for tool start content."""
 
-    type: Literal["tool_start"] = Field(default="tool_start")
-    tool_name: str
-    tool_input: dict[str, Any]
+    type: Literal["tool_use"] = Field(default="tool_use")
+    name: str | None = None
+    tool_input: dict[str, Any] = Field(default_factory=dict, alias="input")
+    output: Any | None = None
+    error: Any | None = None
+    timestamp: Annotated[str, timestamp_to_str_validator] = Field(
+        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
+    )
 
 
-class ToolEndContent(BaseContent):
-    """Content type for tool end content."""
-
-    type: Literal["tool_end"] = Field(default="tool_end")
-    tool_name: str
-    tool_output: Any
-
-
-class ToolErrorContent(BaseContent):
-    """Content type for tool error content."""
-
-    type: Literal["tool_error"] = Field(default="tool_error")
-    tool_name: str
-    tool_error: str
-
-
-ContentTypes: TypeAlias = (
-    ToolStartContent
-    | ToolEndContent
-    | ToolErrorContent
-    | ErrorContent
-    | TextContent
-    | MediaContent
-    | CodeContent
-    | JSONContent
-)
+ContentTypes: TypeAlias = ToolContent | ErrorContent | TextContent | MediaContent | CodeContent | JSONContent
