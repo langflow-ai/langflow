@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from zipfile import ZipFile, is_zipfile
@@ -40,6 +41,12 @@ class FileComponent(Component):
             advanced=True,
             info="If true, errors will not raise an exception.",
         ),
+        BoolInput(
+            name="use_multithreading",
+            display_name="Use Multithreading",
+            advanced=True,
+            info="If true, parallel processing will be enabled for zip files.",
+        ),
     ]
 
     outputs = [Output(display_name="Data", name="data", method="load_file")]
@@ -56,75 +63,109 @@ class FileComponent(Component):
         # Check if the file path is provided
         if not self.path:
             self.log("File path is missing.")
-
             msg = "Please upload a file for processing."
+
             raise ValueError(msg)
 
         resolved_path = Path(self.resolve_path(self.path))
         try:
             # Check if the file is a zip archive
             if is_zipfile(resolved_path):
-                self.log("Processing zip file at %s.", str(resolved_path))
+                self.log(f"Processing zip file: {resolved_path.name}.")
+                return self._process_zip_file(
+                    resolved_path,
+                    silent_errors=self.silent_errors,
+                    parallel=self.use_multithreading,
+                )
 
-                return self._process_zip_file(resolved_path, silent_errors=self.silent_errors)
-
-            self.log("Processing single file at %s.", str(resolved_path))
-
-            return self._process_single_file(resolved_path, silent_errors=self.silent_errors)
-        except FileNotFoundError as _:
-            self.log("File not found: %s", resolved_path)
-
+            self.log(f"Processing single file: {resolved_path.name}.")
+            return self._process_single_file(
+                resolved_path, silent_errors=self.silent_errors
+            )
+        except FileNotFoundError:
+            self.log(f"File not found: {resolved_path.name}.")
             raise
 
-    def _process_zip_file(self, zip_path: Path, *, silent_errors: bool = False) -> Data:
+    def _process_zip_file(
+        self, zip_path: Path, *, silent_errors: bool = False, parallel: bool = False
+    ) -> list[Data]:
         """Process text files within a zip archive.
 
         Args:
             zip_path: Path to the zip file.
             silent_errors: Suppresses errors if True.
+            parallel: Enables parallel processing if True.
 
         Returns:
-            Data: Combined data from all valid files.
+            list[Data]: Combined data from all valid files.
 
         Raises:
             ValueError: If no valid files found in the archive.
         """
         data: list[Data] = []
         with ZipFile(zip_path, "r") as zip_file:
-            # Filter file names based on extensions in TEXT_FILE_TYPES
-            valid_files = [name for name in zip_file.namelist() if any(name.endswith(ext) for ext in TEXT_FILE_TYPES)]
-            if not valid_files:
-                msg = "No valid files in the zip archive."
-                self.log(msg)
+            # Filter file names based on extensions in TEXT_FILE_TYPES and ignore hidden files
+            valid_files = [
+                name
+                for name in zip_file.namelist()
+                if (
+                    any(name.endswith(ext) for ext in TEXT_FILE_TYPES)
+                    and not name.startswith("__MACOSX")
+                    and not name.startswith(".")
+                )
+            ]
 
-                # Return an empty data object if silent errors is True
+            # Raise an error if no valid files found
+            if not valid_files:
+                self.log("No valid files in the zip archive.")
+
+                # Return empty data if silent_errors is True
                 if silent_errors:
                     return data
 
-                # Raise an exception if silent errors is False
+                # Raise an error if no valid files found
+                msg = "No valid files in the zip archive."
                 raise ValueError(msg)
 
-            # Parse the content of each valid file
-            for file_name in valid_files:
-                file_extension = Path(file_name).suffix
-                with zip_file.open(file_name) as file_content:
-                    with NamedTemporaryFile(delete=False, suffix=file_extension) as temp_file:
-                        temp_file.write(file_content.read())
-                        temp_path = Path(temp_file.name)
-                        self.log(str(temp_path))
+            # Define a function to process each file
+            def process_file(file_name):
+                with NamedTemporaryFile(delete=False) as temp_file:
+                    temp_path = Path(temp_file.name).with_name(file_name)
+                    with zip_file.open(file_name) as file_content:
+                        temp_path.write_bytes(file_content.read())
+                try:
+                    return self._process_single_file(
+                        temp_path, silent_errors=silent_errors
+                    )
+                finally:
+                    temp_path.unlink()
 
-                    try:
-                        # Process the temporary file
-                        data.append(self._process_single_file(temp_path, silent_errors=silent_errors))
-                    finally:
-                        # Clean up the temporary file after processing
-                        temp_path.unlink()
+            # Process files in parallel if specified
+            if parallel:
+                self.log("Initializing parallel Thread Pool Executor.")
+                with ThreadPoolExecutor() as executor:
+                    futures = {
+                        executor.submit(process_file, file): file
+                        for file in valid_files
+                    }
+                    for future in as_completed(futures):
+                        try:
+                            data.append(future.result())
+                        except Exception as e:
+                            self.log(f"Error processing file {futures[future]}: {e}")
+                            if not silent_errors:
+                                raise
+            else:
+                # Sequential processing
+                data.extend([process_file(file_name) for file_name in valid_files])
 
-        self.log(f"Successfully processed zip file: {zip_path}.")
+        self.log(f"Successfully processed zip file: {zip_path.name}.")
 
         return data
 
-    def _process_single_file(self, file_path: Path, *, silent_errors: bool = False) -> Data:
+    def _process_single_file(
+        self, file_path: Path, *, silent_errors: bool = False
+    ) -> Data:
         """Process a single file.
 
         Args:
@@ -137,24 +178,25 @@ class FileComponent(Component):
         Raises:
             ValueError: For unsupported file formats.
         """
-        if not any(file_path.suffix == ext for ext in ["." + f for f in TEXT_FILE_TYPES]):
-            msg = f"Unsupported file type: {file_path.suffix}"
-            self.log(msg)
+        if not any(
+            file_path.suffix == ext for ext in ["." + f for f in TEXT_FILE_TYPES]
+        ):
+            self.log(f"Unsupported file type: {file_path.suffix}")
 
-            # Return an empty data object if silent errors is True
+            # Return empty data if silent_errors is True
             if silent_errors:
                 return Data()
 
-            # Raise an exception if silent errors is False
+            msg = f"Unsupported file type: {file_path.suffix}"
             raise ValueError(msg)
 
         try:
-            # Parse the file content
             data = parse_text_file_to_data(str(file_path), silent_errors=silent_errors)
-            self.log(f"Successfully processed file: {file_path}.")
-
+            self.log(f"Successfully processed file: {file_path.name}.")
         except Exception as e:
-            self.log(f"Error processing file {file_path!s}: {e}")
+            self.log(f"Error processing file {file_path.name}: {e}")
+
+            # Return empty data if silent_errors is True
             if not silent_errors:
                 raise
 
