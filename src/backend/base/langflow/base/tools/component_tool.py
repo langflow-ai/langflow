@@ -81,32 +81,39 @@ def _build_output_function(component: Component, output_method: Callable):
 
     # Handle asynchronous methods with a wrapper that manages event loops
     def async_wrapper(*args, **kwargs):
-        """Asynchronous wrapper that handles event loop management.
+        """Handle asynchronous execution of component methods while managing event loops.
 
-        This wrapper handles two scenarios:
-        1. No event loop running: Creates a new one using asyncio.run()
-        2. Existing event loop: Creates a separate loop to prevent blocking
+        This wrapper provides a synchronous interface to asynchronous methods by:
+        1. Setting component arguments using the provided args/kwargs
+        2. Managing the asyncio event loop lifecycle
+        3. Handling cleanup of pending tasks to prevent resource leaks
 
         Args:
             *args: Positional arguments to be passed to component.set()
             **kwargs: Keyword arguments to be passed to component.set()
 
         Returns:
-            Any: The result of the async output_method execution
+            Any: The result of the asynchronous operation
+
+        Raises:
+            RuntimeError: If there are issues with the event loop management
         """
-        # Set component arguments before execution
         component.set(*args, **kwargs)
+
+        async def _run_async():
+            return await output_method()
+
         try:
-            # Check if we're already in an event loop
-            asyncio.get_running_loop()
+            loop = asyncio.get_running_loop()
+            return loop.run_until_complete(_run_async())
         except RuntimeError:
-            # No loop running - create one using asyncio.run()
-            # This handles the creation and cleanup of the event loop
-            return asyncio.run(output_method())
-        else:
-            # We're in a running loop - create a new one to prevent blocking
-            # This is useful in contexts like FastAPI where a loop is already running
-            return asyncio.new_event_loop().run_until_complete(output_method())
+            # No running loop
+            return asyncio.run(_run_async())
+        finally:
+            # Ensure we don't leave any pending tasks
+            pending = asyncio.all_tasks(loop) if "loop" in locals() else set()
+            for task in pending:
+                task.cancel()
 
     return async_wrapper
 
