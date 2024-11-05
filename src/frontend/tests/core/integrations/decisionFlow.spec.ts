@@ -446,8 +446,9 @@ test("should create a flow with decision", async ({ page }) => {
   await page
     .getByTestId("input-chat-playground")
     .fill("my dog is alive and happy!");
-  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
+  await page.waitForSelector('[data-testid="button-send"]', {
     timeout: 100000,
   });
-  await page.getByTestId("icon-LucideSend").click();
+
+  await page.getByTestId("button-send").last().click();
 });
