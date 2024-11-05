@@ -194,3 +194,6 @@ body {
   border-radius: 20% !important;
 }
 
+code {
+  font-family: var(--font-mono)s !important;
+}
