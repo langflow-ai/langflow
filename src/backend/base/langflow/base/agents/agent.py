@@ -1,23 +1,20 @@
 from abc import abstractmethod
-from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.agents.agent import RunnableAgent
 from langchain_core.runnables import Runnable
 
 from langflow.base.agents.callback import AgentAsyncHandler
+from langflow.base.agents.events import process_agent_events
 from langflow.base.agents.utils import data_to_messages
 from langflow.custom import Component
 from langflow.inputs.inputs import InputTypes
 from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
 from langflow.schema import Data
-from langflow.schema.content_block import ContentBlock
-from langflow.schema.content_types import ToolEndContent, ToolErrorContent, ToolStartContent
 from langflow.schema.log import SendMessageFunctionType
 from langflow.schema.message import Message
 from langflow.template import Output
-from langflow.utils.constants import MESSAGE_SENDER_AI
 
 if TYPE_CHECKING:
     from langchain_core.messages import BaseMessage
@@ -150,128 +147,3 @@ class LCToolsAgentComponent(LCAgentComponent):
     @abstractmethod
     def create_agent_runnable(self) -> Runnable:
         """Create the agent."""
-
-
-# Add this function near the top of the file, after the imports
-
-
-async def process_agent_events(
-    agent_executor: AsyncIterator[dict[str, Any]],
-    send_message_method: SendMessageFunctionType,
-) -> Message:
-    """Process agent events and return the final output.
-
-    Uses a single message that gets updated throughout the agent's execution.
-
-    Args:
-        agent_executor: An async iterator of agent events
-        send_message_method: A callable function for sending messages
-        on_token: A callable function for streaming tokens
-    Returns:
-        str: The final output from the agent
-    """
-    # Initialize a single message that will be updated throughout
-    agent_message = Message(
-        sender=MESSAGE_SENDER_AI,
-        sender_name="Agent",
-        properties={"icon": "🤖", "state": "partial"},
-        content_blocks=[],
-    )
-    # Store the initial message
-    agent_message = send_message_method(message=agent_message)
-
-    async for event in agent_executor:
-        match event["event"]:
-            case "on_chain_start":
-                if event["data"].get("input"):
-                    agent_message.content_blocks.append(
-                        ContentBlock(
-                            title="Agent Input",
-                            content={
-                                "type": "text",
-                                "text": f"Agent initiated with input: {event['data'].get('input')}",
-                            },
-                        )
-                    )
-                    agent_message.properties.icon = "🚀"
-                    agent_message = send_message_method(message=agent_message)
-
-            case "on_chain_end":
-                data_output = event["data"].get("output", {})
-                if data_output:
-                    # Agent Strachpad floods the chat
-                    # agent_scratchpad_messages = data_output["agent_scratchpad"]
-                    # json_encoded_messages = jsonable_encoder(agent_scratchpad_messages)
-                    # agent_message.content_blocks.extend(
-                    #     [
-                    #         ContentBlock(
-                    #             title="Agent Scratchpad",
-                    #             content=JSONContent(type="json", data=json_encoded_message),
-                    #         )
-                    #         for json_encoded_message in json_encoded_messages
-                    #     ]
-                    # )
-                    if hasattr(data_output, "return_values") and data_output.return_values.get("output"):
-                        agent_message.properties.state = "complete"
-                        agent_message.text = data_output.return_values.get("output")
-                        icon = "🤖"
-                    else:
-                        icon = "🔍"
-                    agent_message.properties.icon = icon
-                    agent_message = send_message_method(message=agent_message)
-
-            case "on_tool_start":
-                agent_message.content_blocks.append(
-                    ContentBlock(
-                        title="Tool Input",
-                        content=ToolStartContent(
-                            type="tool_start",
-                            tool_name=event["name"],
-                            tool_input=event["data"].get("input"),
-                        ),
-                    )
-                )
-                agent_message.properties.icon = "🔧"
-                agent_message = send_message_method(message=agent_message)
-
-            case "on_tool_end":
-                agent_message.content_blocks.append(
-                    ContentBlock(
-                        title="Tool Output",
-                        content=ToolEndContent(
-                            type="tool_end",
-                            tool_name=event["name"],
-                            tool_output=event["data"].get("output"),
-                        ),
-                    )
-                )
-                agent_message = send_message_method(message=agent_message)
-
-            case "on_tool_error":
-                tool_name = event.get("name", "Unknown tool")
-                error_message = event["data"].get("error", "Unknown error")
-                agent_message.content_blocks.append(
-                    ContentBlock(
-                        title="Tool Error",
-                        content=ToolErrorContent(
-                            type="tool_error",
-                            tool_name=tool_name,
-                            tool_error=error_message,
-                        ),
-                    )
-                )
-                agent_message.properties.icon = "⚠️"
-                agent_message = send_message_method(message=agent_message)
-
-            case "on_chain_stream":
-                # this is similar to the on_chain_end but here we stream tokens
-                data_chunk = event["data"].get("chunk", {})
-                if isinstance(data_chunk, dict) and data_chunk.get("output"):
-                    agent_message.text = data_chunk.get("output")
-                    agent_message.properties.state = "complete"
-                    agent_message = send_message_method(message=agent_message)
-            case _:
-                # Handle any other event types or ignore them
-                pass
-    agent_message.properties.state = "complete"
-    return Message(**agent_message.model_dump())
