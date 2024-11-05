@@ -10,6 +10,7 @@ from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
 from langflow.inputs.inputs import HandleInput
+from langflow.io import Output
 
 
 class OpenAIModelComponent(LCModelComponent):
@@ -80,6 +81,10 @@ class OpenAIModelComponent(LCModelComponent):
             advanced=True,
             input_types=["OutputParser"],
         ),
+    ]
+    outputs = [
+        Output(display_name="Text", name="text_output", method="text_response"),
+        Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
