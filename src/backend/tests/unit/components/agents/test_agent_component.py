@@ -29,7 +29,7 @@ async def test_agent_component_with_calculator():
 
 
 
-
+@pytest.mark.api_key_required
 async def test_agent_as_tool():
     tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
     input_value = "What is 2 + 2?"
