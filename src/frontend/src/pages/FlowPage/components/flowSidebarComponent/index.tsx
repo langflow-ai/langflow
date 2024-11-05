@@ -449,7 +449,7 @@ export function FlowSidebarComponent() {
                                     >
                                       <ForwardedIconComponent
                                         name={item.icon}
-                                        className="group-aria-expanded/collapsible:x-gradient h-4 w-4"
+                                        className="h-4 w-4 group-aria-expanded/collapsible:text-accent-pink-foreground"
                                       />
                                       <span className="group-aria-expanded/collapsible:font-semibold">
                                         {item.display_name}
