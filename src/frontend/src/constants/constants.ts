@@ -931,6 +931,7 @@ export const COLOR_OPTIONS = {
   rose: "hsl(var(--note-rose))",
   blue: "hsl(var(--note-blue))",
   lime: "hsl(var(--note-lime))",
+  transparent: null,
 };
 
 export const maxSizeFilesInBytes = 10 * 1024 * 1024; // 10MB in bytes

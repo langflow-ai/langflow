@@ -93,9 +93,12 @@ export default function NoteToolbarComponent({
                   >
                     <div
                       style={{
-                        backgroundColor: COLOR_OPTIONS[bgColor],
+                        backgroundColor: COLOR_OPTIONS[bgColor] ?? "#00000000",
                       }}
-                      className="h-4 w-4 rounded-full"
+                      className={cn(
+                        "h-4 w-4 rounded-full",
+                        COLOR_OPTIONS[bgColor] === null && "border",
+                      )}
                     ></div>
                   </div>
                 </div>
@@ -129,9 +132,10 @@ export default function NoteToolbarComponent({
                         className={cn(
                           "h-4 w-4 rounded-full hover:border hover:border-ring",
                           bgColor === color ? "border-2 border-blue-500" : "",
+                          code === null && "border",
                         )}
                         style={{
-                          backgroundColor: code,
+                          backgroundColor: code ?? "#00000000",
                         }}
                       ></div>
                     </Button>

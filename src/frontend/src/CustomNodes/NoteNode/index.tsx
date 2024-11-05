@@ -63,12 +63,13 @@ function NoteNode({
           maxWidth: NOTE_NODE_MAX_WIDTH,
           minWidth: NOTE_NODE_MIN_WIDTH,
           minHeight: NOTE_NODE_MIN_HEIGHT,
-          backgroundColor: COLOR_OPTIONS[bgColor],
+          backgroundColor: COLOR_OPTIONS[bgColor] ?? "#00000000",
         }}
         ref={nodeDiv}
         className={cn(
-          "flex h-full w-full flex-col gap-3 border border-b p-3 transition-all",
-          selected ? "" : "-z-50 shadow-sm",
+          "flex h-full w-full flex-col gap-3 rounded-xl p-3 transition-all",
+          COLOR_OPTIONS[bgColor] !== null &&
+            `border ${!selected && "-z-50 shadow-sm"}`,
         )}
       >
         <div
@@ -80,7 +81,7 @@ function NoteNode({
         >
           <NodeDescription
             inputClassName="border-0 ring-transparent resize-none rounded-none shadow-none h-full w-full"
-            style={{ backgroundColor: COLOR_OPTIONS[bgColor] }}
+            style={{ backgroundColor: COLOR_OPTIONS[bgColor] ?? "#00000000" }}
             charLimit={2500}
             nodeId={data.id}
             selected={selected}
