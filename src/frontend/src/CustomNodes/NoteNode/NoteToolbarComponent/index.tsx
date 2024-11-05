@@ -17,10 +17,9 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
-import { NodeDataType, noteDataType } from "@/types/flow";
+import { noteDataType } from "@/types/flow";
 import { classNames, cn, openInNewTab } from "@/utils/utils";
-import { cloneDeep, set, take } from "lodash";
-import { useState } from "react";
+import { cloneDeep } from "lodash";
 import IconComponent from "../../../components/genericIconComponent";
 
 export default function NoteToolbarComponent({
@@ -30,7 +29,6 @@ export default function NoteToolbarComponent({
   data: noteDataType;
   bgColor: string;
 }) {
-  const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const nodes = useFlowStore((state) => state.nodes);
   const setLastCopiedSelection = useFlowStore(
