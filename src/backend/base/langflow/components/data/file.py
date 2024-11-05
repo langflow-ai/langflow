@@ -81,16 +81,12 @@ class FileComponent(Component):
                 )
 
             self.log(f"Processing single file: {resolved_path.name}.")
-            return self._process_single_file(
-                resolved_path, silent_errors=self.silent_errors
-            )
+            return self._process_single_file(resolved_path, silent_errors=self.silent_errors)
         except FileNotFoundError:
             self.log(f"File not found: {resolved_path.name}.")
             raise
 
-    def _process_zip_file(
-        self, zip_path: Path, *, silent_errors: bool = False, parallel: bool = False
-    ) -> list[Data]:
+    def _process_zip_file(self, zip_path: Path, *, silent_errors: bool = False, parallel: bool = False) -> list[Data]:
         """Process text files within a zip archive.
 
         Args:
@@ -136,9 +132,7 @@ class FileComponent(Component):
                     with zip_file.open(file_name) as file_content:
                         temp_path.write_bytes(file_content.read())
                 try:
-                    return self._process_single_file(
-                        temp_path, silent_errors=silent_errors
-                    )
+                    return self._process_single_file(temp_path, silent_errors=silent_errors)
                 finally:
                     temp_path.unlink()
 
@@ -146,10 +140,7 @@ class FileComponent(Component):
             if parallel:
                 self.log("Initializing parallel Thread Pool Executor.")
                 with ThreadPoolExecutor() as executor:
-                    futures = {
-                        executor.submit(process_file, file): file
-                        for file in valid_files
-                    }
+                    futures = {executor.submit(process_file, file): file for file in valid_files}
                     for future in as_completed(futures):
                         try:
                             data.append(future.result())
@@ -165,9 +156,7 @@ class FileComponent(Component):
 
         return data
 
-    def _process_single_file(
-        self, file_path: Path, *, silent_errors: bool = False
-    ) -> Data:
+    def _process_single_file(self, file_path: Path, *, silent_errors: bool = False) -> Data:
         """Process a single file.
 
         Args:
@@ -193,10 +182,7 @@ class FileComponent(Component):
             return text
 
         # Check if the file type is supported
-        if not any(
-            file_path.suffix == ext
-            for ext in ["." + f for f in [*TEXT_FILE_TYPES, "pdf"]]
-        ):
+        if not any(file_path.suffix == ext for ext in ["." + f for f in [*TEXT_FILE_TYPES, "pdf"]]):
             self.log(f"Unsupported file type: {file_path.suffix}")
 
             # Return empty data if silent_errors is True
@@ -209,13 +195,9 @@ class FileComponent(Component):
         try:
             # Parse the file based on the file type
             if file_path.suffix == ".pdf":
-                data = Data(
-                    data={"file_path": file_path, "text": pdf_to_text(file_path)}
-                )
+                data = Data(data={"file_path": file_path, "text": pdf_to_text(file_path)})
             else:
-                data = parse_text_file_to_data(
-                    str(file_path), silent_errors=silent_errors
-                )
+                data = parse_text_file_to_data(str(file_path), silent_errors=silent_errors)
 
             self.log(f"Successfully processed file: {file_path.name}.")
         except Exception as e:
