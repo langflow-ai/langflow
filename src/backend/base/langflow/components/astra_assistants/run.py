@@ -1,7 +1,5 @@
 from typing import Any
 
-from astra_assistants import patch
-from openai import OpenAI
 from openai.lib.streaming import AssistantEventHandler
 
 from langflow.base.astra_assistants.util import get_patched_openai_client
@@ -63,8 +61,6 @@ class AssistantsRun(ComponentWithCache):
     outputs = [Output(display_name="Assistant Response", name="assistant_response", method="process_inputs")]
 
     def process_inputs(self) -> Message:
-        patch(OpenAI())
-
         text = ""
 
         if self.thread_id is None:
