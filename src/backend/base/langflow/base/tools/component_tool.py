@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from langchain_core.tools import ToolException
 from langchain_core.tools.structured import StructuredTool
@@ -22,6 +22,8 @@ if TYPE_CHECKING:
     from langflow.events.event_manager import EventManager
     from langflow.inputs.inputs import InputTypes
     from langflow.io import Output
+    from langflow.schema.content_types import ContentBlock
+    from langflow.schema.message import Message
 
 
 def _get_input_type(_input: InputTypes):
@@ -50,10 +52,57 @@ def build_description(component: Component, output: Output) -> str:
     return f"{output.method}({args}) - {component.description}"
 
 
+def send_message_noop(
+    message: Message | None = None,
+    text: str | None = None,  # noqa: ARG001
+    background_color: str | None = None,  # noqa: ARG001
+    text_color: str | None = None,  # noqa: ARG001
+    icon: str | None = None,  # noqa: ARG001
+    content_blocks: list[ContentBlock] | None = None,  # noqa: ARG001
+    format_type: Literal["default", "error", "warning", "info"] = "default",  # noqa: ARG001
+    id_: str | None = None,  # noqa: ARG001
+    *,
+    allow_markdown: bool = True,  # noqa: ARG001
+) -> Message:
+    """No-op implementation of send_message."""
+    return message
+
+
+def patch_components_send_message(component: Component):
+    old_send_message = component.send_message
+    component.send_message = send_message_noop
+    return old_send_message
+
+
+def _patch_send_message_decorator(component, func):
+    """Decorator to patch the send_message method of a component.
+
+    This is useful when we want to use a component as a tool, but we don't want to
+    send any messages to the UI. With this only the Component calling the tool
+    will send messages to the UI.
+    """
+
+    async def async_wrapper(*args, **kwargs):
+        original_send_message = component.send_message
+        component.send_message = send_message_noop
+        try:
+            return await func(*args, **kwargs)
+        finally:
+            component.send_message = original_send_message
+
+    def sync_wrapper(*args, **kwargs):
+        original_send_message = component.send_message
+        component.send_message = send_message_noop
+        try:
+            return func(*args, **kwargs)
+        finally:
+            component.send_message = original_send_message
+
+    return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+
+
 def _build_output_function(component: Component, output_method: Callable, event_manager: EventManager | None = None):
     def output_function(*args, **kwargs):
-        # set the component with the arguments
-        # set functionality was updatedto handle list of components and other values separately
         try:
             if event_manager:
                 event_manager.on_build_start(data={"id": component._id})
@@ -66,14 +115,13 @@ def _build_output_function(component: Component, output_method: Callable, event_
         else:
             return result
 
-    return output_function
+    return _patch_send_message_decorator(component, output_function)
 
 
 def _build_output_async_function(
     component: Component, output_method: Callable, event_manager: EventManager | None = None
 ):
     async def output_function(*args, **kwargs):
-        # set the component with the arguments
         try:
             if event_manager:
                 event_manager.on_build_start(data={"id": component._id})
@@ -87,7 +135,7 @@ def _build_output_async_function(
             return result.model_dump()
         return result
 
-    return output_function
+    return _patch_send_message_decorator(component, output_function)
 
 
 def _format_tool_name(name: str):
