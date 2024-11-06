@@ -25,9 +25,11 @@ export function ContentBlockDisplay({
 }: ContentBlockDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const totalDuration = contentBlocks[0]?.contents.reduce((acc, curr) => {
-    return acc + (curr.duration || 0);
-  }, 0) || undefined;
+  const totalDuration = isLoading
+    ? undefined
+    : contentBlocks[0]?.contents.reduce((acc, curr) => {
+        return acc + (curr.duration || 0);
+      }, 0);
 
   if (!contentBlocks?.length) {
     return null;
