@@ -106,6 +106,7 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
             self.status = data
             return data
 
+
 class Float32Embeddings:
     """Wrapper class to ensure float32 embeddings."""
 
@@ -127,4 +128,3 @@ class Float32Embeddings:
     def _force_float32(self, value):
         """Convert any numeric type to Python float."""
         return float(np.float32(value))
-
