@@ -68,8 +68,7 @@ class GoogleOAuthToken(Component):
 
         if token_path.exists():
             with token_path.open(mode="r", encoding="utf-8") as token_file:
-                creds = Credentials.from_authorized_user_file(
-                    str(token_path), scopes)
+                creds = Credentials.from_authorized_user_file(str(token_path), scopes)
 
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
@@ -81,8 +80,7 @@ class GoogleOAuthToken(Component):
                     error_message = "OAuth 2.0 Credentials file not provided."
                     raise ValueError(error_message)
 
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    client_secret_file, scopes)
+                flow = InstalledAppFlow.from_client_secrets_file(client_secret_file, scopes)
                 creds = flow.run_local_server(port=0)
 
             with token_path.open(mode="w", encoding="utf-8") as token_file:
