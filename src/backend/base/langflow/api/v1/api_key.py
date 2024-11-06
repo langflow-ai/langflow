@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 
-from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils import AsyncDbSession, CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import ApiKeyCreateRequest, ApiKeysResponse
 from langflow.services.auth import utils as auth_utils
 
@@ -20,12 +20,12 @@ router = APIRouter(tags=["APIKey"], prefix="/api_key")
 
 @router.get("/")
 async def get_api_keys_route(
-    db: DbSession,
+    db: AsyncDbSession,
     current_user: CurrentActiveUser,
 ) -> ApiKeysResponse:
     try:
         user_id = current_user.id
-        keys = get_api_keys(db, user_id)
+        keys = await get_api_keys(db, user_id)
 
         return ApiKeysResponse(total_count=len(keys), user_id=user_id, api_keys=keys)
     except Exception as exc:
@@ -36,11 +36,11 @@ async def get_api_keys_route(
 async def create_api_key_route(
     req: ApiKeyCreate,
     current_user: CurrentActiveUser,
-    db: DbSession,
+    db: AsyncDbSession,
 ) -> UnmaskedApiKeyRead:
     try:
         user_id = current_user.id
-        return create_api_key(db, req, user_id=user_id)
+        return await create_api_key(db, req, user_id=user_id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -48,10 +48,10 @@ async def create_api_key_route(
 @router.delete("/{api_key_id}", dependencies=[Depends(auth_utils.get_current_active_user)])
 async def delete_api_key_route(
     api_key_id: UUID,
-    db: DbSession,
+    db: AsyncDbSession,
 ):
     try:
-        delete_api_key(db, api_key_id)
+        await delete_api_key(db, api_key_id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     return {"detail": "API Key deleted"}
