@@ -8,7 +8,9 @@ export const getSpecificClassFromBuildStatus = (
 ): string => {
   let isInvalid = validationStatus && !validationStatus.valid;
 
-  if ((isInvalid || buildStatus === BuildStatus.ERROR) && !isBuilding) {
+  if (BuildStatus.BUILDING === buildStatus) {
+    return "border-foreground border-[1px] ring-[0.75px] ring-foreground";
+  } else if ((isInvalid || buildStatus === BuildStatus.ERROR) && !isBuilding) {
     return "border-destructive border-[1px] ring-[0.75px] ring-destructive";
   } else {
     return "";

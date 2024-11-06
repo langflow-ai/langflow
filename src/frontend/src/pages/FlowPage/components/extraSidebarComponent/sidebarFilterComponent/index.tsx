@@ -17,7 +17,7 @@ export function SidebarFilterComponent({
     <div
       className={`mb-0.5 flex w-full items-center justify-between rounded border p-2 text-sm text-foreground`}
       style={{
-        backgroundColor: `hsl(var(--inner-${color}-foreground))`,
+        backgroundColor: `hsl(var(--accent-${color}-foreground))`,
       }}
     >
       <div className="flex flex-1 items-center gap-1.5">

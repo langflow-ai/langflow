@@ -174,7 +174,7 @@
     @apply flex gap-2;
   }
   .primary-input {
-    @apply form-input block w-full truncate rounded-md border-[1px] border-border bg-background px-3 text-left text-sm placeholder:text-muted-foreground hover:border-muted-foreground focus:border-foreground focus:placeholder-transparent focus:ring-0 focus:ring-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground;
+    @apply form-input block w-full truncate rounded-md border border-border bg-background px-3 text-left text-sm placeholder:text-muted-foreground hover:border-muted-foreground focus:border-foreground focus:placeholder-transparent focus:ring-0 focus:ring-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground;
   }
 
   .skeleton-card {
@@ -191,7 +191,7 @@
 
   /* The same as primary-input but no-truncate */
   .textarea-primary {
-    @apply form-input block w-full rounded-md border-[1px] border-border bg-background px-3 text-left shadow-sm placeholder:text-placeholder-foreground hover:border-muted focus:border-muted focus:placeholder-transparent focus:ring-[0.75px] focus:ring-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-secondary disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground sm:text-sm;
+    @apply form-input block w-full rounded-md border border-border bg-background px-3 text-left shadow-sm placeholder:text-placeholder-foreground hover:border-muted focus:border-muted focus:placeholder-transparent focus:ring-[0.75px] focus:ring-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-secondary disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground sm:text-sm;
   }
 
   .input-edit-node {
@@ -777,7 +777,7 @@
     @apply flex-max-width mt-2 h-full;
   }
   .code-area-modal-editor-box {
-    @apply h-[300px] w-full rounded-lg border-[1px] border-ring custom-scroll;
+    @apply h-[300px] w-full rounded-lg border border-ring custom-scroll;
   }
 
   .edit-node-modal-variable {
@@ -790,7 +790,7 @@
     @apply flex-max-width h-fit max-h-[400px];
   }
   .edit-node-modal-box {
-    @apply w-full rounded-lg border-[1px] border-input bg-background;
+    @apply w-full rounded-lg border border-input bg-background;
   }
   .edit-node-modal-table {
     @apply flex h-fit flex-col gap-5;
@@ -1099,7 +1099,7 @@
     @apply flex-max-width h-full flex-col transition-all;
   }
   .ace-editor {
-    @apply h-full w-full rounded-lg border-[1px] border-border custom-scroll;
+    @apply h-full w-full rounded-lg border border-border custom-scroll;
   }
   .ace-editor-save-btn {
     @apply flex-max-width h-fit justify-end;
@@ -1207,7 +1207,7 @@
   }
 
   .bg-lucide-icon {
-    @apply flex h-8 w-8 items-center justify-center rounded-[6px] bg-muted p-[6px];
+    @apply flex h-8 w-8 items-center justify-center rounded-md bg-muted p-[6px];
   }
 
   .integration-icon {
@@ -1260,7 +1260,7 @@
   }
 
   .hit-area-icon {
-    @apply h-[32px] w-[32px] rounded-md;
+    @apply h-8 w-8 rounded-md;
   }
 
   .node-toolbar-buttons {
@@ -1268,7 +1268,11 @@
   }
 
   .last-output-border {
-    @apply rounded-b-[12px];
+    @apply rounded-b-xl;
+  }
+
+  .toolbar-wrapper {
+    @apply flex items-center gap-1 rounded-xl border border-border bg-background p-1 shadow-sm h-10;
   }
 }
 

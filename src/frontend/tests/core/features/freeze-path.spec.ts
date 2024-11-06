@@ -133,7 +133,11 @@ test("user must be able to freeze a path", async ({ page }) => {
 
   await page.waitForTimeout(1000);
 
-  await page.getByTestId("icon-FreezeAll").click();
+  await page.getByTestId("more-options-modal").click();
+
+  await page.waitForTimeout(1000);
+
+  await page.getByTestId("freeze-path-button").click();
 
   await page.waitForTimeout(1000);
 

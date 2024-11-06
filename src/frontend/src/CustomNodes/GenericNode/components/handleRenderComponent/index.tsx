@@ -43,8 +43,8 @@ export default function HandleRenderComponent({
 }) {
   const handleColorName = colorName?.[0] ?? "";
 
-  const innerColorName = `inner-${handleColorName}`;
-  const innerForegroundColorName = `${innerColorName}-foreground`;
+  const accentColorName = `accent-${handleColorName}`;
+  const accentForegroundColorName = `${accentColorName}-foreground`;
 
   const setHandleDragging = useFlowStore((state) => state.setHandleDragging);
   const setFilterType = useFlowStore((state) => state.setFilterType);
@@ -174,14 +174,14 @@ export default function HandleRenderComponent({
     () =>
       isNullHandle
         ? dark
-          ? "conic-gradient(hsl(var(--inner-gray)) 0deg 360deg)"
-          : "conic-gradient(hsl(var(--inner-gray-foreground)) 0deg 360deg)"
+          ? "conic-gradient(hsl(var(--accent-gray)) 0deg 360deg)"
+          : "conic-gradient(hsl(var(--accent-gray-foreground)) 0deg 360deg)"
         : "conic-gradient(" +
           colorName!
             .concat(colorName![0])
             .map(
               (color, index) =>
-                `hsl(var(--inner-${color}))` +
+                `hsl(var(--accent-${color}))` +
                 " " +
                 ((360 / colors.length) * index - 360 / (colors.length * 4)) +
                 "deg " +
@@ -203,34 +203,34 @@ export default function HandleRenderComponent({
       styleSheet.textContent = `
         @keyframes pulseNeon {
           0% {
-            box-shadow: 0 0 0 2px hsl(var(--border)),
-                        0 0 2px hsl(var(--inner-${colorName![0]})),
-                        0 0 4px hsl(var(--inner-${colorName![0]})),
-                        0 0 6px hsl(var(--inner-${colorName![0]})),
-                        0 0 8px hsl(var(--inner-${colorName![0]})),
-                        0 0 10px hsl(var(--inner-${colorName![0]})),
-                        0 0 15px hsl(var(--inner-${colorName![0]})),
-                        0 0 20px hsl(var(--inner-${colorName![0]}));
+            box-shadow: 0 0 0 2px hsl(var(--node-ring)),
+                        0 0 2px hsl(var(--accent-${colorName![0]})),
+                        0 0 4px hsl(var(--accent-${colorName![0]})),
+                        0 0 6px hsl(var(--accent-${colorName![0]})),
+                        0 0 8px hsl(var(--accent-${colorName![0]})),
+                        0 0 10px hsl(var(--accent-${colorName![0]})),
+                        0 0 15px hsl(var(--accent-${colorName![0]})),
+                        0 0 20px hsl(var(--accent-${colorName![0]}));
           }
           50% {
-            box-shadow: 0 0 0 2px hsl(var(--border)),
-                        0 0 4px hsl(var(--inner-${colorName![0]})),
-                        0 0 8px hsl(var(--inner-${colorName![0]})),
-                        0 0 12px hsl(var(--inner-${colorName![0]})),
-                        0 0 16px hsl(var(--inner-${colorName![0]})),
-                        0 0 20px hsl(var(--inner-${colorName![0]})),
-                        0 0 25px hsl(var(--inner-${colorName![0]})),
-                        0 0 30px hsl(var(--inner-${colorName![0]}));
+            box-shadow: 0 0 0 2px hsl(var(--node-ring)),
+                        0 0 4px hsl(var(--accent-${colorName![0]})),
+                        0 0 8px hsl(var(--accent-${colorName![0]})),
+                        0 0 12px hsl(var(--accent-${colorName![0]})),
+                        0 0 16px hsl(var(--accent-${colorName![0]})),
+                        0 0 20px hsl(var(--accent-${colorName![0]})),
+                        0 0 25px hsl(var(--accent-${colorName![0]})),
+                        0 0 30px hsl(var(--accent-${colorName![0]}));
           }
           100% {
-            box-shadow: 0 0 0 2px hsl(var(--border)),
-                        0 0 2px hsl(var(--inner-${colorName![0]})),
-                        0 0 4px hsl(var(--inner-${colorName![0]})),
-                        0 0 6px hsl(var(--inner-${colorName![0]})),
-                        0 0 8px hsl(var(--inner-${colorName![0]})),
-                        0 0 10px hsl(var(--inner-${colorName![0]})),
-                        0 0 15px hsl(var(--inner-${colorName![0]})),
-                        0 0 20px hsl(var(--inner-${colorName![0]}));
+            box-shadow: 0 0 0 2px hsl(var(--node-ring)),
+                        0 0 2px hsl(var(--accent-${colorName![0]})),
+                        0 0 4px hsl(var(--accent-${colorName![0]})),
+                        0 0 6px hsl(var(--accent-${colorName![0]})),
+                        0 0 8px hsl(var(--accent-${colorName![0]})),
+                        0 0 10px hsl(var(--accent-${colorName![0]})),
+                        0 0 15px hsl(var(--accent-${colorName![0]})),
+                        0 0 20px hsl(var(--accent-${colorName![0]}));
           }
         }
       `;
@@ -302,11 +302,13 @@ export default function HandleRenderComponent({
           content={
             <HandleTooltipComponent
               isInput={left}
-              colors={colors}
               tooltipTitle={tooltipTitle}
               isConnecting={!!filterPresent && !ownHandle}
               isCompatible={openHandle}
               isSameNode={sameNode && !ownHandle}
+              accentColorName={accentColorName}
+              accentForegroundColorName={accentForegroundColorName}
+              left={left}
             />
           }
           side={left ? "left" : "right"}
@@ -366,12 +368,12 @@ export default function HandleRenderComponent({
             height: "10px",
             transition: "all 0.2s",
             boxShadow: getNeonShadow(
-              innerForegroundColorName,
+              accentForegroundColorName,
               isHovered || openHandle,
             ),
             animation:
               (isHovered || openHandle) && !isNullHandle
-                ? "pulseNeon 0.7s ease-in-out infinite"
+                ? "pulseNeon 1.1s ease-in-out infinite"
                 : "none",
             border: isNullHandle ? "2px solid hsl(var(--muted))" : "none",
           }}
