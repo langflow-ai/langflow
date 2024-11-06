@@ -82,7 +82,7 @@
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^10.0.0",
     "vite-plugin-svgr": "^4.2.0",
-    "vite-tsconfig-paths": "^4.3.2",
+    "vite-tsconfig-paths": "^5.0.1",
     "web-vitals": "^4.1.1",
     "zod": "^3.23.8",
     "zustand": "^4.5.2"
