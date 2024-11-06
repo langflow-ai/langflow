@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from langchain_core.tools import ToolException
 from langchain_core.tools.structured import StructuredTool
 from loguru import logger
+from pydantic import BaseModel
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
 from langflow.io.schema import create_input_schema
@@ -14,6 +15,7 @@ from langflow.io.schema import create_input_schema
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from langchain_core.callbacks import Callbacks
     from langchain_core.tools import BaseTool
 
     from langflow.custom.custom_component.component import Component
@@ -81,6 +83,8 @@ def _build_output_async_function(
                 event_manager.on_build_end(data={"id": component._id})
         except Exception as e:
             raise ToolException(e) from e
+        if isinstance(result, BaseModel):
+            return result.model_dump()
         return result
 
     return output_function
@@ -97,7 +101,9 @@ class ComponentToolkit:
     def __init__(self, component: Component):
         self.component = component
 
-    def get_tools(self) -> list[BaseTool]:
+    def get_tools(
+        self, tool_name: str | None = None, tool_description: str | None = None, callbacks: Callbacks | None = None
+    ) -> list[BaseTool]:
         tools = []
         for output in self.component.outputs:
             if output.name == TOOL_OUTPUT_NAME:
@@ -136,6 +142,8 @@ class ComponentToolkit:
                         description=build_description(self.component, output),
                         coroutine=_build_output_async_function(self.component, output_method, event_manager),
                         args_schema=args_schema,
+                        handle_tool_error=True,
+                        callbacks=callbacks,
                     )
                 )
             else:
@@ -145,6 +153,18 @@ class ComponentToolkit:
                         description=build_description(self.component, output),
                         func=_build_output_function(self.component, output_method, event_manager),
                         args_schema=args_schema,
+                        handle_tool_error=True,
+                        callbacks=callbacks,
                     )
                 )
+        if len(tools) == 1:
+            tool = tools[0]
+            tool.name = tool_name
+            tool.description = tool_description
+        elif tool_name or tool_description:
+            msg = (
+                "When passing a tool name or description, there must be only one tool, "
+                f"but {len(tools)} tools were found."
+            )
+            raise ValueError(msg)
         return tools
