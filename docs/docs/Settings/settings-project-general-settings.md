@@ -4,33 +4,20 @@ sidebar_position: 1
 slug: /settings-project-general-settings
 ---
 
-
-
-:::info
-
-This page may contain outdated information. It will be updated as soon as possible.
-
-:::
-
-
-
-
 Change the **Project Settings** or **General Settings** for Langflow.
-
 
 ## Project Settings {#71e61e6544c94f808cd74b8cc012363d}
 
-
 ---
-
 
 Click **Project Name** &gt; **Settings** to view your **Project Settings**.
 
 - **Name** - the name of your project.
 - **Description** - the description for your project.
-Visible on the Langflow Store.
+This description is visible on the Langflow Store.
 - **Endpoint name** - the custom endpoint name for your project's API endpoint.
-To use the default value, leave this field blank.
+To use the default UUID value, leave this field blank.
+Change the **Endpoint name** to change the default flow UUID value to the string you specify - for example, `http://127.0.0.1:7860/api/v1/run/my-custom-endpoint`.
 
 ## General Settings {#1a0c451fd5e84feeb1d18c2886d642eb}
 
@@ -38,7 +25,7 @@ To use the default value, leave this field blank.
 ---
 
 
-Select your **Profile Picture** &gt; **Settings** to view your **General Settings**.
+Select your **Profile Picture**, and then click **Settings** to view your **General Settings**.
 
 
 ### Profile Picture {#8abfa80ed6c448b6977467679d43c275}
@@ -62,7 +49,7 @@ Select **Add New** to add a key to Langflow.
 Select the **trash icon** to delete a key.
 
 
-For more information, see Global Variables.
+For more information, see [Global Variables](./settings-global-variables).
 
 
 ### Langflow API {#0a08ffc3dd9042da9f9d2d49c9df0b6a}
@@ -89,5 +76,5 @@ A list of keyboard shortcuts for Langflow.
 Inspect, edit, and remove messages in your flow for testing and debugging purposes.
 
 
-For more information, see the Playground.
+For more information, see the [Playground](/workspace-playground).
 
