@@ -2,6 +2,7 @@ import prettyMilliseconds from "pretty-ms";
 import { useEffect, useState } from "react";
 import { AnimatedNumber } from "../animatedNumbers";
 import Loading from "../ui/loading";
+import ForwardedIconComponent from "../genericIconComponent";
 
 export default function DurationDisplay({ duration }: { duration?: number }) {
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -29,25 +30,31 @@ export default function DurationDisplay({ duration }: { duration?: number }) {
   }, [duration]);
 
   const displayTime = duration ?? elapsedTime;
-  const humanizedTime = prettyMilliseconds(displayTime);
+  const humanizedTime = prettyMilliseconds(displayTime, {formatSubMilliseconds: true, millisecondsDecimalDigits: 2});
   return (
     <div
-      className={`inline-flex items-center gap-2 rounded px-2 text-sm ${
+      className={`inline-flex justify-between items-center gap-1 rounded-[3px] px-2 text-sm ${
         duration !== undefined
-          ? "bg-emerald-950/30 text-emerald-400"
-          : "text-gray-400"
+          ? "bg-emerald-50 text-emerald-600 dark:bg-[#022C22] dark:text-emerald-500"
+          : "bg-muted text-muted-foreground"
       }`}
     >
-      <AnimatedNumber
-        value={displayTime}
+      {duration === undefined ? (
+        <Loading className="h-4 w-4" />
+      ) : (
+        <ForwardedIconComponent name="check" className="h-4 w-4" />
+      )}
+      <div className=" w-fit">
+        <AnimatedNumber
+          value={displayTime}
         humanizedValue={humanizedTime}
         springOptions={{
           bounce: 0,
           duration: 300,
         }}
         className="tabular-nums"
-      />
-      {duration === undefined && <Loading />}
+        />
+        </div>
     </div>
   );
 }
