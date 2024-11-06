@@ -1,6 +1,7 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from fastapi.encoders import jsonable_encoder
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
 from typing_extensions import TypedDict
 
 
@@ -78,3 +79,7 @@ class ToolContent(BaseContent):
     output: Any | None = None
     error: Any | None = None
     duration: int | None = None
+
+    @field_serializer("output")
+    def serialize_output(self, output: Any, _info: Any) -> Any:
+        return jsonable_encoder(output)
