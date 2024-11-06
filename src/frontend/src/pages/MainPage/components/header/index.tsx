@@ -123,7 +123,7 @@ const HeaderComponent = ({
           </div>
         </div>
         <div className="flex gap-2">
-          <ShadTooltip content="Store" side="bottom">
+          {/* <ShadTooltip content="Store" side="bottom">
             <Button variant="outline" onClick={() => navigate("/store")}>
               <ForwardedIconComponent
                 name="store"
@@ -134,7 +134,7 @@ const HeaderComponent = ({
                 Browse Store
               </span>
             </Button>
-          </ShadTooltip>
+          </ShadTooltip> */}
           <ShadTooltip content="New Flow" side="bottom">
             <Button
               variant="default"
