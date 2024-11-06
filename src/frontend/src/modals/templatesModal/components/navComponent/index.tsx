@@ -20,7 +20,7 @@ export function Nav({ categories, currentTab, setCurrentTab }: NavProps) {
   const isMobile = useIsMobile();
 
   return (
-    <Sidebar collapsible={isMobile ? "icon" : "none"}>
+    <Sidebar collapsible={isMobile ? "icon" : "none"} className="max-w-[230px]">
       <SidebarContent className="gap-0 p-2">
         <div
           className={cn("relative flex items-center gap-2 px-2 py-3 md:px-4")}
@@ -33,11 +33,11 @@ export function Nav({ categories, currentTab, setCurrentTab }: NavProps) {
           />
           <div
             className={cn(
-              "flex h-8 shrink-0 items-center rounded-md text-lg font-semibold leading-none tracking-tight text-primary outline-none ring-ring transition-[margin,opa] duration-200 ease-linear focus-visible:ring-1 [&>svg]:size-4 [&>svg]:shrink-0",
+              "text-base-semibold flex h-8 shrink-0 items-center rounded-md leading-none tracking-tight text-primary outline-none ring-ring transition-[margin,opa] duration-200 ease-linear focus-visible:ring-1 [&>svg]:size-4 [&>svg]:shrink-0",
               "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
             )}
           >
-            Categories
+            Templates
           </div>
         </div>
 
@@ -65,7 +65,7 @@ export function Nav({ categories, currentTab, setCurrentTab }: NavProps) {
                         name={link.icon}
                         className={`h-4 w-4 stroke-2 ${
                           currentTab === link.id
-                            ? "x-gradient"
+                            ? "text-accent-pink-foreground"
                             : "text-muted-foreground"
                         }`}
                       />

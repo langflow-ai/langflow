@@ -73,15 +73,15 @@ const router = createBrowserRouter(
                 >
                   <Route
                     index
-                    element={<CustomNavigate replace to={"all"} />}
+                    element={<CustomNavigate replace to={"flows"} />}
                   />
                   <Route
                     path="flows/"
                     element={
                       ENABLE_HOMEPAGE ? (
-                        <HomePage key="flows" type="flow" />
+                        <HomePage key="flows" type="flows" />
                       ) : (
-                        <MyCollectionComponent key="flows" type="flow" />
+                        <MyCollectionComponent key="flows" type="flows" />
                       )
                     }
                   >
@@ -89,9 +89,9 @@ const router = createBrowserRouter(
                       path="folder/:folderId"
                       element={
                         ENABLE_HOMEPAGE ? (
-                          <HomePage key="flows" type="flow" />
+                          <HomePage key="flows" type="flows" />
                         ) : (
-                          <MyCollectionComponent key="flows" type="flow" />
+                          <MyCollectionComponent key="flows" type="flows" />
                         )
                       }
                     />
@@ -100,7 +100,7 @@ const router = createBrowserRouter(
                     path="components/"
                     element={
                       ENABLE_HOMEPAGE ? (
-                        <HomePage key="components" type="component" />
+                        <HomePage key="components" type="components" />
                       ) : (
                         <MyCollectionComponent
                           key="components"
@@ -113,7 +113,7 @@ const router = createBrowserRouter(
                       path="folder/:folderId"
                       element={
                         ENABLE_HOMEPAGE ? (
-                          <HomePage key="components" type="component" />
+                          <HomePage key="components" type="components" />
                         ) : (
                           <MyCollectionComponent
                             key="components"
@@ -127,7 +127,7 @@ const router = createBrowserRouter(
                     path="all/"
                     element={
                       ENABLE_HOMEPAGE ? (
-                        <HomePage key="all" type="all" />
+                        <HomePage key="flows" type="flows" />
                       ) : (
                         <MyCollectionComponent key="all" type="all" />
                       )
@@ -137,7 +137,7 @@ const router = createBrowserRouter(
                       path="folder/:folderId"
                       element={
                         ENABLE_HOMEPAGE ? (
-                          <HomePage key="all" type="all" />
+                          <HomePage key="flows" type="flows" />
                         ) : (
                           <MyCollectionComponent key="all" type="all" />
                         )

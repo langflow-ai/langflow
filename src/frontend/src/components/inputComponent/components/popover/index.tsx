@@ -15,7 +15,7 @@ import {
 import { cn } from "@/utils/utils";
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import { X } from "lucide-react";
-import React, { useState } from "react";
+import { useState } from "react";
 
 const CustomInputPopover = ({
   id,
@@ -97,11 +97,10 @@ const CustomInputPopover = ({
             ))
           ) : selectedOption?.length > 0 ? (
             <Badge
-              variant="secondary"
+              variant={nodeStyle ? "emerald" : "secondary"}
               className={cn(
-                "flex items-center gap-1 truncate bg-muted",
-                nodeStyle &&
-                  "font-jetbrains rounded-[3px] bg-emerald-100 px-1 text-emerald-700 hover:bg-emerald-200",
+                "flex items-center gap-1 truncate",
+                nodeStyle ? "font-jetbrains rounded-[3px] px-1" : "bg-muted",
               )}
             >
               <div className="max-w-36 truncate">{selectedOption}</div>

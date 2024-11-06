@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -175,7 +174,7 @@ body {
   stroke-width: 1px !important;
 }
 
-.react-flow__edge.runned .react-flow__edge-path {
+.react-flow__edge.ran .react-flow__edge-path {
   stroke: hsl(var(--foreground)) !important;
   stroke-width: 2px !important;
 }
@@ -195,5 +194,5 @@ body {
 }
 
 code {
-  font-family: var(--font-mono)s !important;
+  font-family: var(--font-mono) s !important;
 }

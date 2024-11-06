@@ -105,7 +105,10 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
   let hasStyles = await element?.evaluate((el) => {
     const style = window.getComputedStyle(el);
-    return style.backgroundColor === "rgb(241, 245, 249)";
+    return (
+      style.backgroundColor === "rgb(252, 211, 77)" ||
+      style.backgroundColor === "rgb(253, 230, 138)"
+    );
   });
   expect(hasStyles).toBe(true);
 
@@ -113,7 +116,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
   await page.getByTestId("color_picker").click();
 
-  await page.getByTestId("color_picker_button_red").click();
+  await page.getByTestId("color_picker_button_rose").click();
   await page.waitForTimeout(1000);
 
   await page.getByTestId("note_node").click();
@@ -122,7 +125,11 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
   hasStyles = await element?.evaluate((el) => {
     const style = window.getComputedStyle(el);
-    return style.backgroundColor === "rgb(254, 226, 226)";
+
+    return (
+      style.backgroundColor === "rgb(253, 164, 175)" ||
+      style.backgroundColor === "rgb(254, 205, 211)"
+    );
   });
   expect(hasStyles).toBe(true);
 

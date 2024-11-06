@@ -14,7 +14,7 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 from langchain_core.prompts import BaseChatPromptTemplate, ChatPromptTemplate, PromptTemplate
 from langchain_core.prompts.image import ImagePromptTemplate
 from loguru import logger
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer, field_validator
 
 from langflow.base.prompts.utils import dict_values_to_string
 from langflow.schema.content_block import ContentBlock
@@ -22,7 +22,7 @@ from langflow.schema.content_types import ErrorContent
 from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
 from langflow.schema.properties import Properties, Source
-from langflow.schema.utils import timestamp_to_str_validator  # noqa: TCH001
+from langflow.schema.validators import timestamp_to_str_validator  # noqa: TCH001
 from langflow.utils.constants import (
     MESSAGE_SENDER_AI,
     MESSAGE_SENDER_NAME_AI,
@@ -59,6 +59,28 @@ class Message(Data):
     def validate_flow_id(cls, value):
         if isinstance(value, UUID):
             value = str(value)
+        return value
+
+    @field_validator("content_blocks", mode="before")
+    @classmethod
+    def validate_content_blocks(cls, value):
+        # value may start with [ or not
+        if isinstance(value, list):
+            return [
+                ContentBlock.model_validate_json(v) if isinstance(v, str) else ContentBlock.model_validate(v)
+                for v in value
+            ]
+        if isinstance(value, str):
+            value = json.loads(value) if value.startswith("[") else [ContentBlock.model_validate_json(value)]
+        return value
+
+    @field_validator("properties", mode="before")
+    @classmethod
+    def validate_properties(cls, value):
+        if isinstance(value, str):
+            value = Properties.model_validate_json(value)
+        elif isinstance(value, dict):
+            value = Properties.model_validate(value)
         return value
 
     @field_serializer("flow_id")
@@ -328,11 +350,17 @@ class ErrorMessage(Message):
         flow_id: str | None = None,
     ) -> None:
         # Get the error reason
-        reason = exception.__class__.__name__
+        reason = f"**{exception.__class__.__name__}**\n"
         if hasattr(exception, "body") and "message" in exception.body:
-            reason = exception.body.get("message")
+            reason += f" - **{exception.body.get('message')}**\n"
         elif hasattr(exception, "code"):
-            reason = exception.code
+            reason += f" - **Code: {exception.code}**\n"
+        elif hasattr(exception, "args") and exception.args:
+            reason += f" - **Details: {exception.args[0]}**\n"
+        elif isinstance(exception, ValidationError):
+            reason += f" - **Details:**\n\n```python\n{exception!s}\n```\n"
+        else:
+            reason += " - **An unknown error occurred.**\n"
 
         # Get the sender ID
         if trace_name:
@@ -359,14 +387,16 @@ class ErrorMessage(Message):
             content_blocks=[
                 ContentBlock(
                     title="Error",
-                    content=ErrorContent(
-                        type="error",
-                        component=source.display_name,
-                        field=str(exception.field) if hasattr(exception, "field") else None,
-                        reason=reason,
-                        solution=str(exception.solution) if hasattr(exception, "solution") else None,
-                        traceback=traceback.format_exc(),
-                    ),
+                    contents=[
+                        ErrorContent(
+                            type="error",
+                            component=source.display_name,
+                            field=str(exception.field) if hasattr(exception, "field") else None,
+                            reason=reason,
+                            solution=str(exception.solution) if hasattr(exception, "solution") else None,
+                            traceback=traceback.format_exc(),
+                        )
+                    ],
                 )
             ],
             flow_id=flow_id,
