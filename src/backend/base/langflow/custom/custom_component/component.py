@@ -591,7 +591,7 @@ class Component(CustomComponent):
                     f"You should pass one of the following: {methods}"
                 )
                 raise ValueError(msg)
-            if callable(input_value):
+            if callable(input_value) and hasattr(input_value, "__self__"):
                 msg = f"Input {name} is connected to {input_value.__self__.display_name}.{input_value.__name__}"
                 raise ValueError(msg)
             self._inputs[name].value = value
@@ -876,7 +876,7 @@ class Component(CustomComponent):
 
     def to_toolkit(self) -> list[Tool]:
         component_toolkit = _get_component_toolkit()
-        return component_toolkit(component=self).get_tools()
+        return component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
 
     def get_project_name(self):
         if hasattr(self, "_tracing_service") and self._tracing_service:
