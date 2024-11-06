@@ -252,6 +252,6 @@ async def process_agent_events(
                 agent_message, start_time = chain_handler(event, agent_message, send_message_method, start_time)
                 start_time = start_time or perf_counter()
         agent_message.properties.state = "complete"
-        return Message(**agent_message.model_dump())
     except Exception as e:
         raise ExceptionWithMessageError(e, agent_message) from e
+    return Message(**agent_message.model_dump())
