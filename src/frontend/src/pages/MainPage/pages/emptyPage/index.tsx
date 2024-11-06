@@ -19,7 +19,7 @@ export const EmptyPage = ({
   const folders = useFolderStore((state) => state.folders);
 
   return (
-    <div className="m-0 p-0">
+    <div className="m-0 h-full w-full bg-black p-0">
       <div className="text-container">
         {(folderData?.folder?.name && folderData?.flows?.items?.length !== 0) ||
           (folders?.length > 1 && (
