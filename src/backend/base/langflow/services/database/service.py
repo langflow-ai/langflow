@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import sqlite3
 import time
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -14,7 +15,9 @@ from loguru import logger
 from sqlalchemy import event, inspect
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlmodel import Session, SQLModel, create_engine, select, text
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.base import Service
 from langflow.services.database import models
@@ -39,12 +42,17 @@ class DatabaseService(Service):
             msg = "No database URL provided"
             raise ValueError(msg)
         self.database_url: str = settings_service.settings.database_url
+        self._sanitize_database_url()
         # This file is in langflow.services.database.manager.py
         # the ini is in langflow
         langflow_dir = Path(__file__).parent.parent.parent
         self.script_location = langflow_dir / "alembic"
         self.alembic_cfg_path = langflow_dir / "alembic.ini"
+        # register the event listener for sqlite as part of this class.
+        # Using decorator will make the method not able to use self
+        event.listen(Engine, "connect", self.on_connection)
         self.engine = self._create_engine()
+        self.async_engine = self._create_async_engine()
         alembic_log_file = self.settings_service.settings.alembic_log_file
 
         # Check if the provided path is absolute, cross-platform.
@@ -56,10 +64,47 @@ class DatabaseService(Service):
             self.alembic_log_path = Path(langflow_dir) / alembic_log_file
 
     def reload_engine(self) -> None:
+        self._sanitize_database_url()
         self.engine = self._create_engine()
+        self.async_engine = self._create_async_engine()
+
+    def _sanitize_database_url(self):
+        if self.database_url.startswith("postgres://"):
+            self.database_url = self.database_url.replace("postgres://", "postgresql://")
+            logger.warning(
+                "Fixed postgres dialect in database URL. Replacing postgres:// with postgresql://. "
+                "To avoid this warning, update the database URL."
+            )
 
     def _create_engine(self) -> Engine:
         """Create the engine for the database."""
+        return create_engine(
+            self.database_url,
+            connect_args=self._get_connect_args(),
+            pool_size=self.settings_service.settings.pool_size,
+            max_overflow=self.settings_service.settings.max_overflow,
+        )
+
+    def _create_async_engine(self) -> AsyncEngine:
+        """Create the engine for the database."""
+        url_components = self.database_url.split("://", maxsplit=1)
+        if url_components[0].startswith("sqlite"):
+            database_url = "sqlite+aiosqlite://"
+            kwargs = {}
+        else:
+            kwargs = {
+                "pool_size": self.settings_service.settings.pool_size,
+                "max_overflow": self.settings_service.settings.max_overflow,
+            }
+            database_url = "postgresql+psycopg://" if url_components[0].startswith("postgresql") else url_components[0]
+        database_url += url_components[1]
+        return create_async_engine(
+            database_url,
+            connect_args=self._get_connect_args(),
+            **kwargs,
+        )
+
+    def _get_connect_args(self):
         if self.settings_service.settings.database_url and self.settings_service.settings.database_url.startswith(
             "sqlite"
         ):
@@ -69,33 +114,12 @@ class DatabaseService(Service):
             }
         else:
             connect_args = {}
-        try:
-            # register the event listener for sqlite as part of this class.
-            # Using decorator will make the method not able to use self
-            event.listen(Engine, "connect", self.on_connection)
-
-            return create_engine(
-                self.database_url,
-                connect_args=connect_args,
-                pool_size=self.settings_service.settings.pool_size,
-                max_overflow=self.settings_service.settings.max_overflow,
-            )
-        except sa.exc.NoSuchModuleError as exc:
-            if "postgres" in str(exc) and not self.database_url.startswith("postgresql"):
-                # https://stackoverflow.com/questions/62688256/sqlalchemy-exc-nosuchmoduleerror-cant-load-plugin-sqlalchemy-dialectspostgre
-                self.database_url = self.database_url.replace("postgres://", "postgresql://")
-                logger.warning(
-                    "Fixed postgres dialect in database URL. Replacing postgres:// with postgresql://. "
-                    "To avoid this warning, update the database URL."
-                )
-                return self._create_engine()
-            msg = "Error creating database engine"
-            raise RuntimeError(msg) from exc
+        return connect_args
 
     def on_connection(self, dbapi_connection, _connection_record) -> None:
-        from sqlite3 import Connection as sqliteConnection
-
-        if isinstance(dbapi_connection, sqliteConnection):
+        if isinstance(
+            dbapi_connection, sqlite3.Connection | sa.dialects.sqlite.aiosqlite.AsyncAdapt_aiosqlite_connection
+        ):
             pragmas: dict = self.settings_service.settings.sqlite_pragmas or {}
             pragmas_list = []
             for key, val in pragmas.items():
@@ -115,6 +139,11 @@ class DatabaseService(Service):
     @contextmanager
     def with_session(self):
         with Session(self.engine) as session:
+            yield session
+
+    @asynccontextmanager
+    async def with_async_session(self):
+        async with AsyncSession(self.async_engine) as session:
             yield session
 
     def migrate_flows_if_auto_login(self) -> None:
@@ -334,3 +363,4 @@ class DatabaseService(Service):
 
     async def teardown(self) -> None:
         await asyncio.to_thread(self._teardown)
+        await self.async_engine.dispose()
