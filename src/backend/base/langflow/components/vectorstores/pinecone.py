@@ -7,29 +7,6 @@ from langflow.io import DataInput, DropdownInput, HandleInput, IntInput, Multili
 from langflow.schema import Data
 
 
-class Float32Embeddings:
-    """Wrapper class to ensure float32 embeddings."""
-
-    def __init__(self, base_embeddings):
-        self.base_embeddings = base_embeddings
-
-    def embed_documents(self, texts):
-        embeddings = self.base_embeddings.embed_documents(texts)
-        if isinstance(embeddings, np.ndarray):
-            return [[self._force_float32(x) for x in vec] for vec in embeddings]
-        return [[self._force_float32(x) for x in vec] for vec in embeddings]
-
-    def embed_query(self, text):
-        embedding = self.base_embeddings.embed_query(text)
-        if isinstance(embedding, np.ndarray):
-            return [self._force_float32(x) for x in embedding]
-        return [self._force_float32(x) for x in embedding]
-
-    def _force_float32(self, value):
-        """Convert any numeric type to Python float."""
-        return float(np.float32(value))
-
-
 class PineconeVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Pinecone"
     description = "Pinecone Vector Store with search capabilities"
@@ -128,3 +105,26 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
             data = docs_to_data(docs)
             self.status = data
             return data
+
+class Float32Embeddings:
+    """Wrapper class to ensure float32 embeddings."""
+
+    def __init__(self, base_embeddings):
+        self.base_embeddings = base_embeddings
+
+    def embed_documents(self, texts):
+        embeddings = self.base_embeddings.embed_documents(texts)
+        if isinstance(embeddings, np.ndarray):
+            return [[self._force_float32(x) for x in vec] for vec in embeddings]
+        return [[self._force_float32(x) for x in vec] for vec in embeddings]
+
+    def embed_query(self, text):
+        embedding = self.base_embeddings.embed_query(text)
+        if isinstance(embedding, np.ndarray):
+            return [self._force_float32(x) for x in embedding]
+        return [self._force_float32(x) for x in embedding]
+
+    def _force_float32(self, value):
+        """Convert any numeric type to Python float."""
+        return float(np.float32(value))
+
