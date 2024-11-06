@@ -42,5 +42,5 @@ class AimlModels:
             if model_type in model_type_mapping:
                 model_type_mapping[model_type].append(model_id)
 
-    def get_exception_message(e: Exception):
+    def get_exception_message(self, e: Exception):
         return str(e)

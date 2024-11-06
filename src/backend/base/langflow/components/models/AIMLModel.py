@@ -64,7 +64,7 @@ class AIMLModelComponent(LCModelComponent):
         ),
     ]
 
-    def update_build_config(self, build_config: dict, field_name: str | None = None):
+    def update_build_config(self, field_value: str, build_config: dict, field_name: str | None = None):
         if field_name == "api_key" or field_name == "aiml_api_base" or field_name == "model_name":
             aiml = AimlModels()
             aiml.get_aiml_models()
@@ -77,7 +77,7 @@ class AIMLModelComponent(LCModelComponent):
         model_name: str = self.model_name
         max_tokens = self.max_tokens
         model_kwargs = self.model_kwargs or {}
-        aiml_api_base = self.aiml_api_base or "https://api-staging.aimlapi.com/v2"
+        aiml_api_base = self.aiml_api_base or "https://api.aimlapi.com/v2"
 
         openai_api_key = aiml_api_key.get_secret_value() if isinstance(aiml_api_key, SecretStr) else aiml_api_key
 

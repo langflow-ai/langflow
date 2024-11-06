@@ -16,7 +16,7 @@ class AIMLEmbeddingsComponent(LCEmbeddingsModel):
         DropdownInput(
             name="model_name",
             display_name="Model Name",
-            options=AimlModels().embedding_models,
+            options=[],
             required=True,
         ),
         SecretStrInput(
