@@ -99,7 +99,7 @@ export default function NodeStatus({
   const getBaseBorderClass = (selected) => {
     let className =
       selected && !isBuilding
-        ? " border-[1px] ring-[0.75px] ring-foreground border-foreground hover:shadow-node"
+        ? " border-[1px] ring-[0.75px] ring-muted-foreground border-muted-foreground hover:shadow-node"
         : "border-[1px] ring-[0.5px] hover:shadow-node ring-border";
     let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
     return frozen ? frozenClass : className;
@@ -218,7 +218,7 @@ export default function NodeStatus({
                 <div className="max-h-100 p-2">
                   <div className="max-h-80 overflow-auto">
                     {validationString && (
-                      <div className="ml-1 pb-2 text-status-red">
+                      <div className="text-accent-red-foreground ml-1 pb-2">
                         {validationString}
                       </div>
                     )}
