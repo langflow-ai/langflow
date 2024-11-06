@@ -1,6 +1,6 @@
+import prettyMilliseconds from "pretty-ms";
 import { useEffect, useState } from "react";
 import Loading from "../ui/loading";
-
 export default function DurationDisplay({ duration }: { duration?: number }) {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
@@ -30,7 +30,7 @@ export default function DurationDisplay({ duration }: { duration?: number }) {
   }, [duration]);
 
   const displayTime = duration ?? elapsedTime;
-
+  const humanizedTime = prettyMilliseconds(displayTime);
   return (
     <div
       className={`inline-flex items-center gap-2 rounded px-2 text-sm ${
@@ -39,7 +39,7 @@ export default function DurationDisplay({ duration }: { duration?: number }) {
           : "text-gray-400"
       }`}
     >
-      {displayTime}ms
+      {humanizedTime}
       {duration === undefined && <Loading />}
     </div>
   );
