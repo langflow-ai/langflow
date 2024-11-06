@@ -9,7 +9,6 @@ import { useState } from "react";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
-import { Separator } from "../ui/separator";
 import ContentDisplay from "./ContentDisplay";
 
 interface ContentBlockDisplayProps {
@@ -81,15 +80,8 @@ export function ContentBlockDisplay({
                   </Markdown>
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {block.contents.map((content, contentIndex) => (
-                    <div className="relative" key={contentIndex}>
-                      {contentIndex > 0 && <Separator className="my-2" />}
-                      {Object.entries(content)
-                        .filter(([key]) => key !== "type")
-                        .map(([key, value], entryIndex) => (
-                          <ContentDisplay type={key} content={value} />
-                        ))}
-                    </div>
+                  {block.contents.map((content, index) => (
+                    <ContentDisplay key={index} content={content} />
                   ))}
                 </div>
               </div>
