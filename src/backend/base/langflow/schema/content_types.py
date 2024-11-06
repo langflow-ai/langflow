@@ -13,7 +13,7 @@ class BaseContent(BaseModel):
     """Base class for all content types."""
 
     type: str = Field(..., description="Type of the content")
-    duration: float | None = None
+    duration: int | None = None
     header: HeaderDict | None = Field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
