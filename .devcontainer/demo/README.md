@@ -10,6 +10,6 @@ To setup the demo, simply navigate to the Langflow repo, click the "+" button, a
 
 ### Wait for everything to install
 
-After the codespace is opened, you should see a new Terminal window in VS Code where langflow is installed. Once the install completes, `langflow` will launch the webserver and your application will be available via devcontainer port. 
+After the codespace is opened, you should see a new Terminal window in VS Code where langflow is installed. Once the install completes, `langflow` will launch the webserver and your application will be available via devcontainer port.
 
 Note: VS Code should prompt you with a button to push once the port is available.

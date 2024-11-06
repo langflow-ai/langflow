@@ -60,7 +60,7 @@ print(data.title)  # Outputs: "Hello, World!" because "title" key is in the data
 The `Data` object is also convenient for visualization of outputs, since the output preview has visual elements to inspect data as a table and its cells as pop ups for basic types. The idea is to create a unified way to work and visualize complex information in Langflow.
 
 
-To receive `Data` objects in a component input, you can use the `DataInput` input type. 
+To receive `Data` objects in a component input, you can use the `DataInput` input type.
 
 
 ## The Message Object {#f4f17cad02a545068f407d515cbc2902}

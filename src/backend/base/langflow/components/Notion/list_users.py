@@ -1,6 +1,6 @@
-import requests
 from langchain.tools import StructuredTool
 from pydantic import BaseModel
+from security import safe_requests
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
@@ -58,7 +58,7 @@ class NotionUserList(LCToolComponent):
             "Notion-Version": "2022-06-28",
         }
 
-        response = requests.get(url, headers=headers, timeout=10)
+        response = safe_requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
 
         data = response.json()

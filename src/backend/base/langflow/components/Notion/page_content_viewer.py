@@ -2,6 +2,7 @@ import requests
 from langchain.tools import StructuredTool
 from loguru import logger
 from pydantic import BaseModel, Field
+from security import safe_requests
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
@@ -55,7 +56,7 @@ class NotionPageContent(LCToolComponent):
             "Notion-Version": "2022-06-28",
         }
         try:
-            blocks_response = requests.get(blocks_url, headers=headers, timeout=10)
+            blocks_response = safe_requests.get(blocks_url, headers=headers, timeout=10)
             blocks_response.raise_for_status()
             blocks_data = blocks_response.json()
             return self.parse_blocks(blocks_data.get("results", []))

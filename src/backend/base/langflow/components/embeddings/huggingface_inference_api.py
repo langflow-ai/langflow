@@ -3,6 +3,7 @@ from urllib.parse import urlparse
 import requests
 from langchain_community.embeddings.huggingface import HuggingFaceInferenceAPIEmbeddings
 from pydantic.v1.types import SecretStr
+from security import safe_requests
 from tenacity import retry, stop_after_attempt, wait_fixed
 
 from langflow.base.embeddings.model import LCEmbeddingsModel
@@ -54,7 +55,7 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
             raise ValueError(msg)
 
         try:
-            response = requests.get(f"{inference_endpoint}/health", timeout=5)
+            response = safe_requests.get(f"{inference_endpoint}/health", timeout=5)
         except requests.RequestException as e:
             msg = (
                 f"Inference endpoint '{inference_endpoint}' is not responding. "

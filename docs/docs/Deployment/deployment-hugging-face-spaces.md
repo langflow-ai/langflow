@@ -30,5 +30,5 @@ HuggingFace provides a great alternative for running Langflow in their Spaces en
 3. **Complete Installation**: The duplication and setup process begins immediately after you click **Duplicate Space**. Once completed, you will be automatically redirected to the main page of your new Space.
 
 
-4. **Start Exploring Langflow**: With the setup complete, Langflow is now ready for use in your Space and you can start exploring its features and capabilities right away! 
+4. **Start Exploring Langflow**: With the setup complete, Langflow is now ready for use in your Space and you can start exploring its features and capabilities right away!
 

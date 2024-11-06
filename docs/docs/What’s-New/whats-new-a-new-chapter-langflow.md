@@ -118,7 +118,7 @@ We introduced folders on the home page to help categorize flows and components. 
 ### Playground {#27649918dcb64a0ebae83db767bfe2eb}
 
 
-By having a clear definition of Inputs and Outputs, we could build the experience around that, which led us to create the Playground. 
+By having a clear definition of Inputs and Outputs, we could build the experience around that, which led us to create the Playground.
 
 
 When building a project, testing and debugging are crucial. The Playground is an interface that changes dynamically based on the Inputs and Outputs you defined in your project.

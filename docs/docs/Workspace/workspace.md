@@ -12,7 +12,7 @@ slug: /workspace
 ---
 
 
-The **Langflow Workspace** is where you assemble new flows and create AIs by connecting and running components. 
+The **Langflow Workspace** is where you assemble new flows and create AIs by connecting and running components.
 
 
 ![](./310382168.png)

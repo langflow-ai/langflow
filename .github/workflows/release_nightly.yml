@@ -222,13 +222,16 @@ jobs:
       nightly_tag_main: ${{ inputs.nightly_tag_main }}
     secrets: inherit
 
-# Not currently supported, let's add it later
-#  call_docker_build_main_ep:
-#    name: Call Docker Build Workflow for Langflow with Entrypoint
-#    if: always() && ${{ inputs.build_docker_ep == 'true' }}
-#    needs: [release-nightly-main]
-#    uses: ./.github/workflows/docker-build.yml
-#    with:
-#      release_type: main-ep
-#      nightly_tag_main: ${{ inputs.nightly_tag_main }}
-#    secrets: inherit
+  call_docker_build_main_ep:
+    name: Call Docker Build Workflow for Langflow with Entrypoint
+    if: always() && ${{ inputs.build_docker_ep == 'true' }}
+    needs: [release-nightly-main]
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      release_type: main-ep
+      nightly_tag_main: ${{ inputs.nightly_tag_main }}
+    secrets: inherit
+
+
+
+

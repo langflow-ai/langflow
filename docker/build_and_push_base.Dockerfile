@@ -67,7 +67,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
-FROM python:3.12.3-slim AS runtime
+FROM python:3.13-slim AS runtime
 
 RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 # and we use the venv at the root because workspaces

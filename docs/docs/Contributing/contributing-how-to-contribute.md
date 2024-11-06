@@ -15,7 +15,7 @@ This page may contain outdated information. It will be updated as soon as possib
 
 
 
-👋 Hello there! 
+👋 Hello there!
 
 We welcome contributions from developers of all levels to our open-source project on [GitHub](https://github.com/langflow-ai/langflow). If you'd like to contribute, please check our contributing guidelines and help make Langflow more accessible.
 

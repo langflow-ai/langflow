@@ -2,11 +2,11 @@ import json
 from collections.abc import Sequence
 from typing import Any
 
-import requests
 from langchain.agents import Tool
 from langchain_core.tools import StructuredTool
 from loguru import logger
 from pydantic.v1 import Field, create_model
+from security import safe_requests
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import DropdownInput, IntInput, MessageTextInput, MultiselectInput
@@ -20,7 +20,6 @@ class SearXNGToolComponent(LCToolComponent):
     description = "A component that searches for tools using SearXNG."
     name = "SearXNGTool"
     legacy: bool = True
-
     inputs = [
         MessageTextInput(
             name="url",
@@ -47,7 +46,6 @@ class SearXNGToolComponent(LCToolComponent):
             options=[],
         ),
     ]
-
     outputs = [
         Output(display_name="Tool", name="result_tool", method="build_tool"),
     ]
@@ -55,14 +53,11 @@ class SearXNGToolComponent(LCToolComponent):
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         if field_name is None:
             return build_config
-
         if field_name != "url":
             return build_config
-
         try:
             url = f"{field_value}/config"
-
-            response = requests.get(url=url, headers=self.search_headers.copy(), timeout=10)
+            response = safe_requests.get(url=url, headers=self.search_headers.copy(), timeout=10)
             data = None
             if response.headers.get("Content-Encoding") == "zstd":
                 data = json.loads(response.content)
@@ -97,7 +92,7 @@ class SearXNGToolComponent(LCToolComponent):
                 try:
                     url = f"{SearxSearch._url}/"
                     headers = SearxSearch._headers.copy()
-                    response = requests.get(
+                    response = safe_requests.get(
                         url=url,
                         headers=headers,
                         params={
@@ -108,7 +103,6 @@ class SearXNGToolComponent(LCToolComponent):
                         },
                         timeout=10,
                     ).json()
-
                     num_results = min(SearxSearch._max_results, len(response["results"]))
                     return [response["results"][i] for i in range(num_results)]
                 except Exception as e:  # noqa: BLE001
@@ -133,7 +127,6 @@ class SearXNGToolComponent(LCToolComponent):
                 Field(default=[], description="The categories to search in."),
             ),
         }
-
         searx_search_schema = create_model("SearxSearchSchema", **schema_fields)
 
         return StructuredTool.from_function(
