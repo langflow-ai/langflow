@@ -50,9 +50,10 @@ The repo includes a `.vscode/launch.json` file for debugging the backend in VSCo
 2. Press **Ctrl+Shift+D** for Windows **or Cmd+Shift+D** for Mac to open the Run and Debug view.
 3. Choose a configuration from the dropdown at the top (for example, "Debug Backend").
 4. Click the green play button or press F5 to start debugging.
-5. This allows you to quickly debug different parts of your application, like the backend, frontend, or CLI, directly from VSCode.
 
-### Run Langflow locally (Poetry and Node.js)
+This allows you to quickly debug different parts of your application, like the backend, frontend, or CLI, directly from VSCode.
+
+### Run Langflow locally
 
 Run Langflow locally by cloning the repository and installing the dependencies. We recommend using a virtual environment like [venv](https://docs.python.org/3/library/venv.html) or [conda](https://anaconda.org/anaconda/conda) to isolate dependencies.
 
@@ -72,7 +73,7 @@ make frontend
 
 ## Contribute documentation
 
-The documentation is built using [Docusaurus](https://docusaurus.io/). To run the documentation locally, run the following commands:
+The documentation is built using [Docusaurus](https://docusaurus.io/) and written in [Markdown](https://daringfireball.net/projects/markdown/). To run the documentation locally, run the following commands:
 
 ```bash
 cd docs
