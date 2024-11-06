@@ -10,6 +10,7 @@ import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
 import ForwardedIconComponent from "../genericIconComponent";
 import ContentDisplay from "./ContentDisplay";
+import DurationDisplay from "./DurationDisplay";
 
 interface ContentBlockDisplayProps {
   contentBlocks: ContentBlock[];
@@ -23,6 +24,10 @@ export function ContentBlockDisplay({
   state,
 }: ContentBlockDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const totalDuration = contentBlocks[0]?.contents.reduce((acc, curr) => {
+    return acc + (curr.duration || 0);
+  }, 0) || undefined;
 
   if (!contentBlocks?.length) {
     return null;
@@ -91,12 +96,15 @@ export function ContentBlockDisplay({
               </motion.div>
             </div>
           </div>
-          <motion.div
-            animate={{ rotate: isExpanded ? 180 : 0 }}
+          <div className="flex items-center gap-2">
+            <DurationDisplay duration={totalDuration} />
+            <motion.div
+              animate={{ rotate: isExpanded ? 180 : 0 }}
             transition={{ duration: 0.2, ease: "easeInOut" }}
-          >
-            <ChevronDown className="h-5 w-5" />
-          </motion.div>
+            >
+              <ChevronDown className="h-5 w-5" />
+            </motion.div>
+          </div>
         </div>
 
         <AnimatePresence initial={false}>
