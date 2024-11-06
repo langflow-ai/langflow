@@ -243,7 +243,7 @@ export default function ChatMessage({
               className="flex w-full gap-4 rounded-md p-2"
             >
               <LogoIcon />
-              <div className="w-full rounded-md border border-error-red-border bg-error-red p-4 text-[14px] text-foreground">
+              <div className="w-full rounded-xl border border-error-red-border bg-error-red p-4 text-[14px] text-foreground">
                 <div className="mb-2 flex items-center gap-2">
                   <ForwardedIconComponent
                     className="h-[18px] w-[18px] text-destructive"
