@@ -73,29 +73,6 @@ def handle_on_chain_end(event: dict[str, Any], agent_message: Message) -> Messag
     return agent_message
 
 
-def _find_or_create_tool_content(
-    tool_blocks_map: dict[str, ToolContent],
-    run_id: str,
-    tool_name: str,
-    tool_input: Any | None = None,
-    tool_output: Any | None = None,
-    tool_error: Any | None = None,
-) -> ToolContent:
-    """Create a new ToolContent object."""
-    tool_content = tool_blocks_map.get(run_id)
-    if not tool_content:
-        tool_content = ToolContent(
-            type="tool_use",
-            name=tool_name,
-            input=tool_input if isinstance(tool_input, dict) else {},
-            output=tool_output,
-            error=tool_error,
-            header={"title": f"Accessing **{tool_name}**", "icon": "Hammer"},
-        )
-        tool_blocks_map[run_id] = tool_content
-    return tool_content
-
-
 def handle_on_tool_start(
     event: dict[str, Any],
     agent_message: Message,
