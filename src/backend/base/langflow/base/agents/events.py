@@ -37,7 +37,7 @@ def _calculate_duration(start_time: float) -> int:
 
 
 def handle_on_chain_start(
-    event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType
+    event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType, start_time: float
 ) -> Message:
     # Create content blocks if they don't exist
     if not agent_message.content_blocks:
@@ -54,7 +54,7 @@ def handle_on_chain_start(
             text_content = TextContent(
                 type="text",
                 text=_build_agent_input_text_content(input_dict),
-                duration=_calculate_duration(event["start_time"]),
+                duration=_calculate_duration(start_time),
                 header={"title": "Input", "icon": "MessageSquare"},
             )
             agent_message.content_blocks[0].contents.append(text_content)
@@ -63,17 +63,21 @@ def handle_on_chain_start(
 
 
 def handle_on_chain_end(
-    event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType
+    event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType, start_time: float
 ) -> Message:
     data_output = event["data"].get("output")
     if data_output and isinstance(data_output, AgentFinish) and data_output.return_values.get("output"):
         agent_message.text = data_output.return_values.get("output")
         agent_message.properties.state = "complete"
         # Add duration to the last content if it exists
-        if agent_message.content_blocks and agent_message.content_blocks[0].contents:
-            last_content = agent_message.content_blocks[0].contents[-1]
-            if not getattr(last_content, "duration", None):
-                last_content.duration = _calculate_duration(event["start_time"])
+        if agent_message.content_blocks:
+            duration = _calculate_duration(start_time)
+            text_content = TextContent(
+                type="text",
+                text=agent_message.text,
+                duration=duration,
+            )
+            agent_message.content_blocks[0].contents.append(text_content)
         agent_message = send_message_method(message=agent_message)
     return agent_message
 
@@ -83,6 +87,7 @@ def handle_on_tool_start(
     agent_message: Message,
     tool_blocks_map: dict[str, ToolContent],
     send_message_method: SendMessageFunctionType,
+    start_time: float,  # noqa: ARG001
 ) -> Message:
     tool_name = event["name"]
     tool_input = event["data"].get("input")
@@ -116,6 +121,7 @@ def handle_on_tool_end(
     agent_message: Message,
     tool_blocks_map: dict[str, ToolContent],
     send_message_method: SendMessageFunctionType,
+    start_time: float,
 ) -> Message:
     run_id = event.get("run_id", "")
     tool_content = tool_blocks_map.get(run_id)
@@ -124,7 +130,7 @@ def handle_on_tool_end(
         tool_content.output = event["data"].get("output")
         # Calculate duration only when tool ends
         tool_content.header = {"title": f"Executed **{tool_content.name}**", "icon": "Hammer"}
-        tool_content.duration = _calculate_duration(event["start_time"])
+        tool_content.duration = _calculate_duration(start_time)
         agent_message = send_message_method(message=agent_message)
     return agent_message
 
@@ -134,20 +140,24 @@ def handle_on_tool_error(
     agent_message: Message,
     tool_blocks_map: dict[str, ToolContent],
     send_message_method: SendMessageFunctionType,
+    start_time: float,
 ) -> Message:
     run_id = event.get("run_id", "")
     tool_content = tool_blocks_map.get(run_id)
 
     if tool_content and isinstance(tool_content, ToolContent):
         tool_content.error = event["data"].get("error", "Unknown error")
-        tool_content.duration = _calculate_duration(event["start_time"])
+        tool_content.duration = _calculate_duration(start_time)
         tool_content.header = {"title": f"Error using **{tool_content.name}**", "icon": "Hammer"}
         agent_message = send_message_method(message=agent_message)
     return agent_message
 
 
 def handle_on_chain_stream(
-    event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType
+    event: dict[str, Any],
+    agent_message: Message,
+    send_message_method: SendMessageFunctionType,
+    start_time: float,  # noqa: ARG001
 ) -> Message:
     data_chunk = event["data"].get("chunk", {})
     if isinstance(data_chunk, dict) and data_chunk.get("output"):
@@ -164,6 +174,7 @@ class ToolEventHandler(Protocol):
         agent_message: Message,
         tool_blocks_map: dict[str, ContentBlock],
         send_message_method: SendMessageFunctionType,
+        start_time: float,
     ) -> Message: ...
 
 
@@ -173,6 +184,7 @@ class ChainEventHandler(Protocol):
         event: dict[str, Any],
         agent_message: Message,
         send_message_method: SendMessageFunctionType,
+        start_time: float,
     ) -> Message: ...
 
 
@@ -208,18 +220,14 @@ async def process_agent_events(
 
     # Create a mapping of run_ids to tool contents
     tool_blocks_map: dict[str, ToolContent] = {}
-
+    start_time = perf_counter()
     async for event in agent_executor:
-        # Add start_time to event
-        event["start_time"] = perf_counter()
-
         if event["event"] in TOOL_EVENT_HANDLERS:
             tool_handler = TOOL_EVENT_HANDLERS[event["event"]]
-            # Pass send_message_method to tool handlers
-            agent_message = tool_handler(event, agent_message, tool_blocks_map, send_message_method)
+            agent_message = tool_handler(event, agent_message, tool_blocks_map, send_message_method, start_time)
         elif event["event"] in CHAIN_EVENT_HANDLERS:
             chain_handler = CHAIN_EVENT_HANDLERS[event["event"]]
-            agent_message = chain_handler(event, agent_message, send_message_method)
-
+            agent_message = chain_handler(event, agent_message, send_message_method, start_time)
+        start_time = perf_counter()
     agent_message.properties.state = "complete"
     return Message(**agent_message.model_dump())
