@@ -871,7 +871,7 @@ export const LOCATIONS_TO_RETURN = ["/flow/", "/settings/"];
 export const MAX_BATCH_SIZE = 50;
 
 export const MODAL_CLASSES =
-  "nopan nodelete nodrag  noflow fixed inset-0 bottom-0 left-0 right-0 top-0 z-50 overflow-auto bg-blur-shared backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0";
+  "nopan nodelete nodrag  noflow fixed inset-0 bottom-0 left-0 right-0 top-0 z-50 overflow-auto bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0";
 
 export const ALLOWED_IMAGE_INPUT_EXTENSIONS = ["png", "jpg", "jpeg"];
 
@@ -926,19 +926,12 @@ export const NOTE_NODE_MAX_HEIGHT = 800;
 export const NOTE_NODE_MAX_WIDTH = 600;
 
 export const COLOR_OPTIONS = {
-  default: "var(--note-default)",
-  indigo: "var(--note-indigo)",
-  emerald: "var(--note-emerald)",
-  amber: "var(--note-amber)",
-  red: "var(--note-red)",
-};
-
-export const SHADOW_COLOR_OPTIONS = {
-  default: "var(--note-default-opacity)",
-  indigo: "var(--note-indigo-opacity)",
-  emerald: "var(--note-emerald-opacity)",
-  amber: "var(--note-amber-opacity)",
-  red: "var(--note-red-opacity)",
+  amber: "hsl(var(--note-amber))",
+  neutral: "hsl(var(--note-neutral))",
+  rose: "hsl(var(--note-rose))",
+  blue: "hsl(var(--note-blue))",
+  lime: "hsl(var(--note-lime))",
+  transparent: null,
 };
 
 export const maxSizeFilesInBytes = 10 * 1024 * 1024; // 10MB in bytes

@@ -8,9 +8,9 @@ import ForwardedIconComponent from "@/components/genericIconComponent";
 import LoadingComponent from "@/components/loadingComponent";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import {
+  COLOR_OPTIONS,
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
-  SHADOW_COLOR_OPTIONS,
 } from "@/constants/constants";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
 import { track } from "@/customization/utils/analytics";
@@ -196,8 +196,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   const zoomLevel = reactFlowInstance?.getZoom();
   const shadowBoxWidth = NOTE_NODE_MIN_WIDTH * (zoomLevel || 1);
   const shadowBoxHeight = NOTE_NODE_MIN_HEIGHT * (zoomLevel || 1);
-  const shadowBoxBackgroundColor =
-    SHADOW_COLOR_OPTIONS[Object.keys(SHADOW_COLOR_OPTIONS)[0]];
+  const shadowBoxBackgroundColor = COLOR_OPTIONS[Object.keys(COLOR_OPTIONS)[0]];
 
   function handleGroupNode() {
     takeSnapshot();
@@ -432,6 +431,11 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
+      const grabbingElement =
+        document.getElementsByClassName("cursor-grabbing");
+      if (grabbingElement.length > 0) {
+        document.body.removeChild(grabbingElement[0]);
+      }
       if (event.dataTransfer.types.some((type) => isSupportedNodeTypes(type))) {
         takeSnapshot();
 
@@ -561,20 +565,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     [isAddingNote, setNodes, reactFlowInstance, getNodeId, setFilterEdge],
   );
 
-  const onPaneMouseMove = useCallback(
-    (event: React.MouseEvent) => {
-      if (isAddingNote) {
-        const shadowBox = document.getElementById("shadow-box");
-        if (shadowBox) {
-          shadowBox.style.display = "block";
-          shadowBox.style.left = `${event.clientX - shadowBoxWidth / 2}px`;
-          shadowBox.style.top = `${event.clientY - shadowBoxHeight / 2}px`;
-        }
-      }
-    },
-    [isAddingNote],
-  );
-
   const handleEdgeClick = (event, edge) => {
     const color =
       nodeColorsName[edge?.data?.targetHandle?.inputTypes[0]] ||
@@ -587,6 +577,25 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   };
 
   const { open } = useSidebar();
+
+  useEffect(() => {
+    const handleGlobalMouseMove = (event) => {
+      if (isAddingNote) {
+        const shadowBox = document.getElementById("shadow-box");
+        if (shadowBox) {
+          shadowBox.style.display = "block";
+          shadowBox.style.left = `${event.clientX - shadowBoxWidth / 2}px`;
+          shadowBox.style.top = `${event.clientY - shadowBoxHeight / 2}px`;
+        }
+      }
+    };
+
+    document.addEventListener("mousemove", handleGlobalMouseMove);
+
+    return () => {
+      document.removeEventListener("mousemove", handleGlobalMouseMove);
+    };
+  }, [isAddingNote, shadowBoxWidth, shadowBoxHeight]);
 
   return (
     <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
@@ -625,10 +634,9 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             panActivationKeyCode={""}
             proOptions={{ hideAttribution: true }}
             onPaneClick={onPaneClick}
-            onPaneMouseMove={onPaneMouseMove}
             onEdgeClick={handleEdgeClick}
           >
-            <Background className="" />
+            <Background size={2} gap={20} className="" />
             {!view && (
               <>
                 <CanvasControls>
@@ -637,6 +645,12 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
                     tooltipText="Add Note"
                     onClick={() => {
                       setIsAddingNote(true);
+                      const shadowBox = document.getElementById("shadow-box");
+                      if (shadowBox) {
+                        shadowBox.style.display = "block";
+                        shadowBox.style.left = `${position.current.x - shadowBoxWidth / 2}px`;
+                        shadowBox.style.top = `${position.current.y - shadowBoxHeight / 2}px`;
+                      }
                     }}
                     iconClasses="text-primary"
                     testId="add_note"
@@ -678,6 +692,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
               width: `${shadowBoxWidth}px`,
               height: `${shadowBoxHeight}px`,
               backgroundColor: `${shadowBoxBackgroundColor}`,
+              opacity: 0.7,
               pointerEvents: "none",
             }}
           ></div>

@@ -40,11 +40,9 @@ export default function TableAutoCellRender({
         else if (value === "success") {
           return (
             <Badge
-              variant="outline"
+              variant="successStatic"
               size="sq"
-              className={cn(
-                "h-[18px] w-full justify-center bg-success-background text-success-foreground hover:bg-success-background",
-              )}
+              className={cn("h-[18px] w-full justify-center")}
             >
               {value}
             </Badge>
@@ -52,11 +50,9 @@ export default function TableAutoCellRender({
         } else if (value === "failure") {
           return (
             <Badge
-              variant="outline"
+              variant="errorStatic"
               size="sq"
-              className={cn(
-                "h-[18px] w-full justify-center bg-error-background text-error-foreground hover:bg-error-background",
-              )}
+              className={cn("h-[18px] w-full justify-center")}
             >
               {value}
             </Badge>

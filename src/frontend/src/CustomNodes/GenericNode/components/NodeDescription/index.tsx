@@ -11,6 +11,7 @@ export default function NodeDescription({
   selected,
   nodeId,
   emptyPlaceholder = "Double Click to Edit Description",
+  placeholderClassName,
   charLimit,
   inputClassName,
   mdClassName,
@@ -20,6 +21,7 @@ export default function NodeDescription({
   selected: boolean;
   nodeId: string;
   emptyPlaceholder?: string;
+  placeholderClassName?: string;
   charLimit?: number;
   inputClassName?: string;
   mdClassName?: string;
@@ -62,7 +64,8 @@ export default function NodeDescription({
       className={cn(
         !inputDescription ? "overflow-auto" : "",
         hasScroll ? "nowheel" : "",
-        charLimit ? "px-2" : "",
+        charLimit ? "px-2 pb-4" : "",
+        "w-full",
       )}
     >
       {inputDescription ? (
@@ -114,10 +117,11 @@ export default function NodeDescription({
           {charLimit && (
             <div
               className={cn(
-                "text-left text-[13px]",
+                "pt-1 text-left text-[13px]",
                 (nodeDescription?.length ?? 0) >= charLimit
                   ? "text-error"
                   : "text-primary",
+                placeholderClassName,
               )}
               data-testid="note_char_limit"
             >
@@ -130,8 +134,9 @@ export default function NodeDescription({
           data-testid="generic-node-desc"
           ref={overflowRef}
           className={cn(
-            "nodoubleclick generic-node-desc-text h-full cursor-text text-[13px] word-break-break-word dark:text-note-placeholder",
+            "nodoubleclick generic-node-desc-text h-full cursor-text text-[13px] word-break-break-word",
             description === "" || !description ? "font-light italic" : "",
+            placeholderClassName,
           )}
           onDoubleClick={(e) => {
             setInputDescription(true);
@@ -144,7 +149,7 @@ export default function NodeDescription({
             <Markdown
               linkTarget="_blank"
               className={cn(
-                "markdown prose flex h-full w-full flex-col text-[13px] leading-5 text-muted-foreground word-break-break-word dark:prose-invert",
+                "markdown prose flex h-full w-full flex-col text-[13px] leading-5 text-foreground word-break-break-word",
                 mdClassName,
               )}
             >

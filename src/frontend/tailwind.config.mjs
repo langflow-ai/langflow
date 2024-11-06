@@ -69,11 +69,9 @@ const config = {
         "build-trigger": "var(--build-trigger)",
         "chat-trigger": "var(--chat-trigger)",
         "chat-trigger-disabled": "var(--chat-trigger-disabled)",
-        "blur-shared": "var(--blur-shared)",
         "dark-blue": "var(--dark-blue)",
         "dark-gray": "var(--dark-gray)",
         "dark-red": "var(--dark-red)",
-        "note-placeholder": "var(--note-placeholder)",
         error: {
           DEFAULT: "var(--error)",
           background: "var(--error-background)",
@@ -97,7 +95,11 @@ const config = {
         "medium-high-indigo": "var(--medium-high-indigo)",
         "medium-indigo": "var(--medium-indigo)",
         "medium-low-gray": "var(--medium-low-gray)",
-        "note-amber": "var(--note-amber)",
+        "note-amber": "hsl(var(--note-amber))",
+        "note-neutral": "hsl(var(--note-neutral))",
+        "note-rose": "hsl(var(--note-rose))",
+        "note-blue": "hsl(var(--note-blue))",
+        "note-lime": "hsl(var(--note-lime))",
         "status-green": "var(--status-green)",
         "status-red": "var(--status-red)",
         "status-yellow": "var(--status-yellow)",
@@ -120,7 +122,7 @@ const config = {
         "code-background": "hsl(var(--code-background))",
         canvas: {
           DEFAULT: "hsl(var(--canvas))",
-          dark: "hsl(var(--canvas-dark))",
+          dot: "hsl(var(--canvas-dot))",
         },
         ice: "var(--ice)",
         selected: "var(--selected)",
@@ -128,13 +130,15 @@ const config = {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
-        "error-red":"hsl(var(--error-red))",
-        "error-red-border":"hsl(var(--error-red-border))",
+        "error-red": "hsl(var(--error-red))",
+        "error-red-border": "hsl(var(--error-red-border))",
         "node-selected": "hsl(var(--node-selected))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
-        "emerald-success": "hsl(var(--emerald-success))",
-        "accent-emerald-foreground": "hsl(var(--accent-emerald-foreground))",
+        "accent-emerald": {
+          DEFAULT: "hsl(var(--accent-emerald))",
+          foreground: "hsl(var(--accent-emerald-foreground))",
+        },
         "emerald-smooth": "hsl(var(--emaral-smooth))",
         "emerald-hard": "hsl(var(--emeral-hard))",
         placeholder: "hsl(var(--placeholder))",
@@ -166,6 +170,7 @@ const config = {
         "accent-emerald": {
           DEFAULT: "hsl(var(--accent-emerald))",
           foreground: "hsl(var(--accent-emerald-foreground))",
+          hover: "hsl(var(--accent-emerald-hover))",
         },
         "accent-indigo": {
           DEFAULT: "hsl(var(--accent-indigo))",
@@ -377,34 +382,34 @@ const config = {
     tailwindcssTypography,
     tailwindcssDottedBackground,
     plugin(function ({ addUtilities, theme, e }) {
-      const colors = theme('colors');
+      const colors = theme("colors");
 
-      const generateUtilities = (colors, prefix = '') => {
+      const generateUtilities = (colors, prefix = "") => {
         return Object.keys(colors).reduce((acc, colorName) => {
           const colorValue = colors[colorName];
           const className = prefix ? `${prefix}-${e(colorName)}` : e(colorName);
 
-          if (typeof colorValue === 'string') {
+          if (typeof colorValue === "string") {
             acc[`.truncate-${className}`] = {
-              position: 'relative',
-              overflow: 'hidden',
-              '&::after': {
+              position: "relative",
+              overflow: "hidden",
+              "&::after": {
                 content: '""',
-                position: 'absolute',
-                inset: '0 0 0 0',
+                position: "absolute",
+                inset: "0 0 0 0",
                 background: `linear-gradient(to right, transparent, 75%, ${colorValue})`,
               },
             };
-          } else if (typeof colorValue === 'object') {
+          } else if (typeof colorValue === "object") {
             // Use the DEFAULT value for the base class if it exists
             if (colorValue.DEFAULT) {
               acc[`.truncate-${className}`] = {
-                position: 'relative',
-                overflow: 'hidden',
-                '&::after': {
+                position: "relative",
+                overflow: "hidden",
+                "&::after": {
                   content: '""',
-                  position: 'absolute',
-                  inset: '0 0 0 0',
+                  position: "absolute",
+                  inset: "0 0 0 0",
                   background: `linear-gradient(to right, transparent, ${colorValue.DEFAULT})`,
                 },
               };
@@ -419,7 +424,7 @@ const config = {
 
       const newUtilities = generateUtilities(colors);
 
-      addUtilities(newUtilities, ['responsive', 'hover']);
+      addUtilities(newUtilities, ["responsive", "hover"]);
     }),
     plugin(({ addVariant }) => {
       addVariant("group-increment-hover", ":merge(.group-increment):hover &");

@@ -1,14 +1,13 @@
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
-import { log } from "console";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Handle, Position, useViewport } from "reactflow";
+import { Handle, Position } from "reactflow";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import {
   isValidConnection,
   scapedJSONStringfy,
 } from "../../../../utils/reactflowUtils";
-import { classNames, cn, groupByFamily } from "../../../../utils/utils";
+import { cn, groupByFamily } from "../../../../utils/utils";
 import HandleTooltipComponent from "../HandleTooltipComponent";
 
 export default function HandleRenderComponent({
@@ -42,7 +41,7 @@ export default function HandleRenderComponent({
   nodeId: string;
   colorName?: string[];
 }) {
-  const handleColorName = colorName?.[0];
+  const handleColorName = colorName?.[0] ?? "";
 
   const innerColorName = `inner-${handleColorName}`;
   const innerForegroundColorName = `${innerColorName}-foreground`;
@@ -156,7 +155,7 @@ export default function HandleRenderComponent({
             source: undefined,
             sourceHandle: undefined,
             type: tooltipTitle,
-            color: colors[0],
+            color: handleColorName,
           }
         : {
             sourceHandle: myId,
@@ -164,7 +163,7 @@ export default function HandleRenderComponent({
             target: undefined,
             targetHandle: undefined,
             type: tooltipTitle,
-            color: colors[0],
+            color: handleColorName,
           },
     [left, myId, nodeId, tooltipTitle, colors],
   );
