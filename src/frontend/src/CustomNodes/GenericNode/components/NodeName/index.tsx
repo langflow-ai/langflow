@@ -13,6 +13,7 @@ export default function NodeName({
   showNode,
   validationStatus,
   isOutdated,
+  beta,
 }: {
   display_name?: string;
   selected: boolean;
@@ -20,6 +21,7 @@ export default function NodeName({
   showNode: boolean;
   validationStatus: VertexBuildTypeAPI | null;
   isOutdated: boolean;
+  beta: boolean;
 }) {
   const [inputName, setInputName] = useState(false);
   const [nodeName, setNodeName] = useState(display_name);
@@ -68,20 +70,29 @@ export default function NodeName({
     <div className="group flex w-full items-center gap-1">
       <div
         onDoubleClick={(event) => {
+          if (!showNode) {
+            return;
+          }
           setInputName(true);
           takeSnapshot();
           event.stopPropagation();
           event.preventDefault();
         }}
         data-testid={"title-" + display_name}
-        className="nodoubleclick w-full cursor-text truncate font-medium text-primary"
+        className={
+          showNode
+            ? "nodoubleclick w-full cursor-text truncate font-medium text-primary"
+            : "cursor-default"
+        }
       >
         <div className="flex items-center gap-2">
           <span
             className={cn(
               "max-w-44 truncate text-[14px]",
               validationStatus?.data?.duration && "max-w-36",
+              validationStatus?.data?.duration && beta && "max-w-20",
               isOutdated && "max-w-40",
+              !showNode && "max-w-28",
             )}
           >
             {display_name}

@@ -80,6 +80,7 @@ export default function NodeToolbarComponent({
   function minimize() {
     if (isMinimal) {
       setShowNode((data.showNode ?? true) ? false : true);
+      updateNodeInternals(data.id);
       return;
     }
     setNoticeData({
@@ -324,7 +325,7 @@ export default function NodeToolbarComponent({
   return (
     <>
       <div className="noflow nowheel nopan nodelete nodrag">
-        <div className="flex items-center gap-1 rounded-lg bg-background p-1 shadow-sm">
+        <div className="flex items-center gap-1 rounded-lg border-[1px] border-border bg-background p-1 shadow-sm">
           {hasCode && (
             <ShadTooltip
               content={
@@ -549,7 +550,10 @@ export default function NodeToolbarComponent({
               />
             </SelectItem>
             {isMinimal && (
-              <SelectItem value={"show"}>
+              <SelectItem
+                value={"show"}
+                data-testid={`${showNode ? "minimize" : "expand"}-button-modal`}
+              >
                 <ToolbarSelectItem
                   shortcut={
                     shortcuts.find((obj) => obj.name === "Minimize")?.shortcut!

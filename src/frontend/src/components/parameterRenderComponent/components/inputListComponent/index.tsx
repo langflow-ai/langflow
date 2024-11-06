@@ -90,7 +90,11 @@ export default function InputListComponent({
           >
             <Button
               unstyled
-              className={cn("hit-area-icon", getButtonClassName())}
+              size="icon"
+              className={cn(
+                "hit-area-icon flex items-center justify-center",
+                getButtonClassName(),
+              )}
               data-testid={getTestId(index === 0 ? "plus" : "minus", index)}
               disabled={disabled}
             >

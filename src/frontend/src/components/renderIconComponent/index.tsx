@@ -1,4 +1,3 @@
-import { IS_MAC } from "@/constants/constants";
 import { addPlusSignes, cn, sortShortcuts } from "@/utils/utils";
 import RenderKey from "./components/renderKey";
 

@@ -1,4 +1,5 @@
 import ShortLangFlowIcon from "@/components/appHeaderComponent/assets//ShortLangFlowIcon.svg?react";
+import CardsWrapComponent from "@/components/cardsWrapComponent";
 import ForwardedIconComponent from "@/components/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
