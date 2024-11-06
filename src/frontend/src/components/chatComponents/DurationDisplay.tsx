@@ -1,27 +1,26 @@
 import prettyMilliseconds from "pretty-ms";
 import { useEffect, useState } from "react";
+import { AnimatedNumber } from "@/components/animatedNumbers";
 import Loading from "../ui/loading";
+
 export default function DurationDisplay({ duration }: { duration?: number }) {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // If duration is provided, clear any existing timer
     if (duration !== undefined && intervalId) {
       clearInterval(intervalId);
       setIntervalId(null);
       return;
     }
 
-    // Start timer if duration is undefined
     if (duration === undefined && !intervalId) {
       const id = setInterval(() => {
-        setElapsedTime((prev) => prev + 10); // Update every 10ms
+        setElapsedTime((prev) => prev + 10);
       }, 10);
       setIntervalId(id);
     }
 
-    // Cleanup
     return () => {
       if (intervalId) {
         clearInterval(intervalId);
@@ -30,7 +29,7 @@ export default function DurationDisplay({ duration }: { duration?: number }) {
   }, [duration]);
 
   const displayTime = duration ?? elapsedTime;
-  const humanizedTime = prettyMilliseconds(displayTime);
+
   return (
     <div
       className={`inline-flex items-center gap-2 rounded px-2 text-sm ${
@@ -39,7 +38,14 @@ export default function DurationDisplay({ duration }: { duration?: number }) {
           : "text-gray-400"
       }`}
     >
-      {humanizedTime}
+      <AnimatedNumber
+        value={displayTime}
+        springOptions={{
+          bounce: 0,
+          duration: 300,
+        }}
+        className="tabular-nums"
+      />
       {duration === undefined && <Loading />}
     </div>
   );
