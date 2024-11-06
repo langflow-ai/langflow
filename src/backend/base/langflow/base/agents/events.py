@@ -11,7 +11,6 @@ from langflow.schema.content_block import ContentBlock
 from langflow.schema.content_types import TextContent, ToolContent
 from langflow.schema.log import SendMessageFunctionType
 from langflow.schema.message import Message
-from langflow.utils.constants import MESSAGE_SENDER_AI
 
 
 class InputDict(TypedDict):
@@ -195,15 +194,11 @@ TOOL_EVENT_HANDLERS: dict[str, ToolEventHandler] = {
 
 async def process_agent_events(
     agent_executor: AsyncIterator[dict[str, Any]],
+    agent_message: Message,
     send_message_method: SendMessageFunctionType,
 ) -> Message:
     """Process agent events and return the final output."""
-    agent_message = Message(
-        sender=MESSAGE_SENDER_AI,
-        sender_name="Agent",
-        properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
-    )
+    agent_message.properties = {"icon": "Bot", "state": "partial"}
     # Store the initial message
     agent_message = send_message_method(message=agent_message)
 

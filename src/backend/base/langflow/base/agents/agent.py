@@ -12,9 +12,11 @@ from langflow.custom import Component
 from langflow.inputs.inputs import InputTypes
 from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
 from langflow.schema import Data
+from langflow.schema.content_block import ContentBlock
 from langflow.schema.log import SendMessageFunctionType
 from langflow.schema.message import Message
 from langflow.template import Output
+from langflow.utils.constants import MESSAGE_SENDER_AI
 
 if TYPE_CHECKING:
     from langchain_core.messages import BaseMessage
@@ -111,12 +113,21 @@ class LCAgentComponent(Component):
         if self.chat_history:
             input_dict["chat_history"] = data_to_messages(self.chat_history)
 
+        agent_message = Message(
+            sender=MESSAGE_SENDER_AI,
+            sender_name="Agent",
+            properties={"icon": "Bot", "state": "partial"},
+            content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+            session_id=self.graph.session_id,
+        )
+
         result = await process_agent_events(
             runnable.astream_events(
                 input_dict,
                 config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]},
                 version="v2",
             ),
+            agent_message,
             cast(SendMessageFunctionType, self.send_message),
         )
 
