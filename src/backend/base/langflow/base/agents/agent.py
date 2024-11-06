@@ -1,3 +1,4 @@
+import asyncio
 from abc import abstractmethod
 from typing import TYPE_CHECKING, cast
 
@@ -6,11 +7,12 @@ from langchain.agents.agent import RunnableAgent
 from langchain_core.runnables import Runnable
 
 from langflow.base.agents.callback import AgentAsyncHandler
-from langflow.base.agents.events import process_agent_events
+from langflow.base.agents.events import ExceptionWithMessageError, process_agent_events
 from langflow.base.agents.utils import data_to_messages
 from langflow.custom import Component
 from langflow.inputs.inputs import InputTypes
 from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
+from langflow.memory import delete_message
 from langflow.schema import Data
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.log import SendMessageFunctionType
@@ -120,16 +122,23 @@ class LCAgentComponent(Component):
             content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
             session_id=self.graph.session_id,
         )
-
-        result = await process_agent_events(
-            runnable.astream_events(
-                input_dict,
-                config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]},
-                version="v2",
-            ),
-            agent_message,
-            cast(SendMessageFunctionType, self.send_message),
-        )
+        try:
+            result = await process_agent_events(
+                runnable.astream_events(
+                    input_dict,
+                    config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]},
+                    version="v2",
+                ),
+                agent_message,
+                cast(SendMessageFunctionType, self.send_message),
+            )
+        except ExceptionWithMessageError as e:
+            msg_id = e.agent_message.id
+            await asyncio.to_thread(delete_message, id_=msg_id)
+            self._send_message_event(e.agent_message, category="remove_message")
+            raise e.exception  # noqa: B904
+        except Exception:
+            raise
 
         self.status = result
         return result
