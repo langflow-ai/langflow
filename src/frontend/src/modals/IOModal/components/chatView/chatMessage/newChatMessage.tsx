@@ -249,8 +249,9 @@ export default function ChatMessage({
                     className="h-[18px] w-[18px] text-destructive"
                     name="OctagonAlert"
                   />
-                  <span className="">An error occured in the{" "}
-                  <span
+                  <span className="">
+                    An error occured in the{" "}
+                    <span
                       className={cn(
                         closeChat ? "cursor-pointer hover:underline" : "",
                       )}
@@ -260,9 +261,9 @@ export default function ChatMessage({
                       }}
                     >
                       <strong>{errorContent.component}</strong>
-                    </span>
-                      {" "} Component, stopping your flow. See below for more details.
-                    </span>
+                    </span>{" "}
+                    Component, stopping your flow. See below for more details.
+                  </span>
                 </div>
                 <div className="">
                   <h3 className="pb-3 font-semibold">Error details:</h3>

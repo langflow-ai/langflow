@@ -158,7 +158,9 @@ export default function SessionSelector({
                     : "truncate-muted dark:truncate-background",
                 )}
               >
-                <span>{session === currentFlowId ? "Default Session" : session}</span>
+                <span>
+                  {session === currentFlowId ? "Default Session" : session}
+                </span>
               </div>
             </ShadTooltip>
           )}
