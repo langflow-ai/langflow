@@ -5,15 +5,12 @@ import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/us
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
-import IconComponent, {
-  ForwardedIconComponent,
-} from "../../components/genericIconComponent";
+import { ForwardedIconComponent } from "../../components/genericIconComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
 import {
   TOOLTIP_HIDDEN_OUTPUTS,
   TOOLTIP_OPEN_HIDDEN_OUTPUTS,
-  TOOLTIP_OUTDATED_NODE,
 } from "../../constants/constants";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import useAlertStore from "../../stores/alertStore";
@@ -379,6 +376,7 @@ export default function GenericNode({
             <div>
               <NodeDescription
                 description={data.node?.description}
+                mdClassName={"dark:prose-invert"}
                 nodeId={data.id}
                 selected={selected}
               />

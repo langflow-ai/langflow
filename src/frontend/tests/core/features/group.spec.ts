@@ -35,10 +35,7 @@ test.describe("group node test", () => {
 
     await page.getByRole("button", { name: "Group" }).click();
     await page.getByTestId("title-Group").dblclick();
-    await page
-      .getByTestId("popover-anchor-input-title-Group")
-      .first()
-      .fill("test");
+    await page.getByTestId("input-title-Group").first().fill("test");
     await page.getByTestId("icon-Ungroup").first().click();
     await page.keyboard.press("Control+g");
     await page.getByTestId("title-OpenAI").isVisible();
