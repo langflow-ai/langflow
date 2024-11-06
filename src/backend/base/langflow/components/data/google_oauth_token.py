@@ -1,5 +1,6 @@
 import os
 import re
+import json
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -23,7 +24,6 @@ class GoogleOAuthToken(Component):
             display_name="Scopes",
             info="Input a comma-separated list of scopes with the permissions required for your application.",
             required=True,
-            value="https://www.googleapis.com/auth/drive.readonly,\n https://www.googleapis.com/auth/drive.activity.readonly",
         ),
         FileInput(
             name="oauth_credentials",
