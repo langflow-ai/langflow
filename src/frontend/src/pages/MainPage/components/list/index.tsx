@@ -106,17 +106,17 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
         onClick={handleClick}
         className={`my-2 flex flex-row bg-background ${
           isComponent ? "cursor-default" : "cursor-pointer"
-        } justify-between rounded-lg border border-border p-5 hover:border-placeholder-foreground hover:shadow-sm`}
+        } justify-between rounded-lg border border-border p-4 hover:border-placeholder-foreground hover:shadow-sm`}
       >
         {/* left side */}
         <div
           className={`flex min-w-0 ${
             isComponent ? "cursor-default" : "cursor-pointer"
-          } items-center gap-2`}
+          } items-center gap-4`}
         >
           {/* Icon */}
           <div
-            className={`item-center mr-3 flex justify-center rounded-lg border ${flowData?.icon_bg_color || icon_bg_color} p-3`}
+            className={`item-center flex justify-center rounded-lg border ${flowData?.icon_bg_color || icon_bg_color} p-3`}
           >
             <ForwardedIconComponent
               name={flowData?.icon || icon}

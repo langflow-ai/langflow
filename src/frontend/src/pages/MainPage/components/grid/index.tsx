@@ -107,13 +107,13 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
         draggable
         onDragStart={onDragStart}
         onClick={handleClick}
-        className={`my-1 flex flex-col rounded-lg border border-border bg-background p-5 hover:border-placeholder-foreground hover:shadow-sm ${
+        className={`my-1 flex flex-col rounded-lg border border-border bg-background p-4 hover:border-placeholder-foreground hover:shadow-sm ${
           isComponent ? "cursor-default" : "cursor-pointer"
         }`}
       >
-        <div className="flex w-full items-center gap-2">
+        <div className="flex w-full items-center gap-4">
           <div
-            className={`mr-3 flex rounded-lg border ${flowData?.icon_bg_color || icon_bg_color} p-3`}
+            className={`flex rounded-lg border ${flowData?.icon_bg_color || icon_bg_color} p-3`}
           >
             <ForwardedIconComponent
               name={flowData?.icon || icon}
