@@ -9,6 +9,7 @@ import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
 import ForwardedIconComponent from "../genericIconComponent";
+import { Separator } from "../ui/separator";
 import ContentDisplay from "./ContentDisplay";
 import DurationDisplay from "./DurationDisplay";
 
@@ -160,6 +161,7 @@ export function ContentBlockDisplay({
                     </Markdown>
                   </div>
                   <div className="text-sm text-muted-foreground">
+                    <Separator orientation="horizontal" className="my-2" />
                     {block.contents.map((content, index) => (
                       <ContentDisplay key={index} content={content} />
                     ))}

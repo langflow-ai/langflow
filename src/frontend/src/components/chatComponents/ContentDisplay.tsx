@@ -6,14 +6,12 @@ import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
 import SimplifiedCodeTabComponent from "../codeTabsComponent/ChatCodeTabComponent";
 import ForwardedIconComponent from "../genericIconComponent";
-import { Separator } from "../ui/separator";
 import DurationDisplay from "./DurationDisplay";
 
 export default function ContentDisplay({ content }: { content: ContentType }) {
   // First render the common BaseContent elements if they exist
   const renderHeader = content.header && (
     <>
-      <Separator orientation="horizontal" className="my-2" />
       <div className="flex items-center gap-2">
         {content.header.icon && (
           <ForwardedIconComponent
@@ -36,9 +34,8 @@ export default function ContentDisplay({ content }: { content: ContentType }) {
       </div>
     </>
   );
-
   const renderDuration = content.duration !== undefined && (
-    <div className="absolute right-0 top-2">
+    <div className="relative float-right -mt-6 mr-2">
       <DurationDisplay duration={content.duration} />
     </div>
   );
