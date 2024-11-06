@@ -38,7 +38,6 @@ dependencies = [
     "huggingface-hub[inference]>=0.23.2",
     "networkx>=3.1",
     "fake-useragent>=1.5.0",
-    "psycopg2-binary>=2.9.6",
     "pyarrow>=14.0.0",
     "wikipedia>=1.4.0",
     "qdrant-client~=1.9.2",
@@ -49,7 +48,6 @@ dependencies = [
     "pymongo>=4.6.0",
     "supabase~=2.6.0",
     "certifi>=2023.11.17,<2025.0.0",
-    "psycopg>=3.1.9",
     "fastavro>=1.8.0",
     "redis>=5.0.1",
     "metaphor-python>=0.1.11",
@@ -111,6 +109,7 @@ dependencies = [
     "langchain-elasticsearch>=0.2.0",
     "langchain-ollama>=0.2.0",
     "pymupdf~=1.24.13",
+    "sqlalchemy[aiosqlite,postgresql_psycopg2binary,postgresql_psycopgbinary]>=2.0.36"
 ]
 
 [project.urls]
