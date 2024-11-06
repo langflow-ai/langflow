@@ -12,6 +12,7 @@ export default function NodeName({
   showNode,
   validationStatus,
   isOutdated,
+  beta,
 }: {
   display_name?: string;
   selected: boolean;
@@ -19,6 +20,7 @@ export default function NodeName({
   showNode: boolean;
   validationStatus: VertexBuildTypeAPI | null;
   isOutdated: boolean;
+  beta: boolean;
 }) {
   const [inputName, setInputName] = useState(false);
   const [nodeName, setNodeName] = useState(display_name);
@@ -85,6 +87,7 @@ export default function NodeName({
             className={cn(
               "max-w-44 truncate text-[14px]",
               validationStatus?.data?.duration && "max-w-36",
+              validationStatus?.data?.duration && beta && "max-w-20",
               isOutdated && "max-w-40",
               !showNode && "max-w-28",
             )}

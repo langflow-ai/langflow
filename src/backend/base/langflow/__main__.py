@@ -1,3 +1,4 @@
+import asyncio
 import inspect
 import platform
 import socket
@@ -27,7 +28,7 @@ from langflow.services.database.models.folder.utils import (
     create_default_folder_if_it_doesnt_exist,
 )
 from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service, get_settings_service, session_scope
+from langflow.services.deps import async_session_scope, get_db_service, get_settings_service
 from langflow.services.settings.constants import DEFAULT_SUPERUSER
 from langflow.services.utils import initialize_services
 from langflow.utils.version import fetch_latest_version, get_version_info
@@ -486,28 +487,35 @@ def api_key(
     if not auth_settings.AUTO_LOGIN:
         typer.echo("Auto login is disabled. API keys cannot be created through the CLI.")
         return
-    with session_scope() as session:
-        from langflow.services.database.models.user.model import User
 
-        superuser = session.exec(select(User).where(User.username == DEFAULT_SUPERUSER)).first()
-        if not superuser:
-            typer.echo("Default superuser not found. This command requires a superuser and AUTO_LOGIN to be enabled.")
-            return
-        from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate
-        from langflow.services.database.models.api_key.crud import (
-            create_api_key,
-            delete_api_key,
-        )
+    async def aapi_key():
+        async with async_session_scope() as session:
+            from langflow.services.database.models.user.model import User
 
-        api_key = session.exec(select(ApiKey).where(ApiKey.user_id == superuser.id)).first()
-        if api_key:
-            delete_api_key(session, api_key.id)
+            superuser = (await session.exec(select(User).where(User.username == DEFAULT_SUPERUSER))).first()
+            if not superuser:
+                typer.echo(
+                    "Default superuser not found. This command requires a superuser and AUTO_LOGIN to be enabled."
+                )
+                return None
+            from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate
+            from langflow.services.database.models.api_key.crud import (
+                create_api_key,
+                delete_api_key,
+            )
 
-        api_key_create = ApiKeyCreate(name="CLI")
-        unmasked_api_key = create_api_key(session, api_key_create, user_id=superuser.id)
-        session.commit()
-        # Create a banner to display the API key and tell the user it won't be shown again
-        api_key_banner(unmasked_api_key)
+            api_key = (await session.exec(select(ApiKey).where(ApiKey.user_id == superuser.id))).first()
+            if api_key:
+                await delete_api_key(session, api_key.id)
+
+            api_key_create = ApiKeyCreate(name="CLI")
+            unmasked_api_key = await create_api_key(session, api_key_create, user_id=superuser.id)
+            await session.commit()
+            return unmasked_api_key
+
+    unmasked_api_key = asyncio.run(aapi_key())
+    # Create a banner to display the API key and tell the user it won't be shown again
+    api_key_banner(unmasked_api_key)
 
 
 def api_key_banner(unmasked_api_key) -> None:
