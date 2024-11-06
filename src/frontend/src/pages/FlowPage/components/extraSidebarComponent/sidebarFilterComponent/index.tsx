@@ -5,18 +5,25 @@ import { Button } from "@/components/ui/button";
 export function SidebarFilterComponent({
   isInput,
   type,
+  color,
   resetFilters,
 }: {
   isInput: boolean;
   type: string;
+  color: string;
   resetFilters: () => void;
 }) {
   return (
-    <div className="mb-0.5 flex w-full items-center justify-between rounded border bg-accent-indigo p-2 text-sm text-foreground">
+    <div
+      className={`mb-0.5 flex w-full items-center justify-between rounded border p-2 text-sm text-foreground`}
+      style={{
+        backgroundColor: `hsl(var(--inner-${color}-foreground))`,
+      }}
+    >
       <div className="flex flex-1 items-center gap-1.5">
         <ForwardedIconComponent
           name="ListFilter"
-          className="h-4 w-4 shrink-0 stroke-2 text-accent-indigo-foreground"
+          className={`h-4 w-4 shrink-0 stroke-2`}
         />
         <div className="flex flex-1">
           {isInput ? "Input" : "Output"}:{" "}

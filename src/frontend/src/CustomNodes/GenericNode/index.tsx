@@ -2,9 +2,7 @@ import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/us
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
-import IconComponent, {
-  ForwardedIconComponent,
-} from "../../components/genericIconComponent";
+import { ForwardedIconComponent } from "../../components/genericIconComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
 import {
@@ -365,6 +363,7 @@ export default function GenericNode({
             <div>
               <NodeDescription
                 description={data.node?.description}
+                mdClassName={"dark:prose-invert"}
                 nodeId={data.id}
                 selected={selected}
               />
