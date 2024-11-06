@@ -432,7 +432,7 @@ export default function NodeToolbarComponent({
             styleClasses="relative bottom-2"
           >
             <Button
-              className="node-toolbar-buttons h-[2.125rem]"
+              className="node-toolbar-buttons h-[2rem]"
               variant="ghost"
               onClick={handleButtonClick}
               size="node-toolbar"
