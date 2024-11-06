@@ -37,7 +37,7 @@ export default function ContentDisplay({ content }: { content: ContentType }) {
     </>
   );
 
-  const renderDuration = content.duration && (
+  const renderDuration = content.duration!==undefined && (
     <div className="absolute right-0 top-2">
       <DurationDisplay duration={content.duration} />
     </div>

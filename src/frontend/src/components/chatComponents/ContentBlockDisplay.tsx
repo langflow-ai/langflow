@@ -39,35 +39,50 @@ export function ContentBlockDisplay({
         `Steps (${contentBlocks[0]?.contents.length})`
       : "Steps";
 
-  const renderContent = () => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className={cn(
-        "relative rounded-lg border border-border bg-background",
-        "overflow-hidden",
-      )}
-    >
-      <div
-        className="flex cursor-pointer items-center justify-between p-4"
-        onClick={() => setIsExpanded(!isExpanded)}
+  // console.log("contentBlocks");
+
+  return (
+    <div className="relative py-3">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{
+          duration: 0.2,
+          ease: "easeOut"
+        }}
+        className={cn(
+          "relative rounded-lg border border-border bg-background",
+          "overflow-hidden"
+        )}
       >
-        <div className="flex items-center gap-2">
-          {headerIcon && (
-            <ForwardedIconComponent
-              name={headerIcon}
-              className="h-4 w-4"
-              strokeWidth={1.5}
-            />
-          )}
-          <div className="relative h-6 overflow-hidden">
-            <AnimatePresence mode="wait">
+        {isLoading && (
+          <BorderTrail
+            className="bg-zinc-600 opacity-50 dark:bg-zinc-400"
+            size={60}
+            transition={{
+              repeat: Infinity,
+              duration: 2,
+              ease: "linear",
+            }}
+          />
+        )}
+        <div
+          className="flex cursor-pointer items-center justify-between p-4"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <div className="flex items-center gap-2">
+            {headerIcon && (
+              <ForwardedIconComponent
+                name={headerIcon}
+                className="h-4 w-4"
+                strokeWidth={1.5}
+              />
+            )}
+            <div className="relative h-6 overflow-hidden">
               <motion.div
                 key={headerTitle}
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: -20, opacity: 0 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 transition={{ duration: 0.2 }}
               >
                 <Markdown
@@ -78,87 +93,74 @@ export function ContentBlockDisplay({
                   {headerTitle}
                 </Markdown>
               </motion.div>
-            </AnimatePresence>
+            </div>
           </div>
+          <motion.div
+            animate={{ rotate: isExpanded ? 180 : 0 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+          >
+            <ChevronDown className="h-5 w-5" />
+          </motion.div>
         </div>
-        <ChevronDown
-          className={cn(
-            "h-5 w-5 transition-transform",
-            isExpanded ? "rotate-180" : "",
-          )}
-        />
-      </div>
 
-      {isExpanded && (
-        <motion.div
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: "auto", opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="relative border-t border-border"
-        >
-          {contentBlocks.map((block, index) => (
-            <div
-              key={`${block.title}-${index}`}
-              className={cn(
-                "relative p-4",
-                index !== contentBlocks.length - 1 && "border-b border-border",
-              )}
+        <AnimatePresence initial={false}>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{
+                height: "auto",
+                opacity: 1,
+                transition: {
+                  height: { duration: 0.2 },
+                  opacity: { duration: 0.1, delay: 0.1 }
+                }
+              }}
+              exit={{
+                height: 0,
+                opacity: 0,
+                transition: {
+                  height: { duration: 0.2 },
+                  opacity: { duration: 0.1 }
+                }
+              }}
+              className="relative border-t border-border"
             >
-              <div className="mb-2 font-medium">
-                <Markdown
-                  remarkPlugins={[remarkGfm]}
-                  linkTarget="_blank"
-                  rehypePlugins={[rehypeMathjax]}
-                  components={{
-                    p({ node, ...props }) {
-                      return <span className="inline">{props.children}</span>;
-                    },
-                  }}
+              {contentBlocks.map((block, index) => (
+                <motion.div
+                  key={`${block.title}-${index}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.2, delay: 0.1 }}
+                  className={cn(
+                    "relative p-4",
+                    index !== contentBlocks.length - 1 && "border-b border-border"
+                  )}
                 >
-                  {block.title}
-                </Markdown>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {block.contents.map((content, index) => (
-                  <ContentDisplay key={index} content={content} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </motion.div>
-      )}
-    </motion.div>
-  );
-
-  return (
-    <div className="relative py-3">
-      {renderContent()}
-      {isLoading && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative mt-4 rounded-lg border border-border bg-background p-4"
-        >
-          <BorderTrail
-            className="bg-zinc-600 opacity-50 dark:bg-zinc-400"
-            size={60}
-            transition={{
-              repeat: Infinity,
-              duration: 3,
-              ease: "linear",
-            }}
-          />
-          <div className="relative z-10 flex flex-col space-y-3">
-            <TextShimmer className="w-25">Processing...</TextShimmer>
-            <div className="flex animate-pulse flex-col space-y-2">
-              <div className="h-2 w-1/4 rounded bg-muted"></div>
-              <div className="h-2 w-1/2 rounded bg-muted"></div>
-              <div className="h-2 w-1/3 rounded bg-muted"></div>
-            </div>
-          </div>
-        </motion.div>
-      )}
+                  <div className="mb-2 font-medium">
+                    <Markdown
+                      remarkPlugins={[remarkGfm]}
+                      linkTarget="_blank"
+                      rehypePlugins={[rehypeMathjax]}
+                      components={{
+                        p({ node, ...props }) {
+                          return <span className="inline">{props.children}</span>;
+                        },
+                      }}
+                    >
+                      {block.title}
+                    </Markdown>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {block.contents.map((content, index) => (
+                      <ContentDisplay key={index} content={content} />
+                    ))}
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
     </div>
   );
 }

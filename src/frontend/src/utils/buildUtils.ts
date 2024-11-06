@@ -200,8 +200,8 @@ export async function buildFlowVertices({
       ids.forEach((id) => verticesStartTimeMs.set(id, Date.now()));
     };
 
-    console.log("type", type);
-    console.log("data", data);
+    // console.log("type", type);
+    // console.log("data", data);
 
     switch (type) {
       case "vertices_sorted": {
@@ -296,6 +296,7 @@ export async function buildFlowVertices({
         return true;
       }
       case "message": {
+        console.log("message",data);
         //adds a message to the messsage table
         useMessagesStore.getState().addMessage(data);
         return true;
