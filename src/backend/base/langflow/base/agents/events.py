@@ -53,7 +53,7 @@ def handle_on_chain_start(event: dict[str, Any], agent_message: Message) -> Mess
             text_content = TextContent(
                 type="text",
                 text=_build_agent_input_text_content(input_dict),
-                duration=_calculate_duration(event.get("start_time", perf_counter())),
+                duration=_calculate_duration(event["start_time"]),
                 header={"title": "Input", "icon": "MessageSquare"},
             )
             agent_message.content_blocks[0].contents.append(text_content)
@@ -69,7 +69,7 @@ def handle_on_chain_end(event: dict[str, Any], agent_message: Message) -> Messag
         if agent_message.content_blocks and agent_message.content_blocks[0].contents:
             last_content = agent_message.content_blocks[0].contents[-1]
             if not getattr(last_content, "duration", None):
-                last_content.duration = _calculate_duration(event.get("start_time", perf_counter()))
+                last_content.duration = _calculate_duration(event["start_time"])
     return agent_message
 
 
@@ -137,7 +137,7 @@ def handle_on_tool_end(
     if tool_content and isinstance(tool_content, ToolContent):
         tool_content.output = event["data"].get("output")
         # Calculate duration only when tool ends
-        tool_content.duration = _calculate_duration(event.get("start_time", perf_counter()))
+        tool_content.duration = _calculate_duration(event["start_time"])
 
     return agent_message
 
@@ -152,7 +152,7 @@ def handle_on_tool_error(
 
     if tool_content and isinstance(tool_content, ToolContent):
         tool_content.error = event["data"].get("error", "Unknown error")
-        tool_content.duration = _calculate_duration(event.get("start_time", perf_counter()))
+        tool_content.duration = _calculate_duration(event["start_time"])
         tool_content.header = {"title": f"Error using **{tool_content.name}**", "icon": "Hammer"}
 
     return agent_message
