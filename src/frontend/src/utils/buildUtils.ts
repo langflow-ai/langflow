@@ -295,7 +295,7 @@ export async function buildFlowVertices({
         }
         return true;
       }
-      case "message": {
+      case "add_message": {
         console.log("message", data);
         //adds a message to the messsage table
         useMessagesStore.getState().addMessage(data);
