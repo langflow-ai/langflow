@@ -33,6 +33,10 @@ export type PropertiesType = {
   icon?: string;
   background_color?: string;
   text_color?: string;
+  targets?: string[];
+  edited?: boolean;
+  allow_markdown?: boolean;
+  state?: string;
 };
 
 export type ChatOutputType = {
@@ -63,6 +67,11 @@ export type FlowPoolObjectType = {
 // Base content type
 export interface BaseContent {
   type: string;
+  duration?: number;
+  header?: {
+    title?: string;
+    icon?: string;
+  };
 }
 
 // Individual content types
@@ -98,22 +107,12 @@ export interface CodeContent extends BaseContent {
   title?: string;
 }
 
-export interface ToolStartContent extends BaseContent {
-  type: "tool_start";
-  tool_name: string;
+export interface ToolContent extends BaseContent {
+  type: "tool_use";
+  name?: string;
   tool_input: Record<string, any>;
-}
-
-export interface ToolEndContent extends BaseContent {
-  type: "tool_end";
-  tool_name: string;
-  tool_output: any;
-}
-
-export interface ToolErrorContent extends BaseContent {
-  type: "tool_error";
-  tool_name: string;
-  tool_error: string;
+  output?: any;
+  error?: any;
 }
 
 // Union type for all content types
@@ -123,14 +122,12 @@ export type ContentType =
   | MediaContent
   | JSONContent
   | CodeContent
-  | ToolStartContent
-  | ToolEndContent
-  | ToolErrorContent;
+  | ToolContent;
 
 // Updated ContentBlock interface
 export interface ContentBlock {
   title: string;
-  content: ContentType;
+  contents: ContentType[];
   allow_markdown: boolean;
   media_url?: string[];
   component: string;

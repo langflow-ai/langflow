@@ -1,8 +1,8 @@
 from langflow.base.io.chat import ChatComponent
 from langflow.inputs import BoolInput
-from langflow.io import DropdownInput, MessageTextInput, Output
+from langflow.io import DropdownInput, MessageInput, MessageTextInput, Output
 from langflow.schema.message import Message
-from langflow.schema.properties import Properties, Source
+from langflow.schema.properties import Source
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_USER
 
 
@@ -13,7 +13,7 @@ class ChatOutput(ChatComponent):
     name = "ChatOutput"
 
     inputs = [
-        MessageTextInput(
+        MessageInput(
             name="input_value",
             display_name="Text",
             info="Message to be passed as output.",
@@ -96,19 +96,15 @@ class ChatOutput(ChatComponent):
         _text_color = self.text_color
         if self.chat_icon:
             _icon = self.chat_icon
-        message = Message(
-            text=self.input_value,
-            sender=self.sender,
-            sender_name=self.sender_name,
-            session_id=self.session_id,
-            flow_id=self.graph.flow_id,
-            properties=Properties(
-                source=self._build_source(_source_id, _display_name, _source),
-                icon=_icon,
-                background_color=_background_color,
-                text_color=_text_color,
-            ),
-        )
+        message = self.input_value if isinstance(self.input_value, Message) else Message(text=self.input_value)
+        message.sender = self.sender
+        message.sender_name = self.sender_name
+        message.session_id = self.session_id
+        message.flow_id = self.graph.flow_id
+        message.properties.source = Source(id=_source_id, display_name=_display_name, source=_source)
+        message.properties.icon = _icon
+        message.properties.background_color = _background_color
+        message.properties.text_color = _text_color
         if self.session_id and isinstance(message, Message) and self.should_store_message:
             stored_message = self.send_message(
                 message,

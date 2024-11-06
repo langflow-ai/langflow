@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
@@ -6,7 +7,7 @@ from pydantic import field_serializer, field_validator
 from sqlalchemy import Text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
-from langflow.schema.content_block import ContentBlock, ContentBlockDict
+from langflow.schema.content_block import ContentBlock
 from langflow.schema.properties import Properties
 
 if TYPE_CHECKING:
@@ -97,7 +98,7 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
     files: list[str] = Field(sa_column=Column(JSON))
     properties: Properties = Field(default_factory=lambda: Properties().model_dump(), sa_column=Column(JSON))  # type: ignore[assignment]
     category: str = Field(sa_column=Column(Text))
-    content_blocks: list[ContentBlockDict] = Field(default_factory=list, sa_column=Column(JSON))  # type: ignore[assignment]
+    content_blocks: list[ContentBlock] = Field(default_factory=list, sa_column=Column(JSON))  # type: ignore[assignment]
 
     @field_validator("flow_id", mode="before")
     @classmethod
@@ -108,16 +109,21 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
             value = UUID(value)
         return value
 
-    @field_validator("properties")
+    @field_validator("properties", "content_blocks")
     @classmethod
-    def validate_properties(cls, value):
+    def validate_properties_or_content_blocks(cls, value):
+        if isinstance(value, list):
+            return [cls.validate_properties_or_content_blocks(item) for item in value]
         if hasattr(value, "model_dump"):
             return value.model_dump()
+        if isinstance(value, str):
+            return json.loads(value)
         return value
 
-    @field_serializer("properties")
-    @classmethod
-    def serialize_properties(cls, value):
+    @field_serializer("properties", "content_blocks")
+    def serialize_properties_or_content_blocks(self, value) -> dict | list[dict]:
+        if isinstance(value, list):
+            return [self.serialize_properties_or_content_blocks(item) for item in value]
         if hasattr(value, "model_dump"):
             return value.model_dump()
         return value

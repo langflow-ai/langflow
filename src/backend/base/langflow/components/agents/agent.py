@@ -2,11 +2,7 @@ from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.base.models.model_input_constants import ALL_PROVIDER_FIELDS, MODEL_PROVIDERS_DICT
 from langflow.components.agents.tool_calling import ToolCallingAgentComponent
 from langflow.components.helpers.memory import MemoryComponent
-from langflow.io import (
-    DropdownInput,
-    MultilineInput,
-    Output,
-)
+from langflow.io import DropdownInput, MultilineInput, Output
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
 
@@ -55,7 +51,7 @@ class AgentComponent(ToolCallingAgentComponent):
             raise ValueError(msg)
         self.chat_history = self.get_memory_data()
 
-        agent = ToolCallingAgentComponent().set(
+        agent = self.set(
             llm=llm_model,
             tools=[self.tools],
             chat_history=self.chat_history,

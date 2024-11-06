@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
+from langchain_core.tools import ToolException
 from langchain_core.tools.structured import StructuredTool
 from loguru import logger
 
@@ -15,6 +16,7 @@ if TYPE_CHECKING:
     from langchain_core.tools import BaseTool
 
     from langflow.custom.custom_component.component import Component
+    from langflow.events.event_manager import EventManager
     from langflow.inputs.inputs import InputTypes
     from langflow.io import Output
 
@@ -45,12 +47,21 @@ def build_description(component: Component, output: Output) -> str:
     return f"{output.method}({args}) - {component.description}"
 
 
-def _build_output_function(component: Component, output_method: Callable):
+def _build_output_function(component: Component, output_method: Callable, event_manager: EventManager | None = None):
     def output_function(*args, **kwargs):
         # set the component with the arguments
         # set functionality was updatedto handle list of components and other values separately
-        component.set(*args, **kwargs)
-        return output_method()
+        try:
+            if event_manager:
+                event_manager.on_build_start(data={"id": component._id})
+            component.set(*args, **kwargs)
+            result = output_method()
+            if event_manager:
+                event_manager.on_build_end(data={"id": component._id})
+        except Exception as e:
+            raise ToolException(e) from e
+        else:
+            return result
 
     return output_function
 
@@ -88,8 +99,12 @@ class ComponentToolkit:
             tools.append(
                 StructuredTool(
                     name=formatted_name,
-                    description=build_description(self.component, output),
-                    func=_build_output_function(self.component, output_method),
+                    description=build_description(component=self.component, output=output),
+                    func=_build_output_function(
+                        component=self.component,
+                        output_method=output_method,
+                        event_manager=self.component._event_manager,
+                    ),
                     args_schema=args_schema,
                 )
             )

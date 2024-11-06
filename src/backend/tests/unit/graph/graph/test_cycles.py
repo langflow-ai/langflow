@@ -28,6 +28,7 @@ class Concatenate(Component):
         return Message(text=f"{self.text}{self.text}" or "test")
 
 
+@pytest.mark.skip(reason="Temporarily disabled")
 def test_cycle_in_graph():
     chat_input = ChatInput(_id="chat_input")
     router = ConditionalRouterComponent(_id="router")

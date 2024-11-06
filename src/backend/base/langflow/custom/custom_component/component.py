@@ -701,9 +701,9 @@ class Component(CustomComponent):
                 raise ValueError(msg)
             _attributes[key] = value
         for key, input_obj in self._inputs.items():
-            if key not in _attributes:
+            if key not in _attributes and key not in self._attributes:
                 _attributes[key] = input_obj.value or None
-        self._attributes = _attributes
+        self._attributes.update(_attributes)
 
     def _set_outputs(self, outputs: list[dict]) -> None:
         self.outputs = [Output(**output) for output in outputs]
@@ -903,7 +903,7 @@ class Component(CustomComponent):
             self.outputs.append(Output(name=TOOL_OUTPUT_NAME, display_name="Tool", method="to_toolkit", types=["Tool"]))
 
     def send_message(self, message: Message, id_: str | None = None):
-        if self.graph.session_id and message is not None and message.session_id is None:
+        if self.graph.session_id and message is not None and not message.session_id:
             message.session_id = self.graph.session_id
         stored_message = self._store_message(message)
 
@@ -936,15 +936,17 @@ class Component(CustomComponent):
 
         return messages[0]
 
-    def _send_message_event(self, message: Message, id_: str | None = None):
+    def _send_message_event(self, message: Message, id_: str | None = None, category: str | None = None) -> None:
         if hasattr(self, "_event_manager") and self._event_manager:
             data_dict = message.data.copy() if hasattr(message, "data") else message.model_dump()
             if id_ and not data_dict.get("id"):
                 data_dict["id"] = id_
-            category = data_dict.get("category", None)
+            category = category or data_dict.get("category", None)
             match category:
                 case "error":
                     self._event_manager.on_error(data=data_dict)
+                case "remove_message":
+                    self._event_manager.on_remove_message(data={"id": data_dict["id"]})
                 case _:
                     self._event_manager.on_message(data=data_dict)
 

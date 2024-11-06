@@ -49,6 +49,15 @@ test("fresh start playground", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("chat input");
   await page.waitForTimeout(1000);
@@ -62,6 +71,16 @@ test("fresh start playground", async ({ page }) => {
   await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
   });
+
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("text output");
+  await page.waitForTimeout(1000);
+
+  await page
+    .getByTestId("outputsText Output")
+    .dragTo(page.locator('//*[@id="react-flow-id"]'));
+  await page.mouse.up();
+  await page.mouse.down();
 
   await page.getByTestId("fit_view").click();
   await page.getByTestId("zoom_out").click();
@@ -91,6 +110,45 @@ test("fresh start playground", async ({ page }) => {
 
   // Move to the second element
 
+  const elementsTextOutput = await page
+    .getByTestId("handle-textoutput-shownode-text-left")
+    .all();
+
+  for (const element of elementsTextOutput) {
+    if (await element.isVisible()) {
+      visibleElementHandle = element;
+      break;
+    }
+  }
+
+  await visibleElementHandle.hover();
+
+  // Release the mouse
+  await page.mouse.up();
+
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("fit_view").click();
+
+  //
+
+  const elementsTextOutputRight = await page
+    .locator('[data-testid="handle-textoutput-shownode-text-right"]')
+    .all();
+
+  for (const element of elementsTextOutputRight) {
+    if (await element.isVisible()) {
+      visibleElementHandle = element;
+      break;
+    }
+  }
+
+  // Click and hold on the first element
+  await visibleElementHandle.hover();
+  await page.mouse.down();
+
+  //
   const elementsChatOutput = await page
     .getByTestId("handle-chatoutput-shownode-text-left")
     .all();
@@ -206,7 +264,7 @@ test("fresh start playground", async ({ page }) => {
 
   // check new chat
   await page.getByTestId("new-chat").click();
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(5000);
   await page.getByText("New chat").click();
   await page.getByTestId("input-chat-playground").click();
   await page.getByTestId("input-chat-playground").fill("second session");

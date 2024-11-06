@@ -711,7 +711,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         const edges = get().edges;
         const newEdges = edges.map((edge) => {
           if (idList.includes(edge.data.targetHandle.id)) {
-            edge.className = "runned";
+            edge.className = "ran";
           }
           return edge;
         });

@@ -148,7 +148,7 @@ class MessageInput(StrInput, InputTraceMixin):
             return Message(**v)
         if isinstance(v, Message):
             return v
-        if isinstance(v, str):
+        if isinstance(v, str | AsyncIterator | Iterator):
             return Message(text=v)
         msg = f"Invalid value type {type(v)}"
         raise ValueError(msg)

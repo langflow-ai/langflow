@@ -1,6 +1,7 @@
 import importlib
 
 from langchain.tools import StructuredTool
+from langchain_core.tools import ToolException
 from langchain_experimental.utilities import PythonREPL
 from loguru import logger
 from pydantic import BaseModel, Field
@@ -74,9 +75,9 @@ class PythonREPLToolComponent(LCToolComponent):
         def run_python_code(code: str) -> str:
             try:
                 return python_repl.run(code)
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 logger.opt(exception=True).debug("Error running Python code")
-                return f"Error: {e}"
+                raise ToolException(str(e)) from e
 
         tool = StructuredTool.from_function(
             name=self.name,

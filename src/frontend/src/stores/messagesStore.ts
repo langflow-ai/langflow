@@ -15,6 +15,11 @@ export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
     set(() => ({ messages: messages }));
   },
   addMessage: (message) => {
+    const existingMessage = get().messages.find((msg) => msg.id === message.id);
+    if (existingMessage) {
+      get().updateMessagePartial(message);
+      return;
+    }
     set(() => ({ messages: [...get().messages, message] }));
   },
   removeMessage: (message) => {

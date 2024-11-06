@@ -57,6 +57,7 @@
     "p-debounce": "^4.0.0",
     "pako": "^2.1.0",
     "playwright": "^1.44.1",
+    "pretty-ms": "^9.1.0",
     "react": "^18.3.1",
     "react-ace": "^11.0.1",
     "react-cookie": "^7.1.4",
