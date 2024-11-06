@@ -33,12 +33,16 @@ def _build_agent_input_text_content(agent_input_dict: InputDict) -> str:
 
 def _calculate_duration(start_time: float) -> int:
     """Calculate duration in milliseconds from start time to now."""
+    if isinstance(start_time, int):
+        # means it was transformed into ms so we need to reverse it
+        # to whatever perf_counter returns
+        return int((perf_counter() - start_time / 1000) * 1000)
     return int((perf_counter() - start_time) * 1000)
 
 
 def handle_on_chain_start(
     event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType, start_time: float
-) -> Message:
+) -> tuple[Message, float]:
     # Create content blocks if they don't exist
     if not agent_message.content_blocks:
         agent_message.content_blocks = [ContentBlock(title="Agent Steps", contents=[])]
@@ -59,7 +63,8 @@ def handle_on_chain_start(
             )
             agent_message.content_blocks[0].contents.append(text_content)
             agent_message = send_message_method(message=agent_message)
-    return agent_message
+            start_time = perf_counter()
+    return agent_message, start_time
 
 
 def handle_on_chain_end(
@@ -80,7 +85,8 @@ def handle_on_chain_end(
             )
             agent_message.content_blocks[0].contents.append(text_content)
         agent_message = send_message_method(message=agent_message)
-    return agent_message
+        start_time = perf_counter()
+    return agent_message, start_time
 
 
 def handle_on_tool_start(
@@ -88,7 +94,7 @@ def handle_on_tool_start(
     agent_message: Message,
     tool_blocks_map: dict[str, ToolContent],
     send_message_method: SendMessageFunctionType,
-    start_time: float,  # noqa: ARG001
+    start_time: float,
 ) -> Message:
     tool_name = event["name"]
     tool_input = event["data"].get("input")
@@ -106,6 +112,7 @@ def handle_on_tool_start(
         output=None,
         error=None,
         header={"title": f"Accessing **{tool_name}**", "icon": "Hammer"},
+        duration=int(start_time * 1000),
     )
 
     # Store in map and append to message
@@ -114,7 +121,7 @@ def handle_on_tool_start(
 
     agent_message = send_message_method(message=agent_message)
     tool_blocks_map[run_id] = agent_message.content_blocks[0].contents[-1]
-    return agent_message
+    return agent_message, start_time
 
 
 def handle_on_tool_end(
@@ -131,9 +138,10 @@ def handle_on_tool_end(
         tool_content.output = event["data"].get("output")
         # Calculate duration only when tool ends
         tool_content.header = {"title": f"Executed **{tool_content.name}**", "icon": "Hammer"}
-        tool_content.duration = _calculate_duration(start_time)
+        tool_content.duration = _calculate_duration(tool_content.duration)
         agent_message = send_message_method(message=agent_message)
-    return agent_message
+        start_time = perf_counter()
+    return agent_message, start_time
 
 
 def handle_on_tool_error(
@@ -151,21 +159,23 @@ def handle_on_tool_error(
         tool_content.duration = _calculate_duration(start_time)
         tool_content.header = {"title": f"Error using **{tool_content.name}**", "icon": "Hammer"}
         agent_message = send_message_method(message=agent_message)
-    return agent_message
+        start_time = perf_counter()
+    return agent_message, start_time
 
 
 def handle_on_chain_stream(
     event: dict[str, Any],
     agent_message: Message,
     send_message_method: SendMessageFunctionType,
-    start_time: float,  # noqa: ARG001
+    start_time: float,
 ) -> Message:
     data_chunk = event["data"].get("chunk", {})
     if isinstance(data_chunk, dict) and data_chunk.get("output"):
         agent_message.text = data_chunk.get("output")
         agent_message.properties.state = "complete"
         agent_message = send_message_method(message=agent_message)
-    return agent_message
+        start_time = perf_counter()
+    return agent_message, start_time
 
 
 class ToolEventHandler(Protocol):
@@ -225,10 +235,13 @@ async def process_agent_events(
     async for event in agent_executor:
         if event["event"] in TOOL_EVENT_HANDLERS:
             tool_handler = TOOL_EVENT_HANDLERS[event["event"]]
-            agent_message = tool_handler(event, agent_message, tool_blocks_map, send_message_method, start_time)
+            agent_message, start_time = tool_handler(
+                event, agent_message, tool_blocks_map, send_message_method, start_time
+            )
+            start_time = start_time or perf_counter()
         elif event["event"] in CHAIN_EVENT_HANDLERS:
             chain_handler = CHAIN_EVENT_HANDLERS[event["event"]]
-            agent_message = chain_handler(event, agent_message, send_message_method, start_time)
-        start_time = perf_counter()
+            agent_message, start_time = chain_handler(event, agent_message, send_message_method, start_time)
+            start_time = start_time or perf_counter()
     agent_message.properties.state = "complete"
     return Message(**agent_message.model_dump())
