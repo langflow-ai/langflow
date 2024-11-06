@@ -20,9 +20,9 @@ This page demonstrates serving the basic prompting flow as an endpoint in backen
 
 ## Prerequisites
 
-- [Langflow installed](/getting-started-installation)
-- [OpenAI API key](https://platform.openai.com/)
-- [A Langflow Basic Prompting flow created](/starter-projects-basic-prompting)
+- [Langflow is installed](/getting-started-installation)
+- [You have an OpenAI API key](https://platform.openai.com/)
+- [You have a Langflow Basic Prompting flow](/starter-projects-basic-prompting)
 
 ## Get your flow's ID
 
@@ -49,7 +49,7 @@ curl -X POST \
 
 In the URL, note the flow ID of `fff8dcaa-f0f6-4136-9df0-b7cb38de42e0`, which is the unique endpoint for your flow.
 
-3. Stop Langflow with Ctrl+C.
+3. To stop Langflow, press **Ctrl+C**.
 
 ## Start Langflow in backend-only mode
 
