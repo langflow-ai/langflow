@@ -58,7 +58,7 @@
     "pako": "^2.1.0",
     "playwright": "^1.44.1",
     "react": "^18.3.1",
-    "react-ace": "^11.0.1",
+    "react-ace": "^12.0.0",
     "react-cookie": "^7.1.4",
     "react-dom": "^18.3.1",
     "react-error-boundary": "^4.0.13",
