@@ -392,7 +392,7 @@ const SideBarFoldersButtonsComponent = ({
     <>
       <HeaderButtons />
 
-      <div className="flex h-[70vh] flex-col gap-2 overflow-auto">
+      <div className="flex h-[70vh] flex-col gap-1 overflow-auto">
         <>
           {!loading ? (
             folders.map((item, index) => {
@@ -408,7 +408,7 @@ const SideBarFoldersButtonsComponent = ({
                   key={item.id}
                   data-testid={`sidebar-nav-${item.name}`}
                   className={cn(
-                    buttonVariants({ variant: "ghost" }),
+                    buttonVariants({ variant: "ghost", size: "sm" }),
                     checkPathName(item.id!)
                       ? "bg-zinc-200 hover:bg-zinc-200 dark:bg-zinc-800"
                       : "hover:bg-transparent hover:bg-zinc-200 dark:hover:bg-zinc-800 lg:border-transparent",

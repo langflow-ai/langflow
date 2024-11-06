@@ -76,7 +76,7 @@ export default function CollectionPage(): JSX.Element {
     <>
       {(folderData?.flows?.items?.length !== 0 || folders?.length > 1) && (
         <aside
-          className={`flex w-2/6 min-w-[220px] max-w-[20rem] flex-col border-r bg-background px-4 lg:inline ${
+          className={`flex w-2/6 min-w-[220px] max-w-[17.5rem] flex-col border-r bg-background px-4 lg:inline ${
             showFolderModal ? "" : "hidden"
           }`}
         >
