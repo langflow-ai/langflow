@@ -196,61 +196,51 @@ const config = {
           DEFAULT: "#18181B",
           muted: "#27272A",
         },
-        "inner-yellow": {
-          DEFAULT: "hsl(var(--inner-yellow))",
-          foreground: "hsl(var(--inner-foreground-yellow))",
-          muted: "hsl(var(--inner-yellow-muted-foreground))",
+        "accent-yellow": {
+          DEFAULT: "hsl(var(--accent-yellow))",
+          foreground: "hsl(var(--accent-yellow-foreground))",
         },
-        "inner-blue": {
-          DEFAULT: "hsl(var(--inner-blue))",
-          foreground: "hsl(var(--inner-foreground-blue))",
-          muted: "hsl(var(--inner-blue-muted-foreground))",
+        "accent-blue": {
+          DEFAULT: "hsl(var(--accent-blue))",
+          foreground: "hsl(var(--accent-blue-foreground))",
         },
-        "inner-gray": {
-          DEFAULT: "hsl(var(--inner-gray))",
-          foreground: "hsl(var(--inner-foreground-gray))",
-          muted: "hsl(var(--inner-gray-muted-foreground))",
+        "accent-gray": {
+          DEFAULT: "hsl(var(--accent-gray))",
+          foreground: "hsl(var(--accent-gray-foreground))",
         },
-        "inner-lime": {
-          DEFAULT: "hsl(var(--inner-lime))",
-          foreground: "hsl(var(--inner-foreground-lime))",
-          muted: "hsl(var(--inner-lime-muted-foreground))",
+        "accent-lime": {
+          DEFAULT: "hsl(var(--accent-lime))",
+          foreground: "hsl(var(--accent-lime-foreground))",
         },
-        "inner-red": {
-          DEFAULT: "hsl(var(--inner-red))",
-          foreground: "hsl(var(--inner-foreground-red))",
-          muted: "hsl(var(--inner-red-muted-foreground))",
+        "accent-red": {
+          DEFAULT: "hsl(var(--accent-red))",
+          foreground: "hsl(var(--accent-red-foreground))",
         },
-        "inner-violet": {
-          DEFAULT: "hsl(var(--inner-violet))",
-          foreground: "hsl(var(--inner-foreground-violet))",
-          muted: "hsl(var(--inner-violet-muted-foreground))",
+        "accent-violet": {
+          DEFAULT: "hsl(var(--accent-violet))",
+          foreground: "hsl(var(--accent-violet-foreground))",
         },
-        "inner-emerald": {
-          DEFAULT: "hsl(var(--inner-emerald))",
-          foreground: "hsl(var(--inner-foreground-emerald))",
-          muted: "hsl(var(--inner-emerald-muted-foreground))",
+        "accent-emerald": {
+          DEFAULT: "hsl(var(--accent-emerald))",
+          foreground: "hsl(var(--accent-emerald-foreground))",
         },
-        "inner-fuchsia": {
-          DEFAULT: "hsl(var(--inner-fuchsia))",
-          foreground: "hsl(var(--inner-foreground-fuchsia))",
-          muted: "hsl(var(--inner-fuchsia-muted-foreground))",
+        "accent-fuchsia": {
+          DEFAULT: "hsl(var(--accent-fuchsia))",
+          foreground: "hsl(var(--accent-fuchsia-foreground))",
         },
-        "inner-purple": {
-          DEFAULT: "hsl(var(--inner-purple))",
-          foreground: "hsl(var(--inner-foreground-purple))",
-          muted: "hsl(var(--inner-purple-muted-foreground))",
+        "accent-purple": {
+          DEFAULT: "hsl(var(--accent-purple))",
+          foreground: "hsl(var(--accent-purple-foreground))",
         },
-        "inner-cyan": {
-          DEFAULT: "hsl(var(--inner-cyan))",
-          foreground: "hsl(var(--inner-foreground-cyan))",
-          muted: "hsl(var(--inner-cyan-muted-foreground))",
+        "accent-cyan": {
+          DEFAULT: "hsl(var(--accent-cyan))",
+          foreground: "hsl(var(--accent-cyan-foreground))",
         },
-        "inner-indigo": {
-          DEFAULT: "hsl(var(--inner-indigo))",
-          foreground: "hsl(var(--inner-foreground-indigo))",
-          muted: "hsl(var(--inner-indigo-muted-foreground))",
+        "accent-indigo": {
+          DEFAULT: "hsl(var(--accent-indigo))",
+          foreground: "hsl(var(--accent-indigo-foreground))",
         },
+        "node-ring": "hsl(var(--node-ring))",
       },
       borderRadius: {
         lg: `var(--radius)`,
