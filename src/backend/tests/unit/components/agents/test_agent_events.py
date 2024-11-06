@@ -282,11 +282,12 @@ async def test_handle_on_chain_start_with_input():
     )
     event = {"event": "on_chain_start", "data": {"input": {"input": "test input", "chat_history": []}}, "start_time": 0}
 
-    updated_message = handle_on_chain_start(event, agent_message, send_message)
+    updated_message, start_time = handle_on_chain_start(event, agent_message, send_message, 0.0)
 
     assert updated_message.properties.icon == "Bot"
     assert len(updated_message.content_blocks) == 1
     assert updated_message.content_blocks[0].title == "Agent Steps"
+    assert isinstance(start_time, float)
 
 
 async def test_handle_on_chain_start_no_input():
@@ -300,11 +301,12 @@ async def test_handle_on_chain_start_no_input():
     )
     event = {"event": "on_chain_start", "data": {}, "start_time": 0}
 
-    updated_message = handle_on_chain_start(event, agent_message, send_message)
+    updated_message, start_time = handle_on_chain_start(event, agent_message, send_message, 0.0)
 
     assert updated_message.properties.icon == "Bot"
     assert len(updated_message.content_blocks) == 1
     assert len(updated_message.content_blocks[0].contents) == 0
+    assert isinstance(start_time, float)
 
 
 async def test_handle_on_chain_end_with_output():
@@ -320,11 +322,12 @@ async def test_handle_on_chain_end_with_output():
     output = AgentFinish(return_values={"output": "final output"}, log="test log")
     event = {"event": "on_chain_end", "data": {"output": output}, "start_time": 0}
 
-    updated_message = handle_on_chain_end(event, agent_message, send_message)
+    updated_message, start_time = handle_on_chain_end(event, agent_message, send_message, 0.0)
 
     assert updated_message.properties.icon == "Bot"
     assert updated_message.properties.state == "complete"
     assert updated_message.text == "final output"
+    assert isinstance(start_time, float)
 
 
 async def test_handle_on_chain_end_no_output():
@@ -338,11 +341,12 @@ async def test_handle_on_chain_end_no_output():
     )
     event = {"event": "on_chain_end", "data": {}, "start_time": 0}
 
-    updated_message = handle_on_chain_end(event, agent_message, send_message)
+    updated_message, start_time = handle_on_chain_end(event, agent_message, send_message, 0.0)
 
     assert updated_message.properties.icon == "Bot"
     assert updated_message.properties.state == "partial"
     assert updated_message.text == ""
+    assert isinstance(start_time, float)
 
 
 async def test_handle_on_chain_end_empty_data():
@@ -356,11 +360,12 @@ async def test_handle_on_chain_end_empty_data():
     )
     event = {"event": "on_chain_end", "data": {"output": None}, "start_time": 0}
 
-    updated_message = handle_on_chain_end(event, agent_message, send_message)
+    updated_message, start_time = handle_on_chain_end(event, agent_message, send_message, 0.0)
 
     assert updated_message.properties.icon == "Bot"
     assert updated_message.properties.state == "partial"
     assert updated_message.text == ""
+    assert isinstance(start_time, float)
 
 
 async def test_handle_on_chain_end_with_empty_return_values():
@@ -379,11 +384,12 @@ async def test_handle_on_chain_end_with_empty_return_values():
 
     event = {"event": "on_chain_end", "data": {"output": MockOutputEmptyReturnValues()}, "start_time": 0}
 
-    updated_message = handle_on_chain_end(event, agent_message, send_message)
+    updated_message, start_time = handle_on_chain_end(event, agent_message, send_message, 0.0)
 
     assert updated_message.properties.icon == "Bot"
     assert updated_message.properties.state == "partial"
     assert updated_message.text == ""
+    assert isinstance(start_time, float)
 
 
 def test_handle_on_tool_start():
@@ -404,7 +410,7 @@ def test_handle_on_tool_start():
         "start_time": 0,
     }
 
-    updated_message = handle_on_tool_start(event, agent_message, tool_blocks_map, send_message)
+    updated_message, start_time = handle_on_tool_start(event, agent_message, tool_blocks_map, send_message, 0.0)
 
     assert len(updated_message.content_blocks) == 1
     assert len(updated_message.content_blocks[0].contents) > 0
@@ -413,6 +419,8 @@ def test_handle_on_tool_start():
     assert isinstance(tool_content, ToolContent)
     assert tool_content.name == "test_tool"
     assert tool_content.tool_input == {"query": "tool input"}
+    assert isinstance(tool_content.duration, int)
+    assert isinstance(start_time, float)
 
 
 async def test_handle_on_tool_end():
@@ -432,7 +440,7 @@ async def test_handle_on_tool_end():
         "run_id": "test_run",
         "data": {"input": {"query": "tool input"}},
     }
-    agent_message = handle_on_tool_start(start_event, agent_message, tool_blocks_map, send_message)
+    agent_message, _ = handle_on_tool_start(start_event, agent_message, tool_blocks_map, send_message, 0.0)
 
     end_event = {
         "event": "on_tool_end",
@@ -442,12 +450,13 @@ async def test_handle_on_tool_end():
         "start_time": 0,
     }
 
-    updated_message = handle_on_tool_end(end_event, agent_message, tool_blocks_map, send_message)
+    updated_message, start_time = handle_on_tool_end(end_event, agent_message, tool_blocks_map, send_message, 0.0)
 
     tool_content = updated_message.content_blocks[0].contents[-1]
     assert tool_content.name == "test_tool"
     assert tool_content.output == "tool output"
-    assert hasattr(tool_content, "duration")
+    assert isinstance(tool_content.duration, int)
+    assert isinstance(start_time, float)
 
 
 async def test_handle_on_tool_error():
@@ -467,7 +476,7 @@ async def test_handle_on_tool_error():
         "run_id": "test_run",
         "data": {"input": {"query": "tool input"}},
     }
-    agent_message = handle_on_tool_start(start_event, agent_message, tool_blocks_map, send_message)
+    agent_message, _ = handle_on_tool_start(start_event, agent_message, tool_blocks_map, send_message, 0.0)
 
     error_event = {
         "event": "on_tool_error",
@@ -477,13 +486,14 @@ async def test_handle_on_tool_error():
         "start_time": 0,
     }
 
-    updated_message = handle_on_tool_error(error_event, agent_message, tool_blocks_map, send_message)
+    updated_message, start_time = handle_on_tool_error(error_event, agent_message, tool_blocks_map, send_message, 0.0)
 
     tool_content = updated_message.content_blocks[0].contents[-1]
     assert tool_content.name == "test_tool"
     assert tool_content.error == "error message"
     assert tool_content.header["title"] == "Error using **test_tool**"
-    assert hasattr(tool_content, "duration")
+    assert isinstance(tool_content.duration, int)
+    assert isinstance(start_time, float)
 
 
 async def test_handle_on_chain_stream_with_output():
@@ -500,10 +510,11 @@ async def test_handle_on_chain_stream_with_output():
         "data": {"chunk": {"output": "streamed output"}},
     }
 
-    updated_message = handle_on_chain_stream(event, agent_message, send_message)
+    updated_message, start_time = handle_on_chain_stream(event, agent_message, send_message, 0.0)
 
     assert updated_message.text == "streamed output"
     assert updated_message.properties.state == "complete"
+    assert isinstance(start_time, float)
 
 
 async def test_handle_on_chain_stream_no_output():
@@ -521,7 +532,8 @@ async def test_handle_on_chain_stream_no_output():
         "data": {"chunk": {}},
     }
 
-    updated_message = handle_on_chain_stream(event, agent_message, send_message)
+    updated_message, start_time = handle_on_chain_stream(event, agent_message, send_message, 0.0)
 
     assert updated_message.text == ""
     assert updated_message.properties.state == "partial"
+    assert isinstance(start_time, float)
