@@ -106,7 +106,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
         draggable
         onDragStart={onDragStart}
         onClick={handleClick}
-        className={`my-2 flex h-[110px] flex-row bg-background ${
+        className={`my-2 flex flex-row bg-background ${
           isComponent ? "cursor-default" : "cursor-pointer"
         } justify-between rounded-lg border border-zinc-100 p-5 shadow-sm hover:border-border dark:border-zinc-800 dark:hover:border-muted-foreground`}
       >
@@ -136,7 +136,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
                 Edited {timeElapsed(flowData.updated_at)} ago
               </div>
             </div>
-            <div className="line-clamp-2 flex text-sm text-zinc-800 truncate-doubleline dark:text-white">
+            <div className="overflow-hidden truncate text-sm text-zinc-800 dark:text-white">
               {flowData.description}
             </div>
           </div>
