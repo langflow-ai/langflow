@@ -4,10 +4,10 @@ from pydantic import BaseModel, Field, field_serializer, field_validator
 
 
 class Source(BaseModel):
-    id: str = Field(default="", description="The id of the source component.")
-    display_name: str = Field(default="", description="The display name of the source component.")
-    source: str = Field(
-        default="",
+    id: str | None = Field(default=None, description="The id of the source component.")
+    display_name: str | None = Field(default=None, description="The display name of the source component.")
+    source: str | None = Field(
+        default=None,
         description="The source of the message. Normally used to display the model name (e.g. 'gpt-4o')",
     )
 
