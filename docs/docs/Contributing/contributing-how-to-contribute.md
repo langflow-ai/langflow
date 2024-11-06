@@ -1,24 +1,22 @@
 ---
-title: How to contribute?
+title: Contribute to Langflow
 sidebar_position: 1
 slug: /contributing-how-to-contribute
 ---
-
-# How to contribute to Langflow
 
 This guide is intended to help you start contributing to Langflow.
 As an open-source project in a rapidly developing field, Langflow welcomes contributions, whether it be in the form of a new feature, improved infrastructure, or better documentation.
 
 To contribute to this project, follow the [fork and pull request](https://docs.github.com/en/get-started/quickstart/contributing-to-projects) workflow.
 
-## Prerequisites
-
-- [uv(>=0.4)](https://docs.astral.sh/uv/getting-started/installation/)
-- [Node.js](https://nodejs.org/en/download/package-manager)
-
 ## Contribute code
 
 Develop Langflow locally with [uv](https://docs.astral.sh/uv/getting-started/installation/) and [Node.js](https://nodejs.org/en/download/package-manager).
+
+### Prerequisites
+
+* [uv(>=0.4)](https://docs.astral.sh/uv/getting-started/installation/)
+* [Node.js](https://nodejs.org/en/download/package-manager)
 
 ### Clone the Langflow Repository
 
@@ -48,10 +46,10 @@ The repo includes a `.vscode/launch.json` file for debugging the backend in VSCo
 
 1. Open Langflow in VSCode.
 2. Press **Ctrl+Shift+D** for Windows **or Cmd+Shift+D** for Mac to open the Run and Debug view.
-3. Choose a configuration from the dropdown at the top (for example, "Debug Backend").
-4. Click the green play button or press F5 to start debugging.
+3. From the **Run and Debug** dropdown, choose a debugging configuration.
+4. Click the green **Play** button or press F5 to start debugging.
 
-This allows you to quickly debug different parts of your application, like the backend, frontend, or CLI, directly from VSCode.
+Use `launch.json` to quickly debug different parts of your application, like the backend, frontend, or CLI, directly from VSCode.
 
 ### Run Langflow locally
 
@@ -73,7 +71,23 @@ make frontend
 
 ## Contribute documentation
 
-The documentation is built using [Docusaurus](https://docusaurus.io/) and written in [Markdown](https://daringfireball.net/projects/markdown/). To run the documentation locally, run the following commands:
+The documentation is built using [Docusaurus](https://docusaurus.io/) and written in [Markdown](https://docusaurus.io/docs/markdown-features).
+
+### Prerequisites
+
+* [Node.js](https://nodejs.org/en/download/package-manager)
+
+### Clone the Langflow repository
+
+1. Navigate to the [Langflow GitHub repository](https://github.com/langflow-ai/langflow), and then click **Fork**.
+
+2. Add the new remote to your local repository on your local machine:
+
+```bash
+git remote add fork https://github.com/<your_git_username>/langflow.git
+```
+
+3. To run the documentation locally, run the following commands:
 
 ```bash
 cd docs
@@ -97,22 +111,3 @@ Some additional guidance on pull request titles:
 * Pull requests should strive to fix one thing **only**, and should contain a good description of what is being fixed.
 
 For more information, see the [Python Developer's Guide](https://devguide.python.org/getting-started/pull-request-lifecycle/index.html#making-good-commits).
-
-## Report bugs or suggest improvements
-
-Our [GitHub issues](https://github.com/langflow-ai/langflow/issues) page is kept up to date
-with bugs, improvements, and feature requests. There is a taxonomy of labels to help
-with sorting and discovery of issues of interest. [See this page](https://github.com/langflow-ai/langflow/labels) for an overview of
-the system we use to tag our issues and pull requests.
-
-If you're looking for help with your code, consider posting a question on the
-[GitHub Discussions board](https://github.com/langflow-ai/langflow/discussions). Please
-understand that we won't be able to provide individual support via email. We
-also believe that help is much more valuable if it's **shared publicly**,
-so that more people can benefit from it.
-
-Since the Discussions board is public, please follow this guidance when posting your code questions.
-
-1. When describing your issue, try to provide as many details as possible. What exactly goes wrong? _How_ is it failing? Is there an error? "XY doesn't work" usually isn't that helpful for tracking down problems. Always remember to include the code you ran and if possible, extract only the relevant parts and don't just dump your entire script. This will make it easier for us to reproduce the error.
-
-2. When you include long code, logs, or tracebacks, wrap them in `<details>` and `</details>` tags. This [collapses the content](https://developer.mozilla.org/en/docs/Web/HTML/Element/details) so the contents only becomes visible on click, making the issue easier to read and follow.
