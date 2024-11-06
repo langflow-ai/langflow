@@ -114,6 +114,7 @@ def handle_on_tool_end(
     if tool_content and isinstance(tool_content, ToolContent):
         tool_content.output = event["data"].get("output")
         # Calculate duration only when tool ends
+        tool_content.header = {"title": f"Executed **{tool_content.name}**", "icon": "Hammer"}
         tool_content.duration = _calculate_duration(event["start_time"])
 
     return agent_message
@@ -201,12 +202,12 @@ async def process_agent_events(
             tool_handler = TOOL_EVENT_HANDLERS[event["event"]]
             # Pass the tool_blocks_map to tool handlers
             agent_message = tool_handler(event, agent_message, tool_blocks_map)
+            agent_message = send_message_method(message=agent_message)
+            tool_blocks_map = {**tool_blocks_map, event["run_id"]: agent_message.content_blocks[0].contents[-1]}
         elif event["event"] in CHAIN_EVENT_HANDLERS:
             chain_handler = CHAIN_EVENT_HANDLERS[event["event"]]
             agent_message = chain_handler(event, agent_message)
-
-        # Send message after each event
-        agent_message = send_message_method(message=agent_message)
+            agent_message = send_message_method(message=agent_message)
 
     agent_message.properties.state = "complete"
     return Message(**agent_message.model_dump())
