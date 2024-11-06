@@ -13,6 +13,13 @@ from langflow.schema.log import SendMessageFunctionType
 from langflow.schema.message import Message
 
 
+class ExceptionWithMessageError(Exception):
+    def __init__(self, e: Exception, agent_message: Message):
+        self.agent_message = agent_message
+        self.exception = e
+        super().__init__()
+
+
 class InputDict(TypedDict):
     input: str
     chat_history: list[BaseMessage]
@@ -228,20 +235,22 @@ async def process_agent_events(
         agent_message.properties.state = "partial"
     # Store the initial message
     agent_message = send_message_method(message=agent_message)
-
-    # Create a mapping of run_ids to tool contents
-    tool_blocks_map: dict[str, ToolContent] = {}
-    start_time = perf_counter()
-    async for event in agent_executor:
-        if event["event"] in TOOL_EVENT_HANDLERS:
-            tool_handler = TOOL_EVENT_HANDLERS[event["event"]]
-            agent_message, start_time = tool_handler(
-                event, agent_message, tool_blocks_map, send_message_method, start_time
-            )
-            start_time = start_time or perf_counter()
-        elif event["event"] in CHAIN_EVENT_HANDLERS:
-            chain_handler = CHAIN_EVENT_HANDLERS[event["event"]]
-            agent_message, start_time = chain_handler(event, agent_message, send_message_method, start_time)
-            start_time = start_time or perf_counter()
-    agent_message.properties.state = "complete"
-    return Message(**agent_message.model_dump())
+    try:
+        # Create a mapping of run_ids to tool contents
+        tool_blocks_map: dict[str, ToolContent] = {}
+        start_time = perf_counter()
+        async for event in agent_executor:
+            if event["event"] in TOOL_EVENT_HANDLERS:
+                tool_handler = TOOL_EVENT_HANDLERS[event["event"]]
+                agent_message, start_time = tool_handler(
+                    event, agent_message, tool_blocks_map, send_message_method, start_time
+                )
+                start_time = start_time or perf_counter()
+            elif event["event"] in CHAIN_EVENT_HANDLERS:
+                chain_handler = CHAIN_EVENT_HANDLERS[event["event"]]
+                agent_message, start_time = chain_handler(event, agent_message, send_message_method, start_time)
+                start_time = start_time or perf_counter()
+        agent_message.properties.state = "complete"
+        return Message(**agent_message.model_dump())
+    except Exception as e:
+        raise ExceptionWithMessageError(e, agent_message) from e
