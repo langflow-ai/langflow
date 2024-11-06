@@ -65,7 +65,7 @@ export function Nav({ categories, currentTab, setCurrentTab }: NavProps) {
                         name={link.icon}
                         className={`h-4 w-4 stroke-2 ${
                           currentTab === link.id
-                            ? "x-gradient"
+                            ? "text-accent-pink-foreground"
                             : "text-muted-foreground"
                         }`}
                       />
