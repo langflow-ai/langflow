@@ -1,6 +1,5 @@
 "use client";
 import { BorderTrail } from "@/components/core/border-trail";
-import { TextShimmer } from "@/components/ui/TextShimmer";
 import { ContentBlock } from "@/types/chat";
 import { cn } from "@/utils/utils";
 import { AnimatePresence, motion } from "framer-motion";
@@ -34,12 +33,9 @@ export function ContentBlockDisplay({
   const headerIcon =
     state === "partial" ? lastContent?.header?.icon || "Bot" : "Bot";
   const headerTitle =
-    state === "partial"
-      ? lastContent?.header?.title ||
-        `Steps (${contentBlocks[0]?.contents.length})`
-      : "Steps";
-
-  // console.log("contentBlocks");
+    (state === "partial"
+      ? lastContent?.header?.title
+      : contentBlocks[0]?.title) || "Steps";
 
   return (
     <div className="relative py-3">
@@ -48,11 +44,11 @@ export function ContentBlockDisplay({
         animate={{ opacity: 1, y: 0 }}
         transition={{
           duration: 0.2,
-          ease: "easeOut"
+          ease: "easeOut",
         }}
         className={cn(
           "relative rounded-lg border border-border bg-background",
-          "overflow-hidden"
+          "overflow-hidden",
         )}
       >
         {isLoading && (
@@ -112,16 +108,16 @@ export function ContentBlockDisplay({
                 opacity: 1,
                 transition: {
                   height: { duration: 0.2 },
-                  opacity: { duration: 0.1, delay: 0.1 }
-                }
+                  opacity: { duration: 0.1, delay: 0.1 },
+                },
               }}
               exit={{
                 height: 0,
                 opacity: 0,
                 transition: {
                   height: { duration: 0.2 },
-                  opacity: { duration: 0.1 }
-                }
+                  opacity: { duration: 0.1 },
+                },
               }}
               className="relative border-t border-border"
             >
@@ -133,7 +129,8 @@ export function ContentBlockDisplay({
                   transition={{ duration: 0.2, delay: 0.1 }}
                   className={cn(
                     "relative p-4",
-                    index !== contentBlocks.length - 1 && "border-b border-border"
+                    index !== contentBlocks.length - 1 &&
+                      "border-b border-border",
                   )}
                 >
                   <div className="mb-2 font-medium">
@@ -143,7 +140,9 @@ export function ContentBlockDisplay({
                       rehypePlugins={[rehypeMathjax]}
                       components={{
                         p({ node, ...props }) {
-                          return <span className="inline">{props.children}</span>;
+                          return (
+                            <span className="inline">{props.children}</span>
+                          );
                         },
                       }}
                     >
