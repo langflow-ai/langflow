@@ -1,22 +1,10 @@
 ---
 title: My Collection
 sidebar_position: 3
-slug: /365085a8-a90a-43f9-a779-f8769ec7eca1
+slug: /configuration-my-collection
 ---
 
-
-
-:::info
-
-This page may contain outdated information. It will be updated as soon as possible.
-
-:::
-
-
-
-
 My Collection is a space in Langflow where users can manage, organize, and access their flows and components. Flows and components are displayed as individual cards that provide relevant information.
-
 
 ![](./1289235516.png)
 
