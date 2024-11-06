@@ -139,7 +139,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
                   className="group ml-2 h-10 w-10 border-none dark:hover:bg-zinc-700"
                 >
                   <ForwardedIconComponent
-                    name="ellipsis"
+                    name="Ellipsis"
                     aria-hidden="true"
                     className="h-5 w-5 dark:text-zinc-400 dark:group-hover:text-white"
                   />

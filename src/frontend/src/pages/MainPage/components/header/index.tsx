@@ -94,7 +94,7 @@ const HeaderComponent = ({
       <div className="flex justify-between">
         <div className="flex w-full xl:w-5/12">
           <Input
-            icon="search"
+            icon="Search"
             data-testid="search-store-input"
             type="text"
             placeholder={`Search ${flowType}...`}
@@ -116,7 +116,7 @@ const HeaderComponent = ({
                 onClick={() => setView(viewType as "list" | "grid")}
               >
                 <ForwardedIconComponent
-                  name={viewType === "list" ? "menu" : "layout-grid"}
+                  name={viewType === "list" ? "Menu" : "LayoutGrid"}
                   aria-hidden="true"
                   className="h-4 w-4 group-hover:text-black dark:group-hover:text-white"
                 />
@@ -144,7 +144,7 @@ const HeaderComponent = ({
               id="new-project-btn"
             >
               <ForwardedIconComponent
-                name="plus"
+                name="Plus"
                 aria-hidden="true"
                 className="h-4 w-4"
               />
