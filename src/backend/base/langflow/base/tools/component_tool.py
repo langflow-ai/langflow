@@ -11,6 +11,8 @@ from pydantic import BaseModel
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
 from langflow.io.schema import create_input_schema
+from langflow.schema.data import Data
+from langflow.schema.message import Message
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -23,7 +25,6 @@ if TYPE_CHECKING:
     from langflow.inputs.inputs import InputTypes
     from langflow.io import Output
     from langflow.schema.content_types import ContentBlock
-    from langflow.schema.message import Message
 
 
 def _get_input_type(_input: InputTypes):
@@ -112,8 +113,14 @@ def _build_output_function(component: Component, output_method: Callable, event_
                 event_manager.on_build_end(data={"id": component._id})
         except Exception as e:
             raise ToolException(e) from e
-        else:
-            return result
+
+        if isinstance(result, Message):
+            return result.get_text()
+        if isinstance(result, Data):
+            return result.data
+        if isinstance(result, BaseModel):
+            return result.model_dump()
+        return result
 
     return _patch_send_message_decorator(component, output_function)
 
@@ -131,6 +138,10 @@ def _build_output_async_function(
                 event_manager.on_build_end(data={"id": component._id})
         except Exception as e:
             raise ToolException(e) from e
+        if isinstance(result, Message):
+            return result.get_text()
+        if isinstance(result, Data):
+            return result.data
         if isinstance(result, BaseModel):
             return result.model_dump()
         return result
