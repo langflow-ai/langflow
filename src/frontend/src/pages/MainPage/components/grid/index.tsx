@@ -107,7 +107,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
         draggable
         onDragStart={onDragStart}
         onClick={handleClick}
-        className={`my-1 flex flex-col rounded-lg border border-zinc-100 bg-background p-5 shadow-sm hover:border-border dark:border-zinc-800 dark:hover:border-muted-foreground ${
+        className={`my-1 flex flex-col rounded-lg border border-border bg-background p-5 shadow-sm hover:border-placeholder-foreground ${
           isComponent ? "cursor-default" : "cursor-pointer"
         }`}
       >
