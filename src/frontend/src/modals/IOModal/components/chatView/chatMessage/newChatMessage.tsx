@@ -249,7 +249,6 @@ export default function ChatMessage({
                     className="h-[18px] w-[18px] text-destructive"
                     name="OctagonAlert"
                   />
-                  <span className="">An error stopped your flow.</span>
                 </div>
                 {blocks.map((block, blockIndex) => (
                   <div key={blockIndex} className="mb-4">
@@ -259,29 +258,37 @@ export default function ChatMessage({
                         return (
                           <div key={contentIndex}>
                             {content.component && (
-                              <p className="pb-1">
-                                Component:{" "}
-                                <span
-                                  className={cn(
-                                    closeChat ? "cursor-pointer underline" : "",
-                                  )}
-                                  onClick={() => {
-                                    fitViewNode(
-                                      chat.properties?.source?.id ?? "",
-                                    );
-                                    closeChat?.();
-                                  }}
-                                >
-                                  {content.component}
+                              <>
+                                <span className="">
+                                  An error occured in the{" "}
                                 </span>
-                              </p>
+                                <span>
+                                  <span
+                                    className={cn(
+                                      closeChat
+                                        ? "cursor-pointer hover:underline"
+                                        : "",
+                                    )}
+                                    onClick={() => {
+                                      fitViewNode(
+                                        chat.properties?.source?.id ?? "",
+                                      );
+                                      closeChat?.();
+                                    }}
+                                  >
+                                    <strong>{content.component}</strong>
+                                  </span>{" "}
+                                  Component, stopping your flow. See below for
+                                  more details.
+                                </span>
+                              </>
                             )}
+
                             {content.field && (
                               <p className="pb-1">Field: {content.field}</p>
                             )}
                             {content.reason && (
                               <span className="">
-                                Reason:{" "}
                                 <Markdown
                                   linkTarget="_blank"
                                   remarkPlugins={[remarkGfm]}
@@ -356,7 +363,7 @@ export default function ChatMessage({
                               </span>
                             )}
                             {content.solution && (
-                              <div>
+                              <div className="mt-4">
                                 <h3 className="pb-3 font-semibold">
                                   Steps to fix:
                                 </h3>
