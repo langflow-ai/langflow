@@ -10,7 +10,9 @@ from langflow.base.agents.callback import AgentAsyncHandler
 from langflow.base.agents.events import ExceptionWithMessageError, process_agent_events
 from langflow.base.agents.utils import data_to_messages
 from langflow.custom import Component
-from langflow.inputs.inputs import InputTypes
+from langflow.custom.custom_component.component import _get_component_toolkit
+from langflow.field_typing import Tool
+from langflow.inputs.inputs import InputTypes, MultilineInput
 from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
 from langflow.memory import delete_message
 from langflow.schema import Data
@@ -27,7 +29,12 @@ if TYPE_CHECKING:
 class LCAgentComponent(Component):
     trace_type = "agent"
     _base_inputs: list[InputTypes] = [
-        MessageTextInput(name="input_value", display_name="Input", tool_mode=True),
+        MessageTextInput(
+            name="input_value",
+            display_name="Input",
+            info="The input provided by the user for the agent to process.",
+            tool_mode=True,
+        ),
         BoolInput(
             name="handle_parsing_errors",
             display_name="Handle Parse Errors",
@@ -44,6 +51,26 @@ class LCAgentComponent(Component):
             name="max_iterations",
             display_name="Max Iterations",
             value=15,
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="agent_name",
+            display_name="Agent Name",
+            info="The name of the agent.",
+            value="Agent",
+            advanced=True,
+        ),
+        MultilineInput(
+            name="agent_description",
+            display_name="Agent Description",
+            info="The description of the agent. This is only used when in Tool Mode.",
+            advanced=True,
+            value="A helpful assistant with access to tools.",
+        ),
+        BoolInput(
+            name="add_tools_to_description",
+            display_name="Add Tools to Description. This is only used when in Tool Mode.",
+            value=False,
             advanced=True,
         ),
     ]
@@ -117,7 +144,7 @@ class LCAgentComponent(Component):
 
         agent_message = Message(
             sender=MESSAGE_SENDER_AI,
-            sender_name="Agent",
+            sender_name=self.agent_name or "Agent",
             properties={"icon": "Bot", "state": "partial"},
             content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
             session_id=self.graph.session_id,
@@ -167,3 +194,23 @@ class LCToolsAgentComponent(LCAgentComponent):
     @abstractmethod
     def create_agent_runnable(self) -> Runnable:
         """Create the agent."""
+
+    def get_tool_name(self) -> str:
+        return self.agent_name or "Agent"
+
+    def get_tool_description(self) -> str:
+        return self.agent_description or "A helpful assistant with access to tools."
+
+    def _build_tools_description(self):
+        tool_description = ""
+        if self.tools:
+            tool_description = "\n".join([f"{tool.name}: {tool.description}" for tool in self.tools])
+        return tool_description
+
+    def to_toolkit(self) -> list[Tool]:
+        component_toolkit = _get_component_toolkit()
+        tools_description = self._build_tools_description() if self.add_tools_to_description else ""
+        description = f"{self.get_tool_description()}\n\n{tools_description}"
+        return component_toolkit(component=self).get_tools(
+            tool_name=self.get_tool_name(), tool_description=description, callbacks=self.get_langchain_callbacks()
+        )
