@@ -3,7 +3,7 @@ import { BorderTrail } from "@/components/core/border-trail";
 import { TextShimmer } from "@/components/ui/TextShimmer";
 import { ContentBlock } from "@/types/chat";
 import { cn } from "@/utils/utils";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import Markdown from "react-markdown";
@@ -61,13 +61,25 @@ export function ContentBlockDisplay({
               strokeWidth={1.5}
             />
           )}
-          <Markdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeMathjax]}
-            className="inline-block w-fit max-w-full font-semibold text-primary"
-          >
-            {headerTitle}
-          </Markdown>
+          <div className="relative h-6 overflow-hidden">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={headerTitle}
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -20, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Markdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeMathjax]}
+                  className="inline-block w-fit max-w-full font-semibold text-primary"
+                >
+                  {headerTitle}
+                </Markdown>
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </div>
         <ChevronDown
           className={cn(
