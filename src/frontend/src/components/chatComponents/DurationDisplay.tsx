@@ -1,4 +1,3 @@
-import { AnimatedNumber } from "@/components/animatedNumbers";
 import prettyMilliseconds from "pretty-ms";
 import { useEffect, useState } from "react";
 import Loading from "../ui/loading";
@@ -29,7 +28,7 @@ export default function DurationDisplay({ duration }: { duration?: number }) {
   }, [duration]);
 
   const displayTime = duration ?? elapsedTime;
-
+  const humanizedTime = prettyMilliseconds(displayTime);
   return (
     <div
       className={`inline-flex items-center gap-2 rounded px-2 text-sm ${
@@ -40,6 +39,7 @@ export default function DurationDisplay({ duration }: { duration?: number }) {
     >
       <AnimatedNumber
         value={displayTime}
+        humanizedValue={humanizedTime}
         springOptions={{
           bounce: 0,
           duration: 300,

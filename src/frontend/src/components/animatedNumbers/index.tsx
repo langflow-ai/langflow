@@ -2,17 +2,19 @@ import { cn } from "@/utils/utils";
 import { motion, SpringOptions, useSpring, useTransform } from "framer-motion";
 import { useEffect, useState } from "react";
 
-type AnimatedNumber = {
+type AnimatedNumberProps = {
   value: number;
+  humanizedValue?: string;
   className?: string;
   springOptions?: SpringOptions;
 };
 
 export function AnimatedNumber({
   value,
+  humanizedValue,
   className,
   springOptions,
-}: AnimatedNumber) {
+}: AnimatedNumberProps) {
   const spring = useSpring(value, springOptions);
   const display = useTransform(spring, (current) =>
     Math.round(current).toLocaleString(),
@@ -24,7 +26,7 @@ export function AnimatedNumber({
 
   return (
     <motion.span className={cn("tabular-nums", className)}>
-      {display}
+      {humanizedValue ?? display}
     </motion.span>
   );
 }
