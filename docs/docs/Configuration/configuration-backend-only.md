@@ -1,10 +1,13 @@
 ---
-title: Backend-Only
+title: Start Langflow in backend-only mode
 sidebar_position: 4
 slug: /configuration-backend-only
 ---
 
+Learn how to serve the [Basic Prompting flow](/starter-projects-basic-prompting) as an endpoint in backend-only mode.
+
 Langflow can run in `--backend-only` mode to expose a Langflow app as an API endpoint, without running the frontend UI.
+This is also known as "headless" mode. Running Langflow without the frontend is useful for automation, testing, and situations where you just need to serve a flow as a workload, and not create a new flow in the UI.
 
 To start Langflow in backend-only mode, pass the `--backend-only` flag at startup.
 
@@ -15,8 +18,6 @@ python3 -m langflow run --backend-only
 The terminal prints `Welcome to ⛓ Langflow`, and a blank window opens at `http://127.0.0.1:7860/all`.
 
 Langflow will now serve requests to its API without the frontend running.
-
-This page demonstrates serving the basic prompting flow as an endpoint in backend-only mode.
 
 ## Prerequisites
 
@@ -53,7 +54,12 @@ In the URL, note the flow ID of `fff8dcaa-f0f6-4136-9df0-b7cb38de42e0`, which is
 
 ## Start Langflow in backend-only mode
 
-1. Start langflow in backend-only mode with `python3 -m langflow run --backend-only`.
+1. Start langflow in backend-only mode.
+
+```python
+python3 -m langflow run --backend-only
+```
+
 The terminal prints `Welcome to ⛓ Langflow`, and a blank window opens at `http://127.0.0.1:7864/all`.
 Langflow is now serving requests to its API.
 2. Run the curl code you copied from the UI.
@@ -90,11 +96,16 @@ result = query_langflow(user_input)
 
 print(json.dumps(result, indent=2))
 ```
-2. Run the script with `python langflow_api_demo.py`.
+2. Run the script.
+
+```python
+python langflow_api_demo.py
+```
+
 3. Enter your message when prompted.
 You will get a prettified JSON response back containing a response to your message.
 
-## Configuration
+## Configure host and ports in backend-only mode
 
 To change the host and port, pass the values as additional flags.
 
