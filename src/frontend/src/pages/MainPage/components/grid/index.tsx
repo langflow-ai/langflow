@@ -8,10 +8,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import { track } from "@/customization/utils/analytics";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
-import IOModal from "@/modals/IOModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { FlowType } from "@/types/flow";
@@ -25,14 +23,15 @@ import DropdownComponent from "../dropdown";
 
 const GridComponent = ({ flowData }: { flowData: FlowType }) => {
   const navigate = useCustomNavigate();
-  const [openPlayground, setOpenPlayground] = useState(false);
-  const [loadingPlayground, setLoadingPlayground] = useState(false);
+  /* const [openPlayground, setOpenPlayground] = useState(false);
+  const [loadingPlayground, setLoadingPlayground] = useState(false); */
   const [openDelete, setOpenDelete] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const { deleteFlow } = useDeleteFlow();
+  console.log(flowData);
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
+  /* const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow); */
   const { folderId } = useParams();
   const isComponent = flowData.is_component ?? false;
   const setFlowToCanvas = useFlowsManagerStore(
@@ -51,7 +50,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
     return inputs.length > 0 || outputs.length > 0;
   }
 
-  const handlePlaygroundClick = () => {
+  /* const handlePlaygroundClick = () => {
     track("Playground Button Clicked", { flowId: flowData.id });
     setLoadingPlayground(true);
 
@@ -73,7 +72,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
         list: ["Error getting flow data."],
       });
     }
-  };
+  }; */
 
   const handleClick = async () => {
     if (!isComponent) {
@@ -164,7 +163,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
           {flowData.description}
         </div>
 
-        <div className="flex justify-end pt-[24px]">
+        {/* <div className="flex justify-end pt-[24px]">
           {flowData.is_component ? (
             <></>
           ) : (
@@ -180,9 +179,9 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
               Playground
             </Button>
           )}
-        </div>
+        </div> */}
       </Card>
-      {openPlayground && (
+      {/* {openPlayground && (
         <IOModal
           key={flowData.id}
           cleanOnClose={true}
@@ -191,7 +190,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
         >
           <></>
         </IOModal>
-      )}
+      )} */}
       {openDelete && (
         <DeleteConfirmationModal
           open={openDelete}
