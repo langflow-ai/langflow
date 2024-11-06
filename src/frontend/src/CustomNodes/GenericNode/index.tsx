@@ -1,6 +1,3 @@
-import { Badge } from "@/components/ui/badge";
-import { BorderBeam } from "@/components/ui/border-beams";
-import { BuildStatus } from "@/constants/enums";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -291,16 +288,6 @@ export default function GenericNode({
           !hasOutputs && "pb-4",
         )}
       >
-        {BuildStatus.BUILDING === buildStatus && (
-          <BorderBeam
-            colorFrom="hsl(var(--foreground))"
-            colorTo="hsl(var(--muted-foreground))"
-            className="z-10"
-            borderWidth={1.75}
-            size={300}
-          />
-        )}
-
         <div
           data-testid={`${data.id}-main-node`}
           className={cn(
