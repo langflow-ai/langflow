@@ -32,17 +32,16 @@
     --secondary-hover: 240 6% 90%; /* hsl(240, 6%, 90%) */
     --placeholder-foreground: 240 5% 65%; /* hsl(240, 5%, 65%) */
     --canvas: 240 5% 96%; /* hsl(240, 5%, 96%) */
+    --canvas-dot: 240 5% 65%; /* hsl(240, 5%, 65%) */
     --accent-emerald: 149 80% 90%; /* hsl(149, 80%, 90%) */
     --accent-emerald-foreground: 161 41% 30%; /* hsl(161, 41%, 30%) */
+    --accent-emerald-hover: 152.4 76% 80.4%; /* hsl(152.4, 76%, 80.4%) */
     --accent-indigo: 226 100% 94%; /* hsl(226, 100%, 94%) */
     --accent-indigo-foreground: 243 75% 59%; /* hsl(243, 75%, 59%) */
     --accent-pink: 326 78% 95%; /* hsl(326, 78%, 95%) */
     --accent-pink-foreground: 333 71% 51%; /* hsl(333, 71%, 51%) */
-    --note-amber: 48 97% 77%; /* hsl(48, 97%, 77%) */
     --tooltip: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --tooltip-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
-
-    --canvas-dark: 240 6% 10%; /* hsl(240, 6%, 10%) */
 
     --node-selected: 243 75% 59%;
     --round-btn-shadow: #00000063;
@@ -89,27 +88,21 @@
     --status-blue: #2563eb;
     --status-gray: #6b7280;
     --connection: #555;
-    --note-default: #f1f5f9;
-    --note-indigo: #e0e7ff;
-    --note-emerald: #d1fae5;
-    --note-red: #fee2e2;
+
+    --note-amber: 48 96.6% 76.7%; /* hsl(48, 96.6%, 76.7%) */
+    --note-neutral: 240 5.9% 90%; /* hsl(240, 5.9%, 90%) */
+    --note-rose: 352.7 96.1% 90%; /* hsl(352.7, 96.1%, 90%) */
+    --note-blue: 213.3 96.9% 87.3%; /* hsl(213.3, 96.9%, 87.3%) */
+    --note-lime: 80.9 88.5% 79.6%; /* hsl(80.9, 88.5%, 79.6%) */
+
     --error-red: 0, 86%, 97%; /*hsla(0, 86%, 97%)*/
     --error-red-border: 0, 96%, 89%; /*hsla(0,96%,89%)*/
-    --note-default-opacity: #f1f5f980;
-    --note-indigo-opacity: #312e8180;
-    --note-emerald-opacity: #064e3b80;
-    --note-amber-opacity: #78350f80;
-    --note-red-opacity: #7f1d1d80;
+
     --code-background: var(--canvas);
-    --emerald-success: 160.1 84.1% 39.4%;
-    --accent-emerald-foreground: 161.4 93.5% 30.4%;
     --placeholder: 240 5% 64.9%;
     --hard-zinc: 240 5.2% 33.9%;
     --smooth-red: 0 93.3% 94.1%;
     --radius: 0.5rem;
-
-    --accent-pink: 327.3 73.3% 97.1%;
-    --accent-pink-foreground: 333.3 71.4% 50.6%;
 
     --inner-yellow: 40.6 96.1% 40.4%;
     --inner-yellow-foreground: 50.4 97.8% 63.5%;
@@ -180,30 +173,25 @@
     --secondary-hover: 240 4% 16%; /* hsl(240, 4%, 16%) */
     --placeholder-foreground: 240 4% 46%; /* hsl(240, 4%, 46%) */
     --canvas: 0 0% 0%; /* hsl(0, 0%, 0%) */
+    --canvas-dot: 240 5% 34%; /* hsl(240, 5%, 34%) */
     --accent-emerald: 164 86% 16%; /* hsl(164, 86%, 16%) */
     --accent-emerald-foreground: 158 64% 52%; /* hsl(158, 64%, 52%) */
+    --accent-emerald-hover: 163.1 88.1% 19.8%; /* hsl(163.1, 88.1%, 19.8%) */
     --accent-indigo: 242 25% 34%; /* hsl(242, 25%, 34%) */
     --accent-indigo-foreground: 234 89% 74%; /* hsl(234, 89%, 74%) */
-    --accent-pink: 336 30% 30%; /* hsl(336, 30%, 30%) */
+    --accent-pink: 336 69% 30%; /* hsl(336, 69%, 30%) */
     --accent-pink-foreground: 329 86% 70%; /* hsl(329, 86%, 70%) */
-    --note-amber: 46 97% 65%; /* hsl(46, 97%, 65%) */
     --tooltip: 0 0% 100%; /* hsl(0, 0%, 100%) */
 
     --tooltip-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --error-red: 0, 75%, 15%; /*hsla(0, 75%, 15%)*/
     --error-red-border: 0, 70%, 35%; /*hsla(0,70%,35%)*/
 
-    --note-default: #0f172a;
-    --note-indigo: #312e81;
-    --note-emerald: #064e3b;
-    --note-red: #7f1d1d;
-    --note-placeholder: 216 12% 84%; /* hsl(216 12% 84%) */
-
-    --note-default-opacity: #0f172a80;
-    --note-indigo-opacity: #312e8180;
-    --note-emerald-opacity: #064e3b80;
-    --note-amber-opacity: #78350f80;
-    --note-red-opacity: #7f1d1d80;
+    --note-amber: 45.9 96.7% 64.5%; /* hsl(45.9, 96.7%, 64.5%) */
+    --note-neutral: 240 4.9% 83.9%; /* hsl(240, 4.9%, 83.9%) */
+    --note-rose: 352.6 95.7% 81.8%; /* hsl(352.6, 95.7%, 81.8%) */
+    --note-blue: 211.7 96.4% 78.4%; /* hsl(211.7, 96.4%, 78.4%) */
+    --note-lime: 82 84.5% 67.1%; /* hsl(82, 84.5%, 67.1%) */
 
     --node-selected: 234 89% 74%;
 
@@ -234,8 +222,6 @@
     --component-icon: #c35f85;
     --flow-icon: #2467e4;
 
-    /* Colors that are shared in dark and light mode */
-    --blur-shared: #151923d2;
     --build-trigger: #dc735b;
     --chat-trigger: #5c8be1;
     --chat-trigger-disabled: #2d3b54;
@@ -262,13 +248,9 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
-    --emerald-success: 160.1 84.1% 39.4%;
     --placeholder: 240 5% 64.9%;
     --hard-zinc: 240 5.2% 33.9%;
     --smooth-red: 0 93.3% 94.1%;
-
-    --accent-pink: 335.9 69% 30.4%;
-    --accent-pink-foreground: 330.4 81.2% 60.4%;
 
     --inner-yellow: 47.9 95.8% 53.1%;
     --inner-yellow-foreground: 35.5 91.7% 32.9%;

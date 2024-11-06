@@ -167,7 +167,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       <div className="flow-page-positioning">
         {currentFlow && (
           <div className="flex h-full overflow-hidden">
-            <SidebarProvider width="19rem" defaultOpen={!isMobile}>
+            <SidebarProvider width="17.5rem" defaultOpen={!isMobile}>
               {!view && <FlowSidebarComponent />}
               <main className="flex flex-1">
                 <div className="h-full w-full">

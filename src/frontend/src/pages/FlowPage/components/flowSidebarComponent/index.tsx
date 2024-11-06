@@ -30,6 +30,7 @@ import { Switch } from "@/components/ui/switch";
 import { CustomLink } from "@/customization/components/custom-link";
 import { useAddComponent } from "@/hooks/useAddComponent";
 import { useStoreStore } from "@/stores/storeStore";
+import { checkChatInput } from "@/utils/reactflowUtils";
 import {
   nodeColors,
   SIDEBAR_BUNDLES,
@@ -97,6 +98,7 @@ export function FlowSidebarComponent() {
       (category) => Object.keys(category).length > 0,
     );
   }, [dataFilter]);
+  const [sortedCategories, setSortedCategories] = useState<string[]>([]);
 
   useEffect(() => {
     filterComponents();
@@ -128,6 +130,7 @@ export function FlowSidebarComponent() {
     // Apply search filter
     if (search && fuse) {
       const results = fuse.search(search);
+      setSortedCategories(results.map((result) => result.item.category));
       filteredData = Object.fromEntries(
         Object.entries(data).map(([category, items]) => {
           const categoryResults = results.filter(
@@ -303,11 +306,20 @@ export function FlowSidebarComponent() {
       dataFilter[item.name] && Object.keys(dataFilter[item.name]).length > 0,
   );
 
+  const hasCategoryItems = categories.some(
+    (item) =>
+      dataFilter[item.name] && Object.keys(dataFilter[item.name]).length > 0,
+  );
+
   function handleClearSearch() {
     setSearch("");
     setFilterData(data);
     setOpenCategories([]);
   }
+
+  const nodes = useFlowStore((state) => state.nodes);
+
+  const chatInputAdded = checkChatInput(nodes);
 
   return (
     <Sidebar collapsible="offcanvas" data-testid="shad-sidebar">
@@ -339,12 +351,11 @@ export function FlowSidebarComponent() {
             <div className="flex flex-col gap-7 border-b pb-7 pt-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm font-medium">
-                    Show{" "}
-                    <Badge variant="pinkStatic" size="sq">
+                  <span className="flex gap-2 text-sm font-medium">
+                    Show
+                    <Badge variant="pinkStatic" size="xq">
                       BETA
-                    </Badge>{" "}
-                    Components
+                    </Badge>
                   </span>
                 </div>
                 <Switch
@@ -355,12 +366,11 @@ export function FlowSidebarComponent() {
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm font-medium">
-                    Show{" "}
-                    <Badge variant="secondaryStatic" size="sq">
+                  <span className="flex gap-2 text-sm font-medium">
+                    Show
+                    <Badge variant="secondaryStatic" size="xq">
                       LEGACY
-                    </Badge>{" "}
-                    Components
+                    </Badge>
                   </span>
                 </div>
                 <Switch
@@ -393,8 +403,7 @@ export function FlowSidebarComponent() {
               Type{" "}
               <span>
                 <ShortcutDisplay sidebar shortcut="/" />
-              </span>{" "}
-              to search components
+              </span>
             </div>
           )}
         </div>
@@ -402,6 +411,7 @@ export function FlowSidebarComponent() {
           <SidebarFilterComponent
             isInput={!!filterType.source}
             type={filterType.type}
+            color={filterType.color}
             resetFilters={() => {
               setFilterEdge([]);
               setFilterData(data);
@@ -409,19 +419,186 @@ export function FlowSidebarComponent() {
           />
         )}
       </SidebarHeader>
-      <SidebarContent className="p-2">
+      <SidebarContent>
         {hasResults ? (
           <>
-            <SidebarGroup>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {!data
-                    ? Array.from({ length: 5 }).map((_, index) => (
-                        <SidebarMenuItem key={index}>
-                          <SidebarMenuSkeleton />
-                        </SidebarMenuItem>
-                      ))
-                    : categories.map(
+            {hasCategoryItems && (
+              <SidebarGroup className="p-3">
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {!data
+                      ? Array.from({ length: 5 }).map((_, index) => (
+                          <SidebarMenuItem key={index}>
+                            <SidebarMenuSkeleton />
+                          </SidebarMenuItem>
+                        ))
+                      : categories
+                          .toSorted(
+                            (a, b) =>
+                              (search !== ""
+                                ? sortedCategories
+                                : categories
+                              ).findIndex((value) => value === a.name) -
+                              (search !== ""
+                                ? sortedCategories
+                                : categories
+                              ).findIndex((value) => value === b.name),
+                          )
+                          .map(
+                            (item) =>
+                              dataFilter[item.name] &&
+                              Object.keys(dataFilter[item.name]).length > 0 && (
+                                <Disclosure
+                                  key={item.name}
+                                  open={openCategories.includes(item.name)}
+                                  onOpenChange={(isOpen) => {
+                                    setOpenCategories((prev) =>
+                                      isOpen
+                                        ? [...prev, item.name]
+                                        : prev.filter(
+                                            (cat) => cat !== item.name,
+                                          ),
+                                    );
+                                  }}
+                                >
+                                  <SidebarMenuItem>
+                                    <DisclosureTrigger className="group/collapsible">
+                                      <SidebarMenuButton asChild>
+                                        <div
+                                          data-testid={`disclosure-${item.display_name.toLocaleLowerCase()}`}
+                                          tabIndex={0}
+                                          onKeyDown={(e) =>
+                                            handleKeyDown(e, item.name)
+                                          }
+                                          className="flex cursor-pointer items-center gap-2"
+                                        >
+                                          <ForwardedIconComponent
+                                            name={item.icon}
+                                            className="h-4 w-4 group-aria-expanded/collapsible:text-accent-pink-foreground"
+                                          />
+                                          <span className="flex-1 group-aria-expanded/collapsible:font-semibold">
+                                            {item.display_name}
+                                          </span>
+                                          <ForwardedIconComponent
+                                            name="ChevronRight"
+                                            className="-mr-1 h-4 w-4 text-muted-foreground transition-all group-aria-expanded/collapsible:rotate-90"
+                                          />
+                                        </div>
+                                      </SidebarMenuButton>
+                                    </DisclosureTrigger>
+                                    <DisclosureContent>
+                                      <div className="flex flex-col gap-1 py-2">
+                                        {Object.keys(dataFilter[item.name])
+                                          .sort((a, b) =>
+                                            sensitiveSort(
+                                              dataFilter[item.name][a]
+                                                .display_name,
+                                              dataFilter[item.name][b]
+                                                .display_name,
+                                            ),
+                                          )
+                                          .map((SBItemName: string, idx) => (
+                                            <ShadTooltip
+                                              content={
+                                                dataFilter[item.name][
+                                                  SBItemName
+                                                ].display_name
+                                              }
+                                              side="right"
+                                              key={idx}
+                                            >
+                                              <SidebarDraggableComponent
+                                                sectionName={
+                                                  item.name as string
+                                                }
+                                                apiClass={
+                                                  dataFilter[item.name][
+                                                    SBItemName
+                                                  ]
+                                                }
+                                                icon={
+                                                  dataFilter[item.name][
+                                                    SBItemName
+                                                  ].icon ??
+                                                  item.icon ??
+                                                  "Unknown"
+                                                }
+                                                key={idx}
+                                                onDragStart={(event) =>
+                                                  onDragStart(event, {
+                                                    type: removeCountFromString(
+                                                      SBItemName,
+                                                    ),
+                                                    node: dataFilter[item.name][
+                                                      SBItemName
+                                                    ],
+                                                  })
+                                                }
+                                                color={nodeColors[item.name]}
+                                                itemName={SBItemName}
+                                                error={
+                                                  !!dataFilter[item.name][
+                                                    SBItemName
+                                                  ].error
+                                                }
+                                                display_name={
+                                                  dataFilter[item.name][
+                                                    SBItemName
+                                                  ].display_name
+                                                }
+                                                official={
+                                                  dataFilter[item.name][
+                                                    SBItemName
+                                                  ].official === false
+                                                    ? false
+                                                    : true
+                                                }
+                                                beta={
+                                                  dataFilter[item.name][
+                                                    SBItemName
+                                                  ].beta ?? false
+                                                }
+                                                legacy={
+                                                  dataFilter[item.name][
+                                                    SBItemName
+                                                  ].legacy ?? false
+                                                }
+                                                disabled={
+                                                  SBItemName === "ChatInput" &&
+                                                  chatInputAdded
+                                                }
+                                                disabledTooltip="Chat input already added"
+                                              />
+                                            </ShadTooltip>
+                                          ))}
+                                      </div>
+                                    </DisclosureContent>
+                                  </SidebarMenuItem>
+                                </Disclosure>
+                              ),
+                          )}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
+            {hasBundleItems && (
+              <SidebarGroup className="p-3">
+                <SidebarGroupLabel>Bundles</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {bundles
+                      .toSorted(
+                        (a, b) =>
+                          (search !== ""
+                            ? sortedCategories
+                            : bundles
+                          ).findIndex((value) => value === a.name) -
+                          (search !== ""
+                            ? sortedCategories
+                            : bundles
+                          ).findIndex((value) => value === b.name),
+                      )
+                      .map(
                         (item) =>
                           dataFilter[item.name] &&
                           Object.keys(dataFilter[item.name]).length > 0 && (
@@ -440,7 +617,6 @@ export function FlowSidebarComponent() {
                                 <DisclosureTrigger className="group/collapsible">
                                   <SidebarMenuButton asChild>
                                     <div
-                                      data-testid={`disclosure-${item.display_name.toLocaleLowerCase()}`}
                                       tabIndex={0}
                                       onKeyDown={(e) =>
                                         handleKeyDown(e, item.name)
@@ -449,14 +625,14 @@ export function FlowSidebarComponent() {
                                     >
                                       <ForwardedIconComponent
                                         name={item.icon}
-                                        className="group-aria-expanded/collapsible:x-gradient h-4 w-4"
+                                        className="h-4 w-4 text-muted-foreground group-aria-expanded/collapsible:text-primary"
                                       />
-                                      <span className="group-aria-expanded/collapsible:font-semibold">
+                                      <span className="flex-1 group-aria-expanded/collapsible:font-semibold">
                                         {item.display_name}
                                       </span>
                                       <ForwardedIconComponent
                                         name="ChevronRight"
-                                        className="h-4 w-4 text-muted-foreground transition-all group-aria-expanded/collapsible:rotate-90"
+                                        className="-mr-1 h-4 w-4 text-muted-foreground transition-all group-aria-expanded/collapsible:rotate-90"
                                       />
                                     </div>
                                   </SidebarMenuButton>
@@ -526,6 +702,11 @@ export function FlowSidebarComponent() {
                                               dataFilter[item.name][SBItemName]
                                                 .legacy ?? false
                                             }
+                                            disabled={
+                                              SBItemName === "ChatInput" &&
+                                              chatInputAdded
+                                            }
+                                            disabledTooltip="Chat input already added"
                                           />
                                         </ShadTooltip>
                                       ))}
@@ -535,126 +716,6 @@ export function FlowSidebarComponent() {
                             </Disclosure>
                           ),
                       )}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-            {hasBundleItems && (
-              <SidebarGroup>
-                <SidebarGroupLabel>Bundles</SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {bundles.map(
-                      (item) =>
-                        dataFilter[item.name] &&
-                        Object.keys(dataFilter[item.name]).length > 0 && (
-                          <Disclosure
-                            key={item.name}
-                            open={openCategories.includes(item.name)}
-                            onOpenChange={(isOpen) => {
-                              setOpenCategories((prev) =>
-                                isOpen
-                                  ? [...prev, item.name]
-                                  : prev.filter((cat) => cat !== item.name),
-                              );
-                            }}
-                          >
-                            <SidebarMenuItem>
-                              <DisclosureTrigger className="group/collapsible">
-                                <SidebarMenuButton asChild>
-                                  <div
-                                    tabIndex={0}
-                                    onKeyDown={(e) =>
-                                      handleKeyDown(e, item.name)
-                                    }
-                                    className="flex cursor-pointer items-center gap-2"
-                                  >
-                                    <ForwardedIconComponent
-                                      name={item.icon}
-                                      className="h-4 w-4 text-muted-foreground group-aria-expanded/collapsible:text-primary"
-                                    />
-                                    <span className="group-aria-expanded/collapsible:font-semibold">
-                                      {item.display_name}
-                                    </span>
-                                    <ForwardedIconComponent
-                                      name="ChevronRight"
-                                      className="h-4 w-4 text-muted-foreground transition-all group-aria-expanded/collapsible:rotate-90"
-                                    />
-                                  </div>
-                                </SidebarMenuButton>
-                              </DisclosureTrigger>
-                              <DisclosureContent>
-                                <div className="flex flex-col gap-1 py-2">
-                                  {Object.keys(dataFilter[item.name])
-                                    .sort((a, b) =>
-                                      sensitiveSort(
-                                        dataFilter[item.name][a].display_name,
-                                        dataFilter[item.name][b].display_name,
-                                      ),
-                                    )
-                                    .map((SBItemName: string, idx) => (
-                                      <ShadTooltip
-                                        content={
-                                          dataFilter[item.name][SBItemName]
-                                            .display_name
-                                        }
-                                        side="right"
-                                        key={idx}
-                                      >
-                                        <SidebarDraggableComponent
-                                          sectionName={item.name as string}
-                                          apiClass={
-                                            dataFilter[item.name][SBItemName]
-                                          }
-                                          icon={
-                                            dataFilter[item.name][SBItemName]
-                                              .icon ??
-                                            item.icon ??
-                                            "Unknown"
-                                          }
-                                          key={idx}
-                                          onDragStart={(event) =>
-                                            onDragStart(event, {
-                                              type: removeCountFromString(
-                                                SBItemName,
-                                              ),
-                                              node: dataFilter[item.name][
-                                                SBItemName
-                                              ],
-                                            })
-                                          }
-                                          color={nodeColors[item.name]}
-                                          itemName={SBItemName}
-                                          error={
-                                            !!dataFilter[item.name][SBItemName]
-                                              .error
-                                          }
-                                          display_name={
-                                            dataFilter[item.name][SBItemName]
-                                              .display_name
-                                          }
-                                          official={
-                                            dataFilter[item.name][SBItemName]
-                                              .official === false
-                                              ? false
-                                              : true
-                                          }
-                                          beta={
-                                            dataFilter[item.name][SBItemName]
-                                              .beta ?? false
-                                          }
-                                          legacy={
-                                            dataFilter[item.name][SBItemName]
-                                              .legacy ?? false
-                                          }
-                                        />
-                                      </ShadTooltip>
-                                    ))}
-                                </div>
-                              </DisclosureContent>
-                            </SidebarMenuItem>
-                          </Disclosure>
-                        ),
-                    )}
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
