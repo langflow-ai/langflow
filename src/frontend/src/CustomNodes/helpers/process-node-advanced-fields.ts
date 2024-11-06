@@ -9,13 +9,15 @@ export function processNodeAdvancedFields(
 ) {
   let newNode = cloneDeep(resData);
 
-  const edgesWithNode = edges.filter(
+  const relevantEdges = edges.filter(
     (edge) => edge.source !== nodeId || edge.target !== nodeId,
   );
 
-  if (edgesWithNode.length === 0) return newNode;
+  if (relevantEdges.length === 0) {
+    return newNode;
+  }
 
-  for (const edge of edgesWithNode) {
+  for (const edge of relevantEdges) {
     const field = edge?.data?.targetHandle?.fieldName;
 
     if (field) {
