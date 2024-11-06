@@ -106,7 +106,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
         onClick={handleClick}
         className={`my-2 flex flex-row bg-background ${
           isComponent ? "cursor-default" : "cursor-pointer"
-        } justify-between rounded-lg border border-border p-5 shadow-sm hover:border-placeholder-foreground`}
+        } justify-between rounded-lg border border-border p-5 hover:border-placeholder-foreground hover:shadow-sm`}
       >
         {/* left side */}
         <div
