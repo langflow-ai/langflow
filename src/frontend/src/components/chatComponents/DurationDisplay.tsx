@@ -1,4 +1,3 @@
-import prettyMilliseconds from "pretty-ms";
 import { useEffect, useState } from "react";
 import { AnimatedNumber } from "../animatedNumbers";
 import ForwardedIconComponent from "../genericIconComponent";
@@ -30,10 +29,9 @@ export default function DurationDisplay({ duration }: { duration?: number }) {
   }, [duration]);
 
   const displayTime = duration ?? elapsedTime;
-  const humanizedTime = prettyMilliseconds(displayTime, {
-    formatSubMilliseconds: true,
-    millisecondsDecimalDigits: 2,
-  });
+  const secondsValue = displayTime / 1000;
+  const humanizedTime = `${secondsValue.toFixed(1)}s`;
+
   return (
     <div
       className={`inline-flex items-center justify-between gap-1 rounded-[3px] px-2 text-sm ${
@@ -49,7 +47,7 @@ export default function DurationDisplay({ duration }: { duration?: number }) {
       )}
       <div className="w-fit">
         <AnimatedNumber
-          value={displayTime}
+          value={secondsValue}
           humanizedValue={humanizedTime}
           springOptions={{
             bounce: 0,
