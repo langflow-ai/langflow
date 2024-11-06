@@ -7,7 +7,7 @@ slug: /configuration-backend-only
 Learn how to serve the [Basic Prompting flow](/starter-projects-basic-prompting) as an endpoint in backend-only mode.
 
 Langflow can run in `--backend-only` mode to expose a Langflow app as an API endpoint, without running the frontend UI.
-This is also known as "headless" mode. Running Langflow without the frontend is useful for automation, testing, and situations where you just need to serve a flow as a workload, and not create a new flow in the UI.
+This is also known as "headless" mode. Running Langflow without the frontend is useful for automation, testing, and situations where you just need to serve a flow as a workload without creating a new flow in the UI.
 
 To start Langflow in backend-only mode, pass the `--backend-only` flag at startup.
 
@@ -54,7 +54,7 @@ In the URL, note the flow ID of `fff8dcaa-f0f6-4136-9df0-b7cb38de42e0`, which is
 
 ## Start Langflow in backend-only mode
 
-1. Start langflow in backend-only mode.
+1. Start Langflow in backend-only mode.
 
 ```python
 python3 -m langflow run --backend-only
@@ -62,6 +62,7 @@ python3 -m langflow run --backend-only
 
 The terminal prints `Welcome to ⛓ Langflow`, and a blank window opens at `http://127.0.0.1:7864/all`.
 Langflow is now serving requests to its API.
+
 2. Run the curl code you copied from the UI.
 You should get a result like this:
 
