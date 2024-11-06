@@ -102,7 +102,7 @@ export function ContentBlockDisplay({
             <DurationDisplay duration={totalDuration} />
             <motion.div
               animate={{ rotate: isExpanded ? 180 : 0 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
             >
               <ChevronDown className="h-5 w-5" />
             </motion.div>

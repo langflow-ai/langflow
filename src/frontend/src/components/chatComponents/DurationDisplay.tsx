@@ -1,6 +1,6 @@
+import { AnimatedNumber } from "@/components/animatedNumbers";
 import prettyMilliseconds from "pretty-ms";
 import { useEffect, useState } from "react";
-import { AnimatedNumber } from "@/components/animatedNumbers";
 import Loading from "../ui/loading";
 
 export default function DurationDisplay({ duration }: { duration?: number }) {
