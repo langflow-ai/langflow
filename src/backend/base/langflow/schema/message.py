@@ -79,6 +79,8 @@ class Message(Data):
     def validate_properties(cls, value):
         if isinstance(value, str):
             value = Properties.model_validate_json(value)
+        elif isinstance(value, dict):
+            value = Properties.model_validate(value)
         return value
 
     @field_serializer("flow_id")
