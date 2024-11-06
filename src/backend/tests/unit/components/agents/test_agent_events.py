@@ -33,15 +33,16 @@ async def test_chain_start_event():
     ]
 
     # Initialize message with content blocks
-    initial_message = Message(
+    agent_message = Message(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
         content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        session_id="test_session_id",
     )
-    send_message.return_value = initial_message
+    send_message.return_value = agent_message
 
-    result = await process_agent_events(create_event_iterator(events), send_message)
+    result = await process_agent_events(create_event_iterator(events), agent_message, send_message)
 
     assert result.properties.icon == "Bot"
     assert len(result.content_blocks) == 1
@@ -58,15 +59,16 @@ async def test_chain_end_event():
     events = [{"event": "on_chain_end", "data": {"output": output}, "start_time": 0}]
 
     # Initialize message with content blocks
-    initial_message = Message(
+    agent_message = Message(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
         content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        session_id="test_session_id",
     )
-    send_message.return_value = initial_message
+    send_message.return_value = agent_message
 
-    result = await process_agent_events(create_event_iterator(events), send_message)
+    result = await process_agent_events(create_event_iterator(events), agent_message, send_message)
 
     assert result.properties.icon == "Bot"
     assert result.properties.state == "complete"
@@ -93,8 +95,14 @@ async def test_tool_start_event():
             "start_time": 0,
         }
     ]
-
-    result = await process_agent_events(create_event_iterator(events), send_message)
+    agent_message = Message(
+        sender=MESSAGE_SENDER_AI,
+        sender_name="Agent",
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        session_id="test_session_id",
+    )
+    result = await process_agent_events(create_event_iterator(events), agent_message, send_message)
 
     assert result.properties.icon == "Bot"
     assert len(result.content_blocks) == 1
@@ -126,8 +134,14 @@ async def test_tool_end_event():
             "start_time": 0,
         },
     ]
-
-    result = await process_agent_events(create_event_iterator(events), send_message)
+    agent_message = Message(
+        sender=MESSAGE_SENDER_AI,
+        sender_name="Agent",
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        session_id="test_session_id",
+    )
+    result = await process_agent_events(create_event_iterator(events), agent_message, send_message)
 
     assert len(result.content_blocks) == 1
     tool_content = result.content_blocks[0].contents[-1]
@@ -155,8 +169,15 @@ async def test_tool_error_event():
             "start_time": 0,
         },
     ]
+    agent_message = Message(
+        sender=MESSAGE_SENDER_AI,
+        sender_name="Agent",
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        session_id="test_session_id",
+    )
 
-    result = await process_agent_events(create_event_iterator(events), send_message)
+    result = await process_agent_events(create_event_iterator(events), agent_message, send_message)
 
     tool_content = result.content_blocks[0].contents[-1]
     assert tool_content.name == "test_tool"
@@ -169,8 +190,14 @@ async def test_chain_stream_event():
     send_message = MagicMock(side_effect=lambda message: message)
 
     events = [{"event": "on_chain_stream", "data": {"chunk": {"output": "streamed output"}}, "start_time": 0}]
-
-    result = await process_agent_events(create_event_iterator(events), send_message)
+    agent_message = Message(
+        sender=MESSAGE_SENDER_AI,
+        sender_name="Agent",
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        session_id="test_session_id",
+    )
+    result = await process_agent_events(create_event_iterator(events), agent_message, send_message)
 
     assert result.properties.state == "complete"
     assert result.text == "streamed output"
@@ -203,15 +230,15 @@ async def test_multiple_events():
     ]
 
     # Initialize message with content blocks
-    initial_message = Message(
+    agent_message = Message(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
         content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
     )
-    send_message.return_value = initial_message
+    send_message.return_value = agent_message
 
-    result = await process_agent_events(create_event_iterator(events), send_message)
+    result = await process_agent_events(create_event_iterator(events), agent_message, send_message)
 
     assert result.properties.state == "complete"
     assert result.properties.icon == "Bot"
@@ -222,17 +249,17 @@ async def test_multiple_events():
 async def test_unknown_event():
     """Test handling of unknown event type."""
     send_message = MagicMock(side_effect=lambda message: message)
-    initial_message = Message(
+    agent_message = Message(
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
         content_blocks=[ContentBlock(title="Agent Steps", contents=[])],  # Initialize with empty content block
     )
-    send_message.return_value = initial_message
+    send_message.return_value = agent_message
 
     events = [{"event": "unknown_event", "data": {"some": "data"}, "start_time": 0}]
 
-    result = await process_agent_events(create_event_iterator(events), send_message)
+    result = await process_agent_events(create_event_iterator(events), agent_message, send_message)
 
     # Should complete without error and maintain default state
     assert result.properties.state == "complete"
@@ -487,6 +514,7 @@ async def test_handle_on_chain_stream_no_output():
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
         content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        session_id="test_session_id",
     )
     event = {
         "event": "on_chain_stream",
