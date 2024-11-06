@@ -357,6 +357,7 @@ export default function NodeToolbarComponent({
                 />
               }
               side="top"
+              styleClasses="relative bottom-2"
             >
               <Button
                 className="node-toolbar-buttons"
@@ -385,6 +386,7 @@ export default function NodeToolbarComponent({
                 />
               }
               side="top"
+              styleClasses="relative bottom-2"
             >
               <Button
                 className="node-toolbar-buttons"
@@ -410,6 +412,7 @@ export default function NodeToolbarComponent({
               />
             }
             side="top"
+            styleClasses="relative bottom-2"
           >
             <Button
               className="node-toolbar-buttons h-[2.125rem]"
