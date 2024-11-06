@@ -37,7 +37,9 @@ def _calculate_duration(start_time: float) -> int:
     return int((perf_counter() - start_time) * 1000)
 
 
-def handle_on_chain_start(event: dict[str, Any], agent_message: Message) -> Message:
+def handle_on_chain_start(
+    event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType
+) -> Message:
     # Create content blocks if they don't exist
     if not agent_message.content_blocks:
         agent_message.content_blocks = [ContentBlock(title="Agent Steps", contents=[])]
@@ -57,10 +59,13 @@ def handle_on_chain_start(event: dict[str, Any], agent_message: Message) -> Mess
                 header={"title": "Input", "icon": "MessageSquare"},
             )
             agent_message.content_blocks[0].contents.append(text_content)
+            agent_message = send_message_method(message=agent_message)
     return agent_message
 
 
-def handle_on_chain_end(event: dict[str, Any], agent_message: Message) -> Message:
+def handle_on_chain_end(
+    event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType
+) -> Message:
     data_output = event["data"].get("output")
     if data_output and isinstance(data_output, AgentFinish) and data_output.return_values.get("output"):
         agent_message.text = data_output.return_values.get("output")
@@ -70,6 +75,7 @@ def handle_on_chain_end(event: dict[str, Any], agent_message: Message) -> Messag
             last_content = agent_message.content_blocks[0].contents[-1]
             if not getattr(last_content, "duration", None):
                 last_content.duration = _calculate_duration(event["start_time"])
+        agent_message = send_message_method(message=agent_message)
     return agent_message
 
 
@@ -77,6 +83,7 @@ def handle_on_tool_start(
     event: dict[str, Any],
     agent_message: Message,
     tool_blocks_map: dict[str, ToolContent],
+    send_message_method: SendMessageFunctionType,
 ) -> Message:
     tool_name = event["name"]
     tool_input = event["data"].get("input")
@@ -100,6 +107,8 @@ def handle_on_tool_start(
     tool_blocks_map[run_id] = tool_content
     agent_message.content_blocks[0].contents.append(tool_content)
 
+    agent_message = send_message_method(message=agent_message)
+    tool_blocks_map[run_id] = agent_message.content_blocks[0].contents[-1]
     return agent_message
 
 
@@ -107,6 +116,7 @@ def handle_on_tool_end(
     event: dict[str, Any],
     agent_message: Message,
     tool_blocks_map: dict[str, ToolContent],
+    send_message_method: SendMessageFunctionType,
 ) -> Message:
     run_id = event.get("run_id", "")
     tool_content = tool_blocks_map.get(run_id)
@@ -116,7 +126,7 @@ def handle_on_tool_end(
         # Calculate duration only when tool ends
         tool_content.header = {"title": f"Executed **{tool_content.name}**", "icon": "Hammer"}
         tool_content.duration = _calculate_duration(event["start_time"])
-
+        agent_message = send_message_method(message=agent_message)
     return agent_message
 
 
@@ -124,6 +134,7 @@ def handle_on_tool_error(
     event: dict[str, Any],
     agent_message: Message,
     tool_blocks_map: dict[str, ToolContent],
+    send_message_method: SendMessageFunctionType,
 ) -> Message:
     run_id = event.get("run_id", "")
     tool_content = tool_blocks_map.get(run_id)
@@ -132,15 +143,18 @@ def handle_on_tool_error(
         tool_content.error = event["data"].get("error", "Unknown error")
         tool_content.duration = _calculate_duration(event["start_time"])
         tool_content.header = {"title": f"Error using **{tool_content.name}**", "icon": "Hammer"}
-
+        agent_message = send_message_method(message=agent_message)
     return agent_message
 
 
-def handle_on_chain_stream(event: dict[str, Any], agent_message: Message) -> Message:
+def handle_on_chain_stream(
+    event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType
+) -> Message:
     data_chunk = event["data"].get("chunk", {})
     if isinstance(data_chunk, dict) and data_chunk.get("output"):
         agent_message.text = data_chunk.get("output")
         agent_message.properties.state = "complete"
+        agent_message = send_message_method(message=agent_message)
     return agent_message
 
 
@@ -150,6 +164,7 @@ class ToolEventHandler(Protocol):
         event: dict[str, Any],
         agent_message: Message,
         tool_blocks_map: dict[str, ContentBlock],
+        send_message_method: SendMessageFunctionType,
     ) -> Message: ...
 
 
@@ -158,6 +173,7 @@ class ChainEventHandler(Protocol):
         self,
         event: dict[str, Any],
         agent_message: Message,
+        send_message_method: SendMessageFunctionType,
     ) -> Message: ...
 
 
@@ -200,14 +216,11 @@ async def process_agent_events(
 
         if event["event"] in TOOL_EVENT_HANDLERS:
             tool_handler = TOOL_EVENT_HANDLERS[event["event"]]
-            # Pass the tool_blocks_map to tool handlers
-            agent_message = tool_handler(event, agent_message, tool_blocks_map)
-            agent_message = send_message_method(message=agent_message)
-            tool_blocks_map = {**tool_blocks_map, event["run_id"]: agent_message.content_blocks[0].contents[-1]}
+            # Pass send_message_method to tool handlers
+            agent_message = tool_handler(event, agent_message, tool_blocks_map, send_message_method)
         elif event["event"] in CHAIN_EVENT_HANDLERS:
             chain_handler = CHAIN_EVENT_HANDLERS[event["event"]]
-            agent_message = chain_handler(event, agent_message)
-            agent_message = send_message_method(message=agent_message)
+            agent_message = chain_handler(event, agent_message, send_message_method)
 
     agent_message.properties.state = "complete"
     return Message(**agent_message.model_dump())
