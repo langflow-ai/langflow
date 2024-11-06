@@ -76,7 +76,7 @@ def handle_on_chain_start(
 
 def handle_on_chain_end(
     event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType, start_time: float
-) -> Message:
+) -> tuple[Message, float]:
     data_output = event["data"].get("output")
     if data_output and isinstance(data_output, AgentFinish) and data_output.return_values.get("output"):
         agent_message.text = data_output.return_values.get("output")
@@ -102,7 +102,7 @@ def handle_on_tool_start(
     tool_blocks_map: dict[str, ToolContent],
     send_message_method: SendMessageFunctionType,
     start_time: float,
-) -> Message:
+) -> tuple[Message, float]:
     tool_name = event["name"]
     tool_input = event["data"].get("input")
     run_id = event.get("run_id", "")
@@ -137,7 +137,7 @@ def handle_on_tool_end(
     tool_blocks_map: dict[str, ToolContent],
     send_message_method: SendMessageFunctionType,
     start_time: float,
-) -> Message:
+) -> tuple[Message, float]:
     run_id = event.get("run_id", "")
     tool_content = tool_blocks_map.get(run_id)
 
@@ -145,7 +145,8 @@ def handle_on_tool_end(
         tool_content.output = event["data"].get("output")
         # Calculate duration only when tool ends
         tool_content.header = {"title": f"Executed **{tool_content.name}**", "icon": "Hammer"}
-        tool_content.duration = _calculate_duration(tool_content.duration)
+        if isinstance(tool_content.duration, int):
+            tool_content.duration = _calculate_duration(tool_content.duration)
         agent_message = send_message_method(message=agent_message)
         start_time = perf_counter()
     return agent_message, start_time
@@ -157,7 +158,7 @@ def handle_on_tool_error(
     tool_blocks_map: dict[str, ToolContent],
     send_message_method: SendMessageFunctionType,
     start_time: float,
-) -> Message:
+) -> tuple[Message, float]:
     run_id = event.get("run_id", "")
     tool_content = tool_blocks_map.get(run_id)
 
@@ -175,7 +176,7 @@ def handle_on_chain_stream(
     agent_message: Message,
     send_message_method: SendMessageFunctionType,
     start_time: float,
-) -> Message:
+) -> tuple[Message, float]:
     data_chunk = event["data"].get("chunk", {})
     if isinstance(data_chunk, dict) and data_chunk.get("output"):
         agent_message.text = data_chunk.get("output")
@@ -193,7 +194,7 @@ class ToolEventHandler(Protocol):
         tool_blocks_map: dict[str, ContentBlock],
         send_message_method: SendMessageFunctionType,
         start_time: float,
-    ) -> Message: ...
+    ) -> tuple[Message, float]: ...
 
 
 class ChainEventHandler(Protocol):
@@ -203,7 +204,7 @@ class ChainEventHandler(Protocol):
         agent_message: Message,
         send_message_method: SendMessageFunctionType,
         start_time: float,
-    ) -> Message: ...
+    ) -> tuple[Message, float]: ...
 
 
 EventHandler = ToolEventHandler | ChainEventHandler
