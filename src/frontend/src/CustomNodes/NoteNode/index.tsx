@@ -19,7 +19,9 @@ function NoteNode({
   selected: boolean;
 }) {
   const bgColor =
-    data.node?.template.backgroundColor ?? Object.keys(COLOR_OPTIONS)[0];
+    Object.keys(COLOR_OPTIONS).find(
+      (key) => key === data.node?.template.backgroundColor,
+    ) ?? Object.keys(COLOR_OPTIONS)[0];
   const nodeDiv = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   //tricky to start the description with the right size
@@ -61,12 +63,13 @@ function NoteNode({
           maxWidth: NOTE_NODE_MAX_WIDTH,
           minWidth: NOTE_NODE_MIN_WIDTH,
           minHeight: NOTE_NODE_MIN_HEIGHT,
-          backgroundColor: COLOR_OPTIONS[bgColor],
+          backgroundColor: COLOR_OPTIONS[bgColor] ?? "#00000000",
         }}
         ref={nodeDiv}
         className={cn(
-          "flex h-full w-full flex-col gap-3 border border-b p-3 transition-all",
-          selected ? "" : "-z-50 shadow-sm",
+          "flex h-full w-full flex-col gap-3 rounded-xl p-3 transition-all",
+          COLOR_OPTIONS[bgColor] !== null &&
+            `border ${!selected && "-z-50 shadow-sm"}`,
         )}
       >
         <div
@@ -77,13 +80,26 @@ function NoteNode({
           }}
         >
           <NodeDescription
-            inputClassName="border-0 ring-transparent resize-none rounded-none shadow-none h-full w-full"
-            style={{ backgroundColor: COLOR_OPTIONS[bgColor] }}
+            inputClassName={cn(
+              "border-0 ring-transparent resize-none shadow-none rounded-sm h-full w-full",
+              COLOR_OPTIONS[bgColor] === null
+                ? ""
+                : "dark:!ring-background dark:text-background",
+            )}
+            mdClassName={
+              COLOR_OPTIONS[bgColor] === null
+                ? "dark:prose-invert"
+                : "dark:!text-background"
+            }
+            style={{ backgroundColor: COLOR_OPTIONS[bgColor] ?? "#00000000" }}
             charLimit={2500}
             nodeId={data.id}
             selected={selected}
             description={data.node?.description}
             emptyPlaceholder="Double-click to start typing or enter Markdown..."
+            placeholderClassName={
+              COLOR_OPTIONS[bgColor] === null ? "" : "dark:!text-background"
+            }
           />
         </div>
       </div>

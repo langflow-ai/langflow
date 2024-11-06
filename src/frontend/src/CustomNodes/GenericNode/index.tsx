@@ -1,18 +1,16 @@
+import { Badge } from "@/components/ui/badge";
 import { BorderBeam } from "@/components/ui/border-beams";
 import { BuildStatus } from "@/constants/enums";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
-import IconComponent, {
-  ForwardedIconComponent,
-} from "../../components/genericIconComponent";
+import { ForwardedIconComponent } from "../../components/genericIconComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
 import {
   TOOLTIP_HIDDEN_OUTPUTS,
   TOOLTIP_OPEN_HIDDEN_OUTPUTS,
-  TOOLTIP_OUTDATED_NODE,
 } from "../../constants/constants";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import useAlertStore from "../../stores/alertStore";
@@ -287,7 +285,7 @@ export default function GenericNode({
         className={cn(
           borderColor,
           showNode
-            ? "w-80 rounded-xl"
+            ? "w-80 rounded-xl shadow-sm hover:shadow-md"
             : `h-[4.065rem] w-48 rounded-[0.75rem] ${!selected ? "border-[1px] border-border ring-[0.5px] ring-border" : ""}`,
           "generic-node-div group/node relative",
           !hasOutputs && "pb-4",
@@ -302,13 +300,6 @@ export default function GenericNode({
             size={300}
           />
         )}
-        <div>
-          {data.node?.beta && showNode && (
-            <div className="h-8 rounded-t-[12px] bg-accent-pink px-4 pt-2 text-[11px] font-medium text-accent-pink-foreground">
-              BETA
-            </div>
-          )}
-        </div>
 
         <div
           data-testid={`${data.id}-main-node`}
@@ -343,6 +334,7 @@ export default function GenericNode({
                   showNode={showNode}
                   validationStatus={validationStatus}
                   isOutdated={isOutdated}
+                  beta={data.node?.beta || false}
                 />
               </div>
             </div>
@@ -384,6 +376,7 @@ export default function GenericNode({
             <div>
               <NodeDescription
                 description={data.node?.description}
+                mdClassName={"dark:prose-invert"}
                 nodeId={data.id}
                 selected={selected}
               />
