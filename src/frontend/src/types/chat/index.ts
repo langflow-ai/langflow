@@ -67,6 +67,11 @@ export type FlowPoolObjectType = {
 // Base content type
 export interface BaseContent {
   type: string;
+  duration?: number;
+  header?: {
+    title?: string;
+    icon?: string;
+  };
 }
 
 // Individual content types
@@ -101,13 +106,13 @@ export interface CodeContent extends BaseContent {
   language: string;
   title?: string;
 }
+
 export interface ToolContent extends BaseContent {
   type: "tool_use";
   name?: string;
   tool_input: Record<string, any>;
   output?: any;
   error?: any;
-  timestamp?: Date;
 }
 
 // Union type for all content types
