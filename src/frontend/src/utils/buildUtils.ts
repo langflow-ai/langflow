@@ -200,8 +200,8 @@ export async function buildFlowVertices({
       ids.forEach((id) => verticesStartTimeMs.set(id, Date.now()));
     };
 
-    // console.log("type", type);
-    // console.log("data", data);
+    console.log("type", type);
+    console.log("data", data);
 
     switch (type) {
       case "vertices_sorted": {
@@ -308,6 +308,10 @@ export async function buildFlowVertices({
             useMessagesStore.getState().updateMessageText(data.id, data.chunk);
           });
         }, 10);
+        return true;
+      }
+      case "remove_message": {
+        useMessagesStore.getState().removeMessage(data);
         return true;
       }
       case "end": {
