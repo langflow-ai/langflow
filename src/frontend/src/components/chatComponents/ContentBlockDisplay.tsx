@@ -161,9 +161,11 @@ export function ContentBlockDisplay({
                     </Markdown>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    <Separator orientation="horizontal" className="my-2" />
                     {block.contents.map((content, index) => (
-                      <ContentDisplay key={index} content={content} />
+                      <>
+                        <Separator orientation="horizontal" className="my-2" />
+                        <ContentDisplay key={index} content={content} />
+                      </>
                     ))}
                   </div>
                 </motion.div>
