@@ -1,8 +1,6 @@
 import CardsWrapComponent from "@/components/cardsWrapComponent";
-import ForwardedIconComponent from "@/components/genericIconComponent";
 import PaginatorComponent from "@/components/paginatorComponent";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
-import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -129,15 +127,13 @@ const HomePage = ({ type }) => {
                   </div>
                 )
               ) : (
-                <div className="pt-2 text-center">
-                  No saved or custom components. Learn more about{" "}
+                <div className="pt-2 text-center text-sm text-secondary-foreground">
+                  No flows in this folder.{" "}
                   <a
-                    href="https://docs.langflow.org/components-custom-components"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="underline"
+                    onClick={() => setNewProjectModal(true)}
+                    className="cursor-pointer underline"
                   >
-                    creating custom components
+                    Create a new flow
                   </a>
                   , or browse the store.
                 </div>
@@ -160,7 +156,7 @@ const HomePage = ({ type }) => {
                   </div>
                 )
               ) : (
-                <div className="pt-2 text-center">
+                <div className="pt-2 text-center text-sm text-secondary-foreground">
                   No saved or custom components. Learn more about{" "}
                   <a
                     href="https://docs.langflow.org/components-custom-components"
