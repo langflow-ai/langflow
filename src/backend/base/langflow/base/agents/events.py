@@ -198,7 +198,11 @@ async def process_agent_events(
     send_message_method: SendMessageFunctionType,
 ) -> Message:
     """Process agent events and return the final output."""
-    agent_message.properties = {"icon": "Bot", "state": "partial"}
+    if isinstance(agent_message.properties, dict):
+        agent_message.properties.update({"icon": "Bot", "state": "partial"})
+    else:
+        agent_message.properties.icon = "Bot"
+        agent_message.properties.state = "partial"
     # Store the initial message
     agent_message = send_message_method(message=agent_message)
 
