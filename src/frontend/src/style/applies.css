@@ -1260,7 +1260,7 @@
   }
 
   .hit-area-icon {
-    @apply h-[32px] w-[32px] rounded-md;
+    @apply h-8 w-8 rounded-md;
   }
 
   .node-toolbar-buttons {
@@ -1268,11 +1268,11 @@
   }
 
   .last-output-border {
-    @apply rounded-b-[12px];
+    @apply rounded-b-xl;
   }
 
   .toolbar-wrapper {
-    @apply flex items-center gap-1 rounded-xl border border-border bg-background p-1 shadow-sm;
+    @apply flex items-center gap-1 rounded-xl border border-border bg-background p-1 shadow-sm h-10;
   }
 }
 

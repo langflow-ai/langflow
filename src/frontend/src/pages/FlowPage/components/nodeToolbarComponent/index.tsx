@@ -426,7 +426,11 @@ export default function NodeToolbarComponent({
               <IconComponent name="Copy" className="h-4 w-4" />
             </Button>
           </ShadTooltip>
-          <ShadTooltip content="Show More" side="top">
+          <ShadTooltip
+            content="Show More"
+            side="top"
+            styleClasses="relative bottom-2"
+          >
             <Button
               className="node-toolbar-buttons h-[2.125rem]"
               variant="ghost"
