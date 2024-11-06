@@ -80,11 +80,13 @@ const HeaderComponent = ({
             onClick={() => setFlowType(type as "flows" | "components")}
             className={`border-b ${
               flowType === type
-                ? "border-b-2 border-black font-semibold dark:border-white dark:text-white"
-                : "border-border text-zinc-400 hover:text-black dark:hover:text-white"
-            } px-3 pb-2`}
+                ? "border-b-2 border-foreground text-foreground"
+                : "border-border text-muted-foreground hover:text-foreground"
+            } px-3 pb-2 text-sm`}
           >
-            {type.charAt(0).toUpperCase() + type.slice(1)}
+            <div className={flowType === type ? "-mb-px" : ""}>
+              {type.charAt(0).toUpperCase() + type.slice(1)}
+            </div>
           </Button>
         ))}
       </div>
