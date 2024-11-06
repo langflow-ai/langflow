@@ -936,15 +936,17 @@ class Component(CustomComponent):
 
         return messages[0]
 
-    def _send_message_event(self, message: Message, id_: str | None = None):
+    def _send_message_event(self, message: Message, id_: str | None = None, category: str | None = None) -> None:
         if hasattr(self, "_event_manager") and self._event_manager:
             data_dict = message.data.copy() if hasattr(message, "data") else message.model_dump()
             if id_ and not data_dict.get("id"):
                 data_dict["id"] = id_
-            category = data_dict.get("category", None)
+            category = category or data_dict.get("category", None)
             match category:
                 case "error":
                     self._event_manager.on_error(data=data_dict)
+                case "remove_message":
+                    self._event_manager.on_remove_message(data={"id": data_dict["id"]})
                 case _:
                     self._event_manager.on_message(data=data_dict)
 
