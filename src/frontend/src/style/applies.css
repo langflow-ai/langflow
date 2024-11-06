@@ -1270,6 +1270,10 @@
   .last-output-border {
     @apply rounded-b-[12px];
   }
+
+  .toolbar-wrapper {
+    @apply flex items-center gap-1 rounded-[12px] border-[1px] border-border bg-background p-1 shadow-sm;
+  }
 }
 
 /* Gradient background */
