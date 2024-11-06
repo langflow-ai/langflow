@@ -152,15 +152,13 @@ export default function SessionSelector({
             <ShadTooltip styleClasses="z-50" content={session}>
               <div
                 className={cn(
-                  "w-full group-hover:truncate-secondary-hover",
+                  "w-full group-hover:truncate-secondary-hover whitespace-nowrap",
                   isVisible
                     ? "truncate-secondary-hover"
-                    : "truncate-muted dark:truncate-background",
+                    : "truncate-muted dark:truncate-canvas",
                 )}
               >
-                <span>
-                  {session === currentFlowId ? "Default Session" : session}
-                </span>
+                {session === currentFlowId ? "Default Session" : session}
               </div>
             </ShadTooltip>
           )}
