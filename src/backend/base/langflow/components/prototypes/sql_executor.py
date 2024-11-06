@@ -44,7 +44,9 @@ class SQLExecutorComponent(CustomComponent):
         include_columns: bool = False,
         passthrough: bool = False,
         add_error: bool = False,
+        **kwargs,
     ) -> Text:
+        _ = kwargs
         error = None
         try:
             database = SQLDatabase.from_uri(database_url)

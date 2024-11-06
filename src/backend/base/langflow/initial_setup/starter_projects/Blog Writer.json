@@ -6,7 +6,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-46k0m",
+            "id": "URL-v3FkJ",
             "name": "data",
             "output_types": [
               "Data"
@@ -14,25 +14,25 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-jUQRS",
+            "id": "ParseData-qffHj",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-URL-46k0m{œdataTypeœ:œURLœ,œidœ:œURL-46k0mœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-ParseData-jUQRS{œfieldNameœ:œdataœ,œidœ:œParseData-jUQRSœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "URL-46k0m",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-46k0mœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-jUQRS",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-jUQRSœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-URL-v3FkJ{œdataTypeœ:œURLœ,œidœ:œURL-v3FkJœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-ParseData-qffHj{œfieldNameœ:œdataœ,œidœ:œParseData-qffHjœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "URL-v3FkJ",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-v3FkJœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-qffHj",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-qffHjœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-jUQRS",
+            "id": "ParseData-qffHj",
             "name": "text",
             "output_types": [
               "Message"
@@ -40,7 +40,7 @@
           },
           "targetHandle": {
             "fieldName": "references",
-            "id": "Prompt-Pf4QQ",
+            "id": "Prompt-ztjwI",
             "inputTypes": [
               "Message",
               "Text"
@@ -48,18 +48,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParseData-jUQRS{œdataTypeœ:œParseDataœ,œidœ:œParseData-jUQRSœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-Pf4QQ{œfieldNameœ:œreferencesœ,œidœ:œPrompt-Pf4QQœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ParseData-jUQRS",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-jUQRSœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-Pf4QQ",
-        "targetHandle": "{œfieldNameœ: œreferencesœ, œidœ: œPrompt-Pf4QQœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ParseData-qffHj{œdataTypeœ:œParseDataœ,œidœ:œParseData-qffHjœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-ztjwI{œfieldNameœ:œreferencesœ,œidœ:œPrompt-ztjwIœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ParseData-qffHj",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-qffHjœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-ztjwI",
+        "targetHandle": "{œfieldNameœ: œreferencesœ, œidœ: œPrompt-ztjwIœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "TextInput",
-            "id": "TextInput-slCbp",
+            "id": "TextInput-A7goL",
             "name": "text",
             "output_types": [
               "Message"
@@ -67,7 +67,7 @@
           },
           "targetHandle": {
             "fieldName": "instructions",
-            "id": "Prompt-Pf4QQ",
+            "id": "Prompt-ztjwI",
             "inputTypes": [
               "Message",
               "Text"
@@ -75,18 +75,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-TextInput-slCbp{œdataTypeœ:œTextInputœ,œidœ:œTextInput-slCbpœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-Pf4QQ{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-Pf4QQœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "TextInput-slCbp",
-        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-slCbpœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-Pf4QQ",
-        "targetHandle": "{œfieldNameœ: œinstructionsœ, œidœ: œPrompt-Pf4QQœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-TextInput-A7goL{œdataTypeœ:œTextInputœ,œidœ:œTextInput-A7goLœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-ztjwI{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-ztjwIœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "TextInput-A7goL",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-A7goLœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-ztjwI",
+        "targetHandle": "{œfieldNameœ: œinstructionsœ, œidœ: œPrompt-ztjwIœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-Pf4QQ",
+            "id": "Prompt-ztjwI",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -94,25 +94,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-o0Gr0",
+            "id": "OpenAIModel-Y3GUP",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-Pf4QQ{œdataTypeœ:œPromptœ,œidœ:œPrompt-Pf4QQœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-o0Gr0{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-o0Gr0œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-Pf4QQ",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-Pf4QQœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-o0Gr0",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-o0Gr0œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-ztjwI{œdataTypeœ:œPromptœ,œidœ:œPrompt-ztjwIœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-Y3GUP{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-Y3GUPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-ztjwI",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-ztjwIœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-Y3GUP",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-Y3GUPœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-o0Gr0",
+            "id": "OpenAIModel-Y3GUP",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -120,18 +120,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-eIVde",
+            "id": "ChatOutput-Y7FC3",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-o0Gr0{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-o0Gr0œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-eIVde{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-eIVdeœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-o0Gr0",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-o0Gr0œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-eIVde",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-eIVdeœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-Y3GUP{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Y3GUPœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Y7FC3{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Y7FC3œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-Y3GUP",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-Y3GUPœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-Y7FC3",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Y7FC3œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -139,7 +139,7 @@
         "data": {
           "description": "Fetch content from one or more URLs.",
           "display_name": "URL",
-          "id": "URL-46k0m",
+          "id": "URL-v3FkJ",
           "node": {
             "base_classes": [
               "Data"
@@ -252,8 +252,8 @@
           "type": "URL"
         },
         "dragging": false,
-        "height": 397,
-        "id": "URL-46k0m",
+        "height": 465,
+        "id": "URL-v3FkJ",
         "position": {
           "x": 220.79156431407534,
           "y": 498.8186168722667
@@ -270,7 +270,7 @@
         "data": {
           "description": "Convert Data into plain text following a specified template.",
           "display_name": "Parse Data",
-          "id": "ParseData-jUQRS",
+          "id": "ParseData-qffHj",
           "node": {
             "base_classes": [
               "Message"
@@ -387,8 +387,8 @@
           "type": "ParseData"
         },
         "dragging": false,
-        "height": 378,
-        "id": "ParseData-jUQRS",
+        "height": 353,
+        "id": "ParseData-qffHj",
         "position": {
           "x": 754.3607306709101,
           "y": 736.8516961537598
@@ -405,7 +405,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-Pf4QQ",
+          "id": "Prompt-ztjwI",
           "node": {
             "base_classes": [
               "Message"
@@ -533,8 +533,8 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "height": 502,
-        "id": "Prompt-Pf4QQ",
+        "height": 477,
+        "id": "Prompt-ztjwI",
         "position": {
           "x": 1368.0633591447076,
           "y": 467.19448061224284
@@ -551,7 +551,7 @@
         "data": {
           "description": "Get text inputs from the Playground.",
           "display_name": "Instructions",
-          "id": "TextInput-slCbp",
+          "id": "TextInput-A7goL",
           "node": {
             "base_classes": [
               "Message"
@@ -568,6 +568,7 @@
             ],
             "frozen": false,
             "icon": "type",
+            "metadata": {},
             "output_types": [],
             "outputs": [
               {
@@ -601,7 +602,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.io.text import TextComponent\nfrom langflow.io import MultilineInput, Output\nfrom langflow.schema.message import Message\n\n\nclass TextInputComponent(TextComponent):\n    display_name = \"Text Input\"\n    description = \"Get text inputs from the Playground.\"\n    icon = \"type\"\n    name = \"TextInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Text to be passed as input.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Text\", name=\"text\", method=\"text_response\"),\n    ]\n\n    def text_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n        )\n        return message\n"
+                "value": "from langflow.base.io.text import TextComponent\nfrom langflow.io import MultilineInput, Output\nfrom langflow.schema.message import Message\n\n\nclass TextInputComponent(TextComponent):\n    display_name = \"Text Input\"\n    description = \"Get text inputs from the Playground.\"\n    icon = \"type\"\n    name = \"TextInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Text to be passed as input.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Text\", name=\"text\", method=\"text_response\"),\n    ]\n\n    def text_response(self) -> Message:\n        return Message(\n            text=self.input_value,\n        )\n"
               },
               "input_value": {
                 "_input_type": "MultilineInput",
@@ -630,8 +631,8 @@
           "type": "TextInput"
         },
         "dragging": false,
-        "height": 302,
-        "id": "TextInput-slCbp",
+        "height": 289,
+        "id": "TextInput-A7goL",
         "position": {
           "x": 743.7338453293725,
           "y": 301.58775454952183
@@ -648,7 +649,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-eIVde",
+          "id": "ChatOutput-Y7FC3",
           "node": {
             "base_classes": [
               "Message"
@@ -889,8 +890,8 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "height": 302,
-        "id": "ChatOutput-eIVde",
+        "height": 289,
+        "id": "ChatOutput-Y7FC3",
         "position": {
           "x": 2449.3489426461606,
           "y": 571.2449700910389
@@ -907,7 +908,7 @@
         "data": {
           "description": "Generates text using OpenAI LLMs.",
           "display_name": "OpenAI",
-          "id": "OpenAIModel-o0Gr0",
+          "id": "OpenAIModel-Y3GUP",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1223,8 +1224,8 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "height": 605,
-        "id": "OpenAIModel-o0Gr0",
+        "height": 587,
+        "id": "OpenAIModel-Y3GUP",
         "position": {
           "x": 1950.3830456413473,
           "y": 380.8161704718418
@@ -1239,18 +1240,18 @@
       }
     ],
     "viewport": {
-      "x": -314.93585938343927,
-      "y": 168.32720664181306,
+      "x": -46.935859383438924,
+      "y": 110.83424076132906,
       "zoom": 0.5205627295612754
     }
   },
   "description": "This flow can be used to create a blog post following instructions from the user, using two other blogs as reference.",
   "endpoint_name": null,
-  "icon": "FileText",
-  "id": "92d42e25-91d4-4108-8187-92fc53fc9778",
+  "id": "5e9b5662-0985-4d40-8ffe-b7f42fa86421",
   "is_component": false,
-  "last_tested_version": "1.0.17",
+  "last_tested_version": "1.0.19.post1",
   "name": "Blog Writer",
+  "icon": "FileText",
   "tags": [
     "chatbots"
   ]

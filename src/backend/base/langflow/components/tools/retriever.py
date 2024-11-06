@@ -21,12 +21,8 @@ class RetrieverToolComponent(CustomComponent):
             "description": {"display_name": "Description", "info": "Description of the tool"},
         }
 
-    def build(
-        self,
-        retriever: BaseRetriever,
-        name: str,
-        description: str,
-    ) -> Tool:
+    def build(self, retriever: BaseRetriever, name: str, description: str, **kwargs) -> Tool:
+        _ = kwargs
         return create_retriever_tool(
             retriever=retriever,
             name=name,
