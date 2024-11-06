@@ -1,8 +1,6 @@
-import { Badge } from "@/components/ui/badge";
 import { BorderBeam } from "@/components/ui/border-beams";
 import { BuildStatus } from "@/constants/enums";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
-import { cloneDeep } from "lodash";
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
