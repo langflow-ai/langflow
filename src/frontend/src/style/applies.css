@@ -1272,7 +1272,7 @@
   }
 
   .toolbar-wrapper {
-    @apply flex items-center gap-1 rounded-[12px] border border-border bg-background p-1 shadow-sm;
+    @apply flex items-center gap-1 rounded-xl border border-border bg-background p-1 shadow-sm;
   }
 }
 

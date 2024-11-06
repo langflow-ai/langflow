@@ -47,7 +47,7 @@ export default function HandleTooltipComponent({
           )}
           {tooltips.map((word, index) => (
             <Badge
-              className="h-6 rounded-[6px] p-1"
+              className="h-6 rounded-md p-1"
               style={{
                 backgroundColor: left
                   ? `hsl(var(--${accentColorName}))`
