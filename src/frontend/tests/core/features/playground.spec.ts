@@ -137,16 +137,15 @@ test("fresh start playground", async ({ page }) => {
     .locator('[data-testid="handle-textoutput-shownode-text-right"]')
     .all();
 
-
   for (const element of elementsTextOutputRight) {
     if (await element.isVisible()) {
       visibleElementHandle = element;
-    break;
+      break;
+    }
   }
-}
 
-// Click and hold on the first element
-await visibleElementHandle.hover();
+  // Click and hold on the first element
+  await visibleElementHandle.hover();
   await page.mouse.down();
 
   //
