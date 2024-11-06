@@ -21,7 +21,7 @@ test("user must be able to interact with starter projects", async ({
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
-  expect(page.getByText("Start from scratch")).toBeVisible();
+  expect(page.getByText("Start from scratch", { exact: true })).toBeVisible();
   expect(page.getByRole("button", { name: "Blank Flow" })).toBeVisible();
 
   await page.getByTestId("side_nav_options_all-templates").click();
@@ -48,9 +48,9 @@ test("user must be able to interact with starter projects", async ({
 
   await page.waitForTimeout(500);
 
-  await page.getByTestId(`side_nav_options_chatbots`).click();
+  await page.getByTestId(`side_nav_options_prompting`).click();
   await page.waitForTimeout(500);
-  expect(page.getByTestId(`category_title_chatbots`)).toBeVisible();
+  expect(page.getByTestId(`category_title_prompting`)).toBeVisible();
 
   await page.getByTestId(`side_nav_options_rag`).click();
   await page.waitForTimeout(500);

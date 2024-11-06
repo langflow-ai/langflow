@@ -29,7 +29,7 @@ test("user should be able to see multiple edges and interact with them", async (
   }
   await page.waitForTimeout(1000);
 
-  await page.getByText("Vector RAG", { exact: true }).last().click();
+  await page.getByText("Vector Store RAG", { exact: true }).last().click();
   await page.waitForTimeout(3000);
   await page.getByText("Retriever", { exact: true }).first().isVisible();
   await page.getByText("Search Results", { exact: true }).first().isVisible();

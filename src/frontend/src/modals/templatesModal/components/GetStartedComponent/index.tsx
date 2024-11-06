@@ -12,21 +12,21 @@ export default function GetStartedComponent() {
   // Define the card data
   const cardData: CardData[] = [
     {
-      bg: "linear-gradient(145deg, #7CC0FF 0%, #96B9FF 50%, #CAA5FF 100%)",
+      bg: "radial-gradient(ellipse at top left, #A3E8EF, #ADF6FD, #9676fd)",
       spiralImage: memoryChatbotSpiral,
       icon: "MessagesSquare",
-      category: "Chatbot",
+      category: "Prompting",
       flow: examples.find((example) => example.name === "Memory Chatbot"),
     },
     {
-      bg: "linear-gradient(145deg,  #388295 0%, #52B0C4 50%, #7CAB64 100%)",
+      bg: "radial-gradient(ellipse at top right, #f599fe, #de8afa, #9a5af7)",
       spiralImage: vectorRagSpiral,
       icon: "Database",
-      category: "Vector RAG",
+      category: "RAG",
       flow: examples.find((example) => example.name === "Vector Store RAG"),
     },
     {
-      bg: "linear-gradient(145deg, #DB52C2 0%, #DC4F88 50%, #FFA395 100%)",
+      bg: "radial-gradient(ellipse at top left, #ed93f5, #e0bae9, #a5f0af)",
       spiralImage: multiAgentSpiral,
       icon: "Bot",
       category: "Agents",
