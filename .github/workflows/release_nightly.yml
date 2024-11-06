@@ -207,9 +207,9 @@ jobs:
     needs: [release-nightly-base, release-nightly-main]
     uses: ./.github/workflows/docker-build.yml
     with:
-      release_type: base
-      nightly_tag_base: ${{ inputs.nightly_tag_base }}
-      nightly_tag_main: ${{ inputs.nightly_tag_main }}
+      release_type: nightly-base
+      base_version: ${{ inputs.nightly_tag_base }}
+      main_version: ${{ inputs.nightly_tag_main }}
     secrets: inherit
 
   call_docker_build_main:
@@ -218,17 +218,16 @@ jobs:
     needs: [release-nightly-main]
     uses: ./.github/workflows/docker-build.yml
     with:
-      release_type: main
-      nightly_tag_main: ${{ inputs.nightly_tag_main }}
+      release_type: nightly-main
+      main_version: ${{ inputs.nightly_tag_main }}
     secrets: inherit
 
-# Not currently supported, let's add it later
-#  call_docker_build_main_ep:
-#    name: Call Docker Build Workflow for Langflow with Entrypoint
-#    if: always() && ${{ inputs.build_docker_ep == 'true' }}
-#    needs: [release-nightly-main]
-#    uses: ./.github/workflows/docker-build.yml
-#    with:
-#      release_type: main-ep
-#      nightly_tag_main: ${{ inputs.nightly_tag_main }}
-#    secrets: inherit
+  call_docker_build_main_ep:
+    name: Call Docker Build Workflow for Langflow with Entrypoint
+    if: always() && ${{ inputs.build_docker_ep == 'true' }}
+    needs: [release-nightly-main]
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      release_type: main-ep
+      main_version: ${{ inputs.nightly_tag_main }}
+    secrets: inherit

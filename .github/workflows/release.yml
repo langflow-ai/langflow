@@ -189,10 +189,11 @@ jobs:
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
     if: inputs.build_docker_base == true
-    needs: release-base
+    needs: [release-base, release-main]
     uses: ./.github/workflows/docker-build.yml
     with:
-      version: ${{ needs.release-base.outputs.version }}
+      base_version: ${{ needs.release-base.outputs.version }}
+      main_version: ${{ needs.release-main.outputs.version }}
       release_type: base
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
@@ -200,10 +201,10 @@ jobs:
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
     if: inputs.build_docker_main == true
-    needs: release-main
+    needs: [release-main]
     uses: ./.github/workflows/docker-build.yml
     with:
-      version: ${{ needs.release-main.outputs.version }}
+      main_version: ${{ needs.release-main.outputs.version }}
       release_type: main
       pre_release: ${{ inputs.pre_release }}
     secrets: inherit
@@ -211,9 +212,10 @@ jobs:
   call_docker_build_main_ep:
     name: Call Docker Build Workflow for Langflow with Entrypoint
     if: inputs.build_docker_ep == true
+    needs: [release-main]
     uses: ./.github/workflows/docker-build.yml
     with:
-      version: needs.release-main.outputs.version
+      main_version: ${{ needs.release-main.outputs.version }}
       release_type: main-ep
       pre_release: False
     secrets: inherit
