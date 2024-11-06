@@ -76,6 +76,7 @@ def handle_on_chain_end(
                 type="text",
                 text=agent_message.text,
                 duration=duration,
+                header={"title": "Output", "icon": "MessageSquare"},
             )
             agent_message.content_blocks[0].contents.append(text_content)
         agent_message = send_message_method(message=agent_message)
