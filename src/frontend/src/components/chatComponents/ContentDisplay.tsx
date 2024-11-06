@@ -35,7 +35,7 @@ export default function ContentDisplay({ content }: { content: ContentType }) {
     </>
   );
   const renderDuration = content.duration !== undefined && (
-    <div className="relative float-right -mt-6 mr-2">
+    <div className="absolute right-2 top-0">
       <DurationDisplay duration={content.duration} />
     </div>
   );
@@ -45,7 +45,7 @@ export default function ContentDisplay({ content }: { content: ContentType }) {
   switch (content.type) {
     case "text":
       contentData = (
-        <div className="ml-1">
+        <div className="ml-1 pr-20">
           <Markdown
             remarkPlugins={[remarkGfm]}
             linkTarget="_blank"
@@ -102,19 +102,23 @@ export default function ContentDisplay({ content }: { content: ContentType }) {
 
     case "code":
       contentData = (
-        <SimplifiedCodeTabComponent
-          language={content.language}
-          code={content.code}
-        />
+        <div className="pr-20">
+          <SimplifiedCodeTabComponent
+            language={content.language}
+            code={content.code}
+          />
+        </div>
       );
       break;
 
     case "json":
       contentData = (
-        <CodeBlock
-          language="json"
-          value={JSON.stringify(content.data, null, 2)}
-        />
+        <div className="pr-20">
+          <CodeBlock
+            language="json"
+            value={JSON.stringify(content.data, null, 2)}
+          />
+        </div>
       );
       break;
 
@@ -164,7 +168,7 @@ export default function ContentDisplay({ content }: { content: ContentType }) {
   }
 
   return (
-    <div>
+    <div className="relative">
       {renderHeader}
       {renderDuration}
       {contentData}
