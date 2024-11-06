@@ -243,36 +243,35 @@ export default function ChatMessage({
               className="flex w-full gap-4 rounded-md p-2"
             >
               <LogoIcon />
-              <div className="w-full rounded-md border border-error-red-border bg-error-red p-4 text-[14px] text-foreground">
+              <div className="w-full rounded-xl border border-error-red-border bg-error-red p-4 text-[14px] text-foreground">
                 <div className="mb-2 flex items-center gap-2">
                   <ForwardedIconComponent
                     className="h-[18px] w-[18px] text-destructive"
                     name="OctagonAlert"
                   />
-                  <span className="">An error stopped your flow.</span>
-                </div>
-                <div className="mb-4">
-                  <h3 className="pb-3 font-semibold">Error details:</h3>
-                  <p className="pb-1">
-                    Component:{" "}
+                  <span className="">
+                    An error occured in the{" "}
                     <span
                       className={cn(
-                        closeChat ? "cursor-pointer underline" : "",
+                        closeChat ? "cursor-pointer hover:underline" : "",
                       )}
                       onClick={() => {
                         fitViewNode(chat.properties?.source?.id ?? "");
                         closeChat?.();
                       }}
                     >
-                      {errorContent.component}
-                    </span>
-                  </p>
+                      <strong>{errorContent.component}</strong>
+                    </span>{" "}
+                    Component, stopping your flow. See below for more details.
+                  </span>
+                </div>
+                <div className="">
+                  <h3 className="pb-3 font-semibold">Error details:</h3>
                   {errorContent.field && (
                     <p className="pb-1">Field: {errorContent.field}</p>
                   )}
                   {errorContent.reason && (
                     <span className="">
-                      Reason:{" "}
                       <Markdown
                         linkTarget="_blank"
                         remarkPlugins={[remarkGfm]}
@@ -297,7 +296,7 @@ export default function ChatMessage({
                   )}
                 </div>
                 {errorContent.solution && (
-                  <div>
+                  <div className="mt-4">
                     <h3 className="pb-3 font-semibold">Steps to fix:</h3>
                     <ol className="list-decimal pl-5">
                       <li>Check the component settings</li>
