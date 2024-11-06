@@ -6,11 +6,10 @@ slug: /contributing-how-to-contribute
 
 # How to contribute to Langflow
 
-This guide is intended to help you get started contributing to Langflow.
-As an open-source project in a rapidly developing field, we are extremely open
-to contributions, whether it be in the form of a new feature, improved infra, or better documentation.
+This guide is intended to help you start contributing to Langflow.
+As an open-source project in a rapidly developing field, Langflow welcomes contributions, whether it be in the form of a new feature, improved infrastructure, or better documentation.
 
-To contribute to this project, please follow the [fork and pull request](https://docs.github.com/en/get-started/quickstart/contributing-to-projects) workflow.
+To contribute to this project, follow the [fork and pull request](https://docs.github.com/en/get-started/quickstart/contributing-to-projects) workflow.
 
 ## Prerequisites
 
@@ -23,7 +22,7 @@ Develop Langflow locally with [uv](https://docs.astral.sh/uv/getting-started/ins
 
 ### Clone the Langflow Repository
 
-1. Navigate to the [Langflow GitHub repository](https://github.com/langflow-ai/langflow) and click **Fork**.
+1. Navigate to the [Langflow GitHub repository](https://github.com/langflow-ai/langflow), and then click **Fork**.
 
 2. Add the new remote to your local repository on your local machine:
 
@@ -45,10 +44,10 @@ This command sets up the development environment by installing backend and front
 
 ### Debug
 
-The repo includes a `.vscode/launch.json` file for debugging the backend in VSCode, which is a lot faster than debugging with Docker compose. To debug Langflow with the `launch.json` file in VSCode:
+The repo includes a `.vscode/launch.json` file for debugging the backend in VSCode, which is faster than debugging with Docker Compose. To debug Langflow with the `launch.json` file in VSCode:
 
 1. Open Langflow in VSCode.
-2. Press Ctrl+Shift+D (or Cmd+Shift+D on Mac) to open the Run and Debug view.
+2. Press **Ctrl+Shift+D** for Windows **or Cmd+Shift+D** for Mac to open the Run and Debug view.
 3. Choose a configuration from the dropdown at the top (for example, "Debug Backend").
 4. Click the green play button or press F5 to start debugging.
 5. This allows you to quickly debug different parts of your application, like the backend, frontend, or CLI, directly from VSCode.

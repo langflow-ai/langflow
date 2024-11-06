@@ -4,7 +4,7 @@ sidebar_position: 0
 slug: /contributing-telemetry
 ---
 
-Langflow uses anonymous telemetry to collect essential usage statistics to enhance functionality and user experience. This data helps us identify popular features and areas needing improvement, and ensures development efforts align with what you need.
+Langflow uses anonymous telemetry to collect essential usage statistics to enhance functionality and the user experience. This data helps us identify popular features and areas that need improvement, and ensures development efforts align with what you need.
 
 We respect your privacy and are committed to protecting your data. We do not collect any personal information or sensitive data. All telemetry data is anonymized and used solely for improving Langflow.
 
@@ -12,7 +12,7 @@ You can opt-out of telemetry by setting the `LANGFLOW_DO_NOT_TRACK` or `DO_NO
 
 This telemetry data is crucial for enhancing Langflow and ensuring that our development efforts align with your needs. Your feedback and suggestions are invaluable in shaping the future of Langflow, and we appreciate your support in making Langflow better for everyone.
 
-## Telemetry Data Collected
+## Data that Langflow collects
 
 ### Run {#2d427dca4f0148ae867997f6789e8bfb}
 
