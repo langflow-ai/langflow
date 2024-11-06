@@ -225,7 +225,7 @@
     --status-green: #4ade80;
     --status-blue: #2563eb;
     --connection: #6d6c6c;
-    --code-background: var(--muted);
+    --code-background: var(--background);
 
     --beta-background: rgb(37 99 235);
     --beta-foreground: rgb(219 234 254);
