@@ -533,6 +533,7 @@ def version_option(
     version: bool = typer.Option(
         None,
         "--version",
+        "-v",
         callback=show_version,
         is_eager=True,
         help="Show the version and exit.",
