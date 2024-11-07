@@ -118,7 +118,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
     <div className="flex items-baseline gap-2 truncate">
       <div className="header-menu-bar w-full justify-end truncate">
         {currentFolder?.name && (
-          <div className="flex hidden truncate md:flex">
+          <div className="hidden truncate md:flex">
             <div
               className="cursor-pointer truncate text-muted-foreground hover:text-primary"
               onClick={() => {
@@ -130,7 +130,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
           </div>
         )}
       </div>
-      <div className="hidden w-fit font-normal text-muted-foreground md:flex">
+      <div className="hidden w-fit select-none font-normal text-muted-foreground md:flex">
         /
       </div>
 
