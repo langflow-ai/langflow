@@ -174,7 +174,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               className="cursor-pointer"
             >
               <IconComponent name="Settings2" className="header-menu-options" />
-              Settings
+              Flow Settings
             </DropdownMenuItem>
             {!autoSaving && (
               <DropdownMenuItem onClick={handleSave} className="cursor-pointer">
