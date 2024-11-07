@@ -138,7 +138,7 @@ class LCAgentComponent(Component):
 
         agent_message = Message(
             sender=MESSAGE_SENDER_AI,
-            sender_name=self.agent_name or "Agent",
+            sender_name=self.display_name or "Agent",
             properties={"icon": "Bot", "state": "partial"},
             content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
             session_id=self.graph.session_id,
