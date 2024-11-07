@@ -38,6 +38,8 @@ class APIRequestComponent(Component):
             "This will fill in the dictionary fields for headers and body.",
             advanced=False,
             refresh_button=True,
+            real_time_refresh=True,
+            tool_mode=True,
         ),
         DropdownInput(
             name="method",

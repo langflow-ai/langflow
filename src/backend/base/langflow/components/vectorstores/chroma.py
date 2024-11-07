@@ -32,6 +32,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         MultilineInput(
             name="search_query",
             display_name="Search Query",
+            tool_mode=True,
         ),
         DataInput(
             name="ingest_data",
