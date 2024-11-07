@@ -31,6 +31,7 @@ def test_component_to_tool_has_no_component_as_tool():
     tools = chat_input.to_toolkit()
     assert len(tools) == 1
 
+
 def test_custom_component_to_tool():
     custom_component = CustomComponent()
     tools = custom_component.to_toolkit()
