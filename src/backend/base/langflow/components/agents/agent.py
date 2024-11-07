@@ -50,10 +50,12 @@ class AgentComponent(ToolCallingAgentComponent):
             msg = "No language model selected"
             raise ValueError(msg)
         self.chat_history = self.get_memory_data()
-
+        if not self.tools:
+            msg = "Tools are required to run the agent."
+            raise ValueError(msg)
         self.set(
             llm=llm_model,
-            tools=[self.tools],
+            tools=self.tools,
             chat_history=self.chat_history,
             input_value=self.input_value,
             system_prompt=self.system_prompt,
