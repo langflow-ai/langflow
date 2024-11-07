@@ -16,12 +16,12 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
       <div className="text-container">
         <div className="relative z-20 flex w-full flex-col items-center justify-center gap-2">
           {ENABLE_NEW_LOGO ? (
-            <ShortLangFlowIcon className="h-7 w-7 fill-black dark:fill-[white]" />
+            <ShortLangFlowIcon className="h-7 w-7 fill-foreground" />
           ) : (
-            <span className="fill-black text-4xl dark:fill-white">⛓️</span>
+            <span className="fill-foreground text-4xl">⛓️</span>
           )}
           <h3
-            className="pt-5 text-2xl font-semibold dark:text-white"
+            className="pt-5 text-2xl font-semibold text-foreground"
             style={{
               fontFamily: "Chivo",
             }}
@@ -29,7 +29,7 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
           >
             {folders?.length > 1 ? "Empty folder" : "Start building"}
           </h3>
-          <p className="pb-5 text-sm dark:text-white">
+          <p className="pb-5 text-sm text-secondary-foreground">
             Begin with a template, or start from scratch.
           </p>
           <Button
@@ -38,7 +38,7 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
             id="new-project-btn"
           >
             <ForwardedIconComponent
-              name="plus"
+              name="Plus"
               aria-hidden="true"
               className="h-4 w-4"
             />
