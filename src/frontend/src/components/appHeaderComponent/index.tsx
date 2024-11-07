@@ -121,7 +121,7 @@ export default function AppHeader(): JSX.Element {
                 className="side-bar-button-size h-[18px] w-[18px]"
                 aria-hidden="true"
               />
-              <span className="hidden whitespace-nowrap lg:inline">
+              <span className="hidden whitespace-nowrap xl:inline">
                 Notifications
               </span>
             </Button>
@@ -146,7 +146,7 @@ export default function AppHeader(): JSX.Element {
                   name="Store"
                   className="side-bar-button-size h-[18px] w-[18px]"
                 />
-                <span className="hidden whitespace-nowrap lg:inline">
+                <span className="hidden whitespace-nowrap xl:inline">
                   Store
                 </span>
               </Button>
