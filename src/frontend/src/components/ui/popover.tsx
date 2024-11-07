@@ -46,4 +46,10 @@ const PopoverContentWithoutPortal = React.forwardRef<
 ));
 PopoverContentWithoutPortal.displayName = PopoverPrimitive.Content.displayName;
 
-export { Popover, PopoverAnchor, PopoverContent, PopoverContentWithoutPortal, PopoverTrigger };
+export {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+  PopoverContentWithoutPortal,
+  PopoverTrigger,
+};

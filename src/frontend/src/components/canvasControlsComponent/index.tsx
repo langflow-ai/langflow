@@ -81,18 +81,18 @@ const CanvasControls = ({ children }) => {
       nodesConnectable: !isLocked,
       elementsSelectable: !isLocked,
     });
-  }, [currentFlow?.locked])
+  }, [currentFlow?.locked]);
 
   const handleSaveFlow = () => {
     if (!currentFlow) return;
     const newFlow = cloneDeep(currentFlow);
     newFlow.locked = isInteractive;
     if (autoSaving) {
-      saveFlow(newFlow)
+      saveFlow(newFlow);
     } else {
       setCurrentFlow(newFlow);
     }
-  }
+  };
 
   const onToggleInteractivity = () => {
     store.setState({
