@@ -65,6 +65,7 @@ class APIRequestComponent(Component):
             name="query_params",
             display_name="Query Parameters",
             info="The query parameters to append to the URL.",
+            tool_mode=True,
         ),
         IntInput(
             name="timeout",
@@ -178,7 +179,11 @@ class APIRequestComponent(Component):
         headers = self.headers or {}
         body = self.body or {}
         timeout = self.timeout
-        query_params = self.query_params.data if self.query_params else {}
+
+        if isinstance(self.query_params, str):
+            query_params = dict(parse_qsl(self.query_params))
+        else:
+            query_params = self.query_params.data if self.query_params else {}
 
         if curl:
             self._build_config = self.parse_curl(curl, dotdict())
