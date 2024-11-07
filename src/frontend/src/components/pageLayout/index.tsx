@@ -47,7 +47,7 @@ export default function PageLayout({
                   data-testid="mainpage_title"
                 >
                   {title}
-                  {betaIcon && <span className="store-beta-icon">BETA</span>}
+                  {betaIcon && <span className="store-beta-icon">Beta</span>}
                 </h2>
               </div>
               <p className="text-muted-foreground">{description}</p>
