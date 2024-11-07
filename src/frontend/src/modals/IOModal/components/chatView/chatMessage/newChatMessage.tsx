@@ -243,26 +243,24 @@ export default function ChatMessage({
               className="flex w-full gap-4 rounded-md p-2"
             >
               <LogoIcon />
-              <div className="w-full rounded-xl border border-error-red-border bg-error-red p-4 text-[14px] text-foreground">
-                <div className="mb-2 flex items-center gap-2">
-                  <ForwardedIconComponent
-                    className="h-[18px] w-[18px] text-destructive"
-                    name="OctagonAlert"
-                  />
-                </div>
-                {blocks.map((block, blockIndex) => (
-                  <div key={blockIndex} className="mb-4">
-                    <h3 className="pb-3 font-semibold">{block.title}:</h3>
-                    {block.contents.map((content, contentIndex) => {
-                      if (content.type === "error") {
-                        return (
-                          <div key={contentIndex}>
+              {blocks.map((block, blockIndex) => (
+                <div
+                  key={blockIndex}
+                  className="w-full rounded-xl border border-error-red-border bg-error-red p-4 text-[14px] text-foreground"
+                >
+                  {block.contents.map((content, contentIndex) => {
+                    if (content.type === "error") {
+                      return (
+                        <div className="" key={contentIndex}>
+                          <div className="mb-2 flex items-center">
+                            <ForwardedIconComponent
+                              className="mr-2 h-[18px] w-[18px] text-destructive"
+                              name="OctagonAlert"
+                            />
                             {content.component && (
                               <>
-                                <span className="">
-                                  An error occured in the{" "}
-                                </span>
                                 <span>
+                                  An error occured in the{" "}
                                   <span
                                     className={cn(
                                       closeChat
@@ -283,7 +281,11 @@ export default function ChatMessage({
                                 </span>
                               </>
                             )}
-
+                          </div>
+                          <div>
+                            <h3 className="pb-3 font-semibold">
+                              Error details:
+                            </h3>
                             {content.field && (
                               <p className="pb-1">Field: {content.field}</p>
                             )}
@@ -375,13 +377,13 @@ export default function ChatMessage({
                               </div>
                             )}
                           </div>
-                        );
-                      }
-                      return null;
-                    })}
-                  </div>
-                ))}
-              </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+              ))}
             </motion.div>
           )}
         </AnimatePresence>
