@@ -518,6 +518,30 @@ def api_key(
     api_key_banner(unmasked_api_key)
 
 
+def show_version(*, value: bool):
+    if value:
+        default = "DEV"
+        raw_info = get_version_info()
+        version = raw_info.get("version", default) if raw_info else default
+        typer.echo(f"langflow {version}")
+        raise typer.Exit
+
+
+@app.callback()
+def version_option(
+    *,
+    version: bool = typer.Option(
+        None,
+        "--version",
+        "-v",
+        callback=show_version,
+        is_eager=True,
+        help="Show the version and exit.",
+    ),
+):
+    pass
+
+
 def api_key_banner(unmasked_api_key) -> None:
     is_mac = platform.system() == "Darwin"
     import pyperclip
