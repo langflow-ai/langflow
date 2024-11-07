@@ -86,6 +86,10 @@ const config = {
              to: '/',
              from: '/whats-new-a-new-chapter-langflow',
            },
+           {
+            to: '/getting-started-installation',
+            from: '/getting-started-common-installation-issues',
+          },
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',
