@@ -10,7 +10,7 @@ import CodeAreaModal from "@/modals/codeAreaModal";
 import { APIClassType } from "@/types/api";
 import _, { cloneDeep } from "lodash";
 import { useEffect, useRef, useState } from "react";
-import { useReactFlow, useStore, useUpdateNodeInternals } from "reactflow";
+import { useStore, useUpdateNodeInternals } from "reactflow";
 import IconComponent from "../../../../components/genericIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import {
@@ -190,6 +190,7 @@ export default function NodeToolbarComponent({
       });
     },
   });
+  const updateToolMode = useFlowStore((state) => state.updateToolMode);
 
   useEffect(() => {
     if (!showModalAdvanced) {
@@ -293,6 +294,7 @@ export default function NodeToolbarComponent({
         const newValue = !toolMode;
         setToolMode(newValue);
 
+        updateToolMode(data.id, newValue);
         mutateTemplate(
           newValue,
           data.node!,
@@ -495,6 +497,7 @@ export default function NodeToolbarComponent({
                 variant="ghost"
                 onClick={(event) => {
                   event.preventDefault();
+                  takeSnapshot();
                   handleSelectChange("toolMode");
                 }}
                 size="node-toolbar"
