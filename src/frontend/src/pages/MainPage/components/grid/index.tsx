@@ -115,7 +115,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
             <ForwardedIconComponent
               name={getIcon()}
               aria-hidden="true"
-              className="h-5 w-5 dark:text-black"
+              className="h-5 w-5 text-foreground"
             />
           </div>
           <div className="flex w-full min-w-0 items-center justify-between">
@@ -123,27 +123,27 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
               <div className="text-md truncate font-semibold">
                 {flowData.name}
               </div>
-              <div className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+              <div className="truncate text-xs text-muted-foreground">
                 Edited {timeElapsed(flowData.updated_at)} ago
               </div>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   data-testid="home-dropdown-menu"
-                  size="icon"
-                  className="group ml-2 h-10 w-10 border-none dark:hover:bg-zinc-700"
+                  size="iconMd"
+                  className="group"
                 >
                   <ForwardedIconComponent
                     name="Ellipsis"
                     aria-hidden="true"
-                    className="h-5 w-5 dark:text-zinc-400 dark:group-hover:text-white"
+                    className="h-5 w-5 text-muted-foreground group-hover:text-foreground"
                   />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
-                className="mr-[30px] w-[185px] bg-white dark:bg-black"
+                className="w-[185px]"
                 sideOffset={5}
                 side="bottom"
               >
@@ -156,7 +156,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
           </div>
         </div>
 
-        <div className="line-clamp-2 h-full pt-5 text-sm text-zinc-800 dark:text-white">
+        <div className="line-clamp-2 h-full pt-5 text-sm text-primary">
           {flowData.description}
         </div>
 

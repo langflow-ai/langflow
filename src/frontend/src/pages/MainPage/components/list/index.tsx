@@ -120,7 +120,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
             <ForwardedIconComponent
               name={flowData?.icon || getIcon()}
               aria-hidden="true"
-              className="flex h-5 w-5 items-center justify-center dark:text-black"
+              className="flex h-5 w-5 items-center justify-center text-foreground"
             />
           </div>
 
@@ -129,11 +129,11 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
               <div className="text-md flex truncate pr-2 font-semibold max-md:w-full">
                 <span className="truncate">{flowData.name}</span>
               </div>
-              <div className="item-baseline flex text-xs text-zinc-500 dark:text-zinc-400">
+              <div className="item-baseline flex text-xs text-muted-foreground">
                 Edited {timeElapsed(flowData.updated_at)} ago
               </div>
             </div>
-            <div className="overflow-hidden truncate text-sm text-zinc-800 dark:text-white">
+            <div className="overflow-hidden truncate text-sm text-primary">
               {flowData.description}
             </div>
           </div>
@@ -160,20 +160,20 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant="outline"
-                size="icon"
+                variant="ghost"
+                size="iconMd"
                 data-testid="home-dropdown-menu"
-                className="group h-10 w-10 border-none dark:hover:bg-zinc-700"
+                className="group"
               >
                 <ForwardedIconComponent
                   name="Ellipsis"
                   aria-hidden="true"
-                  className="h-5 w-5 dark:text-zinc-400 dark:group-hover:text-white"
+                  className="h-5 w-5 text-muted-foreground group-hover:text-foreground"
                 />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              className="mr-[30px] w-[185px] bg-white dark:bg-black"
+              className="w-[185px]"
               sideOffset={5}
               side="bottom"
             >
