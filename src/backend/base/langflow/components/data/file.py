@@ -52,7 +52,7 @@ class FileComponent(Component):
             advanced=True,
             info="The maximum number of workers to use, if concurrency is enabled",
             value="4",
-        )
+        ),
     ]
 
     outputs = [Output(display_name="Data", name="data", method="load_file")]
