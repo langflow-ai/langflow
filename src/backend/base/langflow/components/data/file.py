@@ -4,7 +4,7 @@ from zipfile import ZipFile, is_zipfile
 
 from langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
 from langflow.custom import Component
-from langflow.io import BoolInput, FileInput, Output, StrInput
+from langflow.io import BoolInput, FileInput, IntInput, Output
 from langflow.schema import Data
 
 
@@ -46,12 +46,12 @@ class FileComponent(Component):
             advanced=True,
             info="If true, parallel processing will be enabled for zip files.",
         ),
-        StrInput(
+        IntInput(
             name="concurrency_multithreading",
             display_name="Multithreading Concurrency",
             advanced=True,
             info="The maximum number of workers to use, if concurrency is enabled",
-            value="4",
+            value=4,
         ),
     ]
 
@@ -152,7 +152,7 @@ class FileComponent(Component):
                     valid_files,
                     silent_errors=silent_errors,
                     load_function=process_file,
-                    max_concurrency=int(self.concurrency_multithreading),
+                    max_concurrency=self.concurrency_multithreading,
                 )
 
                 # Filter out empty data
