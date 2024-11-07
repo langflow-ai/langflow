@@ -1,8 +1,10 @@
 from typing import Any, Literal
 
 from fastapi.encoders import jsonable_encoder
-from pydantic import BaseModel, ConfigDict, Field, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, model_serializer
 from typing_extensions import TypedDict
+
+from langflow.schema.encoders import CUSTOM_ENCODERS
 
 
 class HeaderDict(TypedDict, total=False):
@@ -23,6 +25,13 @@ class BaseContent(BaseModel):
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "BaseContent":
         return cls(**data)
+
+    @model_serializer()
+    def serialize_model(self) -> dict[str, Any]:
+        try:
+            return jsonable_encoder(self, custom_encoder=CUSTOM_ENCODERS)
+        except Exception:  # noqa: BLE001
+            return self.model_dump()
 
 
 class ErrorContent(BaseContent):
@@ -79,7 +88,3 @@ class ToolContent(BaseContent):
     output: Any | None = None
     error: Any | None = None
     duration: int | None = None
-
-    @field_serializer("output")
-    def serialize_output(self, output: Any, _info: Any) -> Any:
-        return jsonable_encoder(output)
