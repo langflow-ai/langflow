@@ -121,7 +121,7 @@ export const SidebarDraggableComponent = forwardRef(
             data-tooltip-id={itemName}
             tabIndex={0}
             onKeyDown={handleKeyDown}
-            className="rounded-md outline-none ring-ring focus-visible:ring-2"
+            className="m-[1px] rounded-md outline-none ring-ring focus-visible:ring-1"
           >
             <div
               data-testid={sectionName + display_name}
@@ -150,7 +150,7 @@ export const SidebarDraggableComponent = forwardRef(
               />
               <div className="flex flex-1 items-center overflow-hidden">
                 <ShadTooltip content={display_name} styleClasses="z-50">
-                  <span className="truncate text-sm font-semibold">
+                  <span className="truncate text-sm font-normal">
                     {display_name}
                   </span>
                 </ShadTooltip>
@@ -160,7 +160,7 @@ export const SidebarDraggableComponent = forwardRef(
                     size="xq"
                     className="ml-1.5 shrink-0"
                   >
-                    BETA
+                    Beta
                   </Badge>
                 )}
                 {legacy && (
@@ -169,7 +169,7 @@ export const SidebarDraggableComponent = forwardRef(
                     size="xq"
                     className="ml-1.5 shrink-0"
                   >
-                    LEGACY
+                    Legacy
                   </Badge>
                 )}
               </div>
