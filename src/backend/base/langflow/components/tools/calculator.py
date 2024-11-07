@@ -2,6 +2,7 @@ import ast
 import operator
 
 from langchain.tools import StructuredTool
+from langchain_core.tools import ToolException
 from loguru import logger
 from pydantic import BaseModel, Field
 
@@ -35,7 +36,7 @@ class CalculatorToolComponent(LCToolComponent):
         return StructuredTool.from_function(
             name="calculator",
             description="Evaluate basic arithmetic expressions. Input should be a string containing the expression.",
-            func=self._evaluate_expression,
+            func=self._eval_expr_with_error,
             args_schema=self.CalculatorToolSchema,
         )
 
@@ -54,7 +55,20 @@ class CalculatorToolComponent(LCToolComponent):
             return operators[type(node.op)](self._eval_expr(node.left), self._eval_expr(node.right))
         if isinstance(node, ast.UnaryOp):
             return operators[type(node.op)](self._eval_expr(node.operand))
-        raise TypeError(node)
+        if isinstance(node, ast.Call):
+            msg = (
+                "Function calls like sqrt(), sin(), cos() etc. are not supported. "
+                "Only basic arithmetic operations (+, -, *, /, **) are allowed."
+            )
+            raise TypeError(msg)
+        msg = f"Unsupported operation or expression type: {type(node).__name__}"
+        raise TypeError(msg)
+
+    def _eval_expr_with_error(self, expression: str) -> list[Data]:
+        try:
+            return self._evaluate_expression(expression)
+        except Exception as e:
+            raise ToolException(str(e)) from e
 
     def _evaluate_expression(self, expression: str) -> list[Data]:
         try:

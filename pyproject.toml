@@ -12,7 +12,7 @@ packages = ["src/backend/langflow"]
 
 [project]
 name = "langflow"
-version = "1.0.19"
+version = "1.0.19.post2"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.13"
 license = "MIT"
@@ -31,14 +31,13 @@ maintainers = [
 
 # Define your main dependencies here
 dependencies = [
-    "langflow-base==0.0.97",
+    "langflow-base==0.0.99",
     "beautifulsoup4>=4.12.2",
     "google-search-results>=2.4.1",
     "google-api-python-client>=2.130.0",
     "huggingface-hub[inference]>=0.23.2",
     "networkx>=3.1",
     "fake-useragent>=1.5.0",
-    "psycopg2-binary>=2.9.6",
     "pyarrow>=14.0.0",
     "wikipedia>=1.4.0",
     "qdrant-client~=1.9.2",
@@ -49,7 +48,6 @@ dependencies = [
     "pymongo>=4.6.0",
     "supabase~=2.6.0",
     "certifi>=2023.11.17,<2025.0.0",
-    "psycopg>=3.1.9",
     "fastavro>=1.8.0",
     "redis>=5.0.1",
     "metaphor-python>=0.1.11",
@@ -70,6 +68,8 @@ dependencies = [
     "litellm>=1.44.0",
     "chromadb>=0.4",
     "zep-python>=2.0.0",
+    "langchain-groq>=0.1.9",
+    "langchain-pinecone>=0.1.3",
     "youtube-transcript-api>=0.6.2",
     "markdown>=3.7",
     "upstash-vector>=0.5.0",
@@ -77,6 +77,8 @@ dependencies = [
     "kubernetes>=30.1.0",
     "firecrawl-py>=0.0.16",
     "json-repair>=0.25.2",
+    "langchain-google-calendar-tools>=0.0.1",
+    "langchain-milvus>=0.1.1",
     "langwatch==0.1.16",
     "langsmith~=0.1.136",
     "yfinance>=0.2.40",
@@ -109,7 +111,10 @@ dependencies = [
     "langchain-milvus>=0.1.1",
     "langchain-google-community~=2.0.1",
     "langchain-elasticsearch>=0.2.0",
+    "opensearch-py>=2.7.1",
     "langchain-ollama>=0.2.0",
+    "pymupdf~=1.24.13",
+    "sqlalchemy[aiosqlite,postgresql_psycopg2binary,postgresql_psycopgbinary]>=2.0.36"
 ]
 
 [project.urls]

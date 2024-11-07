@@ -2,7 +2,6 @@ import { BASE_URL_API } from "@/constants/constants";
 import { performStreamingRequest } from "@/controllers/API/api";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { AxiosError } from "axios";
-import { timeStamp } from "console";
 import { flushSync } from "react-dom";
 import { Edge, Node } from "reactflow";
 import { BuildStatus } from "../constants/enums";
@@ -201,6 +200,9 @@ export async function buildFlowVertices({
       ids.forEach((id) => verticesStartTimeMs.set(id, Date.now()));
     };
 
+    console.log("type", type);
+    console.log("data", data);
+
     switch (type) {
       case "vertices_sorted": {
         const verticesToRun = data.to_run;
@@ -293,7 +295,7 @@ export async function buildFlowVertices({
         }
         return true;
       }
-      case "message": {
+      case "add_message": {
         //adds a message to the messsage table
         useMessagesStore.getState().addMessage(data);
         return true;
@@ -305,6 +307,10 @@ export async function buildFlowVertices({
             useMessagesStore.getState().updateMessageText(data.id, data.chunk);
           });
         }, 10);
+        return true;
+      }
+      case "remove_message": {
+        useMessagesStore.getState().removeMessage(data);
         return true;
       }
       case "end": {
@@ -321,6 +327,14 @@ export async function buildFlowVertices({
         buildResults.push(false);
         return true;
       }
+      case "build_start":
+        useFlowStore
+          .getState()
+          .updateBuildStatus([data.id], BuildStatus.BUILDING);
+        break;
+      case "build_end":
+        useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILT);
+        break;
       default:
         return true;
     }

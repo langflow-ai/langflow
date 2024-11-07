@@ -2,53 +2,50 @@ name: Docker Build and Push
 on:
   workflow_call:
     inputs:
-      version:
+      main_version:
+        required: true
+        type: string
+        description: "Main version to tag images with. Required for both main and base releases."
+      base_version:
         required: false
         type: string
-        description: "Main version to build. Does not support base version."
+        description: "Base version to tag images with. Required for base release type."
       release_type:
         required: true
         type: string
+        description: "Release type. One of 'main', 'main-ep', 'base', 'nightly-main', 'nightly-base'."
       pre_release:
         required: false
         type: boolean
         default: false
-      nightly_tag_main:
-        description: "Tag for the nightly main build"
+      ref:
         required: false
         type: string
-        default: ''
-      nightly_tag_base:
-        description: "Tag for the nightly base build"
-        required: false
-        type: string
-        default: ''
+        description: "Ref to check out. If not specified, will default to the main version or current branch."
 
   workflow_dispatch:
     inputs:
-      version:
-        description: "Main version to build. Does not support base version."
+      main_version:
+        description: "Main version to tag images with. Required for both main and base releases."
+        required: false
+        type: string
+      base_version:
+        description: "Base version to tag images with. Required for base release type."
         required: false
         type: string
       release_type:
-        description: "Type of release"
+        description: "Type of release. One of 'main', 'main-ep', 'base', 'nightly-main', 'nightly-base'."
         required: true
         type: string
       pre_release:
-        description: "Pre-release"
         required: false
         type: boolean
         default: false
-      nightly_tag_main:
-        description: "Tag for the nightly main build"
+      ref:
         required: false
         type: string
-        default: ''
-      nightly_tag_base:
-        description: "Tag for the nightly base build"
-        required: false
-        type: string
-        default: ''
+        description: "Ref to check out. If not specified, will default to the main version or current branch."
+
 
 env:
   POETRY_VERSION: "1.8.2"
@@ -60,88 +57,58 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.get-version-input.outputs.version || steps.get-version-base.outputs.version || steps.get-version-main.outputs.version }}
-      nightly-tag: ${{ steps.resolve-nightly-tag.outputs.nightly_tag }}
-      nightly-build: ${{ steps.resolve-nightly-tag.outputs.nightly_build }}
     steps:
-      - name: Resolve nightly tag
-        id: resolve-nightly-tag
+      - name: Verify a main version exists
+        if: ${{ inputs.main_version == '' }}
         run: |
-          # Note - this is more complex than I'd like. For `main` builds, we just pass the `main` tag.
-          # For `base` builds, we pass both the `base` and `main` tags. This is because the `main` tag is the
-          # version we need to check out for the build, but the `base` tag is the version we need to build.
-          #
-          # So, you need to check for `base` existence before `main`.
+          # due to our how we split packages, we need to have a main version to check out. 
+          echo "Must specify a main version to check out."
+          exit 1
 
-          if [[ "${{ inputs.nightly_tag_base }}" != '' ]]; then
-            if [[ "${{ inputs.release_type }}" != "base" ]]; then
-              echo "Release type is not 'base'. Exiting the workflow."
-              exit 1
-            fi
-
-            # Main tag must not be empty, otherwise we have no valid tag to check out.
-            if [[ "${{ inputs.nightly_tag_main }}" == '' ]]; then
-              echo "Nightly tag main is empty. Exiting the workflow."
-              exit 1
-            fi
-
-            echo "nightly_tag=${{ inputs.nightly_tag_base }}" >> $GITHUB_OUTPUT
-            echo "nightly_build=true" >> $GITHUB_OUTPUT
-          elif [[ "${{ inputs.nightly_tag_main }}" != '' ]]; then
-            if [[ "${{ inputs.release_type }}" != "main" ]]; then
-              echo "Release type is not 'main'. Exiting the workflow."
-              exit 1
-            fi
-            echo "nightly_tag=${{ inputs.nightly_tag_main }}" >> $GITHUB_OUTPUT
-            echo "nightly_build=true" >> $GITHUB_OUTPUT
-          else
-            echo "nightly_tag=" >> $GITHUB_OUTPUT
-            echo "nightly_build=false" >> $GITHUB_OUTPUT
-          fi
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.nightly_tag_main || github.ref }}
+          ref: ${{ inputs.ref || inputs.main_version || github.ref }}
           persist-credentials: true
 
-      - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
-
-      - name: Get Version from Input
-        if: ${{ inputs.version != '' }}
+      - name: Get Version to Tag
+        if: ${{ inputs.main_version != '' }}
         id: get-version-input
         run: |
-          # Base version cannot have a version input, since you have to specify a valid main tag to checkout.
-          if [[ "${{ inputs.release_type }}" == "base" && "${{ inputs.version }}" != '' ]]; then
-            echo "Cannot specify version for base release."
-            echo "Build type is 'base' and version is non-empty. Exiting the workflow."
+          # Produces the versions we will use to tag the docker images with.
+
+          if [[ "${{ inputs.release_type }}" == "base" && "${{ inputs.base_version }}" == '' ]]; then
+            echo "Must specify a base version for base release type."
             exit 1
           fi
 
-          # If doing a nightly release, just specify the nightly tag.
-          if [[ "${{ inputs.version }}" != '' && "${{ steps.resolve-nightly-tag.outputs.nightly-tag }}" != '' ]]; then
-            echo "Cannot specify both version and nightly version."
-            echo "Version is specified and nightly tag is non-empty. Exiting the workflow."
+          if [[ "${{ inputs.release_type }}" == "nightly-base" && "${{ inputs.base_version }}" == '' ]]; then
+            echo "Must specify a base version for nightly-base release type."
             exit 1
           fi
 
-          if [[ "${{ steps.resolve-nightly-tag.outputs.nightly-tag }}" != '' ]]; then
-            if [[ "${{ inputs.nightly_tag_main }}" == '' ]]; then
-              echo "Must specify a main nightly tag to check out when building base image."
-              echo "Nightly tag main is empty. Exiting the workflow."
-              exit 1
-            fi
-            echo "main nightly version=${{ inputs.nightly_tag_main }}"
-            echo "base nightly version=${{ inputs.nightly_tag_base }}"
-            echo "building image for nightly_version=${{ steps.resolve-nightly-tag.outputs.nightly-tag }}"
+          if [[ "${{ inputs.release_type }}" == "main" && "${{ inputs.main_version }}" == '' ]]; then
+            echo "Must specify a main version for main release type."
+            exit 1
+          fi
 
-            # Strip leading v from nightly tag main if present
-            version=${{ inputs.nightly_tag_main }}
-            version=${version#v}
+          if [[ "${{ inputs.release_type }}" == "main-ep" && "${{ inputs.main_version }}" == '' ]]; then
+            echo "Must specify a main version for main-ep release type."
+            exit 1
+          fi
+
+          if [[ "${{ inputs.release_type }}" == "nightly-main" && "${{ inputs.main_version }}" == '' ]]; then
+            echo "Must specify a main version for nightly-main release type."
+            exit 1
+          fi
+
+          if [[ "${{ inputs.release_type }}" == "base" || "${{ inputs.release_type }}" == "nightly-base" ]]; then
+            version=${{ inputs.base_version }}
+            echo "base version=${{ inputs.base_version }}"
+            echo version=$version
             echo version=$version >> $GITHUB_OUTPUT
-          elif [[ "${{ inputs.version }}" != '' ]]; then
-            # strip leading v if present
-            version=${{ inputs.version }}
-            version=${version#v}
+          elif [[ "${{ inputs.release_type }}" == "main" || "${{ inputs.release_type }}" == "main-ep"  || "${{ inputs.release_type }}" == "nightly-main" ]]; then
+            version=${{ inputs.main_version }}
             echo version=$version
             echo version=$version >> $GITHUB_OUTPUT
           else
@@ -149,7 +116,7 @@ jobs:
             exit 1
           fi
       - name: Get Version Base
-        if: ${{ inputs.version == '' && inputs.release_type == 'base' }}
+        if: ${{ inputs.base_version == '' && (inputs.release_type == 'base' || inputs.release_type == 'nightly-base') }}
         id: get-version-base
         run: |
           version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//')
@@ -160,7 +127,7 @@ jobs:
           echo version=$version
           echo version=$version >> $GITHUB_OUTPUT
       - name: Get Version Main
-        if: ${{ inputs.version == '' && (inputs.release_type == 'main' || inputs.release_type == 'main-ep') }}
+        if: ${{ inputs.main_version == '' && (inputs.release_type == 'main' || inputs.release_type == 'main-ep' || inputs.release_type == 'nightly-main') }}
         id: get-version-main
         run: |
           version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
@@ -178,11 +145,11 @@ jobs:
         id: set-vars
         run: |
           nightly_suffix=''
-          if [[ "${{ needs.get-version.outputs.nightly-build }}" == "true" ]]; then
+          if [[ "${{ inputs.release_type }}" == "nightly-base" || "${{ inputs.release_type }}" == "nightly-main" ]]; then
             nightly_suffix="-nightly"
           fi
 
-          if [[ "${{ inputs.release_type }}" == "base" ]]; then
+          if [[ "${{ inputs.release_type }}" == "base" || "${{ inputs.release_type }}" == "nightly-base" ]]; then
             # LANGFLOW-BASE RELEASE
             echo "docker_tags=langflowai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
             echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
@@ -198,7 +165,7 @@ jobs:
               echo "docker_tags=langflowai/langflow-ep${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow-ep${nightly_suffix}:latest" >> $GITHUB_OUTPUT
               echo "ghcr_tags=ghcr.io/langflow-ai/langflow-ep${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow-ep${nightly_suffix}:latest" >> $GITHUB_OUTPUT
               echo "file=./docker/build_and_push_ep.Dockerfile" >> $GITHUB_OUTPUT
-            elif [[ "${{ inputs.release_type }}" == "main" ]]; then
+            elif [[ "${{ inputs.release_type }}" == "main" || "${{ inputs.release_type }}" == "nightly-main" ]]; then
               # LANGFLOW-MAIN RELEASE
               echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
               echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
@@ -215,14 +182,13 @@ jobs:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.nightly_tag_main || github.ref }}
-          #ref: ${{ needs.get-version.outputs.version && format('v{0}', needs.get-version.outputs.version) || github.ref }}
+          ref: ${{ inputs.ref || inputs.main_version || github.ref }}
           persist-credentials: true
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
       - name: Install the project
         run: |
-          if [[ "${{ inputs.release_type }}" == "base" ]]; then
+          if [[ "${{ inputs.release_type }}" == "base" || "${{ inputs.release_type }}" == "nightly-base" ]]; then
             uv sync --directory src/backend/base --no-dev --no-sources
           else
             uv sync --no-dev --no-sources
@@ -274,25 +240,25 @@ jobs:
         include:
           - component: docker-backend
             dockerfile: ./docker/build_and_push_backend.Dockerfile
-            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-backend{0}:{1}', needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) || format('langflowai/langflow-backend{0}:{1},langflowai/langflow-backend{0}:latest',  needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) }}
-            langflow_image: langflowai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version }}
+            tags: langflowai/langflow-backend:${{ needs.get-version.outputs.version }},langflowai/langflow-backend:latest
+            langflow_image: langflowai/langflow:${{ needs.get-version.outputs.version }}
           - component: docker-frontend
             dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
-            tags: ${{ inputs.pre_release == 'true' && format('langflowai/langflow-frontend{0}:{1}', needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) || format('langflowai/langflow-frontend{0}:{1},langflowai/langflow-frontend{0}:latest',  needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) }}
-            langflow_image: langflowai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version }}
+            tags: langflowai/langflow-frontend:${{ needs.get-version.outputs.version }},langflowai/langflow-frontend:latest
+            langflow_image: langflowai/langflow:${{ needs.get-version.outputs.version }}
           - component: ghcr-backend
             dockerfile: ./docker/build_and_push_backend.Dockerfile
-            tags: ${{ format('ghcr.io/langflow-ai/langflow-backend{0}:{1},ghcr.io/langflow-ai/langflow-backend{0}:latest', needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) }}
-            langflow_image: ghcr.io/langflow-ai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version }}
+            tags: ghcr.io/langflow-ai/langflow-backend:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow-backend:latest
+            langflow_image: ghcr.io/langflow-ai/langflow:${{ needs.get-version.outputs.version }}
           - component: ghcr-frontend
             dockerfile: ./docker/frontend/build_and_push_frontend.Dockerfile
-            tags: ${{ format('ghcr.io/langflow-ai/langflow-frontend{0}:{1},ghcr.io/langflow-ai/langflow-frontend{0}:latest', needs.get-version.outputs.nightly-build && '-nightly' || '', needs.get-version.outputs.version) }}
-            langflow_image: ghcr.io/langflow-ai/langflow${{ needs.get-version.outputs.nightly-build && '-nightly' || '' }}:${{ needs.get-version.outputs.version }}
+            tags: ghcr.io/langflow-ai/langflow-frontend:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow-frontend:latest
+            langflow_image: ghcr.io/langflow-ai/langflow:${{ needs.get-version.outputs.version }}
     steps:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.nightly_tag_main || github.ref }}
+          ref: ${{ inputs.ref || inputs.main_version || github.ref }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -329,7 +295,7 @@ jobs:
 
   restart-space:
     name: Restart HuggingFace Spaces
-    if: ${{ inputs.release_type == 'main' && needs.get-version.outputs.nightly-build == 'false' }}
+    if: ${{ inputs.release_type == 'main' }}
     runs-on: ubuntu-latest
     needs: [build, get-version]
     strategy:
@@ -340,10 +306,13 @@ jobs:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.nightly_tag_main || github.ref }}
+          ref: ${{ inputs.ref || inputs.main_version || github.ref }}
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
 
       - name: Restart HuggingFace Spaces Build
         run: |
           uv run ./scripts/factory_restart_space.py --space "Langflow/Langflow" --token ${{ secrets.HUGGINGFACE_API_TOKEN }}
+
+
+
