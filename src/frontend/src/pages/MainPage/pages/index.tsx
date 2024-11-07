@@ -7,7 +7,7 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
-import { useIsFetching, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import useFileDrop from "../hooks/use-on-file-drop";
@@ -27,10 +27,6 @@ export default function CollectionPage(): JSX.Element {
   const folderToEdit = useFolderStore((state) => state.folderToEdit);
   const folders = useFolderStore((state) => state.folders);
   const queryClient = useQueryClient();
-  const isPendingFolders = !!useIsFetching({
-    queryKey: ["useGetFolders"],
-    exact: false,
-  });
 
   useEffect(() => {
     return () => queryClient.removeQueries({ queryKey: ["useGetFolder"] });
@@ -77,7 +73,7 @@ export default function CollectionPage(): JSX.Element {
           />
         )}
       <main className="flex flex-1">
-        {!isPendingFolders && flows && examples && folders ? (
+        {flows && examples && folders ? (
           <div className={`relative mx-auto h-full w-full overflow-y-scroll`}>
             <CardsWrapComponent
               onFileDrop={handleFileDrop}
