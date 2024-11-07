@@ -14,7 +14,7 @@ export const EmptyFolder = ({ setOpenModal }: EmptyFolderProps) => {
       <div className="text-container">
         <div className="relative z-20 flex w-full flex-col items-center justify-center gap-2">
           <h3
-            className="font-chivo pt-5 text-2xl font-semibold"
+            className="pt-5 font-chivo text-2xl font-semibold"
             data-testid="mainpage_title"
           >
             {folders?.length > 1 ? "Empty folder" : "Start building"}
