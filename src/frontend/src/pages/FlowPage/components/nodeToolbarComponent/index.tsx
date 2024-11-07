@@ -338,12 +338,18 @@ export default function NodeToolbarComponent({
   };
 
   const [toolMode, setToolMode] = useState(() => {
-    // Check if there is exactly one output named 'component_as_tool'
-    return (
-      data.node?.outputs?.some(
-        (output) => output.name === "component_as_tool",
-      ) ?? false
+    // Check if tool mode is explicitly set on the node
+    const hasToolModeProperty = data.node?.tool_mode;
+    if (hasToolModeProperty !== undefined) {
+      return hasToolModeProperty;
+    }
+
+    // Otherwise check if node has component_as_tool output
+    const hasComponentAsTool = data.node?.outputs?.some(
+      (output) => output.name === "component_as_tool",
     );
+
+    return hasComponentAsTool ?? false;
   });
 
   const postToolModeValue = usePostTemplateValue({
