@@ -104,7 +104,7 @@ export default function AppHeader(): JSX.Element {
             <Button
               ref={notificationRef}
               variant="ghost"
-              className={` ${activeState === "notifications" ? "bg-accent text-accent-foreground" : ""}`}
+              className={`relative ${activeState === "notifications" ? "bg-accent text-accent-foreground" : ""}`}
               onClick={() =>
                 setActiveState((prev) =>
                   prev === "notifications" ? null : "notifications",
@@ -113,7 +113,9 @@ export default function AppHeader(): JSX.Element {
             >
               <span
                 className={
-                  notificationCenter ? `header-notifications-dot` : "hidden"
+                  notificationCenter
+                    ? `absolute left-[31px] top-[10px] block h-1 w-1 rounded-full bg-destructive`
+                    : "hidden"
                 }
               />
               <ForwardedIconComponent

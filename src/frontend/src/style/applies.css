@@ -612,9 +612,6 @@
   .header-notifications {
     @apply absolute right-[3px] h-1.5 w-1.5 rounded-full bg-destructive;
   }
-  .header-notifications-dot {
-    @apply absolute left-[33px] top-[9px] block h-1.5 w-1.5 rounded-full bg-destructive dark:bg-red-500;
-  }
   .input-component-div {
     @apply pointer-events-none relative cursor-not-allowed;
   }
