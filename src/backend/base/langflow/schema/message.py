@@ -350,18 +350,17 @@ class ErrorMessage(Message):
         flow_id: str | None = None,
     ) -> None:
         # Get the error reason
-        reason = f"**{exception.__class__.__name__}**\n"
+        reason = ""
         if hasattr(exception, "body") and "message" in exception.body:
-            reason += f" - **{exception.body.get('message')}**\n"
+            reason += f"{exception.body.get('message')}\n"
         elif hasattr(exception, "code"):
             reason += f" - **Code: {exception.code}**\n"
         elif hasattr(exception, "args") and exception.args:
-            reason += f" - **Details: {exception.args[0]}**\n"
+            reason += f"**{exception.args[0]}**\n"
         elif isinstance(exception, ValidationError):
-            reason += f" - **Details:**\n\n```python\n{exception!s}\n```\n"
+            reason += f"```python\n{exception!s}\n```\n"
         else:
-            reason += " - **An unknown error occurred.**\n"
-
+            reason += f"**{exception.__class__.__name__}**\n"
         # Get the sender ID
         if trace_name:
             match = re.search(r"\((.*?)\)", trace_name)
