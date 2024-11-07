@@ -25,12 +25,14 @@ export default function GlobalVariableModal({
   initialData,
   open: myOpen,
   setOpen: mySetOpen,
+  disabled = false,
 }: {
   children?: JSX.Element;
   asChild?: boolean;
   initialData?: GlobalVariable;
   open?: boolean;
   setOpen?: (a: boolean | ((o?: boolean) => boolean)) => void;
+  disabled?: boolean;
 }): JSX.Element {
   const [key, setKey] = useState(initialData?.name ?? "");
   const [value, setValue] = useState(initialData?.value ?? "");
@@ -122,6 +124,7 @@ export default function GlobalVariableModal({
       setOpen={setOpen}
       size="x-small"
       onSubmit={submitForm}
+      disable={disabled}
     >
       <BaseModal.Header
         description={
@@ -138,7 +141,9 @@ export default function GlobalVariableModal({
           aria-hidden="true"
         />
       </BaseModal.Header>
-      <BaseModal.Trigger asChild={asChild}>{children}</BaseModal.Trigger>
+      <BaseModal.Trigger disable={disabled} asChild={asChild}>
+        {children}
+      </BaseModal.Trigger>
       <BaseModal.Content>
         <div className="flex h-full w-full flex-col gap-4 align-middle">
           <Label>Variable Name</Label>
