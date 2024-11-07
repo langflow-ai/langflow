@@ -303,6 +303,7 @@ export default function NodeToolbarComponent({
           setNoticeData,
           "tool_mode",
         );
+        updateNodeInternals(data.id);
         break;
     }
 
