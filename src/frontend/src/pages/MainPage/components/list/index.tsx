@@ -13,7 +13,6 @@ import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { FlowType } from "@/types/flow";
-import { getInputsAndOutputs } from "@/utils/storeUtils";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import useDescriptionModal from "../../oldComponents/componentsComponent/hooks/use-description-modal";
@@ -29,7 +28,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const { deleteFlow } = useDeleteFlow();
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
+  /* const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow); */
   const { folderId } = useParams();
   const isComponent = flowData.is_component ?? false;
   const setFlowToCanvas = useFlowsManagerStore(
@@ -39,13 +38,13 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
 
   const editFlowLink = `/flow/${flowData.id}${folderId ? `/folder/${folderId}` : ""}`;
 
-  function hasPlayground(flow?: FlowType) {
+  /* function hasPlayground(flow?: FlowType) {
     if (!flow) {
       return false;
     }
     const { inputs, outputs } = getInputsAndOutputs(flow?.data?.nodes ?? []);
     return inputs.length > 0 || outputs.length > 0;
-  }
+  } */
 
   /* const handlePlaygroundClick = () => {
     track("Playground Button Clicked", { flowId: flowData.id });
