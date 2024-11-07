@@ -56,6 +56,7 @@ class CurrentDateComponent(Component):
             ],
             value="UTC",
             info="Select the timezone for the current date and time.",
+            tool_mode=True
         ),
     ]
     outputs = [
