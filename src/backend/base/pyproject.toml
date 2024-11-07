@@ -161,7 +161,7 @@ dependencies = [
     "assemblyai>=0.33.0",
     "fastapi-pagination>=0.12.29",
     "defusedxml>=0.7.1",
-    "pymupdf~=1.24.13",
+    "pypdf~=5.1.0",
 ]
 
 [project.urls]

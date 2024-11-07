@@ -127,11 +127,11 @@ def read_docx_file(file_path: str) -> str:
 
 
 def parse_pdf_to_text(file_path: str) -> str:
-    import fitz
+    from pypdf import PdfReader
 
-    # Open and process he PDF file
-    with fitz.open(file_path) as pdf:
-        return "\n\n".join([page.get_text() for page in pdf])
+    with Path(file_path).open("rb") as f:
+        reader = PdfReader(f)
+        return "\n\n".join([page.extract_text() for page in reader.pages])
 
 
 def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
