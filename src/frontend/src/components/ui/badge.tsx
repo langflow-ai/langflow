@@ -15,15 +15,20 @@ const badgeVariants = cva(
         destructive:
           "bg-destructive hover:bg-destructive/80 border-transparent text-destructive-foreground",
         outline: "text-primary/80 border-ring/60",
-        secondaryStatic: "bg-input text-muted-foreground",
-        pinkStatic: "bg-accent-pink text-accent-pink-foreground",
+        secondaryStatic: "bg-muted text-muted-foreground border-0",
+        pinkStatic: "bg-accent-pink text-accent-pink-foreground border-0",
+        emerald:
+          "bg-accent-emerald text-accent-emerald-foreground hover:bg-accent-emerald-hover",
+        successStatic:
+          "bg-accent-emerald text-accent-emerald-foreground border-0",
+        errorStatic: "bg-error-background text-error-foreground border-0",
       },
       size: {
         sm: "h-4 text-xs",
         md: "h-5 text-sm",
         lg: "h-6 text-base",
         sq: "h-6 px-1.5 text-sm font-medium rounded-md",
-        xq: "h-5 px-1 text-xs font-medium rounded-md",
+        xq: "h-6 px-1.5 text-xs font-medium rounded-sm",
       },
     },
     defaultVariants: {

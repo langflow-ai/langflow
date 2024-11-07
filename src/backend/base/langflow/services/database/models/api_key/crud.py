@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlmodel import Session, select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
 
@@ -12,13 +13,13 @@ if TYPE_CHECKING:
     from sqlmodel.sql.expression import SelectOfScalar
 
 
-def get_api_keys(session: Session, user_id: UUID) -> list[ApiKeyRead]:
+async def get_api_keys(session: AsyncSession, user_id: UUID) -> list[ApiKeyRead]:
     query: SelectOfScalar = select(ApiKey).where(ApiKey.user_id == user_id)
-    api_keys = session.exec(query).all()
+    api_keys = (await session.exec(query)).all()
     return [ApiKeyRead.model_validate(api_key) for api_key in api_keys]
 
 
-def create_api_key(session: Session, api_key_create: ApiKeyCreate, user_id: UUID) -> UnmaskedApiKeyRead:
+async def create_api_key(session: AsyncSession, api_key_create: ApiKeyCreate, user_id: UUID) -> UnmaskedApiKeyRead:
     # Generate a random API key with 32 bytes of randomness
     generated_api_key = f"sk-{secrets.token_urlsafe(32)}"
 
@@ -30,20 +31,20 @@ def create_api_key(session: Session, api_key_create: ApiKeyCreate, user_id: UUID
     )
 
     session.add(api_key)
-    session.commit()
-    session.refresh(api_key)
+    await session.commit()
+    await session.refresh(api_key)
     unmasked = UnmaskedApiKeyRead.model_validate(api_key, from_attributes=True)
     unmasked.api_key = generated_api_key
     return unmasked
 
 
-def delete_api_key(session: Session, api_key_id: UUID) -> None:
-    api_key = session.get(ApiKey, api_key_id)
+async def delete_api_key(session: AsyncSession, api_key_id: UUID) -> None:
+    api_key = await session.get(ApiKey, api_key_id)
     if api_key is None:
         msg = "API Key not found"
         raise ValueError(msg)
-    session.delete(api_key)
-    session.commit()
+    await session.delete(api_key)
+    await session.commit()
 
 
 def check_key(session: Session, api_key: str) -> ApiKey | None:

@@ -108,7 +108,9 @@ const CanvasControls = ({ children }) => {
         tooltipText={isInteractive ? "Lock" : "Unlock"}
         onClick={onToggleInteractivity}
         backgroundClasses={isInteractive ? "" : "bg-destructive"}
-        iconClasses={isInteractive ? "" : "text-primary-foreground"}
+        iconClasses={
+          isInteractive ? "" : "text-primary-foreground dark:text-primary"
+        }
         testId="lock_unlock"
       />
       {children}

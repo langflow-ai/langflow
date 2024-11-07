@@ -529,7 +529,7 @@ async def added_webhook_test(client, json_webhook_test, logged_in_headers):
 
 
 @pytest.fixture
-async def flow_component(client: TestClient, logged_in_headers):
+async def flow_component(client: AsyncClient, logged_in_headers):
     from langflow.components.inputs import ChatInput
 
     chat_input = ChatInput()

@@ -1,14 +1,13 @@
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
-import { log } from "console";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Handle, Position, useViewport } from "reactflow";
+import { Handle, Position } from "reactflow";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import {
   isValidConnection,
   scapedJSONStringfy,
 } from "../../../../utils/reactflowUtils";
-import { classNames, cn, groupByFamily } from "../../../../utils/utils";
+import { cn, groupByFamily } from "../../../../utils/utils";
 import HandleTooltipComponent from "../HandleTooltipComponent";
 
 export default function HandleRenderComponent({
@@ -42,10 +41,10 @@ export default function HandleRenderComponent({
   nodeId: string;
   colorName?: string[];
 }) {
-  const handleColorName = colorName?.[0];
+  const handleColorName = colorName?.[0] ?? "";
 
-  const innerColorName = `inner-${handleColorName}`;
-  const innerForegroundColorName = `${innerColorName}-foreground`;
+  const accentColorName = `accent-${handleColorName}`;
+  const accentForegroundColorName = `${accentColorName}-foreground`;
 
   const setHandleDragging = useFlowStore((state) => state.setHandleDragging);
   const setFilterType = useFlowStore((state) => state.setFilterType);
@@ -156,7 +155,7 @@ export default function HandleRenderComponent({
             source: undefined,
             sourceHandle: undefined,
             type: tooltipTitle,
-            color: colors[0],
+            color: handleColorName,
           }
         : {
             sourceHandle: myId,
@@ -164,7 +163,7 @@ export default function HandleRenderComponent({
             target: undefined,
             targetHandle: undefined,
             type: tooltipTitle,
-            color: colors[0],
+            color: handleColorName,
           },
     [left, myId, nodeId, tooltipTitle, colors],
   );
@@ -175,14 +174,14 @@ export default function HandleRenderComponent({
     () =>
       isNullHandle
         ? dark
-          ? "conic-gradient(hsl(var(--inner-gray)) 0deg 360deg)"
-          : "conic-gradient(hsl(var(--inner-gray-foreground)) 0deg 360deg)"
+          ? "conic-gradient(hsl(var(--accent-gray)) 0deg 360deg)"
+          : "conic-gradient(hsl(var(--accent-gray-foreground)) 0deg 360deg)"
         : "conic-gradient(" +
           colorName!
             .concat(colorName![0])
             .map(
               (color, index) =>
-                `hsl(var(--inner-${color}))` +
+                `hsl(var(--accent-${color}))` +
                 " " +
                 ((360 / colors.length) * index - 360 / (colors.length * 4)) +
                 "deg " +
@@ -204,34 +203,34 @@ export default function HandleRenderComponent({
       styleSheet.textContent = `
         @keyframes pulseNeon {
           0% {
-            box-shadow: 0 0 0 2px hsl(var(--border)),
-                        0 0 2px hsl(var(--inner-${colorName![0]})),
-                        0 0 4px hsl(var(--inner-${colorName![0]})),
-                        0 0 6px hsl(var(--inner-${colorName![0]})),
-                        0 0 8px hsl(var(--inner-${colorName![0]})),
-                        0 0 10px hsl(var(--inner-${colorName![0]})),
-                        0 0 15px hsl(var(--inner-${colorName![0]})),
-                        0 0 20px hsl(var(--inner-${colorName![0]}));
+            box-shadow: 0 0 0 2px hsl(var(--node-ring)),
+                        0 0 2px hsl(var(--accent-${colorName![0]})),
+                        0 0 4px hsl(var(--accent-${colorName![0]})),
+                        0 0 6px hsl(var(--accent-${colorName![0]})),
+                        0 0 8px hsl(var(--accent-${colorName![0]})),
+                        0 0 10px hsl(var(--accent-${colorName![0]})),
+                        0 0 15px hsl(var(--accent-${colorName![0]})),
+                        0 0 20px hsl(var(--accent-${colorName![0]}));
           }
           50% {
-            box-shadow: 0 0 0 2px hsl(var(--border)),
-                        0 0 4px hsl(var(--inner-${colorName![0]})),
-                        0 0 8px hsl(var(--inner-${colorName![0]})),
-                        0 0 12px hsl(var(--inner-${colorName![0]})),
-                        0 0 16px hsl(var(--inner-${colorName![0]})),
-                        0 0 20px hsl(var(--inner-${colorName![0]})),
-                        0 0 25px hsl(var(--inner-${colorName![0]})),
-                        0 0 30px hsl(var(--inner-${colorName![0]}));
+            box-shadow: 0 0 0 2px hsl(var(--node-ring)),
+                        0 0 4px hsl(var(--accent-${colorName![0]})),
+                        0 0 8px hsl(var(--accent-${colorName![0]})),
+                        0 0 12px hsl(var(--accent-${colorName![0]})),
+                        0 0 16px hsl(var(--accent-${colorName![0]})),
+                        0 0 20px hsl(var(--accent-${colorName![0]})),
+                        0 0 25px hsl(var(--accent-${colorName![0]})),
+                        0 0 30px hsl(var(--accent-${colorName![0]}));
           }
           100% {
-            box-shadow: 0 0 0 2px hsl(var(--border)),
-                        0 0 2px hsl(var(--inner-${colorName![0]})),
-                        0 0 4px hsl(var(--inner-${colorName![0]})),
-                        0 0 6px hsl(var(--inner-${colorName![0]})),
-                        0 0 8px hsl(var(--inner-${colorName![0]})),
-                        0 0 10px hsl(var(--inner-${colorName![0]})),
-                        0 0 15px hsl(var(--inner-${colorName![0]})),
-                        0 0 20px hsl(var(--inner-${colorName![0]}));
+            box-shadow: 0 0 0 2px hsl(var(--node-ring)),
+                        0 0 2px hsl(var(--accent-${colorName![0]})),
+                        0 0 4px hsl(var(--accent-${colorName![0]})),
+                        0 0 6px hsl(var(--accent-${colorName![0]})),
+                        0 0 8px hsl(var(--accent-${colorName![0]})),
+                        0 0 10px hsl(var(--accent-${colorName![0]})),
+                        0 0 15px hsl(var(--accent-${colorName![0]})),
+                        0 0 20px hsl(var(--accent-${colorName![0]}));
           }
         }
       `;
@@ -265,9 +264,34 @@ export default function HandleRenderComponent({
   const handleRef = useRef<HTMLDivElement>(null);
   const invisibleDivRef = useRef<HTMLDivElement>(null);
 
+  const getHandleClasses = ({
+    left,
+    showNode,
+  }: {
+    left: boolean;
+    showNode: boolean;
+  }) => {
+    return cn(
+      "noflow nowheel nopan noselect absolute left-3.5 -translate-y-1/2 translate-x-1/3 cursor-crosshair rounded-full",
+      left && "-left-5 -translate-x-1/2",
+      left && !showNode && "-translate-y-5 translate-x-4",
+      !left && !showNode && "-translate-y-5 translate-x-[10.8rem]",
+    );
+  };
+
+  const handleClick = () => {
+    setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
+    setFilterType(currentFilter);
+    if (filterOpenHandle && filterType) {
+      onConnect(getConnection(filterType));
+      setFilterType(undefined);
+      setFilterEdge([]);
+    }
+  };
+
   return (
     <div>
-      <div className="relative">
+      <div className={`${!showNode ? "" : "relative"}`}>
         <ShadTooltip
           open={openTooltip}
           setOpen={setOpenTooltip}
@@ -278,11 +302,13 @@ export default function HandleRenderComponent({
           content={
             <HandleTooltipComponent
               isInput={left}
-              colors={colors}
               tooltipTitle={tooltipTitle}
               isConnecting={!!filterPresent && !ownHandle}
               isCompatible={openHandle}
               isSameNode={sameNode && !ownHandle}
+              accentColorName={accentColorName}
+              accentForegroundColorName={accentForegroundColorName}
+              left={left}
             />
           }
           side={left ? "left" : "right"}
@@ -299,18 +325,11 @@ export default function HandleRenderComponent({
             isValidConnection={(connection) =>
               isValidConnection(connection, nodes, edges)
             }
-            className={classNames(
-              `group/handle z-50 h-12 w-12 border-none bg-transparent transition-all`,
+            className={cn(
+              `group/handle z-50 transition-all`,
+              !showNode && "no-show",
             )}
-            onClick={() => {
-              setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
-              setFilterType(currentFilter);
-              if (filterOpenHandle && filterType) {
-                onConnect(getConnection(filterType));
-                setFilterType(undefined);
-                setFilterEdge([]);
-              }
-            }}
+            onClick={handleClick}
             onMouseUp={() => {
               setOpenTooltip(false);
             }}
@@ -342,22 +361,19 @@ export default function HandleRenderComponent({
             !showNode ? (left ? "target" : "source") : left ? "left" : "right"
           }`}
           ref={invisibleDivRef}
-          className={cn(
-            "noflow nowheel nopan noselect absolute left-3.5 -translate-y-1/2 translate-x-1/3 cursor-crosshair rounded-full",
-            left && "-left-5 -translate-x-1/2",
-          )}
+          className={getHandleClasses({ left, showNode })}
           style={{
             background: isNullHandle ? "hsl(var(--border))" : handleColor,
             width: "10px",
             height: "10px",
             transition: "all 0.2s",
             boxShadow: getNeonShadow(
-              innerForegroundColorName,
+              accentForegroundColorName,
               isHovered || openHandle,
             ),
             animation:
               (isHovered || openHandle) && !isNullHandle
-                ? "pulseNeon 0.7s ease-in-out infinite"
+                ? "pulseNeon 1.1s ease-in-out infinite"
                 : "none",
             border: isNullHandle ? "2px solid hsl(var(--muted))" : "none",
           }}

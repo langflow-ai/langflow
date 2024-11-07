@@ -80,7 +80,7 @@ export default function InputGlobalComponent({
       optionsPlaceholder={"Global Variables"}
       optionsIcon="Globe"
       optionsButton={
-        <GlobalVariableModal>
+        <GlobalVariableModal disabled={disabled}>
           <CommandItem value="doNotFilter-addNewVariable">
             <ForwardedIconComponent
               name="Plus"

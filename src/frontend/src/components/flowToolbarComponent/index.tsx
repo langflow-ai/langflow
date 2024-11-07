@@ -1,20 +1,17 @@
 import ShadTooltip from "@/components/shadTooltipComponent";
-import { ENABLE_API, ENABLE_NEW_IO_MODAL } from "@/customization/feature-flags";
+import { ENABLE_API } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
+import IOModal from "@/modals/IOModal/newModal";
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { Panel } from "reactflow";
 import ApiModal from "../../modals/apiModal";
-import IOModalOld from "../../modals/IOModal";
-import IOModalNew from "../../modals/IOModal/newModal";
 import ShareModal from "../../modals/shareModal";
 import useFlowStore from "../../stores/flowStore";
 import { useShortcutsStore } from "../../stores/shortcuts";
 import { useStoreStore } from "../../stores/storeStore";
 import { classNames, isThereModal } from "../../utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
-
-const IOModal = ENABLE_NEW_IO_MODAL ? IOModalNew : IOModalOld;
 
 export default function FlowToolbar(): JSX.Element {
   const preventDefault = true;
@@ -79,10 +76,10 @@ export default function FlowToolbar(): JSX.Element {
           <button
             disabled={!hasApiKey || !validApiKey || !hasStore}
             className={classNames(
-              "share-button",
+              "relative inline-flex h-8 w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out",
               !hasApiKey || !validApiKey || !hasStore
-                ? "text-muted-foreground"
-                : "",
+                ? "cursor-not-allowed text-muted-foreground"
+                : "hover:bg-accent",
             )}
             data-testid="shared-button-flow"
             onClick={() => {
@@ -93,13 +90,13 @@ export default function FlowToolbar(): JSX.Element {
               <ForwardedIconComponent
                 name="Share2"
                 className={classNames(
-                  "-m-0.5 -ml-1 h-4 w-4",
+                  "h-4 w-4",
                   !hasApiKey || !validApiKey || !hasStore
                     ? "extra-side-bar-save-disable"
                     : "",
                 )}
               />
-              Share
+              <span className="hidden md:block">Share</span>
             </>
           </button>
         </ShadTooltip>
@@ -134,26 +131,26 @@ export default function FlowToolbar(): JSX.Element {
                 >
                   <div
                     data-testid="playground-btn-flow-io"
-                    className="relative inline-flex w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-accent"
+                    className="relative inline-flex h-8 w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold transition-all duration-500 ease-in-out hover:bg-accent"
                   >
                     <ForwardedIconComponent
                       name="Play"
                       className={"h-4 w-4 transition-all"}
                     />
-                    Playground
+                    <span className="hidden md:block">Playground</span>
                   </div>
                 </IOModal>
               ) : (
                 <ShadTooltip content="Add a Chat Input or Chat Output to use the playground">
                   <div
-                    className={`relative inline-flex w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out`}
+                    className={`relative inline-flex h-8 w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out`}
                     data-testid="playground-btn-flow"
                   >
                     <ForwardedIconComponent
                       name="BotMessageSquareIcon"
                       className={"h-5 w-5 transition-all"}
                     />
-                    Playground
+                    <span className="hidden md:block">Playground</span>
                   </div>
                 </ShadTooltip>
               )}
@@ -169,14 +166,14 @@ export default function FlowToolbar(): JSX.Element {
                     >
                       <div
                         className={classNames(
-                          "relative inline-flex w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-accent",
+                          "relative inline-flex h-8 w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-accent",
                         )}
                       >
                         <ForwardedIconComponent
                           name="Code2"
                           className={"h-4 w-4"}
                         />
-                        API
+                        <span className="hidden md:block">API</span>
                       </div>
                     </ApiModal>
                   )}

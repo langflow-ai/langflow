@@ -159,9 +159,11 @@ export default function InputComponent({
           className={cn(
             password && selectedOption === "" ? "right-8" : "right-0",
             "absolute inset-y-0 flex items-center pr-2.5",
+            disabled && "cursor-not-allowed opacity-50",
           )}
         >
           <button
+            disabled={disabled}
             onClick={(e) => {
               if (disabled) return;
               setShowOptions(!showOptions);

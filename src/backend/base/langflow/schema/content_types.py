@@ -1,12 +1,20 @@
-from typing import Any, Literal, TypeAlias
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+from typing_extensions import TypedDict
+
+
+class HeaderDict(TypedDict, total=False):
+    title: str | None
+    icon: str | None
 
 
 class BaseContent(BaseModel):
     """Base class for all content types."""
 
     type: str = Field(..., description="Type of the content")
+    duration: int | None = None
+    header: HeaderDict | None = Field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return self.model_dump()
@@ -32,6 +40,7 @@ class TextContent(BaseContent):
 
     type: Literal["text"] = Field(default="text")
     text: str
+    duration: int | None = None
 
 
 class MediaContent(BaseContent):
@@ -58,37 +67,14 @@ class CodeContent(BaseContent):
     title: str | None = None
 
 
-class ToolStartContent(BaseContent):
+class ToolContent(BaseContent):
     """Content type for tool start content."""
 
-    type: Literal["tool_start"] = Field(default="tool_start")
-    tool_name: str
-    tool_input: dict[str, Any]
+    model_config = ConfigDict(populate_by_name=True)
 
-
-class ToolEndContent(BaseContent):
-    """Content type for tool end content."""
-
-    type: Literal["tool_end"] = Field(default="tool_end")
-    tool_name: str
-    tool_output: Any
-
-
-class ToolErrorContent(BaseContent):
-    """Content type for tool error content."""
-
-    type: Literal["tool_error"] = Field(default="tool_error")
-    tool_name: str
-    tool_error: str
-
-
-ContentTypes: TypeAlias = (
-    ToolStartContent
-    | ToolEndContent
-    | ToolErrorContent
-    | ErrorContent
-    | TextContent
-    | MediaContent
-    | CodeContent
-    | JSONContent
-)
+    type: Literal["tool_use"] = Field(default="tool_use")
+    name: str | None = None
+    tool_input: dict[str, Any] = Field(default_factory=dict, alias="input")
+    output: Any | None = None
+    error: Any | None = None
+    duration: int | None = None

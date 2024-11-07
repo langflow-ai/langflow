@@ -87,6 +87,9 @@ def create_default_event_manager(queue):
     manager.register_event("on_vertices_sorted", "vertices_sorted")
     manager.register_event("on_error", "error")
     manager.register_event("on_end", "end")
-    manager.register_event("on_message", "message")
+    manager.register_event("on_message", "add_message")
+    manager.register_event("on_remove_message", "remove_message")
     manager.register_event("on_end_vertex", "end_vertex")
+    manager.register_event("on_build_start", "build_start")
+    manager.register_event("on_build_end", "build_end")
     return manager
