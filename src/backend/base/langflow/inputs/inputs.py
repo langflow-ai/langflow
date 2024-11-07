@@ -407,7 +407,7 @@ class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
     value: dict | None = {}
 
 
-class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin):
+class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin,ToolModeMixin):
     """Represents a dropdown input field.
 
     This class represents a dropdown input field and provides functionality for handling dropdown values.
