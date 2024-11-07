@@ -67,7 +67,7 @@ class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
     field_type: SerializableFieldTypes = FieldTypes.OTHER
 
 
-class DataInput(HandleInput, InputTraceMixin, ListableInputMixin,ToolModeMixin):
+class DataInput(HandleInput, InputTraceMixin, ListableInputMixin, ToolModeMixin):
     """Represents an Input that has a Handle that receives a Data object.
 
     Attributes:
@@ -77,7 +77,7 @@ class DataInput(HandleInput, InputTraceMixin, ListableInputMixin,ToolModeMixin):
     input_types: list[str] = ["Data"]
 
 
-class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin,ToolModeMixin):
+class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.PROMPT
 
 
@@ -407,7 +407,7 @@ class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
     value: dict | None = {}
 
 
-class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin,ToolModeMixin):
+class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a dropdown input field.
 
     This class represents a dropdown input field and provides functionality for handling dropdown values.
