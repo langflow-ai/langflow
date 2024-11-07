@@ -606,9 +606,6 @@
   .header-github-link:hover {
     @apply hover:bg-accent hover:text-accent-foreground;
   }
-  .header-github-display {
-    @apply -mr-px ml-1 flex h-8 items-center justify-center rounded-md rounded-l-none border bg-[white] px-2 text-sm dark:bg-[black];
-  }
   .header-notifications-box {
     @apply fixed left-0 top-0 h-screen w-screen;
   }
@@ -1272,7 +1269,7 @@
   }
 
   .toolbar-wrapper {
-    @apply flex items-center gap-1 rounded-xl border border-border bg-background p-1 shadow-sm h-10;
+    @apply flex h-10 items-center gap-1 rounded-xl border border-border bg-background p-1 shadow-sm;
   }
 }
 
