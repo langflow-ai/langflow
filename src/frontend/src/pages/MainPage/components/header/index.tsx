@@ -2,8 +2,8 @@ import ForwardedIconComponent from "@/components/genericIconComponent";
 import ShadTooltip from "@/components/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import { useFolderStore } from "@/stores/foldersStore";
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { cn } from "@/utils/utils";
 import { debounce } from "lodash";
 import { useCallback, useEffect, useState } from "react";
 
@@ -26,9 +26,8 @@ const HeaderComponent = ({
   setNewProjectModal,
   setSearch,
 }: HeaderComponentProps) => {
-  const navigate = useCustomNavigate();
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const { showFolderModal, setShowFolderModal } = useFolderStore();
+  const { open } = useSidebar();
 
   // Debounce the setSearch function from the parent
   const debouncedSetSearch = useCallback(
@@ -56,18 +55,22 @@ const HeaderComponent = ({
         className="flex items-center pb-8 text-xl font-semibold"
         data-testid="mainpage_title"
       >
-        <Button
-          variant="ghost"
-          className="mr-2 lg:hidden"
-          size="icon"
-          onClick={() => setShowFolderModal(!showFolderModal)}
-        >
-          <ForwardedIconComponent
-            name={showFolderModal ? "panel-right-open" : "panel-right-close"}
-            aria-hidden="true"
-            className="h-5 w-5 text-zinc-500 dark:text-zinc-400"
-          />
-        </Button>
+        <div className={cn("w-10 transition-all lg:hidden", open && "md:w-0")}>
+          <div
+            className={cn(
+              "relative left-0 opacity-100 transition-all",
+              open ? "md:opacity-0" : "",
+            )}
+          >
+            <SidebarTrigger>
+              <ForwardedIconComponent
+                name="PanelLeftOpen"
+                aria-hidden="true"
+                className="text-zinc-500 dark:text-zinc-400"
+              />
+            </SidebarTrigger>
+          </div>
+        </div>
         {folderName}
       </div>
       <div className="flex flex-row-reverse pb-8">
