@@ -62,19 +62,22 @@ export default function CollectionPage(): JSX.Element {
 
   return (
     <SidebarProvider>
-      {(flows?.length !== examples?.length || folders?.length > 1) && (
-        <SideBarFoldersButtonsComponent
-          handleChangeFolder={(id: string) => {
-            navigate(`all/folder/${id}`);
-          }}
-          handleDeleteFolder={(item) => {
-            setFolderToEdit(item);
-            setOpenDeleteFolderModal(true);
-          }}
-        />
-      )}
+      {flows &&
+        examples &&
+        folders &&
+        (flows?.length !== examples?.length || folders?.length > 1) && (
+          <SideBarFoldersButtonsComponent
+            handleChangeFolder={(id: string) => {
+              navigate(`all/folder/${id}`);
+            }}
+            handleDeleteFolder={(item) => {
+              setFolderToEdit(item);
+              setOpenDeleteFolderModal(true);
+            }}
+          />
+        )}
       <main className="flex flex-1">
-        {!isPendingFolders ? (
+        {!isPendingFolders && flows && examples && folders ? (
           <div className={`relative mx-auto h-full w-full overflow-y-scroll`}>
             <CardsWrapComponent
               onFileDrop={handleFileDrop}
