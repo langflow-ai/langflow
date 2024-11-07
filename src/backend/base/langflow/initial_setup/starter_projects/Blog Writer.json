@@ -1247,11 +1247,11 @@
   },
   "description": "This flow can be used to create a blog post following instructions from the user, using two other blogs as reference.",
   "endpoint_name": null,
+  "icon": "FileText",
   "id": "5e9b5662-0985-4d40-8ffe-b7f42fa86421",
   "is_component": false,
   "last_tested_version": "1.0.19.post1",
   "name": "Blog Writer",
-  "icon": "FileText",
   "tags": [
     "chatbots"
   ]
