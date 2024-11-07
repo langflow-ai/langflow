@@ -1,6 +1,7 @@
 import CardsWrapComponent from "@/components/cardsWrapComponent";
 import PaginatorComponent from "@/components/paginatorComponent";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -11,6 +12,7 @@ import ListComponent from "../../components/list";
 import ListSkeleton from "../../components/listSkeleton";
 import useFileDrop from "../../hooks/use-on-file-drop";
 import ModalsComponent from "../../oldComponents/modalsComponent";
+import EmptyFolder from "../emptyFolder";
 
 const HomePage = ({ type }) => {
   const [view, setView] = useState<"grid" | "list">(() => {
@@ -30,6 +32,7 @@ const HomePage = ({ type }) => {
     folders.find((folder) => folder.id === folderId)?.name ??
     folders[0]?.name ??
     "";
+  const flows = useFlowsManagerStore((state) => state.flows);
 
   const { data: folderData, isLoading } = useGetFolderQuery({
     id: folderId ?? myCollectionId!,
@@ -67,6 +70,10 @@ const HomePage = ({ type }) => {
     setSearch(newSearch);
     setPageIndex(1);
   }, []);
+
+  const isEmptyFolder =
+    flows?.find((flow) => flow.folder_id === (folderId ?? myCollectionId)) ===
+    undefined;
 
   return (
     <CardsWrapComponent
@@ -108,64 +115,68 @@ const HomePage = ({ type }) => {
             setView={setView}
             setNewProjectModal={setNewProjectModal}
             setSearch={onSearch}
+            isEmptyFolder={isEmptyFolder}
           />
-
-          <div className="mt-6">
-            {isLoading ? (
-              view === "grid" ? (
-                <div className="mt-1 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                  <GridSkeleton />
-                  <GridSkeleton />
+          {isEmptyFolder ? (
+            <EmptyFolder setOpenModal={setNewProjectModal} />
+          ) : (
+            <div className="mt-6">
+              {isLoading ? (
+                view === "grid" ? (
+                  <div className="mt-1 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                    <GridSkeleton />
+                    <GridSkeleton />
+                  </div>
+                ) : (
+                  <div className="flex flex-col">
+                    <ListSkeleton />
+                    <ListSkeleton />
+                  </div>
+                )
+              ) : data && data.pagination.total > 0 ? (
+                view === "grid" ? (
+                  <div className="mt-1 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                    {data.flows.map((flow) => (
+                      <GridComponent key={flow.id} flowData={flow} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col">
+                    {data.flows.map((flow) => (
+                      <ListComponent key={flow.id} flowData={flow} />
+                    ))}
+                  </div>
+                )
+              ) : flowType === "flows" ? (
+                <div className="pt-2 text-center text-sm text-secondary-foreground">
+                  No flows in this folder.{" "}
+                  <a
+                    onClick={() => setNewProjectModal(true)}
+                    className="cursor-pointer underline"
+                  >
+                    Create a new flow
+                  </a>
+                  , or browse the store.
                 </div>
               ) : (
-                <div className="flex flex-col">
-                  <ListSkeleton />
-                  <ListSkeleton />
+                <div className="pt-2 text-center text-sm text-secondary-foreground">
+                  No saved or custom components. Learn more about{" "}
+                  <a
+                    href="https://docs.langflow.org/components-custom-components"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline"
+                  >
+                    creating custom components
+                  </a>
+                  , or browse the store.
                 </div>
-              )
-            ) : data && data.pagination.total > 0 ? (
-              view === "grid" ? (
-                <div className="mt-1 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                  {data.flows.map((flow) => (
-                    <GridComponent key={flow.id} flowData={flow} />
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col">
-                  {data.flows.map((flow) => (
-                    <ListComponent key={flow.id} flowData={flow} />
-                  ))}
-                </div>
-              )
-            ) : flowType === "flows" ? (
-              <div className="pt-2 text-center text-sm text-secondary-foreground">
-                No flows in this folder.{" "}
-                <a
-                  onClick={() => setNewProjectModal(true)}
-                  className="cursor-pointer underline"
-                >
-                  Create a new flow
-                </a>
-                , or browse the store.
-              </div>
-            ) : (
-              <div className="pt-2 text-center text-sm text-secondary-foreground">
-                No saved or custom components. Learn more about{" "}
-                <a
-                  href="https://docs.langflow.org/components-custom-components"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="underline"
-                >
-                  creating custom components
-                </a>
-                , or browse the store.
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {!isLoading && data.pagination.total >= 10 && (
+        {!isLoading && !isEmptyFolder && data.pagination.total >= 10 && (
           <div className="relative flex justify-end px-3 py-6">
             <PaginatorComponent
               storeComponent={true}
@@ -179,6 +190,7 @@ const HomePage = ({ type }) => {
           </div>
         )}
       </div>
+
       <ModalsComponent
         openModal={newProjectModal}
         setOpenModal={setNewProjectModal}
