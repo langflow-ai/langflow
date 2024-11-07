@@ -67,7 +67,7 @@ class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
     field_type: SerializableFieldTypes = FieldTypes.OTHER
 
 
-class DataInput(HandleInput, InputTraceMixin, ListableInputMixin):
+class DataInput(HandleInput, InputTraceMixin, ListableInputMixin,ToolModeMixin):
     """Represents an Input that has a Handle that receives a Data object.
 
     Attributes:
@@ -77,7 +77,7 @@ class DataInput(HandleInput, InputTraceMixin, ListableInputMixin):
     input_types: list[str] = ["Data"]
 
 
-class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
+class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin,ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.PROMPT
 
 

@@ -1,5 +1,6 @@
 from collections.abc import Callable
 
+from langflow.components.custom_component.custom_component import CustomComponent
 from langflow.components.inputs import ChatInput
 
 
@@ -28,4 +29,9 @@ def test_component_to_toolkit():
 def test_component_to_tool_has_no_component_as_tool():
     chat_input = ChatInput()
     tools = chat_input.to_toolkit()
+    assert len(tools) == 1
+
+def test_custom_component_to_tool():
+    custom_component = CustomComponent()
+    tools = custom_component.to_toolkit()
     assert len(tools) == 1
