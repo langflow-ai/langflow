@@ -106,7 +106,6 @@ class TestCreateStateModel:
         with pytest.raises(ValueError, match="get_output_by_method"):
             create_state_model(method_one=mock_component.method_one, method_two=mock_component.method_two)
 
-    @pytest.mark.skip(reason="Temporarily disabled: sqlalchemy.exc.OperationalError")
     def test_graph_functional_start_state_update(self):
         chat_input = ChatInput(_id="chat_input", session_id="test", input_value="test")
         chat_output = ChatOutput(input_value="test", _id="chat_output", session_id="test")
