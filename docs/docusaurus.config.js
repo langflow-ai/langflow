@@ -78,6 +78,22 @@ const config = {
   plugins: [
     ["docusaurus-node-polyfills", { excludeAliases: ["console"] }],
     "docusaurus-plugin-image-zoom",
+    [
+      '@docusaurus/plugin-client-redirects',
+      {
+        redirects: [
+          // {
+          //   to: '/My-Collection',
+          //   from: '/365085a8-a90a-43f9-a779-f8769ec7eca1',
+          // },
+          // add more redirects like this
+          // {
+          //   to: '/docs/anotherpage',
+          //   from: ['/docs/legacypage1', '/docs/legacypage2'],
+          // },
+        ],
+      },
+    ],
     // ....
     async function myPlugin(context, options) {
       return {
