@@ -57,16 +57,6 @@ class LCAgentComponent(Component):
             value=15,
             advanced=True,
         ),
-        MessageTextInput(
-            name="agent_name",
-            display_name="Agent Name",
-            info=(
-                "The name of the agent. The default value contains {tools_names}"
-                " which will be replaced with the names of the tools available to this agent."
-            ),
-            value=DEFAULT_AGENT_NAME,
-            advanced=True,
-        ),
         MultilineInput(
             name="agent_description",
             display_name="Agent Description",
@@ -200,9 +190,7 @@ class LCToolsAgentComponent(LCAgentComponent):
         """Create the agent."""
 
     def get_tool_name(self) -> str:
-        if self.agent_name == DEFAULT_AGENT_NAME:
-            return DEFAULT_AGENT_NAME.format(tools_names=self._build_tools_names())
-        return self.agent_name
+        return self.display_name
 
     def get_tool_description(self) -> str:
         return self.agent_description or DEFAULT_TOOLS_DESCRIPTION
