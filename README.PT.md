@@ -134,7 +134,7 @@ Cada opção é detalhada abaixo:
 - `--help`: Exibe todas as opções disponíveis.
 - `--host`: Define o host para vincular o servidor. Pode ser configurado usando a variável de ambiente `LANGFLOW_HOST`. O padrão é `127.0.0.1`.
 - `--workers`: Define o número de processos. Pode ser configurado usando a variável de ambiente `LANGFLOW_WORKERS`. O padrão é `1`.
-- `--timeout`: Define o tempo limite do worker em segundos. O padrão é `60`.
+- `--worker-timeout`: Define o tempo limite do worker em segundos. O padrão é `60`.
 - `--port`: Define a porta para escutar. Pode ser configurado usando a variável de ambiente `LANGFLOW_PORT`. O padrão é `7860`.
 - `--env-file`: Especifica o caminho para o arquivo .env contendo variáveis de ambiente. O padrão é `.env`.
 - `--log-level`: Define o nível de log. Pode ser configurado usando a variável de ambiente `LANGFLOW_LOG_LEVEL`. O padrão é `critical`.

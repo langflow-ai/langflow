@@ -33,7 +33,7 @@
 <div align="center">
   <a href="./README.md"><img alt="README in English" src="https://img.shields.io/badge/English-d9d9d9"></a>
   <a href="./README.PT.md"><img alt="README in Portuguese" src="https://img.shields.io/badge/Portuguese-d9d9d9"></a>
-  <a href="./README.ES.md"><img alt="README in Spanish" src="https://img.shields.io/badge/Spanish-d9d9d9"></a>  
+  <a href="./README.ES.md"><img alt="README in Spanish" src="https://img.shields.io/badge/Spanish-d9d9d9"></a>
   <a href="./README.zh_CN.md"><img alt="README in Simplified Chinese" src="https://img.shields.io/badge/简体中文-d9d9d9"></a>
   <a href="./README.ja.md"><img alt="README in Japanese" src="https://img.shields.io/badge/日本語-d9d9d9"></a>
   <a href="./README.KR.md"><img alt="README in KOREAN" src="https://img.shields.io/badge/한국어-d9d9d9"></a>
@@ -154,7 +154,7 @@ langflow run [OPTIONS]
 - `--help`: 사용 가능한 모든 옵션을 표시합니다.
 - `--host`: 서버를 바인딩할 호스트를 정의합니다. `LANGFLOW_HOST` 환경 변수를 사용하여 설정할 수 있습니다. 기본 값은 `127.0.0.1`입니다.
 - `--workers`: 작업자 프로세스 수를 설정합니다. `LANGFLOW_WORKERS` 환경 변수를 사용하여 설정할 수 있습니다. 기본 값은 `1`입니다.
-- `--timeout`: 작업자 시간 제한을 초 단위로 설정합니다. 기본 값은 `60`입니다.
+- `--worker-timeout`: 작업자 시간 제한을 초 단위로 설정합니다. 기본 값은 `60`입니다.
 - `--port`: 수신할 포트를 설정합니다. `LANGFLOW_PORT` 환경 변수를 사용하여 설정할 수 있습니다. 기본 값은 `7860`입니다.
 - `--env-file`: 환경 변수가 포함된 .env 파일의 경로를 지정합니다. 기본 값은 `.env`입니다.
 - `--log-level`: 로깅 수준을 정의합니다. `LANGFLOW_LOG_LEVEL` 환경 변수를 사용하여 설정할 수 있습니다. 기본 값은 `critical`입니다.
