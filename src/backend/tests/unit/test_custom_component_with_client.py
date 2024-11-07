@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pytest
 from langflow.custom.custom_component.custom_component import CustomComponent
 from langflow.field_typing.constants import Data
@@ -32,6 +30,3 @@ def test_list_flows_flow_objects(component):
 def test_list_flows_return_type(component):
     flows = component.list_flows()
     assert isinstance(flows, list)
-
-
-
