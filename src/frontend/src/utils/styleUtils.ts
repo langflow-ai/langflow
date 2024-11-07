@@ -1,5 +1,7 @@
 import { AIMLIcon } from "@/icons/AIML";
 import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
+import { ExaIcon } from "@/icons/Exa";
+import { MilvusIcon } from "@/icons/Milvus";
 import Perplexity from "@/icons/Perplexity/Perplexity";
 import { TavilyIcon } from "@/icons/Tavily";
 import { UnstructuredIcon } from "@/icons/Unstructured";
@@ -137,6 +139,7 @@ import {
   PlusCircle,
   PlusSquare,
   PocketKnife,
+  Radio,
   Redo,
   RefreshCcw,
   RefreshCcwDot,
@@ -156,6 +159,7 @@ import {
   Share,
   Share2,
   Shield,
+  Sigma,
   Sliders,
   SlidersHorizontal,
   Snowflake,
@@ -442,10 +446,10 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Text Splitters", name: "textsplitters", icon: "Scissors" },
   { display_name: "Toolkits", name: "toolkits", icon: "Package2" },
   { display_name: "Tools", name: "tools", icon: "Hammer" },
+  { display_name: "Logic", name: "logic", icon: "Sigma" },
 ];
 
 export const SIDEBAR_BUNDLES = [
-  { display_name: "CrewAI", name: "crewai", icon: "CrewAi" },
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
   { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
   {
@@ -453,11 +457,17 @@ export const SIDEBAR_BUNDLES = [
     name: "astra_assistants",
     icon: "AstraDB",
   },
-  { display_name: "Google", name: "google", icon: "Google" },
-  { display_name: "Firecrawl", name: "firecrawl", icon: "FirecrawlCrawlApi" },
   { display_name: "Notion", name: "Notion", icon: "Notion" },
   { display_name: "NVIDIA", name: "nvidia", icon: "NVIDIA" },
   { display_name: "Vectara", name: "vectara", icon: "Vectara" },
+  { display_name: "Google", name: "google", icon: "Google" },
+  { display_name: "CrewAI", name: "crewai", icon: "CrewAI" },
+  { display_name: "Composio", name: "composio", icon: "Composio" },
+  { display_name: "Cohere", name: "cohere", icon: "Cohere" },
+  { display_name: "Firecrawl", name: "firecrawl", icon: "FirecrawlCrawlApi" },
+  { display_name: "Unstructured", name: "unstructured", icon: "Unstructured" },
+  { display_name: "Git", name: "git", icon: "GitLoader" },
+  { display_name: "Confluence", name: "confluence", icon: "Confluence" },
 ];
 
 export const categoryIcons = {
@@ -624,6 +634,8 @@ export const nodeIconsLucide: iconsType = {
   GithubIcon,
   FaGithub,
   FaApple,
+  Milvus: MilvusIcon,
+  ExaSearch: ExaIcon,
 
   //Node Icons
   model_specs: FileSliders,
@@ -814,4 +826,6 @@ export const nodeIconsLucide: iconsType = {
   CircleCheckBig,
   ZoomIn,
   ZoomOut,
+  Sigma,
+  Radio,
 };
