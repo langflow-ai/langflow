@@ -1,11 +1,10 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from zipfile import ZipFile, is_zipfile
 
-from langflow.base.data.utils import TEXT_FILE_TYPES, parse_text_file_to_data
+from langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
 from langflow.custom import Component
-from langflow.io import BoolInput, FileInput, Output
+from langflow.io import BoolInput, FileInput, Output, StrInput
 from langflow.schema import Data
 
 
@@ -47,6 +46,13 @@ class FileComponent(Component):
             advanced=True,
             info="If true, parallel processing will be enabled for zip files.",
         ),
+        StrInput(
+            name="concurrency_multithreading",
+            display_name="Multithreading Concurrency",
+            advanced=True,
+            info="The maximum number of workers to use, if concurrency is enabled",
+            value="4",
+        )
     ]
 
     outputs = [Output(display_name="Data", name="data", method="load_file")]
@@ -124,7 +130,7 @@ class FileComponent(Component):
                 raise ValueError(msg)
 
             # Define a function to process each file
-            def process_file(file_name):
+            def process_file(file_name, silent_errors=silent_errors):
                 with NamedTemporaryFile(delete=False) as temp_file:
                     temp_path = Path(temp_file.name).with_name(file_name)
                     with zip_file.open(file_name) as file_content:
@@ -136,19 +142,21 @@ class FileComponent(Component):
 
             # Process files in parallel if specified
             if parallel:
-                self.log("Initializing parallel Thread Pool Executor.")
-                with ThreadPoolExecutor() as executor:
-                    futures = {executor.submit(process_file, file): file for file in valid_files}
-                    for future in as_completed(futures):
-                        try:
-                            data.append(future.result())
-                        except Exception as e:
-                            self.log(f"Error processing file {futures[future]}: {e}")
-                            if not silent_errors:
-                                raise
+                self.log(
+                    f"Initializing parallel Thread Pool Executor with max workers: "
+                    f"{self.concurrency_multithreading}."
+                )
+
+                # Process files in parallel
+                data = parallel_load_data(
+                    valid_files,
+                    silent_errors=silent_errors,
+                    load_function=process_file,
+                    max_concurrency=int(self.concurrency_multithreading),
+                )
             else:
                 # Sequential processing
-                data.extend([process_file(file_name) for file_name in valid_files])
+                data = [process_file(file_name) for file_name in valid_files]
 
         self.log(f"Successfully processed zip file: {zip_path.name}.")
 
