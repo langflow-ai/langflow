@@ -15,6 +15,7 @@ interface HeaderComponentProps {
   setNewProjectModal: (newProjectModal: boolean) => void;
   folderName?: string;
   setSearch: (search: string) => void;
+  isEmptyFolder: boolean;
 }
 
 const HeaderComponent = ({
@@ -25,6 +26,7 @@ const HeaderComponent = ({
   setView,
   setNewProjectModal,
   setSearch,
+  isEmptyFolder,
 }: HeaderComponentProps) => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const { open } = useSidebar();
@@ -73,62 +75,64 @@ const HeaderComponent = ({
         </div>
         {folderName}
       </div>
-      <div className="flex flex-row-reverse pb-8">
-        <div className="w-full border-b dark:border-border" />
-        {["components", "flows"].map((type) => (
-          <Button
-            key={type}
-            unstyled
-            id={`${type}-btn`}
-            onClick={() => setFlowType(type as "flows" | "components")}
-            className={`border-b ${
-              flowType === type
-                ? "border-b-2 border-foreground text-foreground"
-                : "border-border text-muted-foreground hover:text-foreground"
-            } px-3 pb-2 text-sm`}
-          >
-            <div className={flowType === type ? "-mb-px" : ""}>
-              {type.charAt(0).toUpperCase() + type.slice(1)}
-            </div>
-          </Button>
-        ))}
-      </div>
-      {/* Search and filters */}
-      <div className="flex justify-between">
-        <div className="flex w-full xl:w-5/12">
-          <Input
-            icon="Search"
-            data-testid="search-store-input"
-            type="text"
-            placeholder={`Search ${flowType}...`}
-            className="mr-2"
-            value={debouncedSearch}
-            onChange={handleSearch}
-          />
-          <div className="px-py mr-2 flex rounded-lg border border-zinc-100 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800">
-            {["list", "grid"].map((viewType) => (
+      {!isEmptyFolder && (
+        <>
+          <div className="flex flex-row-reverse pb-8">
+            <div className="w-full border-b dark:border-border" />
+            {["components", "flows"].map((type) => (
               <Button
-                key={viewType}
+                key={type}
                 unstyled
-                size="icon"
-                className={`group mx-[2px] my-[2px] rounded-lg p-2 ${
-                  view === viewType
-                    ? "bg-white text-black shadow-md dark:bg-black dark:text-white"
-                    : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:hover:bg-zinc-800"
-                }`}
-                onClick={() => setView(viewType as "list" | "grid")}
+                id={`${type}-btn`}
+                onClick={() => setFlowType(type as "flows" | "components")}
+                className={`border-b ${
+                  flowType === type
+                    ? "border-b-2 border-foreground text-foreground"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                } px-3 pb-2 text-sm`}
               >
-                <ForwardedIconComponent
-                  name={viewType === "list" ? "Menu" : "LayoutGrid"}
-                  aria-hidden="true"
-                  className="h-4 w-4 group-hover:text-black dark:group-hover:text-white"
-                />
+                <div className={flowType === type ? "-mb-px" : ""}>
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </div>
               </Button>
             ))}
           </div>
-        </div>
-        <div className="flex gap-2">
-          {/* <ShadTooltip content="Store" side="bottom">
+          {/* Search and filters */}
+          <div className="flex justify-between">
+            <div className="flex w-full xl:w-5/12">
+              <Input
+                icon="Search"
+                data-testid="search-store-input"
+                type="text"
+                placeholder={`Search ${flowType}...`}
+                className="mr-2"
+                value={debouncedSearch}
+                onChange={handleSearch}
+              />
+              <div className="px-py mr-2 flex rounded-lg border border-zinc-100 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800">
+                {["list", "grid"].map((viewType) => (
+                  <Button
+                    key={viewType}
+                    unstyled
+                    size="icon"
+                    className={`group mx-[2px] my-[2px] rounded-lg p-2 ${
+                      view === viewType
+                        ? "bg-white text-black shadow-md dark:bg-black dark:text-white"
+                        : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:hover:bg-zinc-800"
+                    }`}
+                    onClick={() => setView(viewType as "list" | "grid")}
+                  >
+                    <ForwardedIconComponent
+                      name={viewType === "list" ? "Menu" : "LayoutGrid"}
+                      aria-hidden="true"
+                      className="h-4 w-4 group-hover:text-black dark:group-hover:text-white"
+                    />
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              {/* <ShadTooltip content="Store" side="bottom">
             <Button variant="outline" onClick={() => navigate("/store")}>
               <ForwardedIconComponent
                 name="store"
@@ -140,24 +144,26 @@ const HeaderComponent = ({
               </span>
             </Button>
           </ShadTooltip> */}
-          <ShadTooltip content="New Flow" side="bottom">
-            <Button
-              variant="default"
-              onClick={() => setNewProjectModal(true)}
-              id="new-project-btn"
-            >
-              <ForwardedIconComponent
-                name="Plus"
-                aria-hidden="true"
-                className="h-4 w-4"
-              />
-              <span className="hidden whitespace-nowrap font-semibold md:inline">
-                New Flow
-              </span>
-            </Button>
-          </ShadTooltip>
-        </div>
-      </div>
+              <ShadTooltip content="New Flow" side="bottom">
+                <Button
+                  variant="default"
+                  onClick={() => setNewProjectModal(true)}
+                  id="new-project-btn"
+                >
+                  <ForwardedIconComponent
+                    name="Plus"
+                    aria-hidden="true"
+                    className="h-4 w-4"
+                  />
+                  <span className="hidden whitespace-nowrap font-semibold md:inline">
+                    New Flow
+                  </span>
+                </Button>
+              </ShadTooltip>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 };
