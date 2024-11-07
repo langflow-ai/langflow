@@ -98,7 +98,11 @@ export const MenuBar = ({}: {}): JSX.Element => {
       return <div className="truncate">Saving...</div>;
     }
     // return savedText;
-    return <div className="truncate text-[#059669]">Saved</div>;
+    return (
+      <div className="truncate text-xs font-medium text-accent-emerald-foreground">
+        Saved
+      </div>
+    );
   }
 
   const handleSave = () => {
