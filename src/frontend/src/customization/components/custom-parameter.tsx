@@ -1,6 +1,7 @@
 import { ParameterRenderComponent } from "@/components/parameterRenderComponent";
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { APIClassType, InputFieldType } from "@/types/api";
+import { cn } from "@/utils/utils";
 
 export function CustomParameterComponent({
   handleOnNewValue,
@@ -40,18 +41,20 @@ export function CustomParameterComponent({
 
 export function getCustomParameterTitle({
   title,
-  nodeId,
+  isFlexView,
 }: {
   title: string;
-  nodeId: string;
+  isFlexView: boolean;
 }) {
   return (
-    <span
-      data-testid={`title-${title.toLocaleLowerCase()}`}
-      className="text-[13px]"
-    >
-      {title}
-    </span>
+    <div className={cn(isFlexView && "max-w-56 truncate")}>
+      <span
+        data-testid={`title-${title.toLocaleLowerCase()}`}
+        className="text-[13px]"
+      >
+        {title}
+      </span>
+    </div>
   );
 }
 

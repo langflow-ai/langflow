@@ -125,7 +125,10 @@ export default function NodeInputField({
               <ShadTooltip content={<span>{proxy.id}</span>}>
                 {
                   <span>
-                    {getCustomParameterTitle({ title, nodeId: data.id })}
+                    {getCustomParameterTitle({
+                      title,
+                      isFlexView,
+                    })}
                   </span>
                 }
               </ShadTooltip>
@@ -134,7 +137,10 @@ export default function NodeInputField({
                 <span>
                   {
                     <span className="text-sm font-medium">
-                      {getCustomParameterTitle({ title, nodeId: data.id })}
+                      {getCustomParameterTitle({
+                        title,
+                        isFlexView,
+                      })}
                     </span>
                   }
                 </span>
