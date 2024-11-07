@@ -73,7 +73,21 @@ export default function NodeToolbarComponent({
   const addFlow = useAddFlow();
 
   const isMinimal = countHandlesFn(data) <= 1 && numberOfOutputHandles <= 1;
+  function activateToolMode() {
+    const newValue = !toolMode;
+    setToolMode(newValue);
 
+    updateToolMode(data.id, newValue);
+    mutateTemplate(
+      newValue,
+      data.node!,
+      handleNodeClass,
+      postToolModeValue,
+      setNoticeData,
+      "tool_mode",
+    );
+    updateNodeInternals(data.id);
+  }
   function minimize() {
     if (isMinimal) {
       setShowNode((data.showNode ?? true) ? false : true);
@@ -172,6 +186,7 @@ export default function NodeToolbarComponent({
     shareComponent,
     ungroup: handleungroup,
     minimizeFunction: minimize,
+    activateToolMode: activateToolMode,
   });
 
   const paste = useFlowStore((state) => state.paste);
@@ -291,19 +306,7 @@ export default function NodeToolbarComponent({
         );
         break;
       case "toolMode":
-        const newValue = !toolMode;
-        setToolMode(newValue);
-
-        updateToolMode(data.id, newValue);
-        mutateTemplate(
-          newValue,
-          data.node!,
-          handleNodeClass,
-          postToolModeValue,
-          setNoticeData,
-          "tool_mode",
-        );
-        updateNodeInternals(data.id);
+        activateToolMode();
         break;
     }
 

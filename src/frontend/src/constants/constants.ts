@@ -855,6 +855,10 @@ export const defaultShortcuts = [
     name: "Output Inspection",
     shortcut: `O`,
   },
+  {
+    name: "Tool Mode",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + M`,
+  },
 ];
 
 export const DEFAULT_TABLE_ALERT_MSG = `Oops! It seems there's no data to display right now. Please check back later.`;
