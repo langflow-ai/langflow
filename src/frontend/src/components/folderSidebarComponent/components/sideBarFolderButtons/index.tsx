@@ -503,7 +503,7 @@ const SideBarFoldersButtonsComponent = ({
                                 >
                                   <FolderSelectItem
                                     name="Rename"
-                                    iconName="square-pen"
+                                    iconName="SquarePen"
                                   />
                                 </SelectItem>
                               )}
@@ -513,7 +513,7 @@ const SideBarFoldersButtonsComponent = ({
                               >
                                 <FolderSelectItem
                                   name="Download Content"
-                                  iconName="download"
+                                  iconName="Download"
                                 />
                               </SelectItem>
                               {index > 0 && (
@@ -523,7 +523,7 @@ const SideBarFoldersButtonsComponent = ({
                                 >
                                   <FolderSelectItem
                                     name="Delete"
-                                    iconName="trash"
+                                    iconName="Trash2"
                                   />
                                 </SelectItem>
                               )}
