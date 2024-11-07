@@ -26,12 +26,13 @@ class BaseContent(BaseModel):
     def from_dict(cls, data: dict[str, Any]) -> "BaseContent":
         return cls(**data)
 
-    @model_serializer()
-    def serialize_model(self) -> dict[str, Any]:
+    @model_serializer(mode="wrap")
+    def serialize_model(self, nxt) -> dict[str, Any]:
         try:
-            return jsonable_encoder(self, custom_encoder=CUSTOM_ENCODERS)
+            dump = nxt(self)
+            return jsonable_encoder(dump, custom_encoder=CUSTOM_ENCODERS)
         except Exception:  # noqa: BLE001
-            return self.model_dump()
+            return nxt(self)
 
 
 class ErrorContent(BaseContent):
