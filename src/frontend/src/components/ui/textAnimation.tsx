@@ -37,7 +37,7 @@ const defaultContainerVariants: Variants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.025,
+      staggerChildren: 0.015,
     },
   },
   exit: {

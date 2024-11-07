@@ -130,7 +130,7 @@ export function detectBrokenEdgesEdges(nodes: NodeType[], edges: Edge[]) {
         displayName: targetNode.data.node!.display_name,
         field:
           targetNode.data.node!.template[targetHandleObject.fieldName]
-            .display_name,
+            ?.display_name ?? targetHandleObject.fieldName,
       },
     };
   }

@@ -1,10 +1,10 @@
 import { ProfileIcon } from "@/components/appHeaderComponent/components/ProfileIcon";
+import { ContentBlockDisplay } from "@/components/chatComponents/ContentBlockDisplay";
 import { TextShimmer } from "@/components/ui/TextShimmer";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import { ContentBlock, ErrorContent } from "@/types/chat";
 import Convert from "ansi-to-html";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
@@ -215,8 +215,8 @@ export default function ChatMessage({
   ) : null;
 
   if (chat.category === "error") {
-    const block = (chat.content_blocks?.[0] ?? {}) as ContentBlock;
-    const errorContent = (block.content as ErrorContent) ?? {};
+    const blocks = chat.content_blocks ?? [];
+
     return (
       <div className="w-5/6 max-w-[768px] py-4 word-break-break-word">
         <AnimatePresence mode="wait">
@@ -243,7 +243,7 @@ export default function ChatMessage({
               className="flex w-full gap-4 rounded-md p-2"
             >
               <LogoIcon />
-              <div className="w-full rounded-md border border-error-red-border bg-error-red p-4 text-[14px] text-foreground">
+              <div className="w-full rounded-xl border border-error-red-border bg-error-red p-4 text-[14px] text-foreground">
                 <div className="mb-2 flex items-center gap-2">
                   <ForwardedIconComponent
                     className="h-[18px] w-[18px] text-destructive"
@@ -251,61 +251,129 @@ export default function ChatMessage({
                   />
                   <span className="">An error stopped your flow.</span>
                 </div>
-                <div className="mb-4">
-                  <h3 className="pb-3 font-semibold">Error details:</h3>
-                  <p className="pb-1">
-                    Component:{" "}
-                    <span
-                      className={cn(
-                        closeChat ? "cursor-pointer underline" : "",
-                      )}
-                      onClick={() => {
-                        fitViewNode(chat.properties?.source?.id ?? "");
-                        closeChat?.();
-                      }}
-                    >
-                      {errorContent.component}
-                    </span>
-                  </p>
-                  {errorContent.field && (
-                    <p className="pb-1">Field: {errorContent.field}</p>
-                  )}
-                  {errorContent.reason && (
-                    <span className="">
-                      Reason:{" "}
-                      <Markdown
-                        linkTarget="_blank"
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          a: ({ node, ...props }) => {
-                            return (
-                              <a
-                                href={props.href}
-                                target="_blank"
-                                className="underline"
-                                rel="noopener noreferrer"
-                              >
-                                {props.children}
-                              </a>
-                            );
-                          },
-                        }}
-                      >
-                        {errorContent.reason}
-                      </Markdown>
-                    </span>
-                  )}
-                </div>
-                {errorContent.solution && (
-                  <div>
-                    <h3 className="pb-3 font-semibold">Steps to fix:</h3>
-                    <ol className="list-decimal pl-5">
-                      <li>Check the component settings</li>
-                      <li>Ensure all required fields are filled</li>
-                      <li>Re-run your flow</li>
-                    </ol>
+                {blocks.map((block, blockIndex) => (
+                  <div key={blockIndex} className="mb-4">
+                    <h3 className="pb-3 font-semibold">{block.title}:</h3>
+                    {block.contents.map((content, contentIndex) => {
+                      if (content.type === "error") {
+                        return (
+                          <div key={contentIndex}>
+                            {content.component && (
+                              <p className="pb-1">
+                                Component:{" "}
+                                <span
+                                  className={cn(
+                                    closeChat ? "cursor-pointer underline" : "",
+                                  )}
+                                  onClick={() => {
+                                    fitViewNode(
+                                      chat.properties?.source?.id ?? "",
+                                    );
+                                    closeChat?.();
+                                  }}
+                                >
+                                  {content.component}
+                                </span>
+                              </p>
+                            )}
+                            {content.field && (
+                              <p className="pb-1">Field: {content.field}</p>
+                            )}
+                            {content.reason && (
+                              <span className="">
+                                Reason:{" "}
+                                <Markdown
+                                  linkTarget="_blank"
+                                  remarkPlugins={[remarkGfm]}
+                                  components={{
+                                    a: ({ node, ...props }) => (
+                                      <a
+                                        href={props.href}
+                                        target="_blank"
+                                        className="underline"
+                                        rel="noopener noreferrer"
+                                      >
+                                        {props.children}
+                                      </a>
+                                    ),
+                                    p({ node, ...props }) {
+                                      return (
+                                        <span className="inline-block w-fit max-w-full">
+                                          {props.children}
+                                        </span>
+                                      );
+                                    },
+                                    code: ({
+                                      node,
+                                      inline,
+                                      className,
+                                      children,
+                                      ...props
+                                    }) => {
+                                      let content = children as string;
+                                      if (
+                                        Array.isArray(children) &&
+                                        children.length === 1 &&
+                                        typeof children[0] === "string"
+                                      ) {
+                                        content = children[0] as string;
+                                      }
+                                      if (typeof content === "string") {
+                                        if (content.length) {
+                                          if (content[0] === "▍") {
+                                            return (
+                                              <span className="form-modal-markdown-span"></span>
+                                            );
+                                          }
+                                        }
+
+                                        const match = /language-(\w+)/.exec(
+                                          className || "",
+                                        );
+
+                                        return !inline ? (
+                                          <CodeTabsComponent
+                                            language={(match && match[1]) || ""}
+                                            code={String(content).replace(
+                                              /\n$/,
+                                              "",
+                                            )}
+                                          />
+                                        ) : (
+                                          <code
+                                            className={className}
+                                            {...props}
+                                          >
+                                            {content}
+                                          </code>
+                                        );
+                                      }
+                                    },
+                                  }}
+                                >
+                                  {content.reason}
+                                </Markdown>
+                              </span>
+                            )}
+                            {content.solution && (
+                              <div>
+                                <h3 className="pb-3 font-semibold">
+                                  Steps to fix:
+                                </h3>
+                                <ol className="list-decimal pl-5">
+                                  <li>Check the component settings</li>
+                                  <li>Ensure all required fields are filled</li>
+                                  <li>Re-run your flow</li>
+                                </ol>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
                   </div>
-                )}
+                ))}
               </div>
             </motion.div>
           )}
@@ -393,6 +461,17 @@ export default function ChatMessage({
                 )}
               </div>
             </div>
+            {chat.content_blocks && chat.content_blocks.length > 0 && (
+              <ContentBlockDisplay
+                contentBlocks={chat.content_blocks}
+                isLoading={
+                  chatMessage === "" &&
+                  lockChat &&
+                  chat.properties?.state === "partial"
+                }
+                state={chat.properties?.state}
+              />
+            )}
             {!chat.isSend ? (
               <div className="form-modal-chat-text-position flex-grow">
                 <div className="form-modal-chat-text">

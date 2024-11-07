@@ -1,20 +1,21 @@
+import asyncio
 from abc import abstractmethod
-from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 
-from fastapi.encoders import jsonable_encoder
 from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain.agents.agent import RunnableAgent
 from langchain_core.runnables import Runnable
 
 from langflow.base.agents.callback import AgentAsyncHandler
+from langflow.base.agents.events import ExceptionWithMessageError, process_agent_events
 from langflow.base.agents.utils import data_to_messages
 from langflow.custom import Component
-from langflow.field_typing import Text
 from langflow.inputs.inputs import InputTypes
 from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
+from langflow.memory import delete_message
 from langflow.schema import Data
-from langflow.schema.log import LogFunctionType
+from langflow.schema.content_block import ContentBlock
+from langflow.schema.log import SendMessageFunctionType
 from langflow.schema.message import Message
 from langflow.template import Output
 from langflow.utils.constants import MESSAGE_SENDER_AI
@@ -59,11 +60,8 @@ class LCAgentComponent(Component):
     async def message_response(self) -> Message:
         """Run the agent and return the response."""
         agent = self.build_agent()
-        result = await self.run_agent(agent=agent)
+        message = await self.run_agent(agent=agent)
 
-        if isinstance(result, list):
-            result = "\n".join([result_dict["text"] for result_dict in result])
-        message = Message(text=result, sender=MESSAGE_SENDER_AI)
         self.status = message
         return message
 
@@ -99,35 +97,51 @@ class LCAgentComponent(Component):
         # might be overridden in subclasses
         return None
 
-    async def run_agent(self, agent: AgentExecutor) -> Text:
+    async def run_agent(
+        self,
+        agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor,
+    ) -> Message:
+        if isinstance(agent, AgentExecutor):
+            runnable = agent
+        else:
+            runnable = AgentExecutor.from_agent_and_tools(
+                agent=agent,
+                tools=self.tools,
+                handle_parsing_errors=self.handle_parsing_errors,
+                verbose=self.verbose,
+                max_iterations=self.max_iterations,
+            )
         input_dict: dict[str, str | list[BaseMessage]] = {"input": self.input_value}
-        self.chat_history = self.get_chat_history_data()
         if self.chat_history:
             input_dict["chat_history"] = data_to_messages(self.chat_history)
-        result = agent.invoke(
-            input_dict, config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]}
+
+        agent_message = Message(
+            sender=MESSAGE_SENDER_AI,
+            sender_name="Agent",
+            properties={"icon": "Bot", "state": "partial"},
+            content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+            session_id=self.graph.session_id,
         )
+        try:
+            result = await process_agent_events(
+                runnable.astream_events(
+                    input_dict,
+                    config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]},
+                    version="v2",
+                ),
+                agent_message,
+                cast(SendMessageFunctionType, self.send_message),
+            )
+        except ExceptionWithMessageError as e:
+            msg_id = e.agent_message.id
+            await asyncio.to_thread(delete_message, id_=msg_id)
+            self._send_message_event(e.agent_message, category="remove_message")
+            raise e.exception  # noqa: B904
+        except Exception:
+            raise
+
         self.status = result
-        if "output" not in result:
-            msg = "Output key not found in result. Tried 'output'."
-            raise ValueError(msg)
-
-        return cast(str, result)
-
-    async def handle_chain_start(self, event: dict[str, Any]) -> None:
-        if event["name"] == "Agent":
-            self.log(f"Starting agent: {event['name']} with input: {event['data'].get('input')}")
-
-    async def handle_chain_end(self, event: dict[str, Any]) -> None:
-        if event["name"] == "Agent":
-            self.log(f"Done agent: {event['name']} with output: {event['data'].get('output', {}).get('output', '')}")
-
-    async def handle_tool_start(self, event: dict[str, Any]) -> None:
-        self.log(f"Starting tool: {event['name']} with inputs: {event['data'].get('input')}")
-
-    async def handle_tool_end(self, event: dict[str, Any]) -> None:
-        self.log(f"Done tool: {event['name']}")
-        self.log(f"Tool output was: {event['data'].get('output')}")
+        return result
 
     @abstractmethod
     def create_agent_runnable(self) -> Runnable:
@@ -150,94 +164,6 @@ class LCToolsAgentComponent(LCAgentComponent):
             **self.get_agent_kwargs(flatten=True),
         )
 
-    async def run_agent(
-        self,
-        agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor,
-    ) -> Text:
-        if isinstance(agent, AgentExecutor):
-            runnable = agent
-        else:
-            runnable = AgentExecutor.from_agent_and_tools(
-                agent=agent,
-                tools=self.tools,
-                handle_parsing_errors=self.handle_parsing_errors,
-                verbose=self.verbose,
-                max_iterations=self.max_iterations,
-            )
-        input_dict: dict[str, str | list[BaseMessage]] = {"input": self.input_value}
-        if self.chat_history:
-            input_dict["chat_history"] = data_to_messages(self.chat_history)
-
-        result = await process_agent_events(
-            runnable.astream_events(
-                input_dict,
-                config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]},
-                version="v2",
-            ),
-            self.log,
-        )
-
-        self.status = result
-        return cast(str, result)
-
     @abstractmethod
     def create_agent_runnable(self) -> Runnable:
         """Create the agent."""
-
-
-# Add this function near the top of the file, after the imports
-
-
-async def process_agent_events(agent_executor: AsyncIterator[dict[str, Any]], log_callback: LogFunctionType) -> str:
-    """Process agent events and return the final output.
-
-    Args:
-        agent_executor: An async iterator of agent events
-        log_callback: A callable function for logging messages
-
-    Returns:
-        str: The final output from the agent
-    """
-    final_output = ""
-    async for event in agent_executor:
-        match event["event"]:
-            case "on_chain_start":
-                if event["data"].get("input"):
-                    log_callback(f"Agent initiated with input: {event['data'].get('input')}", name="🚀 Agent Start")
-
-            case "on_chain_end":
-                data_output = event["data"].get("output", {})
-                if data_output and "output" in data_output:
-                    final_output = data_output["output"]
-                    log_callback(f"{final_output}", name="✅ Agent End")
-                elif data_output and "agent_scratchpad" in data_output and data_output["agent_scratchpad"]:
-                    agent_scratchpad_messages = data_output["agent_scratchpad"]
-                    json_encoded_messages = jsonable_encoder(agent_scratchpad_messages)
-                    log_callback(json_encoded_messages, name="🔍 Agent Scratchpad")
-
-            case "on_tool_start":
-                log_callback(
-                    f"Initiating tool: '{event['name']}' with inputs: {event['data'].get('input')}",
-                    name="🔧 Tool Start",
-                )
-
-            case "on_tool_end":
-                log_callback(f"Tool '{event['name']}' execution completed", name="🏁 Tool End")
-                log_callback(f"{event['data'].get('output')}", name="📊 Tool Output")
-
-            case "on_tool_error":
-                tool_name = event.get("name", "Unknown tool")
-                error_message = event["data"].get("error", "Unknown error")
-                log_callback(f"Tool '{tool_name}' failed with error: {error_message}", name="❌ Tool Error")
-
-                if "stack_trace" in event["data"]:
-                    log_callback(f"{event['data']['stack_trace']}", name="🔍 Tool Error")
-
-                if "recovery_attempt" in event["data"]:
-                    log_callback(f"{event['data']['recovery_attempt']}", name="🔄 Tool Error")
-
-            case _:
-                # Handle any other event types or ignore them
-                pass
-
-    return final_output
