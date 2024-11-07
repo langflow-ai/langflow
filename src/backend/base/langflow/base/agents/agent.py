@@ -125,6 +125,9 @@ class LCAgentComponent(Component):
         if isinstance(agent, AgentExecutor):
             runnable = agent
         else:
+            if not self.tools:
+                msg = "Tools are required to run the agent."
+                raise ValueError(msg)
             runnable = AgentExecutor.from_agent_and_tools(
                 agent=agent,
                 tools=self.tools,
@@ -157,7 +160,7 @@ class LCAgentComponent(Component):
             msg_id = e.agent_message.id
             await asyncio.to_thread(delete_message, id_=msg_id)
             self._send_message_event(e.agent_message, category="remove_message")
-            raise
+            raise e.exception  # noqa: B904
         except Exception:
             raise
 
@@ -172,7 +175,11 @@ class LCAgentComponent(Component):
 class LCToolsAgentComponent(LCAgentComponent):
     _base_inputs = [
         HandleInput(
-            name="tools", display_name="Tools", input_types=["Tool", "BaseTool", "StructuredTool"], is_list=True
+            name="tools",
+            display_name="Tools",
+            input_types=["Tool", "BaseTool", "StructuredTool"],
+            is_list=True,
+            required=True,
         ),
         *LCAgentComponent._base_inputs,
     ]
