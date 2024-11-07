@@ -1,5 +1,5 @@
 ---
-title: 👋 Welcome to Langflow
+title: Welcome to Langflow
 sidebar_position: 0
 slug: /
 ---
