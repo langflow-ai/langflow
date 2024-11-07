@@ -78,7 +78,7 @@ export default function AppHeader(): JSX.Element {
       </div>
 
       {/* Right Section */}
-      <div className={`absolute right-[20px] flex gap-2`}>
+      <div className={`absolute right-[20px] flex items-center gap-2`}>
         {!ENABLE_DATASTAX_LANGFLOW && (
           <>
             <Button
@@ -104,7 +104,7 @@ export default function AppHeader(): JSX.Element {
             <Button
               ref={notificationRef}
               variant="ghost"
-              className={`relative ${activeState === "notifications" ? "bg-accent text-accent-foreground" : ""}`}
+              className={` ${activeState === "notifications" ? "bg-accent text-accent-foreground" : ""}`}
               onClick={() =>
                 setActiveState((prev) =>
                   prev === "notifications" ? null : "notifications",
@@ -136,7 +136,7 @@ export default function AppHeader(): JSX.Element {
             >
               <Button
                 variant="ghost"
-                className={`flex items-center text-sm font-medium ${lastPath === "store" ? "bg-accent text-accent-foreground" : ""}`}
+                className={` ${lastPath === "store" ? "bg-accent text-accent-foreground" : ""}`}
                 onClick={() => {
                   navigate("/store");
                 }}
