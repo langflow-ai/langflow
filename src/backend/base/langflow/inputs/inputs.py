@@ -209,7 +209,7 @@ class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin, ToolModeMi
         return value
 
 
-class MultilineInput(MessageTextInput, MultilineMixin, InputTraceMixin):
+class MultilineInput(MessageTextInput, MultilineMixin, InputTraceMixin, ToolModeMixin):
     """Represents a multiline input field.
 
     Attributes:
