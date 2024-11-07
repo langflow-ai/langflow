@@ -14,13 +14,15 @@ export const HeaderMenu = ({ children }) => (
 );
 
 export const HeaderMenuToggle = ({ children }) => (
-  <Menu.Button className="inline-flex w-full items-center justify-center gap-1 rounded-md px-2 py-2 text-sm font-medium text-white hover:bg-accent hover:text-accent-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-white/75">
-    {children}
-    <ChevronsUpDown
-      className="text-zinc-500"
-      size={"15px"}
-      strokeWidth={"2px"}
-    />
+  <Menu.Button className="group inline-flex w-full items-center justify-center gap-1 rounded-md px-2 py-2 pr-0 text-sm font-medium text-foreground hover:text-accent-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-white/75">
+    <div className="flex items-center gap-1 rounded-full group-hover:bg-muted">
+      {children}
+      <ChevronsUpDown
+        className="mr-2 text-muted-foreground group-hover:text-foreground"
+        size={"15px"}
+        strokeWidth={"2px"}
+      />
+    </div>
   </Menu.Button>
 );
 
