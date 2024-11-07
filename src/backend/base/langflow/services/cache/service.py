@@ -56,7 +56,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
             lock: A lock to use for the operation.
 
         Returns:
-            The value associated with the key, or None if the key is not found or the item has expired.
+            The value associated with the key, or CACHE_MISS if the key is not found or the item has expired.
         """
         with lock or self._lock:
             return self._get_without_lock(key)
@@ -70,7 +70,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
                 # Check if the value is pickled
                 return pickle.loads(item["value"]) if isinstance(item["value"], bytes) else item["value"]
             self.delete(key)
-        return None
+        return CACHE_MISS
 
     def set(self, key, value, lock: Union[threading.Lock, None] = None) -> None:  # noqa: UP007
         """Add an item to the cache.
@@ -105,7 +105,7 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
         """
         with lock or self._lock:
             existing_value = self._get_without_lock(key)
-            if existing_value is not None and isinstance(existing_value, dict) and isinstance(value, dict):
+            if existing_value is not CACHE_MISS and isinstance(existing_value, dict) and isinstance(value, dict):
                 existing_value.update(value)
                 value = existing_value
 
@@ -139,9 +139,13 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
         with lock or self._lock:
             self._cache.clear()
 
-    def __contains__(self, key) -> bool:
+    def contains(self, key) -> bool:
         """Check if the key is in the cache."""
         return key in self._cache
+
+    def __contains__(self, key) -> bool:
+        """Check if the key is in the cache."""
+        return self.contains(key)
 
     def __getitem__(self, key):
         """Retrieve an item from the cache using the square bracket notation."""
@@ -229,9 +233,9 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
     @override
     async def get(self, key, lock=None):
         if key is None:
-            return None
+            return CACHE_MISS
         value = await self._client.get(str(key))
-        return pickle.loads(value) if value else None
+        return pickle.loads(value) if value else CACHE_MISS
 
     @override
     async def set(self, key, value, lock=None) -> None:
@@ -274,11 +278,11 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
         """Clear all items from the cache."""
         await self._client.flushdb()
 
-    def __contains__(self, key) -> bool:
+    async def contains(self, key) -> bool:
         """Check if the key is in the cache."""
         if key is None:
             return False
-        return bool(asyncio.run(self._client.exists(str(key))))
+        return bool(await self._client.exists(str(key)))
 
     def __repr__(self) -> str:
         """Return a string representation of the RedisCache instance."""
@@ -364,5 +368,5 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
             value = existing_value
         await self.set(key, value)
 
-    def __contains__(self, key) -> bool:
+    async def contains(self, key) -> bool:
         return key in self.cache

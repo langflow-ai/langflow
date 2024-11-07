@@ -2,7 +2,6 @@ import { BASE_URL_API } from "@/constants/constants";
 import { performStreamingRequest } from "@/controllers/API/api";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { AxiosError } from "axios";
-import { timeStamp } from "console";
 import { flushSync } from "react-dom";
 import { Edge, Node } from "reactflow";
 import { BuildStatus } from "../constants/enums";
@@ -12,7 +11,7 @@ import useFlowStore from "../stores/flowStore";
 import { VertexBuildTypeAPI } from "../types/api";
 import { isErrorLogType } from "../types/utils/typeCheckingUtils";
 import { VertexLayerElementType } from "../types/zustand/flow";
-import { tryParseJson } from "./utils";
+import { isStringArray, tryParseJson } from "./utils";
 
 type BuildVerticesParams = {
   setLockChat?: (lock: boolean) => void;
@@ -200,8 +199,10 @@ export async function buildFlowVertices({
         onBuildStart(ids.map((id) => ({ id: id, reference: id })));
       ids.forEach((id) => verticesStartTimeMs.set(id, Date.now()));
     };
+
     console.log("type", type);
     console.log("data", data);
+
     switch (type) {
       case "vertices_sorted": {
         const verticesToRun = data.to_run;
@@ -275,12 +276,26 @@ export async function buildFlowVertices({
             buildResults.push(true);
           }
         }
+
+        await useFlowStore.getState().clearEdgesRunningByNodes();
+
         if (buildData.next_vertices_ids) {
+          if (isStringArray(buildData.next_vertices_ids)) {
+            useFlowStore
+              .getState()
+              .setCurrentBuildingNodeId(buildData?.next_vertices_ids ?? []);
+            useFlowStore
+              .getState()
+              .updateEdgesRunningByNodes(
+                buildData?.next_vertices_ids ?? [],
+                true,
+              );
+          }
           onStartVertices(buildData.next_vertices_ids);
         }
         return true;
       }
-      case "message": {
+      case "add_message": {
         //adds a message to the messsage table
         useMessagesStore.getState().addMessage(data);
         return true;
@@ -289,9 +304,13 @@ export async function buildFlowVertices({
         // flushSync and timeout is needed to avoid react batched updates
         setTimeout(() => {
           flushSync(() => {
-            useMessagesStore.getState().updateMessagePartial(data);
+            useMessagesStore.getState().updateMessageText(data.id, data.chunk);
           });
         }, 10);
+        return true;
+      }
+      case "remove_message": {
+        useMessagesStore.getState().removeMessage(data);
         return true;
       }
       case "end": {
@@ -301,13 +320,21 @@ export async function buildFlowVertices({
         return true;
       }
       case "error": {
-        const errorMessage = data.error;
-        console.log(data);
-        onBuildError!("Error Running Flow", [errorMessage], []);
-        buildResults.push(false);
         useFlowStore.getState().setIsBuilding(false);
+        if (data.category === "error") {
+          useMessagesStore.getState().addMessage(data);
+        }
+        buildResults.push(false);
         return true;
       }
+      case "build_start":
+        useFlowStore
+          .getState()
+          .updateBuildStatus([data.id], BuildStatus.BUILDING);
+        break;
+      case "build_end":
+        useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILT);
+        break;
       default:
         return true;
     }

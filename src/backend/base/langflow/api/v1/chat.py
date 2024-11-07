@@ -40,6 +40,7 @@ from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.graph.base import Graph
 from langflow.graph.utils import log_vertex_build
 from langflow.schema.schema import OutputValue
+from langflow.services.cache.utils import CacheMiss
 from langflow.services.chat.service import ChatService
 from langflow.services.deps import get_chat_service, get_session, get_telemetry_service
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
@@ -175,6 +176,9 @@ async def build_flow(
                     first_layer = graph.sort_vertices()
             else:
                 first_layer = graph.sort_vertices()
+
+            if inputs is not None and hasattr(inputs, "session") and inputs.session is not None:
+                graph.session_id = inputs.session
 
             for vertex_id in first_layer:
                 graph.run_manager.add_to_vertices_being_run(vertex_id)
@@ -328,7 +332,7 @@ async def build_flow(
         client_consumed_queue: asyncio.Queue,
         event_manager: EventManager,
     ) -> None:
-        build_task = asyncio.create_task(asyncio.to_thread(asyncio.run, _build_vertex(vertex_id, graph, event_manager)))
+        build_task = asyncio.create_task(_build_vertex(vertex_id, graph, event_manager))
         try:
             await build_task
         except asyncio.CancelledError as exc:
@@ -360,8 +364,8 @@ async def build_flow(
 
     async def event_generator(event_manager: EventManager, client_consumed_queue: asyncio.Queue) -> None:
         if not data:
-            # using another thread since the DB query is I/O bound
-            vertices_task = asyncio.create_task(asyncio.to_thread(asyncio.run, build_graph_and_get_order()))
+            # using another task since the build_graph_and_get_order is now an async function
+            vertices_task = asyncio.create_task(build_graph_and_get_order())
             try:
                 await vertices_task
             except asyncio.CancelledError:
@@ -493,7 +497,7 @@ async def build_vertex(
     error_message = None
     try:
         cache = await chat_service.get_cache(flow_id_str)
-        if not cache:
+        if isinstance(cache, CacheMiss):
             # If there's no cache
             logger.warning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
             graph: Graph = await build_graph_from_db(
@@ -621,7 +625,7 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
             yield str(StreamData(event="error", data={"error": str(exc)}))
             return
 
-        if not cache:
+        if isinstance(cache, CacheMiss):
             # If there's no cache
             msg = f"No cache found for {flow_id}."
             logger.error(msg)

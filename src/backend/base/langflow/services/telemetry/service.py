@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import os
 import platform
+import sys
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
@@ -40,6 +40,7 @@ class TelemetryService(Service):
         self._stopping = False
 
         self.ot = OpenTelemetry(prometheus_enabled=settings_service.settings.prometheus_enabled)
+        self.architecture: str | None = None
 
         # Check for do-not-track settings
         self.do_not_track = (
@@ -93,7 +94,8 @@ class TelemetryService(Service):
     async def log_package_version(self) -> None:
         python_version = ".".join(platform.python_version().split(".")[:2])
         version_info = get_version_info()
-        architecture = platform.architecture()[0]
+        if self.architecture is None:
+            self.architecture = (await asyncio.to_thread(platform.architecture))[0]
         payload = VersionPayload(
             package=version_info["package"].lower(),
             version=version_info["version"],
@@ -101,7 +103,7 @@ class TelemetryService(Service):
             python=python_version,
             cache_type=self.settings_service.settings.cache_type,
             backend_only=self.settings_service.settings.backend_only,
-            arch=architecture,
+            arch=self.architecture,
             auto_login=self.settings_service.auth_settings.AUTO_LOGIN,
         )
         await self._queue_event((self.send_telemetry_data, payload, None))
@@ -112,7 +114,7 @@ class TelemetryService(Service):
     async def log_package_component(self, payload: ComponentPayload) -> None:
         await self._queue_event((self.send_telemetry_data, payload, "component"))
 
-    async def start(self) -> None:
+    def start(self) -> None:
         if self.running or self.do_not_track:
             return
         try:
@@ -131,6 +133,18 @@ class TelemetryService(Service):
         except Exception:  # noqa: BLE001
             logger.exception("Error flushing logs")
 
+    async def _cancel_task(self, task: asyncio.Task, cancel_msg: str) -> None:
+        task.cancel(cancel_msg)
+        try:
+            await task
+        except asyncio.CancelledError:
+            current_task = asyncio.current_task()
+            if sys.version_info >= (3, 11):
+                if current_task and current_task.cancelling() > 0:
+                    raise
+            elif current_task and hasattr(current_task, "_must_cancel") and current_task._must_cancel:
+                raise
+
     async def stop(self) -> None:
         if self.do_not_track or self._stopping:
             return
@@ -140,9 +154,9 @@ class TelemetryService(Service):
             await self.flush()
             self.running = False
             if self.worker_task:
-                self.worker_task.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await self.worker_task
+                await self._cancel_task(self.worker_task, "Cancel telemetry worker task")
+            if self.log_package_version_task:
+                await self._cancel_task(self.log_package_version_task, "Cancel telemetry log package version task")
             await self.client.aclose()
         except Exception:  # noqa: BLE001
             logger.exception("Error stopping tracing service")

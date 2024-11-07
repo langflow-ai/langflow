@@ -6,7 +6,16 @@ from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
 import sqlalchemy as sa
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Body,
+    Depends,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
 from loguru import logger
 from sqlmodel import select
 
@@ -17,7 +26,6 @@ from langflow.api.v1.schemas import (
     CustomComponentResponse,
     InputValueRequest,
     RunResponse,
-    SidebarCategoriesResponse,
     SimplifiedAPIRequest,
     TaskStatusResponse,
     UpdateCustomComponentRequest,
@@ -37,16 +45,13 @@ from langflow.services.auth.utils import api_key_security, get_current_active_us
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.flow.model import FlowRead
-from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
-from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import (
-    get_session_service,
-    get_settings_service,
-    get_task_service,
-    get_telemetry_service,
+from langflow.services.database.models.flow.utils import (
+    get_all_webhook_components_in_flow,
 )
+from langflow.services.database.models.user.model import User, UserRead
+from langflow.services.deps import get_session_service, get_settings_service, get_task_service, get_telemetry_service
+from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.telemetry.schema import RunPayload
-from langflow.utils.constants import SIDEBAR_CATEGORIES
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
@@ -109,7 +114,11 @@ async def simple_run_flow(
         graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
         graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name)
         inputs = [
-            InputValueRequest(components=[], input_value=input_request.input_value, type=input_request.input_type)
+            InputValueRequest(
+                components=[],
+                input_value=input_request.input_value,
+                type=input_request.input_type,
+            )
         ]
         if input_request.output_component:
             outputs = [input_request.output_component]
@@ -247,7 +256,10 @@ async def simplified_run_flow(
         background_tasks.add_task(
             telemetry_service.log_package_run,
             RunPayload(
-                run_is_webhook=False, run_seconds=int(end_time - start_time), run_success=True, run_error_message=""
+                run_is_webhook=False,
+                run_seconds=int(end_time - start_time),
+                run_success=True,
+                run_error_message="",
             ),
         )
 
@@ -359,7 +371,11 @@ async def webhook_run_flow(
     return {"message": "Task started in the background", "status": "in progress"}
 
 
-@router.post("/run/advanced/{flow_id}", response_model=RunResponse, response_model_exclude_none=True)
+@router.post(
+    "/run/advanced/{flow_id}",
+    response_model=RunResponse,
+    response_model_exclude_none=True,
+)
 async def experimental_run_flow(
     *,
     session: DbSession,
@@ -548,7 +564,7 @@ async def create_upload_file(
 
 # get endpoint to return version of langflow
 @router.get("/version")
-def get_version():
+async def get_version():
     return get_version_info()
 
 
@@ -616,24 +632,29 @@ async def custom_component_update(
             field_value=code_request.field_value,
             field_name=code_request.field,
         )
+        component_node["template"] = updated_build_config
+        if isinstance(cc_instance, Component):
+            cc_instance.run_and_validate_update_outputs(
+                frontend_node=component_node,
+                field_name=code_request.field,
+                field_value=code_request.field_value,
+            )
+
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    component_node["template"] = updated_build_config
     return component_node
 
 
 @router.get("/config", response_model=ConfigResponse)
-def get_config():
+async def get_config():
     try:
         from langflow.services.deps import get_settings_service
 
         settings_service: SettingsService = get_settings_service()
-        return settings_service.settings.model_dump()
+
+        return {
+            "feature_flags": FEATURE_FLAGS,
+            **settings_service.settings.model_dump(),
+        }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-
-@router.get("/sidebar_categories")
-def get_sidebar_categories() -> SidebarCategoriesResponse:
-    return SidebarCategoriesResponse(categories=SIDEBAR_CATEGORIES)

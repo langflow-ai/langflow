@@ -1,7 +1,7 @@
 import os
 
+import orjson
 from astrapy.admin import parse_api_endpoint
-from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers import docs_to_data
@@ -116,6 +116,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             display_name="Metric",
             info="Optional distance metric for vector comparisons in the vector store.",
             options=["cosine", "dot_product", "euclidean"],
+            value="cosine",
             advanced=True,
         ),
         IntInput(
@@ -145,8 +146,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         DropdownInput(
             name="setup_mode",
             display_name="Setup Mode",
-            info="Configuration mode for setting up the vector store, with options like 'Sync', 'Async', or 'Off'.",
-            options=["Sync", "Async", "Off"],
+            info="Configuration mode for setting up the vector store, with options like 'Sync' or 'Off'.",
+            options=["Sync", "Off"],
             advanced=True,
             value="Sync",
         ),
@@ -160,18 +161,21 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             name="metadata_indexing_include",
             display_name="Metadata Indexing Include",
             info="Optional list of metadata fields to include in the indexing.",
+            is_list=True,
             advanced=True,
         ),
         StrInput(
             name="metadata_indexing_exclude",
             display_name="Metadata Indexing Exclude",
             info="Optional list of metadata fields to exclude from the indexing.",
+            is_list=True,
             advanced=True,
         ),
         StrInput(
             name="collection_indexing_policy",
             display_name="Collection Indexing Policy",
-            info="Optional dictionary defining the indexing policy for the collection.",
+            info='Optional JSON string for the "indexing" field of the collection. '
+            "See https://docs.datastax.com/en/astra-db-serverless/api-reference/collections.html#the-indexing-option",
             advanced=True,
         ),
         IntInput(
@@ -214,7 +218,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
 
             # Find the index of the key to insert after
             idx = len(items)
-            for i, (key, _value) in enumerate(items):
+            for i, (key, _) in enumerate(items):
                 if key == field_name:
                     idx = i + 1
                     break
@@ -286,6 +290,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 "https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html):\n\n"
                 f"{', '.join(model_options)}",
                 options=model_options,
+                placeholder="Select a model",
+                value=model_options[0],
                 required=True,
             ).to_dict()
 
@@ -384,7 +390,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             msg = f"Invalid setup mode: {self.setup_mode}"
             raise ValueError(msg) from e
 
-        if self.embedding:
+        if self.embedding_service == "Embedding Model":
             embedding_dict = {"embedding": self.embedding}
         else:
             from astrapy.info import CollectionVectorServiceOptions
@@ -399,33 +405,29 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 "collection_vector_service_options": CollectionVectorServiceOptions.from_dict(
                     dict_options.get("collection_vector_service_options", {})
                 ),
+                "collection_embedding_api_key": dict_options.get("collection_embedding_api_key"),
             }
-
-        vector_store_kwargs = {
-            **embedding_dict,
-            "collection_name": self.collection_name,
-            "token": self.token,
-            "api_endpoint": self.api_endpoint,
-            "namespace": self.namespace or None,
-            "environment": parse_api_endpoint(self.api_endpoint).environment,
-            "metric": self.metric or None,
-            "batch_size": self.batch_size or None,
-            "bulk_insert_batch_concurrency": self.bulk_insert_batch_concurrency or None,
-            "bulk_insert_overwrite_concurrency": self.bulk_insert_overwrite_concurrency or None,
-            "bulk_delete_concurrency": self.bulk_delete_concurrency or None,
-            "setup_mode": setup_mode_value,
-            "pre_delete_collection": self.pre_delete_collection or False,
-        }
-
-        if self.metadata_indexing_include:
-            vector_store_kwargs["metadata_indexing_include"] = self.metadata_indexing_include
-        elif self.metadata_indexing_exclude:
-            vector_store_kwargs["metadata_indexing_exclude"] = self.metadata_indexing_exclude
-        elif self.collection_indexing_policy:
-            vector_store_kwargs["collection_indexing_policy"] = self.collection_indexing_policy
-
         try:
-            vector_store = AstraDBVectorStore(**vector_store_kwargs)
+            vector_store = AstraDBVectorStore(
+                collection_name=self.collection_name,
+                token=self.token,
+                api_endpoint=self.api_endpoint,
+                namespace=self.namespace or None,
+                environment=parse_api_endpoint(self.api_endpoint).environment if self.api_endpoint else None,
+                metric=self.metric or None,
+                batch_size=self.batch_size or None,
+                bulk_insert_batch_concurrency=self.bulk_insert_batch_concurrency or None,
+                bulk_insert_overwrite_concurrency=self.bulk_insert_overwrite_concurrency or None,
+                bulk_delete_concurrency=self.bulk_delete_concurrency or None,
+                setup_mode=setup_mode_value,
+                pre_delete_collection=self.pre_delete_collection,
+                metadata_indexing_include=[s for s in self.metadata_indexing_include if s] or None,
+                metadata_indexing_exclude=[s for s in self.metadata_indexing_exclude if s] or None,
+                collection_indexing_policy=orjson.dumps(self.collection_indexing_policy)
+                if self.collection_indexing_policy
+                else None,
+                **embedding_dict,
+            )
         except Exception as e:
             msg = f"Error initializing AstraDBVectorStore: {e}"
             raise ValueError(msg) from e
@@ -444,14 +446,14 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 raise TypeError(msg)
 
         if documents:
-            logger.debug(f"Adding {len(documents)} documents to the Vector Store.")
+            self.log(f"Adding {len(documents)} documents to the Vector Store.")
             try:
                 vector_store.add_documents(documents)
             except Exception as e:
                 msg = f"Error adding documents to AstraDBVectorStore: {e}"
                 raise ValueError(msg) from e
         else:
-            logger.debug("No documents to add to the Vector Store.")
+            self.log("No documents to add to the Vector Store.")
 
     def _map_search_type(self) -> str:
         if self.search_type == "Similarity with score threshold":
@@ -476,9 +478,9 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         if not vector_store:
             vector_store = self.build_vector_store()
 
-        logger.debug(f"Search input: {self.search_input}")
-        logger.debug(f"Search type: {self.search_type}")
-        logger.debug(f"Number of results: {self.number_of_results}")
+        self.log(f"Search input: {self.search_input}")
+        self.log(f"Search type: {self.search_type}")
+        self.log(f"Number of results: {self.number_of_results}")
 
         if self.search_input and isinstance(self.search_input, str) and self.search_input.strip():
             try:
@@ -490,13 +492,13 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 msg = f"Error performing search in AstraDBVectorStore: {e}"
                 raise ValueError(msg) from e
 
-            logger.debug(f"Retrieved documents: {len(docs)}")
+            self.log(f"Retrieved documents: {len(docs)}")
 
             data = docs_to_data(docs)
-            logger.debug(f"Converted documents to data: {len(data)}")
+            self.log(f"Converted documents to data: {len(data)}")
             self.status = data
             return data
-        logger.debug("No search input provided. Skipping search.")
+        self.log("No search input provided. Skipping search.")
         return []
 
     def get_retriever_kwargs(self):

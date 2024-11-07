@@ -16,7 +16,7 @@ test.describe("group node test", () => {
     }
 
     while (modalCount === 0) {
-      await page.getByText("New Project", { exact: true }).click();
+      await page.getByText("New Flow", { exact: true }).click();
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
@@ -26,7 +26,7 @@ test.describe("group node test", () => {
       .first()
       .click();
     await page.waitForTimeout(1000);
-    await page.getByLabel("fit view").first().click();
+    await page.getByTestId("fit_view").first().click();
 
     await page.getByTestId("title-OpenAI").click();
     await page.getByTestId("title-OpenAI").click({ modifiers: ["Control"] });
@@ -35,10 +35,7 @@ test.describe("group node test", () => {
 
     await page.getByRole("button", { name: "Group" }).click();
     await page.getByTestId("title-Group").dblclick();
-    await page
-      .getByTestId("popover-anchor-input-title-Group")
-      .first()
-      .fill("test");
+    await page.getByTestId("input-title-Group").first().fill("test");
     await page.getByTestId("icon-Ungroup").first().click();
     await page.keyboard.press("Control+g");
     await page.getByTestId("title-OpenAI").isVisible();

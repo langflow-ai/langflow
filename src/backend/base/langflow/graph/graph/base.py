@@ -39,7 +39,6 @@ from langflow.logging.logger import LogConfig, configure
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.deps import get_chat_service, get_tracing_service
-from langflow.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import InputValueRequest
@@ -94,6 +93,7 @@ class Graph:
         self.has_session_id_vertices: list[str] = []
         self._sorted_vertices_layers: list[list[str]] = []
         self._run_id = ""
+        self._session_id = ""
         self._start_time = datetime.now(timezone.utc)
         self.inactivated_vertices: set = set()
         self.activated_vertices: list[str] = []
@@ -134,6 +134,14 @@ class Graph:
         if (start is not None and end is None) or (start is None and end is not None):
             msg = "You must provide both input and output components"
             raise ValueError(msg)
+
+    @property
+    def session_id(self):
+        return self._session_id
+
+    @session_id.setter
+    def session_id(self, value: str):
+        self._session_id = value
 
     @property
     def state_model(self):
@@ -707,58 +715,6 @@ class Graph:
 
         return vertex_outputs
 
-    def run(
-        self,
-        inputs: list[dict[str, str]],
-        *,
-        input_components: list[list[str]] | None = None,
-        types: list[InputType | None] | None = None,
-        outputs: list[str] | None = None,
-        session_id: str | None = None,
-        stream: bool = False,
-        fallback_to_env_vars: bool = False,
-    ) -> list[RunOutputs]:
-        """Run the graph with the given inputs and return the outputs.
-
-        Args:
-            inputs (Dict[str, str]): A dictionary of input values.
-            input_components (Optional[list[str]]): A list of input components.
-            types (Optional[list[str]]): A list of types.
-            outputs (Optional[list[str]]): A list of output components.
-            session_id (Optional[str]): The session ID.
-            stream (bool): Whether to stream the outputs.
-            fallback_to_env_vars (bool): Whether to fallback to environment variables.
-
-        Returns:
-            List[RunOutputs]: A list of RunOutputs objects representing the outputs.
-        """
-        # run the async function in a sync way
-        # this could be used in a FastAPI endpoint
-        # so we should take care of the event loop
-        coro = self.arun(
-            inputs=inputs,
-            inputs_components=input_components,
-            types=types,
-            outputs=outputs,
-            session_id=session_id,
-            stream=stream,
-            fallback_to_env_vars=fallback_to_env_vars,
-        )
-
-        try:
-            # Attempt to get the running event loop; if none, an exception is raised
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            # If there's no running event loop, use asyncio.run
-            return asyncio.run(coro)
-
-        # If the event loop is closed, use asyncio.run
-        if loop.is_closed():
-            return asyncio.run(coro)
-
-        # If there's an existing, open event loop, use it to run the async function
-        return loop.run_until_complete(coro)
-
     async def arun(
         self,
         inputs: list[dict[str, str]],
@@ -833,7 +789,7 @@ class Graph:
         Returns:
             dict: The metadata of the graph.
         """
-        time_format = "%Y-%m-%d %H:%M:%S"
+        time_format = "%Y-%m-%d %H:%M:%S %Z"
         return {
             "start_time": self._start_time.strftime(time_format),
             "end_time": self._end_time.strftime(time_format),
@@ -1178,7 +1134,7 @@ class Graph:
         # This is a hack to make sure that the LLM vertex is sent to
         # the toolkit vertex
         self._build_vertex_params()
-        run_until_complete(self._instantiate_components_in_vertices())
+        self._instantiate_components_in_vertices()
         self._set_cache_to_vertices_in_cycle()
 
     def _get_edges_as_list_of_tuples(self) -> list[tuple[str, str]]:
@@ -1193,10 +1149,10 @@ class Graph:
             if vertex.id in cycle_vertices:
                 vertex.apply_on_outputs(lambda output_object: setattr(output_object, "cache", False))
 
-    async def _instantiate_components_in_vertices(self) -> None:
+    def _instantiate_components_in_vertices(self) -> None:
         """Instantiates the components in the vertices."""
         for vertex in self.vertices:
-            await vertex.instantiate_component(self.user_id)
+            vertex.instantiate_component(self.user_id)
 
     def remove_vertex(self, vertex_id: str) -> None:
         """Removes a vertex from the graph."""
@@ -1356,7 +1312,7 @@ class Graph:
                 if get_cache is not None:
                     cached_result = await get_cache(key=vertex.id)
                 else:
-                    cached_result = None
+                    cached_result = CacheMiss()
                 if isinstance(cached_result, CacheMiss):
                     should_build = True
                 else:

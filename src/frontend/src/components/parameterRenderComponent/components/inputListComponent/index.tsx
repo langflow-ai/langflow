@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import _ from "lodash";
 import { classNames, cn } from "../../../../utils/utils";
 import IconComponent from "../../../genericIconComponent";
@@ -49,11 +50,7 @@ export default function InputListComponent({
   };
 
   const getButtonClassName = () =>
-    classNames(
-      disabled
-        ? "cursor-not-allowed text-muted-foreground"
-        : "text-primary hover:text-accent-foreground",
-    );
+    classNames(disabled ? "text-hard-zinc" : "text-placeholder-foreground");
 
   const getTestId = (type, index) =>
     `input-list-${type}-btn${editNode ? "-edit" : ""}_${componentName}-${index}`;
@@ -66,28 +63,54 @@ export default function InputListComponent({
       )}
     >
       {value.map((singleValue, index) => (
-        <div key={index} className="flex w-full gap-3">
+        <div key={index} className="flex w-full items-center gap-3">
           <Input
             disabled={disabled}
             type="text"
             value={singleValue}
-            className={editNode ? "input-edit-node" : ""}
+            className={cn(
+              editNode ? "input-edit-node" : "",
+              disabled ? "disabled-state" : "",
+            )}
             placeholder="Type something..."
             onChange={(event) => handleInputChange(index, event.target.value)}
             data-testid={`${id}_${index}`}
           />
-          <Button
-            unstyled
-            className={getButtonClassName()}
+          <div
             onClick={index === 0 ? addNewInput : (e) => removeInput(index, e)}
-            data-testid={getTestId(index === 0 ? "plus" : "minus", index)}
-            disabled={disabled}
+            className={cn(
+              "hit-area-icon group flex items-center justify-center text-center",
+              disabled
+                ? "pointer-events-none bg-background hover:bg-background"
+                : "",
+              index === 0
+                ? "bg-background hover:bg-muted"
+                : "hover:bg-smooth-red",
+            )}
           >
-            <IconComponent
-              name={index === 0 ? "Plus" : "X"}
-              className="h-4 w-4"
-            />
-          </Button>
+            <Button
+              unstyled
+              size="icon"
+              className={cn(
+                "hit-area-icon flex items-center justify-center",
+                getButtonClassName(),
+              )}
+              data-testid={getTestId(index === 0 ? "plus" : "minus", index)}
+              disabled={disabled}
+            >
+              <IconComponent
+                name={index === 0 ? "Plus" : "Trash2"}
+                className={cn(
+                  "icon-size justify-self-center text-muted-foreground",
+                  !disabled && "hover:cursor-pointer hover:text-foreground",
+                  index === 0
+                    ? "group-hover:text-foreground"
+                    : "group-hover:text-destructive",
+                )}
+                strokeWidth={ICON_STROKE_WIDTH}
+              />
+            </Button>
+          </div>
         </div>
       ))}
     </div>

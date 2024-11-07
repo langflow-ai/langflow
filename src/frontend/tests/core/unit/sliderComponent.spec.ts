@@ -1,6 +1,7 @@
 import { expect, Page, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 
+// TODO: This component doesn't have slider needs updating
 test("user should be able to use slider input", async ({ page }) => {
   await page.goto("/");
   await page.waitForSelector('[data-testid="mainpage_title"]', {
@@ -22,7 +23,7 @@ test("user should be able to use slider input", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -39,12 +40,8 @@ test("user should be able to use slider input", async ({ page }) => {
     timeout: 30000,
   });
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("ollama");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("ollama");
 
   await page.waitForTimeout(1000);
 
@@ -53,9 +50,9 @@ test("user should be able to use slider input", async ({ page }) => {
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("title-Ollama").click();
   await page.getByTestId("code-button-modal").click();
@@ -80,7 +77,7 @@ test("user should be able to use slider input", async ({ page }) => {
   await page.locator('//*[@id="checkAndSaveBtn"]').click();
   await page.waitForTimeout(500);
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   await mutualValidation(page);
 
@@ -88,10 +85,10 @@ test("user should be able to use slider input", async ({ page }) => {
 
   await page.waitForTimeout(500);
 
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("more-options-modal").click();
-  await page.getByText("Advanced", { exact: true }).click();
+  await page.getByText("Controls", { exact: true }).last().click();
   await expect(
     page.getByTestId("default_slider_display_value_advanced"),
   ).toHaveText("19.00");

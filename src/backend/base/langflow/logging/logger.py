@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -8,7 +9,10 @@ from threading import Lock, Semaphore
 from typing import TypedDict
 
 import orjson
-from loguru import logger
+from loguru import _defaults, logger
+from loguru._error_interceptor import ErrorInterceptor
+from loguru._file_sink import FileSink
+from loguru._simple_sinks import AsyncSink
 from platformdirs import user_cache_dir
 from rich.logging import RichHandler
 from typing_extensions import NotRequired
@@ -28,16 +32,12 @@ class SizedLogBuffer:
         The buffer can be overwritten by an env variable LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE
         because the logger is initialized before the settings_service are loaded.
         """
-        self.max: int = 0
-        env_buffer_size = os.getenv("LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE", "0")
-        if env_buffer_size.isdigit():
-            self.max = int(env_buffer_size)
-
         self.buffer: deque = deque()
 
         self._max_readers = max_readers
         self._wlock = Lock()
         self._rsemaphore = Semaphore(max_readers)
+        self._max = 0
 
     def get_write_lock(self) -> Lock:
         return self._wlock
@@ -102,6 +102,19 @@ class SizedLogBuffer:
         finally:
             self._rsemaphore.release()
 
+    @property
+    def max(self) -> int:
+        # Get it dynamically to allow for env variable changes
+        if self._max == 0:
+            env_buffer_size = os.getenv("LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE", "0")
+            if env_buffer_size.isdigit():
+                self._max = int(env_buffer_size)
+        return self._max
+
+    @max.setter
+    def max(self, value: int) -> None:
+        self._max = value
+
     def enabled(self) -> bool:
         return self.max > 0
 
@@ -136,12 +149,30 @@ class LogConfig(TypedDict):
     log_env: NotRequired[str]
 
 
+class AsyncFileSink(AsyncSink):
+    def __init__(self, file):
+        self._sink = FileSink(
+            path=file,
+            rotation="10 MB",  # Log rotation based on file size
+        )
+        super().__init__(self.write_async, None, ErrorInterceptor(_defaults.LOGURU_CATCH, -1))
+
+    async def complete(self):
+        await asyncio.to_thread(self._sink.stop)
+        for task in self._tasks:
+            await self._complete_task(task)
+
+    async def write_async(self, message):
+        await asyncio.to_thread(self._sink.write, message)
+
+
 def configure(
     *,
     log_level: str | None = None,
     log_file: Path | None = None,
     disable: bool | None = False,
     log_env: str | None = None,
+    async_file: bool = False,
 ) -> None:
     if disable and log_level is None and log_file is None:
         logger.disable("langflow")
@@ -187,14 +218,12 @@ def configure(
             log_file = cache_dir / "langflow.log"
             logger.debug(f"Log file: {log_file}")
         try:
-            log_file = Path(log_file)
             log_file.parent.mkdir(parents=True, exist_ok=True)
 
             logger.add(
-                sink=str(log_file),
+                sink=AsyncFileSink(log_file) if async_file else log_file,
                 level=log_level.upper(),
                 format=log_format,
-                rotation="10 MB",  # Log rotation based on file size
                 serialize=True,
             )
         except Exception:  # noqa: BLE001

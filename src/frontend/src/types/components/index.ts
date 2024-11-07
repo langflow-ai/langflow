@@ -41,6 +41,7 @@ export type InputComponentType = {
   objectOptions?: Array<{ name: string; id: string }>;
   isObjectOption?: boolean;
   onChangeFolderName?: (e: any) => void;
+  nodeStyle?: boolean;
 };
 export type DropDownComponent = {
   disabled?: boolean;
@@ -52,6 +53,7 @@ export type DropDownComponent = {
   editNode?: boolean;
   id?: string;
   children?: ReactNode;
+  name?: string;
 };
 export type ParameterComponentType = {
   selected?: boolean;
@@ -88,6 +90,8 @@ export type NodeOutputFieldComponentType = {
   type: string | undefined;
   outputName?: string;
   outputProxy?: OutputFieldProxyType;
+  lastOutput?: boolean;
+  colorName?: string[];
 };
 
 export type NodeInputFieldComponentType = {
@@ -103,6 +107,7 @@ export type NodeInputFieldComponentType = {
   info: string;
   proxy: { field: string; id: string } | undefined;
   showNode: boolean;
+  colorName?: string[];
 };
 
 export type IOJSONInputComponentType = {
@@ -240,6 +245,7 @@ export type ShadToolTipType = {
   setOpen?: (open: boolean) => void;
   content?: ReactNode | null;
   side?: "top" | "right" | "bottom" | "left";
+  align?: "start" | "center" | "end";
   asChild?: boolean;
   children?: ReactElement;
   delayDuration?: number;
@@ -267,6 +273,7 @@ export type IconComponentProps = {
   strokeWidth?: number;
   id?: string;
   skipFallback?: boolean;
+  dataTestId?: string;
 };
 
 export type InputProps = {
@@ -535,6 +542,7 @@ export type nodeToolbarPropsType = {
   onCloseAdvancedModal?: (close: boolean) => void;
   isOutdated: boolean;
   updateNode: () => void;
+  closeToolbar?: () => void;
 };
 
 export type parsedDataType = {
@@ -581,6 +589,7 @@ export type chatMessagePropsType = {
     message: string,
     stream_url?: string,
   ) => void;
+  closeChat?: () => void;
 };
 
 export type genericModalPropsType = {
@@ -616,10 +625,12 @@ export type textModalPropsType = {
   setValue: (value: string) => void;
   value: string;
   disabled?: boolean;
-  children: ReactNode;
+  children?: ReactNode;
   readonly?: boolean;
   password?: boolean;
   changeVisibility?: () => void;
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
 };
 
 export type newFlowModalPropsType = {
@@ -634,6 +645,7 @@ export type IOModalPropsType = {
   disable?: boolean;
   isPlayground?: boolean;
   cleanOnClose?: boolean;
+  canvasOpen?: boolean;
 };
 
 export type buttonBoxPropsType = {
@@ -752,6 +764,7 @@ export type chatViewProps = {
   setLockChat: (lock: boolean) => void;
   visibleSession?: string;
   focusChat?: string;
+  closeChat?: () => void;
 };
 
 export type IOFileInputProps = {

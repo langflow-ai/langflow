@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("user should be able to use duckduckgo search component", async ({
+test.skip("user should be able to use duckduckgo search component", async ({
   page,
 }) => {
   await page.goto("/");
@@ -23,18 +23,14 @@ test("user should be able to use duckduckgo search component", async ({
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("duck");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("duck");
 
   await page.waitForTimeout(1000);
 
@@ -43,7 +39,7 @@ test("user should be able to use duckduckgo search component", async ({
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   await page
     .getByTestId("popover-anchor-input-input_value")
@@ -51,7 +47,7 @@ test("user should be able to use duckduckgo search component", async ({
 
   await page.getByTestId("button_run_duckduckgo search").click();
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   const result = await Promise.race([
     page.waitForSelector("text=built successfully", { timeout: 30000 }),

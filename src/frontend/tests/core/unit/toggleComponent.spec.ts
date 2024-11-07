@@ -21,7 +21,7 @@ test("ToggleComponent", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -30,17 +30,8 @@ test("ToggleComponent", async ({ page }) => {
   });
   await page.getByTestId("blank-flow").click();
 
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  const focusElementsOnBoard = async ({ page }) => {
-    const focusElements = await page.getByTestId("extended-disclosure");
-    focusElements.click();
-  };
-
-  await focusElementsOnBoard({ page });
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("directory");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("directory");
 
   await page.waitForTimeout(1000);
   await page
@@ -49,19 +40,19 @@ test("ToggleComponent", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.waitForSelector('[title="fit view"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
   });
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("div-generic-node").click();
 
   await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("advanced-button-modal").click();
 
   await page.locator('//*[@id="showload_hidden"]').click();
   expect(
@@ -70,11 +61,11 @@ test("ToggleComponent", async ({ page }) => {
 
   await page.getByText("Close").last().click();
 
-  await page.waitForSelector('[title="fit view"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
   });
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   await page.getByTestId("toggle_bool_load_hidden").click();
   expect(
@@ -103,17 +94,17 @@ test("ToggleComponent", async ({ page }) => {
 
   await page.getByTestId("div-generic-node").click();
 
-  await page.waitForSelector('[title="fit view"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
   });
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("more-options-modal").click();
-  await page.getByTestId("edit-button-modal").click();
+  await page.getByTestId("advanced-button-modal").click();
 
   expect(
     await page.getByTestId("toggle_bool_load_hidden").isChecked(),
@@ -180,7 +171,7 @@ test("ToggleComponent", async ({ page }) => {
     await page.getByTestId("div-generic-node").click();
 
     await page.getByTestId("more-options-modal").click();
-    await page.getByTestId("edit-button-modal").click();
+    await page.getByTestId("advanced-button-modal").click();
 
     await page.locator('//*[@id="showload_hidden"]').click();
     expect(

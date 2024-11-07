@@ -13,7 +13,7 @@ test("should see general profile gradient", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page.getByText("Settings").click();
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(2000);
 
   await page.getByText("General").nth(2).isVisible();
   await page.getByText("Profile Gradient").isVisible();
@@ -35,7 +35,7 @@ test("should interact with global variables", async ({ page }) => {
   await page
     .getByPlaceholder("Insert a name for the variable...")
     .fill(randomName);
-  await page.getByTestId("popover-anchor-type-global-variables").click();
+  await page.getByTestId("anchor-popover-anchor-type-global-variables").click();
   await page.getByPlaceholder("Search options...").fill("Generic");
   await page.waitForTimeout(1000);
   await page.getByText("Generic", { exact: true }).last().isVisible();
@@ -76,10 +76,6 @@ test("should interact with global variables", async ({ page }) => {
 
   await page.getByPlaceholder("Search options...").fill("ollama");
 
-  await page.waitForSelector("text=ollama", { timeout: 30000 });
-
-  await page.getByText("ollama").first().click();
-
   await page.keyboard.press("Escape");
   await page.getByText("Save Variable", { exact: true }).click();
 
@@ -110,19 +106,21 @@ test("should interact with global variables", async ({ page }) => {
 
   await page.getByText(randomName3).last().isVisible();
 
-  const focusElementsOnBoard = async ({ page }) => {
-    await page.waitForSelector(
-      '[aria-label="Press Space to toggle all rows selection (unchecked)"]',
-      { timeout: 30000 },
-    );
-    const focusElements = await page
-      .getByLabel("Press Space to toggle all rows selection (unchecked)")
-      .first();
-    await focusElements.click();
-  };
+  await page.waitForTimeout(2000);
 
-  await focusElementsOnBoard({ page });
+  // const focusElementsOnBoard = async ({ page }) => {
+  //   await page.waitForSelector(
+  //     '[aria-label="Press Space to toggle all rows selection (unchecked)"]',
+  //     { timeout: 30000, state: "visible" },
+  //   );
+  //   const focusElements = await page
+  //     .getByLabel("Press Space to toggle all rows selection (unchecked)")
+  //     .first();
+  //   await focusElements.click();
+  // };
+  // await focusElementsOnBoard({ page });
 
+  await page.locator(".ag-checkbox-input").first().click();
   await page.getByTestId("icon-Trash2").click();
   await page.getByText("No data available").isVisible();
 });

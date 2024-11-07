@@ -110,7 +110,7 @@ export default function PdfViewer({ pdf }: { pdf: string }): JSX.Element {
           "absolute z-50 pb-5 " + (showControl && numPages > 0 ? "" : " hidden")
         }
       >
-        <div className="flex w-min items-center justify-center gap-0.5 rounded-xl bg-secondary px-2 align-middle">
+        <div className="flex w-min items-center justify-center gap-0.5 rounded-xl bg-muted px-2 align-middle">
           <button
             type="button"
             disabled={pageNumber <= 1}

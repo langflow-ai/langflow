@@ -108,157 +108,7 @@ PROMPT_REQUEST = {
 }
 
 
-# def test_process_flow_invalid_api_key(client, flow, monkeypatch):
-#     # Mock de process_graph_cached
-#     from langflow.api.v1 import endpoints
-#     from langflow.services.database.models.api_key import crud
-
-#     settings_service = get_settings_service()
-#     settings_service.auth_settings.AUTO_LOGIN = False
-
-#     async def mock_process_graph_cached(*args, **kwargs):
-#         return Result(result={}, session_id="session_id_mock")
-
-#     def mock_update_total_uses(*args, **kwargs):
-#         return created_api_key
-
-#     monkeypatch.setattr(endpoints, "process_graph_cached", mock_process_graph_cached)
-#     monkeypatch.setattr(crud, "update_total_uses", mock_update_total_uses)
-
-#     headers = {"x-api-key": "invalid_api_key"}
-
-#     post_data = {
-#         "inputs": {"key": "value"},
-#         "tweaks": None,
-#         "clear_cache": False,
-#         "session_id": None,
-#     }
-
-#     response = await client.post(f"api/v1/process/{flow.id}", headers=headers, json=post_data)
-
-#     assert response.status_code == 403
-#     assert response.json() == {"detail": "Invalid or missing API key"}
-
-
-# def test_process_flow_invalid_id(client, monkeypatch, created_api_key):
-#     async def mock_process_graph_cached(*args, **kwargs):
-#         return Result(result={}, session_id="session_id_mock")
-
-#     from langflow.api.v1 import endpoints
-
-#     monkeypatch.setattr(endpoints, "process_graph_cached", mock_process_graph_cached)
-
-#     api_key = created_api_key.api_key
-#     headers = {"x-api-key": api_key}
-
-#     post_data = {
-#         "inputs": {"key": "value"},
-#         "tweaks": None,
-#         "clear_cache": False,
-#         "session_id": None,
-#     }
-
-#     invalid_id = uuid.uuid4()
-#     response = await client.post(f"api/v1/process/{invalid_id}", headers=headers, json=post_data)
-
-#     assert response.status_code == 404
-#     assert f"Flow {invalid_id} not found" in response.json()["detail"]
-
-
-# def test_process_flow_without_autologin(client, flow, monkeypatch, created_api_key):
-#     # Mock de process_graph_cached
-#     from langflow.api.v1 import endpoints
-#     from langflow.services.database.models.api_key import crud
-
-#     settings_service = get_settings_service()
-#     settings_service.auth_settings.AUTO_LOGIN = False
-
-#     async def mock_process_graph_cached(*args, **kwargs):
-#         return Result(result={}, session_id="session_id_mock")
-
-#     def mock_process_graph_cached_task(*args, **kwargs):
-#         return Result(result={}, session_id="session_id_mock")
-
-#     # The task function is ran like this:
-#     # if not self.use_celery:
-#     #     return None, await task_func(*args, **kwargs)
-#     # if not hasattr(task_func, "apply"):
-#     #     raise ValueError(f"Task function {task_func} does not have an apply method")
-#     # task = task_func.apply(args=args, kwargs=kwargs)
-#     # result = task.get()
-#     # return task.id, result
-#     # So we need to mock the task function to return a task object
-#     # and then mock the task object to return a result
-#     # maybe a named tuple would be better here
-#     task = namedtuple("task", ["id", "get"])
-#     mock_process_graph_cached_task.apply = lambda *args, **kwargs: task(
-#         id="task_id_mock", get=lambda: Result(result={}, session_id="session_id_mock")
-#     )
-
-#     def mock_update_total_uses(*args, **kwargs):
-#         return created_api_key
-
-#     monkeypatch.setattr(endpoints, "process_graph_cached", mock_process_graph_cached)
-#     monkeypatch.setattr(crud, "update_total_uses", mock_update_total_uses)
-#     monkeypatch.setattr(endpoints, "process_graph_cached_task", mock_process_graph_cached_task)
-
-#     api_key = created_api_key.api_key
-#     headers = {"x-api-key": api_key}
-
-#     # Dummy POST data
-#     post_data = {
-#         "inputs": {"input": "value"},
-#         "tweaks": None,
-#         "clear_cache": False,
-#         "session_id": None,
-#     }
-
-#     # Make the request to the FastAPI TestClient
-
-#     response = await client.post(f"api/v1/process/{flow.id}", headers=headers, json=post_data)
-
-#     # Check the response
-#     assert response.status_code == 200, response.json()
-#     assert response.json()["result"] == {}, response.json()
-#     assert response.json()["session_id"] == "session_id_mock", response.json()
-
-
-# def test_process_flow_fails_autologin_off(client, flow, monkeypatch):
-#     # Mock de process_graph_cached
-#     from langflow.api.v1 import endpoints
-#     from langflow.services.database.models.api_key import crud
-
-#     settings_service = get_settings_service()
-#     settings_service.auth_settings.AUTO_LOGIN = False
-
-#     async def mock_process_graph_cached(*args, **kwargs):
-#         return Result(result={}, session_id="session_id_mock")
-
-#     async def mock_update_total_uses(*args, **kwargs):
-#         return created_api_key
-
-#     monkeypatch.setattr(endpoints, "process_graph_cached", mock_process_graph_cached)
-#     monkeypatch.setattr(crud, "update_total_uses", mock_update_total_uses)
-
-#     headers = {"x-api-key": "api_key"}
-
-#     # Dummy POST data
-#     post_data = {
-#         "inputs": {"key": "value"},
-#         "tweaks": None,
-#         "clear_cache": False,
-#         "session_id": None,
-#     }
-
-#     # Make the request to the FastAPI TestClient
-
-#     response = await client.post(f"api/v1/process/{flow.id}", headers=headers, json=post_data)
-
-#     # Check the response
-#     assert response.status_code == 403, response.json()
-#     assert response.json() == {"detail": "Invalid or missing API key"}
-
-
+@pytest.mark.benchmark
 async def test_get_all(client: AsyncClient, logged_in_headers):
     response = await client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
@@ -480,6 +330,7 @@ async def test_successful_run_with_output_type_text(client, simple_api_test, cre
     assert all(key in result for result in inner_results for key in expected_keys), outputs_dict
 
 
+@pytest.mark.benchmark
 async def test_successful_run_with_output_type_any(client, simple_api_test, created_api_key):
     # This one should have both the ChatOutput and TextOutput components
     headers = {"x-api-key": created_api_key.api_key}
@@ -511,6 +362,7 @@ async def test_successful_run_with_output_type_any(client, simple_api_test, crea
     assert all(key in result for result in inner_results for key in expected_keys), outputs_dict
 
 
+@pytest.mark.benchmark
 async def test_successful_run_with_output_type_debug(client, simple_api_test, created_api_key):
     # This one should return outputs for all components
     # Let's just check the amount of outputs(there should be 7)
@@ -536,6 +388,7 @@ async def test_successful_run_with_output_type_debug(client, simple_api_test, cr
     assert len(outputs_dict.get("outputs")) == 3
 
 
+@pytest.mark.benchmark
 async def test_successful_run_with_input_type_text(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
@@ -570,6 +423,7 @@ async def test_successful_run_with_input_type_text(client, simple_api_test, crea
 
 
 @pytest.mark.api_key_required
+@pytest.mark.benchmark
 async def test_successful_run_with_input_type_chat(client: AsyncClient, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
@@ -602,6 +456,7 @@ async def test_successful_run_with_input_type_chat(client: AsyncClient, simple_a
     ), chat_input_outputs
 
 
+@pytest.mark.benchmark
 async def test_invalid_run_with_input_type_chat(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
@@ -616,6 +471,7 @@ async def test_invalid_run_with_input_type_chat(client, simple_api_test, created
     assert "If you pass an input_value to the chat input, you cannot pass a tweak with the same name." in response.text
 
 
+@pytest.mark.benchmark
 async def test_successful_run_with_input_type_any(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
@@ -668,6 +524,7 @@ async def test_invalid_flow_id(client, created_api_key):
     # Check if the error detail is as expected
 
 
+@pytest.mark.benchmark
 async def test_starter_projects(client, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     response = await client.get("api/v1/starter-projects/", headers=headers)

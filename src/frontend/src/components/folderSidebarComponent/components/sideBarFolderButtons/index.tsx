@@ -56,6 +56,10 @@ const SideBarFoldersButtonsComponent = ({
     pathname.split("/").length < (ENABLE_CUSTOM_PARAM ? 5 : 4);
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const folderIdDragging = useFolderStore((state) => state.folderIdDragging);
+  const showFolderModal = useFolderStore((state) => state.showFolderModal);
+  const setShowFolderModal = useFolderStore(
+    (state) => state.setShowFolderModal,
+  );
 
   const checkPathName = (itemId: string) => {
     if (urlWithoutPath && itemId === myCollectionId) {
@@ -100,7 +104,7 @@ const SideBarFoldersButtonsComponent = ({
                 onError: (err) => {
                   console.log(err);
                   setErrorData({
-                    title: `Error on upload`,
+                    title: `Error on uploading your folder, try dragging it into an existing folder.`,
                     list: [err["response"]["data"]["message"]],
                   });
                 },
@@ -121,10 +125,8 @@ const SideBarFoldersButtonsComponent = ({
       },
       {
         onSuccess: (data) => {
-          const folder = folders.find((f) => f.id === data.folderId);
-
-          data.folder_name = folder?.name || "folder";
-          data.folder_description = folder?.description || "";
+          data.folder_name = data?.name || "folder";
+          data.folder_description = data?.description || "";
 
           const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
             JSON.stringify(data),
@@ -132,7 +134,7 @@ const SideBarFoldersButtonsComponent = ({
 
           const link = document.createElement("a");
           link.href = jsonString;
-          link.download = `${data.folder_name}.json`;
+          link.download = `${data?.name}.json`;
 
           link.click();
           track("Folder Exported", { folderId: id! });
@@ -252,8 +254,17 @@ const SideBarFoldersButtonsComponent = ({
     isDeletingFolder;
 
   const HeaderButtons = () => (
-    <div className="mt-4 flex shrink-0 items-center justify-between gap-2">
-      <div className="text-md flex-1 font-semibold">Folders</div>
+    <div className="my-4 flex shrink-0 items-center justify-between gap-1">
+      <Button
+        variant="ghost"
+        className="h-7 w-7 border-0 text-zinc-500 hover:bg-zinc-200 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white lg:hidden"
+        size="icon"
+        onClick={() => setShowFolderModal(!showFolderModal)}
+        data-testid="upload-folder-button"
+      >
+        <IconComponent name="panel-right-open" className="h-4 w-4" />
+      </Button>
+      <div className="flex-1 text-sm font-semibold">Folders</div>
       <UploadFolderButton
         onClick={handleUploadFlowsToFolder}
         disabled={isUpdatingFolder}
@@ -263,31 +274,32 @@ const SideBarFoldersButtonsComponent = ({
   );
 
   const AddFolderButton = ({ onClick, disabled }) => (
-    <ShadTooltip content="Add a new folder">
+    <ShadTooltip content="Create new folder" styleClasses="z-10">
       <Button
-        variant="primary"
+        variant="ghost"
         size="icon"
-        className="border-0"
+        className="h-7 w-7 border-0 text-zinc-500 hover:bg-zinc-200 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
         onClick={onClick}
         data-testid="add-folder-button"
         disabled={disabled}
       >
-        <IconComponent name="Plus" className="w-5" />
+        <IconComponent name="Plus" className="h-4 w-4" />
       </Button>
     </ShadTooltip>
   );
 
   const UploadFolderButton = ({ onClick, disabled }) => (
-    <ShadTooltip content="Upload a folder">
+    /* Todo: change this back to being a folder upload */
+    <ShadTooltip content="Upload a flow" styleClasses="z-10">
       <Button
-        variant="primary"
+        variant="ghost"
+        className="h-7 w-7 border-0 text-zinc-500 hover:bg-zinc-200 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
         size="icon"
-        className="border-0"
         onClick={onClick}
         data-testid="upload-folder-button"
         disabled={disabled}
       >
-        <IconComponent name="Upload" className="w-4" />
+        <IconComponent name="Upload" className="h-4 w-4" />
       </Button>
     </ShadTooltip>
   );
@@ -295,7 +307,7 @@ const SideBarFoldersButtonsComponent = ({
   const FolderSelectItem = ({ name, iconName }) => (
     <div
       className={cn(
-        name === "Delete" ? "text-error" : "",
+        name === "Delete" ? "text-destructive" : "",
         "flex items-center font-medium",
       )}
     >
@@ -380,7 +392,7 @@ const SideBarFoldersButtonsComponent = ({
     <>
       <HeaderButtons />
 
-      <div className="flex gap-2 overflow-auto lg:h-[70vh] lg:flex-col">
+      <div className="flex h-[70vh] flex-col gap-2 overflow-auto">
         <>
           {!loading ? (
             folders.map((item, index) => {
@@ -398,8 +410,8 @@ const SideBarFoldersButtonsComponent = ({
                   className={cn(
                     buttonVariants({ variant: "ghost" }),
                     checkPathName(item.id!)
-                      ? "bg-muted hover:bg-muted"
-                      : "border hover:bg-transparent lg:border-transparent lg:hover:border-border",
+                      ? "bg-zinc-200 hover:bg-zinc-200 dark:bg-zinc-800"
+                      : "hover:bg-transparent hover:bg-zinc-200 dark:hover:bg-zinc-800 lg:border-transparent",
                     "group flex w-full shrink-0 cursor-pointer gap-2 opacity-100 lg:min-w-full",
                     folderIdDragging === item.id! ? "bg-border" : "",
                   )}
@@ -412,10 +424,6 @@ const SideBarFoldersButtonsComponent = ({
                     className="flex w-full items-center justify-between"
                   >
                     <div className="flex items-center gap-2">
-                      <IconComponent
-                        name={"folder"}
-                        className="mr-2 w-4 flex-shrink-0 justify-start stroke-[1.5] opacity-100"
-                      />
                       {editFolderName?.edit && !isUpdatingFolder ? (
                         <div>
                           <Input
@@ -452,7 +460,7 @@ const SideBarFoldersButtonsComponent = ({
                           />
                         </div>
                       ) : (
-                        <span className="block w-full grow truncate opacity-100">
+                        <span className="block w-full grow truncate text-[13px] opacity-100">
                           {item.name}
                         </span>
                       )}
@@ -461,16 +469,24 @@ const SideBarFoldersButtonsComponent = ({
                       onValueChange={(value) => handleSelectChange(value, item)}
                       value=""
                     >
-                      <SelectTrigger
-                        className="w-fit"
-                        id={`options-trigger-${item.name}`}
-                        data-testid="more-options-button"
+                      <ShadTooltip
+                        content="Options"
+                        side="right"
+                        styleClasses="z-10"
                       >
-                        <IconComponent
-                          name={"MoreHorizontal"}
-                          className="hidden w-4 stroke-[1.5] px-0 text-primary group-hover:block"
-                        />
-                      </SelectTrigger>
+                        <SelectTrigger
+                          className="w-fit"
+                          id={`options-trigger-${item.name}`}
+                          data-testid="more-options-button"
+                        >
+                          <IconComponent
+                            name={"MoreHorizontal"}
+                            className={`w-4 stroke-[1.5] px-0 text-zinc-500 group-hover:block group-hover:text-black dark:text-zinc-400 dark:group-hover:text-white ${
+                              checkPathName(item.id!) ? "block" : "hidden"
+                            }`}
+                          />
+                        </SelectTrigger>
+                      </ShadTooltip>
                       <SelectContent
                         align="end"
                         alignOffset={-16}

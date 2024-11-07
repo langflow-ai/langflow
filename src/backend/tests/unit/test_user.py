@@ -155,22 +155,8 @@ async def test_inactive_user(client: AsyncClient):
 
 
 @pytest.mark.api_key_required
-async def test_add_user(test_user):
+def test_add_user(test_user):
     assert test_user["username"] == "testuser"
-
-
-# This is not used in the Frontend at the moment
-# def test_read_current_user(client: TestClient, active_user):
-#     # First we need to login to get the access token
-#     login_data = {"username": "testuser", "password": "testpassword"}
-#     response = await client.post("api/v1/login", data=login_data)
-#     assert response.status_code == 200
-
-#     headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
-
-#     response = await client.get("api/v1/user", headers=headers)
-#     assert response.status_code == 200, response.json()
-#     assert response.json()["username"] == "testuser"
 
 
 @pytest.mark.api_key_required

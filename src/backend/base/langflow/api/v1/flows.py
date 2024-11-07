@@ -35,7 +35,7 @@ router = APIRouter(prefix="/flows", tags=["Flows"])
 
 
 @router.post("/", response_model=FlowRead, status_code=201)
-def create_flow(
+async def create_flow(
     *,
     session: DbSession,
     flow: FlowCreate,
@@ -124,7 +124,7 @@ def create_flow(
 
 
 @router.get("/", response_model=list[FlowRead] | Page[FlowRead] | list[FlowHeader], status_code=200)
-def read_flows(
+async def read_flows(
     *,
     current_user: CurrentActiveUser,
     session: DbSession,
@@ -226,7 +226,7 @@ def _read_flow(
 
 
 @router.get("/{flow_id}", response_model=FlowRead, status_code=200)
-def read_flow(
+async def read_flow(
     *,
     session: DbSession,
     flow_id: UUID,
@@ -239,7 +239,7 @@ def read_flow(
 
 
 @router.patch("/{flow_id}", response_model=FlowRead, status_code=200)
-def update_flow(
+async def update_flow(
     *,
     session: DbSession,
     flow_id: UUID,
@@ -299,7 +299,7 @@ def update_flow(
 
 
 @router.delete("/{flow_id}", status_code=200)
-async def delete_flow(
+def delete_flow(
     *,
     session: DbSession,
     flow_id: UUID,
@@ -314,13 +314,13 @@ async def delete_flow(
     )
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
-    await cascade_delete_flow(session, flow)
+    cascade_delete_flow(session, flow)
     session.commit()
     return {"message": "Flow deleted successfully"}
 
 
 @router.post("/batch/", response_model=list[FlowRead], status_code=201)
-def create_flows(
+async def create_flows(
     *,
     session: DbSession,
     flow_list: FlowListCreate,
@@ -357,7 +357,7 @@ async def upload_file(
         flow.user_id = current_user.id
         if folder_id:
             flow.folder_id = folder_id
-        response = create_flow(session=session, flow=flow, current_user=current_user)
+        response = await create_flow(session=session, flow=flow, current_user=current_user)
         response_list.append(response)
 
     return response_list
@@ -442,7 +442,7 @@ async def download_multiple_file(
 
 
 @router.get("/basic_examples/", response_model=list[FlowRead], status_code=200)
-def read_basic_examples(
+async def read_basic_examples(
     *,
     session: DbSession,
 ):

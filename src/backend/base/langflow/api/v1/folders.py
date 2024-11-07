@@ -28,7 +28,7 @@ router = APIRouter(prefix="/folders", tags=["Folders"])
 
 
 @router.post("/", response_model=FolderRead, status_code=201)
-def create_folder(
+async def create_folder(
     *,
     session: DbSession,
     folder: FolderCreate,
@@ -82,7 +82,7 @@ def create_folder(
 
 
 @router.get("/", response_model=list[FolderRead], status_code=200)
-def read_folders(
+async def read_folders(
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
@@ -100,7 +100,7 @@ def read_folders(
 
 
 @router.get("/{folder_id}", response_model=FolderWithPaginatedFlows | FolderReadWithFlows, status_code=200)
-def read_folder(
+async def read_folder(
     *,
     session: DbSession,
     folder_id: str,
@@ -145,7 +145,7 @@ def read_folder(
 
 
 @router.patch("/{folder_id}", response_model=FolderRead, status_code=200)
-def update_folder(
+async def update_folder(
     *,
     session: DbSession,
     folder_id: str,
@@ -206,17 +206,17 @@ def update_folder(
 
 
 @router.delete("/{folder_id}", status_code=204)
-async def delete_folder(
+def delete_folder(
     *,
     session: DbSession,
     folder_id: str,
     current_user: CurrentActiveUser,
 ):
     try:
-        flows = session.exec(select(Flow).where(Flow.folder_id == folder_id, Folder.user_id == current_user.id)).all()
+        flows = session.exec(select(Flow).where(Flow.folder_id == folder_id, Flow.user_id == current_user.id)).all()
         if len(flows) > 0:
             for flow in flows:
-                await cascade_delete_flow(session, flow)
+                cascade_delete_flow(session, flow)
 
         folder = session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id)).first()
     except Exception as e:

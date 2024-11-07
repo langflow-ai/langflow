@@ -1,7 +1,17 @@
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "Roboto",
+    "Oxygen",
+    "Ubuntu",
+    "Cantarell",
+    "Fira Sans",
+    "Droid Sans",
+    "Helvetica Neue",
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -88,6 +98,16 @@ input .ag-cell-edit-input {
   outline-color: transparent !important;
 }
 
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23666666'%3E%3Cpath d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'/%3E%3C/svg%3E");
+  height: 16px;
+  width: 16px;
+  cursor: pointer;
+  display: block;
+}
+
 input[class^="ag-"]:not([type]),
 input[class^="ag-"][type="text"],
 input[class^="ag-"][type="number"],
@@ -170,23 +190,29 @@ textarea[class^="ag-"]:focus {
 }
 
 .react-flow__handle-right {
-  right: 0 !important;
+  right: -1.25rem !important;
   transform: translate(50%, -50%) !important;
 }
 
 .react-flow__handle-left {
-  left: 0 !important;
+  left: 1.25rem !important;
   transform: translate(-50%, -50%) !important;
 }
 
 .react-flow__handle-right {
-  right: 0 !important;
+  right: -1.25rem !important;
   transform: translate(50%, -50%) !important;
 }
 
 .react-flow__handle-left {
-  left: 0 !important;
+  left: -1.25rem !important;
   transform: translate(-50%, -50%) !important;
+}
+
+/* Modified transform when showNode is false */
+.react-flow__handle-right.no-show,
+.react-flow__handle-left.no-show {
+  transform: translate(0%, -50%) !important;
 }
 
 .react-flow__node-noteNode:not(.selected) {
@@ -233,15 +259,35 @@ span.token {
   max-width: 100%;
 }
 
-code {
+pre code {
   max-width: 100%;
   display: inline-block;
   width: 100%;
-  /* bg ignored now */
-  background-color: var(--canvas);
+  /* Background color */
+  background-color: hsl(var(--code-background)) !important;
 }
 
 pre {
-  /* bg ignored now */
-  background-color: var(--canvas);
+  /* Background color */
+  background-color: hsl(var(--code-background)) !important;
+}
+
+[type="search"]:not(:placeholder-shown)::-webkit-search-cancel-button {
+  opacity: 1 !important;
+}
+
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  height: 16px;
+  width: 16px;
+  margin-left: 0.4em;
+  position: relative;
+  right: -4px;
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'><path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'/></svg>");
+  background-color: hsl(var(--foreground)) !important;
+  background-image: none;
+  cursor: pointer;
+}
+.react-flow__background pattern circle {
+  fill: hsl(var(--canvas-dot)) !important;
 }

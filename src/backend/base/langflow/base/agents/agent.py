@@ -1,3 +1,4 @@
+import asyncio
 from abc import abstractmethod
 from typing import TYPE_CHECKING, cast
 
@@ -6,12 +7,15 @@ from langchain.agents.agent import RunnableAgent
 from langchain_core.runnables import Runnable
 
 from langflow.base.agents.callback import AgentAsyncHandler
+from langflow.base.agents.events import ExceptionWithMessageError, process_agent_events
 from langflow.base.agents.utils import data_to_messages
 from langflow.custom import Component
-from langflow.field_typing import Text
 from langflow.inputs.inputs import InputTypes
 from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
+from langflow.memory import delete_message
 from langflow.schema import Data
+from langflow.schema.content_block import ContentBlock
+from langflow.schema.log import SendMessageFunctionType
 from langflow.schema.message import Message
 from langflow.template import Output
 from langflow.utils.constants import MESSAGE_SENDER_AI
@@ -56,11 +60,8 @@ class LCAgentComponent(Component):
     async def message_response(self) -> Message:
         """Run the agent and return the response."""
         agent = self.build_agent()
-        result = await self.run_agent(agent=agent)
+        message = await self.run_agent(agent=agent)
 
-        if isinstance(result, list):
-            result = "\n".join([result_dict["text"] for result_dict in result])
-        message = Message(text=result, sender=MESSAGE_SENDER_AI)
         self.status = message
         return message
 
@@ -96,42 +97,10 @@ class LCAgentComponent(Component):
         # might be overridden in subclasses
         return None
 
-    async def run_agent(self, agent: AgentExecutor) -> Text:
-        input_dict: dict[str, str | list[BaseMessage]] = {"input": self.input_value}
-        self.chat_history = self.get_chat_history_data()
-        if self.chat_history:
-            input_dict["chat_history"] = data_to_messages(self.chat_history)
-        result = agent.invoke(
-            input_dict, config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]}
-        )
-        self.status = result
-        if "output" not in result:
-            msg = "Output key not found in result. Tried 'output'."
-            raise ValueError(msg)
-
-        return cast(str, result.get("output"))
-
-
-class LCToolsAgentComponent(LCAgentComponent):
-    _base_inputs = [
-        *LCAgentComponent._base_inputs,
-        HandleInput(
-            name="tools", display_name="Tools", input_types=["Tool", "BaseTool", "StructuredTool"], is_list=True
-        ),
-    ]
-
-    def build_agent(self) -> AgentExecutor:
-        agent = self.create_agent_runnable()
-        return AgentExecutor.from_agent_and_tools(
-            agent=RunnableAgent(runnable=agent, input_keys_arg=["input"], return_keys_arg=["output"]),
-            tools=self.tools,
-            **self.get_agent_kwargs(flatten=True),
-        )
-
     async def run_agent(
         self,
         agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor,
-    ) -> Text:
+    ) -> Message:
         if isinstance(agent, AgentExecutor):
             runnable = agent
         else:
@@ -146,15 +115,54 @@ class LCToolsAgentComponent(LCAgentComponent):
         if self.chat_history:
             input_dict["chat_history"] = data_to_messages(self.chat_history)
 
-        result = runnable.invoke(
-            input_dict, config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]}
+        agent_message = Message(
+            sender=MESSAGE_SENDER_AI,
+            sender_name="Agent",
+            properties={"icon": "Bot", "state": "partial"},
+            content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+            session_id=self.graph.session_id,
         )
-        self.status = result
-        if "output" not in result:
-            msg = "Output key not found in result. Tried 'output'."
-            raise ValueError(msg)
+        try:
+            result = await process_agent_events(
+                runnable.astream_events(
+                    input_dict,
+                    config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]},
+                    version="v2",
+                ),
+                agent_message,
+                cast(SendMessageFunctionType, self.send_message),
+            )
+        except ExceptionWithMessageError as e:
+            msg_id = e.agent_message.id
+            await asyncio.to_thread(delete_message, id_=msg_id)
+            self._send_message_event(e.agent_message, category="remove_message")
+            raise e.exception  # noqa: B904
+        except Exception:
+            raise
 
-        return cast(str, result.get("output"))
+        self.status = result
+        return result
+
+    @abstractmethod
+    def create_agent_runnable(self) -> Runnable:
+        """Create the agent."""
+
+
+class LCToolsAgentComponent(LCAgentComponent):
+    _base_inputs = [
+        HandleInput(
+            name="tools", display_name="Tools", input_types=["Tool", "BaseTool", "StructuredTool"], is_list=True
+        ),
+        *LCAgentComponent._base_inputs,
+    ]
+
+    def build_agent(self) -> AgentExecutor:
+        agent = self.create_agent_runnable()
+        return AgentExecutor.from_agent_and_tools(
+            agent=RunnableAgent(runnable=agent, input_keys_arg=["input"], return_keys_arg=["output"]),
+            tools=self.tools,
+            **self.get_agent_kwargs(flatten=True),
+        )
 
     @abstractmethod
     def create_agent_runnable(self) -> Runnable:

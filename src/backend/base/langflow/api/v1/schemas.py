@@ -4,7 +4,14 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_serializer,
+)
 
 from langflow.graph.schema import RunOutputs
 from langflow.graph.utils import serialize_field
@@ -15,6 +22,7 @@ from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
+from langflow.services.settings.feature_flags import FeatureFlags
 from langflow.services.tracing.schema import Log
 from langflow.utils.util_strings import truncate_long_strings
 
@@ -315,7 +323,11 @@ class InputValueRequest(BaseModel):
                 },
                 {"components": ["Component Name"], "input_value": "input_value"},
                 {"input_value": "input_value"},
-                {"components": ["Component Name"], "input_value": "input_value", "session": "session_id"},
+                {
+                    "components": ["Component Name"],
+                    "input_value": "input_value",
+                    "session": "session_id",
+                },
                 {"input_value": "input_value", "session": "session_id"},
                 {"type": "chat", "input_value": "input_value"},
                 {"type": "json", "input_value": '{"key": "value"}'},
@@ -350,19 +362,9 @@ class FlowDataRequest(BaseModel):
 
 
 class ConfigResponse(BaseModel):
+    feature_flags: FeatureFlags
     frontend_timeout: int
     auto_saving: bool
     auto_saving_interval: int
     health_check_max_retries: int
     max_file_size_upload: int
-
-
-class SidebarCategory(BaseModel):
-    display_name: str
-    name: str
-    icon: str
-    beta: bool = False
-
-
-class SidebarCategoriesResponse(BaseModel):
-    categories: list[SidebarCategory]

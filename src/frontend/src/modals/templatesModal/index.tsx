@@ -1,5 +1,6 @@
+import ForwardedIconComponent from "@/components/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
@@ -9,8 +10,8 @@ import { useParams } from "react-router-dom";
 import { newFlowModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 import GetStartedComponent from "./components/GetStartedComponent";
-import { Nav } from "./components/navComponent";
 import TemplateContentComponent from "./components/TemplateContentComponent";
+import { Nav } from "./components/navComponent";
 
 export default function TemplatesModal({
   open,
@@ -26,14 +27,14 @@ export default function TemplatesModal({
     {
       title: "Templates",
       items: [
-        { title: "Get Started", icon: "SquarePlay", id: "get-started" },
-        { title: "All Templates", icon: "LayoutPanelTop", id: "all-templates" },
+        { title: "Get started", icon: "SquarePlay", id: "get-started" },
+        { title: "All templates", icon: "LayoutPanelTop", id: "all-templates" },
       ],
     },
     {
-      title: "Usecase",
+      title: "Methodology",
       items: [
-        { title: "Chatbots", icon: "MessagesSquare", id: "chatbots" },
+        { title: "Prompting", icon: "MessagesSquare", id: "chatbots" },
         { title: "RAG", icon: "Database", id: "rag" },
         { title: "Agents", icon: "Bot", id: "agents" },
       ],
@@ -44,58 +45,52 @@ export default function TemplatesModal({
     <BaseModal size="templates" open={open} setOpen={setOpen} className="p-0">
       <BaseModal.Content overflowHidden className="flex flex-col p-0">
         <div className="flex h-full">
-          <div className="flex w-60 flex-col gap-4 p-6 pl-4">
-            {categories.map((category, index) => (
-              <div key={index} className="flex flex-col gap-2">
-                <h2
-                  className={`pl-2 font-semibold ${index === 0 ? "mb-3 text-lg leading-none tracking-tight text-primary" : "text-sm text-muted-foreground"}`}
-                  data-testid={index === 0 ? "modal-title" : undefined}
-                >
-                  {category.title}
-                </h2>
-                <Nav
-                  links={category.items}
+          <SidebarProvider width="15rem" defaultOpen={false}>
+            <Nav
+              categories={categories}
+              currentTab={currentTab}
+              setCurrentTab={setCurrentTab}
+            />
+            <main className="flex flex-1 flex-col gap-4 overflow-hidden p-6 md:gap-8">
+              {currentTab === "get-started" ? (
+                <GetStartedComponent />
+              ) : (
+                <TemplateContentComponent
                   currentTab={currentTab}
-                  onClick={(id) => setCurrentTab(id)}
+                  categories={categories.flatMap((category) => category.items)}
                 />
-              </div>
-            ))}
-          </div>
-          <Separator className="h-auto" orientation="vertical" />
-          <div className="flex flex-1 flex-col gap-8 overflow-hidden p-6">
-            {currentTab === "get-started" ? (
-              <GetStartedComponent />
-            ) : (
-              <TemplateContentComponent
-                currentTab={currentTab}
-                categories={categories.flatMap((category) => category.items)}
-              />
-            )}
-            <BaseModal.Footer>
-              <div className="flex w-full items-center justify-between pb-4">
-                <div className="flex flex-col items-start justify-center">
-                  <div className="font-semibold">Start from scratch</div>
-                  <div className="text-sm text-muted-foreground">
-                    Begin a fresh project to build from scratch.
+              )}
+              <BaseModal.Footer>
+                <div className="flex w-full flex-col justify-between gap-4 pb-4 sm:flex-row sm:items-center">
+                  <div className="flex flex-col items-start justify-center">
+                    <div className="font-semibold">Start from scratch</div>
+                    <div className="text-sm text-muted-foreground">
+                      Begin with a fresh flow to build from scratch.
+                    </div>
                   </div>
+                  <Button
+                    onClick={() => {
+                      addFlow().then((id) => {
+                        navigate(
+                          `/flow/${id}${folderId ? `/folder/${folderId}` : ""}`,
+                        );
+                      });
+                      track("New Flow Created", { template: "Blank Flow" });
+                    }}
+                    size="sm"
+                    data-testid="blank-flow"
+                    className="shrink-0"
+                  >
+                    <ForwardedIconComponent
+                      name="Plus"
+                      className="h-4 w-4 shrink-0"
+                    />
+                    Blank Flow
+                  </Button>
                 </div>
-                <Button
-                  onClick={() => {
-                    addFlow().then((id) => {
-                      navigate(
-                        `/flow/${id}${folderId ? `/folder/${folderId}` : ""}`,
-                      );
-                    });
-                    track("New Flow Created", { template: "Blank Flow" });
-                  }}
-                  size="sm"
-                  data-testid="blank-flow"
-                >
-                  Create Blank Project
-                </Button>
-              </div>
-            </BaseModal.Footer>
-          </div>
+              </BaseModal.Footer>
+            </main>
+          </SidebarProvider>
         </div>
       </BaseModal.Content>
     </BaseModal>

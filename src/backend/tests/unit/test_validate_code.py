@@ -2,7 +2,13 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
-from langflow.utils.validate import create_function, execute_function, extract_function_name, validate_code
+from langflow.utils.validate import (
+    create_class,
+    create_function,
+    execute_function,
+    extract_function_name,
+    validate_code,
+)
 from requests.exceptions import MissingSchema
 
 
@@ -100,3 +106,67 @@ def my_function(x):
     """
     with mock.patch("requests.get", side_effect=MissingSchema), pytest.raises(MissingSchema):
         execute_function(code, "my_function", "invalid_url")
+
+
+def test_create_class():
+    code = """
+from langflow.custom import CustomComponent
+
+class ExternalClass:
+    def __init__(self, value):
+        self.value = value
+
+class MyComponent(CustomComponent):
+    def build(self):
+        return ExternalClass("test")
+"""
+    class_name = "MyComponent"
+    created_class = create_class(code, class_name)
+    instance = created_class()
+    result = instance.build()
+    assert result.value == "test"
+
+
+def test_create_class_with_multiple_external_classes():
+    code = """
+from langflow.custom import CustomComponent
+
+class ExternalClass1:
+    def __init__(self, value):
+        self.value = value
+
+class ExternalClass2:
+    def __init__(self, value):
+        self.value = value
+
+class MyComponent(CustomComponent):
+    def build(self):
+        return ExternalClass1("test1"), ExternalClass2("test2")
+"""
+    class_name = "MyComponent"
+    created_class = create_class(code, class_name)
+    instance = created_class()
+    result1, result2 = instance.build()
+    assert result1.value == "test1"
+    assert result2.value == "test2"
+
+
+def test_create_class_with_external_variables_and_functions():
+    code = """
+from langflow.custom import CustomComponent
+
+external_variable = "external_value"
+
+def external_function():
+    return "external_function_value"
+
+class MyComponent(CustomComponent):
+    def build(self):
+        return external_variable, external_function()
+"""
+    class_name = "MyComponent"
+    created_class = create_class(code, class_name)
+    instance = created_class()
+    result_variable, result_function = instance.build()
+    assert result_variable == "external_value"
+    assert result_function == "external_function_value"

@@ -36,7 +36,6 @@ def astradb_client():
 
 
 @pytest.mark.api_key_required
-@pytest.mark.asyncio
 async def test_base(astradb_client: AstraDB):
     from langflow.components.embeddings import OpenAIEmbeddingsComponent
 
@@ -65,7 +64,6 @@ async def test_base(astradb_client: AstraDB):
 
 
 @pytest.mark.api_key_required
-@pytest.mark.asyncio
 async def test_astra_embeds_and_search():
     application_token = get_astradb_application_token()
     api_endpoint = get_astradb_api_endpoint()

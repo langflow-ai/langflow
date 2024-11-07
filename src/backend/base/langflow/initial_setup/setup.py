@@ -3,7 +3,6 @@ import json
 import shutil
 import time
 from collections import defaultdict
-from collections.abc import Awaitable
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,7 +19,6 @@ from langflow.base.constants import (
     NODE_FORMAT_ATTRIBUTES,
     ORJSON_OPTIONS,
 )
-from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.model import Folder, FolderCreate
@@ -600,12 +598,7 @@ def find_existing_flow(session, flow_id, flow_endpoint_name):
     return None
 
 
-async def create_or_update_starter_projects(get_all_components_coro: Awaitable[dict]) -> None:
-    try:
-        all_types_dict = await get_all_components_coro
-    except Exception:
-        logger.exception("Error loading components")
-        raise
+def create_or_update_starter_projects(all_types_dict: dict) -> None:
     with session_scope() as session:
         new_folder = create_starter_folder(session)
         starter_projects = load_starter_projects()
@@ -627,10 +620,6 @@ async def create_or_update_starter_projects(get_all_components_coro: Awaitable[d
                 project_data.copy(), all_types_dict
             )
             updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
-            try:
-                Graph.from_payload(updated_project_data)
-            except Exception:  # noqa: BLE001
-                logger.exception(f"Error loading project {project_name}")
             if updated_project_data != project_data:
                 project_data = updated_project_data
                 # We also need to update the project data in the file
