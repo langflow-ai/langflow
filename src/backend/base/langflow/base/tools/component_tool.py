@@ -216,10 +216,10 @@ class ComponentToolkit:
                         callbacks=callbacks,
                     )
                 )
-        if len(tools) == 1:
+        if len(tools) == 1 and (tool_name or tool_description):
             tool = tools[0]
-            tool.name = tool_name
-            tool.description = tool_description
+            tool.name = tool_name or tool.name
+            tool.description = tool_description or tool.description
         elif tool_name or tool_description:
             msg = (
                 "When passing a tool name or description, there must be only one tool, "
