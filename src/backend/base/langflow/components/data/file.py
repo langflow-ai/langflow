@@ -148,12 +148,15 @@ class FileComponent(Component):
                 )
 
                 # Process files in parallel
-                data = parallel_load_data(
+                initial_data = parallel_load_data(
                     valid_files,
                     silent_errors=silent_errors,
                     load_function=process_file,
                     max_concurrency=int(self.concurrency_multithreading),
                 )
+
+                # Filter out empty data
+                data = list(filter(None, initial_data))
             else:
                 # Sequential processing
                 data = [process_file(file_name) for file_name in valid_files]
