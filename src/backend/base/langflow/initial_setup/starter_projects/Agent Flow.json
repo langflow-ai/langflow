@@ -1052,28 +1052,6 @@
                 "type": "str",
                 "value": "OpenAI"
               },
-              "agent_name": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Agent Name",
-                "dynamic": false,
-                "info": "The name of the agent. The default value contains {tools_names} which will be replaced with the names of the tools available to this agent.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "agent_name",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Agent"
-              },
               "api_key": {
                 "_input_type": "SecretStrInput",
                 "advanced": false,
