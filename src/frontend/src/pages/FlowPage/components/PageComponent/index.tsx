@@ -125,8 +125,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   const [isHighlightingCursor, setIsHighlightingCursor] = useState(false);
 
   const addComponent = useAddComponent();
-  const { zoomIn, zoomOut, fitView } = useReactFlow();
-  const { zoom } = useViewport();
 
   useEffect(() => {
     const handleVisibilityChange = () => {

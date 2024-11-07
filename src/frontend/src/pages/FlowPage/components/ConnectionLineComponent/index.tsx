@@ -10,6 +10,7 @@ const ConnectionLineComponent = ({
 }: ConnectionLineComponentProps): JSX.Element => {
   const handleDragging = useFlowStore((state) => state.handleDragging);
   const color = handleDragging?.color;
+  const accentColor = `hsl(var(--accent-${color}))`;
 
   return (
     <g>
@@ -19,7 +20,7 @@ const ConnectionLineComponent = ({
         strokeWidth={2}
         className={`animated`}
         style={{
-          stroke: handleDragging ? handleDragging.color : "",
+          stroke: handleDragging ? accentColor : "",
           ...connectionLineStyle,
         }}
         d={`M${fromX},${fromY} C ${fromX} ${toY} ${fromX} ${toY} ${toX},${toY}`}
@@ -29,7 +30,7 @@ const ConnectionLineComponent = ({
         cy={toY}
         fill="#fff"
         r={5}
-        stroke={color}
+        stroke={accentColor}
         className=""
         strokeWidth={1.5}
       />
