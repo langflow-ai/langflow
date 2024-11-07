@@ -10,7 +10,7 @@ import CodeAreaModal from "@/modals/codeAreaModal";
 import { APIClassType } from "@/types/api";
 import _, { cloneDeep } from "lodash";
 import { useEffect, useRef, useState } from "react";
-import { useUpdateNodeInternals } from "reactflow";
+import { useReactFlow, useStore, useUpdateNodeInternals } from "reactflow";
 import IconComponent from "../../../../components/genericIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import {
@@ -352,10 +352,31 @@ export default function NodeToolbarComponent({
     parameterId: "tool_mode",
   });
 
+  // Use ReactFlow's store selector to get zoom updates
+  const zoom = useStore((state) => state.transform[2]);
+  const [scale, setScale] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!zoom) return;
+    if (zoom < 0.65) {
+      const newScale = Math.max(zoom * 1.2, 0.4);
+      setScale(newScale);
+    } else {
+      setScale(1);
+    }
+  }, [zoom]);
+
+  if (scale === null) return <></>;
   return (
     <>
-      <div className="noflow nowheel nopan nodelete nodrag">
-        <div className="flex items-center gap-1 rounded-lg border-[1px] border-border bg-background p-1 shadow-sm">
+      <div
+        className="noflow nowheel nopan nodelete nodrag"
+        style={{
+          transform: `scale(${scale})`,
+          transformOrigin: "bottom",
+        }}
+      >
+        <div className="toolbar-wrapper">
           {hasCode && (
             <ShadTooltip
               content={
@@ -366,6 +387,7 @@ export default function NodeToolbarComponent({
                 />
               }
               side="top"
+              styleClasses="relative bottom-2"
             >
               <Button
                 className="node-toolbar-buttons"
@@ -394,6 +416,7 @@ export default function NodeToolbarComponent({
                 />
               }
               side="top"
+              styleClasses="relative bottom-2"
             >
               <Button
                 className="node-toolbar-buttons"
@@ -490,6 +513,7 @@ export default function NodeToolbarComponent({
               />
             }
             side="top"
+            styleClasses="relative bottom-2"
           >
             <Button
               className="node-toolbar-buttons h-[2.125rem]"
@@ -503,9 +527,13 @@ export default function NodeToolbarComponent({
               <IconComponent name="Copy" className="h-4 w-4" />
             </Button>
           </ShadTooltip>
-          <ShadTooltip content="All" side="top">
+          <ShadTooltip
+            content="Show More"
+            side="top"
+            styleClasses="relative bottom-2"
+          >
             <Button
-              className="node-toolbar-buttons h-[2.125rem]"
+              className="node-toolbar-buttons h-[2rem]"
               variant="ghost"
               onClick={handleButtonClick}
               size="node-toolbar"
@@ -517,12 +545,13 @@ export default function NodeToolbarComponent({
         </div>
 
         <Select onValueChange={handleSelectChange} value={selectedValue!}>
-          <ShadTooltip content="All" side="bottom">
-            <SelectTrigger ref={selectTriggerRef}>
-              <></>
-            </SelectTrigger>
-          </ShadTooltip>
-          <SelectContent className="relative -left-10 min-w-[14rem]">
+          <SelectTrigger ref={selectTriggerRef}>
+            <></>
+          </SelectTrigger>
+          <SelectContent
+            className="relative min-w-[14rem] bg-background"
+            style={{ transform: `scale(${scale})`, transformOrigin: "top" }}
+          >
             {hasCode && (
               <SelectItem value={"code"}>
                 <ToolbarSelectItem

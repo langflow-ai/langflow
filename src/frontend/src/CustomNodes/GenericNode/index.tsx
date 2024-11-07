@@ -1,6 +1,3 @@
-import { Badge } from "@/components/ui/badge";
-import { BorderBeam } from "@/components/ui/border-beams";
-import { BuildStatus } from "@/constants/enums";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -26,6 +23,7 @@ import { getNodeInputColors } from "../helpers/get-node-input-colors";
 import { getNodeInputColorsName } from "../helpers/get-node-input-colors-name";
 import { getNodeOutputColors } from "../helpers/get-node-output-colors";
 import { getNodeOutputColorsName } from "../helpers/get-node-output-colors-name";
+import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
 import useCheckCodeValidity from "../hooks/use-check-code-validity";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
 import getFieldTitle from "../utils/get-field-title";
@@ -108,6 +106,8 @@ export default function GenericNode({
 
   const { mutate: validateComponentCode } = usePostValidateComponentCode();
 
+  const edges = useFlowStore((state) => state.edges);
+
   const handleUpdateCode = () => {
     setLoadingUpdate(true);
     takeSnapshot();
@@ -122,9 +122,15 @@ export default function GenericNode({
       validateComponentCode(
         { code: currentCode, frontend_node: data.node },
         {
-          onSuccess: ({ data, type }) => {
-            if (data && type && updateNodeCode) {
-              updateNodeCode(data, currentCode, "code", type);
+          onSuccess: ({ data: resData, type }) => {
+            if (resData && type && updateNodeCode) {
+              const newNode = processNodeAdvancedFields(
+                resData,
+                edges,
+                data.id,
+              );
+
+              updateNodeCode(newNode, currentCode, "code", type);
               setLoadingUpdate(false);
             }
           },
@@ -327,16 +333,6 @@ export default function GenericNode({
           !hasOutputs && "pb-4",
         )}
       >
-        {BuildStatus.BUILDING === buildStatus && (
-          <BorderBeam
-            colorFrom="hsl(var(--foreground))"
-            colorTo="hsl(var(--muted-foreground))"
-            className="z-10"
-            borderWidth={1.75}
-            size={300}
-          />
-        )}
-
         <div
           data-testid={`${data.id}-main-node`}
           className={cn(

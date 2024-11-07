@@ -125,8 +125,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   const [isHighlightingCursor, setIsHighlightingCursor] = useState(false);
 
   const addComponent = useAddComponent();
-  const { zoomIn, zoomOut, fitView } = useReactFlow();
-  const { zoom } = useViewport();
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -570,10 +568,8 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
       nodeColorsName[edge?.data?.targetHandle?.inputTypes[0]] ||
       "hsl(var(--foreground))";
 
-    console.log(edge?.data?.targetHandle);
-
-    const innerColor = `hsl(var(--inner-${color}-muted-foreground))`;
-    document.documentElement.style.setProperty("--selected", innerColor);
+    const accentColor = `hsl(var(--accent-${color}-foreground))`;
+    document.documentElement.style.setProperty("--selected", accentColor);
   };
 
   const { open } = useSidebar();
