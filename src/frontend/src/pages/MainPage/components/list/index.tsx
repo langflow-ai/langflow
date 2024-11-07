@@ -17,7 +17,7 @@ import { getInputsAndOutputs } from "@/utils/storeUtils";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import useDescriptionModal from "../../oldComponents/componentsComponent/hooks/use-description-modal";
-import { getTemplateStyle } from "../../utils/get-template-style";
+import { useGetTemplateStyle } from "../../utils/get-template-style";
 import { timeElapsed } from "../../utils/time-elapse";
 import DropdownComponent from "../dropdown";
 
@@ -35,7 +35,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
   const setFlowToCanvas = useFlowsManagerStore(
     (state) => state.setFlowToCanvas,
   );
-  const { icon, icon_bg_color } = getTemplateStyle(flowData);
+  const { getIcon } = useGetTemplateStyle(flowData);
 
   const editFlowLink = `/flow/${flowData.id}${folderId ? `/folder/${folderId}` : ""}`;
 
@@ -106,7 +106,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
         onClick={handleClick}
         className={`my-2 flex flex-row bg-background ${
           isComponent ? "cursor-default" : "cursor-pointer"
-        } justify-between rounded-lg border border-border p-4 hover:border-placeholder-foreground hover:shadow-sm`}
+        } group justify-between rounded-lg border border-border p-4 hover:border-placeholder-foreground hover:shadow-sm`}
       >
         {/* left side */}
         <div
@@ -116,10 +116,10 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
         >
           {/* Icon */}
           <div
-            className={`item-center flex justify-center rounded-lg border ${flowData?.icon_bg_color || icon_bg_color} p-3`}
+            className={`item-center flex justify-center rounded-lg bg-muted p-3`}
           >
             <ForwardedIconComponent
-              name={flowData?.icon || icon}
+              name={flowData?.icon || getIcon()}
               aria-hidden="true"
               className="flex h-5 w-5 items-center justify-center dark:text-black"
             />

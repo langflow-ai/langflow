@@ -17,7 +17,7 @@ import { getInputsAndOutputs } from "@/utils/storeUtils";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import useDescriptionModal from "../../oldComponents/componentsComponent/hooks/use-description-modal";
-import { getTemplateStyle } from "../../utils/get-template-style";
+import { useGetTemplateStyle } from "../../utils/get-template-style";
 import { timeElapsed } from "../../utils/time-elapse";
 import DropdownComponent from "../dropdown";
 
@@ -38,7 +38,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
     (state) => state.setFlowToCanvas,
   );
 
-  const { icon, icon_bg_color } = getTemplateStyle(flowData);
+  const { getIcon } = useGetTemplateStyle(flowData);
 
   const editFlowLink = `/flow/${flowData.id}${folderId ? `/folder/${folderId}` : ""}`;
 
@@ -112,11 +112,9 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
         }`}
       >
         <div className="flex w-full items-center gap-4">
-          <div
-            className={`flex rounded-lg border ${flowData?.icon_bg_color || icon_bg_color} p-3`}
-          >
+          <div className={`flex rounded-lg bg-muted p-3`}>
             <ForwardedIconComponent
-              name={flowData?.icon || icon}
+              name={getIcon()}
               aria-hidden="true"
               className="h-5 w-5 dark:text-black"
             />
