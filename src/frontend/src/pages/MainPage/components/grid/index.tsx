@@ -28,7 +28,6 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
   const [openDelete, setOpenDelete] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const { deleteFlow } = useDeleteFlow();
-  console.log(flowData);
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
   /* const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow); */
