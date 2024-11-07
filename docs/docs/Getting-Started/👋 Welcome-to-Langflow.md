@@ -30,5 +30,3 @@ Its intuitive interface allows for easy manipulation of AI building blocks, enab
 - [Quickstart](/getting-started-quickstart) - Create a flow and run it.
 - [Langflow Workspace](/workspace) - Learn more about the Langflow Workspace.
 
-Learn more about the exciting changes in Langflow 1.0 in [A new chapter for Langflow](/whats-new-a-new-chapter-langflow).
-
