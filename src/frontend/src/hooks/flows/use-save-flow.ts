@@ -58,11 +58,11 @@ const useSaveFlow = () => {
             );
           }
 
-          const { id, name, data, description, folder_id, endpoint_name } =
+          const { id, name, data, description, folder_id, endpoint_name, locked } =
             flow;
           if (!currentSavedFlow?.data?.nodes.length || data!.nodes.length > 0) {
             mutate(
-              { id, name, data: data!, description, folder_id, endpoint_name },
+              { id, name, data: data!, description, folder_id, endpoint_name, locked },
               {
                 onSuccess: (updatedFlow) => {
                   setSaveLoading(false);
