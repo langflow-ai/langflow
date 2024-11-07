@@ -1,46 +1,64 @@
-from langflow.custom import CustomComponent
+from langflow.custom import Component
+from langflow.io import BoolInput, DataInput, MessageTextInput, Output
 from langflow.schema import Data
 
 
-class NotifyComponent(CustomComponent):
+class NotifyComponent(Component):
+    """Generates a notification to the 'Listen' component."""
+
     display_name = "Notify"
-    description = "A component to generate a notification to Get Notified component."
-    icon = "Notify"
+    description = "Generates a notification to the 'Listen' component."
     name = "Notify"
     beta: bool = True
 
-    def build_config(self):
-        return {
-            "name": {"display_name": "Name", "info": "The name of the notification."},
-            "data": {"display_name": "Data", "info": "The data to store."},
-            "append": {
-                "display_name": "Append",
-                "info": "If True, the record will be appended to the notification.",
-            },
-        }
+    inputs = [
+        MessageTextInput(name="name_of_state", display_name="Name", info="The identifier for the notification state."),
+        DataInput(name="data", display_name="Data", info="The data content to store in the notification."),
+        BoolInput(name="append", display_name="Append", info="If True, appends the data to the existing notification."),
+    ]
 
-    def build(self, name: str, *, data: Data | None = None, append: bool = False) -> Data:
-        if data and not isinstance(data, Data):
-            if isinstance(data, str):
-                data = Data(text=data)
-            elif isinstance(data, dict):
-                data = Data(data=data)
+    outputs = [Output(name="output_data", display_name="Data", method="build_notify")]
+
+    def build_notify(self) -> Data:
+        """Builds the notification data and updates the component's state."""
+        try:
+            name_of_state = getattr(self, "name_of_state", None)
+            if not name_of_state:
+                self.status = "Error: 'Name' is required."
+                error_message = "The 'Name' input cannot be empty"
+                raise ValueError(error_message)
+
+            data_input = getattr(self, "data", None)
+            if data_input and not isinstance(data_input, Data):
+                # Using | operator for type checks (Python 3.10+)
+                data = data_input if isinstance(data_input, str | dict) else data_input
+            elif not data_input:
+                data = Data(text="")
             else:
-                data = Data(text=str(data))
-        elif not data:
-            data = Data(text="")
-        if data:
+                data = data_input
+
+            # Determine 'append' behavior
+            append = getattr(self, "append", False)
             if append:
-                self.append_state(name, data)
+                self.append_state(name_of_state, data)
             else:
-                self.update_state(name, data)
+                self.update_state(name_of_state, data)
+
+            self._set_successors_ids()
+        except Exception as exc:
+            error_msg = f"Error in build_notify: {exc!s}"
+            self.status = error_msg
+            raise
         else:
-            self.status = "No record provided."
-        self.status = data
-        self._set_successors_ids()
-        return data
+            return data
 
     def _set_successors_ids(self):
-        self._vertex.is_state = True
-        successors = self._vertex.graph.successor_map.get(self._vertex.id, [])
-        return successors + self._vertex.graph.activated_vertices
+        """Sets the successor IDs for the vertex."""
+        try:
+            self._vertex.is_state = True
+            successors = self._vertex.graph.successor_map.get(self._vertex.id, [])
+            return successors + self._vertex.graph.activated_vertices
+        except Exception as exc:
+            error_msg = f"Error in _set_successors_ids: {exc!s}"
+            self.status = error_msg
+            raise
