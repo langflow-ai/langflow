@@ -26,6 +26,10 @@ if TYPE_CHECKING:
     from langchain_core.messages import BaseMessage
 
 
+DEFAULT_TOOLS_DESCRIPTION = "A helpful assistant with access to the following tools:"
+DEFAULT_AGENT_NAME = "Agent ({tools_names})"
+
+
 class LCAgentComponent(Component):
     trace_type = "agent"
     _base_inputs: list[InputTypes] = [
@@ -56,22 +60,22 @@ class LCAgentComponent(Component):
         MessageTextInput(
             name="agent_name",
             display_name="Agent Name",
-            info="The name of the agent.",
-            value="Agent",
+            info=(
+                "The name of the agent. The default value contains {tools_names}"
+                " which will be replaced with the names of the tools available to this agent."
+            ),
+            value=DEFAULT_AGENT_NAME,
             advanced=True,
         ),
         MultilineInput(
             name="agent_description",
             display_name="Agent Description",
-            info="The description of the agent. This is only used when in Tool Mode.",
+            info=(
+                "The description of the agent. This is only used when in Tool Mode. "
+                f"Defaults to '{DEFAULT_TOOLS_DESCRIPTION}' and tools are added dynamically."
+            ),
             advanced=True,
-            value="A helpful assistant with access to tools.",
-        ),
-        BoolInput(
-            name="add_tools_to_description",
-            display_name="Add Tools to Description. This is only used when in Tool Mode.",
-            value=False,
-            advanced=True,
+            value=DEFAULT_TOOLS_DESCRIPTION,
         ),
     ]
 
@@ -196,21 +200,28 @@ class LCToolsAgentComponent(LCAgentComponent):
         """Create the agent."""
 
     def get_tool_name(self) -> str:
-        return self.agent_name or "Agent"
+        if self.agent_name == DEFAULT_AGENT_NAME:
+            return DEFAULT_AGENT_NAME.format(tools_names=self._build_tools_names())
+        return self.agent_name
 
     def get_tool_description(self) -> str:
-        return self.agent_description or "A helpful assistant with access to tools."
+        return self.agent_description or DEFAULT_TOOLS_DESCRIPTION
 
-    def _build_tools_description(self):
-        tool_description = ""
+    def _build_tools_names(self):
+        tools_names = ""
         if self.tools:
-            tool_description = "\n".join([f"{tool.name}: {tool.description}" for tool in self.tools])
-        return tool_description
+            tools_names = ", ".join([tool.name for tool in self.tools])
+        return tools_names
 
     def to_toolkit(self) -> list[Tool]:
         component_toolkit = _get_component_toolkit()
-        tools_description = self._build_tools_description() if self.add_tools_to_description else ""
-        description = f"{self.get_tool_description()}\n\n{tools_description}"
+        tools_names = self._build_tools_names()
+        agent_description = self.get_tool_description()
+        # Check if tools_description is the default value
+        if agent_description == DEFAULT_TOOLS_DESCRIPTION:
+            description = f"{agent_description}{tools_names}"
+        else:
+            description = agent_description
         return component_toolkit(component=self).get_tools(
             tool_name=self.get_tool_name(), tool_description=description, callbacks=self.get_langchain_callbacks()
         )
