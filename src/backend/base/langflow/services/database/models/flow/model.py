@@ -37,7 +37,7 @@ class FlowBase(SQLModel):
     webhook: bool | None = Field(default=False, nullable=True, description="Can be used on the webhook endpoint")
     endpoint_name: str | None = Field(default=None, nullable=True, index=True)
     tags: list[str] | None = None
-    locked: bool | None = Field(default=False, nullable=True) 
+    locked: bool | None = Field(default=False, nullable=True)
 
     @field_validator("endpoint_name")
     @classmethod
