@@ -192,7 +192,7 @@ async def test_component_logging():
     assert event_id.startswith("info-")
 
 
-@pytest.mark.asyncio
+@pytest.mark.usefixtures("client")
 async def test_component_streaming_message():
     """Test component's streaming message functionality."""
     queue = await create_event_queue()
