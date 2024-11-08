@@ -6,10 +6,11 @@ import pytest
 
 from langflow.components.data import FileComponent
 from langflow.components.embeddings import OpenAIEmbeddingsComponent
-from langflow.components.helpers import ParseDataComponent, SplitTextComponent
+from langflow.components.helpers import SplitTextComponent
 from langflow.components.inputs import ChatInput
 from langflow.components.models import OpenAIModelComponent
 from langflow.components.outputs import ChatOutput
+from langflow.components.processing import ParseDataComponent
 from langflow.components.prompts import PromptComponent
 from langflow.components.vectorstores import AstraVectorStoreComponent
 from langflow.graph import Graph

@@ -46,6 +46,7 @@ import {
   Clipboard,
   Code,
   Code2,
+  Cog,
   Combine,
   Command,
   Compass,
@@ -54,6 +55,7 @@ import {
   Cpu,
   CpuIcon,
   Database,
+  DatabaseZap,
   Delete,
   Dot,
   Download,
@@ -447,6 +449,7 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Toolkits", name: "toolkits", icon: "Package2" },
   { display_name: "Tools", name: "tools", icon: "Hammer" },
   { display_name: "Logic", name: "logic", icon: "Sigma" },
+  { display_name: "Processing", name: "processing", icon: "Braces" },
 ];
 
 export const SIDEBAR_BUNDLES = [
@@ -828,4 +831,6 @@ export const nodeIconsLucide: iconsType = {
   ZoomOut,
   Sigma,
   Radio,
+  DatabaseZap,
+  Cog,
 };

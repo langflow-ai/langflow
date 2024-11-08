@@ -239,10 +239,10 @@ test("should create a flow with decision", async ({ page }) => {
   await page.getByTestId("sidebar-search-input").fill("parse data");
   await page.waitForTimeout(500);
   await page
-    .getByTestId("helpersParse Data")
+    .getByTestId("processingParse Data")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page
-    .getByTestId("helpersParse Data")
+    .getByTestId("processingParse Data")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   //---------------------------------- PASS
   await page.getByTestId("sidebar-search-input").click();
@@ -278,7 +278,7 @@ test("should create a flow with decision", async ({ page }) => {
   await page.getByTestId("sidebar-search-input").fill("conditional router");
   await page.waitForTimeout(500);
   await page
-    .getByTestId("logicCondition")
+    .getByTestId("logicConditional Router")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   //---------------------------------- CHAT OUTPUT
   await page.getByTestId("sidebar-search-input").click();
@@ -298,7 +298,7 @@ test("should create a flow with decision", async ({ page }) => {
   await page.waitForTimeout(500);
   await moveElementByX(page, "Chat Output", 700, 0);
   await page.waitForTimeout(500);
-  await moveElementByX(page, "Condition", 1100, 0);
+  await moveElementByX(page, "Conditional Router", 1100, 0);
   await page.waitForTimeout(500);
   await page.getByTestId("fit_view").click();
   await moveElementByX(page, "OpenAI", 980, 0);
@@ -410,7 +410,7 @@ test("should create a flow with decision", async ({ page }) => {
   await page.getByTestId("showignored_message").last().click();
   await page.getByText("Close").last().click();
   await page
-    .getByTestId("handle-dataconditionalrouter-shownode-true output-right")
+    .getByTestId("handle-conditionalrouter-shownode-true route-right")
     .nth(0)
     .click();
   await page
@@ -418,7 +418,7 @@ test("should create a flow with decision", async ({ page }) => {
     .nth(1)
     .click();
   await page
-    .getByTestId("handle-dataconditionalrouter-shownode-false output-right")
+    .getByTestId("handle-conditionalrouter-shownode-false route-right")
     .nth(0)
     .click();
   await page

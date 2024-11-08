@@ -133,7 +133,7 @@ test("user must be able to check similarity between embedding texts", async ({
   // await page.waitForTimeout(1000);
 
   await page
-    .getByTestId("helpersParse Data")
+    .getByTestId("processingParse Data")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
   await page.getByTestId("zoom_out").click();

@@ -6,7 +6,7 @@ from langflow.schema import Data
 
 
 class DataFilterComponent(Component):
-    display_name = "Filter Data Values"
+    display_name = "Filter Values"
     description = (
         "Filter a list of data items based on a specified key, filter value,"
         " and comparison operator. Check advanced options to select match comparision."

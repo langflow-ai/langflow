@@ -18,6 +18,7 @@ class VectaraSelfQueryRetriverComponent(CustomComponent):
     documentation = "https://python.langchain.com/docs/integrations/retrievers/self_query/vectara_self_query"
     name = "VectaraSelfQueryRetriver"
     icon = "Vectara"
+    legacy = True
 
     field_config = {
         "code": {"show": True},

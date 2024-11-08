@@ -4,8 +4,8 @@ from collections import deque
 
 import pytest
 
-from langflow.components.agents import ToolCallingAgentComponent
 from langflow.components.inputs import ChatInput
+from langflow.components.langchain_utilities import ToolCallingAgentComponent
 from langflow.components.outputs import ChatOutput, TextOutputComponent
 from langflow.components.tools import YfinanceToolComponent
 from langflow.graph import Graph

@@ -1,3 +1,4 @@
+from .conditional_router import ConditionalRouterComponent
 from .data_conditional_router import DataConditionalRouterComponent
 from .flow_tool import FlowToolComponent
 from .listen import ListenComponent
@@ -12,4 +13,5 @@ __all__ = [
     "NotifyComponent",
     "RunFlowComponent",
     "SubFlowComponent",
+    "ConditionalRouterComponent",
 ]
