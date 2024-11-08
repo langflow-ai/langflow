@@ -5,74 +5,70 @@ import { Card } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import { track } from "@/customization/utils/analytics";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
-import IOModal from "@/modals/IOModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { FlowType } from "@/types/flow";
-import { getInputsAndOutputs } from "@/utils/storeUtils";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import useDescriptionModal from "../../oldComponents/componentsComponent/hooks/use-description-modal";
-import { getTemplateStyle } from "../../utils/get-template-style";
+import { useGetTemplateStyle } from "../../utils/get-template-style";
 import { timeElapsed } from "../../utils/time-elapse";
 import DropdownComponent from "../dropdown";
 
 const ListComponent = ({ flowData }: { flowData: FlowType }) => {
   const navigate = useCustomNavigate();
-  // const [openPlayground, setOpenPlayground] = useState(false);
-  // const [loadingPlayground, setLoadingPlayground] = useState(false);
+  /* const [openPlayground, setOpenPlayground] = useState(false);
+  const [loadingPlayground, setLoadingPlayground] = useState(false); */
   const [openDelete, setOpenDelete] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const { deleteFlow } = useDeleteFlow();
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
+  /* const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow); */
   const { folderId } = useParams();
   const isComponent = flowData.is_component ?? false;
   const setFlowToCanvas = useFlowsManagerStore(
     (state) => state.setFlowToCanvas,
   );
-  const { icon, icon_bg_color } = getTemplateStyle(flowData);
+  const { getIcon } = useGetTemplateStyle(flowData);
 
   const editFlowLink = `/flow/${flowData.id}${folderId ? `/folder/${folderId}` : ""}`;
 
-  function hasPlayground(flow?: FlowType) {
+  /* function hasPlayground(flow?: FlowType) {
     if (!flow) {
       return false;
     }
     const { inputs, outputs } = getInputsAndOutputs(flow?.data?.nodes ?? []);
     return inputs.length > 0 || outputs.length > 0;
-  }
+  } */
 
-  // const handlePlaygroundClick = () => {
-  //   track("Playground Button Clicked", { flowId: flowData.id });
-  //   setLoadingPlayground(true);
+  /* const handlePlaygroundClick = () => {
+    track("Playground Button Clicked", { flowId: flowData.id });
+    setLoadingPlayground(true);
 
-  //   if (flowData) {
-  //     if (!hasPlayground(flowData)) {
-  //       setErrorData({
-  //         title: "Error",
-  //         list: ["This flow doesn't have a playground."],
-  //       });
-  //       setLoadingPlayground(false);
-  //       return;
-  //     }
-  //     setCurrentFlow(flowData);
-  //     setOpenPlayground(true);
-  //     setLoadingPlayground(false);
-  //   } else {
-  //     setErrorData({
-  //       title: "Error",
-  //       list: ["Error getting flow data."],
-  //     });
-  //   }
-  // };
+    if (flowData) {
+      if (!hasPlayground(flowData)) {
+        setErrorData({
+          title: "Error",
+          list: ["This flow doesn't have a playground."],
+        });
+        setLoadingPlayground(false);
+        return;
+      }
+      setCurrentFlow(flowData);
+      setOpenPlayground(true);
+      setLoadingPlayground(false);
+    } else {
+      setErrorData({
+        title: "Error",
+        list: ["Error getting flow data."],
+      });
+    }
+  }; */
 
   const handleClick = async () => {
     if (!isComponent) {
@@ -107,24 +103,24 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
         draggable
         onDragStart={onDragStart}
         onClick={handleClick}
-        className={`my-2 flex h-[110px] flex-row bg-background ${
+        className={`my-2 flex flex-row bg-background ${
           isComponent ? "cursor-default" : "cursor-pointer"
-        } justify-between rounded-lg border border-zinc-100 p-5 shadow-sm hover:border-border dark:border-zinc-800 dark:hover:border-muted-foreground`}
+        } group justify-between rounded-lg border border-border p-4 hover:border-placeholder-foreground hover:shadow-sm`}
       >
         {/* left side */}
         <div
           className={`flex min-w-0 ${
             isComponent ? "cursor-default" : "cursor-pointer"
-          } items-center gap-2`}
+          } items-center gap-4`}
         >
           {/* Icon */}
           <div
-            className={`item-center mr-3 flex justify-center rounded-lg border ${flowData?.icon_bg_color || icon_bg_color} p-3`}
+            className={`item-center flex justify-center rounded-lg bg-muted p-3`}
           >
             <ForwardedIconComponent
-              name={flowData?.icon || icon}
+              name={flowData?.icon || getIcon()}
               aria-hidden="true"
-              className="flex h-5 w-5 items-center justify-center dark:text-black"
+              className="flex h-5 w-5 items-center justify-center text-foreground"
             />
           </div>
 
@@ -133,11 +129,11 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
               <div className="text-md flex truncate pr-2 font-semibold max-md:w-full">
                 <span className="truncate">{flowData.name}</span>
               </div>
-              <div className="item-baseline flex text-xs text-zinc-500 dark:text-zinc-400">
+              <div className="item-baseline flex text-xs text-muted-foreground">
                 Edited {timeElapsed(flowData.updated_at)} ago
               </div>
             </div>
-            <div className="line-clamp-2 flex text-sm text-zinc-800 truncate-doubleline dark:text-white">
+            <div className="overflow-hidden truncate text-sm text-primary">
               {flowData.description}
             </div>
           </div>
@@ -164,20 +160,20 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant="outline"
-                size="icon"
+                variant="ghost"
+                size="iconMd"
                 data-testid="home-dropdown-menu"
-                className="group h-10 w-10 border-none dark:hover:bg-zinc-700"
+                className="group"
               >
                 <ForwardedIconComponent
-                  name="ellipsis"
+                  name="Ellipsis"
                   aria-hidden="true"
-                  className="h-5 w-5 dark:text-zinc-400 dark:group-hover:text-white"
+                  className="h-5 w-5 text-muted-foreground group-hover:text-foreground"
                 />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              className="mr-[30px] w-[185px] bg-white dark:bg-black"
+              className="w-[185px]"
               sideOffset={5}
               side="bottom"
             >
