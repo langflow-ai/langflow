@@ -287,30 +287,34 @@ const SideBarFoldersButtonsComponent = ({
   );
 
   const AddFolderButton = ({ onClick, disabled, loading }) => (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="h-7 w-7 border-0 text-zinc-500 hover:bg-zinc-200 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
-      onClick={onClick}
-      data-testid="add-folder-button"
-      disabled={disabled}
-      loading={loading}
-    >
-      <IconComponent name="Plus" className="h-4 w-4" />
-    </Button>
+    <ShadTooltip content="Create new folder" styleClasses="z-50">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7 border-0 text-zinc-500 hover:bg-zinc-200 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
+        onClick={onClick}
+        data-testid="add-folder-button"
+        disabled={disabled}
+        loading={loading}
+      >
+        <IconComponent name="Plus" className="h-4 w-4" />
+      </Button>
+    </ShadTooltip>
   );
 
   const UploadFolderButton = ({ onClick, disabled }) => (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="h-7 w-7 border-0 text-zinc-500 hover:bg-zinc-200 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
-      onClick={onClick}
-      data-testid="upload-folder-button"
-      disabled={disabled}
-    >
-      <IconComponent name="Upload" className="h-4 w-4" />
-    </Button>
+    <ShadTooltip content="Upload a flow" styleClasses="z-50">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7 border-0 text-zinc-500 hover:bg-zinc-200 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
+        onClick={onClick}
+        data-testid="upload-folder-button"
+        disabled={disabled}
+      >
+        <IconComponent name="Upload" className="h-4 w-4" />
+      </Button>
+    </ShadTooltip>
   );
 
   const FolderSelectItem = ({ name, iconName }) => (
