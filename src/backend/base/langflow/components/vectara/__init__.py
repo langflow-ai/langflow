@@ -1,6 +1,11 @@
-from .vectara import VectaraComponent
-from .vectara_rag import VectaraRAGComponent
-from .vectara_self_query import VectaraSelfQueryComponent
-from .weaviate import WeaviateComponent
+from .vectara import VectaraVectorStoreComponent
+from .vectara_rag import VectaraRagComponent
+from .vectara_self_query import VectaraSelfQueryRetriverComponent
+from .weaviate import WeaviateVectorStoreComponent
 
-__all__ = ["VectaraComponent", "VectaraRAGComponent", "VectaraSelfQueryComponent", "WeaviateComponent"]
+__all__ = [
+    "VectaraVectorStoreComponent",
+    "VectaraRagComponent",
+    "VectaraSelfQueryRetriverComponent",
+    "WeaviateVectorStoreComponent",
+]

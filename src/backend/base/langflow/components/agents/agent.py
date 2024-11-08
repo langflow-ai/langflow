@@ -1,8 +1,11 @@
+from langchain_core.tools import StructuredTool
+
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.base.models.model_input_constants import ALL_PROVIDER_FIELDS, MODEL_PROVIDERS_DICT
+from langflow.components.helpers import CurrentDateComponent
 from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from langflow.components.memories.memory import MemoryComponent
-from langflow.io import DropdownInput, MultilineInput, Output
+from langflow.io import BoolInput, DropdownInput, MultilineInput, Output
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
 
@@ -41,6 +44,13 @@ class AgentComponent(ToolCallingAgentComponent):
         ),
         *LCToolsAgentComponent._base_inputs,
         *memory_inputs,
+        BoolInput(
+            name="add_current_date_tool",
+            display_name="Add tool Current Date",
+            advanced=True,
+            info="If true, will add a tool to the agent that returns the current date.",
+            value=True,
+        ),
     ]
     outputs = [Output(name="response", display_name="Response", method="message_response")]
 
@@ -50,6 +60,18 @@ class AgentComponent(ToolCallingAgentComponent):
             msg = "No language model selected"
             raise ValueError(msg)
         self.chat_history = self.get_memory_data()
+
+        if self.add_current_date_tool:
+            if not isinstance(self.tools, list):  # type: ignore[has-type]
+                self.tools = []
+            # Convert CurrentDateComponent to a StructuredTool
+            current_date_tool = CurrentDateComponent().to_toolkit()[0]
+            if isinstance(current_date_tool, StructuredTool):
+                self.tools.append(current_date_tool)
+            else:
+                msg = "CurrentDateComponent must be converted to a StructuredTool"
+                raise ValueError(msg)
+
         if not self.tools:
             msg = "Tools are required to run the agent."
             raise ValueError(msg)
@@ -150,7 +172,19 @@ class AgentComponent(ToolCallingAgentComponent):
             build_config = self.update_input_types(build_config)
 
             # Validate required keys
-            default_keys = ["code", "_type", "agent_llm", "tools", "input_value"]
+            default_keys = [
+                "code",
+                "_type",
+                "agent_llm",
+                "tools",
+                "input_value",
+                "add_current_date_tool",
+                "system_prompt",
+                "agent_description",
+                "max_iterations",
+                "handle_parsing_errors",
+                "verbose",
+            ]
             missing_keys = [key for key in default_keys if key not in build_config]
             if missing_keys:
                 msg = f"Missing required keys in build_config: {missing_keys}"

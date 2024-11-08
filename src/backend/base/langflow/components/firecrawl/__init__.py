@@ -1,4 +1,4 @@
-from .firecrawl_crawl_api import FirecrawlCrawlAPIComponent
-from .firecrawl_scrape_api import FirecrawlScrapeAPIComponent
+from .firecrawl_crawl_api import FirecrawlCrawlApi
+from .firecrawl_scrape_api import FirecrawlScrapeApi
 
-__all__ = ["FirecrawlCrawlAPIComponent", "FirecrawlScrapeAPIComponent"]
+__all__ = ["FirecrawlCrawlApi", "FirecrawlScrapeApi"]
