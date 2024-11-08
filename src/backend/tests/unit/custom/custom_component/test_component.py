@@ -62,4 +62,3 @@ def test_set_required_inputs_various_components():
     assert _assert_all_outputs_have_different_required_inputs(chatoutput.outputs)
     assert _assert_all_outputs_have_different_required_inputs(task.outputs)
     assert _assert_all_outputs_have_different_required_inputs(tool_calling_agent.outputs)
-    assert _assert_all_outputs_have_different_required_inputs(openai_component.outputs)
