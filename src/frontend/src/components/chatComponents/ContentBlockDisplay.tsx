@@ -40,10 +40,13 @@ export function ContentBlockDisplay({
     contentBlocks[0]?.contents[contentBlocks[0]?.contents.length - 1];
   const headerIcon =
     state === "partial" ? lastContent?.header?.icon || "Bot" : "Bot";
+
   const headerTitle =
     (state === "partial"
       ? lastContent?.header?.title
       : contentBlocks[0]?.title) || "Steps";
+  // show the block title only if state === "partial"
+  const showBlockTitle = state === "partial";
 
   return (
     <div className="relative py-3">
@@ -144,28 +147,56 @@ export function ContentBlockDisplay({
                       "border-b border-border",
                   )}
                 >
-                  <div className="mb-2 font-medium">
-                    <Markdown
-                      remarkPlugins={[remarkGfm]}
-                      linkTarget="_blank"
-                      rehypePlugins={[rehypeMathjax]}
-                      components={{
-                        p({ node, ...props }) {
-                          return (
-                            <span className="inline">{props.children}</span>
-                          );
-                        },
-                      }}
-                    >
-                      {block.title}
-                    </Markdown>
-                  </div>
+                  <AnimatePresence>
+                    {showBlockTitle && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                        animate={{
+                          opacity: 1,
+                          height: "auto",
+                          marginBottom: 8,
+                        }}
+                        exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden font-medium"
+                      >
+                        <Markdown
+                          remarkPlugins={[remarkGfm]}
+                          linkTarget="_blank"
+                          rehypePlugins={[rehypeMathjax]}
+                          components={{
+                            p({ node, ...props }) {
+                              return (
+                                <span className="inline">{props.children}</span>
+                              );
+                            },
+                          }}
+                        >
+                          {block.title}
+                        </Markdown>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                   <div className="text-sm text-muted-foreground">
                     {block.contents.map((content, index) => (
-                      <>
-                        <Separator orientation="horizontal" className="my-2" />
-                        <ContentDisplay key={index} content={content} />
-                      </>
+                      <motion.div key={index}>
+                        <AnimatePresence>
+                          {index !== 0 && (
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <Separator
+                                orientation="horizontal"
+                                className="my-2"
+                              />
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                        <ContentDisplay content={content} />
+                      </motion.div>
                     ))}
                   </div>
                 </motion.div>
