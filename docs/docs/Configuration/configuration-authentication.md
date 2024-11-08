@@ -4,28 +4,14 @@ sidebar_position: 0
 slug: /configuration-authentication
 ---
 
-
-
-:::info
-
-This page may contain outdated information. It will be updated as soon as possible.
-
-:::
-
-
-
-
 ## Sign Up and Sign In {#f480dac5d2094d75a433de0b8e195641}
 
-
 ---
-
 
 The login functionality in Langflow serves to authenticate users and protect sensitive routes in the application. Starting from version 0.5, Langflow introduces an enhanced login mechanism that is governed by a few environment variables. This allows new secure features.
 
 
 ## Environment Variables {#3ed7cae6f5324ba0ac14783cf2a6cc07}
-
 
 The following environment variables are crucial in configuring the login settings:
 
@@ -37,22 +23,16 @@ The following environment variables are crucial in configuring the login setting
 
 All of these variables can be passed to the CLI command _`langflow run`_ through the _`--env-file`_ option. For example:
 
-
 ```shell
 langflow run --env-file .env
 
 ```
 
-
 :::caution
 
  It is critical not to expose these environment variables in your code repository. Always set them securely in your deployment environment, for example, using Docker secrets, Kubernetes ConfigMaps/Secrets, or dedicated secure environment configuration systems like AWS Secrets Manager.
 
-
 :::
-
-
-
 
 ### _`LANGFLOW_AUTO_LOGIN`_ {#8b10059e0fbc44f3bc8ce63fe7692e7e}
 
@@ -66,7 +46,6 @@ To disable automatic login and enforce user authentication:
 ```shell
 export LANGFLOW_AUTO_LOGIN=False
 ```
-
 
 ### _`LANGFLOW_SUPERUSER`_ and _`LANGFLOW_SUPERUSER_PASSWORD`_ {#a61a651a0fc7443a82cec93c07a14503}
 
@@ -124,11 +103,7 @@ This command prompts you to enter the username and password for the superuser, u
 With _`LANGFLOW_AUTO_LOGIN`_ set to _`False`_, Langflow requires users to sign up before they can log in. The sign-up page is the default landing page when a user visits Langflow for the first time.
 
 
-![](./1009571828.png)
-
-
 ## Profile settings {#dd5926e12471448d99bd6849d2149dc8}
-
 
 Once signed in, you can change your profile settings by clicking on the profile icon in the top right corner of the Langflow dashboard. This opens a dropdown menu with the following options:
 
@@ -136,17 +111,12 @@ Once signed in, you can change your profile settings by clicking on the profile 
 - **Profile Settings**: Opens the profile settings page.
 - **Sign Out**: Logs the user out.
 
-	![](./563306242.png)
-
+Select **Admin Page** to manage users and groups as the superuser.
 
 Select **Profile Settings** to change your password and your profile picture.
 
 
-![](./1813063533.png)
 
 
-Select **Admin Page** to manage users and groups as the superuser.
 
-
-![](./383358552.png)
 
