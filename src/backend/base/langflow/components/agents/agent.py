@@ -58,7 +58,7 @@ class AgentComponent(ToolCallingAgentComponent):
             msg = "No language model selected"
             raise ValueError(msg)
         self.chat_history = self.get_memory_data()
-        
+
         if self.add_current_date_tool:
             if not isinstance(self.tools, list):  # type: ignore[has-type]
                 self.tools = []
