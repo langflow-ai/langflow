@@ -1,7 +1,7 @@
 ---
 title: Global Variables
-sidebar_position: 0
-slug: /settings-global-variables
+sidebar_position: 5
+slug: /configuration-global-variables
 ---
 
 import ReactPlayer from "react-player";

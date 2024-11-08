@@ -84,11 +84,15 @@ const config = {
         redirects: [
           {
             to: '/workspace-overview',
-            from: ['/365085a8-a90a-43f9-a779-f8769ec7eca1', '/My-Collection', '/workspace'],
+            from: ['/365085a8-a90a-43f9-a779-f8769ec7eca1', '/My-Collection', '/workspace', '/settings-project-general-settings'],
           },
           {
             to: '/components-overview',
             from: '/components',
+          },
+          {
+            to: '/configuration-global-variables',
+            from: '/settings-global-variables',
           },
           // add more redirects like this
           // {

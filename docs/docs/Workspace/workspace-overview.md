@@ -1,61 +1,77 @@
 ---
-title: Workspace Overview
+title: Workspace Concepts
 sidebar_position: 1
 slug: /workspace-overview
 ---
 
+The **Workspace** is where you create AI applications by connecting and running components in flows.
 
-Assemble new flows and create AIs by connecting and running components  in the **Langflow Workspace**.
+The workspace controls allow you to adjust your view and lock your flows in place.
 
-![](./310382168.png)
+## Components
+
+A **component** is a single building block within a flow and consists of inputs, outputs, and parameters that define its functionality.
+
+To add a component to your flow, drag it from the sidebar onto the workspace.
+
+To connect components, drag a line from the output handle (⚪) of one component to the input handle of another.
+
+For more information, see [How to build flows with components](/components-overview).
+
+## Playground
+
+The **Playground** executes the current flow in the workspace.
+
+Chat with your flow, view inputs and outputs, and modify your AI's memories to tune your responses in real time.
+
+Any input or output component can be opened in the **Playground** and tested in real time.
+
+For more information, see the [Playground](/workspace-playground).
+
+## API
+
+The **API** pane provides code templates to integrate your flows into external applications.
+
+For more information, see the [API](/workspace-api).
+
+## Collections, Folders, and Projects
+
+The **My Collection** page displays all the flows and components you've created in the Langflow Workspace.
+
+Your **collection** is the top-level categorization for all of your projects.
+
+### My Projects
+
+**My Projects** is the default folder where all new projects and components are initially stored.
+
+* To create a new folder, click 📁 **New Folder**.
+
+To rename a folder, double-click the folder name.
+
+To download a folder, click 📥 **Download**.
+
+To upload a folder, click 📤 **Upload**.
+
+Collections, folders, projects, and flows are exchanged as JSON objects.
+
+To move a file, drag and drop it into the desired folder.
+
+## Options menu
+
+The dropdown menu labeled with the project name offers several management and customization options for the current flow in the Langflow Workspace.
+
+* **New**: Create a new flow from scratch.
+* **Settings**: Adjust settings specific to the current flow, such as its Name, Description, and Endpoint Name.
+* **Logs**: View logs for the current project, including execution history, errors, and other runtime events.
+* **Import**: Import a flow or component from a JSON file into the Workspace.
+* **Export**: Export the current flow as a JSON file.
+* **Undo (⌘Z)**: Revert the last action taken in the project.
+* **Redo (⌘Y)**: Reapply a previously undone action.
+* **Refresh All**: Refresh all components and delete cache.
+
+## Settings
+
+Click ⚙️ **Settings** to access **Global Variables**, **Langflow API**, **Shortcuts**, and **Messages**.
 
 
-### Sidebar {#9d571b1d46804a01bcd8fbb9a4677af4}
 
-
-Located on the left, this the sidebar includes several collapsible sections that categorize the different types of pre-built components available in Langflow. Use the search bar to locate components by name.
-
-
-![](./1769489314.png)
-
-
-### Canvas {#5b050d0f8406436a9201f4711f0063ae}
-
-
-The canvas is the main area in the center where you can drag and drop components to create workflows.
-
-
-![](./1224026366.png)
-
-
-Use canvas controls in the bottom left side for zooming in and out, resetting the view, and locking or unlocking the canvas.
-
-
-### Top Navigation Bar {#603c9941be154e1eba4e7c9ec9554b92}
-
-
-In the top navigation bar, the dropdown menu labeled with the project name offers several management and customization options for the current flow in the Langflow Workspace.
-
-
-![](./1801518600.png)
-
-- **New**: Create a new flow from scratch.
-- **Settings**: Adjust settings specific to the current flow, such as its Name, Description, and Endpoint Name.
-- **Logs**: View logs for the current project, including execution history, errors, and other runtime events.
-- **Import**: Import a flow or component from a JSON file into the Workspace.
-- **Export**: Export the current flow as a JSON file.
-- **Undo (⌘Z)**: Revert the last action taken in the project.
-- **Redo (⌘Y)**: Reapply a previously undone action.
-- **Refresh All**: Refresh all components and delete cache.
-
-### Toolbar {#8038bcc315c34350a1f587e1ad0de59f}
-
-
-The toolbar at the bottom-right corner that provides options for executing, accessing the API, and sharing workflows.
-
-
-![](./563382604.png)
-
-- **Playground**: Button that executes the current flow in the workspace.
-- **API**: Provides API access details and integration options for the current flow.
-- **Share**: Allows users to share their AI with others.
