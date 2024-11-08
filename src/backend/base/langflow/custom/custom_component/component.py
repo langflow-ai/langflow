@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, get_type_hints
 
 import nanoid
 import yaml
+from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, ValidationError
 
 from langflow.base.tools.constants import TOOL_OUTPUT_DISPLAY_NAME, TOOL_OUTPUT_NAME
@@ -494,7 +495,7 @@ class Component(CustomComponent):
         # if value is a list of components, we need to process each component
         # Note this update make sure it is not a list str | int | float | bool | type(None)
         if isinstance(value, list) and not any(
-            isinstance(val, str | int | float | bool | type(None) | Message | Data) for val in value
+            isinstance(val, str | int | float | bool | type(None) | Message | Data | StructuredTool) for val in value
         ):
             for val in value:
                 self._process_connection_or_parameter(key, val)
