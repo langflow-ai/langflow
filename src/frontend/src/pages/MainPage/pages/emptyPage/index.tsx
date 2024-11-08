@@ -21,7 +21,7 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
             <span className="fill-foreground text-4xl">⛓️</span>
           )}
           <h3
-            className="font-chivo pt-5 text-2xl font-semibold text-foreground"
+            className="pt-5 font-chivo text-2xl font-semibold text-foreground"
             data-testid="mainpage_title"
           >
             {folders?.length > 1 ? "Empty folder" : "Start building"}
