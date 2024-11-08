@@ -114,12 +114,12 @@ export default function AppHeader(): JSX.Element {
               <span
                 className={
                   notificationCenter
-                    ? `absolute left-[31px] top-[10px] block h-1 w-1 rounded-full bg-destructive`
+                    ? `absolute left-[31px] top-[10px] h-1 w-1 rounded-full bg-destructive`
                     : "hidden"
                 }
               />
               <ForwardedIconComponent
-                name="bell"
+                name="Bell"
                 className="side-bar-button-size h-[18px] w-[18px]"
                 aria-hidden="true"
               />
