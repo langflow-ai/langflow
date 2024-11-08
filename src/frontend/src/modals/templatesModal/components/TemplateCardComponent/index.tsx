@@ -35,23 +35,10 @@ export default function TemplateCardComponent({
       onKeyDown={handleKeyDown}
       onClick={onClick}
     >
-      <div
-        className="relative h-20 w-20 shrink-0 overflow-hidden rounded-md p-4 outline-none ring-ring"
-        style={{
-          backgroundImage: bgGradient,
-          transform: "scale(1)",
-          transition: "transform 0.3s ease-in-out",
-        }}
-      >
-        <div
-          className="absolute inset-0 transition-transform duration-300 group-hover:scale-125 group-focus-visible:scale-125"
-          style={{
-            backgroundImage: bgGradient,
-          }}
-        />
+      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-md bg-muted p-4 outline-none ring-ring group-hover:bg-border group-focus-visible:bg-border">
         <IconComponent
           name={example.icon || "FileText"}
-          className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 text-white duration-300 group-hover:scale-105 group-focus-visible:scale-105"
+          className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 text-muted-foreground duration-300 group-hover:scale-105 group-hover:text-foreground group-focus-visible:scale-105 group-focus-visible:text-foreground"
         />
       </div>
       <div className="flex flex-1 flex-col justify-between">

@@ -2,19 +2,16 @@ import copy
 import json
 from datetime import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, cast
+from typing import cast
 from uuid import UUID
 
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from langchain_core.prompts.image import ImagePromptTemplate
 from loguru import logger
 from pydantic import BaseModel, model_serializer, model_validator
 
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
-
-if TYPE_CHECKING:
-    from langchain_core.prompt_values import ImagePromptValue
+from langflow.utils.image import create_data_url
 
 
 class Data(BaseModel):
@@ -140,11 +137,8 @@ class Data(BaseModel):
             if files:
                 contents = [{"type": "text", "text": text}]
                 for file_path in files:
-                    image_template = ImagePromptTemplate()
-                    image_prompt_value: ImagePromptValue = image_template.invoke(
-                        input={"path": file_path}, config={"callbacks": self.get_langchain_callbacks()}
-                    )
-                    contents.append({"type": "image_url", "image_url": image_prompt_value.image_url})
+                    image_url = create_data_url(file_path)
+                    contents.append({"type": "image_url", "image_url": {"url": image_url}})
                 human_message = HumanMessage(content=contents)
             else:
                 human_message = HumanMessage(
