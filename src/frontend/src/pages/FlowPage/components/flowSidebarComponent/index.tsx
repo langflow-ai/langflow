@@ -457,6 +457,7 @@ export function FlowSidebarComponent() {
                                       handleKeyDown(e, item.name)
                                     }
                                     className="flex cursor-pointer items-center gap-2"
+                                    data-testid={`disclosure-bundles-${item.display_name.toLocaleLowerCase()}`}
                                   >
                                     <ForwardedIconComponent
                                       name={item.icon}

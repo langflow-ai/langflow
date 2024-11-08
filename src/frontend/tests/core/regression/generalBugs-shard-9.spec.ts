@@ -41,6 +41,10 @@ test("memory should work as expect", async ({ page }) => {
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("chat memory");
 
+  await page.getByTestId("sidebar-options-trigger").click();
+  await page.getByTestId("sidebar-legacy-switch").isVisible({ timeout: 5000 });
+  await page.getByTestId("sidebar-legacy-switch").click();
+
   // Locate the canvas element
   const canvas = page.locator("#react-flow-id"); // Update the selector if needed
 
@@ -72,7 +76,7 @@ test("memory should work as expect", async ({ page }) => {
   await page.mouse.up();
 
   await page
-    .getByTestId("helpersChat Memory")
+    .getByTestId("memoriesChat Memory")
     .first()
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 

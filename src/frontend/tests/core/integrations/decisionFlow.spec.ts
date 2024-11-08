@@ -191,6 +191,11 @@ test("should create a flow with decision", async ({ page }) => {
     timeout: 30000,
   });
   await page.getByTestId("blank-flow").click();
+
+  await page.getByTestId("sidebar-options-trigger").click();
+  await page.getByTestId("sidebar-legacy-switch").isVisible({ timeout: 5000 });
+  await page.getByTestId("sidebar-legacy-switch").click();
+
   //---------------------------------- CHAT INPUT
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("chat input");
@@ -244,15 +249,15 @@ test("should create a flow with decision", async ({ page }) => {
   await page.getByTestId("sidebar-search-input").fill("pass");
   await page.waitForTimeout(500);
   await page
-    .getByTestId("prototypesPass")
+    .getByTestId("helpersPass")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.waitForTimeout(500);
   await page
-    .getByTestId("prototypesPass")
+    .getByTestId("helpersPass")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.waitForTimeout(500);
   await page
-    .getByTestId("prototypesPass")
+    .getByTestId("helpersPass")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   //---------------------------------- PROMPT
   await page.getByTestId("sidebar-search-input").click();
@@ -273,7 +278,7 @@ test("should create a flow with decision", async ({ page }) => {
   await page.getByTestId("sidebar-search-input").fill("conditional router");
   await page.waitForTimeout(500);
   await page
-    .getByTestId("prototypesConditional Router")
+    .getByTestId("logicCondition")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   //---------------------------------- CHAT OUTPUT
   await page.getByTestId("sidebar-search-input").click();
@@ -293,7 +298,7 @@ test("should create a flow with decision", async ({ page }) => {
   await page.waitForTimeout(500);
   await moveElementByX(page, "Chat Output", 700, 0);
   await page.waitForTimeout(500);
-  await moveElementByX(page, "Conditional Router", 1100, 0);
+  await moveElementByX(page, "Condition", 1100, 0);
   await page.waitForTimeout(500);
   await page.getByTestId("fit_view").click();
   await moveElementByX(page, "OpenAI", 980, 0);
