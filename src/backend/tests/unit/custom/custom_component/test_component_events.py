@@ -32,6 +32,7 @@ class TestComponent(Component):
         return {"name": "test_tool", "description": "A test tool"}
 
 
+@pytest.mark.usefixtures("client")
 async def test_component_message_sending():
     """Test component's message sending functionality."""
     # Create event queue and manager
