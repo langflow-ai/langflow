@@ -1,13 +1,10 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from zipfile import ZipFile, is_zipfile
 
-import fitz
-
-from langflow.base.data.utils import TEXT_FILE_TYPES, parse_text_file_to_data
+from langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
 from langflow.custom import Component
-from langflow.io import BoolInput, FileInput, Output
+from langflow.io import BoolInput, FileInput, IntInput, Output
 from langflow.schema import Data
 
 
@@ -49,6 +46,13 @@ class FileComponent(Component):
             advanced=True,
             info="If true, parallel processing will be enabled for zip files.",
         ),
+        IntInput(
+            name="concurrency_multithreading",
+            display_name="Multithreading Concurrency",
+            advanced=True,
+            info="The maximum number of workers to use, if concurrency is enabled",
+            value=4,
+        ),
     ]
 
     outputs = [Output(display_name="Data", name="data", method="load_file")]
@@ -74,6 +78,7 @@ class FileComponent(Component):
             # Check if the file is a zip archive
             if is_zipfile(resolved_path):
                 self.log(f"Processing zip file: {resolved_path.name}.")
+
                 return self._process_zip_file(
                     resolved_path,
                     silent_errors=self.silent_errors,
@@ -81,9 +86,11 @@ class FileComponent(Component):
                 )
 
             self.log(f"Processing single file: {resolved_path.name}.")
+
             return self._process_single_file(resolved_path, silent_errors=self.silent_errors)
         except FileNotFoundError:
             self.log(f"File not found: {resolved_path.name}.")
+
             raise
 
     def _process_zip_file(self, zip_path: Path, *, silent_errors: bool = False, parallel: bool = False) -> Data:
@@ -126,7 +133,7 @@ class FileComponent(Component):
                 raise ValueError(msg)
 
             # Define a function to process each file
-            def process_file(file_name):
+            def process_file(file_name, silent_errors=silent_errors):
                 with NamedTemporaryFile(delete=False) as temp_file:
                     temp_path = Path(temp_file.name).with_name(file_name)
                     with zip_file.open(file_name) as file_content:
@@ -138,19 +145,24 @@ class FileComponent(Component):
 
             # Process files in parallel if specified
             if parallel:
-                self.log("Initializing parallel Thread Pool Executor.")
-                with ThreadPoolExecutor() as executor:
-                    futures = {executor.submit(process_file, file): file for file in valid_files}
-                    for future in as_completed(futures):
-                        try:
-                            data.append(future.result())
-                        except Exception as e:
-                            self.log(f"Error processing file {futures[future]}: {e}")
-                            if not silent_errors:
-                                raise
+                self.log(
+                    f"Initializing parallel Thread Pool Executor with max workers: "
+                    f"{self.concurrency_multithreading}."
+                )
+
+                # Process files in parallel
+                initial_data = parallel_load_data(
+                    valid_files,
+                    silent_errors=silent_errors,
+                    load_function=process_file,
+                    max_concurrency=self.concurrency_multithreading,
+                )
+
+                # Filter out empty data
+                data = list(filter(None, initial_data))
             else:
                 # Sequential processing
-                data.extend([process_file(file_name) for file_name in valid_files])
+                data = [process_file(file_name) for file_name in valid_files]
 
         self.log(f"Successfully processed zip file: {zip_path.name}.")
 
@@ -169,20 +181,8 @@ class FileComponent(Component):
         Raises:
             ValueError: For unsupported file formats.
         """
-
-        # Define a function to extract text from a PDF file
-        def pdf_to_text(filepath):
-            text = ""
-
-            # Open the PDF file
-            with fitz.open(filepath) as pdf:
-                for page in pdf:
-                    text += page.get_text() + "\n"
-
-            return text
-
         # Check if the file type is supported
-        if not any(file_path.suffix == ext for ext in ["." + f for f in [*TEXT_FILE_TYPES, "pdf"]]):
+        if not any(file_path.suffix == ext for ext in ["." + f for f in TEXT_FILE_TYPES]):
             self.log(f"Unsupported file type: {file_path.suffix}")
 
             # Return empty data if silent_errors is True
@@ -193,13 +193,10 @@ class FileComponent(Component):
             raise ValueError(msg)
 
         try:
-            # Parse the file based on the file type
-            if file_path.suffix == ".pdf":
-                data = Data(data={"file_path": file_path, "text": pdf_to_text(file_path)})
-            else:
-                data = parse_text_file_to_data(str(file_path), silent_errors=silent_errors)  # type: ignore[assignment]
-                if not data:
-                    data = Data()
+            # Parse the text file as appropriate
+            data = parse_text_file_to_data(str(file_path), silent_errors=silent_errors)  # type: ignore[assignment]
+            if not data:
+                data = Data()
 
             self.log(f"Successfully processed file: {file_path.name}.")
         except Exception as e:
