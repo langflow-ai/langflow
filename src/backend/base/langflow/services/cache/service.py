@@ -298,7 +298,10 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
         self.expiration_time = expiration_time
 
     async def get(self, key, lock: asyncio.Lock | None = None):
-        async with lock or self.lock:
+        if not lock:
+            async with self.lock:
+                return await self._get(key)
+        else:
             return await self._get(key)
 
     async def _get(self, key):
@@ -312,7 +315,13 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
         return CACHE_MISS
 
     async def set(self, key, value, lock: asyncio.Lock | None = None) -> None:
-        async with lock or self.lock:
+        if not lock:
+            async with self.lock:
+                await self._set(
+                    key,
+                    value,
+                )
+        else:
             await self._set(
                 key,
                 value,
@@ -325,7 +334,10 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
         self.cache.move_to_end(key)
 
     async def delete(self, key, lock: asyncio.Lock | None = None) -> None:
-        async with lock or self.lock:
+        if not lock:
+            async with self.lock:
+                await self._delete(key)
+        else:
             await self._delete(key)
 
     async def _delete(self, key) -> None:
@@ -333,21 +345,24 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
             del self.cache[key]
 
     async def clear(self, lock: asyncio.Lock | None = None) -> None:
-        async with lock or self.lock:
+        if not lock:
+            async with self.lock:
+                await self._clear()
+        else:
             await self._clear()
 
     async def _clear(self) -> None:
         self.cache.clear()
 
     async def upsert(self, key, value, lock: asyncio.Lock | None = None) -> None:
-        await self._upsert(key, value, lock)
+        await self._upsert(key, value)
 
-    async def _upsert(self, key, value, lock: asyncio.Lock | None = None) -> None:
-        existing_value = await self.get(key, lock)
+    async def _upsert(self, key, value) -> None:
+        existing_value = await self.get(key)
         if existing_value is not None and isinstance(existing_value, dict) and isinstance(value, dict):
             existing_value.update(value)
             value = existing_value
-        await self.set(key, value, lock)
+        await self.set(key, value)
 
     async def contains(self, key) -> bool:
         return key in self.cache
