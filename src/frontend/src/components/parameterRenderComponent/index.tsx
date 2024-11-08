@@ -30,6 +30,7 @@ export function ParameterRenderComponent({
   handleNodeClass,
   nodeClass,
   disabled,
+  placeholder,
 }: {
   handleOnNewValue: handleOnNewValueType;
   name: string;
@@ -40,6 +41,7 @@ export function ParameterRenderComponent({
   handleNodeClass: (value: any, code?: string, type?: string) => void;
   nodeClass: APIClassType;
   disabled: boolean;
+  placeholder?: string;
 }) {
   const id = (
     templateData.type +
@@ -58,6 +60,7 @@ export function ParameterRenderComponent({
       nodeClass,
       handleNodeClass,
       readonly: templateData.readonly,
+      placeholder,
     };
     if (TEXT_FIELD_TYPES.includes(templateData.type ?? "")) {
       if (templateData.list) {

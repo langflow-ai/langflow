@@ -36,6 +36,26 @@ import NodeStatus from "./components/NodeStatus";
 import { NodeIcon } from "./components/nodeIcon";
 import { useBuildStatus } from "./hooks/use-get-build-status";
 
+const sortToolModeFields = (
+  a: string,
+  b: string,
+  template: any,
+  fieldOrder: string[],
+  isToolMode: boolean,
+) => {
+  if (!isToolMode) return sortFields(a, b, fieldOrder);
+
+  const aToolMode = template[a]?.tool_mode ?? false;
+  const bToolMode = template[b]?.tool_mode ?? false;
+
+  // If one is tool_mode and the other isn't, tool_mode goes last
+  if (aToolMode && !bToolMode) return 1;
+  if (!aToolMode && bToolMode) return -1;
+
+  // If both are tool_mode or both aren't, use regular field order
+  return sortFields(a, b, fieldOrder);
+};
+
 export default function GenericNode({
   data,
   selected,
@@ -180,6 +200,7 @@ export default function GenericNode({
         showNode={showNode}
         outputName={output.name}
         colorName={getNodeOutputColorsName(output, data, types)}
+        isToolMode={isToolMode}
       />
     );
   };
@@ -227,9 +248,21 @@ export default function GenericNode({
     shortcuts,
   ]);
 
+  const isToolMode =
+    data.node?.outputs?.some((output) => output.name === "component_as_tool") ??
+    false;
+
   const renderInputParameter = Object.keys(data.node!.template)
     .filter((templateField) => templateField.charAt(0) !== "_")
-    .sort((a, b) => sortFields(a, b, data.node?.field_order ?? []))
+    .sort((a, b) =>
+      sortToolModeFields(
+        a,
+        b,
+        data.node!.template,
+        data.node?.field_order ?? [],
+        isToolMode,
+      ),
+    )
     .map(
       (templateField: string, idx) =>
         data.node!.template[templateField]?.show &&
@@ -271,6 +304,9 @@ export default function GenericNode({
               data.node?.template[templateField].type,
               types,
             )}
+            isToolMode={
+              isToolMode && data.node!.template[templateField].tool_mode
+            }
           />
         ),
     );
