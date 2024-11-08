@@ -61,6 +61,7 @@ async def test_component_message_sending():
     assert isinstance(sent_message.content_blocks[0].contents[0], TextContent)
 
 
+@pytest.mark.usefixtures("client")
 async def test_component_tool_output():
     """Test component's tool output functionality."""
     # Create event queue and manager
@@ -93,6 +94,7 @@ async def test_component_tool_output():
     assert isinstance(sent_message.content_blocks[0].contents[0], ToolContent)
 
 
+@pytest.mark.usefixtures("client")
 async def test_component_error_handling():
     """Test component's error handling."""
     # Create event queue and manager
@@ -124,6 +126,7 @@ async def test_component_error_handling():
     assert "Test error" in str(sent_message.text)
 
 
+@pytest.mark.usefixtures("client")
 async def test_component_build_results():
     """Test component's build_results functionality."""
     # Create event queue and manager
@@ -155,6 +158,7 @@ async def test_component_build_results():
     assert artifacts["text_output"]["type"] == "text"
 
 
+@pytest.mark.usefixtures("client")
 async def test_component_logging():
     """Test component's logging functionality."""
     # Create event queue and manager
@@ -189,7 +193,7 @@ async def test_component_logging():
     assert event_id.startswith("info-")
 
 
-@pytest.mark.asyncio
+@pytest.mark.usefixtures("client")
 async def test_component_streaming_message():
     """Test component's streaming message functionality."""
     queue = await create_event_queue()
