@@ -31,13 +31,13 @@ export default function SimplifiedCodeTabComponent({
   };
 
   return (
-    <div className="flex w-full flex-col overflow-hidden rounded-md text-left dark">
-      <div className="flex w-full items-center justify-between rounded-t-md border border-border bg-accent px-4 py-2">
+    <div className="mt-2 flex w-full flex-col overflow-hidden rounded-md text-left dark">
+      <div className="flex w-full items-center justify-between rounded-t-md border border-b-0 border-border bg-muted px-4 py-2">
         <span className="dar text-sm font-semibold text-white">{language}</span>
         <Button
           variant="ghost"
           size="icon"
-          className="bg-card text-muted-foreground"
+          className="text-muted-foreground hover:bg-card"
           data-testid="copy-code-button"
           onClick={copyToClipboard}
         >

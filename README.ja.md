@@ -33,7 +33,7 @@
 <div align="center">
   <a href="./README.md"><img alt="README in English" src="https://img.shields.io/badge/English-d9d9d9"></a>
   <a href="./README.PT.md"><img alt="README in Portuguese" src="https://img.shields.io/badge/Portuguese-d9d9d9"></a>
-  <a href="./README.ES.md"><img alt="README in Spanish" src="https://img.shields.io/badge/Spanish-d9d9d9"></a>    
+  <a href="./README.ES.md"><img alt="README in Spanish" src="https://img.shields.io/badge/Spanish-d9d9d9"></a>
   <a href="./README.zh_CN.md"><img alt="README in Simplified Chinese" src="https://img.shields.io/badge/简体中文-d9d9d9"></a>
   <a href="./README.ja.md"><img alt="README in Japanese" src="https://img.shields.io/badge/日本語-d9d9d9"></a>
   <a href="./README.KR.md"><img alt="README in KOREAN" src="https://img.shields.io/badge/한국어-d9d9d9"></a>
@@ -152,7 +152,7 @@ langflow run [OPTIONS]
 - `--help`: 利用可能なすべてのオプションを表示します。
 - `--host`: サーバーをバインドするホストを定義します。`LANGFLOW_HOST`環境変数を使用して設定できます。デフォルトは`127.0.0.1`です。
 - `--workers`: ワーカープロセスの数を設定します。`LANGFLOW_WORKERS`環境変数を使用して設定できます。デフォルトは`1`です。
-- `--timeout`: ワーカーのタイムアウトを秒単位で設定します。デフォルトは`60`です。
+- `--worker-timeout`: ワーカーのタイムアウトを秒単位で設定します。デフォルトは`60`です。
 - `--port`: リッスンするポートを設定します。`LANGFLOW_PORT`環境変数を使用して設定できます。デフォルトは`7860`です。
 - `--env-file`: 環境変数を含む.env ファイルのパスを指定します。デフォルトは`.env`です。
 - `--log-level`: ログレベルを定義します。`LANGFLOW_LOG_LEVEL`環境変数を使用して設定できます。デフォルトは`critical`です。
