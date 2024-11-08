@@ -217,6 +217,7 @@ import { AnthropicIcon } from "../icons/Anthropic";
 import { AssemblyAIIcon } from "../icons/AssemblyAI";
 import { AstraDBIcon } from "../icons/AstraDB";
 import { AzureIcon } from "../icons/Azure";
+import { BeautifulSoup } from "../icons/BeautifulSoup";
 import { BingIcon } from "../icons/Bing";
 import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
 import { CassandraIcon } from "../icons/Cassandra";
@@ -274,6 +275,7 @@ import { VertexAIIcon } from "../icons/VertexAI";
 import { WeaviateIcon } from "../icons/Weaviate";
 import SvgWikipedia from "../icons/Wikipedia/Wikipedia";
 import SvgWolfram from "../icons/Wolfram/Wolfram";
+import { Youtube } from "../icons/Youtube";
 import { HackerNewsIcon } from "../icons/hackerNews";
 import { MistralIcon } from "../icons/mistral";
 import { SupabaseIcon } from "../icons/supabase";
@@ -655,6 +657,8 @@ export const nodeIconsLucide: iconsType = {
   Perplexity,
   TavilyIcon,
   OpenSearch,
+  Youtube,
+  BeautifulSoup,
   GithubIcon,
   FaGithub,
   FaApple,
