@@ -8,6 +8,7 @@
   :root {
     --font-sans: "Inter", sans-serif;
     --font-mono: "JetBrains Mono", monospace;
+    --font-chivo: "Chivo", sans-serif;
 
     --foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --background: 0 0% 100%; /* hsl(0, 0%, 100%) */
@@ -282,6 +283,5 @@
     --accent-indigo: 229.7 93.5% 81.8%;
     --accent-indigo-foreground: 243.4 75.4% 58.6%;
     --node-ring: 240 6% 90%;
-
   }
 }

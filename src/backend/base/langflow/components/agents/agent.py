@@ -31,7 +31,6 @@ class AgentComponent(ToolCallingAgentComponent):
             options=[*sorted(MODEL_PROVIDERS_DICT.keys()), "Custom"],
             value="OpenAI",
             real_time_refresh=True,
-            refresh_button=True,
             input_types=[],
         ),
         *MODEL_PROVIDERS_DICT["OpenAI"]["inputs"],

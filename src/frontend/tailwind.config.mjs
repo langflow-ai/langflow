@@ -36,6 +36,10 @@ const config = {
       },
     },
     extend: {
+      screens: {
+        xl: "1200px",
+        "2xl": "1400px",
+      },
       keyframes: {
         wiggle: {
           "0%, 100%": { transform: "scale(100%)" },
@@ -254,6 +258,7 @@ const config = {
       fontFamily: {
         sans: ["var(--font-sans)", ...fontFamily.sans],
         mono: ["var(--font-mono)", ...fontFamily.mono],
+        chivo: ["var(--font-chivo)", ...fontFamily.sans],
       },
       boxShadow: {
         "frozen-ring": "0 0 10px 2px rgba(128, 190, 230, 0.5)",
