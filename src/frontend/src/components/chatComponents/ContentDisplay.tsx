@@ -135,16 +135,91 @@ export default function ContentDisplay({ content }: { content: ContentType }) {
       break;
 
     case "tool_use":
+      const formatToolOutput = (output: any) => {
+        if (output === null || output === undefined) return "";
+
+        // If it's a string, render as markdown
+        if (typeof output === "string") {
+          return (
+            <Markdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeMathjax]}
+              className="markdown prose max-w-full text-[14px] font-normal dark:prose-invert"
+              components={{
+                pre({ node, ...props }) {
+                  return <>{props.children}</>;
+                },
+                code: ({ node, inline, className, children, ...props }) => {
+                  const match = /language-(\w+)/.exec(className || "");
+                  return !inline ? (
+                    <SimplifiedCodeTabComponent
+                      language={(match && match[1]) || ""}
+                      code={String(children).replace(/\n$/, "")}
+                    />
+                  ) : (
+                    <code className={className} {...props}>
+                      {children}
+                    </code>
+                  );
+                },
+              }}
+            >
+              {output}
+            </Markdown>
+          );
+        }
+
+        // For objects/arrays, format as JSON
+        try {
+          return (
+            <CodeBlock
+              language="json"
+              value={JSON.stringify(output, null, 2)}
+            />
+          );
+        } catch {
+          return String(output);
+        }
+      };
+
       contentData = (
-        <div>
-          {content.name && <div>Tool: {content.name}</div>}
-          <div>Input: {JSON.stringify(content.tool_input, null, 2)}</div>
-          {content.output && (
-            <div>Output: {JSON.stringify(content.output)}</div>
+        <div className="flex flex-col gap-2">
+          <Markdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeMathjax]}
+            className="markdown prose max-w-full text-[14px] font-normal dark:prose-invert"
+          >
+            {`${content.name ? `**Tool:** ${content.name}\n\n` : ""}**Input:**`}
+          </Markdown>
+          <CodeBlock
+            language="json"
+            value={JSON.stringify(content.tool_input, null, 2)}
+          />
+          {content.output !== undefined && (
+            <>
+              <Markdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeMathjax]}
+                className="markdown prose max-w-full text-[14px] font-normal dark:prose-invert"
+              >
+                **Output:**
+              </Markdown>
+              <div className="mt-1">{formatToolOutput(content.output)}</div>
+            </>
           )}
           {content.error && (
             <div className="text-red-500">
-              Error: {JSON.stringify(content.error)}
+              <Markdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeMathjax]}
+                className="markdown prose max-w-full text-[14px] font-normal dark:prose-invert"
+              >
+                **Error:**
+              </Markdown>
+              <CodeBlock
+                language="json"
+                value={JSON.stringify(content.error, null, 2)}
+              />
             </div>
           )}
         </div>
