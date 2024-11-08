@@ -25,6 +25,7 @@ from .input_mixin import (
     SerializableFieldTypes,
     SliderMixin,
     TableMixin,
+    ToolModeMixin,
 )
 
 
@@ -66,7 +67,7 @@ class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
     field_type: SerializableFieldTypes = FieldTypes.OTHER
 
 
-class DataInput(HandleInput, InputTraceMixin, ListableInputMixin):
+class DataInput(HandleInput, InputTraceMixin, ListableInputMixin, ToolModeMixin):
     """Represents an Input that has a Handle that receives a Data object.
 
     Attributes:
@@ -76,7 +77,7 @@ class DataInput(HandleInput, InputTraceMixin, ListableInputMixin):
     input_types: list[str] = ["Data"]
 
 
-class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
+class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.PROMPT
 
 
@@ -148,13 +149,13 @@ class MessageInput(StrInput, InputTraceMixin):
             return Message(**v)
         if isinstance(v, Message):
             return v
-        if isinstance(v, str):
+        if isinstance(v, str | AsyncIterator | Iterator):
             return Message(text=v)
         msg = f"Invalid value type {type(v)}"
         raise ValueError(msg)
 
 
-class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin):
+class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin, ToolModeMixin):
     """Represents a text input component for the Langflow system.
 
     This component is used to handle text inputs in the Langflow system.
@@ -208,7 +209,7 @@ class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin):
         return value
 
 
-class MultilineInput(MessageTextInput, MultilineMixin, InputTraceMixin):
+class MultilineInput(MessageTextInput, MultilineMixin, InputTraceMixin, ToolModeMixin):
     """Represents a multiline input field.
 
     Attributes:
@@ -406,7 +407,7 @@ class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
     value: dict | None = {}
 
 
-class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin):
+class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a dropdown input field.
 
     This class represents a dropdown input field and provides functionality for handling dropdown values.

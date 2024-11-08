@@ -64,8 +64,13 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 ################################
 FROM python:3.12.3-slim AS runtime
 
-RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
+RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data && \
+    mkdir /data && chown -R 1000:0 /data
+
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
+
+# curl is required for langflow health checks
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
@@ -76,16 +81,10 @@ LABEL org.opencontainers.image.licenses=MIT
 LABEL org.opencontainers.image.url=https://github.com/langflow-ai/langflow
 LABEL org.opencontainers.image.source=https://github.com/langflow-ai/langflow
 
-RUN useradd ragstack -u 10000 -g 0 --no-create-home --home-dir /app/data
 WORKDIR /app
-
-RUN mkdir /data
-RUN chown -R 10000:0 /data
-RUN chown -R 10000:0 /app
 
 ENV LANGFLOW_HOST=0.0.0.0
 ENV LANGFLOW_PORT=7860
 
-USER 10000
-
+USER 1000
 ENTRYPOINT ["python", "-m", "langflow", "run", "--host", "0.0.0.0", "--backend-only"]

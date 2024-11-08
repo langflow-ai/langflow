@@ -84,6 +84,7 @@ const HeaderComponent = ({
                 key={type}
                 unstyled
                 id={`${type}-btn`}
+                data-testid={`${type}-btn`}
                 onClick={() => setFlowType(type as "flows" | "components")}
                 className={`border-b ${
                   flowType === type

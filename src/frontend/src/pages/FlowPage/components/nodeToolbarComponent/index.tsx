@@ -1,14 +1,16 @@
 import { countHandlesFn } from "@/CustomNodes/helpers/count-handles";
+import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import { Button } from "@/components/ui/button";
+import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import CodeAreaModal from "@/modals/codeAreaModal";
 import { APIClassType } from "@/types/api";
 import _, { cloneDeep } from "lodash";
 import { useEffect, useRef, useState } from "react";
-import { useUpdateNodeInternals } from "reactflow";
+import { useStore, useUpdateNodeInternals } from "reactflow";
 import IconComponent from "../../../../components/genericIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import {
@@ -34,12 +36,7 @@ import {
   expandGroupNode,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
-import {
-  classNames,
-  cn,
-  getNodeLength,
-  openInNewTab,
-} from "../../../../utils/utils";
+import { cn, getNodeLength, openInNewTab } from "../../../../utils/utils";
 import useShortcuts from "./hooks/use-shortcuts";
 import ShortcutDisplay from "./shortcutDisplay";
 import ToolbarSelectItem from "./toolbarSelectItem";
@@ -76,7 +73,21 @@ export default function NodeToolbarComponent({
   const addFlow = useAddFlow();
 
   const isMinimal = countHandlesFn(data) <= 1 && numberOfOutputHandles <= 1;
+  function activateToolMode() {
+    const newValue = !toolMode;
+    setToolMode(newValue);
 
+    updateToolMode(data.id, newValue);
+    mutateTemplate(
+      newValue,
+      data.node!,
+      handleNodeClass,
+      postToolModeValue,
+      setNoticeData,
+      "tool_mode",
+    );
+    updateNodeInternals(data.id);
+  }
   function minimize() {
     if (isMinimal) {
       setShowNode((data.showNode ?? true) ? false : true);
@@ -130,6 +141,11 @@ export default function NodeToolbarComponent({
     setSuccessData({ title: `${data.id} saved successfully` });
     return;
   }
+  // Check if any of the data.node.template fields have tool_mode as True
+  // if so we can show the tool mode button
+  const hasToolMode =
+    data.node?.template &&
+    Object.values(data.node.template).some((field) => field.tool_mode);
 
   function openDocs() {
     if (data.node?.documentation) {
@@ -170,6 +186,7 @@ export default function NodeToolbarComponent({
     shareComponent,
     ungroup: handleungroup,
     minimizeFunction: minimize,
+    activateToolMode: activateToolMode,
   });
 
   const paste = useFlowStore((state) => state.paste);
@@ -188,6 +205,7 @@ export default function NodeToolbarComponent({
       });
     },
   });
+  const updateToolMode = useFlowStore((state) => state.updateToolMode);
 
   useEffect(() => {
     if (!showModalAdvanced) {
@@ -287,6 +305,9 @@ export default function NodeToolbarComponent({
           },
         );
         break;
+      case "toolMode":
+        activateToolMode();
+        break;
     }
 
     setSelectedValue(null);
@@ -322,10 +343,52 @@ export default function NodeToolbarComponent({
     (selectTriggerRef.current! as HTMLElement)?.click();
   };
 
+  const [toolMode, setToolMode] = useState(() => {
+    // Check if tool mode is explicitly set on the node
+    const hasToolModeProperty = data.node?.tool_mode;
+    if (hasToolModeProperty !== undefined) {
+      return hasToolModeProperty;
+    }
+
+    // Otherwise check if node has component_as_tool output
+    const hasComponentAsTool = data.node?.outputs?.some(
+      (output) => output.name === "component_as_tool",
+    );
+
+    return hasComponentAsTool ?? false;
+  });
+
+  const postToolModeValue = usePostTemplateValue({
+    node: data.node!,
+    nodeId: data.id,
+    parameterId: "tool_mode",
+  });
+
+  // Use ReactFlow's store selector to get zoom updates
+  const zoom = useStore((state) => state.transform[2]);
+  const [scale, setScale] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!zoom) return;
+    if (zoom < 0.65) {
+      const newScale = Math.max(zoom * 1.2, 0.4);
+      setScale(newScale);
+    } else {
+      setScale(1);
+    }
+  }, [zoom]);
+
+  if (scale === null) return <></>;
   return (
     <>
-      <div className="noflow nowheel nopan nodelete nodrag">
-        <div className="flex items-center gap-1 rounded-lg border-[1px] border-border bg-background p-1 shadow-sm">
+      <div
+        className="noflow nowheel nopan nodelete nodrag"
+        style={{
+          transform: `scale(${scale})`,
+          transformOrigin: "bottom",
+        }}
+      >
+        <div className="toolbar-wrapper">
           {hasCode && (
             <ShadTooltip
               content={
@@ -336,6 +399,7 @@ export default function NodeToolbarComponent({
                 />
               }
               side="top"
+              styleClasses="relative bottom-2"
             >
               <Button
                 className="node-toolbar-buttons"
@@ -364,6 +428,7 @@ export default function NodeToolbarComponent({
                 />
               }
               side="top"
+              styleClasses="relative bottom-2"
             >
               <Button
                 className="node-toolbar-buttons"
@@ -379,39 +444,79 @@ export default function NodeToolbarComponent({
               </Button>
             </ShadTooltip>
           )}
-          <ShadTooltip
-            content={
-              <ShortcutDisplay
-                {...shortcuts.find(
-                  ({ name }) => name.toLowerCase() === "freeze path",
-                )!}
-              />
-            }
-            side="top"
-          >
-            <Button
-              className={cn("node-toolbar-buttons", frozen && "text-blue-500")}
-              variant="ghost"
-              onClick={(event) => {
-                event.preventDefault();
-                takeSnapshot();
-                FreezeAllVertices({
-                  flowId: currentFlowId,
-                  stopNodeId: data.id,
-                });
-              }}
-              size="node-toolbar"
+          {!hasToolMode && (
+            <ShadTooltip
+              content={
+                <ShortcutDisplay
+                  {...shortcuts.find(
+                    ({ name }) => name.toLowerCase() === "freeze path",
+                  )!}
+                />
+              }
+              side="top"
             >
-              <IconComponent
-                name="FreezeAll"
+              <Button
                 className={cn(
-                  "h-4 w-4 transition-all",
-                  frozen ? "animate-wiggle text-ice" : "",
+                  "node-toolbar-buttons",
+                  frozen && "text-blue-500",
                 )}
-              />
-              <span className="text-[13px] font-medium">Freeze Path</span>
-            </Button>
-          </ShadTooltip>
+                variant="ghost"
+                onClick={(event) => {
+                  event.preventDefault();
+                  takeSnapshot();
+                  FreezeAllVertices({
+                    flowId: currentFlowId,
+                    stopNodeId: data.id,
+                  });
+                }}
+                size="node-toolbar"
+              >
+                <IconComponent
+                  name="FreezeAll"
+                  className={cn(
+                    "h-4 w-4 transition-all",
+                    frozen ? "animate-wiggle text-ice" : "",
+                  )}
+                />
+                <span className="text-[13px] font-medium">Freeze Path</span>
+              </Button>
+            </ShadTooltip>
+          )}
+          {hasToolMode && (
+            <ShadTooltip
+              content={
+                <ShortcutDisplay
+                  {...shortcuts.find(
+                    ({ name }) => name.toLowerCase() === "tool mode",
+                  )!}
+                />
+              }
+              side="top"
+            >
+              <Button
+                className={cn(
+                  "node-toolbar-buttons",
+                  toolMode && "text-primary",
+                )}
+                variant="ghost"
+                onClick={(event) => {
+                  event.preventDefault();
+                  takeSnapshot();
+                  handleSelectChange("toolMode");
+                }}
+                size="node-toolbar"
+              >
+                <IconComponent
+                  name="Hammer"
+                  className={cn(
+                    "h-4 w-4 transition-all",
+                    toolMode ? "text-primary" : "",
+                  )}
+                />
+                <span className="text-[13px] font-medium">Tool Mode</span>
+              </Button>
+            </ShadTooltip>
+          )}
           <ShadTooltip
             content={
               <ShortcutDisplay
@@ -421,6 +526,7 @@ export default function NodeToolbarComponent({
               />
             }
             side="top"
+            styleClasses="relative bottom-2"
           >
             <Button
               className="node-toolbar-buttons h-[2.125rem]"
@@ -434,9 +540,13 @@ export default function NodeToolbarComponent({
               <IconComponent name="Copy" className="h-4 w-4" />
             </Button>
           </ShadTooltip>
-          <ShadTooltip content="All" side="top">
+          <ShadTooltip
+            content="Show More"
+            side="top"
+            styleClasses="relative bottom-2"
+          >
             <Button
-              className="node-toolbar-buttons h-[2.125rem]"
+              className="node-toolbar-buttons h-[2rem]"
               variant="ghost"
               onClick={handleButtonClick}
               size="node-toolbar"
@@ -448,12 +558,13 @@ export default function NodeToolbarComponent({
         </div>
 
         <Select onValueChange={handleSelectChange} value={selectedValue!}>
-          <ShadTooltip content="All" side="bottom">
-            <SelectTrigger ref={selectTriggerRef}>
-              <></>
-            </SelectTrigger>
-          </ShadTooltip>
-          <SelectContent className="relative -left-10 min-w-[14rem]">
+          <SelectTrigger ref={selectTriggerRef}>
+            <></>
+          </SelectTrigger>
+          <SelectContent
+            className="relative min-w-[14rem] bg-background"
+            style={{ transform: `scale(${scale})`, transformOrigin: "top" }}
+          >
             {hasCode && (
               <SelectItem value={"code"}>
                 <ToolbarSelectItem
@@ -625,6 +736,19 @@ export default function NodeToolbarComponent({
                 </span>
               </div>
             </SelectItem>
+            {hasToolMode && (
+              <SelectItem value="toolMode">
+                <ToolbarSelectItem
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Tool Mode")?.shortcut!
+                  }
+                  value={"Tool Mode"}
+                  icon={"Hammer"}
+                  dataTestId="tool-mode-button"
+                  style={`${toolMode ? "text-primary" : ""} transition-all`}
+                />
+              </SelectItem>
+            )}
           </SelectContent>
         </Select>
 

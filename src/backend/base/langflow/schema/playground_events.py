@@ -7,8 +7,9 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 from langflow.schema.content_block import ContentBlock
+from langflow.schema.content_types import ErrorContent
 from langflow.schema.properties import Properties
-from langflow.schema.utils import timestamp_to_str_validator
+from langflow.schema.validators import timestamp_to_str_validator
 from langflow.utils.constants import MESSAGE_SENDER_USER
 
 
@@ -23,7 +24,7 @@ class PlaygroundEvent(BaseModel):
     timestamp: Annotated[str, timestamp_to_str_validator] = Field(
         default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
     )
-    id_: UUID | str | None = Field(alias="id")
+    id_: UUID | str | None = Field(default=None, alias="id")
 
     @field_serializer("timestamp")
     @classmethod
@@ -133,7 +134,7 @@ def create_error(
 ) -> ErrorEvent:
     if traceback:
         content_blocks = content_blocks or []
-        content_blocks += [ContentBlock(title=title, content=traceback)]
+        content_blocks += [ContentBlock(title=title, contents=[ErrorContent(type="error", traceback=traceback)])]
     return ErrorEvent(
         text=text,
         properties=properties,

@@ -855,6 +855,10 @@ export const defaultShortcuts = [
     name: "Output Inspection",
     shortcut: `O`,
   },
+  {
+    name: "Tool Mode",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + M`,
+  },
 ];
 
 export const DEFAULT_TABLE_ALERT_MSG = `Oops! It seems there's no data to display right now. Please check back later.`;
@@ -953,3 +957,7 @@ export const GRADIENT_CLASS =
 export const RECEIVING_INPUT_VALUE = "Receiving input";
 
 export const ICON_STROKE_WIDTH = 1.25;
+
+export const DEFAULT_PLACEHOLDER = "Type something...";
+
+export const DEFAULT_TOOLSET_PLACEHOLDER = "Used as a tool";
