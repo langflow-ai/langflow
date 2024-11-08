@@ -25,6 +25,7 @@ from .input_mixin import (
     SerializableFieldTypes,
     SliderMixin,
     TableMixin,
+    ToolModeMixin,
 )
 
 
@@ -154,7 +155,7 @@ class MessageInput(StrInput, InputTraceMixin):
         raise ValueError(msg)
 
 
-class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin):
+class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin, ToolModeMixin):
     """Represents a text input component for the Langflow system.
 
     This component is used to handle text inputs in the Langflow system.

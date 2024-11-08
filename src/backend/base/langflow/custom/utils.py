@@ -424,8 +424,8 @@ def build_custom_component_template(
 
         frontend_node = add_code_field(frontend_node, custom_component._code)
 
-        add_base_classes(frontend_node, custom_component.get_function_entrypoint_return_type)
-        add_output_types(frontend_node, custom_component.get_function_entrypoint_return_type)
+        add_base_classes(frontend_node, custom_component._get_function_entrypoint_return_type)
+        add_output_types(frontend_node, custom_component._get_function_entrypoint_return_type)
 
         reorder_fields(frontend_node, custom_instance._get_field_order())
 

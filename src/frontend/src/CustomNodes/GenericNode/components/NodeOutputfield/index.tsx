@@ -13,7 +13,6 @@ import {
   scapedJSONStringfy,
 } from "../../../../utils/reactflowUtils";
 import {
-  classNames,
   cn,
   logHasMessage,
   logTypeIsError,
@@ -37,6 +36,7 @@ export default function NodeOutputField({
   outputProxy,
   lastOutput,
   colorName,
+  isToolMode = false,
 }: NodeOutputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const nodes = useFlowStore((state) => state.nodes);
@@ -131,6 +131,8 @@ export default function NodeOutputField({
       className={cn(
         "relative mt-1 flex h-11 w-full flex-wrap items-center justify-between bg-muted px-5 py-2",
         lastOutput ? "last-output-border" : "",
+        isToolMode && "bg-primary",
+        outputName === "component_as_tool" && "border-l-2 border-primary pl-2",
       )}
     >
       <>
@@ -186,6 +188,7 @@ export default function NodeOutputField({
                 nodeId={data.id}
                 frozen={data.node?.frozen}
                 name={title ?? type}
+                isToolMode={isToolMode}
               />
             </span>
             <ShadTooltip

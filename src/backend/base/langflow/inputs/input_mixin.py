@@ -106,6 +106,10 @@ class BaseInputMixin(BaseModel, validate_assignment=True):  # type: ignore[call-
         return dump
 
 
+class ToolModeMixin(BaseModel):
+    tool_mode: bool = False
+
+
 class InputTraceMixin(BaseModel):
     trace_as_input: bool = True
 

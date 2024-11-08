@@ -31,6 +31,7 @@ export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
   download: "mod+j",
   freeze: "mod+f",
   FreezePath: "mod+shift+f",
+  toolMode: "mod+shift+m",
   updateUniqueShortcut: (name, combination) => {
     set({
       [name]: combination,

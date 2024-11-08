@@ -23,11 +23,6 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
             info="Initial instructions and context provided to guide the agent's behavior.",
             value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
         ),
-        MessageTextInput(
-            name="input_value",
-            display_name="Input",
-            info="The input provided by the user for the agent to process.",
-        ),
         DataInput(name="chat_history", display_name="Chat Memory", is_list=True, advanced=True),
     ]
 

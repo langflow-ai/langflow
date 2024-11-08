@@ -363,7 +363,7 @@ class CustomComponent(BaseComponent):
         return build_methods[0] if build_methods else {}
 
     @property
-    def get_function_entrypoint_return_type(self) -> list[Any]:
+    def _get_function_entrypoint_return_type(self) -> list[Any]:
         """Gets the return type of the function entrypoint for the custom component.
 
         Returns:

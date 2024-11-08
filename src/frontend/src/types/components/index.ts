@@ -1,4 +1,3 @@
-import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { ReactElement, ReactNode } from "react";
 import { ReactFlowJsonObject } from "reactflow";
 import { InputOutput } from "../../constants/enums";
@@ -10,7 +9,6 @@ import {
 } from "../api";
 import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
-import { ColumnField } from "../utils/functions";
 import { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
   name?: string;
@@ -92,6 +90,7 @@ export type NodeOutputFieldComponentType = {
   outputProxy?: OutputFieldProxyType;
   lastOutput?: boolean;
   colorName?: string[];
+  isToolMode?: boolean;
 };
 
 export type NodeInputFieldComponentType = {
@@ -108,6 +107,7 @@ export type NodeInputFieldComponentType = {
   proxy: { field: string; id: string } | undefined;
   showNode: boolean;
   colorName?: string[];
+  isToolMode?: boolean;
 };
 
 export type IOJSONInputComponentType = {
@@ -124,6 +124,7 @@ export type outputComponentType = {
   idx: number;
   name: string;
   proxy?: OutputFieldProxyType;
+  isToolMode?: boolean;
 };
 
 export type DisclosureComponentType = {

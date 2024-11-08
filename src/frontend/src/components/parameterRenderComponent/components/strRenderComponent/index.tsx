@@ -6,6 +6,7 @@ import TextAreaComponent from "../textAreaComponent";
 export function StrRenderComponent({
   templateData,
   name,
+  placeholder,
   ...baseInputProps
 }: InputProps<string, StrRenderComponentType>) {
   const { handleOnNewValue, id, disabled, editNode, value } = baseInputProps;
@@ -30,6 +31,7 @@ export function StrRenderComponent({
         {...baseInputProps}
         password={templateData.password}
         load_from_db={templateData.load_from_db}
+        placeholder={placeholder}
         id={"input-" + name}
       />
     );

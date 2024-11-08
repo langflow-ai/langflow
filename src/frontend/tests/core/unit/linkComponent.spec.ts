@@ -63,8 +63,8 @@ test("user should interact with link component", async ({ context, page }) => {
 
   // Replace the MessageTextInput line and add LinkInput
   cleanCode = cleanCode.replace(
-    'MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!"),',
-    `MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!"),
+    'MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!", tool_mode=True),',
+    `MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!", tool_mode=True),
     LinkInput(name="link", display_name="BUTTON", value="https://www.datastax.com", text="Click me"),`,
   );
 

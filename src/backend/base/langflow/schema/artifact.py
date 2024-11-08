@@ -1,4 +1,4 @@
-from collections.abc import Callable, Generator
+from collections.abc import Generator
 from enum import Enum
 
 from fastapi.encoders import jsonable_encoder
@@ -6,6 +6,7 @@ from loguru import logger
 from pydantic import BaseModel
 
 from langflow.schema.data import Data
+from langflow.schema.encoders import CUSTOM_ENCODERS
 from langflow.schema.message import Message
 from langflow.schema.serialize import recursive_serialize_or_str
 
@@ -49,13 +50,6 @@ def get_artifact_type(value, build_result=None) -> str:
         result = ArtifactType.STREAM
 
     return result.value
-
-
-def encode_callable(obj: Callable):
-    return obj.__name__ if hasattr(obj, "__name__") else str(obj)
-
-
-CUSTOM_ENCODERS = {Callable: encode_callable}
 
 
 def post_process_raw(raw, artifact_type: str):

@@ -58,6 +58,7 @@ export default function TextAreaComponent({
   id = "",
   updateVisibility,
   password,
+  placeholder,
 }: InputProps<string, TextAreaComponentType>): JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
@@ -131,7 +132,7 @@ export default function TextAreaComponent({
         onChange={handleInputChange}
         disabled={disabled}
         className={getInputClassName()}
-        placeholder={getPlaceholder(disabled, "Type something...")}
+        placeholder={getPlaceholder(disabled, placeholder)}
         aria-label={disabled ? value : undefined}
         ref={inputRef}
         type={password ? (passwordVisible ? "text" : "password") : "text"}

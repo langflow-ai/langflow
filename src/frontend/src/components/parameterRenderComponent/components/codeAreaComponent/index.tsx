@@ -51,6 +51,7 @@ export default function CodeAreaComponent({
   nodeClass,
   handleNodeClass,
   id = "",
+  placeholder,
 }: InputProps<string>) {
   const renderCodeText = () => (
     <span
@@ -62,7 +63,7 @@ export default function CodeAreaComponent({
         disabled && !editNode && codeContentClasses.disabled,
       )}
     >
-      {value !== "" ? value : getPlaceholder(disabled, "Type something...")}
+      {value !== "" ? value : getPlaceholder(disabled, placeholder)}
     </span>
   );
 
