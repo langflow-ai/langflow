@@ -6,6 +6,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts.chat import ChatPromptTemplate
 from langflow.schema.message import Message
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
+from platformdirs import user_cache_dir
 
 
 @pytest.fixture
@@ -33,8 +34,8 @@ def sample_image(langflow_cache_dir):
     )
     image_path.write_bytes(image_content)
 
-    # Mock the cache directory location
-    real_cache_dir = Path.home() / "Library/Caches/langflow"
+    # Use platformdirs to get the cache directory
+    real_cache_dir = Path(user_cache_dir("langflow"))
     real_cache_dir.mkdir(parents=True, exist_ok=True)
     real_flow_dir = real_cache_dir / "test_flow"
     real_flow_dir.mkdir(parents=True, exist_ok=True)
@@ -104,8 +105,9 @@ def test_message_with_multiple_images(sample_image, langflow_cache_dir):
     second_image = flow_dir / "second_image.png"
     shutil.copy2(str(sample_image), str(second_image))
 
-    # Also copy to real cache location
-    real_cache_dir = Path.home() / "Library/Caches/langflow/test_flow"
+    # Use platformdirs for the real cache location
+    real_cache_dir = Path(user_cache_dir("langflow")) / "test_flow"
+    real_cache_dir.mkdir(parents=True, exist_ok=True)
     real_second_image = real_cache_dir / "second_image.png"
     shutil.copy2(str(sample_image), str(real_second_image))
 
@@ -172,6 +174,6 @@ def test_message_to_lc_without_sender():
 def cleanup():
     yield
     # Clean up the real cache directory after tests
-    cache_dir = Path.home() / "Library/Caches/langflow"
+    cache_dir = Path(user_cache_dir("langflow"))
     if cache_dir.exists():
         shutil.rmtree(str(cache_dir))
