@@ -8,7 +8,7 @@ The login functionality in Langflow serves to authenticate users and protect sen
 
 Starting from version 0.5, Langflow introduces an enhanced login mechanism that is governed by a few environment variables. This allows new secure features.
 
-## Set up authentication in Langflow
+## Create a superuser and new users in Langflow
 
 Learn how to create a new superuser, log in to Langflow, and add new users.
 
@@ -23,6 +23,8 @@ export LANGFLOW_SUPERUSER_PASSWORD=securepassword
 export LANGFLOW_SECRET_KEY=randomly_generated_secure_key
 export LANGFLOW_NEW_USER_IS_ACTIVE=False
 ```
+
+For more information, see [Authentication configuration values](#values).
 
 :::tip
 The Langflow project includes a [`.env.example`](https://github.com/langflow-ai/langflow/blob/main/.env.example) file to help you get started.
@@ -46,13 +48,30 @@ The user can only sign in if you select them as **Active**.
 10. Click **Save**.
 11. To confirm your new user has been created, sign out of Langflow, and then sign back in using your new **Username** and **Password**.
 
-:::caution
+## Manage Superuser with the Langflow CLI
 
- It is critical not to expose these environment variables in your code repository. Always set them securely in your deployment environment, for example, using Docker secrets, Kubernetes ConfigMaps/Secrets, or dedicated secure environment configuration systems like AWS Secrets Manager.
+Langflow provides a command-line utility for interactively creating superusers:
 
-:::
+1. Enter the CLI command:
 
-The following table summarizes the key environment variables for configuring Langflow authentication:
+```bash
+langflow superuser
+```
+2. Langflow prompts you for a **Username** and **Password**:
+
+```
+langflow superuser
+Username: new_superuser_1
+Password:
+Default folder created successfully.
+Superuser created successfully.
+```
+
+3. To confirm your new superuser was created successfully, go to the **Admin Page** at `http://127.0.0.1:7861/admin`.
+
+## Authentication configuration values {#values}
+
+The following table lists the available authentication configuration variables, their descriptions, and default values:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -61,8 +80,6 @@ The following table summarizes the key environment variables for configuring Lan
 | `LANGFLOW_SUPERUSER_PASSWORD` | Superuser password | - |
 | `LANGFLOW_SECRET_KEY` | Key for encrypting superuser password | - |
 | `LANGFLOW_NEW_USER_IS_ACTIVE` | Automatically activates new users | `False` |
-
-## Detailed Explanation
 
 ### LANGFLOW_AUTO_LOGIN
 
@@ -97,26 +114,6 @@ export LANGFLOW_SECRET_KEY=randomly_generated_secure_key
 By default, this variable is set to `False`. When enabled, new users are automatically activated and can log in without requiring explicit activation by the superuser.
 
 
-## Manage Superuser with the Langflow CLI
-
-Langflow provides a command-line utility for interactively creating superusers:
-
-1. Enter the CLI command:
-
-```bash
-langflow superuser
-```
-2. Langflow prompts you for a Username and Password:
-
-```
-langflow superuser
-Username: mendonk
-Password:
-Default folder created successfully.
-Superuser created successfully.
-```
-
-3. To confirm your new superuser was created successfully, go to the **Admin Page** at `http://127.0.0.1:7861/admin`.
 
 
 
