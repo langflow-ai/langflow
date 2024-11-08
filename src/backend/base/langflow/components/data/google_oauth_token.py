@@ -83,8 +83,7 @@ class GoogleOAuthToken(Component):
                 flow = InstalledAppFlow.from_client_secrets_file(client_secret_file, scopes)
                 creds = flow.run_local_server(port=0)
 
-            with token_path.open(mode="w", encoding="utf-8") as token_file:
-                token_file.write(creds.to_json())
+                token_path.write_text(creds.to_json(), encoding="utf-8")
 
         creds_json = json.loads(creds.to_json())
 
