@@ -1,7 +1,6 @@
 import os
 
 import pytest
-
 from langflow.components.inputs import ChatInput
 from langflow.components.logic.conditional_router import ConditionalRouterComponent
 from langflow.components.models import OpenAIModelComponent
