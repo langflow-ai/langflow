@@ -138,7 +138,7 @@ class Data(BaseModel):
                 contents = [{"type": "text", "text": text}]
                 for file_path in files:
                     image_url = create_data_url(file_path)
-                    contents.append({"type": "image_url", "image_url": image_url})
+                    contents.append({"type": "image_url", "image_url": {"url": image_url}})
                 human_message = HumanMessage(content=contents)
             else:
                 human_message = HumanMessage(
