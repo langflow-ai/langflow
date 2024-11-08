@@ -14,6 +14,7 @@ export function CustomParameterComponent({
   nodeClass,
   disabled,
   placeholder,
+  isToolMode,
 }: {
   handleOnNewValue: handleOnNewValueType;
   name: string;
@@ -25,6 +26,7 @@ export function CustomParameterComponent({
   nodeClass: APIClassType;
   disabled: boolean;
   placeholder?: string;
+  isToolMode?: boolean;
 }) {
   return (
     <ParameterRenderComponent
@@ -38,6 +40,7 @@ export function CustomParameterComponent({
       nodeClass={nodeClass}
       disabled={disabled}
       placeholder={placeholder}
+      isToolMode={isToolMode}
     />
   );
 }
