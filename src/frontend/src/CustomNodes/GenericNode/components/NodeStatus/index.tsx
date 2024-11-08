@@ -218,7 +218,7 @@ export default function NodeStatus({
                 <div className="max-h-100 p-2">
                   <div className="max-h-80 overflow-auto">
                     {validationString && (
-                      <div className="ml-1 pb-2 text-accent-red-foreground">
+                      <div className="text-accent-red-foreground ml-1 pb-2">
                         {validationString}
                       </div>
                     )}

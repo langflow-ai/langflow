@@ -216,7 +216,7 @@ export default function NodeOutputField({
                         className={cn(
                           "icon-size",
                           displayOutputPreview && !unknownOutput
-                            ? "text-placeholder-foreground hover:text-foreground"
+                            ? "text-foreground hover:text-primary-hover"
                             : "cursor-not-allowed text-placeholder-foreground opacity-60",
                           errorOutput ? "text-destructive" : "",
                         )}
