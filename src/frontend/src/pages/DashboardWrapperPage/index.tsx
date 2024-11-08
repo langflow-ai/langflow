@@ -8,7 +8,7 @@ export function DashboardWrapperPage() {
   return (
     <div className="flex h-screen w-full flex-col">
       <AppHeader />
-      <div className="mt-[62px] flex h-[calc(100vh-62px)] w-full flex-row">
+      <div className="flex h-full w-full flex-row">
         <Outlet />
       </div>
     </div>

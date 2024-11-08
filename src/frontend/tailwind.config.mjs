@@ -36,6 +36,10 @@ const config = {
       },
     },
     extend: {
+      screens: {
+        xl: "1200px",
+        "2xl": "1400px",
+      },
       keyframes: {
         wiggle: {
           "0%, 100%": { transform: "scale(100%)" },

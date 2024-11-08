@@ -182,11 +182,7 @@ test("search components", async ({ page }) => {
     await page.getByText("Exit", { exact: true }).click();
   }
 
-  await page
-    .getByText("Components", {
-      exact: true,
-    })
-    .click();
+  await page.getByTestId("components-btn").click();
 
   await page.getByPlaceholder("Search components").fill("Chat Input");
   await page.getByText("Chat Input", { exact: true }).isVisible();

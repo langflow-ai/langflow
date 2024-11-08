@@ -606,17 +606,11 @@
   .header-github-link:hover {
     @apply hover:bg-accent hover:text-accent-foreground;
   }
-  .header-github-display {
-    @apply -mr-px ml-1 flex h-8 items-center justify-center rounded-md rounded-l-none border bg-[white] px-2 text-sm dark:bg-[black];
-  }
   .header-notifications-box {
     @apply fixed left-0 top-0 h-screen w-screen;
   }
   .header-notifications {
     @apply absolute right-[3px] h-1.5 w-1.5 rounded-full bg-destructive;
-  }
-  .header-notifications-dot {
-    @apply absolute left-[33px] top-[9px] block h-1.5 w-1.5 rounded-full bg-destructive dark:bg-red-500;
   }
   .input-component-div {
     @apply pointer-events-none relative cursor-not-allowed;
@@ -1272,7 +1266,7 @@
   }
 
   .toolbar-wrapper {
-    @apply flex items-center gap-1 rounded-xl border border-border bg-background p-1 shadow-sm h-10;
+    @apply flex h-10 items-center gap-1 rounded-xl border border-border bg-background p-1 shadow-sm;
   }
 }
 

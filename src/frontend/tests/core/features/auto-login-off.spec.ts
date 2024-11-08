@@ -136,7 +136,7 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
   await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("flow-configuration-button").click();
-  await page.getByText("Settings", { exact: true }).last().click();
+  await page.getByText("Flow Settings", { exact: true }).last().click();
 
   await page.getByPlaceholder("Flow Name").fill(randomFlowName);
 
@@ -210,7 +210,7 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
   await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("flow-configuration-button").click();
-  await page.getByText("Settings", { exact: true }).last().click();
+  await page.getByText("Flow Settings", { exact: true }).last().click();
 
   await page.getByPlaceholder("Flow Name").fill(secondRandomFlowName);
 

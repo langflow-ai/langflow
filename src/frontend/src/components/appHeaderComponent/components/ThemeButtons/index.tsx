@@ -30,7 +30,7 @@ export const ThemeButtons = () => {
   };
 
   return (
-    <div className="relative ml-auto inline-flex rounded-full border border-zinc-200 p-0.5 dark:border-zinc-700">
+    <div className="relative ml-auto inline-flex rounded-full border border-border p-0.5">
       {/* Sliding Indicator - Behind the Buttons */}
       <div
         className={`absolute bottom-0.5 left-[1px] top-0.5 w-[30%] rounded-full bg-amber-400 ${
@@ -53,12 +53,12 @@ export const ThemeButtons = () => {
         unstyled
         className={`relative z-10 inline-flex items-center rounded-full px-1 ${
           selectedTheme === "light"
-            ? "text-black dark:text-[black]"
-            : "hover:text-black dark:text-[white] dark:hover:bg-amber-400 dark:hover:text-[black]"
+            ? "text-foreground"
+            : "text-foreground hover:text-background dark:hover:bg-amber-400"
         }`}
         onClick={() => handleThemeChange("light")}
       >
-        <ForwardedIconComponent name="sun" className="w-4" />
+        <ForwardedIconComponent name="Sun" className="w-4" />
       </Button>
 
       {/* Dark Theme Button */}
@@ -66,12 +66,12 @@ export const ThemeButtons = () => {
         unstyled
         className={`relative z-10 mx-1 inline-flex items-center rounded-full px-1 ${
           selectedTheme === "dark"
-            ? "text-black dark:text-[black] dark:hover:bg-purple-400 dark:hover:text-[black]"
-            : "hover:bg-purple-400 hover:text-[black] hover:text-[white] dark:hover:text-[black]"
+            ? "text-background dark:hover:bg-purple-400"
+            : "text-foreground hover:bg-purple-400 hover:text-background"
         }`}
         onClick={() => handleThemeChange("dark")}
       >
-        <ForwardedIconComponent name="moon" className="w-4" />
+        <ForwardedIconComponent name="Moon" className="w-4" />
       </Button>
 
       {/* System Theme Button */}
@@ -79,12 +79,12 @@ export const ThemeButtons = () => {
         unstyled
         className={`relative z-10 inline-flex items-center rounded-full px-1 ${
           selectedTheme === "system"
-            ? "text-black dark:bg-[white] dark:text-[black]"
-            : "hover:bg-[black] hover:text-[white] dark:hover:bg-[white] dark:hover:text-[black]"
+            ? "bg-foreground text-background"
+            : "hover:bg-foreground hover:text-background"
         }`}
         onClick={() => handleThemeChange("system")}
       >
-        <ForwardedIconComponent name="monitor" className="w-4" />
+        <ForwardedIconComponent name="Monitor" className="w-4" />
       </Button>
     </div>
   );
