@@ -17,11 +17,11 @@ Learn how to create a new superuser, log in to Langflow, and add new users.
 2. Add the following environment variables to your file.
 
 ```bash
-export LANGFLOW_AUTO_LOGIN=False
-export LANGFLOW_SUPERUSER=admin
-export LANGFLOW_SUPERUSER_PASSWORD=securepassword
-export LANGFLOW_SECRET_KEY=randomly_generated_secure_key
-export LANGFLOW_NEW_USER_IS_ACTIVE=False
+LANGFLOW_AUTO_LOGIN=False
+LANGFLOW_SUPERUSER=admin
+LANGFLOW_SUPERUSER_PASSWORD=securepassword
+LANGFLOW_SECRET_KEY=randomly_generated_secure_key
+LANGFLOW_NEW_USER_IS_ACTIVE=False
 ```
 
 For more information, see [Authentication configuration values](#values).
@@ -83,7 +83,7 @@ The following table lists the available authentication configuration variables, 
 
 ### LANGFLOW_AUTO_LOGIN
 
-By default, this variable is set to `True`. When enabled, Langflow operates as it did in versions prior to 0.5—automatic login without requiring explicit user authentication.
+By default, this variable is set to `True`. When enabled, Langflow operates as it did in versions prior to 0.5, including automatic login without requiring explicit user authentication.
 
 To disable automatic login and enforce user authentication:
 
