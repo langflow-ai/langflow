@@ -1046,7 +1046,7 @@
                 ],
                 "placeholder": "",
                 "real_time_refresh": true,
-                "refresh_button": true,
+                "refresh_button": false,
                 "required": false,
                 "show": true,
                 "title_case": false,
