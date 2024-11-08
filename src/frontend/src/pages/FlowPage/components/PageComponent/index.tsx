@@ -565,7 +565,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     const color =
       nodeColorsName[edge?.data?.targetHandle?.inputTypes[0]] || "cyan";
 
-    const accentColor = `hsl(var(--accent-${color}))`;
+    const accentColor = `hsl(var(--datatype-${color}))`;
     reactFlowWrapper.current?.style.setProperty("--selected", accentColor);
   };
 

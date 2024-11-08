@@ -43,7 +43,7 @@ export default function HandleRenderComponent({
 }) {
   const handleColorName = colorName?.[0] ?? "";
 
-  const accentColorName = `accent-${handleColorName}`;
+  const accentColorName = `datatype-${handleColorName}`;
   const accentForegroundColorName = `${accentColorName}-foreground`;
 
   const setHandleDragging = useFlowStore((state) => state.setHandleDragging);
@@ -181,7 +181,7 @@ export default function HandleRenderComponent({
             .concat(colorName![0])
             .map(
               (color, index) =>
-                `hsl(var(--accent-${color}))` +
+                `hsl(var(--datatype-${color}))` +
                 " " +
                 ((360 / colors.length) * index - 360 / (colors.length * 4)) +
                 "deg " +
@@ -204,33 +204,33 @@ export default function HandleRenderComponent({
         @keyframes pulseNeon {
           0% {
             box-shadow: 0 0 0 2px hsl(var(--node-ring)),
-                        0 0 2px hsl(var(--accent-${colorName![0]})),
-                        0 0 4px hsl(var(--accent-${colorName![0]})),
-                        0 0 6px hsl(var(--accent-${colorName![0]})),
-                        0 0 8px hsl(var(--accent-${colorName![0]})),
-                        0 0 10px hsl(var(--accent-${colorName![0]})),
-                        0 0 15px hsl(var(--accent-${colorName![0]})),
-                        0 0 20px hsl(var(--accent-${colorName![0]}));
+                        0 0 2px hsl(var(--datatype-${colorName![0]})),
+                        0 0 4px hsl(var(--datatype-${colorName![0]})),
+                        0 0 6px hsl(var(--datatype-${colorName![0]})),
+                        0 0 8px hsl(var(--datatype-${colorName![0]})),
+                        0 0 10px hsl(var(--datatype-${colorName![0]})),
+                        0 0 15px hsl(var(--datatype-${colorName![0]})),
+                        0 0 20px hsl(var(--datatype-${colorName![0]}));
           }
           50% {
             box-shadow: 0 0 0 2px hsl(var(--node-ring)),
-                        0 0 4px hsl(var(--accent-${colorName![0]})),
-                        0 0 8px hsl(var(--accent-${colorName![0]})),
-                        0 0 12px hsl(var(--accent-${colorName![0]})),
-                        0 0 16px hsl(var(--accent-${colorName![0]})),
-                        0 0 20px hsl(var(--accent-${colorName![0]})),
-                        0 0 25px hsl(var(--accent-${colorName![0]})),
-                        0 0 30px hsl(var(--accent-${colorName![0]}));
+                        0 0 4px hsl(var(--datatype-${colorName![0]})),
+                        0 0 8px hsl(var(--datatype-${colorName![0]})),
+                        0 0 12px hsl(var(--datatype-${colorName![0]})),
+                        0 0 16px hsl(var(--datatype-${colorName![0]})),
+                        0 0 20px hsl(var(--datatype-${colorName![0]})),
+                        0 0 25px hsl(var(--datatype-${colorName![0]})),
+                        0 0 30px hsl(var(--datatype-${colorName![0]}));
           }
           100% {
             box-shadow: 0 0 0 2px hsl(var(--node-ring)),
-                        0 0 2px hsl(var(--accent-${colorName![0]})),
-                        0 0 4px hsl(var(--accent-${colorName![0]})),
-                        0 0 6px hsl(var(--accent-${colorName![0]})),
-                        0 0 8px hsl(var(--accent-${colorName![0]})),
-                        0 0 10px hsl(var(--accent-${colorName![0]})),
-                        0 0 15px hsl(var(--accent-${colorName![0]})),
-                        0 0 20px hsl(var(--accent-${colorName![0]}));
+                        0 0 2px hsl(var(--datatype-${colorName![0]})),
+                        0 0 4px hsl(var(--datatype-${colorName![0]})),
+                        0 0 6px hsl(var(--datatype-${colorName![0]})),
+                        0 0 8px hsl(var(--datatype-${colorName![0]})),
+                        0 0 10px hsl(var(--datatype-${colorName![0]})),
+                        0 0 15px hsl(var(--datatype-${colorName![0]})),
+                        0 0 20px hsl(var(--datatype-${colorName![0]}));
           }
         }
       `;
