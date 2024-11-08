@@ -27,18 +27,18 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
             name="mem0_config",
             display_name="Mem0 Configuration",
             info="""Configuration dictionary for initializing Mem0 memory instance.
-Example:
-{
-    "graph_store": {
-        "provider": "neo4j",
-        "config": {
-            "url": "neo4j+s://your-neo4j-url",
-            "username": "neo4j",
-            "password": "your-password"
-        }
-    },
-    "version": "v1.1"
-}""",
+                    Example:
+                    {
+                        "graph_store": {
+                            "provider": "neo4j",
+                            "config": {
+                                "url": "neo4j+s://your-neo4j-url",
+                                "username": "neo4j",
+                                "password": "your-password"
+                            }
+                        },
+                        "version": "v1.1"
+                    }""",
             input_types=["Data"],
         ),
         MessageTextInput(
