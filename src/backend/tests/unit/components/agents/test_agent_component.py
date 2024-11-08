@@ -24,5 +24,5 @@ async def test_agent_component_with_calculator():
         temperature=temperature,
     )
 
-    response = await agent.get_response()
+    response = await agent.message_response()
     assert "4" in response.data.get("text")
