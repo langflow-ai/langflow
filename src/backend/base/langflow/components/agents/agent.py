@@ -1,3 +1,5 @@
+from langchain_core.tools import StructuredTool
+
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.base.models.model_input_constants import ALL_PROVIDER_FIELDS, MODEL_PROVIDERS_DICT
 from langflow.components.agents.tool_calling import ToolCallingAgentComponent
@@ -62,7 +64,13 @@ class AgentComponent(ToolCallingAgentComponent):
         if self.add_current_date_tool:
             if not isinstance(self.tools, list):  # type: ignore[has-type]
                 self.tools = []
-            self.tools.append(CurrentDateComponent().to_toolkit())
+            # Convert CurrentDateComponent to a StructuredTool
+            current_date_tool = CurrentDateComponent().to_toolkit()[0]
+            if isinstance(current_date_tool, StructuredTool):
+                self.tools.append(current_date_tool)
+            else:
+                msg = "CurrentDateComponent must be converted to a StructuredTool"
+                raise ValueError(msg)
 
         if not self.tools:
             msg = "Tools are required to run the agent."
