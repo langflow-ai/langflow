@@ -20,6 +20,7 @@ class FlowToolComponent(LCToolComponent):
     trace_type = "tool"
     name = "FlowTool"
     beta = True
+    icon = "Sigma"
 
     def get_flow_names(self) -> list[str]:
         flow_datas = self.list_flows()
