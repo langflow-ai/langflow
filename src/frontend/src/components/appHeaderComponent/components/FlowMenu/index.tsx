@@ -63,17 +63,6 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const changesNotSaved =
     customStringify(currentFlow) !== customStringify(currentSavedFlow);
 
-  const savedText =
-    updatedAt && changesNotSaved ? (
-      SAVED_HOVER +
-      new Date(updatedAt).toLocaleString("en-US", {
-        hour: "numeric",
-        minute: "numeric",
-      })
-    ) : (
-      <div className="text-[#059669]">Saved</div>
-    );
-
   function handleAddFlow() {
     try {
       addFlow().then((id) => {
@@ -122,7 +111,11 @@ export const MenuBar = ({}: {}): JSX.Element => {
             <div
               className="cursor-pointer truncate text-muted-foreground hover:text-primary"
               onClick={() => {
-                navigate("/");
+                navigate(
+                  currentFolder?.id
+                    ? "/all/folder/" + currentFolder.id
+                    : "/all",
+                );
               }}
             >
               {currentFolder?.name}
@@ -283,7 +276,12 @@ export const MenuBar = ({}: {}): JSX.Element => {
         ></FlowSettingsModal>
         <FlowLogsModal open={openLogs} setOpen={setOpenLogs}></FlowLogsModal>
       </div>
-      <div className="hidden shrink-0 items-center sm:flex">
+      <div
+        className={cn(
+          "hidden shrink-0 items-center sm:flex",
+          isBuilding ? "w-30" : "w-[3.2rem]",
+        )}
+      >
         {!autoSaving && (
           <Button
             variant="primary"
@@ -326,8 +324,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
           side="bottom"
           styleClasses="cursor-default z-10"
         >
-          <div className="mr-3 flex cursor-default items-center gap-2 truncate text-sm text-muted-foreground">
-            <div className="flex cursor-default items-center gap-2 truncate text-sm text-zinc-500">
+          <div className="flex cursor-default items-center gap-2 truncate text-sm text-muted-foreground">
+            <div className="flex cursor-default items-center gap-2 truncate text-sm">
               <div className="w-full truncate text-xs">
                 {printByBuildStatus()}
               </div>
@@ -342,7 +340,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               }}
               className={
                 isBuilding
-                  ? "flex hidden items-center gap-1.5 text-xs text-status-red sm:flex"
+                  ? "hidden items-center gap-1.5 text-xs text-status-red sm:flex"
                   : "hidden"
               }
             >
