@@ -337,7 +337,7 @@ class DirectoryReader:
     def get_output_types_from_code(code: str) -> list:
         """Get the output types from the code."""
         custom_component = Component(_code=code)
-        types_list = custom_component.get_function_entrypoint_return_type
+        types_list = custom_component._get_function_entrypoint_return_type
 
         # Get the name of types classes
         return [type_.__name__ for type_ in types_list if hasattr(type_, "__name__")]
