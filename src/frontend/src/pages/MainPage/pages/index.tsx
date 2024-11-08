@@ -72,7 +72,7 @@ export default function CollectionPage(): JSX.Element {
             }}
           />
         )}
-      <main className="flex flex-1">
+      <main className="flex w-full overflow-hidden">
         {flows && examples && folders ? (
           <div className={`relative mx-auto h-full w-full overflow-y-scroll`}>
             <CardsWrapComponent

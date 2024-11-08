@@ -169,7 +169,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
           <div className="flex h-full overflow-hidden">
             <SidebarProvider width="17.5rem" defaultOpen={!isMobile}>
               {!view && <FlowSidebarComponent />}
-              <main className="flex flex-1">
+              <main className="flex w-full overflow-hidden">
                 <div className="h-full w-full">
                   <Page />
                 </div>
