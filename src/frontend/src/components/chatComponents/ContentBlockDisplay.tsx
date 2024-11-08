@@ -64,11 +64,11 @@ export function ContentBlockDisplay({
       >
         {isLoading && (
           <BorderTrail
-            className="bg-zinc-600 opacity-50 dark:bg-zinc-400"
-            size={60}
+            className="bg-zinc-600 dark:bg-zinc-400"
+            size={100}
             transition={{
               repeat: Infinity,
-              duration: 2,
+              duration: isExpanded ? 180 : 18,
               ease: "linear",
             }}
           />
