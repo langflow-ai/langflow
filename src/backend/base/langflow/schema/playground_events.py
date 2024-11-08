@@ -24,7 +24,7 @@ class PlaygroundEvent(BaseModel):
     timestamp: Annotated[str, timestamp_to_str_validator] = Field(
         default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
     )
-    id_: UUID | str | None = Field(alias="id")
+    id_: UUID | str | None = Field(default=None, alias="id")
 
     @field_serializer("timestamp")
     @classmethod
