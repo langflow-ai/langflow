@@ -78,6 +78,7 @@ class FileComponent(Component):
             # Check if the file is a zip archive
             if is_zipfile(resolved_path):
                 self.log(f"Processing zip file: {resolved_path.name}.")
+
                 return self._process_zip_file(
                     resolved_path,
                     silent_errors=self.silent_errors,
@@ -85,9 +86,11 @@ class FileComponent(Component):
                 )
 
             self.log(f"Processing single file: {resolved_path.name}.")
+
             return self._process_single_file(resolved_path, silent_errors=self.silent_errors)
         except FileNotFoundError:
             self.log(f"File not found: {resolved_path.name}.")
+
             raise
 
     def _process_zip_file(self, zip_path: Path, *, silent_errors: bool = False, parallel: bool = False) -> Data:
