@@ -53,7 +53,8 @@ Use `launch.json` to quickly debug different parts of your application, like the
 
 ### Run Langflow locally
 
-Run Langflow locally by cloning the repository and installing the dependencies. We recommend using a virtual environment like [venv](https://docs.python.org/3/library/venv.html) or [conda](https://anaconda.org/anaconda/conda) to isolate dependencies.
+After setting up the environment with `make init`, you can run Langflow's backend and frontend separately for development.
+Langflow recommends using a virtual environment like [venv](https://docs.python.org/3/library/venv.html) or [conda](https://anaconda.org/anaconda/conda) to isolate dependencies.
 
 Before you begin, ensure you have [uv](https://docs.astral.sh/uv/getting-started/installation/) and [Node.js](https://nodejs.org/en/download/package-manager) installed.
 
@@ -68,6 +69,8 @@ make backend
 ```bash
 make frontend
 ```
+
+This approach allows you to work on the backend and frontend independently, with hot-reloading for faster development.
 
 ## Contribute documentation
 
