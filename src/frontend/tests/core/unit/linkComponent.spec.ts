@@ -30,7 +30,7 @@ test("user should interact with link component", async ({ context, page }) => {
 
   const getUA = await page.evaluate(() => navigator.userAgent);
   const userAgentInfo = uaParser(getUA);
-  let control = "Control";
+  let control = "Meta";
 
   if (userAgentInfo.os.name.includes("Mac")) {
     control = "Meta";
@@ -151,6 +151,8 @@ function updateComponentCode(
       inputsPattern,
       `inputs = [\n${newInputs}\n    ]`,
     );
+    updatedCode = updatedCode.replace("true", "True");
+    updatedCode = updatedCode.replace("false", "False");
   }
 
   return updatedCode;
