@@ -268,7 +268,11 @@ export function FlowSidebarComponent() {
   const chatInputAdded = checkChatInput(nodes);
 
   return (
-    <Sidebar collapsible="offcanvas" data-testid="shad-sidebar">
+    <Sidebar
+      collapsible="offcanvas"
+      data-testid="shad-sidebar"
+      className="noflow"
+    >
       <SidebarHeader className="flex w-full flex-col gap-4 p-4 pb-1">
         <Disclosure open={showConfig} onOpenChange={setShowConfig}>
           <div className="flex w-full items-center gap-2">
