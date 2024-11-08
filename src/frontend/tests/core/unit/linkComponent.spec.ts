@@ -55,18 +55,31 @@ test("user should interact with link component", async ({ context, page }) => {
 
   let cleanCode = await extractAndCleanCode(page);
 
-  // Replace the import statement
-  cleanCode = cleanCode.replace(
-    "from langflow.io import MessageTextInput, Output",
-    "from langflow.io import MessageTextInput, Output, LinkInput",
-  );
-
-  // Replace the MessageTextInput line and add LinkInput
-  cleanCode = cleanCode.replace(
-    'MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!", tool_mode=True),',
-    `MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!", tool_mode=True),
-    LinkInput(name="link", display_name="BUTTON", value="https://www.datastax.com", text="Click me"),`,
-  );
+  // Use regex pattern to match the imports section more flexibly
+  cleanCode = updateComponentCode(cleanCode, {
+    imports: ["MessageTextInput", "Output", "LinkInput"],
+    inputs: [
+      {
+        name: "MessageTextInput",
+        config: {
+          name: "input_value",
+          display_name: "Input Value",
+          info: "This is a custom component Input",
+          value: "Hello, World!",
+          tool_mode: true,
+        },
+      },
+      {
+        name: "LinkInput",
+        config: {
+          name: "link",
+          display_name: "BUTTON",
+          value: "https://www.datastax.com",
+          text: "Click me",
+        },
+      },
+    ],
+  });
 
   await page.locator("textarea").last().press(`${control}+a`);
   await page.keyboard.press("Backspace");
@@ -102,4 +115,45 @@ async function extractAndCleanCode(page: Page): Promise<string> {
     .replace(/&#x2F;/g, "/");
 
   return codeContent;
+}
+
+function updateComponentCode(
+  code: string,
+  updates: {
+    imports?: string[];
+    inputs?: Array<{ name: string; config: Record<string, any> }>;
+  },
+): string {
+  let updatedCode = code;
+
+  // Update imports
+  if (updates.imports) {
+    const importPattern = /from\s+langflow\.io\s+import\s+([^;\n]+)/;
+    const newImports = updates.imports.join(", ");
+    updatedCode = updatedCode.replace(
+      importPattern,
+      `from langflow.io import ${newImports}`,
+    );
+  }
+
+  // Update inputs
+  if (updates.inputs) {
+    const inputsPattern = /inputs\s*=\s*\[([\s\S]*?)\]/;
+    const newInputs = updates.inputs
+      .map(({ name, config }) => {
+        const params = Object.entries(config)
+          .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
+          .join(",\n            ");
+        return `        ${name}(\n            ${params}\n        )`;
+      })
+      .join(",\n");
+    updatedCode = updatedCode.replace(
+      inputsPattern,
+      `inputs = [\n${newInputs}\n    ]`,
+    );
+    updatedCode = updatedCode.replace("true", "True");
+    updatedCode = updatedCode.replace("false", "False");
+  }
+
+  return updatedCode;
 }
