@@ -173,7 +173,7 @@ test("user must be able to check similarity between embedding texts", async ({
   // await page.waitForTimeout(1000);
 
   await page
-    .getByTestId("helpersFilter Data")
+    .getByTestId("processingFilter Data")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
   await page.getByTestId("zoom_out").click();
@@ -249,7 +249,7 @@ test("user must be able to check similarity between embedding texts", async ({
   //connection 1
   const openAiEmbeddingOutput_0 = await page
     .getByTestId("handle-openaiembeddings-shownode-embeddings-right")
-    .nth(2);
+    .nth(0);
   await openAiEmbeddingOutput_0.hover();
   await page.mouse.down();
 
