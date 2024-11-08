@@ -102,7 +102,7 @@ The documentation will be available at `localhost:3000` and all the files are lo
 Once you have written and manually tested your changes with `make lint` and `make unit_tests`, open a pull request to send your changes upstream to the main Langflow repository.
 
 1. Open a new GitHub pull request with your patch against the `main` branch.
-2. Ensure the PR title follows semantic commits conventions. For example, features are `feat: add new feature` and fixes are `fix: correct issue with X`.
+2. Ensure the PR title follows semantic commit conventions. For example, features are `feat: add new feature` and fixes are `fix: correct issue with X`.
 3. A Langflow maintainer will review your pull request. Thanks for your contribution!
 
 Some additional guidance on pull request titles:
