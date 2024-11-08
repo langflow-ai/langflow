@@ -914,7 +914,7 @@ class Component(CustomComponent):
             )
 
     def send_message(self, message: Message, id_: str | None = None):
-        if self.graph.session_id and message is not None and not message.session_id:
+        if (hasattr(self, "graph") and self.graph.session_id) and (message is not None and not message.session_id):
             message.session_id = self.graph.session_id
         stored_message = self._store_message(message)
 
@@ -940,7 +940,8 @@ class Component(CustomComponent):
         return stored_message
 
     def _store_message(self, message: Message) -> Message:
-        messages = store_message(message, flow_id=self.graph.flow_id)
+        flow_id = self.graph.flow_id if hasattr(self, "graph") else None
+        messages = store_message(message, flow_id=flow_id)
         if len(messages) != 1:
             msg = "Only one message can be stored at a time."
             raise ValueError(msg)
@@ -1033,16 +1034,18 @@ class Component(CustomComponent):
         session_id: str,
         trace_name: str,
         source: Source,
-    ) -> None:
+    ) -> Message:
         """Send an error message to the frontend."""
+        flow_id = self.graph.flow_id if hasattr(self, "graph") else None
         error_message = ErrorMessage(
-            flow_id=self.graph.flow_id,
+            flow_id=flow_id,
             exception=exception,
             session_id=session_id,
             trace_name=trace_name,
             source=source,
         )
         self.send_message(error_message)
+        return error_message
 
     def _append_tool_to_outputs_map(self):
         self._outputs_map[TOOL_OUTPUT_NAME] = self._build_tool_output()

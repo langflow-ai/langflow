@@ -197,7 +197,7 @@ class LCToolsAgentComponent(LCAgentComponent):
         """Create the agent."""
 
     def get_tool_name(self) -> str:
-        return self.display_name
+        return self.display_name or "Agent"
 
     def get_tool_description(self) -> str:
         return self.agent_description or DEFAULT_TOOLS_DESCRIPTION

@@ -86,13 +86,13 @@ class CalculatorToolComponent(LCToolComponent):
         except (SyntaxError, TypeError, KeyError) as e:
             error_message = f"Invalid expression: {e}"
             self.status = error_message
-            return [Data(data={"error": error_message})]
+            return [Data(data={"error": error_message, "input": expression})]
         except ZeroDivisionError:
             error_message = "Error: Division by zero"
             self.status = error_message
-            return [Data(data={"error": error_message})]
+            return [Data(data={"error": error_message, "input": expression})]
         except Exception as e:  # noqa: BLE001
             logger.opt(exception=True).debug("Error evaluating expression")
             error_message = f"Error: {e}"
             self.status = error_message
-            return [Data(data={"error": error_message})]
+            return [Data(data={"error": error_message, "input": expression})]

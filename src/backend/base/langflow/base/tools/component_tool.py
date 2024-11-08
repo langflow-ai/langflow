@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from langflow.events.event_manager import EventManager
     from langflow.inputs.inputs import InputTypes
     from langflow.io import Output
-    from langflow.schema.content_types import ContentBlock
+    from langflow.schema.content_block import ContentBlock
 
 
 def _get_input_type(_input: InputTypes):
@@ -54,7 +54,7 @@ def build_description(component: Component, output: Output) -> str:
 
 
 def send_message_noop(
-    message: Message | None = None,
+    message: Message,
     text: str | None = None,  # noqa: ARG001
     background_color: str | None = None,  # noqa: ARG001
     text_color: str | None = None,  # noqa: ARG001
@@ -71,7 +71,7 @@ def send_message_noop(
 
 def patch_components_send_message(component: Component):
     old_send_message = component.send_message
-    component.send_message = send_message_noop
+    component.send_message = send_message_noop  # type: ignore[method-assign, assignment]
     return old_send_message
 
 
@@ -176,21 +176,32 @@ class ComponentToolkit:
             args_schema = None
             tool_mode_inputs = [_input for _input in self.component.inputs if getattr(_input, "tool_mode", False)]
             if output.required_inputs:
-                inputs = [self.component._inputs[input_name] for input_name in output.required_inputs]
+                inputs = [
+                    self.component._inputs[input_name]
+                    for input_name in output.required_inputs
+                    if getattr(self.component, input_name) is None
+                ]
                 # If any of the required inputs are not in tool mode, this means
                 # that when the tool is called it will raise an error.
                 # so we should raise an error here.
                 if not all(getattr(_input, "tool_mode", False) for _input in inputs):
-                    non_tool_mode_inputs = [input_.name for input_ in inputs if not getattr(input_, "tool_mode", False)]
+                    non_tool_mode_inputs = [
+                        input_.name
+                        for input_ in inputs
+                        if not getattr(input_, "tool_mode", False) and input_.name is not None
+                    ]
+                    non_tool_mode_inputs_str = ", ".join(non_tool_mode_inputs)
                     msg = (
                         f"Output '{output.name}' requires inputs that are not in tool mode. "
-                        f"The following inputs are not in tool mode: {', '.join(non_tool_mode_inputs)}. "
+                        f"The following inputs are not in tool mode: {non_tool_mode_inputs_str}. "
                         "Please ensure all required inputs are set to tool mode."
                     )
                     raise ValueError(msg)
                 args_schema = create_input_schema(inputs)
-            else:
+            elif tool_mode_inputs:
                 args_schema = create_input_schema(tool_mode_inputs)
+            else:
+                args_schema = create_input_schema(self.component.inputs)
             name = f"{self.component.name}.{output.method}"
             formatted_name = _format_tool_name(name)
             event_manager = self.component._event_manager
