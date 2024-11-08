@@ -103,6 +103,12 @@ export function FlowSidebarComponent() {
   );
 
   useEffect(() => {
+    if (filterType) {
+      setOpen(true);
+    }
+  }, [filterType]);
+
+  useEffect(() => {
     filterComponents();
   }, [data, search, filterType, getFilterEdge, showBeta, showLegacy]);
 
