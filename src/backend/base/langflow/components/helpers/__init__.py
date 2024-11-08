@@ -1,3 +1,16 @@
+
+from .CombineText import CombineTextComponent
+from .CreateList import CreateListComponent
+from .CustomComponent import CustomComponent
+from .FilterData import FilterDataComponent
+from .IDGenerator import IDGeneratorComponent
+from .Memory import MemoryComponent
+from .MergeData import MergeDataComponent
+from .ParseData import ParseDataComponent
+from .ParseExcelData import ParseExcelDataComponent
+from .SplitText import SplitTextComponent
+from .StoreMessage import StoreMessageComponent
+
 from .combine_text import CombineTextComponent
 from .create_list import CreateListComponent
 from .csv_to_data import CSVToDataComponent
@@ -18,6 +31,7 @@ from .sequential_task import SequentialTaskComponent
 from .split_text import SplitTextComponent
 from .store_message import StoreMessageComponent
 from .structured_output import StructuredOutputComponent
+
 
 __all__ = [
     "CSVToDataComponent",
@@ -41,5 +55,6 @@ __all__ = [
     "SequentialTaskComponent",
     "SplitTextComponent",
     "StoreMessageComponent",
+    "ParseExcelDataComponent",
     "StructuredOutputComponent",
 ]
