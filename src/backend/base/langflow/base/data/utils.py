@@ -1,5 +1,4 @@
 import unicodedata
-import xml.etree.ElementTree as ET
 from collections.abc import Callable
 from concurrent import futures
 from pathlib import Path
@@ -7,6 +6,7 @@ from pathlib import Path
 import chardet
 import orjson
 import yaml
+from defusedxml import ElementTree
 
 from langflow.schema import Data
 
@@ -44,13 +44,27 @@ def is_hidden(path: Path) -> bool:
     return path.name.startswith(".")
 
 
+def format_directory_path(path: str) -> str:
+    """Format a directory path to ensure it's properly escaped and valid.
+
+    Args:
+    path (str): The input path string.
+
+    Returns:
+    str: A properly formatted path string.
+    """
+    return path.replace("\n", "\\n")
+
+
 def retrieve_file_paths(
     path: str,
+    *,
     load_hidden: bool,
     recursive: bool,
     depth: int,
     types: list[str] = TEXT_FILE_TYPES,
 ) -> list[str]:
+    path = format_directory_path(path)
     path_obj = Path(path)
     if not path_obj.exists() or not path_obj.is_dir():
         msg = f"Path {path} must exist and be a directory."
@@ -74,7 +88,7 @@ def retrieve_file_paths(
     return [str(p) for p in paths if p.is_file() and match_types(p) and is_not_hidden(p)]
 
 
-def partition_file_to_data(file_path: str, silent_errors: bool) -> Data | None:
+def partition_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
     # Use the partition function to load the file
     from unstructured.partition.auto import partition
 
@@ -95,16 +109,14 @@ def partition_file_to_data(file_path: str, silent_errors: bool) -> Data | None:
 
 def read_text_file(file_path: str) -> str:
     _file_path = Path(file_path)
-    with _file_path.open("rb") as f:
-        raw_data = f.read()
-        result = chardet.detect(raw_data)
-        encoding = result["encoding"]
+    raw_data = _file_path.read_bytes()
+    result = chardet.detect(raw_data)
+    encoding = result["encoding"]
 
-        if encoding in ["Windows-1252", "Windows-1254", "MacRoman"]:
-            encoding = "utf-8"
+    if encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:
+        encoding = "utf-8"
 
-    with _file_path.open(encoding=encoding) as f:
-        return f.read()
+    return _file_path.read_text(encoding=encoding)
 
 
 def read_docx_file(file_path: str) -> str:
@@ -122,7 +134,7 @@ def parse_pdf_to_text(file_path: str) -> str:
         return "\n\n".join([page.extract_text() for page in reader.pages])
 
 
-def parse_text_file_to_data(file_path: str, silent_errors: bool) -> Data | None:
+def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
     try:
         if file_path.endswith(".pdf"):
             text = parse_pdf_to_text(file_path)
@@ -143,8 +155,8 @@ def parse_text_file_to_data(file_path: str, silent_errors: bool) -> Data | None:
         elif file_path.endswith((".yaml", ".yml")):
             text = yaml.safe_load(text)
         elif file_path.endswith(".xml"):
-            xml_element = ET.fromstring(text)
-            text = ET.tostring(xml_element, encoding="unicode")
+            xml_element = ElementTree.fromstring(text)
+            text = ElementTree.tostring(xml_element, encoding="unicode")
     except Exception as e:
         if not silent_errors:
             msg = f"Error loading file {file_path}: {e}"
@@ -172,13 +184,14 @@ def parse_text_file_to_data(file_path: str, silent_errors: bool) -> Data | None:
 
 def parallel_load_data(
     file_paths: list[str],
+    *,
     silent_errors: bool,
     max_concurrency: int,
     load_function: Callable = parse_text_file_to_data,
 ) -> list[Data | None]:
     with futures.ThreadPoolExecutor(max_workers=max_concurrency) as executor:
         loaded_files = executor.map(
-            lambda file_path: load_function(file_path, silent_errors),
+            lambda file_path: load_function(file_path, silent_errors=silent_errors),
             file_paths,
         )
     # loaded_files is an iterator, so we need to convert it to a list

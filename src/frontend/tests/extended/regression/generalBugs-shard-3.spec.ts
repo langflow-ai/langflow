@@ -33,7 +33,7 @@ test("should copy code from playground modal", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -43,12 +43,8 @@ test("should copy code from playground modal", async ({ page }) => {
   });
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat output");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("chat output");
   await page.waitForTimeout(1000);
 
   await page
@@ -57,13 +53,13 @@ test("should copy code from playground modal", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat input");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("chat input");
   await page.waitForTimeout(1000);
 
   await page
@@ -72,14 +68,14 @@ test("should copy code from playground modal", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("openai");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("openai");
   await page.waitForTimeout(1000);
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   await page
     .getByTestId("modelsOpenAI")
@@ -87,15 +83,15 @@ test("should copy code from playground modal", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.waitForSelector('[title="fit view"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
   });
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
 
@@ -105,9 +101,19 @@ test("should copy code from playground modal", async ({ page }) => {
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
-  await page
-    .getByTestId("popover-anchor-input-api_key")
-    .fill(process.env.OPENAI_API_KEY ?? "");
+  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  while (filledApiKey > 0) {
+    await page.getByTestId("remove-icon-badge").first().click();
+    await page.waitForTimeout(1000);
+    filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  }
+
+  const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
+  const isApiKeyInputVisible = await apiKeyInput.isVisible();
+
+  if (isApiKeyInputVisible) {
+    await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+  }
 
   await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
@@ -126,6 +132,11 @@ test("should copy code from playground modal", async ({ page }) => {
   }
 
   // Click and hold on the first element
+  await page.getByTestId("zoom_in").click();
+  await page.getByTestId("zoom_in").click();
+
+  await page.locator(".react-flow__pane").click();
+
   await visibleElementHandle.hover();
   await page.mouse.down();
 
@@ -173,7 +184,7 @@ test("should copy code from playground modal", async ({ page }) => {
   await visibleElementHandle.hover();
   await page.mouse.up();
 
-  await page.getByLabel("fit view").click();
+  await page.getByTestId("fit_view").click();
   await page.getByText("Playground", { exact: true }).last().click();
   await page.waitForSelector('[data-testid="input-chat-playground"]', {
     timeout: 100000,
@@ -183,17 +194,23 @@ test("should copy code from playground modal", async ({ page }) => {
     .getByTestId("input-chat-playground")
     .fill("Could you provide a Python example for a 'Hello, World!' program?");
 
-  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
+  await page.waitForSelector('[data-testid="button-send"]', {
     timeout: 100000,
   });
 
-  await page.getByTestId("icon-LucideSend").click();
+  await page.getByTestId("button-send").click();
 
   await page.getByRole("tab", { name: "python" }).isVisible({
     timeout: 100000,
   });
 
-  await page.getByTestId("icon-Copy").first().click();
+  await page.waitForSelector('[data-testid="copy-code-button"]', {
+    state: "visible",
+    timeout: 30000,
+  });
+
+  await page.waitForTimeout(1000);
+  await page.getByTestId("copy-code-button").last().click();
 
   const handle = await page.evaluateHandle(() =>
     navigator.clipboard.readText(),
@@ -225,7 +242,7 @@ test("playground button should be enabled or disabled", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -235,16 +252,13 @@ test("playground button should be enabled or disabled", async ({ page }) => {
   });
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
 
   expect(await page.getByTestId("playground-btn-flow").isDisabled());
 
   expect(await page.getByText("Langflow Chat").isHidden());
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat output");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("chat output");
 
   await page.waitForTimeout(1000);
 
@@ -253,7 +267,7 @@ test("playground button should be enabled or disabled", async ({ page }) => {
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
-  await page.waitForSelector('[title="fit view"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
   });
 

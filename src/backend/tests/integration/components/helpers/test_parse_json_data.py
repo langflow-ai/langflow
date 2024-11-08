@@ -1,13 +1,11 @@
-import pytest
-
-from langflow.components.helpers.ParseJSONData import ParseJSONDataComponent
+from langflow.components.helpers import ParseJSONDataComponent
 from langflow.components.inputs import ChatInput
 from langflow.schema import Data
+
 from tests.integration.components.mock_components import TextToData
-from tests.integration.utils import run_single_component, ComponentInputHandle
+from tests.integration.utils import ComponentInputHandle, run_single_component
 
 
-@pytest.mark.asyncio
 async def test_from_data():
     outputs = await run_single_component(
         ParseJSONDataComponent,
@@ -34,7 +32,6 @@ async def test_from_data():
     assert outputs["filtered_data"] == [Data(text="2")]
 
 
-@pytest.mark.asyncio
 async def test_from_message():
     outputs = await run_single_component(
         ParseJSONDataComponent,

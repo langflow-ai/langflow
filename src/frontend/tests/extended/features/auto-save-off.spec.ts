@@ -40,7 +40,7 @@ test("user should be able to manually save a flow when the auto_save is off", as
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -50,12 +50,9 @@ test("user should be able to manually save a flow when the auto_save is off", as
   });
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 5000,
-  });
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("NVIDIA");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("NVIDIA");
 
   await page.waitForTimeout(1000);
 
@@ -65,11 +62,11 @@ test("user should be able to manually save a flow when the auto_save is off", as
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.waitForSelector('[title="fit view"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 5000,
   });
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   expect(await page.getByText("Saved").isVisible()).toBeTruthy();
 
@@ -111,8 +108,8 @@ test("user should be able to manually save a flow when the auto_save is off", as
 
   expect(await page.getByText("NVIDIA").isVisible()).toBeFalsy();
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("NVIDIA");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("NVIDIA");
 
   await page.waitForTimeout(1000);
 
@@ -122,11 +119,11 @@ test("user should be able to manually save a flow when the auto_save is off", as
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.waitForSelector('[title="fit view"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 5000,
   });
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   await page.getByTestId("icon-ChevronLeft").last().click();
 
@@ -143,8 +140,8 @@ test("user should be able to manually save a flow when the auto_save is off", as
 
   expect(await page.getByTestId("title-NVIDIA").isVisible()).toBeTruthy();
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("NVIDIA");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("NVIDIA");
 
   await page.waitForTimeout(1000);
 
@@ -154,11 +151,11 @@ test("user should be able to manually save a flow when the auto_save is off", as
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.waitForSelector('[title="fit view"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 5000,
   });
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   await page.getByTestId("save-flow-button").click();
   await page.getByTestId("icon-ChevronLeft").last().click();

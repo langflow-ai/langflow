@@ -67,18 +67,19 @@ test("vector store from starter projects should have its connections and nodes o
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
-  await page.getByRole("heading", { name: "Vector Store RAG" }).click();
-  await page.waitForSelector('[title="fit view"]', {
+  await page.getByTestId("side_nav_options_all-templates").click();
+  await page.getByRole("heading", { name: "Vector Store RAG" }).first().click();
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
   });
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
 
   const edges = await page.locator(".react-flow__edge-interaction").count();
   const nodes = await page.getByTestId("div-generic-node").count();

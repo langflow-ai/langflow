@@ -1,4 +1,5 @@
 import pytest
+
 from tests.integration.utils import run_single_component
 
 
@@ -14,7 +15,6 @@ async def test_list_assistants():
 
 
 @pytest.mark.api_key_required
-@pytest.mark.asyncio
 async def test_create_assistants():
     from langflow.components.astra_assistants import AssistantsCreateAssistant
 

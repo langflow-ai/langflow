@@ -19,11 +19,10 @@ async def update_components_with_user_data(
     components: list["ListComponentResponse"],
     store_service: "StoreService",
     store_api_key: str,
+    *,
     liked: bool,
 ):
-    """
-    Updates the components with the user data (liked_by_user and in_users_collection)
-    """
+    """Updates the components with the user data (liked_by_user and in_users_collection)."""
     component_ids = [str(component.id) for component in components]
     if liked:
         # If liked is True, this means all we got were liked_by_user components

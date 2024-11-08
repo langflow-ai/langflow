@@ -13,14 +13,12 @@ class CustomComponentPathValueError(ValueError):
 
 
 class StringCompressor:
-    def __init__(self, input_string):
+    def __init__(self, input_string) -> None:
         """Initialize StringCompressor with a string to compress."""
         self.input_string = input_string
 
     def compress_string(self):
-        """
-        Compress the initial string and return the compressed data.
-        """
+        """Compress the initial string and return the compressed data."""
         # Convert string to bytes
         byte_data = self.input_string.encode("utf-8")
         # Compress the bytes
@@ -29,9 +27,7 @@ class StringCompressor:
         return self.compressed_data
 
     def decompress_string(self):
-        """
-        Decompress the compressed data and return the original string.
-        """
+        """Decompress the compressed data and return the original string."""
         # Decompress the bytes
         decompressed_data = zlib.decompress(self.compressed_data)
         # Convert bytes back to string
@@ -43,11 +39,8 @@ class DirectoryReader:
     # the custom components from this directory.
     base_path = ""
 
-    def __init__(self, directory_path, compress_code_field=False):
-        """
-        Initialize DirectoryReader with a directory path
-        and a flag indicating whether to compress the code.
-        """
+    def __init__(self, directory_path, *, compress_code_field=False) -> None:
+        """Initialize DirectoryReader with a directory path and a flag indicating whether to compress the code."""
         self.directory_path = directory_path
         self.compress_code_field = compress_code_field
 
@@ -61,12 +54,10 @@ class DirectoryReader:
         return not self.base_path or fullpath.is_relative_to(self.base_path)
 
     def is_empty_file(self, file_content):
-        """
-        Check if the file content is empty.
-        """
+        """Check if the file content is empty."""
         return len(file_content.strip()) == 0
 
-    def filter_loaded_components(self, data: dict, with_errors: bool) -> dict:
+    def filter_loaded_components(self, data: dict, *, with_errors: bool) -> dict:
         from langflow.custom.utils import build_component
 
         items = []
@@ -85,43 +76,36 @@ class DirectoryReader:
         logger.debug(f'Filtered components {"with errors" if with_errors else ""}: {len(filtered)}')
         return {"menu": filtered}
 
-    def validate_code(self, file_content):
-        """
-        Validate the Python code by trying to parse it with ast.parse.
-        """
+    def validate_code(self, file_content) -> bool:
+        """Validate the Python code by trying to parse it with ast.parse."""
         try:
             ast.parse(file_content)
-            return True
         except SyntaxError:
             return False
+        return True
 
     def validate_build(self, file_content):
-        """
-        Check if the file content contains a function named 'build'.
-        """
+        """Check if the file content contains a function named 'build'."""
         return "def build" in file_content
 
     def read_file_content(self, file_path):
-        """
-        Read and return the content of a file.
-        """
+        """Read and return the content of a file."""
         _file_path = Path(file_path)
         if not _file_path.is_file():
             return None
-        with _file_path.open(encoding="utf-8") as file:
-            # UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 3069: character maps to <undefined>
-            try:
+        try:
+            with _file_path.open(encoding="utf-8") as file:
+                # UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 3069:
+                # character maps to <undefined>
                 return file.read()
-            except UnicodeDecodeError:
-                # This is happening in Windows, so we need to open the file in binary mode
-                # The file is always just a python file, so we can safely read it as utf-8
-                with _file_path.open("rb") as f:
-                    return f.read().decode("utf-8")
+        except UnicodeDecodeError:
+            # This is happening in Windows, so we need to open the file in binary mode
+            # The file is always just a python file, so we can safely read it as utf-8
+            with _file_path.open("rb") as f:
+                return f.read().decode("utf-8")
 
     def get_files(self):
-        """
-        Walk through the directory path and return a list of all .py files.
-        """
+        """Walk through the directory path and return a list of all .py files."""
         if not (safe_path := self.get_safe_path()):
             msg = f"The path needs to start with '{self.base_path}'."
             raise CustomComponentPathValueError(msg)
@@ -143,19 +127,14 @@ class DirectoryReader:
         return file_list
 
     def find_menu(self, response, menu_name):
-        """
-        Find and return a menu by its name in the response.
-        """
+        """Find and return a menu by its name in the response."""
         return next(
             (menu for menu in response["menu"] if menu["name"] == menu_name),
             None,
         )
 
     def _is_type_hint_imported(self, type_hint_name: str, code: str) -> bool:
-        """
-        Check if a specific type hint is imported
-        from the typing module in the given code.
-        """
+        """Check if a specific type hint is imported from the typing module in the given code."""
         module = ast.parse(code)
 
         return any(
@@ -166,10 +145,7 @@ class DirectoryReader:
         )
 
     def _is_type_hint_used_in_args(self, type_hint_name: str, code: str) -> bool:
-        """
-        Check if a specific type hint is used in the
-        function definitions within the given code.
-        """
+        """Check if a specific type hint is used in the function definitions within the given code."""
         try:
             module = ast.parse(code)
 
@@ -184,9 +160,7 @@ class DirectoryReader:
         return False
 
     def _is_type_hint_in_arg_annotation(self, annotation, type_hint_name: str) -> bool:
-        """
-        Helper function to check if a type hint exists in an annotation.
-        """
+        """Helper function to check if a type hint exists in an annotation."""
         return (
             annotation is not None
             and isinstance(annotation, ast.Subscript)
@@ -195,9 +169,7 @@ class DirectoryReader:
         )
 
     def is_type_hint_used_but_not_imported(self, type_hint_name: str, code: str) -> bool:
-        """
-        Check if a type hint is used but not imported in the given code.
-        """
+        """Check if a type hint is used but not imported in the given code."""
         try:
             return self._is_type_hint_used_in_args(type_hint_name, code) and not self._is_type_hint_imported(
                 type_hint_name, code
@@ -208,10 +180,7 @@ class DirectoryReader:
             return True
 
     def process_file(self, file_path):
-        """
-        Process a file by validating its content and
-        returning the result and content/error message.
-        """
+        """Process a file by validating its content and returning the result and content/error message."""
         try:
             file_content = self.read_file_content(file_path)
         except Exception:  # noqa: BLE001
@@ -236,10 +205,7 @@ class DirectoryReader:
         return True, file_content
 
     def build_component_menu_list(self, file_paths):
-        """
-        Build a list of menus with their components
-        from the .py files in the directory.
-        """
+        """Build a list of menus with their components from the .py files in the directory."""
         response = {"menu": []}
         logger.debug("-------------------- Building component menu list --------------------")
 
@@ -291,7 +257,7 @@ class DirectoryReader:
 
     async def process_file_async(self, file_path):
         try:
-            file_content = self.read_file_content(file_path)
+            file_content = await asyncio.to_thread(self.read_file_content, file_path)
         except Exception:  # noqa: BLE001
             logger.exception(f"Error while reading file {file_path}")
             return False, f"Could not read {file_path}"
@@ -369,11 +335,9 @@ class DirectoryReader:
 
     @staticmethod
     def get_output_types_from_code(code: str) -> list:
-        """
-        Get the output types from the code.
-        """
+        """Get the output types from the code."""
         custom_component = Component(_code=code)
-        types_list = custom_component.get_function_entrypoint_return_type
+        types_list = custom_component._get_function_entrypoint_return_type
 
         # Get the name of types classes
         return [type_.__name__ for type_ in types_list if hasattr(type_, "__name__")]

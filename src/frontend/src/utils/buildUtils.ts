@@ -1,6 +1,8 @@
 import { BASE_URL_API } from "@/constants/constants";
 import { performStreamingRequest } from "@/controllers/API/api";
+import { useMessagesStore } from "@/stores/messagesStore";
 import { AxiosError } from "axios";
+import { flushSync } from "react-dom";
 import { Edge, Node } from "reactflow";
 import { BuildStatus } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
@@ -9,7 +11,7 @@ import useFlowStore from "../stores/flowStore";
 import { VertexBuildTypeAPI } from "../types/api";
 import { isErrorLogType } from "../types/utils/typeCheckingUtils";
 import { VertexLayerElementType } from "../types/zustand/flow";
-import { tryParseJson } from "./utils";
+import { isStringArray, tryParseJson } from "./utils";
 
 type BuildVerticesParams = {
   setLockChat?: (lock: boolean) => void;
@@ -32,6 +34,7 @@ type BuildVerticesParams = {
   nodes?: Node[];
   edges?: Edge[];
   logBuilds?: boolean;
+  session?: string;
 };
 
 function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
@@ -152,7 +155,9 @@ export async function buildFlowVertices({
   edges,
   logBuilds,
   setLockChat,
+  session,
 }: BuildVerticesParams) {
+  const inputs = {};
   let url = `${BASE_URL_API}build/${flowId}/flow?`;
   if (startNodeId) {
     url = `${url}&start_component_id=${startNodeId}`;
@@ -164,9 +169,6 @@ export async function buildFlowVertices({
     url = `${url}&log_builds=${logBuilds}`;
   }
   const postData = {};
-  if (typeof input_value !== "undefined") {
-    postData["inputs"] = { input_value: input_value };
-  }
   if (files) {
     postData["files"] = files;
   }
@@ -175,6 +177,15 @@ export async function buildFlowVertices({
       nodes,
       edges,
     };
+  }
+  if (typeof input_value !== "undefined") {
+    inputs["input_value"] = input_value;
+  }
+  if (session) {
+    inputs["session"] = session;
+  }
+  if (Object.keys(inputs).length > 0) {
+    postData["inputs"] = inputs;
   }
 
   const buildResults: Array<boolean> = [];
@@ -188,6 +199,10 @@ export async function buildFlowVertices({
         onBuildStart(ids.map((id) => ({ id: id, reference: id })));
       ids.forEach((id) => verticesStartTimeMs.set(id, Date.now()));
     };
+
+    console.log("type", type);
+    console.log("data", data);
+
     switch (type) {
       case "vertices_sorted": {
         const verticesToRun = data.to_run;
@@ -261,9 +276,41 @@ export async function buildFlowVertices({
             buildResults.push(true);
           }
         }
+
+        await useFlowStore.getState().clearEdgesRunningByNodes();
+
         if (buildData.next_vertices_ids) {
+          if (isStringArray(buildData.next_vertices_ids)) {
+            useFlowStore
+              .getState()
+              .setCurrentBuildingNodeId(buildData?.next_vertices_ids ?? []);
+            useFlowStore
+              .getState()
+              .updateEdgesRunningByNodes(
+                buildData?.next_vertices_ids ?? [],
+                true,
+              );
+          }
           onStartVertices(buildData.next_vertices_ids);
         }
+        return true;
+      }
+      case "add_message": {
+        //adds a message to the messsage table
+        useMessagesStore.getState().addMessage(data);
+        return true;
+      }
+      case "token": {
+        // flushSync and timeout is needed to avoid react batched updates
+        setTimeout(() => {
+          flushSync(() => {
+            useMessagesStore.getState().updateMessageText(data.id, data.chunk);
+          });
+        }, 10);
+        return true;
+      }
+      case "remove_message": {
+        useMessagesStore.getState().removeMessage(data);
         return true;
       }
       case "end": {
@@ -273,13 +320,21 @@ export async function buildFlowVertices({
         return true;
       }
       case "error": {
-        const errorMessage = data.error;
-        console.log(data);
-        onBuildError!("Error Running Flow", [errorMessage], []);
-        buildResults.push(false);
         useFlowStore.getState().setIsBuilding(false);
+        if (data.category === "error") {
+          useMessagesStore.getState().addMessage(data);
+        }
+        buildResults.push(false);
         return true;
       }
+      case "build_start":
+        useFlowStore
+          .getState()
+          .updateBuildStatus([data.id], BuildStatus.BUILDING);
+        break;
+      case "build_end":
+        useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILT);
+        break;
       default:
         return true;
     }

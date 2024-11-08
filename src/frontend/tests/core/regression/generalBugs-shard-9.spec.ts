@@ -27,19 +27,19 @@ test("memory should work as expect", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.waitForTimeout(1000);
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat memory");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("chat memory");
 
   // Locate the canvas element
   const canvas = page.locator("#react-flow-id"); // Update the selector if needed
@@ -81,7 +81,7 @@ test("memory should work as expect", async ({ page }) => {
 
   await page.waitForTimeout;
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
 
@@ -91,9 +91,19 @@ test("memory should work as expect", async ({ page }) => {
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
-  await page
-    .getByTestId("popover-anchor-input-api_key")
-    .fill(process.env.OPENAI_API_KEY ?? "");
+  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  while (filledApiKey > 0) {
+    await page.getByTestId("remove-icon-badge").first().click();
+    await page.waitForTimeout(1000);
+    filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  }
+
+  const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
+  const isApiKeyInputVisible = await apiKeyInput.isVisible();
+
+  if (isApiKeyInputVisible) {
+    await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+  }
 
   await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
@@ -107,10 +117,7 @@ AI:
   `;
 
   await page.getByTestId("title-Prompt").last().click();
-  await page
-    .getByTestId("promptarea_prompt_template-ExternalLink")
-    .nth(0)
-    .click();
+  await page.getByTestId("button_open_prompt_modal").nth(0).click();
 
   await page.getByTestId("modal-promptarea_prompt_template").fill(prompt);
   await page.getByText("Edit Prompt", { exact: true }).click();
@@ -136,7 +143,7 @@ AI:
 
   await page.getByText("Playground", { exact: true }).last().click();
 
-  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
+  await page.waitForSelector('[data-testid="button-send"]', {
     timeout: 100000,
   });
 
@@ -144,7 +151,7 @@ AI:
     .getByPlaceholder("Send a message...")
     .fill("hi, my car is blue and I like to eat pizza");
 
-  await page.getByTestId("icon-LucideSend").click();
+  await page.getByTestId("button-send").click();
 
   await page.waitForSelector("text=AI", { timeout: 30000 });
 
@@ -152,7 +159,7 @@ AI:
     .getByPlaceholder("Send a message...")
     .fill("what color is my car and what do I like to eat?");
 
-  await page.getByTestId("icon-LucideSend").click();
+  await page.getByTestId("button-send").click();
 
   await page.waitForTimeout(400);
 

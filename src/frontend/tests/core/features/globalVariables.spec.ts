@@ -23,7 +23,7 @@ test("user must be able to save or delete a global variable", async ({
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -31,12 +31,8 @@ test("user must be able to save or delete a global variable", async ({
     timeout: 30000,
   });
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("openai");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("openai");
 
   await page.waitForTimeout(1000);
 
@@ -46,14 +42,14 @@ test("user must be able to save or delete a global variable", async ({
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.waitForSelector('[title="fit view"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
   });
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   const genericName = Math.random().toString();
   const credentialName = Math.random().toString();
@@ -63,8 +59,7 @@ test("user must be able to save or delete a global variable", async ({
   await page
     .getByPlaceholder("Insert a name for the variable...")
     .fill(genericName);
-  await page.getByTestId("icon-ChevronsUpDown").nth(1).click();
-  await page.getByText("Generic", { exact: true }).click();
+  await page.getByText("Generic", { exact: true }).isVisible();
   await page
     .getByPlaceholder("Insert a value for the variable...")
     .fill("This is a test of generic variable value");
@@ -76,7 +71,10 @@ test("user must be able to save or delete a global variable", async ({
   await page
     .getByPlaceholder("Insert a name for the variable...")
     .fill(credentialName);
-  await page.getByTestId("icon-ChevronsUpDown").nth(1).click();
+  await page
+    .getByTestId("popover-anchor-type-global-variables")
+    .first()
+    .click();
   await page.getByText("Credential", { exact: true }).click();
   await page
     .getByPlaceholder("Insert a value for the variable...")

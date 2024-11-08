@@ -30,8 +30,8 @@ class Edge:
                 except Exception as e:
                     if "inputTypes" in self._target_handle and self._target_handle["inputTypes"] is None:
                         # Check if self._target_handle['fieldName']
-                        if hasattr(target, "_custom_component"):
-                            display_name = getattr(target._custom_component, "display_name", "")
+                        if hasattr(target, "custom_component"):
+                            display_name = getattr(target.custom_component, "display_name", "")
                             msg = (
                                 f"Component {display_name} field '{self._target_handle['fieldName']}' "
                                 "might not be a valid input."
@@ -214,12 +214,12 @@ class CycleEdge(Edge):
         self.is_fulfilled = False  # Whether the contract has been fulfilled.
         self.result: Any = None
         self.is_cycle = True
-        source._has_cycle_edges = True
-        target._has_cycle_edges = True
+        source.has_cycle_edges = True
+        target.has_cycle_edges = True
 
     async def honor(self, source: Vertex, target: Vertex) -> None:
-        """
-        Fulfills the contract by setting the result of the source vertex to the target vertex's parameter.
+        """Fulfills the contract by setting the result of the source vertex to the target vertex's parameter.
+
         If the edge is runnable, the source vertex is run with the message text and the target vertex's
         root_field param is set to the
         result. If the edge is not runnable, the target vertex's parameter is set to the result.
@@ -228,16 +228,16 @@ class CycleEdge(Edge):
         if self.is_fulfilled:
             return
 
-        if not source._built:
+        if not source.built:
             # The system should be read-only, so we should not be building vertices
             # that are not already built.
             msg = f"Source vertex {source.id} is not built."
             raise ValueError(msg)
 
         if self.matched_type == "Text":
-            self.result = source._built_result
+            self.result = source.built_result
         else:
-            self.result = source._built_object
+            self.result = source.built_object
 
         target.params[self.target_param] = self.result
         self.is_fulfilled = True

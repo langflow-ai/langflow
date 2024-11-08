@@ -2,8 +2,7 @@ from langflow.field_typing import Tool
 
 
 def build_status_from_tool(tool: Tool):
-    """
-    Builds a status string representation of a tool.
+    """Builds a status string representation of a tool.
 
     Args:
         tool (Tool): The tool object to build the status for.

@@ -1,7 +1,8 @@
 import { usePostLikeComponent } from "@/controllers/API/queries/store";
 import { useState } from "react";
 import { getComponent } from "../../controllers/API";
-import IOModal from "../../modals/IOModal";
+import IOModalOld from "../../modals/IOModal";
+import IOModalNew from "../../modals/IOModal/newModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useStoreStore } from "../../stores/storeStore";
@@ -45,7 +46,7 @@ export default function StoreCardComponent({
     data?.downloads_count ?? 0,
   );
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
-  const [openPlayground, setOpenPlayground] = useState(false);
+  // const [openPlayground, setOpenPlayground] = useState(false);
   const [loadingPlayground, setLoadingPlayground] = useState(false);
   const playground =
     data.last_tested_version?.includes("1.0.0") && !data.is_component;
@@ -204,7 +205,7 @@ export default function StoreCardComponent({
         <CardFooter>
           <div className="z-50 flex w-full items-center justify-between gap-2">
             <div className="flex w-full flex-wrap items-end justify-end gap-2">
-              {playground && (
+              {/* {playground && (
                 <Button
                   disabled={loadingPlayground || !authorized}
                   key={data.id}
@@ -242,7 +243,7 @@ export default function StoreCardComponent({
                   )}
                   Playground
                 </Button>
-              )}
+              )} */}
               <div className="flex gap-0.5">
                 <ShadTooltip
                   content={authorized ? "Like" : "Please review your API key."}
@@ -313,7 +314,7 @@ export default function StoreCardComponent({
           </div>
         </CardFooter>
       </Card>
-      {openPlayground && (
+      {/* {openPlayground && (
         <IOModal
           key={data.id}
           cleanOnClose={true}
@@ -322,7 +323,7 @@ export default function StoreCardComponent({
         >
           <></>
         </IOModal>
-      )}
+      )} */}
     </>
   );
 }

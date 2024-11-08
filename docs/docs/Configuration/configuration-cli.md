@@ -1,168 +1,170 @@
 ---
-title: Command Line Interface (CLI)
+title: Langflow CLI
 sidebar_position: 2
 slug: /configuration-cli
 ---
 
-:::info
+# Langflow CLI
 
-This page may contain outdated information. It will be updated as soon as possible.
+The Langflow command line interface (Langflow CLI) is the main interface for managing and running the Langflow server.
 
-:::
+## CLI commands
 
-Langflow's Command Line Interface (CLI) is a powerful tool that allows you to interact with the Langflow server from the command line. The CLI provides a wide range of commands to help you shape Langflow to your needs.
+The following sections describe the available CLI commands and their options, as well as their corresponding [environment variables](./environment-variables.md).
 
-The available commands are below. Navigate to their individual sections of this page to see the parameters.
-
-- [langflow](/configuration-cli)
-- [langflow api-key](/configuration-cli)
-- [langflow copy-db](/configuration-cli)
-- [langflow migration](/configuration-cli)
-- [langflow run](/configuration-cli)
-- [langflow superuser](/configuration-cli)
-
-## Overview {#c50e5530289349cf8ed7bee22ba2211a}
+### langflow
 
 Running the CLI without any arguments displays a list of available options and commands.
 
-```shell
-langflow
+```bash
+langflow [OPTIONS]
 # or
-langflow --help
-# or
-python -m langflow
-
+python -m langflow [OPTIONS]
 ```
 
-| Command     | Description                                                            |
-| ----------- | ---------------------------------------------------------------------- |
-| `api-key`   | Creates an API key for the default superuser if AUTO_LOGIN is enabled. |
-| `copy-db`   | Copy the database files to the current directory (`which langflow`).   |
-| `migration` | Run or test migrations.                                                |
-| `run`       | Run the Langflow.                                                      |
-| `superuser` | Create a superuser.                                                    |
+#### Options
 
-### Options {#8a3b5b7ed55b4774ad6d533bb337ef47}
+| Option | Default | Values | Description |
+|--------|------|-----------|-------------|
+| <a id="install-completion"></a>`--install-completion` | *Not applicable* | *Not applicable* | Install auto-completion for the current shell. |
+| <a id="show-completion"></a>`--show-completion` | *Not applicable* | *Not applicable* | Show the location of the auto-completion config file (if installed). |
+| <a id="help"></a>`--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments. |
 
-| Option                 | Description                                                                      |
-| ---------------------- | -------------------------------------------------------------------------------- |
-| `--install-completion` | Install completion for the current shell.                                        |
-| `--show-completion`    | Show completion for the current shell, to copy it or customize the installation. |
-| `--help`               | Show this message and exit.                                                      |
+### langflow api-key
 
-## langflow api-key {#dbfc8c4c83474b83a38bdc7471bccf41}
+Create an API key for the default superuser if the [`LANGFLOW_AUTO_LOGIN` environment variable] is set to `true`.
 
-Run the `api-key` command to create an API key for the default superuser if `LANGFLOW_AUTO_LOGIN` is set to `True`.
-
-```shell
-langflow api-key
+```bash
+langflow api-key [OPTIONS]
 # or
-python -m langflow api-key
-╭─────────────────────────────────────────────────────────────────────╮
-│ API Key Created Successfully:                                       │
-│                                                                     │
-│ sk-O0elzoWID1izAH8RUKrnnvyyMwIzHi2Wk-uXWoNJ2Ro                      │
-│                                                                     │
-│ This is the only time the API key will be displayed.                │
-│ Make sure to store it in a secure location.                         │
-│                                                                     │
-│ The API key has been copied to your clipboard. Cmd + V to paste it. │
-╰──────────────────────────────
-
+python -m langflow api-key [OPTIONS]
 ```
 
-### Options {#ec2ef993dc984811b25838c8d8230b31}
+#### Options
 
-| Option      | Type | Description                                                   |
-| ----------- | ---- | ------------------------------------------------------------- |
-| --log-level | TEXT | Logging level. [env var: LANGFLOW_LOG_LEVEL] [default: error] |
-| --help      |      | Show this message and exit.                                   |
+| Option | Default | Values | Description |
+|--------|---------|--------|-------------|
+| <a id="api-key-log-level"></a>`--log-level` | `critical` | `debug`<br/>`info`<br/>`warning`<br/>`error`<br/>`critical` | Set the logging level. |
+| <a id="api-key-help"></a>`--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments. |
 
-## langflow copy-db {#729a13f4847545e5973d8f9c20f8833d}
+### langflow copy-db
 
-Run the `copy-db` command to copy the cached `langflow.db` and `langflow-pre.db` database files to the current directory.
+Copy the database files to the current directory.
+Copy the Langflow database files, `langflow.db` and `langflow-pre.db` (if they exist), from the cache directory to the current directory.
 
-If the files exist in the cache directory, they will be copied to the same directory as `__main__.py`, which can be found with `which langflow`.
+:::note
+The current directory is the directory containing `__main__.py`.
+You can find this directory by running `which langflow`.
+:::
 
-### Options {#7b7e6bd02b3243218e1d666711854673}
-
-None.
-
-## langflow migration {#7027c1925a444119a7a8ea2bff4bd16d}
-
-Run or test migrations with the Alembic database tool.
-
-```shell
-langflow migration
+```bash
+langflow copy-db
 # or
-python -m langflow migration
-
+python -m langflow copy-db
 ```
 
-### Options {#0b38fbe97bb34edeb7740a7db58433e9}
+#### Options
 
-| Option              | Description                                                                                                                |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `--test, --no-test` | Run migrations in test mode. [default: test]                                                                               |
-| `--fix, --no-fix`   | Fix migrations. This is a destructive operation, and should only be used if you know what you are doing. [default: no-fix] |
-| `--help`            | Show this message and exit.                                                                                                |
+| Option | Default | Values | Description |
+|--------|---------|--------|-------------|
+| <a id="copy-db-help"></a>`--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments. |
 
-## langflow run {#fe050aa659cb4d33a560b859d54c94ea}
+### langflow migration
 
-Run Langflow.
+Run or test database migrations.
 
-```shell
-langflow run
+```bash
+langflow migration [OPTIONS]
 # or
-python -m langflow run
-
+python -m langflow migration [OPTIONS]
 ```
 
-### Options {#4e811481ec9142f1b60309bb1ce5a2ce}
+#### Options
 
-| Option                                                     | Description                                                                                                                                                                                                 |
-| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--help`                                                   | Displays all available options.                                                                                                                                                                             |
-| `--host`                                                   | Defines the host to bind the server to. Can be set using the `LANGFLOW_HOST` environment variable. The default is `127.0.0.1`.                                                                              |
-| `--workers`                                                | Sets the number of worker processes. Can be set using the `LANGFLOW_WORKERS` environment variable. The default is `1`.                                                                                      |
-| `--timeout`                                                | Sets the worker timeout in seconds. The default is `60`.                                                                                                                                                    |
-| `--port`                                                   | Sets the port to listen on. Can be set using the `LANGFLOW_PORT` environment variable. The default is `7860`.                                                                                               |
-| `--env-file`                                               | Specifies the path to the .env file containing environment variables. The default is `.env`.                                                                                                                |
-| `--log-level`                                              | Defines the logging level. Can be set using the `LANGFLOW_LOG_LEVEL` environment variable. The default is `critical`.                                                                                       |
-| `--components-path`                                        | Specifies the path to the directory containing custom components. Can be set using the `LANGFLOW_COMPONENTS_PATH` environment variable. The default is `langflow/components`.                               |
-| `--log-file`                                               | Specifies the path to the log file. Can be set using the `LANGFLOW_LOG_FILE` environment variable. The default is `logs/langflow.log`.                                                                      |
-| `--cache`                                                  | Select the type of cache to use. Options are `InMemoryCache` and `SQLiteCache`. Can be set using the `LANGFLOW_LANGCHAIN_CACHE` environment variable. The default is `SQLiteCache`.                         |
-| `--dev`/`--no-dev`                                         | Toggles the development mode. The default is `no-dev`.                                                                                                                                                      |
-| `--path`                                                   | Specifies the path to the frontend directory containing build files. This option is for development purposes only. Can be set using the `LANGFLOW_FRONTEND_PATH` environment variable.                      |
-| `--open-browser`/`--no-open-browser`                       | Toggles the option to open the browser after starting the server. Can be set using the `LANGFLOW_OPEN_BROWSER` environment variable. The default is `open-browser`.                                         |
-| `--remove-api-keys`/`--no-remove-api-keys`                 | Toggles the option to remove API keys from the projects saved in the database. Can be set using the `LANGFLOW_REMOVE_API_KEYS` environment variable. The default is `no-remove-api-keys`.                   |
-| `--install-completion [bash\|zsh\|fish\|powershell\|pwsh]` | Installs completion for the specified shell.                                                                                                                                                                |
-| `--show-completion [bash\|zsh\|fish\|powershell\|pwsh]`    | Shows completion for the specified shell, allowing you to copy it or customize the installation.                                                                                                            |
-| `--backend-only`                                           | This parameter, with a default value of `False`, allows running only the backend server without the frontend. It can also be set using the `LANGFLOW_BACKEND_ONLY` environment variable.                    |
-| `--store`                                                  | This parameter, with a default value of `True`, enables the store features, use `--no-store` to deactivate it. It can be configured using the `LANGFLOW_STORE` environment variable.                        |
-| `--auto-saving`                                            | This parameter, with a default value of `True`, enables the auto-saving functionality, use `--no-auto-saving` to deactivate it. It can be configured using the `LANGFLOW_AUTO_SAVING` environment variable. |
+| Option | Default | Values | Description |
+|--------|---------|--------|-------------|
+| <a id="migration-test"></a>`--test` | `true` | [Boolean](#boolean) | Run migrations in test mode. Use `--no-test` to disable test mode. |
+| <a id="migration-fix"></a>`--fix` | `false` (`--no-fix`) | [Boolean](#boolean) | Fix migrations. This is a destructive operation, and all affected data will be deleted. Only use this option if you know what you are doing. |
+| <a id="migration-help"></a>`--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments. |
 
-### CLI environment variables {#5868aaccfcc74e26968538ef4d07e756}
 
-You can configure many of the CLI options using environment variables. These can be exported in your operating system or added to a `.env` file and loaded using the `--env-file` option.
+### langflow run
 
-A sample `.env` file named `.env.example` is included with the project. Copy this file to a new file named `.env` and replace the example values with your actual settings. If you're setting values in both your OS and the `.env` file, the `.env` settings will take precedence.
+Start the Langflow server.
 
-## langflow superuser {#5944233ce0c942878e928e1f2945d717}
-
-Create a superuser for Langflow.
-
-```shell
-langflow superuser
+```bash
+langflow run [OPTIONS]
 # or
-python -m langflow superuser
+python -m langflow run [OPTIONS]
 ```
 
-### Options {#f333c5635ead4c3d95985467bb08cc8f}
+#### Options
 
-| Option        | Type | Description                                                   |
-| ------------- | ---- | ------------------------------------------------------------- |
-| `--username`  | TEXT | Username for the superuser. [default: None] [required]        |
-| `--password`  | TEXT | Password for the superuser. [default: None] [required]        |
-| `--log-level` | TEXT | Logging level. [env var: LANGFLOW_LOG_LEVEL] [default: error] |
-| `--help`      |      | Show this message and exit.                                   |
+| Option | Default | Values | Description |
+|--------|---------|--------|-------------|
+| <a id="run-host"></a>`--host` | `127.0.0.1` | String | The host on which the Langflow server will run.<br/>See [`LANGFLOW_HOST` variable](./environment-variables.md#LANGFLOW_HOST). |
+| <a id="run-workers"></a>`--workers` | `1` | Integer | Number of worker processes.<br/>See [`LANGFLOW_WORKERS` variable](./environment-variables.md#LANGFLOW_WORKERS). |
+| <a id="run-worker-timeout"></a>`--worker-timeout` | `300` | Integer | Worker timeout in seconds.<br/>See [`LANGFLOW_WORKER_TIMEOUT` variable](./environment-variables.md#LANGFLOW_WORKER_TIMEOUT). |
+| <a id="run-port"></a>`--port` | `7860` | Integer | The port on which the Langflow server will run. The server automatically selects a free port if the specified port is in use.<br/>See [`LANGFLOW_PORT` variable](./environment-variables.md#LANGFLOW_PORT). |
+| <a id="run-components-path"></a>`--components-path` | `langflow/components` | String | Path to the directory containing custom components.<br/>See [`LANGFLOW_COMPONENTS_PATH` variable](./environment-variables.md#LANGFLOW_COMPONENTS_PATH). |
+| <a id="run-env-file"></a>`--env-file` | Not set | String | Path to the `.env` file containing environment variables.<br/>See [Import environment variables from a .env file](./environment-variables.md#configure-variables-env-file). |
+| <a id="run-log-level"></a>`--log-level` | `critical` | `debug`<br/>`info`<br/>`warning`<br/>`error`<br/>`critical` | Set the logging level.<br/>See [`LANGFLOW_LOG_LEVEL` variable](./environment-variables.md#LANGFLOW_LOG_LEVEL). |
+| <a id="run-log-file"></a>`--log-file` | `logs/langflow.log` | String | Set the path to the log file for Langflow.<br/>See [`LANGFLOW_LOG_FILE` variable](./environment-variables.md#LANGFLOW_LOG_FILE). |
+| <a id="run-cache"></a>`--cache` | `InMemoryCache` | `InMemoryCache`<br/>`SQLiteCache` | Type of cache to use.<br/>See [`LANGFLOW_LANGCHAIN_CACHE` variable](./environment-variables.md#LANGFLOW_LANGCHAIN_CACHE). |
+| <a id="run-dev"></a>`--dev` | `false` (`--no-dev`) | [Boolean](#boolean) | Run Langflow in development mode (may contain bugs).<br/>See [`LANGFLOW_DEV` variable](./environment-variables.md#LANGFLOW_DEV). |
+| <a id="run-frontend-path"></a>`--frontend-path` | `./frontend` | String | Path to the frontend directory containing build files. This is for development purposes only.<br/>See [`LANGFLOW_FRONTEND_PATH` variable](./environment-variables.md#LANGFLOW_FRONTEND_PATH). |
+| <a id="run-open-browser"></a>`--open-browser` | `true` | [Boolean](#boolean) | Open the system web browser on startup. Use `--no-open-browser` to disable opening the system web browser on startup.<br/> See [`LANGFLOW_OPEN_BROWSER` variable](./environment-variables.md#LANGFLOW_OPEN_BROWSER). |
+| <a id="run-remove-api-keys"></a>`--remove-api-keys` | `false` (`--no-remove-api-keys`) | [Boolean](#boolean) | Remove API keys from the projects saved in the database.<br/> See [`LANGFLOW_REMOVE_API_KEYS` variable](./environment-variables.md#LANGFLOW_REMOVE_API_KEYS). |
+| <a id="run-backend-only"></a>`--backend-only` | `false` (`--no-backend-only`) | [Boolean](#boolean) | Only run Langflow's backend server (no frontend).<br/>See [`LANGFLOW_BACKEND_ONLY` variable](./environment-variables.md#LANGFLOW_BACKEND_ONLY). |
+| <a id="run-store"></a>`--store` | `true` | [Boolean](#boolean) | Enable the Langflow Store features. Use `--no-store` to disable the Langflow Store features.<br/>See [`LANGFLOW_STORE` variable](./environment-variables.md#LANGFLOW_STORE). |
+| <a id="run-auto-saving"></a>`--auto-saving` | `true` | [Boolean](#boolean) | Enable flow auto-saving. Use `--no-auto-saving` to disable flow auto-saving.<br/>See [`LANGFLOW_AUTO_SAVING` variable](./environment-variables.md#LANGFLOW_AUTO_SAVING). |
+| <a id="run-auto-saving-interval"></a>`--auto-saving-interval` | `1000` | Integer | Set the interval for flow auto-saving in milliseconds.<br/>See [`LANGFLOW_AUTO_SAVING_INTERVAL` variable](./environment-variables.md#LANGFLOW_AUTO_SAVING_INTERVAL). |
+| <a id="run-health-check-max-retries"></a>`--health-check-max-retries` | `5` | Integer | Set the maximum number of retries for the health check. Use `--no-health-check-max-retries` to disable the maximum number of retries for the health check.<br/>See [`LANGFLOW_HEALTH_CHECK_MAX_RETRIES` variable](./environment-variables.md#LANGFLOW_HEALTH_CHECK_MAX_RETRIES). |
+| <a id="run-max-file-size-upload"></a>`--max-file-size-upload` | `100` | Integer | Set the maximum file size for the upload in megabytes.<br/>See [`LANGFLOW_MAX_FILE_SIZE_UPLOAD` variable](./environment-variables.md#LANGFLOW_MAX_FILE_SIZE_UPLOAD). |
+| <a id="run-help"></a>`--help` | *Not applicable* | *Not applicable* | Display information about the command usage and its options and arguments. |
+
+### langflow superuser
+
+Create a superuser account.
+
+```bash
+langflow superuser [OPTIONS]
+# or
+python -m langflow superuser [OPTIONS]
+```
+
+#### Options
+
+| Option | Default | Values | Description |
+|--------|---------|--------|-------------|
+| <a id="superuser-username"></a>`--username` | Required | String | Specify the name for the superuser.<br/>See [`LANGFLOW_SUPERUSER` variable](./environment-variables.md#LANGFLOW_SUPERUSER). |
+| <a id="superuser-password"></a>`--password` | Required | String | Specify the password for the superuser.<br/>See [`LANGFLOW_SUPERUSER_PASSWORD` variable](./environment-variables.md#LANGFLOW_SUPERUSER_PASSWORD). |
+| <a id="superuser-log-level"></a>`--log-level` | `critical` | `debug`<br/>`info`<br/>`warning`<br/>`error`<br/>`critical` | Set the logging level. |
+
+## Precedence
+
+Langflow CLI options override the values of corresponding [environment variables](./environment-variables.md).
+
+For example, if you have `LANGFLOW_PORT=7860` defined as an environment variable, but you run the CLI with `--port 7880`, then Langflow will set the port to **`7880`** (the value passed with the CLI).
+
+## Assign values
+
+There are two ways you can assign a value to a CLI option.
+You can write the option flag and its value with a single space between them: `--option value`.
+Or, you can write them using an equals sign (`=`) between the option flag and the value: `--option=value`.
+
+Values that contain spaces must be surrounded by quotation marks: `--option 'Value with Spaces'` or `--option='Value with Spaces'`.
+
+### Boolean values {#boolean}
+
+Boolean options turn a behavior on or off, and therefore accept no arguments.
+To activate a boolean option, type it on the command line.
+For example:
+
+```bash
+langflow run --remove-api-keys
+```
+
+All boolean options have a corresponding option that negates it.
+For example, the negating option for `--remove-api-keys` is `--no-remove-api-keys`.
+These options let you negate boolean options that you may have set using [environment variables](./environment-variables.md).

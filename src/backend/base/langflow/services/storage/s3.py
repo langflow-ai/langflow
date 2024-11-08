@@ -8,16 +8,15 @@ from .service import StorageService
 class S3StorageService(StorageService):
     """A service class for handling operations with AWS S3 storage."""
 
-    async def __init__(self, session_service, settings_service):
+    def __init__(self, session_service, settings_service) -> None:
         """Initialize the S3 storage service with session and settings services."""
         super().__init__(session_service, settings_service)
         self.bucket = "langflow"
         self.s3_client = boto3.client("s3")
         self.set_ready()
 
-    async def save_file(self, folder: str, file_name: str, data):
-        """
-        Save a file to the S3 bucket.
+    async def save_file(self, folder: str, file_name: str, data) -> None:
+        """Save a file to the S3 bucket.
 
         :param folder: The folder in the bucket to save the file.
         :param file_name: The name of the file to be saved.
@@ -35,8 +34,7 @@ class S3StorageService(StorageService):
             raise
 
     async def get_file(self, folder: str, file_name: str):
-        """
-        Retrieve a file from the S3 bucket.
+        """Retrieve a file from the S3 bucket.
 
         :param folder: The folder in the bucket where the file is stored.
         :param file_name: The name of the file to be retrieved.
@@ -52,8 +50,7 @@ class S3StorageService(StorageService):
             raise
 
     async def list_files(self, folder: str):
-        """
-        List all files in a specified folder of the S3 bucket.
+        """List all files in a specified folder of the S3 bucket.
 
         :param folder: The folder in the bucket to list files from.
         :return: A list of file names.
@@ -61,16 +58,16 @@ class S3StorageService(StorageService):
         """
         try:
             response = self.s3_client.list_objects_v2(Bucket=self.bucket, Prefix=folder)
-            files = [item["Key"] for item in response.get("Contents", []) if "/" not in item["Key"][len(folder) :]]
-            logger.info(f"{len(files)} files listed in folder {folder}.")
-            return files
         except ClientError:
             logger.exception(f"Error listing files in folder {folder}")
             raise
 
-    async def delete_file(self, folder: str, file_name: str):
-        """
-        Delete a file from the S3 bucket.
+        files = [item["Key"] for item in response.get("Contents", []) if "/" not in item["Key"][len(folder) :]]
+        logger.info(f"{len(files)} files listed in folder {folder}.")
+        return files
+
+    async def delete_file(self, folder: str, file_name: str) -> None:
+        """Delete a file from the S3 bucket.
 
         :param folder: The folder in the bucket where the file is stored.
         :param file_name: The name of the file to be deleted.
@@ -83,6 +80,6 @@ class S3StorageService(StorageService):
             logger.exception(f"Error deleting file {file_name} from folder {folder}")
             raise
 
-    async def teardown(self):
+    async def teardown(self) -> None:
         """Perform any cleanup operations when the service is being torn down."""
         # No specific teardown actions required for S3 storage at the moment.

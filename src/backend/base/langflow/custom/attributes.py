@@ -4,7 +4,7 @@ import emoji
 from loguru import logger
 
 
-def validate_icon(value: str, *args, **kwargs):
+def validate_icon(value: str):
     # we are going to use the emoji library to validate the emoji
     # emojis can be defined using the :emoji_name: syntax
 
@@ -61,6 +61,7 @@ ATTR_FUNC_MAPPING: dict[str, Callable] = {
     "display_name": getattr_return_str,
     "description": getattr_return_str,
     "beta": getattr_return_bool,
+    "legacy": getattr_return_bool,
     "documentation": getattr_return_str,
     "icon": validate_icon,
     "frozen": getattr_return_bool,
@@ -72,4 +73,5 @@ ATTR_FUNC_MAPPING: dict[str, Callable] = {
     "outputs": getattr_return_list_of_object,
     "inputs": getattr_return_list_of_object,
     "metadata": getattr_return_dict,
+    "tool_mode": getattr_return_bool,
 }

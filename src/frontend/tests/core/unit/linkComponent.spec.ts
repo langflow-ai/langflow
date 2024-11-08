@@ -1,6 +1,7 @@
 import { expect, Page, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 
+// TODO: This test might not be needed anymore
 test("user should interact with link component", async ({ context, page }) => {
   await page.goto("/");
   await page.waitForSelector('[data-testid="mainpage_title"]', {
@@ -22,7 +23,7 @@ test("user should interact with link component", async ({ context, page }) => {
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -40,26 +41,9 @@ test("user should interact with link component", async ({ context, page }) => {
   });
   await page.getByTestId("blank-flow").click();
 
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  const focusElementsOnBoard = async ({ page }) => {
-    const focusElements = await page.getByTestId("extended-disclosure");
-    focusElements.click();
-  };
-
-  await focusElementsOnBoard({ page });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("custom component");
-
   await page.waitForTimeout(1000);
 
-  await page
-    .locator('//*[@id="helpersCustom Component"]')
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
+  await page.getByTestId("sidebar-custom-component-button").click();
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();
 
@@ -79,8 +63,8 @@ test("user should interact with link component", async ({ context, page }) => {
 
   // Replace the MessageTextInput line and add LinkInput
   cleanCode = cleanCode.replace(
-    'MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!"),',
-    `MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!"),
+    'MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!", tool_mode=True),',
+    `MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!", tool_mode=True),
     LinkInput(name="link", display_name="BUTTON", value="https://www.datastax.com", text="Click me"),`,
   );
 
@@ -90,8 +74,8 @@ test("user should interact with link component", async ({ context, page }) => {
   await page.locator('//*[@id="checkAndSaveBtn"]').click();
   await page.waitForTimeout(500);
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
 
   expect(await page.getByText("BUTTON").isVisible()).toBeTruthy();
   expect(await page.getByText("Click me").isVisible()).toBeTruthy();

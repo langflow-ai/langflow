@@ -32,8 +32,8 @@ class UpdateBuildConfigError(Exception):
     pass
 
 
-def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: list[str]):
-    """Add output types to the frontend node"""
+def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: list[str]) -> None:
+    """Add output types to the frontend node."""
     for return_type in return_types:
         if return_type is None:
             raise HTTPException(
@@ -55,7 +55,7 @@ def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: l
         frontend_node.add_output_type(_return_type)
 
 
-def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: list[str]):
+def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: list[str]) -> None:
     """Reorder fields in the frontend node based on the specified field_order."""
     if not field_order:
         return
@@ -69,8 +69,8 @@ def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: list
     frontend_node.field_order = field_order
 
 
-def add_base_classes(frontend_node: CustomComponentFrontendNode, return_types: list[str]):
-    """Add base classes to the frontend node"""
+def add_base_classes(frontend_node: CustomComponentFrontendNode, return_types: list[str]) -> None:
+    """Add base classes to the frontend node."""
     for return_type_instance in return_types:
         if return_type_instance is None:
             raise HTTPException(
@@ -90,8 +90,7 @@ def add_base_classes(frontend_node: CustomComponentFrontendNode, return_types: l
 
 
 def extract_type_from_optional(field_type):
-    """
-    Extract the type from a string formatted as "Optional[<type>]".
+    """Extract the type from a string formatted as "Optional[<type>]".
 
     Parameters:
     field_type (str): The string from which to extract the type.
@@ -106,7 +105,7 @@ def extract_type_from_optional(field_type):
 
 
 def get_field_properties(extra_field):
-    """Get the properties of an extra field"""
+    """Get the properties of an extra field."""
     field_name = extra_field["name"]
     field_type = extra_field.get("type", "str")
     field_value = extra_field.get("default", "")
@@ -131,12 +130,13 @@ def process_type(field_type: str):
     # field_type is a string can be Prompt or Code too
     # so we just need to lower if it is the case
     lowercase_type = field_type.lower()
-    if lowercase_type in ["prompt", "code"]:
+    if lowercase_type in {"prompt", "code"}:
         return lowercase_type
     return field_type
 
 
 def add_new_custom_field(
+    *,
     frontend_node: CustomComponentFrontendNode,
     field_name: str,
     field_type: str,
@@ -196,8 +196,8 @@ def add_new_custom_field(
     return frontend_node
 
 
-def add_extra_fields(frontend_node, field_config, function_args):
-    """Add extra fields to the frontend node"""
+def add_extra_fields(frontend_node, field_config, function_args) -> None:
+    """Add extra fields to the frontend node."""
     if not function_args:
         return
     _field_config = field_config.copy()
@@ -206,22 +206,22 @@ def add_extra_fields(frontend_node, field_config, function_args):
     # then we need to add the extra fields
 
     for extra_field in function_args:
-        if "name" not in extra_field or extra_field["name"] in [
+        if "name" not in extra_field or extra_field["name"] in {
             "self",
             "kwargs",
             "args",
-        ]:
+        }:
             continue
 
         field_name, field_type, field_value, field_required = get_field_properties(extra_field)
         config = _field_config.pop(field_name, {})
         frontend_node = add_new_custom_field(
-            frontend_node,
-            field_name,
-            field_type,
-            field_value,
-            field_required,
-            config,
+            frontend_node=frontend_node,
+            field_name=field_name,
+            field_type=field_type,
+            field_value=field_value,
+            field_required=field_required,
+            field_config=config,
         )
     if "kwargs" in function_args_names and not all(key in function_args_names for key in field_config):
         for field_name, config in _field_config.items():
@@ -230,17 +230,17 @@ def add_extra_fields(frontend_node, field_config, function_args):
             _config = config.model_dump() if isinstance(config, BaseModel) else config
             _field_name, field_type, field_value, field_required = get_field_properties(extra_field=_config)
             frontend_node = add_new_custom_field(
-                frontend_node,
-                _field_name,
-                field_type,
-                field_value,
-                field_required,
-                _config,
+                frontend_node=frontend_node,
+                field_name=_field_name,
+                field_type=field_type,
+                field_value=field_value,
+                field_required=field_required,
+                field_config=_config,
             )
 
 
 def get_field_dict(field: Input | dict):
-    """Get the field dictionary from a Input or a dict"""
+    """Get the field dictionary from a Input or a dict."""
     if isinstance(field, Input):
         return dotdict(field.model_dump(by_alias=True, exclude_none=True))
     return field
@@ -248,11 +248,10 @@ def get_field_dict(field: Input | dict):
 
 def run_build_inputs(
     custom_component: Component,
-    user_id: str | UUID | None = None,
 ):
     """Run the build inputs of a custom component."""
     try:
-        return custom_component.build_inputs(user_id=user_id)
+        return custom_component.build_inputs()
         # add_extra_fields(frontend_node, field_config, field_config.values())
     except Exception as exc:
         logger.exception("Error running build inputs")
@@ -260,81 +259,88 @@ def run_build_inputs(
 
 
 def get_component_instance(custom_component: CustomComponent, user_id: str | UUID | None = None):
-    try:
-        if custom_component._code is None:
-            msg = "Code is None"
-            raise ValueError(msg)
-        if isinstance(custom_component._code, str):
+    if custom_component._code is None:
+        error = "Code is None"
+    elif not isinstance(custom_component._code, str):
+        error = "Invalid code type"
+    else:
+        try:
             custom_class = eval_custom_component_code(custom_component._code)
-        else:
-            msg = "Invalid code type"
-            raise TypeError(msg)
-    except Exception as exc:
-        logger.exception("Error while evaluating custom component code")
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": ("Invalid type convertion. Please check your code and try again."),
-                "traceback": traceback.format_exc(),
-            },
-        ) from exc
+        except Exception as exc:
+            logger.exception("Error while evaluating custom component code")
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": ("Invalid type conversion. Please check your code and try again."),
+                    "traceback": traceback.format_exc(),
+                },
+            ) from exc
 
-    try:
-        return custom_class(_user_id=user_id, _code=custom_component._code)
-    except Exception as exc:
-        logger.exception("Error while instantiating custom component")
-        if hasattr(exc, "detail") and "traceback" in exc.detail:
-            logger.error(exc.detail["traceback"])
+        try:
+            return custom_class(_user_id=user_id, _code=custom_component._code)
+        except Exception as exc:
+            logger.exception("Error while instantiating custom component")
+            if hasattr(exc, "detail") and "traceback" in exc.detail:
+                logger.error(exc.detail["traceback"])
 
-        raise
+            raise
+
+    msg = f"Invalid type conversion: {error}. Please check your code and try again."
+    logger.error(msg)
+    raise HTTPException(
+        status_code=400,
+        detail={"error": msg},
+    )
 
 
 def run_build_config(
     custom_component: CustomComponent,
     user_id: str | UUID | None = None,
 ) -> tuple[dict, CustomComponent]:
-    """Build the field configuration for a custom component"""
-
-    try:
-        if custom_component._code is None:
-            msg = "Code is None"
-            raise ValueError(msg)
-        if isinstance(custom_component._code, str):
+    """Build the field configuration for a custom component."""
+    if custom_component._code is None:
+        error = "Code is None"
+    elif not isinstance(custom_component._code, str):
+        error = "Invalid code type"
+    else:
+        try:
             custom_class = eval_custom_component_code(custom_component._code)
-        else:
-            msg = "Invalid code type"
-            raise TypeError(msg)
-    except Exception as exc:
-        logger.exception("Error while evaluating custom component code")
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": ("Invalid type convertion. Please check your code and try again."),
-                "traceback": traceback.format_exc(),
-            },
-        ) from exc
+        except Exception as exc:
+            logger.exception("Error while evaluating custom component code")
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": ("Invalid type conversion. Please check your code and try again."),
+                    "traceback": traceback.format_exc(),
+                },
+            ) from exc
 
-    try:
-        custom_instance = custom_class(_user_id=user_id)
-        build_config: dict = custom_instance.build_config()
+        try:
+            custom_instance = custom_class(_user_id=user_id)
+            build_config: dict = custom_instance.build_config()
 
-        for field_name, field in build_config.copy().items():
-            # Allow user to build Input as well
-            # as a dict with the same keys as Input
-            field_dict = get_field_dict(field)
-            # Let's check if "rangeSpec" is a RangeSpec object
-            if "rangeSpec" in field_dict and isinstance(field_dict["rangeSpec"], RangeSpec):
-                field_dict["rangeSpec"] = field_dict["rangeSpec"].model_dump()
-            build_config[field_name] = field_dict
+            for field_name, field in build_config.copy().items():
+                # Allow user to build Input as well
+                # as a dict with the same keys as Input
+                field_dict = get_field_dict(field)
+                # Let's check if "rangeSpec" is a RangeSpec object
+                if "rangeSpec" in field_dict and isinstance(field_dict["rangeSpec"], RangeSpec):
+                    field_dict["rangeSpec"] = field_dict["rangeSpec"].model_dump()
+                build_config[field_name] = field_dict
 
+        except Exception as exc:
+            logger.exception("Error while building field config")
+            if hasattr(exc, "detail") and "traceback" in exc.detail:
+                logger.error(exc.detail["traceback"])
+            raise
         return build_config, custom_instance
 
-    except Exception as exc:
-        logger.exception("Error while building field config")
-        if hasattr(exc, "detail") and "traceback" in exc.detail:
-            logger.error(exc.detail["traceback"])
-
-        raise
+    msg = f"Invalid type conversion: {error}. Please check your code and try again."
+    logger.error(msg)
+    raise HTTPException(
+        status_code=400,
+        detail={"error": msg},
+    )
 
 
 def add_code_field(frontend_node: CustomComponentFrontendNode, raw_code):
@@ -384,15 +390,25 @@ def build_custom_component_template(
     custom_component: CustomComponent,
     user_id: str | UUID | None = None,
 ) -> tuple[dict[str, Any], CustomComponent | Component]:
-    """Build a custom component template"""
+    """Build a custom component template."""
     try:
-        if not hasattr(custom_component, "template_config"):
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": ("Please check if you are importing Component correctly."),
-                },
-            )
+        has_template_config = hasattr(custom_component, "template_config")
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": (f"Error building Component: {exc}"),
+                "traceback": traceback.format_exc(),
+            },
+        ) from exc
+    if not has_template_config:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": ("Error building Component. Please check if you are importing Component correctly."),
+            },
+        )
+    try:
         if "inputs" in custom_component.template_config:
             return build_custom_component_template_from_inputs(custom_component, user_id=user_id)
         frontend_node = CustomComponentFrontendNode(**custom_component.template_config)
@@ -408,8 +424,8 @@ def build_custom_component_template(
 
         frontend_node = add_code_field(frontend_node, custom_component._code)
 
-        add_base_classes(frontend_node, custom_component.get_function_entrypoint_return_type)
-        add_output_types(frontend_node, custom_component.get_function_entrypoint_return_type)
+        add_base_classes(frontend_node, custom_component._get_function_entrypoint_return_type)
+        add_output_types(frontend_node, custom_component._get_function_entrypoint_return_type)
 
         reorder_fields(frontend_node, custom_instance._get_field_order())
 
@@ -494,11 +510,12 @@ def update_field_dict(
     custom_component_instance: "CustomComponent",
     field_dict: dict,
     build_config: dict,
+    *,
     update_field: str | None = None,
     update_field_value: Any | None = None,
     call: bool = False,
 ):
-    """Update the field dictionary by calling options() or value() if they are callable"""
+    """Update the field dictionary by calling options() or value() if they are callable."""
     if (
         ("real_time_refresh" in field_dict or "refresh_button" in field_dict)
         and any(
@@ -555,7 +572,7 @@ def build_component(component):
 
 
 def get_function(code):
-    """Get the function"""
+    """Get the function."""
     function_name = validate.extract_function_name(code)
 
     return validate.create_function(code, function_name)

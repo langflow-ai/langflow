@@ -62,6 +62,7 @@ DIRECT_TYPES = [
     "prompt",
     "code",
     "NestedDict",
+    "table",
 ]
 
 

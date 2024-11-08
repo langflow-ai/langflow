@@ -49,12 +49,16 @@ class FrontendNode(BaseModel):
     """Order of the fields in the frontend node."""
     beta: bool = False
     """Whether the frontend node is in beta."""
+    legacy: bool = False
+    """Whether the frontend node is legacy."""
     error: str | None = None
     """Error message for the frontend node."""
     edited: bool = False
     """Whether the frontend node has been edited."""
     metadata: dict = {}
     """Metadata for the component node."""
+    tool_mode: bool = False
+    """Whether the frontend node is in tool mode."""
 
     def set_documentation(self, documentation: str) -> None:
         """Sets the documentation of the frontend node."""
@@ -63,13 +67,11 @@ class FrontendNode(BaseModel):
     @field_serializer("base_classes")
     def process_base_classes(self, base_classes: list[str]) -> list[str]:
         """Removes unwanted base classes from the list of base classes."""
-
         return sorted(set(base_classes), key=lambda x: x.lower())
 
     @field_serializer("display_name")
     def process_display_name(self, display_name: str) -> str:
         """Sets the display name of the frontend node."""
-
         return display_name or self.name
 
     @model_serializer(mode="wrap")
@@ -83,7 +85,10 @@ class FrontendNode(BaseModel):
         if "output_types" in result and not result.get("outputs"):
             for base_class in result["output_types"]:
                 output = Output(
-                    display_name=base_class, name=base_class.lower(), types=[base_class], selected=base_class
+                    display_name=base_class,
+                    name=base_class.lower(),
+                    types=[base_class],
+                    selected=base_class,
                 )
                 result["outputs"].append(output.model_dump())
 
@@ -96,7 +101,7 @@ class FrontendNode(BaseModel):
         return cls(**data)
 
     # For backwards compatibility
-    def to_dict(self, keep_name=True) -> dict:
+    def to_dict(self, *, keep_name=True) -> dict:
         """Returns a dict representation of the frontend node."""
         dump = self.model_dump(by_alias=True, exclude_none=True)
         if not keep_name:
@@ -109,7 +114,7 @@ class FrontendNode(BaseModel):
     def add_extra_base_classes(self) -> None:
         pass
 
-    def set_base_classes_from_outputs(self):
+    def set_base_classes_from_outputs(self) -> None:
         self.base_classes = [output_type for output in self.outputs for output_type in output.types]
 
     def validate_component(self) -> None:
@@ -182,13 +187,13 @@ class FrontendNode(BaseModel):
         kwargs["template"] = template
         return cls(**kwargs)
 
-    def set_field_value_in_template(self, field_name, value):
+    def set_field_value_in_template(self, field_name, value) -> None:
         for field in self.template.fields:
             if field.name == field_name:
                 field.value = value
                 break
 
-    def set_field_load_from_db_in_template(self, field_name, value):
+    def set_field_load_from_db_in_template(self, field_name, value) -> None:
         for field in self.template.fields:
             if field.name == field_name and hasattr(field, "load_from_db"):
                 field.load_from_db = value

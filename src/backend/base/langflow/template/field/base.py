@@ -99,7 +99,7 @@ class Input(BaseModel):
     def serialize_model(self, handler):
         result = handler(self)
         # If the field is str, we add the Text input type
-        if self.field_type in ["str", "Text"] and "input_types" not in result:
+        if self.field_type in {"str", "Text"} and "input_types" not in result:
             result["input_types"] = ["Text"]
         if self.field_type == Text:
             result["type"] = "str"
@@ -137,6 +137,7 @@ class Input(BaseModel):
         return value
 
     @field_validator("file_types")
+    @classmethod
     def validate_file_types(cls, value):
         if not isinstance(value, list):
             msg = "file_types must be a list"
@@ -191,12 +192,12 @@ class Output(BaseModel):
     def to_dict(self):
         return self.model_dump(by_alias=True, exclude_none=True)
 
-    def add_types(self, _type: list[Any]):
+    def add_types(self, _type: list[Any]) -> None:
         if self.types is None:
             self.types = []
         self.types.extend([t for t in _type if t not in self.types])
 
-    def set_selected(self):
+    def set_selected(self) -> None:
         if not self.selected and self.types:
             self.selected = self.types[0]
 

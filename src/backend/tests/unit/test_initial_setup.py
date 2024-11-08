@@ -1,10 +1,11 @@
+import asyncio
 from datetime import datetime
 from pathlib import Path
 
 import pytest
-from sqlmodel import select
-
-from langflow.custom.directory_reader.utils import build_custom_component_list_from_path
+from langflow.custom.directory_reader.utils import (
+    abuild_custom_component_list_from_path,
+)
 from langflow.initial_setup.setup import (
     STARTER_FOLDER_NAME,
     get_project_data,
@@ -14,6 +15,7 @@ from langflow.initial_setup.setup import (
 from langflow.interface.types import aget_all_types_dict
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import session_scope
+from sqlmodel import select
 
 
 def test_load_starter_projects():
@@ -34,7 +36,11 @@ def test_get_project_data():
             project_data,
             project_icon,
             project_icon_bg_color,
+            project_gradient,
+            project_tags,
         ) = get_project_data(project)
+        assert isinstance(project_gradient, str) or project_gradient is None
+        assert isinstance(project_tags, list)
         assert isinstance(project_name, str)
         assert isinstance(project_description, str)
         assert isinstance(project_is_component, bool)
@@ -44,23 +50,23 @@ def test_get_project_data():
         assert isinstance(project_icon_bg_color, str) or project_icon_bg_color is None
 
 
-@pytest.mark.asyncio
+@pytest.mark.usefixtures("client")
 async def test_create_or_update_starter_projects():
     with session_scope() as session:
         # Get the number of projects returned by load_starter_projects
-        num_projects = len(load_starter_projects())
+        num_projects = len(await asyncio.to_thread(load_starter_projects))
 
         # Get the number of projects in the database
         folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
         assert folder is not None
         num_db_projects = len(folder.flows)
 
-        # Check that the number of projects in the database is the same as the number of projects returned by load_starter_projects
+        # Check that the number of projects in the database is the same as the number of projects returned by
+        # load_starter_projects
         assert num_db_projects == num_projects
 
 
 # Some starter projects require integration
-# @pytest.mark.asyncio
 # async def test_starter_projects_can_run_successfully(client):
 #     with session_scope() as session:
 #         # Run the function to create or update projects
@@ -72,7 +78,8 @@ async def test_create_or_update_starter_projects():
 #         # Get the number of projects in the database
 #         num_db_projects = session.exec(select(func.count(Flow.id)).where(Flow.folder == STARTER_FOLDER_NAME)).one()
 
-#         # Check that the number of projects in the database is the same as the number of projects returned by load_starter_projects
+#         # Check that the number of projects in the database is the same as the number of projects returned by
+#         # load_starter_projects
 #         assert num_db_projects == num_projects
 
 #         # Get all the starter projects
@@ -95,39 +102,39 @@ async def test_create_or_update_starter_projects():
 #         delete_messages(session_id="test")
 
 
-def find_componeny_by_name(components, name):
-    for category, children in components.items():
+def find_component_by_name(components, name):
+    for children in components.values():
         if name in children:
             return children[name]
-    raise ValueError(f"Component {name} not found in components")
+    msg = f"Component {name} not found in components"
+    raise ValueError(msg)
 
 
 def set_value(component, input_name, value):
     component["template"][input_name]["value"] = value
 
 
-def component_to_node(id, type, component):
-    return {"id": type + id, "data": {"node": component, "type": type, "id": id}}
+def component_to_node(node_id, node_type, component):
+    return {"id": node_type + node_id, "data": {"node": component, "type": node_type, "id": node_id}}
 
 
-def add_edge(input, output, from_output, to_input):
+def add_edge(source, target, from_output, to_input):
     return {
-        "source": input,
-        "target": output,
+        "source": source,
+        "target": target,
         "data": {
-            "sourceHandle": {"dataType": "ChatInput", "id": input, "name": from_output, "output_types": ["Message"]},
-            "targetHandle": {"fieldName": to_input, "id": output, "inputTypes": ["Message"], "type": "str"},
+            "sourceHandle": {"dataType": "ChatInput", "id": source, "name": from_output, "output_types": ["Message"]},
+            "targetHandle": {"fieldName": to_input, "id": target, "inputTypes": ["Message"], "type": "str"},
         },
     }
 
 
-@pytest.mark.asyncio
 async def test_refresh_starter_projects():
     data_path = str(Path(__file__).parent.parent.parent.absolute() / "base" / "langflow" / "components")
-    components = build_custom_component_list_from_path(data_path)
+    components = await abuild_custom_component_list_from_path(data_path)
 
-    chat_input = find_componeny_by_name(components, "ChatInput")
-    chat_output = find_componeny_by_name(components, "ChatOutput")
+    chat_input = find_component_by_name(components, "ChatInput")
+    chat_output = find_component_by_name(components, "ChatOutput")
     chat_output["template"]["code"]["value"] = "changed !"
     del chat_output["template"]["should_store_message"]
     graph_data = {

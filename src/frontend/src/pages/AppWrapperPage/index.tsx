@@ -1,6 +1,5 @@
 import AlertDisplayArea from "@/alerts/displayArea";
 import CrashErrorComponent from "@/components/crashErrorComponent";
-import { CustomHeader } from "@/customization/components/custom-header";
 import { ErrorBoundary } from "react-error-boundary";
 import { Outlet } from "react-router-dom";
 import { GenericErrorComponent } from "./components/GenericErrorComponent";
@@ -10,8 +9,7 @@ export function AppWrapperPage() {
   const { healthCheckTimeout, fetchingHealth, refetch } = useHealthCheck();
 
   return (
-    <div className="flex h-full flex-col">
-      <CustomHeader />
+    <div className="flex flex-col">
       <ErrorBoundary
         onReset={() => {
           // any reset function

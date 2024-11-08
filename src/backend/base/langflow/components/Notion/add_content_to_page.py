@@ -74,7 +74,7 @@ class AddContentToPage(LCToolComponent):
                 "children": blocks,
             }
 
-            response = requests.patch(url, headers=headers, json=data)
+            response = requests.patch(url, headers=headers, json=data, timeout=10)
             response.raise_for_status()
 
             return response.json()
@@ -96,7 +96,7 @@ class AddContentToPage(LCToolComponent):
                     heading_level = text.count("#", 0, 6)
                     heading_text = text[heading_level:].strip()
                     if heading_level in range(3):
-                        blocks.append(self.create_block(f"heading_{heading_level+1}", heading_text))
+                        blocks.append(self.create_block(f"heading_{heading_level + 1}", heading_text))
                 else:
                     blocks.append(self.create_block("paragraph", text))
         elif node.name == "h1":
@@ -216,7 +216,7 @@ class AddContentToPage(LCToolComponent):
             block_type: {},
         }
 
-        if block_type in [
+        if block_type in {
             "paragraph",
             "heading_1",
             "heading_2",
@@ -224,7 +224,7 @@ class AddContentToPage(LCToolComponent):
             "bulleted_list_item",
             "numbered_list_item",
             "quote",
-        ]:
+        }:
             block[block_type]["rich_text"] = [
                 {
                     "type": "text",
