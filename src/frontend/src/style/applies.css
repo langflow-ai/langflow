@@ -1281,8 +1281,6 @@
   left: 0;
   justify-content: center;
   align-items: center;
-  user-select: none;
-  text-shadow: 1px 1px rgba(0, 0, 0, 0.1);
 }
 
 :root {
@@ -1326,7 +1324,7 @@
     var(--color-bg1);
   top: 0;
   left: 0;
-  opacity: 0.6;
+  background-blend-mode: overlay;
 
   svg {
     display: none;

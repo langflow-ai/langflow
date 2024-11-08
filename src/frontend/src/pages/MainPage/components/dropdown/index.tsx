@@ -78,11 +78,11 @@ const DropdownComponent = ({
         data-testid="btn-download-json"
       >
         <ForwardedIconComponent
-          name="download"
+          name="Download"
           aria-hidden="true"
           className="mr-2 h-4 w-4"
         />
-        Download JSON
+        Download
       </DropdownMenuItem>
       <DropdownMenuItem
         onClick={(e) => {
@@ -93,7 +93,7 @@ const DropdownComponent = ({
         data-testid="btn-duplicate-flow"
       >
         <ForwardedIconComponent
-          name="copy-plus"
+          name="CopyPlus"
           aria-hidden="true"
           className="mr-2 h-4 w-4"
         />
@@ -104,10 +104,10 @@ const DropdownComponent = ({
           e.stopPropagation();
           setOpenDelete(true);
         }}
-        className="cursor-pointer text-red-500 focus:text-red-500 dark:text-red-500 dark:focus:text-red-500"
+        className="cursor-pointer text-destructive"
       >
         <ForwardedIconComponent
-          name="trash"
+          name="Trash2"
           aria-hidden="true"
           className="mr-2 h-4 w-4"
         />
