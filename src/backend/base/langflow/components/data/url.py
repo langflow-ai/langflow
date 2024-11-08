@@ -21,6 +21,7 @@ class URLComponent(Component):
             display_name="URLs",
             info="Enter one or more URLs, by clicking the '+' button.",
             is_list=True,
+            tool_mode=True,
         ),
         DropdownInput(
             name="format",
