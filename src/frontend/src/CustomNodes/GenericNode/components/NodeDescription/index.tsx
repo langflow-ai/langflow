@@ -134,7 +134,7 @@ export default function NodeDescription({
           data-testid="generic-node-desc"
           ref={overflowRef}
           className={cn(
-            "nodoubleclick generic-node-desc-text h-full cursor-text text-[13px] word-break-break-word",
+            "nodoubleclick generic-node-desc-text h-full cursor-text text-[13px] text-muted-foreground word-break-break-word",
             description === "" || !description ? "font-light italic" : "",
             placeholderClassName,
           )}
@@ -149,7 +149,7 @@ export default function NodeDescription({
             <Markdown
               linkTarget="_blank"
               className={cn(
-                "markdown prose flex h-full w-full flex-col text-[13px] leading-5 text-foreground word-break-break-word",
+                "markdown prose flex h-full w-full flex-col text-[13px] leading-5 word-break-break-word",
                 mdClassName,
               )}
             >
