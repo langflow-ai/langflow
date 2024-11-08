@@ -1,16 +1,8 @@
 ---
-title: Intro to Components
+title: How to build flows with components
 sidebar_position: 0
-slug: /components
+slug: /components-overview
 ---
-
-
-
-## Component {#0323a728d8314767adb907b998036bb4}
-
-
----
-
 
 A component is a single building block within a flow. It consists of inputs, outputs, and parameters that define their functionality. These elements provide a convenient and  straightforward way to compose LLM-based applications. Learn more about components and how they work below.
 
@@ -24,7 +16,7 @@ During the flow creation process, you will notice handles (colored circles) atta
 On the top right corner of the component, you'll find the a play button to run a component. Once it runs, a status icon appears and you can hover over that to visualize success or error messages. Start interacting with your AI by clicking the **Playground** at the bottom right of the workspace.
 
 
-### Component Menu {#7e3f2f8ff5074b2fb3eee97c9cfaabe7}
+## Component Menu {#7e3f2f8ff5074b2fb3eee97c9cfaabe7}
 
 
 Each component is unique, but they all have a menu bar at the top that looks something like this.
@@ -42,7 +34,7 @@ It consists of options such as:
 Click **All** (the "..." button) to see all options.
 
 
-### Output Preview {#ed7b3c34e0774b8a916b0e68821c9a7a}
+## Output Preview {#ed7b3c34e0774b8a916b0e68821c9a7a}
 
 
 Langflow includes an output visualizer for components that opens a pop-up screen. This allows you to easily inspect and monitor transmissions between components, providing instant feedback on your workflows.
@@ -51,7 +43,7 @@ Langflow includes an output visualizer for components that opens a pop-up screen
 ![](./987204819.png)
 
 
-### Advanced Settings {#b6430d4903df44f0ba4618a558c83d7b}
+## Advanced Settings {#b6430d4903df44f0ba4618a558c83d7b}
 
 
 Langflow components can be edited by clicking the **Advanced Settings** button.
@@ -63,7 +55,7 @@ Hide parameters with the **Show** button to reduce complexity and keep the wor
 You can also double-click a component's name and description to modify those. Component descriptions accept markdown syntax.
 
 
-### Group Components {#c3f5ed818e3b40ceb6534dc358e1a5f2}
+## Group Components {#c3f5ed818e3b40ceb6534dc358e1a5f2}
 
 
 Multiple components can be grouped into a single component for reuse. This is useful when combining large flows into single components (like RAG with a vector database, for example) and saving space.
@@ -77,7 +69,7 @@ Multiple components can be grouped into a single component for reuse. This is us
 [group video here]
 
 
-### Component Version {#887fd587589448dc8c27336d1c235b9b}
+## Component Version {#887fd587589448dc8c27336d1c235b9b}
 
 
 A component's state is stored in a database, while sidebar components are like starter templates. As soon as you drag a component from the sidebar to the workspace, the two components are no longer in parity.
