@@ -23,6 +23,7 @@ import { getNodeInputColors } from "../helpers/get-node-input-colors";
 import { getNodeInputColorsName } from "../helpers/get-node-input-colors-name";
 import { getNodeOutputColors } from "../helpers/get-node-output-colors";
 import { getNodeOutputColorsName } from "../helpers/get-node-output-colors-name";
+import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
 import useCheckCodeValidity from "../hooks/use-check-code-validity";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
 import getFieldTitle from "../utils/get-field-title";
@@ -34,6 +35,26 @@ import NodeOutputField from "./components/NodeOutputfield";
 import NodeStatus from "./components/NodeStatus";
 import { NodeIcon } from "./components/nodeIcon";
 import { useBuildStatus } from "./hooks/use-get-build-status";
+
+const sortToolModeFields = (
+  a: string,
+  b: string,
+  template: any,
+  fieldOrder: string[],
+  isToolMode: boolean,
+) => {
+  if (!isToolMode) return sortFields(a, b, fieldOrder);
+
+  const aToolMode = template[a]?.tool_mode ?? false;
+  const bToolMode = template[b]?.tool_mode ?? false;
+
+  // If one is tool_mode and the other isn't, tool_mode goes last
+  if (aToolMode && !bToolMode) return 1;
+  if (!aToolMode && bToolMode) return -1;
+
+  // If both are tool_mode or both aren't, use regular field order
+  return sortFields(a, b, fieldOrder);
+};
 
 export default function GenericNode({
   data,
@@ -85,6 +106,8 @@ export default function GenericNode({
 
   const { mutate: validateComponentCode } = usePostValidateComponentCode();
 
+  const edges = useFlowStore((state) => state.edges);
+
   const handleUpdateCode = () => {
     setLoadingUpdate(true);
     takeSnapshot();
@@ -99,9 +122,15 @@ export default function GenericNode({
       validateComponentCode(
         { code: currentCode, frontend_node: data.node },
         {
-          onSuccess: ({ data, type }) => {
-            if (data && type && updateNodeCode) {
-              updateNodeCode(data, currentCode, "code", type);
+          onSuccess: ({ data: resData, type }) => {
+            if (resData && type && updateNodeCode) {
+              const newNode = processNodeAdvancedFields(
+                resData,
+                edges,
+                data.id,
+              );
+
+              updateNodeCode(newNode, currentCode, "code", type);
               setLoadingUpdate(false);
             }
           },
@@ -171,6 +200,7 @@ export default function GenericNode({
         showNode={showNode}
         outputName={output.name}
         colorName={getNodeOutputColorsName(output, data, types)}
+        isToolMode={isToolMode}
       />
     );
   };
@@ -218,9 +248,21 @@ export default function GenericNode({
     shortcuts,
   ]);
 
+  const isToolMode =
+    data.node?.outputs?.some((output) => output.name === "component_as_tool") ??
+    false;
+
   const renderInputParameter = Object.keys(data.node!.template)
     .filter((templateField) => templateField.charAt(0) !== "_")
-    .sort((a, b) => sortFields(a, b, data.node?.field_order ?? []))
+    .sort((a, b) =>
+      sortToolModeFields(
+        a,
+        b,
+        data.node!.template,
+        data.node?.field_order ?? [],
+        isToolMode,
+      ),
+    )
     .map(
       (templateField: string, idx) =>
         data.node!.template[templateField]?.show &&
@@ -262,6 +304,9 @@ export default function GenericNode({
               data.node?.template[templateField].type,
               types,
             )}
+            isToolMode={
+              isToolMode && data.node!.template[templateField].tool_mode
+            }
           />
         ),
     );

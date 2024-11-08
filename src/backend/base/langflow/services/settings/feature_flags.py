@@ -2,7 +2,6 @@ from pydantic_settings import BaseSettings
 
 
 class FeatureFlags(BaseSettings):
-    add_toolkit_output: bool = False
     mvp_components: bool = False
 
     class Config:

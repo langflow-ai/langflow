@@ -1,8 +1,9 @@
-import { expect, test } from "@playwright/test";
+import { test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 
 // TODO: fix this test
-test.skip("user must be able to stop a building", async ({ page }) => {
+test("user must be able to stop a building", async ({ page }) => {
+  test.skip(true, "Test is flaky");
   await page.goto("/");
   // await page.waitForTimeout(2000);
 
@@ -230,7 +231,7 @@ class CustomComponent(Component):
     name = "CustomComponent"
 
     inputs = [
-        MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!"),
+        MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!", tool_mode=True),
     ]
 
     outputs = [
