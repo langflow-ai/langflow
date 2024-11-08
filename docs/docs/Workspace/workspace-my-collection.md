@@ -1,7 +1,7 @@
 ---
-title: My Collection
-sidebar_position: 3
-slug: /configuration-my-collection
+title: Manage flows and components
+sidebar_position: 5
+slug: /workspace-my-collection
 ---
 
 Manage, organize, and access your flows and components in the **My Collection** space.
@@ -13,7 +13,6 @@ Flows and components are displayed as individual cards that provide relevant inf
 - **Select All**: View all projects displayed on the page for batch actions like moving, deleting, or exporting.
 
 Click on a flow card to open it in the **Workspace**, or click the **Playground Button** for direct access to execute and interact with the flow’s chatbot interface.
-
 
 ## Create and manage folders {#776a3866273f4efbbbb2febdfc1baa12}
 
@@ -28,8 +27,6 @@ To create a new folder:
 2. Click **Add a New Folder**.
 3. Double-click the new folder to rename it.
 4. Drag and drop files into the folder to organize your content.
-
-![](./711485342.gif)
 
 Hover over a folder to display options for deleting or downloading the folder.
 Folders are transferred as a single JSON file.

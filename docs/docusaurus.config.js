@@ -83,8 +83,12 @@ const config = {
       {
         redirects: [
           {
-            to: '/configuration-my-collection',
+            to: '/workspace-my-collection',
             from: ['/365085a8-a90a-43f9-a779-f8769ec7eca1', '/My-Collection'],
+          },
+          {
+            to: '/workspace-overview',
+            from: '/workspace',
           },
           // add more redirects like this
           // {

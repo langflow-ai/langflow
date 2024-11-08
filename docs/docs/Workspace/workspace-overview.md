@@ -1,19 +1,11 @@
 ---
 title: Workspace Overview
-sidebar_position: 0
-slug: /workspace
+sidebar_position: 1
+slug: /workspace-overview
 ---
 
 
-
-## The Langflow Workspace {#5c8161f9bcc14bfca766685d15251d0c}
-
-
----
-
-
-The **Langflow Workspace** is where you assemble new flows and create AIs by connecting and running components. 
-
+Assemble new flows and create AIs by connecting and running components  in the **Langflow Workspace**.
 
 ![](./310382168.png)
 
