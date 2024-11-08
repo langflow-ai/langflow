@@ -410,7 +410,7 @@ test("should create a flow with decision", async ({ page }) => {
   await page.getByTestId("showignored_message").last().click();
   await page.getByText("Close").last().click();
   await page
-    .getByTestId("handle-conditionalrouter-shownode-true route-right")
+    .getByTestId("handle-dataconditionalrouter-shownode-true output-right")
     .nth(0)
     .click();
   await page
@@ -418,7 +418,7 @@ test("should create a flow with decision", async ({ page }) => {
     .nth(1)
     .click();
   await page
-    .getByTestId("handle-conditionalrouter-shownode-false route-right")
+    .getByTestId("handle-dataconditionalrouter-shownode-false output-right")
     .nth(0)
     .click();
   await page
