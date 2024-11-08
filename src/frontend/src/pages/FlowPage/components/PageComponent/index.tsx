@@ -38,8 +38,6 @@ import ReactFlow, {
   Panel,
   SelectionDragHandler,
   updateEdge,
-  useReactFlow,
-  useViewport,
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import {
@@ -565,11 +563,10 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
 
   const handleEdgeClick = (event, edge) => {
     const color =
-      nodeColorsName[edge?.data?.targetHandle?.inputTypes[0]] ||
-      "hsl(var(--foreground))";
+      nodeColorsName[edge?.data?.targetHandle?.inputTypes[0]] || "cyan";
 
-    const accentColor = `hsl(var(--accent-${color}-foreground))`;
-    document.documentElement.style.setProperty("--selected", accentColor);
+    const accentColor = `hsl(var(--datatype-${color}))`;
+    reactFlowWrapper.current?.style.setProperty("--selected", accentColor);
   };
 
   const { open } = useSidebar();
