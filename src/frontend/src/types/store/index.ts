@@ -45,6 +45,7 @@ export type shortcutsStoreType = {
   download: string;
   freeze: string;
   FreezePath: string;
+  toolMode: string;
   shortcuts: Array<{
     name: string;
     shortcut: string;
