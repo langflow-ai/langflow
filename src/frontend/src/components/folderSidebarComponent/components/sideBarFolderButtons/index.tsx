@@ -433,44 +433,42 @@ const SideBarFoldersButtonsComponent = ({
                           onDoubleClick={(event) => {
                             handleDoubleClick(event, item);
                           }}
-                          className="flex w-full items-center justify-between"
+                          className="flex w-full items-center justify-between gap-2"
                         >
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-1 items-center gap-2">
                             {editFolderName?.edit && !isUpdatingFolder ? (
-                              <div>
-                                <Input
-                                  className="w-36"
-                                  onChange={(e) => {
-                                    handleEditFolderName(e, item.name);
-                                  }}
-                                  ref={refInput}
-                                  onKeyDown={(e) => {
-                                    handleKeyDownFn(e, item);
-                                    handleKeyDown(e, e.key, "");
-                                  }}
-                                  autoFocus={true}
-                                  onBlur={(e) => {
-                                    // fixes autofocus problem where cursor isn't present
-                                    if (
-                                      e.relatedTarget?.id ===
-                                      `options-trigger-${item.name}`
-                                    ) {
-                                      refInput.current?.focus();
-                                      return;
-                                    }
+                              <Input
+                                className="h-6 flex-1 focus:border-0"
+                                onChange={(e) => {
+                                  handleEditFolderName(e, item.name);
+                                }}
+                                ref={refInput}
+                                onKeyDown={(e) => {
+                                  handleKeyDownFn(e, item);
+                                  handleKeyDown(e, e.key, "");
+                                }}
+                                autoFocus={true}
+                                onBlur={(e) => {
+                                  // fixes autofocus problem where cursor isn't present
+                                  if (
+                                    e.relatedTarget?.id ===
+                                    `options-trigger-${item.name}`
+                                  ) {
+                                    refInput.current?.focus();
+                                    return;
+                                  }
 
-                                    if (refInput.current?.value !== item.name) {
-                                      handleEditNameFolder(item);
-                                    } else {
-                                      editFolderName.edit = false;
-                                    }
-                                    refInput.current?.blur();
-                                  }}
-                                  value={foldersNames[item.name]}
-                                  id={`input-folder-${item.name}`}
-                                  data-testid={`input-folder`}
-                                />
-                              </div>
+                                  if (refInput.current?.value !== item.name) {
+                                    handleEditNameFolder(item);
+                                  } else {
+                                    editFolderName.edit = false;
+                                  }
+                                  refInput.current?.blur();
+                                }}
+                                value={foldersNames[item.name]}
+                                id={`input-folder-${item.name}`}
+                                data-testid={`input-folder`}
+                              />
                             ) : (
                               <span className="block w-full grow truncate text-[13px] opacity-100">
                                 {item.name}
