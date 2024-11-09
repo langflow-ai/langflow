@@ -354,7 +354,8 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
     async def _clear(self) -> None:
         self.cache.clear()
 
-    async def upsert(self, key, value, lock: asyncio.Lock | None = None) -> None:
+    @override
+    async def upsert(self, key, value, lock=None) -> None:
         await self._upsert(key, value)
 
     async def _upsert(self, key, value) -> None:
