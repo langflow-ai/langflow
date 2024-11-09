@@ -8,6 +8,9 @@ from pydantic.v1 import BaseModel as BaseModelV1
 
 def recursive_serialize_or_str(obj):
     try:
+        if isinstance(obj, type) and issubclass(obj, BaseModel):
+            # This a type BaseModel and not an instance of it
+            return repr(obj)
         if isinstance(obj, str):
             return obj
         if isinstance(obj, datetime):
@@ -30,13 +33,10 @@ def recursive_serialize_or_str(obj):
             # return f"{obj}" this generates '<generator object BaseChatModel.stream at 0x33e9ec770>'
             # it is not useful
             return "Unconsumed Stream"
-        if hasattr(obj, "dict"):
+        if hasattr(obj, "dict") and not isinstance(obj, type):
             return {k: recursive_serialize_or_str(v) for k, v in obj.dict().items()}
-        if hasattr(obj, "model_dump"):
+        if hasattr(obj, "model_dump") and not isinstance(obj, type):
             return {k: recursive_serialize_or_str(v) for k, v in obj.model_dump().items()}
-        if isinstance(obj, type) and issubclass(obj, BaseModel):
-            # This a type BaseModel and not an instance of it
-            return repr(obj)
         return str(obj)
     except Exception:  # noqa: BLE001
         logger.debug(f"Cannot serialize object {obj}")
