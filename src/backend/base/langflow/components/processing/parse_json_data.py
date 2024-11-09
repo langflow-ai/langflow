@@ -17,6 +17,7 @@ class ParseJSONDataComponent(Component):
     description = "Convert and extract JSON fields."
     icon = "braces"
     name = "ParseJSONData"
+    legacy: bool = True
 
     inputs = [
         HandleInput(

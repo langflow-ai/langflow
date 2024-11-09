@@ -70,9 +70,8 @@ class MemoryComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Messages (Data)", name="messages", method="retrieve_messages"),
-        Output(display_name="Messages (Text)", name="messages_text", method="retrieve_messages_as_text"),
-        Output(display_name="Memory", name="lc_memory", method="build_lc_memory"),
+        Output(display_name="Data", name="messages", method="retrieve_messages"),
+        Output(display_name="Text", name="messages_text", method="retrieve_messages_as_text"),
     ]
 
     def retrieve_messages(self) -> Data:

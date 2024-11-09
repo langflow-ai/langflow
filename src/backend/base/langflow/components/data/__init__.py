@@ -2,6 +2,7 @@ from .api_request import APIRequestComponent
 from .csv_to_data import CSVToDataComponent
 from .directory import DirectoryComponent
 from .file import FileComponent
+from .json_to_data import JSONToDataComponent
 from .sql_executor import SQLExecutorComponent
 from .url import URLComponent
 from .webhook import WebhookComponent
@@ -14,4 +15,5 @@ __all__ = [
     "SQLExecutorComponent",
     "URLComponent",
     "WebhookComponent",
+    "JSONToDataComponent",
 ]

@@ -4,10 +4,11 @@ from langflow.schema.message import Message
 
 
 class ConditionalRouterComponent(Component):
-    display_name = "Conditional Router"
+    display_name = "If-Else"
     description = "Routes an input message to a corresponding output based on text comparison."
-    icon = "equal"
+    icon = "split"
     name = "ConditionalRouter"
+    legacy = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -16,7 +17,7 @@ class ConditionalRouterComponent(Component):
     inputs = [
         MessageTextInput(
             name="input_text",
-            display_name="Input Text",
+            display_name="Text Input",
             info="The primary text input for the operation.",
         ),
         MessageTextInput(
@@ -30,7 +31,6 @@ class ConditionalRouterComponent(Component):
             options=["equals", "not equals", "contains", "starts with", "ends with"],
             info="The operator to apply for comparing the texts.",
             value="equals",
-            advanced=True,
         ),
         BoolInput(
             name="case_sensitive",
@@ -43,6 +43,7 @@ class ConditionalRouterComponent(Component):
             name="message",
             display_name="Message",
             info="The message to pass through either route.",
+            advanced=True,
         ),
         IntInput(
             name="max_iterations",
@@ -61,8 +62,8 @@ class ConditionalRouterComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="True Route", name="true_result", method="true_response"),
-        Output(display_name="False Route", name="false_result", method="false_response"),
+        Output(display_name="True", name="true_result", method="true_response"),
+        Output(display_name="False", name="false_result", method="false_response"),
     ]
 
     def _pre_run_setup(self):

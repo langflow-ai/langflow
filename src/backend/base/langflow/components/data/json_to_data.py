@@ -9,7 +9,7 @@ from langflow.schema import Data
 
 
 class JSONToDataComponent(Component):
-    display_name = "JSON to Data"
+    display_name = "Load JSON"
     description = (
         "Convert a JSON file, JSON from a file path, or a JSON string to a Data object or a list of Data objects"
     )

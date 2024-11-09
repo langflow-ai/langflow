@@ -16,7 +16,7 @@ class SubFlowComponent(Component):
     description = "Generates a Component from a Flow, with all of its inputs, and "
     name = "SubFlow"
     beta: bool = True
-    icon = "Sigma"
+    icon = "Workflow"
 
     def get_flow_names(self) -> list[str]:
         flow_data = self.list_flows()

@@ -11,6 +11,7 @@ class DataConditionalRouterComponent(Component):
     icon = "split"
     beta = True
     name = "DataConditionalRouter"
+    legacy = True
 
     inputs = [
         DataInput(
@@ -26,14 +27,14 @@ class DataConditionalRouterComponent(Component):
         ),
         DropdownInput(
             name="operator",
-            display_name="Comparison Operator",
+            display_name="Operator",
             options=["equals", "not equals", "contains", "starts with", "ends with", "boolean validator"],
             info="The operator to apply for comparing the values. 'boolean validator' treats the value as a boolean.",
             value="equals",
         ),
         MessageTextInput(
             name="compare_value",
-            display_name="Compare Value",
+            display_name="Match Text",
             info="The value to compare against (not used for boolean validator)",
         ),
     ]

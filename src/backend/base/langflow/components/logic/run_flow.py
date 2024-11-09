@@ -16,7 +16,8 @@ class RunFlowComponent(Component):
     description = "A component to run a flow."
     name = "RunFlow"
     beta: bool = True
-    icon = "Sigma"
+    legacy: bool = True
+    icon = "workflow"
 
     def get_flow_names(self) -> list[str]:
         flow_data = self.list_flows()

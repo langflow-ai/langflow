@@ -14,6 +14,7 @@ import {
   ArrowBigUp,
   ArrowLeft,
   ArrowRight,
+  ArrowRightLeft,
   ArrowUpRight,
   ArrowUpToLine,
   Bell,
@@ -454,8 +455,8 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Text Splitters", name: "textsplitters", icon: "Scissors" },
   { display_name: "Toolkits", name: "toolkits", icon: "Package2" },
   { display_name: "Tools", name: "tools", icon: "Hammer" },
-  { display_name: "Logic", name: "logic", icon: "Sigma" },
-  { display_name: "Processing", name: "processing", icon: "Braces" },
+  { display_name: "Logic", name: "logic", icon: "ArrowRightLeft" },
+  { display_name: "Processing", name: "processing", icon: "ListFilter" },
 ];
 
 export const SIDEBAR_BUNDLES = [
@@ -845,4 +846,5 @@ export const nodeIconsLucide: iconsType = {
   Radio,
   DatabaseZap,
   Cog,
+  ArrowRightLeft,
 };
