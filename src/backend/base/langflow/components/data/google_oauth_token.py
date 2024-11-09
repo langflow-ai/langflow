@@ -67,8 +67,7 @@ class GoogleOAuthToken(Component):
         token_path = Path("token.json")
 
         if token_path.exists():
-            with token_path.open(mode="r", encoding="utf-8") as token_file:
-                creds = Credentials.from_authorized_user_file(str(token_path), scopes)
+            creds = Credentials.from_authorized_user_file(str(token_path), scopes)
 
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
