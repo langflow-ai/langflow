@@ -54,6 +54,7 @@ export type FlowPoolType = {
 };
 
 export type FlowStoreType = {
+  fitViewNode: (nodeId: string) => void;
   autoSaveFlow: (() => void) | undefined;
   componentsToUpdate: boolean;
   updateComponentsToUpdate: (nodes: Node[]) => void;
@@ -231,4 +232,8 @@ export type FlowStoreType = {
   stopBuilding: () => void;
   buildController: AbortController;
   setBuildController: (controller: AbortController) => void;
+  currentBuildingNodeId: string[] | undefined;
+  setCurrentBuildingNodeId: (nodeIds: string[] | undefined) => void;
+  clearEdgesRunningByNodes: () => Promise<void>;
+  updateToolMode: (nodeId: string, toolMode: boolean) => void;
 };

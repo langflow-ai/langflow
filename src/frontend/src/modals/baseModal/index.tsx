@@ -77,10 +77,10 @@ const Header: React.FC<{
 }> = ({ children, description }: modalHeaderType): JSX.Element => {
   return (
     <DialogHeader>
-      <DialogTitle className="line-clamp-1 flex items-center pb-0.5">
+      <DialogTitle className="line-clamp-1 flex items-center pb-0.5 text-base">
         {children}
       </DialogTitle>
-      <DialogDescription className="line-clamp-2">
+      <DialogDescription className="line-clamp-2 text-sm">
         {description}
       </DialogDescription>
     </DialogHeader>
@@ -235,6 +235,7 @@ function BaseModal({
         <Dialog open={open} onOpenChange={setOpen}>
           {triggerChild}
           <DialogContent
+            onOpenAutoFocus={(event) => event.preventDefault()}
             onEscapeKeyDown={onEscapeKeyDown}
             className={contentClasses}
           >

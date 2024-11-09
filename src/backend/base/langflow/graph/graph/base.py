@@ -4,6 +4,8 @@ import asyncio
 import contextlib
 import copy
 import json
+import queue
+import threading
 import uuid
 from collections import defaultdict, deque
 from collections.abc import Generator, Iterable
@@ -12,7 +14,6 @@ from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, cast
 
-import nest_asyncio
 from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildError
@@ -26,7 +27,6 @@ from langflow.graph.graph.utils import (
     find_all_cycle_edges,
     find_cycle_vertices,
     find_start_component_id,
-    has_cycle,
     process_flow,
     should_continue,
     sort_up_to_vertex,
@@ -36,10 +36,10 @@ from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.schema import NodeData, NodeTypeEnum
 from langflow.graph.vertex.types import ComponentVertex, InterfaceVertex, StateVertex
 from langflow.logging.logger import LogConfig, configure
+from langflow.schema.dotdict import dotdict
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.deps import get_chat_service, get_tracing_service
-from langflow.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import InputValueRequest
@@ -64,6 +64,7 @@ class Graph:
         description: str | None = None,
         user_id: str | None = None,
         log_config: LogConfig | None = None,
+        context: dict[str, Any] | None = None,
     ) -> None:
         """Initializes a new instance of the Graph class.
 
@@ -75,9 +76,11 @@ class Graph:
             description: The graph description.
             user_id: The user ID.
             log_config: The log configuration.
+            context: Additional context for the graph. Defaults to None.
         """
         if log_config:
             configure(**log_config)
+
         self._start = start
         self._state_model = None
         self._end = end
@@ -94,6 +97,7 @@ class Graph:
         self.has_session_id_vertices: list[str] = []
         self._sorted_vertices_layers: list[list[str]] = []
         self._run_id = ""
+        self._session_id = ""
         self._start_time = datetime.now(timezone.utc)
         self.inactivated_vertices: set = set()
         self.activated_vertices: list[str] = []
@@ -107,6 +111,7 @@ class Graph:
         self.state_manager = GraphStateManager()
         self._vertices: list[NodeData] = []
         self._edges: list[EdgeData] = []
+
         self.top_level_vertices: list[str] = []
         self.vertex_map: dict[str, Vertex] = {}
         self.predecessor_map: dict[str, list[str]] = defaultdict(list)
@@ -123,6 +128,11 @@ class Graph:
         self._call_order: list[str] = []
         self._snapshots: list[dict[str, Any]] = []
         self._end_trace_tasks: set[asyncio.Task] = set()
+
+        if context and not isinstance(context, dict):
+            msg = "Context must be a dictionary"
+            raise TypeError(msg)
+        self._context = dotdict(context or {})
         try:
             self.tracing_service: TracingService | None = get_tracing_service()
         except Exception:  # noqa: BLE001
@@ -134,6 +144,29 @@ class Graph:
         if (start is not None and end is None) or (start is None and end is not None):
             msg = "You must provide both input and output components"
             raise ValueError(msg)
+
+    @property
+    def context(self) -> dotdict:
+        if isinstance(self._context, dotdict):
+            return self._context
+        return dotdict(self._context)
+
+    @context.setter
+    def context(self, value: dict[str, Any]):
+        if not isinstance(value, dict):
+            msg = "Context must be a dictionary"
+            raise TypeError(msg)
+        if isinstance(value, dict):
+            value = dotdict(value)
+        self._context = value
+
+    @property
+    def session_id(self):
+        return self._session_id
+
+    @session_id.setter
+    def session_id(self, value: str):
+        self._session_id = value
 
     @property
     def state_model(self):
@@ -209,6 +242,8 @@ class Graph:
         for vertex in self._vertices:
             if vertex_id := vertex.get("id"):
                 self.top_level_vertices.append(vertex_id)
+            if vertex_id in self.cycle_vertices:
+                self.run_manager.add_to_cycle_vertices(vertex_id)
         self._graph_data = process_flow(self.raw_graph_data)
 
         self._vertices = self._graph_data["nodes"]
@@ -352,26 +387,81 @@ class Graph:
         config: StartConfigDict | None = None,
         event_manager: EventManager | None = None,
     ) -> Generator:
+        """Starts the graph execution synchronously by creating a new event loop in a separate thread.
+
+        Args:
+            inputs: Optional list of input dictionaries
+            max_iterations: Optional maximum number of iterations
+            config: Optional configuration dictionary
+            event_manager: Optional event manager
+
+        Returns:
+            Generator yielding results from graph execution
+        """
         if self.is_cyclic and max_iterations is None:
             msg = "You must specify a max_iterations if the graph is cyclic"
             raise ValueError(msg)
+
         if config is not None:
             self.__apply_config(config)
-        # ! Change this ASAP
-        nest_asyncio.apply()
-        loop = asyncio.get_event_loop()
-        async_gen = self.async_start(inputs, max_iterations, event_manager)
-        async_gen_task = asyncio.ensure_future(anext(async_gen))
 
-        while True:
+        # Create a queue for passing results and errors between threads
+        result_queue: queue.Queue[VertexBuildResult | Exception | None] = queue.Queue()
+
+        # Function to run async code in separate thread
+        def run_async_code():
+            # Create new event loop for this thread
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
             try:
-                result = loop.run_until_complete(async_gen_task)
-                yield result
-                if isinstance(result, Finish):
-                    return
-                async_gen_task = asyncio.ensure_future(anext(async_gen))
-            except StopAsyncIteration:
+                # Run the async generator
+                async_gen = self.async_start(inputs, max_iterations, event_manager)
+
+                while True:
+                    try:
+                        # Get next result from async generator
+                        result = loop.run_until_complete(anext(async_gen))
+                        result_queue.put(result)
+
+                        if isinstance(result, Finish):
+                            break
+
+                    except StopAsyncIteration:
+                        break
+                    except ValueError as e:
+                        # Put the exception in the queue
+                        result_queue.put(e)
+                        break
+
+            finally:
+                # Ensure all pending tasks are completed
+                pending = asyncio.all_tasks(loop)
+                if pending:
+                    # Create a future to gather all pending tasks
+                    cleanup_future = asyncio.gather(*pending, return_exceptions=True)
+                    loop.run_until_complete(cleanup_future)
+
+                # Close the loop
+                loop.close()
+                # Signal completion
+                result_queue.put(None)
+
+        # Start thread for async execution
+        thread = threading.Thread(target=run_async_code)
+        thread.start()
+
+        # Yield results from queue
+        while True:
+            result = result_queue.get()
+            if result is None:
                 break
+            if isinstance(result, Exception):
+                raise result
+            yield result
+
+        # Wait for thread to complete
+        thread.join()
 
     def _add_edge(self, edge: EdgeData) -> None:
         self.add_edge(edge)
@@ -525,12 +615,7 @@ class Graph:
             bool: True if the graph has any cycles, False otherwise.
         """
         if self._is_cyclic is None:
-            vertices = [vertex.id for vertex in self.vertices]
-            try:
-                edges = [(e["data"]["sourceHandle"]["id"], e["data"]["targetHandle"]["id"]) for e in self._edges]
-            except KeyError:
-                edges = [(e["source"], e["target"]) for e in self._edges]
-            self._is_cyclic = has_cycle(vertices, edges)
+            self._is_cyclic = bool(self.cycle_vertices)
         return self._is_cyclic
 
     @property
@@ -781,7 +866,7 @@ class Graph:
         Returns:
             dict: The metadata of the graph.
         """
-        time_format = "%Y-%m-%d %H:%M:%S"
+        time_format = "%Y-%m-%d %H:%M:%S %Z"
         return {
             "start_time": self._start_time.strftime(time_format),
             "end_time": self._end_time.strftime(time_format),
@@ -1126,8 +1211,11 @@ class Graph:
         # This is a hack to make sure that the LLM vertex is sent to
         # the toolkit vertex
         self._build_vertex_params()
-        run_until_complete(self._instantiate_components_in_vertices())
+        self._instantiate_components_in_vertices()
         self._set_cache_to_vertices_in_cycle()
+        for vertex in self.vertices:
+            if vertex.id in self.cycle_vertices:
+                self.run_manager.add_to_cycle_vertices(vertex.id)
 
     def _get_edges_as_list_of_tuples(self) -> list[tuple[str, str]]:
         """Returns the edges of the graph as a list of tuples."""
@@ -1141,10 +1229,10 @@ class Graph:
             if vertex.id in cycle_vertices:
                 vertex.apply_on_outputs(lambda output_object: setattr(output_object, "cache", False))
 
-    async def _instantiate_components_in_vertices(self) -> None:
+    def _instantiate_components_in_vertices(self) -> None:
         """Instantiates the components in the vertices."""
         for vertex in self.vertices:
-            await vertex.instantiate_component(self.user_id)
+            vertex.instantiate_component(self.user_id)
 
     def remove_vertex(self, vertex_id: str) -> None:
         """Removes a vertex from the graph."""
@@ -1447,7 +1535,7 @@ class Graph:
             else:
                 next_runnable_vertices.add(v_id)
 
-        return list(next_runnable_vertices)
+        return sorted(next_runnable_vertices)
 
     async def get_next_runnable_vertices(self, lock: asyncio.Lock, vertex: Vertex, *, cache: bool = True) -> list[str]:
         v_id = vertex.id
@@ -1709,6 +1797,8 @@ class Graph:
 
         for vertex_id in first_layer:
             self.run_manager.add_to_vertices_being_run(vertex_id)
+            if vertex_id in self.cycle_vertices:
+                self.run_manager.add_to_cycle_vertices(vertex_id)
         self._first_layer = sorted(first_layer)
         self._run_queue = deque(self._first_layer)
         self._prepared = True
@@ -1985,7 +2075,7 @@ class Graph:
         for successor_id in self.run_manager.run_map.get(vertex_id, []):
             runnable_vertices.extend(self.find_runnable_predecessors_for_successor(successor_id))
 
-        return runnable_vertices
+        return sorted(runnable_vertices)
 
     def find_runnable_predecessors_for_successor(self, vertex_id: str) -> list[str]:
         runnable_vertices = []

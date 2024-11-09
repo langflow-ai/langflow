@@ -654,26 +654,28 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "slider",
 ]);
 
+export const FLEX_VIEW_TYPES = ["bool"];
+
 export const priorityFields = new Set(["code", "template"]);
 
 export const INPUT_TYPES = new Set([
   "ChatInput",
-  "TextInput",
-  "KeyPairInput",
-  "JsonInput",
-  "StringListInput",
+  // "TextInput",
+  // "KeyPairInput",
+  // "JsonInput",
+  // "StringListInput",
 ]);
 export const OUTPUT_TYPES = new Set([
   "ChatOutput",
-  "TextOutput",
-  "PDFOutput",
-  "ImageOutput",
-  "CSVOutput",
-  "JsonOutput",
-  "KeyPairOutput",
-  "StringListOutput",
-  "DataOutput",
-  "TableOutput",
+  // "TextOutput",
+  // "PDFOutput",
+  // "ImageOutput",
+  // "CSVOutput",
+  // "JsonOutput",
+  // "KeyPairOutput",
+  // "StringListOutput",
+  // "DataOutput",
+  // "TableOutput",
 ]);
 
 export const CHAT_FIRST_INITIAL_TEXT =
@@ -683,6 +685,9 @@ export const TOOLTIP_OUTDATED_NODE =
   "Your component is outdated. Click to update (data may be lost)";
 
 export const CHAT_SECOND_INITIAL_TEXT = "to inspect previous messages.";
+
+export const TOOLTIP_OPEN_HIDDEN_OUTPUTS = "Show hidden outputs";
+export const TOOLTIP_HIDDEN_OUTPUTS = "Hide outputs";
 
 export const ZERO_NOTIFICATIONS = "No new notifications";
 
@@ -850,6 +855,10 @@ export const defaultShortcuts = [
     name: "Output Inspection",
     shortcut: `O`,
   },
+  {
+    name: "Tool Mode",
+    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + M`,
+  },
 ];
 
 export const DEFAULT_TABLE_ALERT_MSG = `Oops! It seems there's no data to display right now. Please check back later.`;
@@ -866,7 +875,7 @@ export const LOCATIONS_TO_RETURN = ["/flow/", "/settings/"];
 export const MAX_BATCH_SIZE = 50;
 
 export const MODAL_CLASSES =
-  "nopan nodelete nodrag  noflow fixed inset-0 bottom-0 left-0 right-0 top-0 z-50 overflow-auto bg-blur-shared backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0";
+  "nopan nodelete nodrag  noflow fixed inset-0 bottom-0 left-0 right-0 top-0 z-50 overflow-auto bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0";
 
 export const ALLOWED_IMAGE_INPUT_EXTENSIONS = ["png", "jpg", "jpeg"];
 
@@ -886,7 +895,7 @@ export const EMPTY_INPUT_SEND_MESSAGE = "No input message provided.";
 export const EMPTY_OUTPUT_SEND_MESSAGE = "Message empty.";
 
 export const TABS_ORDER = [
-  "run curl",
+  "curl",
   "python api",
   "js api",
   "python code",
@@ -903,7 +912,7 @@ export const LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV =
   Number(process.env.ACCESS_TOKEN_EXPIRE_SECONDS) -
   Number(process.env.ACCESS_TOKEN_EXPIRE_SECONDS) * 0.1;
 export const TEXT_FIELD_TYPES: string[] = ["str", "SecretStr"];
-export const NODE_WIDTH = 400;
+export const NODE_WIDTH = 384;
 export const NODE_HEIGHT = NODE_WIDTH * 3;
 
 export const SHORTCUT_KEYS = ["cmd", "ctrl", "alt", "shift"];
@@ -921,19 +930,12 @@ export const NOTE_NODE_MAX_HEIGHT = 800;
 export const NOTE_NODE_MAX_WIDTH = 600;
 
 export const COLOR_OPTIONS = {
-  default: "var(--note-default)",
-  indigo: "var(--note-indigo)",
-  emerald: "var(--note-emerald)",
-  amber: "var(--note-amber)",
-  red: "var(--note-red)",
-};
-
-export const SHADOW_COLOR_OPTIONS = {
-  default: "var(--note-default-opacity)",
-  indigo: "var(--note-indigo-opacity)",
-  emerald: "var(--note-emerald-opacity)",
-  amber: "var(--note-amber-opacity)",
-  red: "var(--note-red-opacity)",
+  amber: "hsl(var(--note-amber))",
+  neutral: "hsl(var(--note-neutral))",
+  rose: "hsl(var(--note-rose))",
+  blue: "hsl(var(--note-blue))",
+  lime: "hsl(var(--note-lime))",
+  transparent: null,
 };
 
 export const maxSizeFilesInBytes = 10 * 1024 * 1024; // 10MB in bytes
@@ -948,3 +950,14 @@ export const STORE_PAGINATION_PAGE = 1;
 
 export const PAGINATION_ROWS_COUNT = [10, 20, 50, 100];
 export const STORE_PAGINATION_ROWS_COUNT = [12, 24, 48, 96];
+
+export const GRADIENT_CLASS =
+  "linear-gradient(to right, hsl(var(--background) / 0.3), hsl(var(--background)))";
+
+export const RECEIVING_INPUT_VALUE = "Receiving input";
+
+export const ICON_STROKE_WIDTH = 1.25;
+
+export const DEFAULT_PLACEHOLDER = "Type something...";
+
+export const DEFAULT_TOOLSET_PLACEHOLDER = "Used as a tool";

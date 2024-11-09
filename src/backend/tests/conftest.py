@@ -1,3 +1,4 @@
+import asyncio
 import json
 import shutil
 
@@ -15,7 +16,6 @@ from asgi_lifespan import LifespanManager
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
-from langflow.components.inputs import ChatInput
 from langflow.graph import Graph
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_password_hash
@@ -32,6 +32,7 @@ from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 from typer.testing import CliRunner
 
+from tests import blockbuster
 from tests.api_keys import get_openai_api_key
 
 if TYPE_CHECKING:
@@ -39,6 +40,7 @@ if TYPE_CHECKING:
 
 
 load_dotenv()
+blockbuster.init()
 
 
 def pytest_configure(config):
@@ -286,23 +288,28 @@ async def client_fixture(
     if "noclient" in request.keywords:
         yield
     else:
-        db_dir = tempfile.mkdtemp()
-        db_path = Path(db_dir) / "test.db"
-        monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
-        monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
-        if "load_flows" in request.keywords:
-            shutil.copyfile(
-                pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"
-            )
-            monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
-            monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
 
-        from langflow.main import create_app
+        def init_app():
+            db_dir = tempfile.mkdtemp()
+            db_path = Path(db_dir) / "test.db"
+            monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
+            monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+            if "load_flows" in request.keywords:
+                shutil.copyfile(
+                    pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"
+                )
+                monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
+                monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
 
-        app = create_app()
-        db_service = get_db_service()
-        db_service.database_url = f"sqlite:///{db_path}"
-        db_service.reload_engine()
+            from langflow.main import create_app
+
+            app = create_app()
+            db_service = get_db_service()
+            db_service.database_url = f"sqlite:///{db_path}"
+            db_service.reload_engine()
+            return app, db_path
+
+        app, db_path = await asyncio.to_thread(init_app)
         # app.dependency_overrides[get_session] = get_session_override
         async with (
             LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager,
@@ -523,6 +530,8 @@ async def added_webhook_test(client, json_webhook_test, logged_in_headers):
 
 @pytest.fixture
 async def flow_component(client: AsyncClient, logged_in_headers):
+    from langflow.components.inputs import ChatInput
+
     chat_input = ChatInput()
     graph = Graph(start=chat_input, end=chat_input)
     graph_dict = graph.dump(name="Chat Input Component")

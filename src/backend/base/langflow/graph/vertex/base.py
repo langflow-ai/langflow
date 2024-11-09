@@ -94,7 +94,7 @@ class Vertex:
         self.result: ResultData | None = None
         self.results: dict[str, Any] = {}
         self.outputs_logs: dict[str, OutputValue] = {}
-        self.logs: dict[str, Log] = {}
+        self.logs: dict[str, list[Log]] = {}
         self.has_cycle_edges = False
         try:
             self.is_interface_component = self.vertex_type in InterfaceComponentTypes
@@ -227,6 +227,7 @@ class Vertex:
             self.output = self.data["node"]["base_classes"]
 
         self.display_name: str = self.data["node"].get("display_name", self.id.split("-")[0])
+        self.icon: str = self.data["node"].get("icon", self.id.split("-")[0])
 
         self.description: str = self.data["node"].get("description", "")
         self.frozen: bool = self.data["node"].get("frozen", False)
@@ -462,9 +463,9 @@ class Vertex:
         self.params = self.raw_params.copy()
         self.updated_raw_params = True
 
-    async def instantiate_component(self, user_id=None) -> None:
+    def instantiate_component(self, user_id=None) -> None:
         if not self.custom_component:
-            self.custom_component, _ = await initialize.loading.instantiate_class(
+            self.custom_component, _ = initialize.loading.instantiate_class(
                 user_id=user_id,
                 vertex=self,
             )
@@ -484,7 +485,7 @@ class Vertex:
             raise ValueError(msg)
 
         if not self.custom_component:
-            custom_component, custom_params = await initialize.loading.instantiate_class(
+            custom_component, custom_params = initialize.loading.instantiate_class(
                 user_id=user_id, vertex=self, event_manager=event_manager
             )
         else:
@@ -803,9 +804,9 @@ class Vertex:
                     inputs
                     and isinstance(inputs, dict)
                     and "input_value" in inputs
-                    and inputs["input_value"] is not None
+                    and inputs.get("input_value") is not None
                 ):
-                    chat_input.update({"input_value": inputs[INPUT_FIELD_NAME]})
+                    chat_input.update({"input_value": inputs.get(INPUT_FIELD_NAME, "")})
                 if files:
                     chat_input.update({"files": files})
 
@@ -870,4 +871,4 @@ class Vertex:
         if not self.custom_component or not self.custom_component.outputs:
             return
         # Apply the function to each output
-        [func(output) for output in self.custom_component.outputs]
+        [func(output) for output in self.custom_component._outputs_map.values()]

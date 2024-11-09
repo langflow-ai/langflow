@@ -1,3 +1,4 @@
+import { VertexBuildTypeAPI } from "@/types/api";
 import { useEffect } from "react";
 import { FlowPoolType } from "../../types/zustand/flow";
 
@@ -5,6 +6,7 @@ const useUpdateValidationStatus = (
   dataId: string,
   flowPool: FlowPoolType,
   setValidationStatus: (value: any) => void,
+  getValidationStatus: (data) => VertexBuildTypeAPI | null,
 ) => {
   useEffect(() => {
     const relevantData =
@@ -17,6 +19,7 @@ const useUpdateValidationStatus = (
     } else {
       setValidationStatus(null);
     }
+    getValidationStatus(relevantData);
   }, [flowPool[dataId], dataId, setValidationStatus]);
 };
 

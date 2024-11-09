@@ -4,9 +4,6 @@ import { CardData } from "@/types/templates/types";
 import memoryChatbotSpiral from "../../../../assets/artwork-spiral-1-def.svg";
 import vectorRagSpiral from "../../../../assets/artwork-spiral-2-def.svg";
 import multiAgentSpiral from "../../../../assets/artwork-spiral-3-def.svg";
-import memoryChatbotBg from "../../../../assets/memory-chatbot-bg.png";
-import multiAgentBg from "../../../../assets/multi-agent-bg.png";
-import vectorRagBg from "../../../../assets/vector-rag-bg.png";
 import TemplateGetStartedCardComponent from "../TemplateGetStartedCardComponent";
 
 export default function GetStartedComponent() {
@@ -15,43 +12,34 @@ export default function GetStartedComponent() {
   // Define the card data
   const cardData: CardData[] = [
     {
-      bgImage: memoryChatbotBg,
+      bg: "radial-gradient(ellipse at top left, #A3E8EF, #ADF6FD, #9676fd)",
       spiralImage: memoryChatbotSpiral,
       icon: "MessagesSquare",
-      category: "Chatbot",
-      title: "Memory Chatbot",
-      description:
-        "Get hands-on with Langflow by building a simple RAGbot that uses memory.",
+      category: "Prompting",
       flow: examples.find((example) => example.name === "Memory Chatbot"),
     },
     {
-      bgImage: vectorRagBg,
+      bg: "radial-gradient(ellipse at top right, #f599fe, #de8afa, #9a5af7)",
       spiralImage: vectorRagSpiral,
-      icon: "MessagesSquare",
-      category: "Vector RAG",
-      title: "Vector RAG",
-      description:
-        "Ingest data into a native vector store and efficiently retrieve it.",
+      icon: "Database",
+      category: "RAG",
       flow: examples.find((example) => example.name === "Vector Store RAG"),
     },
     {
-      bgImage: multiAgentBg,
+      bg: "radial-gradient(ellipse at top left, #ed93f5, #e0bae9, #a5f0af)",
       spiralImage: multiAgentSpiral,
-      icon: "MessagesSquare",
+      icon: "Bot",
       category: "Agents",
-      title: "Multi-Agent",
       flow: examples.find((example) => example.name === "Dynamic Agent"),
-      description:
-        "Deploy a team of agents with a Manager-Worker structure to tackle complex tasks.",
     },
   ];
 
   return (
-    <div className="flex flex-1 flex-col gap-8">
-      <BaseModal.Header description="Start building with templates that highlight Langflow's capabilities across Chatbot, RAG, and Agent use cases.">
-        Get Started
+    <div className="flex flex-1 flex-col gap-4 md:gap-8">
+      <BaseModal.Header description="Start with templates showcasing Langflow's Chatbot, RAG, and Agent use cases.">
+        Get started
       </BaseModal.Header>
-      <div className="grid flex-1 grid-cols-3 gap-4">
+      <div className="grid flex-1 grid-cols-1 gap-4 lg:grid-cols-3">
         {cardData.map((card, index) => (
           <TemplateGetStartedCardComponent key={index} {...card} />
         ))}

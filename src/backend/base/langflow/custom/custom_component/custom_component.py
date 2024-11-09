@@ -83,7 +83,7 @@ class CustomComponent(BaseComponent):
     _flows_data: list[Data] | None = None
     _outputs: list[OutputValue] = []
     _logs: list[Log] = []
-    _output_logs: dict[str, Log] = {}
+    _output_logs: dict[str, list[Log] | Log] = {}
     _tracing_service: TracingService | None = None
     _tree: dict | None = None
 
@@ -93,8 +93,8 @@ class CustomComponent(BaseComponent):
         Args:
             **data: Additional keyword arguments to initialize the custom component.
         """
-        self.cache = TTLCache(maxsize=1024, ttl=60)
-        self._logs = []
+        self.cache: TTLCache = TTLCache(maxsize=1024, ttl=60)
+        self._logs: list[Log] = []
         self._results: dict = {}
         self._artifacts: dict = {}
         super().__init__(**data)
@@ -228,7 +228,7 @@ class CustomComponent(BaseComponent):
         field_value: Any,
         field_name: str | None = None,
     ):
-        build_config[field_name] = field_value
+        build_config[field_name]["value"] = field_value
         return build_config
 
     @property
@@ -363,7 +363,7 @@ class CustomComponent(BaseComponent):
         return build_methods[0] if build_methods else {}
 
     @property
-    def get_function_entrypoint_return_type(self) -> list[Any]:
+    def _get_function_entrypoint_return_type(self) -> list[Any]:
         """Gets the return type of the function entrypoint for the custom component.
 
         Returns:

@@ -10,6 +10,7 @@ export default function OutputComponent({
   idx,
   name,
   proxy,
+  isToolMode = false,
 }: outputComponentType) {
   const displayProxy = (children) => {
     if (proxy) {
@@ -24,7 +25,15 @@ export default function OutputComponent({
   };
 
   return displayProxy(
-    <span className={cn(frozen ? "text-ice" : "")}>{name}</span>,
+    <span
+      className={cn(
+        "text-[13px] font-medium",
+        isToolMode && "text-secondary",
+        frozen ? "text-ice" : "",
+      )}
+    >
+      {name}
+    </span>,
   );
 
   // ! DEACTIVATED UNTIL BETTER IMPLEMENTATION

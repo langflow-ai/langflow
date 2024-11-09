@@ -1,7 +1,6 @@
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import { APIClassType, InputFieldType } from "@/types/api";
-import { Slider } from "@radix-ui/react-slider";
 import { useMemo } from "react";
 import SliderComponent from "../sliderComponent";
 import TableNodeComponent from "./components/TableNodeComponent";
@@ -31,6 +30,7 @@ export function ParameterRenderComponent({
   handleNodeClass,
   nodeClass,
   disabled,
+  placeholder,
 }: {
   handleOnNewValue: handleOnNewValueType;
   name: string;
@@ -41,6 +41,7 @@ export function ParameterRenderComponent({
   handleNodeClass: (value: any, code?: string, type?: string) => void;
   nodeClass: APIClassType;
   disabled: boolean;
+  placeholder?: string;
 }) {
   const id = (
     templateData.type +
@@ -59,6 +60,7 @@ export function ParameterRenderComponent({
       nodeClass,
       handleNodeClass,
       readonly: templateData.readonly,
+      placeholder,
     };
     if (TEXT_FIELD_TYPES.includes(templateData.type ?? "")) {
       if (templateData.list) {
@@ -97,7 +99,13 @@ export function ParameterRenderComponent({
     }
     switch (templateData.type) {
       case "NestedDict":
-        return <DictComponent {...baseInputProps} id={`dict_${id}`} />;
+        return (
+          <DictComponent
+            name={name ?? ""}
+            {...baseInputProps}
+            id={`dict_${id}`}
+          />
+        );
       case "dict":
         return (
           <KeypairListComponent
@@ -107,7 +115,13 @@ export function ParameterRenderComponent({
           />
         );
       case "bool":
-        return <ToggleShadComponent {...baseInputProps} id={`toggle_${id}`} />;
+        return (
+          <ToggleShadComponent
+            size="medium"
+            {...baseInputProps}
+            id={`toggle_${id}`}
+          />
+        );
       case "link":
         return (
           <LinkComponent

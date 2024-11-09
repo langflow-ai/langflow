@@ -15,6 +15,11 @@ export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
     set(() => ({ messages: messages }));
   },
   addMessage: (message) => {
+    const existingMessage = get().messages.find((msg) => msg.id === message.id);
+    if (existingMessage) {
+      get().updateMessagePartial(message);
+      return;
+    }
     set(() => ({ messages: [...get().messages, message] }));
   },
   removeMessage: (message) => {
@@ -37,6 +42,21 @@ export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
       for (let i = state.messages.length - 1; i >= 0; i--) {
         if (state.messages[i].id === message.id) {
           updatedMessages[i] = { ...updatedMessages[i], ...message };
+          break;
+        }
+      }
+      return { messages: updatedMessages };
+    });
+  },
+  updateMessageText: (id, chunk) => {
+    set((state) => {
+      const updatedMessages = [...state.messages];
+      for (let i = state.messages.length - 1; i >= 0; i--) {
+        if (state.messages[i].id === id) {
+          updatedMessages[i] = {
+            ...updatedMessages[i],
+            text: updatedMessages[i].text + chunk,
+          };
           break;
         }
       }

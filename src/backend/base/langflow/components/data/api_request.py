@@ -33,11 +33,13 @@ class APIRequestComponent(Component):
         ),
         MessageTextInput(
             name="curl",
-            display_name="Curl",
+            display_name="cURL",
             info="Paste a curl command to populate the fields. "
             "This will fill in the dictionary fields for headers and body.",
             advanced=False,
             refresh_button=True,
+            real_time_refresh=True,
+            tool_mode=True,
         ),
         DropdownInput(
             name="method",
@@ -63,6 +65,7 @@ class APIRequestComponent(Component):
             name="query_params",
             display_name="Query Parameters",
             info="The query parameters to append to the URL.",
+            tool_mode=True,
         ),
         IntInput(
             name="timeout",
@@ -176,7 +179,11 @@ class APIRequestComponent(Component):
         headers = self.headers or {}
         body = self.body or {}
         timeout = self.timeout
-        query_params = self.query_params.data if self.query_params else {}
+
+        if isinstance(self.query_params, str):
+            query_params = dict(parse_qsl(self.query_params))
+        else:
+            query_params = self.query_params.data if self.query_params else {}
 
         if curl:
             self._build_config = self.parse_curl(curl, dotdict())

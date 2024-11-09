@@ -22,7 +22,7 @@ test("CRUD folders", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -41,9 +41,17 @@ test("CRUD folders", async ({ page }) => {
   await page.getByText("Select All").first().isVisible();
 
   await page.getByTestId("add-folder-button").click();
-  await page.getByText("New Folder").last().isVisible();
+  await page
+    .locator("[data-testid='folder-sidebar']")
+    .getByText("New Folder")
+    .last()
+    .isVisible();
   await page.waitForTimeout(1000);
-  await page.getByText("New Folder").last().dblclick();
+  await page
+    .locator("[data-testid='folder-sidebar']")
+    .getByText("New Folder")
+    .last()
+    .dblclick();
 
   const element = await page.getByTestId("input-folder");
   await element.fill("new folder test name");
@@ -74,7 +82,7 @@ test("CRUD folders", async ({ page }) => {
 test("add a flow into a folder by drag and drop", async ({ page }) => {
   await page.goto("/");
 
-  await page.waitForSelector("text=my collection", {
+  await page.waitForSelector("text=New Flow", {
     timeout: 50000,
   });
 
@@ -113,6 +121,10 @@ test("add a flow into a folder by drag and drop", async ({ page }) => {
 
   await page.waitForTimeout(3000);
 
+  await page.waitForSelector("text=Getting Started:", {
+    timeout: 100000,
+  });
+
   expect(
     await page.locator("text=Getting Started:").last().isVisible(),
   ).toBeTruthy();
@@ -148,7 +160,7 @@ test("change flow folder", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -168,9 +180,17 @@ test("change flow folder", async ({ page }) => {
   await page.getByText("Select All").first().isVisible();
 
   await page.getByTestId("add-folder-button").click();
-  await page.getByText("New Folder").last().isVisible();
+  await page
+    .locator("[data-testid='folder-sidebar']")
+    .getByText("New Folder")
+    .last()
+    .isVisible();
   await page.waitForTimeout(1000);
-  await page.getByText("New Folder").last().dblclick();
+  await page
+    .locator("[data-testid='folder-sidebar']")
+    .getByText("New Folder")
+    .last()
+    .dblclick();
   await page.getByTestId("input-folder").fill("new folder test name");
   await page.keyboard.press("Enter");
   await page.getByText("new folder test name").last().isVisible();

@@ -76,6 +76,7 @@ ignore = [
 [tool.uv]
 dev-dependencies = [
     "asgi-lifespan>=2.1.0",
+    "pytest-codspeed>=3.0.0",
     "pytest-github-actions-annotate-failures>=0.2.0",
 ]
 
@@ -110,7 +111,7 @@ dependencies = [
     "uvicorn>=0.30.0",
     "gunicorn>=22.0.0",
     "langchain~=0.3.3",
-    "langchain-core~=0.3.10",
+    "langchain-core~=0.3.15",
     "langchainhub~=0.1.15",
     "sqlmodel==0.0.18",
     "loguru>=0.7.1",
@@ -134,7 +135,6 @@ dependencies = [
     "duckdb>=1.0.0",
     "python-docx>=1.1.0",
     "jq>=1.7.0; sys_platform != 'win32'",
-    "pypdf>=4.2.0",
     "nest-asyncio>=1.6.0",
     "emoji>=2.12.0",
     "cryptography>=42.0.5,<44.0.0",
@@ -161,6 +161,7 @@ dependencies = [
     "assemblyai>=0.33.0",
     "fastapi-pagination>=0.12.29",
     "defusedxml>=0.7.1",
+    "pypdf~=5.1.0",
 ]
 
 [project.urls]

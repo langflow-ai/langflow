@@ -11,6 +11,7 @@ const config = {
   variants: {
     extend: {
       display: ["group-hover"],
+      textColor: ["group-increment-hover", "group-decrement-hover"],
     },
   },
   darkMode: ["class"],
@@ -30,21 +31,30 @@ const config = {
   theme: {
     container: {
       center: true,
-      padding: "2rem",
       screens: {
         "2xl": "1400px",
       },
     },
     extend: {
+      screens: {
+        xl: "1200px",
+        "2xl": "1400px",
+      },
       keyframes: {
         wiggle: {
           "0%, 100%": { transform: "scale(100%)" },
           "50%": { transform: "scale(120%)" },
         },
+        "border-beam": {
+          "100%": {
+            "offset-distance": "100%",
+          },
+        },
       },
       animation: {
         wiggle: "wiggle 150ms ease-in-out 1",
         "slow-wiggle": "wiggle 500ms ease-in-out 1",
+        "border-beam": "border-beam calc(var(--duration)*1s) infinite linear",
       },
       colors: {
         "frozen-blue": "rgba(128, 190, 219, 0.86)", // Custom blue color for the frozen effect
@@ -63,11 +73,9 @@ const config = {
         "build-trigger": "var(--build-trigger)",
         "chat-trigger": "var(--chat-trigger)",
         "chat-trigger-disabled": "var(--chat-trigger-disabled)",
-        "blur-shared": "var(--blur-shared)",
         "dark-blue": "var(--dark-blue)",
         "dark-gray": "var(--dark-gray)",
         "dark-red": "var(--dark-red)",
-        "note-placeholder": "var(--note-placeholder)",
         error: {
           DEFAULT: "var(--error)",
           background: "var(--error-background)",
@@ -91,13 +99,19 @@ const config = {
         "medium-high-indigo": "var(--medium-high-indigo)",
         "medium-indigo": "var(--medium-indigo)",
         "medium-low-gray": "var(--medium-low-gray)",
-        "note-amber": "var(--note-amber)",
+        "note-amber": "hsl(var(--note-amber))",
+        "note-neutral": "hsl(var(--note-neutral))",
+        "note-rose": "hsl(var(--note-rose))",
+        "note-blue": "hsl(var(--note-blue))",
+        "note-lime": "hsl(var(--note-lime))",
         "status-green": "var(--status-green)",
         "status-red": "var(--status-red)",
         "status-yellow": "var(--status-yellow)",
         "status-gray": "var(--status-gray)",
         "success-background": "var(--success-background)",
         "success-foreground": "var(--success-foreground)",
+        "accent-pink": "hsl(var(--accent-pink))",
+        "accent-pink-foreground": "hsl(var(--accent-pink-foreground))",
         filter: {
           foreground: "var(--filter-foreground)",
           background: "var(--filter-background)",
@@ -109,16 +123,28 @@ const config = {
         },
         "chat-bot-icon": "var(--chat-bot-icon)",
         "chat-user-icon": "var(--chat-user-icon)",
-        canvas: "var(--canvas)",
+        "code-background": "hsl(var(--code-background))",
+        canvas: {
+          DEFAULT: "hsl(var(--canvas))",
+          dot: "hsl(var(--canvas-dot))",
+        },
         ice: "var(--ice)",
         selected: "var(--selected)",
         hover: "var(--hover)",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
+        "error-red": "hsl(var(--error-red))",
+        "error-red-border": "hsl(var(--error-red-border))",
         "node-selected": "hsl(var(--node-selected))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        "emerald-smooth": "hsl(var(--emaral-smooth))",
+        "emerald-hard": "hsl(var(--emeral-hard))",
+        placeholder: "hsl(var(--placeholder))",
+        "hard-zinc": "hsl(var(--hard-zinc))",
+        "smooth-red": "hsl(var(--smooth-red))",
+        "placeholder-foreground": "hsl(var(--placeholder-foreground))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -144,6 +170,7 @@ const config = {
         "accent-emerald": {
           DEFAULT: "hsl(var(--accent-emerald))",
           foreground: "hsl(var(--accent-emerald-foreground))",
+          hover: "hsl(var(--accent-emerald-hover))",
         },
         "accent-indigo": {
           DEFAULT: "hsl(var(--accent-indigo))",
@@ -165,14 +192,69 @@ const config = {
           DEFAULT: "hsl(var(--tooltip))",
           foreground: "hsl(var(--tooltip-foreground))",
         },
+        "code-block": {
+          DEFAULT: "#18181B",
+          muted: "#27272A",
+        },
+        "datatype-yellow": {
+          DEFAULT: "hsl(var(--datatype-yellow))",
+          foreground: "hsl(var(--datatype-yellow-foreground))",
+        },
+        "datatype-blue": {
+          DEFAULT: "hsl(var(--datatype-blue))",
+          foreground: "hsl(var(--datatype-blue-foreground))",
+        },
+        "datatype-gray": {
+          DEFAULT: "hsl(var(--datatype-gray))",
+          foreground: "hsl(var(--datatype-gray-foreground))",
+        },
+        "datatype-lime": {
+          DEFAULT: "hsl(var(--datatype-lime))",
+          foreground: "hsl(var(--datatype-lime-foreground))",
+        },
+        "datatype-red": {
+          DEFAULT: "hsl(var(--datatype-red))",
+          foreground: "hsl(var(--datatype-red-foreground))",
+        },
+        "datatype-violet": {
+          DEFAULT: "hsl(var(--datatype-violet))",
+          foreground: "hsl(var(--datatype-violet-foreground))",
+        },
+        "datatype-emerald": {
+          DEFAULT: "hsl(var(--datatype-emerald))",
+          foreground: "hsl(var(--datatype-emerald-foreground))",
+        },
+        "datatype-fuchsia": {
+          DEFAULT: "hsl(var(--datatype-fuchsia))",
+          foreground: "hsl(var(--datatype-fuchsia-foreground))",
+        },
+        "datatype-purple": {
+          DEFAULT: "hsl(var(--datatype-purple))",
+          foreground: "hsl(var(--datatype-purple-foreground))",
+        },
+        "datatype-cyan": {
+          DEFAULT: "hsl(var(--datatype-cyan))",
+          foreground: "hsl(var(--datatype-cyan-foreground))",
+        },
+        "datatype-indigo": {
+          DEFAULT: "hsl(var(--datatype-indigo))",
+          foreground: "hsl(var(--datatype-indigo-foreground))",
+        },
+        "node-ring": "hsl(var(--node-ring))",
       },
       borderRadius: {
         lg: `var(--radius)`,
         md: `calc(var(--radius) - 2px)`,
         sm: "calc(var(--radius) - 4px)",
       },
+      borderWidth: {
+        1.75: "1.75px",
+        1.5: "1.5px",
+      },
       fontFamily: {
         sans: ["var(--font-sans)", ...fontFamily.sans],
+        mono: ["var(--font-mono)", ...fontFamily.mono],
+        chivo: ["var(--font-chivo)", ...fontFamily.sans],
       },
       boxShadow: {
         "frozen-ring": "0 0 10px 2px rgba(128, 190, 230, 0.5)",
@@ -222,7 +304,7 @@ const config = {
           wordBreak: "break-word",
         },
         ".arrow-hide": {
-          "&::-webkit-inner-spin-button": {
+          "&::-webkit-datatype-spin-button": {
             "-webkit-appearance": "none",
             margin: 0,
           },
@@ -290,6 +372,55 @@ const config = {
     }),
     tailwindcssTypography,
     tailwindcssDottedBackground,
+    plugin(function ({ addUtilities, theme, e }) {
+      const colors = theme("colors");
+
+      const generateUtilities = (colors, prefix = "") => {
+        return Object.keys(colors).reduce((acc, colorName) => {
+          const colorValue = colors[colorName];
+          const className = prefix ? `${prefix}-${e(colorName)}` : e(colorName);
+
+          if (typeof colorValue === "string") {
+            acc[`.truncate-${className}`] = {
+              position: "relative",
+              overflow: "hidden",
+              "&::after": {
+                content: '""',
+                position: "absolute",
+                inset: "0 0 0 0",
+                background: `linear-gradient(to right, transparent, 75%, ${colorValue})`,
+              },
+            };
+          } else if (typeof colorValue === "object") {
+            // Use the DEFAULT value for the base class if it exists
+            if (colorValue.DEFAULT) {
+              acc[`.truncate-${className}`] = {
+                position: "relative",
+                overflow: "hidden",
+                "&::after": {
+                  content: '""',
+                  position: "absolute",
+                  inset: "0 0 0 0",
+                  background: `linear-gradient(to right, transparent, ${colorValue.DEFAULT})`,
+                },
+              };
+            }
+            // Recursively generate utilities for nested color objects
+            Object.assign(acc, generateUtilities(colorValue, className));
+          }
+
+          return acc;
+        }, {});
+      };
+
+      const newUtilities = generateUtilities(colors);
+
+      addUtilities(newUtilities, ["responsive", "hover"]);
+    }),
+    plugin(({ addVariant }) => {
+      addVariant("group-increment-hover", ":merge(.group-increment):hover &");
+      addVariant("group-decrement-hover", ":merge(.group-decrement):hover &");
+    }),
   ],
 };
 

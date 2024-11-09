@@ -130,7 +130,7 @@ export function detectBrokenEdgesEdges(nodes: NodeType[], edges: Edge[]) {
         displayName: targetNode.data.node!.display_name,
         field:
           targetNode.data.node!.template[targetHandleObject.fieldName]
-            .display_name,
+            ?.display_name ?? targetHandleObject.fieldName,
       },
     };
   }
@@ -1596,6 +1596,7 @@ export const createNewFlow = (
     name: flow?.name ? flow.name : "Untitled document",
     data: flowData,
     id: "",
+    icon: flow?.icon ?? undefined,
     is_component: flow?.is_component ?? false,
     folder_id: folderId,
     endpoint_name: flow?.endpoint_name ?? undefined,

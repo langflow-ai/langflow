@@ -9,6 +9,7 @@ from fastapi_pagination import Params
 from loguru import logger
 from sqlalchemy import delete
 from sqlmodel import Session
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_current_active_user
@@ -16,7 +17,7 @@ from langflow.services.database.models import User
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
-from langflow.services.deps import get_session
+from langflow.services.deps import get_async_session, get_session
 from langflow.services.store.utils import get_lf_version_from_pypi
 
 if TYPE_CHECKING:
@@ -31,6 +32,7 @@ MIN_PAGE_SIZE = 1
 
 CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]
 DbSession = Annotated[Session, Depends(get_session)]
+AsyncDbSession = Annotated[AsyncSession, Depends(get_async_session)]
 
 
 def has_api_terms(word: str):
@@ -98,7 +100,7 @@ def get_is_component_from_data(data: dict):
     return data.get("is_component")
 
 
-async def check_langflow_version(component: StoreComponentCreate) -> None:
+def check_langflow_version(component: StoreComponentCreate) -> None:
     from langflow.utils.version import get_version_info
 
     __version__ = get_version_info()["version"]
@@ -264,7 +266,7 @@ def parse_value(value: Any, input_type: str) -> Any:
     return value
 
 
-async def cascade_delete_flow(session: Session, flow: Flow) -> None:
+def cascade_delete_flow(session: Session, flow: Flow) -> None:
     try:
         session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow.id))
         session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow.id))

@@ -63,15 +63,6 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const changesNotSaved =
     customStringify(currentFlow) !== customStringify(currentSavedFlow);
 
-  const savedText =
-    updatedAt && changesNotSaved
-      ? SAVED_HOVER +
-        new Date(updatedAt).toLocaleString("en-US", {
-          hour: "numeric",
-          minute: "numeric",
-        })
-      : "Saved";
-
   function handleAddFlow() {
     try {
       addFlow().then((id) => {
@@ -91,11 +82,16 @@ export const MenuBar = ({}: {}): JSX.Element => {
 
   function printByBuildStatus() {
     if (isBuilding) {
-      return "Building...";
+      return <div className="truncate">Building...</div>;
     } else if (saveLoading) {
-      return "Saving...";
+      return <div className="truncate">Saving...</div>;
     }
-    return savedText;
+    // return savedText;
+    return (
+      <div className="shrink-0 text-xs font-medium text-accent-emerald-foreground">
+        Saved
+      </div>
+    );
   }
 
   const handleSave = () => {
@@ -108,36 +104,48 @@ export const MenuBar = ({}: {}): JSX.Element => {
   useHotkeys(changes, handleSave, { preventDefault: true });
 
   return currentFlow && onFlowPage ? (
-    <div className="flex items-center">
-      <div className="header-menu-bar">
+    <div className="flex items-center justify-center gap-2 truncate">
+      <div className="header-menu-bar hidden justify-end truncate md:flex">
         {currentFolder?.name && (
-          <>
+          <div className="hidden truncate md:flex">
             <div
-              className="cursor-pointer whitespace-nowrap font-normal text-zinc-500 dark:text-zinc-400"
+              className="cursor-pointer truncate text-muted-foreground hover:text-primary"
               onClick={() => {
-                navigate("/");
+                navigate(
+                  currentFolder?.id
+                    ? "/all/folder/" + currentFolder.id
+                    : "/all",
+                );
               }}
             >
               {currentFolder?.name}
             </div>
-            <div className="px-2 font-normal text-zinc-500">/</div>
-          </>
+          </div>
         )}
+      </div>
+      <div className="hidden w-fit shrink-0 select-none font-normal text-muted-foreground md:flex">
+        /
+      </div>
+
+      <div className="w-fit overflow-hidden truncate text-sm sm:whitespace-normal">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <div className="header-menu-bar-display-2">
+            <div className="header-menu-bar-display-2 group truncate">
               <div
-                className="header-menu-flow-name-2 flex"
+                className="header-menu-flow-name-2 truncate"
                 data-testid="flow-configuration-button"
               >
                 <div
-                  className="whitespace-nowrap font-semibold text-black dark:text-[white]"
+                  className="truncate font-semibold group-hover:text-primary dark:text-[white]"
                   data-testid="flow_name"
                 >
                   {currentFlow.name}
                 </div>
               </div>
-              <IconComponent name="ChevronDown" className="w-4 text-zinc-500" />
+              <IconComponent
+                name="ChevronDown"
+                className="flex h-5 w-5 text-muted-foreground group-hover:text-primary"
+              />
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-44 bg-white dark:bg-black">
@@ -159,7 +167,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               className="cursor-pointer"
             >
               <IconComponent name="Settings2" className="header-menu-options" />
-              Settings
+              Flow Settings
             </DropdownMenuItem>
             {!autoSaving && (
               <DropdownMenuItem onClick={handleSave} className="cursor-pointer">
@@ -268,7 +276,12 @@ export const MenuBar = ({}: {}): JSX.Element => {
         ></FlowSettingsModal>
         <FlowLogsModal open={openLogs} setOpen={setOpenLogs}></FlowLogsModal>
       </div>
-      <div className="flex items-center">
+      <div
+        className={cn(
+          "hidden shrink-0 items-center sm:flex",
+          isBuilding ? "w-30" : "w-[3.2rem]",
+        )}
+      >
         {!autoSaving && (
           <Button
             variant="primary"
@@ -309,14 +322,16 @@ export const MenuBar = ({}: {}): JSX.Element => {
             )
           }
           side="bottom"
-          styleClasses="cursor-default"
+          styleClasses="cursor-default z-10"
         >
-          <div className="ml-2 flex cursor-default items-center gap-2 text-sm text-muted-foreground transition-all">
-            <div className="flex cursor-default items-center gap-2 text-sm text-zinc-500 transition-all">
-              <div>{printByBuildStatus()}</div>
+          <div className="flex cursor-default items-center gap-2 truncate text-sm text-muted-foreground">
+            <div className="flex cursor-default items-center gap-2 truncate text-sm">
+              <div className="w-full truncate text-xs">
+                {printByBuildStatus()}
+              </div>
             </div>
             <button
-              data-testid="stop_building_button"
+              data-testid="stop_building_button "
               disabled={!isBuilding}
               onClick={(_) => {
                 if (isBuilding) {
@@ -325,7 +340,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               }}
               className={
                 isBuilding
-                  ? "flex items-center gap-1.5 text-status-red transition-all"
+                  ? "hidden items-center gap-1.5 text-xs text-status-red sm:flex"
                   : "hidden"
               }
             >

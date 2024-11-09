@@ -1,18 +1,17 @@
 import copy
 import json
-from typing import TYPE_CHECKING, cast
+from datetime import datetime
+from decimal import Decimal
+from typing import cast
+from uuid import UUID
 
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from langchain_core.prompts.image import ImagePromptTemplate
 from loguru import logger
 from pydantic import BaseModel, model_serializer, model_validator
 
-from langflow.schema.serialize import recursive_serialize_or_str
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
-
-if TYPE_CHECKING:
-    from langchain_core.prompt_values import ImagePromptValue
+from langflow.utils.image import create_data_url
 
 
 class Data(BaseModel):
@@ -138,11 +137,8 @@ class Data(BaseModel):
             if files:
                 contents = [{"type": "text", "text": text}]
                 for file_path in files:
-                    image_template = ImagePromptTemplate()
-                    image_prompt_value: ImagePromptValue = image_template.invoke(
-                        input={"path": file_path}, config={"callbacks": self.get_langchain_callbacks()}
-                    )
-                    contents.append({"type": "image_url", "image_url": image_prompt_value.image_url})
+                    image_url = create_data_url(file_path)
+                    contents.append({"type": "image_url", "image_url": {"url": image_url}})
                 human_message = HumanMessage(content=contents)
             else:
                 human_message = HumanMessage(
@@ -200,8 +196,7 @@ class Data(BaseModel):
         # return a JSON string representation of the Data atributes
         try:
             data = {k: v.to_json() if hasattr(v, "to_json") else v for k, v in self.data.items()}
-            data = recursive_serialize_or_str(data)
-            return json.dumps(data, indent=4)
+            return serialize_data(data)  # use the custom serializer
         except Exception:  # noqa: BLE001
             logger.opt(exception=True).debug("Error converting Data to JSON")
             return str(self.data)
@@ -211,3 +206,21 @@ class Data(BaseModel):
 
     def __eq__(self, other):
         return isinstance(other, Data) and self.data == other.data
+
+
+def custom_serializer(obj):
+    if isinstance(obj, datetime):
+        return obj.astimezone().isoformat()
+    if isinstance(obj, Decimal):
+        return float(obj)
+    if isinstance(obj, UUID):
+        return str(obj)
+    if isinstance(obj, BaseModel):
+        return obj.model_dump()
+    # Add more custom serialization rules as needed
+    msg = f"Type {type(obj)} not serializable"
+    raise TypeError(msg)
+
+
+def serialize_data(data):
+    return json.dumps(data, indent=4, default=custom_serializer)
