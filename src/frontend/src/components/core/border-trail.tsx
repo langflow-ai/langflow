@@ -1,4 +1,3 @@
-"use client";
 import { cn } from "@/utils/utils";
 import { motion, Transition } from "framer-motion";
 
@@ -33,7 +32,7 @@ export function BorderTrail({
           width: size,
           offsetPath: `rect(0 auto auto 0 round 18px)`,
           boxShadow:
-            "0px 0px 60px 30px rgb(255 255 255 / 50%), 0 0 100px 60px rgb(0 0 0 / 50%), 0 0 140px 90px rgb(0 0 0 / 50%)",
+            "0px 0px 20px 5px rgb(255 255 255 / 90%), 0 0 30px 10px rgb(0 0 0 / 90%)",
           ...style,
         }}
         animate={{

@@ -29,8 +29,8 @@ export function ContentBlockDisplay({
   const totalDuration = isLoading
     ? undefined
     : contentBlocks[0]?.contents.reduce((acc, curr) => {
-        return acc + (curr.duration || 0);
-      }, 0);
+      return acc + (curr.duration || 0);
+    }, 0);
 
   if (!contentBlocks?.length) {
     return null;
@@ -62,13 +62,12 @@ export function ContentBlockDisplay({
           "overflow-hidden",
         )}
       >
-        {isLoading && (
+        {!isLoading && (
           <BorderTrail
-            className="bg-zinc-600 dark:bg-zinc-400"
             size={100}
             transition={{
               repeat: Infinity,
-              duration: isExpanded ? 180 : 18,
+              duration:10,
               ease: "linear",
             }}
           />
@@ -144,7 +143,7 @@ export function ContentBlockDisplay({
                   className={cn(
                     "relative p-4",
                     index !== contentBlocks.length - 1 &&
-                      "border-b border-border",
+                    "border-b border-border",
                   )}
                 >
                   <AnimatePresence>
