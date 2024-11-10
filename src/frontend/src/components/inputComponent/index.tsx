@@ -38,6 +38,7 @@ export default function InputComponent({
   name,
   onChangeFolderName,
   nodeStyle,
+  isToolMode,
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
@@ -183,6 +184,7 @@ export default function InputComponent({
                 selectedOption!,
                 optionsIcon,
                 nodeStyle!,
+                isToolMode!,
               )}
               className={cn(
                 disabled ? "cursor-grab text-placeholder" : "cursor-pointer",

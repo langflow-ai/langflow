@@ -9,7 +9,8 @@ export function StrRenderComponent({
   placeholder,
   ...baseInputProps
 }: InputProps<string, StrRenderComponentType>) {
-  const { handleOnNewValue, id, disabled, editNode, value } = baseInputProps;
+  const { handleOnNewValue, id, disabled, editNode, value, isToolMode } =
+    baseInputProps;
 
   if (!templateData.options) {
     return templateData.multiline ? (
@@ -25,6 +26,7 @@ export function StrRenderComponent({
           }
         }}
         id={`textarea_${id}`}
+        isToolMode={isToolMode}
       />
     ) : (
       <InputGlobalComponent
@@ -33,6 +35,7 @@ export function StrRenderComponent({
         load_from_db={templateData.load_from_db}
         placeholder={placeholder}
         id={"input-" + name}
+        isToolMode={isToolMode}
       />
     );
   }
