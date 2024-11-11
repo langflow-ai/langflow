@@ -1,6 +1,7 @@
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { useAddUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
+import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import * as Form from "@radix-ui/react-form";
@@ -19,7 +20,6 @@ import {
   inputHandlerEventType,
   signUpInputStateType,
 } from "../../types/components";
-import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
 
 export default function SignUp(): JSX.Element {
   const [inputState, setInputState] =
@@ -92,8 +92,11 @@ export default function SignUp(): JSX.Element {
       <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
         <div className="flex w-72 flex-col items-center justify-center gap-2">
           {ENABLE_NEW_LOGO ? (
-            <LangflowLogo title="Langflow logo" className="h-[40px] w-[40px] scale-[1.5] mb-4" />
-          ): (
+            <LangflowLogo
+              title="Langflow logo"
+              className="mb-4 h-[40px] w-[40px] scale-[1.5]"
+            />
+          ) : (
             <span className="mb-4 text-5xl">⛓️</span>
           )}
           <span className="mb-6 text-2xl font-semibold text-primary">
