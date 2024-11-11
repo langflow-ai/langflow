@@ -3914,7 +3914,7 @@ requires-dist = [
     { name = "celery", marker = "extra == 'deploy'", specifier = ">=5.3.1" },
     { name = "chardet", specifier = ">=5.2.0" },
     { name = "clickhouse-connect", specifier = "==0.7.19" },
-    { name = "crewai", specifier = ">=0.76.9" },
+    { name = "crewai", specifier = ">=0.74.2" },
     { name = "cryptography", specifier = ">=42.0.5,<44.0.0" },
     { name = "ctransformers", marker = "extra == 'all'", specifier = ">=0.2" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2" },
