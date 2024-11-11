@@ -25,7 +25,7 @@ export default function ContentDisplay({ content }: { content: ContentType }) {
             <Markdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeMathjax]}
-              className="inline-block w-fit max-w-full"
+              className="inline-block w-fit max-w-full text-[14px] font-semibold text-foreground"
             >
               {content.header.title}
             </Markdown>

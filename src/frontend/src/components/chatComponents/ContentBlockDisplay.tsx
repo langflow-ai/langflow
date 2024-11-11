@@ -62,7 +62,7 @@ export function ContentBlockDisplay({
           "overflow-hidden",
         )}
       >
-        {!isLoading && (
+        {isLoading && (
           <BorderTrail
             size={100}
             transition={{
@@ -94,7 +94,7 @@ export function ContentBlockDisplay({
                 <Markdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeMathjax]}
-                  className="inline-block w-fit max-w-full font-semibold text-primary"
+                  className="inline-block w-fit max-w-full text-primary text-[14px] font-semibold"
                 >
                   {headerTitle}
                 </Markdown>
@@ -160,6 +160,7 @@ export function ContentBlockDisplay({
                         className="overflow-hidden font-medium"
                       >
                         <Markdown
+                          className="text-[14px] font-semibold text-foreground"
                           remarkPlugins={[remarkGfm]}
                           linkTarget="_blank"
                           rehypePlugins={[rehypeMathjax]}
