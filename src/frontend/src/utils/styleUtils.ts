@@ -331,6 +331,9 @@ export const flowGradients = [
   "linear-gradient(90deg, #2F10FE 0%, #98F4FE 100%)",
 ];
 
+export const toolModeGradient =
+  "linear-gradient(-60deg,var(--tool-mode-gradient-1) 0%,var(--tool-mode-gradient-2) 100%)";
+
 export const swatchColors = [
   "bg-neon-fuschia text-white",
   "bg-digital-orchid text-plasma-purple",

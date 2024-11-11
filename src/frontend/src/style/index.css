@@ -150,6 +150,9 @@
     --holo-frost: 186 98% 80%; /* hsl(186, 98%, 80%) */
     --terminal-green: 129 98% 80%; /* hsl(129, 98%, 80%) */
     --cosmic-void: 258 95% 16%; /* hsl(258, 95%, 16%) */
+
+    --tool-mode-gradient-1: #f480ff;
+    --tool-mode-gradient-2: #ff3276;
   }
 
   .dark {
