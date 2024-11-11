@@ -44,7 +44,7 @@ Answer:
 
 The **Template** instructs the LLM to accept `{user_input}` and `Answer the user as if you were a pirate.`.
 
-4. To create an environment variable for the **OpenAI** component, in the **OpenAI API Key** field, click the **Globe** button, and then click **Add New Variable**.
+5. To create an environment variable for the **OpenAI** component, in the **OpenAI API Key** field, click the **Globe** button, and then click **Add New Variable**.
 
 	1. In the **Variable Name** field, enter `openai_api_key`.
 	2. In the **Value** field, paste your OpenAI API Key (`sk-...`).
