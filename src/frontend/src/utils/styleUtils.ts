@@ -238,6 +238,7 @@ import { IFixIcon } from "../icons/IFixIt";
 import { LMStudioIcon } from "../icons/LMStudio";
 import { LangChainIcon } from "../icons/LangChain";
 import { MaritalkIcon } from "../icons/Maritalk";
+import { Mem0 } from "../icons/Mem0";
 import { MetaIcon } from "../icons/Meta";
 import { MidjourneyIcon } from "../icons/Midjorney";
 import { MongoDBIcon } from "../icons/MongoDB";
@@ -826,4 +827,5 @@ export const nodeIconsLucide: iconsType = {
   CircleCheckBig,
   ZoomIn,
   ZoomOut,
+  Mem0,
 };
