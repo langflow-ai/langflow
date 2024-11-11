@@ -1,6 +1,7 @@
 from typing import Any
 
 import httpx
+from openai import APIConnectionError, APIError
 
 
 class AimlModels:
@@ -17,14 +18,23 @@ class AimlModels:
             with httpx.Client() as client:
                 response = client.get("https://api.aimlapi.com/models")
                 response.raise_for_status()
-                models = response.json().get("data", [])
-                self.separate_models_by_type(models)
         except httpx.RequestError as e:
-            self.get_exception_message(e)
+            msg = "Failed to connect to the AIML API."
+            raise APIConnectionError(msg) from e
         except httpx.HTTPStatusError as e:
-            self.get_exception_message(e)
-        except ValueError as e:
-            self.get_exception_message(e)
+            msg = f"AIML API responded with status code: {e.response.status_code}"
+            raise APIError(
+                message=msg,
+                body=None,
+                request=e.request,
+            ) from e
+
+        try:
+            models = response.json().get("data", [])
+            self.separate_models_by_type(models)
+        except (ValueError, KeyError, TypeError) as e:
+            msg = "Failed to parse response data from AIML API. The format may be incorrect."
+            raise ValueError(msg) from e
 
     def separate_models_by_type(self, models):
         model_type_mapping = {
@@ -41,6 +51,3 @@ class AimlModels:
             model_id = model.get("id")
             if model_type in model_type_mapping:
                 model_type_mapping[model_type].append(model_id)
-
-    def get_exception_message(self, e: Exception):
-        return str(e)

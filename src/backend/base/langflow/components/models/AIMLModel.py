@@ -81,8 +81,10 @@ class AIMLModelComponent(LCModelComponent):
 
         openai_api_key = aiml_api_key.get_secret_value() if isinstance(aiml_api_key, SecretStr) else aiml_api_key
 
+        # TODO Once OpenAI fixes their o1 models, this part will need to be removed to work correctly with o1 temperature settings.
         if "o1" in model_name:
             temperature = 1
+
         return ChatOpenAI(
             model=model_name,
             temperature=temperature,
