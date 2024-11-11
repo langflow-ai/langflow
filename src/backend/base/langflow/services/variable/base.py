@@ -2,6 +2,7 @@ import abc
 from uuid import UUID
 
 from sqlmodel import Session
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable
@@ -13,7 +14,7 @@ class VariableService(Service):
     name = "variable_service"
 
     @abc.abstractmethod
-    def initialize_user_variables(self, user_id: UUID | str, session: Session) -> None:
+    async def initialize_user_variables(self, user_id: UUID | str, session: AsyncSession) -> None:
         """Initialize user variables.
 
         Args:
@@ -36,7 +37,7 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def list_variables(self, user_id: UUID | str, session: Session) -> list[str | None]:
+    async def list_variables(self, user_id: UUID | str, session: AsyncSession) -> list[str | None]:
         """List all variables.
 
         Args:
@@ -48,7 +49,7 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def update_variable(self, user_id: UUID | str, name: str, value: str, session: Session) -> Variable:
+    async def update_variable(self, user_id: UUID | str, name: str, value: str, session: AsyncSession) -> Variable:
         """Update a variable.
 
         Args:
@@ -62,7 +63,7 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def delete_variable(self, user_id: UUID | str, name: str, session: Session) -> None:
+    async def delete_variable(self, user_id: UUID | str, name: str, session: AsyncSession) -> None:
         """Delete a variable.
 
         Args:
@@ -75,7 +76,7 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def delete_variable_by_id(self, user_id: UUID | str, variable_id: UUID, session: Session) -> None:
+    async def delete_variable_by_id(self, user_id: UUID | str, variable_id: UUID, session: AsyncSession) -> None:
         """Delete a variable by ID.
 
         Args:
@@ -85,7 +86,7 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def create_variable(
+    async def create_variable(
         self,
         user_id: UUID | str,
         name: str,
@@ -93,7 +94,7 @@ class VariableService(Service):
         *,
         default_fields: list[str],
         _type: str,
-        session: Session,
+        session: AsyncSession,
     ) -> Variable:
         """Create a variable.
 

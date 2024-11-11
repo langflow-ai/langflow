@@ -4,6 +4,7 @@ import threading
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -47,10 +48,10 @@ async def delete_api_key(session: AsyncSession, api_key_id: UUID) -> None:
     await session.commit()
 
 
-def check_key(session: Session, api_key: str) -> ApiKey | None:
+async def check_key(session: AsyncSession, api_key: str) -> ApiKey | None:
     """Check if the API key is valid."""
-    query: SelectOfScalar = select(ApiKey).where(ApiKey.api_key == api_key)
-    api_key_object: ApiKey | None = session.exec(query).first()
+    query: SelectOfScalar = select(ApiKey).options(selectinload(ApiKey.user)).where(ApiKey.api_key == api_key)
+    api_key_object: ApiKey | None = (await session.exec(query)).first()
     if api_key_object is not None:
         threading.Thread(
             target=update_total_uses,
@@ -62,7 +63,7 @@ def check_key(session: Session, api_key: str) -> ApiKey | None:
     return api_key_object
 
 
-def update_total_uses(session, api_key: ApiKey):
+def update_total_uses(session: AsyncSession, api_key: ApiKey):
     """Update the total uses and last used at."""
     # This is running in a separate thread to avoid slowing down the request
     # but session is not thread safe so we need to create a new session
