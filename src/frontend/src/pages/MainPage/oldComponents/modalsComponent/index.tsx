@@ -1,9 +1,6 @@
 // Modals.tsx
 import TemplatesModal from "@/modals/templatesModal";
-import IconComponent from "../../../../components/genericIconComponent";
-import { Button } from "../../../../components/ui/button";
 import DeleteConfirmationModal from "../../../../modals/deleteConfirmationModal";
-import { cn } from "../../../../utils/utils";
 
 interface ModalsProps {
   openModal: boolean;
@@ -35,13 +32,7 @@ const ModalsComponent = ({
           "Deleting the selected folder will remove all associated flows and components."
         }
       >
-        <Button variant="ghost" size="icon" className={"whitespace-nowrap"}>
-          <IconComponent
-            data-testid={`delete-folder`}
-            name="Trash2"
-            className={cn("h-5 w-5")}
-          />
-        </Button>
+        <></>
       </DeleteConfirmationModal>
     )}
   </>

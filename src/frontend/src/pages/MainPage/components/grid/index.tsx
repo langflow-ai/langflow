@@ -8,10 +8,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import { track } from "@/customization/utils/analytics";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
-import IOModal from "@/modals/IOModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { FlowType } from "@/types/flow";
@@ -19,27 +17,27 @@ import { getInputsAndOutputs } from "@/utils/storeUtils";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import useDescriptionModal from "../../oldComponents/componentsComponent/hooks/use-description-modal";
-import { getTemplateStyle } from "../../utils/get-template-style";
+import { useGetTemplateStyle } from "../../utils/get-template-style";
 import { timeElapsed } from "../../utils/time-elapse";
 import DropdownComponent from "../dropdown";
 
 const GridComponent = ({ flowData }: { flowData: FlowType }) => {
   const navigate = useCustomNavigate();
-  // const [openPlayground, setOpenPlayground] = useState(false);
-  const [loadingPlayground, setLoadingPlayground] = useState(false);
+  /* const [openPlayground, setOpenPlayground] = useState(false);
+  const [loadingPlayground, setLoadingPlayground] = useState(false); */
   const [openDelete, setOpenDelete] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const { deleteFlow } = useDeleteFlow();
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
+  /* const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow); */
   const { folderId } = useParams();
   const isComponent = flowData.is_component ?? false;
   const setFlowToCanvas = useFlowsManagerStore(
     (state) => state.setFlowToCanvas,
   );
 
-  const { icon, icon_bg_color } = getTemplateStyle(flowData);
+  const { getIcon } = useGetTemplateStyle(flowData);
 
   const editFlowLink = `/flow/${flowData.id}${folderId ? `/folder/${folderId}` : ""}`;
 
@@ -51,7 +49,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
     return inputs.length > 0 || outputs.length > 0;
   }
 
-  const handlePlaygroundClick = () => {
+  /* const handlePlaygroundClick = () => {
     track("Playground Button Clicked", { flowId: flowData.id });
     setLoadingPlayground(true);
 
@@ -73,7 +71,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
         list: ["Error getting flow data."],
       });
     }
-  };
+  }; */
 
   const handleClick = async () => {
     if (!isComponent) {
@@ -108,18 +106,16 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
         draggable
         onDragStart={onDragStart}
         onClick={handleClick}
-        className={`my-1 flex flex-col rounded-lg border border-zinc-100 bg-background p-5 shadow-sm hover:border-border dark:border-zinc-800 dark:hover:border-muted-foreground ${
+        className={`my-1 flex flex-col rounded-lg border border-border bg-background p-4 hover:border-placeholder-foreground hover:shadow-sm ${
           isComponent ? "cursor-default" : "cursor-pointer"
         }`}
       >
-        <div className="flex w-full items-center gap-2">
-          <div
-            className={`mr-3 flex rounded-lg border ${flowData?.icon_bg_color || icon_bg_color} p-3`}
-          >
+        <div className="flex w-full items-center gap-4">
+          <div className={`flex rounded-lg bg-muted p-3`}>
             <ForwardedIconComponent
-              name={flowData?.icon || icon}
+              name={getIcon()}
               aria-hidden="true"
-              className="h-5 w-5 dark:text-black"
+              className="h-5 w-5 text-foreground"
             />
           </div>
           <div className="flex w-full min-w-0 items-center justify-between">
@@ -127,27 +123,27 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
               <div className="text-md truncate font-semibold">
                 {flowData.name}
               </div>
-              <div className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+              <div className="truncate text-xs text-muted-foreground">
                 Edited {timeElapsed(flowData.updated_at)} ago
               </div>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   data-testid="home-dropdown-menu"
-                  size="icon"
-                  className="group ml-2 h-10 w-10 border-none dark:hover:bg-zinc-700"
+                  size="iconMd"
+                  className="group"
                 >
                   <ForwardedIconComponent
-                    name="ellipsis"
+                    name="Ellipsis"
                     aria-hidden="true"
-                    className="h-5 w-5 dark:text-zinc-400 dark:group-hover:text-white"
+                    className="h-5 w-5 text-muted-foreground group-hover:text-foreground"
                   />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
-                className="mr-[30px] w-[185px] bg-white dark:bg-black"
+                className="w-[185px]"
                 sideOffset={5}
                 side="bottom"
               >
@@ -160,7 +156,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
           </div>
         </div>
 
-        <div className="line-clamp-2 h-full pt-5 text-sm text-zinc-800 dark:text-white">
+        <div className="line-clamp-2 h-full pt-5 text-sm text-primary">
           {flowData.description}
         </div>
 
