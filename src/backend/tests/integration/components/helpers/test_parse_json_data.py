@@ -1,7 +1,6 @@
 from langflow.components.helpers import ParseJSONDataComponent
 from langflow.components.inputs import ChatInput
 from langflow.schema import Data
-
 from tests.integration.components.mock_components import TextToData
 from tests.integration.utils import ComponentInputHandle, run_single_component
 

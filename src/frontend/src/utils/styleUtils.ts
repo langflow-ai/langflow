@@ -3,6 +3,7 @@ import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
 import Perplexity from "@/icons/Perplexity/Perplexity";
 import { TavilyIcon } from "@/icons/Tavily";
 import { UnstructuredIcon } from "@/icons/Unstructured";
+import YouTubeIcon from "@/icons/Youtube/youtube";
 import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import { GlobeOkIcon } from "@/icons/globe-ok";
@@ -640,6 +641,7 @@ export const nodeIconsLucide: iconsType = {
   GithubIcon,
   FaGithub,
   FaApple,
+  YouTube: YouTubeIcon,
 
   //Node Icons
   model_specs: FileSliders,
