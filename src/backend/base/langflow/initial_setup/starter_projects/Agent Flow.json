@@ -1414,7 +1414,7 @@
                 "advanced": false,
                 "display_name": "Agent Instructions",
                 "dynamic": false,
-                "info": "Initial instructions and context provided to guide the agent's behavior.",
+                "info": "System prompt to guide the agent's behavior.",
                 "input_types": [
                   "Message"
                 ],
