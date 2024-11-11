@@ -150,9 +150,12 @@ class AmazonBedrockComponent(LCModelComponent):
         except ImportError as e:
             msg = "langchain_aws is not installed. Please install it with `pip install langchain_aws`."
             raise ImportError(msg) from e
-        if self.aws_access_key_id or self.aws_secret_access_key:
+        try:
             import boto3
-
+        except ImportError as e:
+            msg = "boto3 is not installed. Please install it with `pip install boto3`."
+            raise ImportError(msg) from e
+        if self.aws_access_key_id or self.aws_secret_access_key:
             try:
                 session = boto3.Session(
                     aws_access_key_id=self.aws_access_key_id,
@@ -163,12 +166,8 @@ class AmazonBedrockComponent(LCModelComponent):
                 msg = "Could not create a boto3 session."
                 raise ValueError(msg) from e
         elif self.credentials_profile_name:
-            import boto3
-
             session = boto3.Session(profile_name=self.credentials_profile_name)
         else:
-            import boto3
-
             session = boto3.Session()
 
         client_params = {}

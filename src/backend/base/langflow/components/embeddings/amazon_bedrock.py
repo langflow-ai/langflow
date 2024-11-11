@@ -1,5 +1,3 @@
-from langchain_community.embeddings import BedrockEmbeddings
-
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Embeddings
 from langflow.inputs import SecretStrInput
@@ -102,21 +100,25 @@ class AmazonBedrockEmbeddingsComponent(LCModelComponent):
     ]
 
     def build_embeddings(self) -> Embeddings:
-        if self.aws_access_key_id or self.aws_secret_access_key:
+        try:
+            from langchain_aws import BedrockEmbeddings
+        except ImportError as e:
+            msg = "langchain_aws is not installed. Please install it with `pip install langchain_aws`."
+            raise ImportError(msg) from e
+        try:
             import boto3
-
+        except ImportError as e:
+            msg = "boto3 is not installed. Please install it with `pip install boto3`."
+            raise ImportError(msg) from e
+        if self.aws_access_key_id or self.aws_secret_access_key:
             session = boto3.Session(
                 aws_access_key_id=self.aws_access_key_id,
                 aws_secret_access_key=self.aws_secret_access_key,
                 aws_session_token=self.aws_session_token,
             )
         elif self.credentials_profile_name:
-            import boto3
-
             session = boto3.Session(profile_name=self.credentials_profile_name)
         else:
-            import boto3
-
             session = boto3.Session()
 
         client_params = {}
