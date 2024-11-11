@@ -1,3 +1,4 @@
+from langflow.base.models.aws_contants import AWS_REGIONS, AWS_MODEL_IDs
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs import MessageTextInput, SecretStrInput
@@ -14,41 +15,9 @@ class AmazonBedrockComponent(LCModelComponent):
     inputs = [
         *LCModelComponent._base_inputs,
         DropdownInput(
-            name="model_id",
-            display_name="Model ID",
-            options=[
-                "amazon.titan-text-express-v1",
-                "amazon.titan-text-lite-v1",
-                "amazon.titan-text-premier-v1:0",
-                "amazon.titan-embed-text-v1",
-                "amazon.titan-embed-text-v2:0",
-                "amazon.titan-embed-image-v1",
-                "amazon.titan-image-generator-v1",
-                "anthropic.claude-v2",
-                "anthropic.claude-v2:1",
-                "anthropic.claude-3-sonnet-20240229-v1:0",
-                "anthropic.claude-3-haiku-20240307-v1:0",
-                "anthropic.claude-3-opus-20240229-v1:0",
-                "anthropic.claude-instant-v1",
-                "ai21.j2-mid-v1",
-                "ai21.j2-ultra-v1",
-                "cohere.command-text-v14",
-                "cohere.command-light-text-v14",
-                "cohere.command-r-v1:0",
-                "cohere.command-r-plus-v1:0",
-                "cohere.embed-english-v3",
-                "cohere.embed-multilingual-v3",
-                "meta.llama2-13b-chat-v1",
-                "meta.llama2-70b-chat-v1",
-                "meta.llama3-8b-instruct-v1:0",
-                "meta.llama3-70b-instruct-v1:0",
-                "mistral.mistral-7b-instruct-v0:2",
-                "mistral.mixtral-8x7b-instruct-v0:1",
-                "mistral.mistral-large-2402-v1:0",
-                "mistral.mistral-small-2402-v1:0",
-                "stability.stable-diffusion-xl-v0",
-                "stability.stable-diffusion-xl-v1",
-            ],
+            name="aws_bedrock_model_id",
+            display_name="AWS Bedrock Model ID",
+            options=AWS_MODEL_IDs,
             value="anthropic.claude-3-haiku-20240307-v1:0",
             info="List of available model IDs to choose from.",
         ),
@@ -73,7 +42,7 @@ class AmazonBedrockComponent(LCModelComponent):
             "Usually set in Python code as the environment variable 'AWS_SESSION_TOKEN'.",
         ),
         SecretStrInput(
-            name="credentials_profile_name",
+            name="aws_credentials_profile_name",
             display_name="Credentials Profile Name",
             advanced=True,
             info="The name of the profile to use from your "
@@ -81,56 +50,21 @@ class AmazonBedrockComponent(LCModelComponent):
             "If not provided, the default profile will be used.",
         ),
         DropdownInput(
-            name="region_name",
+            name="aws_region_name",
             display_name="Region Name",
             value="us-east-1",
-            options=[
-                "us-west-2",
-                "us-west-1",
-                "us-gov-west-1",
-                "us-gov-east-1",
-                "us-east-2",
-                "us-east-1",
-                "sa-east-1",
-                "me-south-1",
-                "me-central-1",
-                "il-central-1",
-                "eu-west-3",
-                "eu-west-2",
-                "eu-west-1",
-                "eu-south-2",
-                "eu-south-1",
-                "eu-north-1",
-                "eu-central-2",
-                "eu-central-1",
-                "cn-northwest-1",
-                "cn-north-1",
-                "ca-west-1",
-                "ca-central-1",
-                "ap-southeast-5",
-                "ap-southeast-4",
-                "ap-southeast-3",
-                "ap-southeast-2",
-                "ap-southeast-1",
-                "ap-south-2",
-                "ap-south-1",
-                "ap-northeast-3",
-                "ap-northeast-2",
-                "ap-northeast-1",
-                "ap-east-1",
-                "af-south-1",
-            ],
+            options=AWS_REGIONS,
             info="The AWS region where your Bedrock resources are located.",
         ),
         DictInput(
-            name="model_kwargs",
+            name="aws_model_kwargs",
             display_name="Model Kwargs",
             advanced=True,
             is_list=True,
             info="Additional keyword arguments to pass to the model.",
         ),
         MessageTextInput(
-            name="endpoint_url",
+            name="aws_endpoint_url",
             display_name="Endpoint URL",
             advanced=True,
             info="The URL of the Bedrock endpoint to use.",
@@ -171,19 +105,19 @@ class AmazonBedrockComponent(LCModelComponent):
             session = boto3.Session()
 
         client_params = {}
-        if self.endpoint_url:
-            client_params["endpoint_url"] = self.endpoint_url
-        if self.region_name:
-            client_params["region_name"] = self.region_name
+        if self.aws_endpoint_url:
+            client_params["endpoint_url"] = self.aws_endpoint_url
+        if self.aws_region_name:
+            client_params["region_name"] = self.aws_region_name
 
         boto3_client = session.client("bedrock-runtime", **client_params)
         try:
             output = ChatBedrock(
                 client=boto3_client,
-                model_id=self.model_id,
-                region_name=self.region_name,
-                model_kwargs=self.model_kwargs,
-                endpoint_url=self.endpoint_url,
+                model_id=self.aws_model_id,
+                region_name=self.aws_region_name,
+                model_kwargs=self.aws_model_kwargs,
+                endpoint_url=self.aws_endpoint_url,
                 streaming=self.stream,
             )
         except Exception as e:
