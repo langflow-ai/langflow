@@ -1,8 +1,11 @@
+from typing import Any
+
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs import MessageTextInput, SecretStrInput
 from langflow.inputs.inputs import HandleInput
 from langflow.io import DictInput, DropdownInput
+from langflow.schema.dotdict import dotdict
 
 
 class AmazonBedrockComponent(LCModelComponent):
@@ -16,40 +19,8 @@ class AmazonBedrockComponent(LCModelComponent):
         DropdownInput(
             name="model_id",
             display_name="Model ID",
-            options=[
-                "amazon.titan-text-express-v1",
-                "amazon.titan-text-lite-v1",
-                "amazon.titan-text-premier-v1:0",
-                "amazon.titan-embed-text-v1",
-                "amazon.titan-embed-text-v2:0",
-                "amazon.titan-embed-image-v1",
-                "amazon.titan-image-generator-v1",
-                "anthropic.claude-v2",
-                "anthropic.claude-v2:1",
-                "anthropic.claude-3-sonnet-20240229-v1:0",
-                "anthropic.claude-3-haiku-20240307-v1:0",
-                "anthropic.claude-3-opus-20240229-v1:0",
-                "anthropic.claude-instant-v1",
-                "ai21.j2-mid-v1",
-                "ai21.j2-ultra-v1",
-                "cohere.command-text-v14",
-                "cohere.command-light-text-v14",
-                "cohere.command-r-v1:0",
-                "cohere.command-r-plus-v1:0",
-                "cohere.embed-english-v3",
-                "cohere.embed-multilingual-v3",
-                "meta.llama2-13b-chat-v1",
-                "meta.llama2-70b-chat-v1",
-                "meta.llama3-8b-instruct-v1:0",
-                "meta.llama3-70b-instruct-v1:0",
-                "mistral.mistral-7b-instruct-v0:2",
-                "mistral.mixtral-8x7b-instruct-v0:1",
-                "mistral.mistral-large-2402-v1:0",
-                "mistral.mistral-small-2402-v1:0",
-                "stability.stable-diffusion-xl-v0",
-                "stability.stable-diffusion-xl-v1",
-            ],
-            value="anthropic.claude-3-haiku-20240307-v1:0",
+            value="",
+            refresh_button=True,
             info="List of available model IDs to choose from.",
         ),
         SecretStrInput(
@@ -150,25 +121,7 @@ class AmazonBedrockComponent(LCModelComponent):
         except ImportError as e:
             msg = "langchain_aws is not installed. Please install it with `pip install langchain_aws`."
             raise ImportError(msg) from e
-        try:
-            import boto3
-        except ImportError as e:
-            msg = "boto3 is not installed. Please install it with `pip install boto3`."
-            raise ImportError(msg) from e
-        if self.aws_access_key_id or self.aws_secret_access_key:
-            try:
-                session = boto3.Session(
-                    aws_access_key_id=self.aws_access_key_id,
-                    aws_secret_access_key=self.aws_secret_access_key,
-                    aws_session_token=self.aws_session_token,
-                )
-            except Exception as e:
-                msg = "Could not create a boto3 session."
-                raise ValueError(msg) from e
-        elif self.credentials_profile_name:
-            session = boto3.Session(profile_name=self.credentials_profile_name)
-        else:
-            session = boto3.Session()
+        session = self.get_boto3_session()
 
         client_params = {}
         if self.endpoint_url:
@@ -190,3 +143,47 @@ class AmazonBedrockComponent(LCModelComponent):
             msg = "Could not connect to AmazonBedrock API."
             raise ValueError(msg) from e
         return output
+
+    def get_boto3_session(self):
+        try:
+            import boto3
+        except ImportError as e:
+            msg = "boto3 is not installed. Please install it with `pip install boto3`."
+            raise ImportError(msg) from e
+        if self.aws_access_key_id or self.aws_secret_access_key:
+            try:
+                return boto3.Session(
+                    aws_access_key_id=self.aws_access_key_id,
+                    aws_secret_access_key=self.aws_secret_access_key,
+                    aws_session_token=self.aws_session_token,
+                )
+            except Exception as e:
+                msg = "Could not create a boto3 session."
+                raise ValueError(msg) from e
+        elif self.credentials_profile_name:
+            return boto3.Session(profile_name=self.credentials_profile_name)
+        else:
+            return boto3.Session()
+
+    def get_available_model_ids(self):
+        session = self.get_boto3_session()
+        client = session.client("bedrock", region_name=self.region_name)
+        response = client.list_foundation_models()
+        model_ids = [model["modelId"] for model in response["modelSummaries"]]
+        print(model_ids)
+
+        return [
+            model_id for model_id in model_ids if self.check_model_access(client, model_id)
+        ]
+
+    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
+        if field_name == "model_id":
+            build_config["model_id"]["options"] = self.get_available_model_ids()
+        return build_config
+
+    def check_model_access(self, client, model_id):
+        try:
+            client.get_foundation_model(modelIdentifier=model_id)
+            return True
+        except client.exceptions.AccessDeniedException:
+            return False
