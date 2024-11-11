@@ -14,9 +14,8 @@ from langflow.schema.message import Message
 
 
 class ExceptionWithMessageError(Exception):
-    def __init__(self, e: Exception, agent_message: Message):
+    def __init__(self, agent_message: Message):
         self.agent_message = agent_message
-        self.exception = e
         super().__init__()
 
 
@@ -106,6 +105,7 @@ def handle_on_tool_start(
     tool_name = event["name"]
     tool_input = event["data"].get("input")
     run_id = event.get("run_id", "")
+    tool_key = f"{tool_name}_{run_id}"
 
     # Create content blocks if they don't exist
     if not agent_message.content_blocks:
@@ -123,11 +123,11 @@ def handle_on_tool_start(
     )
 
     # Store in map and append to message
-    tool_blocks_map[run_id] = tool_content
+    tool_blocks_map[tool_key] = tool_content
     agent_message.content_blocks[0].contents.append(tool_content)
 
     agent_message = send_message_method(message=agent_message)
-    tool_blocks_map[run_id] = agent_message.content_blocks[0].contents[-1]
+    tool_blocks_map[tool_key] = agent_message.content_blocks[0].contents[-1]
     return agent_message, start_time
 
 
@@ -139,7 +139,9 @@ def handle_on_tool_end(
     start_time: float,
 ) -> tuple[Message, float]:
     run_id = event.get("run_id", "")
-    tool_content = tool_blocks_map.get(run_id)
+    tool_name = event.get("name", "")
+    tool_key = f"{tool_name}_{run_id}"
+    tool_content = tool_blocks_map.get(tool_key)
 
     if tool_content and isinstance(tool_content, ToolContent):
         tool_content.output = event["data"].get("output")
@@ -160,7 +162,9 @@ def handle_on_tool_error(
     start_time: float,
 ) -> tuple[Message, float]:
     run_id = event.get("run_id", "")
-    tool_content = tool_blocks_map.get(run_id)
+    tool_name = event.get("name", "")
+    tool_key = f"{tool_name}_{run_id}"
+    tool_content = tool_blocks_map.get(tool_key)
 
     if tool_content and isinstance(tool_content, ToolContent):
         tool_content.error = event["data"].get("error", "Unknown error")
@@ -253,5 +257,5 @@ async def process_agent_events(
                 start_time = start_time or perf_counter()
         agent_message.properties.state = "complete"
     except Exception as e:
-        raise ExceptionWithMessageError(e, agent_message) from e
+        raise ExceptionWithMessageError(agent_message) from e
     return Message(**agent_message.model_dump())

@@ -238,6 +238,7 @@ import { IFixIcon } from "../icons/IFixIt";
 import { LMStudioIcon } from "../icons/LMStudio";
 import { LangChainIcon } from "../icons/LangChain";
 import { MaritalkIcon } from "../icons/Maritalk";
+import { Mem0 } from "../icons/Mem0";
 import { MetaIcon } from "../icons/Meta";
 import { MidjourneyIcon } from "../icons/Midjorney";
 import { MongoDBIcon } from "../icons/MongoDB";
@@ -328,6 +329,15 @@ export const flowGradients = [
   "linear-gradient(90deg, #BB277F 0%, #050154 100%)",
   "linear-gradient(90deg, #7528FC 0%, #9BFEAA 100%)",
   "linear-gradient(90deg, #2F10FE 0%, #98F4FE 100%)",
+];
+
+export const swatchColors = [
+  "bg-neon-fuschia text-white",
+  "bg-digital-orchid text-plasma-purple",
+  "bg-plasma-purple text-digital-orchid",
+  "bg-electric-blue text-holo-frost",
+  "bg-holo-frost text-electric-blue",
+  "bg-terminal-green text-cosmic-void",
 ];
 
 export const nodeColors: { [char: string]: string } = {
@@ -826,4 +836,5 @@ export const nodeIconsLucide: iconsType = {
   CircleCheckBig,
   ZoomIn,
   ZoomOut,
+  Mem0,
 };
