@@ -6,6 +6,7 @@ from .json import JsonAgentComponent
 from .json_document_builder import JSONDocumentBuilder
 from .langchain_hub import LangChainHubPromptComponent
 from .language_recursive import LanguageRecursiveTextSplitterComponent
+from .language_semantic import SemanticTextSplitterComponent
 from .llm_checker import LLMCheckerChainComponent
 from .llm_math import LLMMathChainComponent
 from .natural_language import NaturalLanguageTextSplitterComponent
@@ -52,4 +53,5 @@ __all__ = [
     "VectorStoreInfoComponent",
     "VectorStoreRouterAgentComponent",
     "XMLAgentComponent",
+    "SemanticTextSplitterComponent",
 ]
