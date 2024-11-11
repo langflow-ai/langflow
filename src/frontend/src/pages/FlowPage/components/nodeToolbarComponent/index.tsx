@@ -528,29 +528,6 @@ export default function NodeToolbarComponent({
             </ShadTooltip>
           )}
           <ShadTooltip
-            content={
-              <ShortcutDisplay
-                {...shortcuts.find(
-                  ({ name }) => name.toLowerCase() === "copy",
-                )!}
-              />
-            }
-            side="top"
-            styleClasses="relative bottom-2"
-          >
-            <Button
-              className="node-toolbar-buttons h-[2rem] w-[2rem]"
-              variant="ghost"
-              onClick={(event) => {
-                event.preventDefault();
-                handleSelectChange("copy");
-              }}
-              size="node-toolbar"
-            >
-              <IconComponent name="Copy" className="h-4 w-4" />
-            </Button>
-          </ShadTooltip>
-          <ShadTooltip
             content="Show More"
             side="top"
             styleClasses="relative bottom-2"
