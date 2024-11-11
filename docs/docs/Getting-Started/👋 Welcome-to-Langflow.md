@@ -18,8 +18,6 @@ Langflow is a new, visual framework for building multi-agent and RAG application
 Its intuitive interface allows for easy manipulation of AI building blocks, enabling developers to quickly prototype and turn their ideas into powerful, real-world solutions.
 
 
-![](./1160086633.gif)
-
 
 ## 🚀 First steps {#c1ccb5e315b040edaa8d9a67f4960d81}
 

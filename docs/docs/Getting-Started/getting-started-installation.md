@@ -19,8 +19,6 @@ The easiest way to get started with Langflow is through the DataStax Cloud Servi
 **DataStax Langflow** is a hosted version of Langflow integrated with [Astra DB](https://www.datastax.com/products/datastax-astra). Be up and running in minutes with no installation or setup required. [Sign up for free](https://astra.datastax.com/signup?type=langflow).
 
 
-![](./602374500.png)
-
 
 ## **Install Langflow Locally** {#ef364ee864c545649d248113ad7d3038}
 
@@ -89,8 +87,17 @@ python -m langflow run
 
 2. Confirm that a local Langflow instance starts by visiting `http://127.0.0.1:7860` in a Chromium-based browser.
 
-
-![](./221680153.png)
+```plain
+│ Welcome to ⛓ Langflow                              
+│                                                                   
+│                                                               
+│ Collaborate, and contribute at our GitHub Repo 🌟                 
+│                                                                   
+│ We collect anonymous usage data to improve Langflow.              
+│ You can opt-out by setting DO_NOT_TRACK=true in your environment. 
+│                                                                   
+│ Access http://127.0.0.1:7861                                      
+```
 
 
 3. Continue on to the [Quickstart](/getting-started-quickstart).
