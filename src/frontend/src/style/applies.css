@@ -1258,7 +1258,7 @@
   }
 
   .node-toolbar-buttons {
-    @apply flex w-max min-w-10 items-center gap-1 rounded-lg text-foreground;
+    @apply flex w-max items-center gap-1 rounded-lg text-foreground;
   }
 
   .last-output-border {
