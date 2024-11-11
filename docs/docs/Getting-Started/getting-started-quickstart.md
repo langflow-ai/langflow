@@ -15,19 +15,10 @@ slug: /getting-started-quickstart
 - [OpenAI API key](https://platform.openai.com/)
 - [Langflow installed and running](/getting-started-installation)
 
-## Basic Prompting {#67e7cd59d0fa43e3926bdc75134f7472}
+## Create the Basic Prompting project {#c029603ddb1f42f5b28df92e58426ab3}
 
 
----
-
-
-### Create the basic prompting project {#c029603ddb1f42f5b28df92e58426ab3}
-
-
-1. From the Langflow dashboard, click **New Project**. 
-
-
-![](./1835734464.png)
+1. From the Langflow dashboard, click **New Project**.
 
 
 2. Select **Basic Prompting**.
@@ -36,17 +27,22 @@ slug: /getting-started-quickstart
 3. The **Basic Prompting** flow is created.
 
 
-![](./487525520.png)
+![](/img/starter-flow-basic-prompting.png)
 
 
-This flow allows you to chat with the **OpenAI** component through the **Prompt** component. 
+This flow allows you to chat with the **OpenAI** component through the **Prompt** component.
 
+4. To examine the flow's **Prompt** component, click on the **Template** field of the **Prompt** component.
 
-Examine the **Prompt** component. The **Template** field instructs the LLM to `Answer the user as if you were a pirate.` This should be interesting...
+```plain
+Answer the user as if you were a pirate.
 
+User: {user_input}
 
-![](./690736575.png)
+Answer:
+```
 
+The **Template** instructs the LLM to accept `{user_input}` and `Answer the user as if you were a pirate.`.
 
 4. To create an environment variable for the **OpenAI** component, in the **OpenAI API Key** field, click the **Globe** button, and then click **Add New Variable**.
 
@@ -54,19 +50,18 @@ Examine the **Prompt** component. The **Template** field instructs the LLM t
 	2. In the **Value** field, paste your OpenAI API Key (`sk-...`).
 	3. Click **Save Variable**.
 
-![](./1390293355.png)
 
+## Run the Basic Prompting flow {#ef0e8283bfb646f99bbb825462d8cbab}
 
-### Run {#ef0e8283bfb646f99bbb825462d8cbab}
-
-1. Click the **Playground** button on the control panel (bottom right side of the workspace). This is where you can interact with your AI.
+1. To open the **Playground** pane, click the **Playground** button.
+This is where you can interact with your AI.
 2. Type a message and press Enter. The bot should respond in a markedly piratical manner!
 
-### Modify the prompt for a different result {#dcea9df0cd51434db76717c78b1e9a94}
+## Modify the prompt for a different result {#dcea9df0cd51434db76717c78b1e9a94}
 
 1. To modify your prompt results, in the **Prompt** template, click the **Template** field. The **Edit Prompt** window opens.
 2. Change `Answer the user as if you were a pirate` to a different character, perhaps `Answer the user as if you were Hermione Granger.`
-3. Run the workflow again. The response will be markedly different.
+3. Run the workflow again. The response will be very different.
 
 ## Next steps {#63b6db6cb571489c86b3ae89051f1a4f}
 
