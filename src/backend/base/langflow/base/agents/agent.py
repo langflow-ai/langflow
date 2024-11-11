@@ -139,12 +139,19 @@ class LCAgentComponent(Component):
         if self.chat_history:
             input_dict["chat_history"] = data_to_messages(self.chat_history)
 
+        if hasattr(self, "graph"):
+            session_id = self.graph.session_id
+        elif hasattr(self, "_session_id"):
+            session_id = self._session_id
+        else:
+            session_id = None
+
         agent_message = Message(
             sender=MESSAGE_SENDER_AI,
             sender_name=self.display_name or "Agent",
             properties={"icon": "Bot", "state": "partial"},
             content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
-            session_id=self.graph.session_id,
+            session_id=session_id,
         )
         try:
             result = await process_agent_events(
