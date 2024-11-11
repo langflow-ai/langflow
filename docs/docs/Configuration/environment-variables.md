@@ -1,13 +1,11 @@
 ---
-title: Environment Variables
+title: Environment variables
 sidebar_position: 7
 slug: /environment-variables
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-
-# Environment Variables
 
 Langflow lets you configure a number of settings using environment variables.
 

@@ -1,5 +1,5 @@
 ---
-title: Workspace Concepts
+title: Workspace concepts
 sidebar_position: 1
 slug: /workspace-overview
 ---
@@ -34,13 +34,13 @@ The **API** pane provides code templates to integrate your flows into external a
 
 For more information, see the [API](/workspace-api).
 
-## Collections, Folders, and Projects
+## Collections, folders, and projects
 
 The **My Collection** page displays all the flows and components you've created in the Langflow Workspace.
 
 Your **collection** is the top-level categorization for all of your projects.
 
-### My Projects
+### My projects
 
 **My Projects** is the default folder where all new projects and components are initially stored.
 
