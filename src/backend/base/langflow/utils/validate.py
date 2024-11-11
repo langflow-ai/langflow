@@ -351,7 +351,7 @@ def extract_class_name(code: str) -> str:
                     return node.name
 
         msg = f"No Component subclass found in the code string. Code snippet: {code[:100]}"
-        raise ValueError(msg)
+        raise TypeError(msg)
     except SyntaxError as e:
         msg = f"Invalid Python code: {e!s}"
         raise ValueError(msg) from e
