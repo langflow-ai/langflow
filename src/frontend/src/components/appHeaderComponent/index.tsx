@@ -64,7 +64,7 @@ export default function AppHeader(): JSX.Element {
             <span className="fill-black text-2xl dark:fill-white">⛓️</span>
           )}
         </Button>
-        {!ENABLE_DATASTAX_LANGFLOW && (
+        {ENABLE_DATASTAX_LANGFLOW && (
           <>
             <CustomOrgSelector />
             <CustomProductSelector />
