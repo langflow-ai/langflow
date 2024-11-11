@@ -1,5 +1,5 @@
 import ShadTooltip from "@/components/shadTooltipComponent";
-import { ENABLE_API } from "@/customization/feature-flags";
+import { ENABLE_API, ENABLE_LANGFLOW_STORE } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import IOModal from "@/modals/IOModal/newModal";
 import { useEffect, useMemo, useState } from "react";
@@ -180,17 +180,19 @@ export default function FlowToolbar(): JSX.Element {
                 </div>
               </>
             )}
-            <div className="flex items-center gap-2">
-              <div
-                className={`side-bar-button ${
-                  !hasApiKey || !validApiKey || !hasStore
-                    ? "cursor-not-allowed"
-                    : "cursor-pointer"
-                }`}
-              >
-                {ModalMemo}
+            {ENABLE_LANGFLOW_STORE && (
+              <div className="flex items-center gap-2">
+                <div
+                  className={`side-bar-button ${
+                    !hasApiKey || !validApiKey || !hasStore
+                      ? "cursor-not-allowed"
+                      : "cursor-pointer"
+                  }`}
+                >
+                  {ModalMemo}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </Panel>

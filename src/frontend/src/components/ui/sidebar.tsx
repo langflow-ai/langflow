@@ -213,7 +213,7 @@ const Sidebar = React.forwardRef<
         />
         <div
           className={cn(
-            "absolute inset-y-0 z-50 flex h-full transition-[left,right,width] duration-200 ease-linear",
+            "absolute inset-y-0 z-45 flex h-full transition-[left,right,width] duration-200 ease-linear",
             // Adjust width based on state and device
             "w-[--sidebar-width]",
             "max-sm:group-data-[state=collapsed]:w-[--sidebar-width-icon]",

@@ -47,9 +47,11 @@ export function CustomParameterComponent({
 
 export function getCustomParameterTitle({
   title,
+  nodeId,
   isFlexView,
 }: {
   title: string;
+  nodeId: string,
   isFlexView: boolean;
 }) {
   return (
