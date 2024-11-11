@@ -3,7 +3,6 @@ import logging
 from collections import deque
 
 import pytest
-
 from langflow.components.agents import ToolCallingAgentComponent
 from langflow.components.inputs import ChatInput
 from langflow.components.outputs import ChatOutput, TextOutputComponent

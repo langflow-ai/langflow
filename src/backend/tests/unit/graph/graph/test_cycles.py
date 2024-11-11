@@ -1,7 +1,6 @@
 import os
 
 import pytest
-
 from langflow.components.inputs import ChatInput
 from langflow.components.inputs.text import TextInputComponent
 from langflow.components.models import OpenAIModelComponent
