@@ -3,7 +3,7 @@ import random
 import warnings
 from collections.abc import Coroutine
 from datetime import datetime, timedelta, timezone
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
 from cryptography.fernet import Fernet
@@ -15,11 +15,13 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from starlette.websockets import WebSocket
 
 from langflow.services.database.models.api_key.crud import check_key
-from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_async_session, get_db_service, get_settings_service
 from langflow.services.settings.service import SettingsService
+
+if TYPE_CHECKING:
+    from langflow.services.database.models.api_key.model import ApiKey
 
 oauth2_login = OAuth2PasswordBearer(tokenUrl="api/v1/login", auto_error=False)
 
@@ -67,8 +69,6 @@ async def api_key_security(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Invalid or missing API key",
             )
-        if isinstance(result, ApiKey):
-            return UserRead.model_validate(result.user, from_attributes=True)
         if isinstance(result, User):
             return UserRead.model_validate(result, from_attributes=True)
     msg = "Invalid result type"

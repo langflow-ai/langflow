@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from langflow.services.database.models import User
 from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
 
 if TYPE_CHECKING:
@@ -48,7 +49,7 @@ async def delete_api_key(session: AsyncSession, api_key_id: UUID) -> None:
     await session.commit()
 
 
-async def check_key(session: AsyncSession, api_key: str) -> ApiKey | None:
+async def check_key(session: AsyncSession, api_key: str) -> User | None:
     """Check if the API key is valid."""
     query: SelectOfScalar = select(ApiKey).options(selectinload(ApiKey.user)).where(ApiKey.api_key == api_key)
     api_key_object: ApiKey | None = (await session.exec(query)).first()
@@ -60,7 +61,8 @@ async def check_key(session: AsyncSession, api_key: str) -> ApiKey | None:
                 api_key_object,
             ),
         ).start()
-    return api_key_object
+        return api_key_object.user
+    return None
 
 
 def update_total_uses(session: AsyncSession, api_key: ApiKey):
