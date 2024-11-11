@@ -5,6 +5,7 @@ import { MilvusIcon } from "@/icons/Milvus";
 import Perplexity from "@/icons/Perplexity/Perplexity";
 import { TavilyIcon } from "@/icons/Tavily";
 import { UnstructuredIcon } from "@/icons/Unstructured";
+import { ZepMemoryIcon } from "@/icons/ZepMemory";
 import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import { GlobeOkIcon } from "@/icons/globe-ok";
@@ -646,6 +647,7 @@ export const nodeIconsLucide: iconsType = {
   FaApple,
   Milvus: MilvusIcon,
   ExaSearch: ExaIcon,
+  ZepMemory: ZepMemoryIcon,
 
   //Node Icons
   model_specs: FileSliders,
