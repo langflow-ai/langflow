@@ -18,7 +18,7 @@ from langflow.template import Output
 class AstraAssistantManager(ComponentWithCache):
     display_name = "Astra Assistant Manager"
     description = "Manages Assistant Interactions"
-    icon = "bot"
+    icon = "AstraDB"
 
     inputs = [
         StrInput(

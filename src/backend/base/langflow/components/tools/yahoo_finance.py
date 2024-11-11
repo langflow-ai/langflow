@@ -49,7 +49,7 @@ class YahooFinanceSchema(BaseModel):
 
 
 class YfinanceToolComponent(LCToolComponent):
-    display_name = "Yahoo Finance Tool"
+    display_name = "Yahoo Finance"
     description = "Access financial data and market information using Yahoo Finance."
     icon = "trending-up"
     name = "YahooFinanceTool"
