@@ -54,7 +54,7 @@ export default function LoginAdminPage() {
         {ENABLE_NEW_LOGO ? (
           <LangflowLogo
             title="Langflow logo"
-            className="h-[40px] w-[40px] scale-[1.5]"
+            className="h-10 w-10 scale-[1.5]"
           />
         ) : (
           <span className="mb-4 text-5xl">⛓️</span>

@@ -150,12 +150,12 @@ export default function ChatView({
               {ENABLE_NEW_LOGO ? (
                 <LangflowLogo
                   title="Langflow logo"
-                  className="h-[40px] w-[40px] scale-[1.5]"
+                  className="h-10 w-10 scale-[1.5]"
                 />
               ) : (
                 <ChainLogo
                   title="Langflow logo"
-                  className="h-[40px] w-[40px] scale-[1.5]"
+                  className="h-10 w-10 scale-[1.5]"
                 />
               )}
               <div className="flex flex-col items-center justify-center">

@@ -94,7 +94,7 @@ export default function SignUp(): JSX.Element {
           {ENABLE_NEW_LOGO ? (
             <LangflowLogo
               title="Langflow logo"
-              className="mb-4 h-[40px] w-[40px] scale-[1.5]"
+              className="mb-4 h-10 w-10 scale-[1.5]"
             />
           ) : (
             <span className="mb-4 text-5xl">⛓️</span>
