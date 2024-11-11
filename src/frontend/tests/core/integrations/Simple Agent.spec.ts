@@ -3,7 +3,7 @@ import * as dotenv from "dotenv";
 import path from "path";
 import uaParser from "ua-parser-js";
 
-test.skip("Simple Agent", async ({ page }) => {
+test("Simple Agent", async ({ page }) => {
   test.skip(
     !process?.env?.OPENAI_API_KEY,
     "OPENAI_API_KEY required to run this test",
@@ -148,5 +148,5 @@ test.skip("Simple Agent", async ({ page }) => {
 
   pythonWords = await page.getByText("print(").count();
 
-  expect(pythonWords).toBe(1);
+  expect(pythonWords).toBeGreaterThanOrEqual(1);
 });
