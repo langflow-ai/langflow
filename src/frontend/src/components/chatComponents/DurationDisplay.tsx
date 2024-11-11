@@ -1,34 +1,42 @@
-import { useEffect, useState } from "react";
+import { useDurationStore } from "@/stores/durationStore";
+import { useEffect } from "react";
 import { AnimatedNumber } from "../animatedNumbers";
 import ForwardedIconComponent from "../genericIconComponent";
 import Loading from "../ui/loading";
 
-export default function DurationDisplay({ duration }: { duration?: number }) {
-  const [elapsedTime, setElapsedTime] = useState(0);
-  const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
+interface DurationDisplayProps {
+  duration?: number;
+  chatId: string;
+}
+
+export default function DurationDisplay({ duration, chatId }: DurationDisplayProps) {
+  const {
+    durations,
+    setDuration,
+    incrementDuration,
+    clearInterval: clearDurationInterval,
+    setInterval: setDurationInterval,
+  } = useDurationStore();
 
   useEffect(() => {
-    if (duration !== undefined && intervalId) {
-      clearInterval(intervalId);
-      setIntervalId(null);
+    if (duration !== undefined) {
+      setDuration(chatId, duration);
+      clearDurationInterval(chatId);
       return;
     }
 
-    if (duration === undefined && !intervalId) {
-      const id = setInterval(() => {
-        setElapsedTime((prev) => prev + 10);
-      }, 10);
-      setIntervalId(id);
-    }
+    const intervalId = setInterval(() => {
+      incrementDuration(chatId);
+    }, 10);
+
+    setDurationInterval(chatId, intervalId);
 
     return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
+      clearDurationInterval(chatId);
     };
-  }, [duration]);
+  }, [duration, chatId]);
 
-  const displayTime = duration ?? elapsedTime;
+  const displayTime = duration ?? durations[chatId] ?? 0;
   const secondsValue = displayTime / 1000;
   const humanizedTime = `${secondsValue.toFixed(1)}s`;
 
