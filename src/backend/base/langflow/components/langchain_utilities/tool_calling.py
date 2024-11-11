@@ -11,7 +11,6 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
     display_name: str = "Tool Calling Agent"
     description: str = "An agent designed to utilize various tools seamlessly within workflows."
     icon = "LangChain"
-    beta = True
     name = "ToolCallingAgent"
 
     inputs = [

@@ -627,6 +627,7 @@ export const nodeIconsLucide: iconsType = {
   WolframAlphaAPIWrapper: SvgWolfram,
   WikipediaQueryRun: SvgWikipedia,
   WolframAlphaQueryRun: SvgWolfram,
+  WolframAlphaAPI: SvgWolfram,
   group_components: GradientUngroup,
   Streamlit,
   Discord: FaDiscord,

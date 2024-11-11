@@ -619,18 +619,6 @@
                   "Data"
                 ],
                 "value": "__UNDEFINED__"
-              },
-              {
-                "cache": true,
-                "display_name": "Vector Store",
-                "method": "cast_vector_store",
-                "name": "vector_store",
-                "required_inputs": [],
-                "selected": "VectorStore",
-                "types": [
-                  "VectorStore"
-                ],
-                "value": "__UNDEFINED__"
               }
             ],
             "pinned": false,
@@ -1965,18 +1953,6 @@
                 "selected": "Data",
                 "types": [
                   "Data"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "cache": true,
-                "display_name": "Vector Store",
-                "method": "cast_vector_store",
-                "name": "vector_store",
-                "required_inputs": [],
-                "selected": "VectorStore",
-                "types": [
-                  "VectorStore"
                 ],
                 "value": "__UNDEFINED__"
               }
