@@ -13,7 +13,7 @@ from langflow.schema import Data
 
 
 class YfinanceToolComponent(LCToolComponent):
-    display_name = "Yahoo Finance Tool"
+    display_name = "Yahoo Finance"
     description = "Access financial data and market information using Yahoo Finance."
     icon = "trending-up"
     name = "YahooFinanceTool"
@@ -54,7 +54,7 @@ class YfinanceToolComponent(LCToolComponent):
     class YahooFinanceSchema(BaseModel):
         symbol: str = Field(..., description="The stock symbol to retrieve data for.")
         method: str = Field("get_info", description="The type of data to retrieve.")
-        num_news: int | None = Field(5, description="The number of news articles to retrieve.")
+        num_news: int = Field(5, description="The number of news articles to retrieve.")
 
     def run_model(self) -> list[Data]:
         return self._yahoo_finance_tool(

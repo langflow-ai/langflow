@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from functools import wraps
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from loguru import logger
 
@@ -64,11 +64,6 @@ class LCVectorStoreComponent(Component):
             name="search_results",
             method="search_documents",
         ),
-        Output(
-            display_name="Vector Store",
-            name="vector_store",
-            method="cast_vector_store",
-        ),
     ]
 
     def _validate_outputs(self) -> None:
@@ -119,9 +114,6 @@ class LCVectorStoreComponent(Component):
         data = docs_to_data(docs)
         self.status = data
         return data
-
-    def cast_vector_store(self) -> VectorStore:
-        return cast(VectorStore, self.build_vector_store())
 
     def build_base_retriever(self) -> Retriever:  # type: ignore[type-var]
         """Builds the BaseRetriever object."""

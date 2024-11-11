@@ -48,7 +48,7 @@ test("user must see on handle click the possibility connections - RetrievalQA", 
 
   await page.waitForTimeout(1000);
   await page
-    .getByTestId("chainsRetrieval QA")
+    .getByTestId("langchain_utilitiesRetrieval QA")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
@@ -84,11 +84,12 @@ test("user must see on handle click the possibility connections - RetrievalQA", 
     "disclosure-vector stores",
     "disclosure-embeddings",
     "disclosure-agents",
-    "disclosure-chains",
     "disclosure-memories",
-    "disclosure-prototypes",
-    "disclosure-retrievers",
-    "disclosure-text splitters",
+    "disclosure-logic",
+    "disclosure-tools",
+    "disclosure-bundles-langchain",
+    "disclosure-bundles-assemblyai",
+    "disclosure-bundles-datastax",
   ];
 
   const elementTestIds = [
@@ -96,15 +97,15 @@ test("user must see on handle click the possibility connections - RetrievalQA", 
     "outputsChat Output",
     "dataAPI Request",
     "modelsAmazon Bedrock",
-    "helpersChat Memory",
+    "memoriesChat Memory",
     "vectorstoresAstra DB",
     "embeddingsAmazon Bedrock Embeddings",
-    "agentsTool Calling Agent",
-    "chainsConversationChain",
+    "langchain_utilitiesTool Calling Agent",
+    "langchain_utilitiesConversationChain",
     "memoriesAstra DB Chat Memory",
-    "prototypesConditional Router",
-    "retrieversSelf Query Retriever",
-    "textsplittersCharacterTextSplitter",
+    "logicCondition",
+    "langchain_utilitiesSelf Query Retriever",
+    "langchain_utilitiesCharacterTextSplitter",
   ];
 
   await Promise.all(
@@ -179,6 +180,6 @@ test("user must see on handle click the possibility connections - RetrievalQA", 
 
   await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
   await expect(page.getByTestId("disclosure-agents")).toBeVisible();
-  await expect(page.getByTestId("disclosure-chains")).toBeVisible();
-  await expect(page.getByTestId("disclosure-prototypes")).toBeVisible();
+  await expect(page.getByTestId("disclosure-memories")).toBeVisible();
+  await expect(page.getByTestId("disclosure-logic")).toBeVisible();
 });

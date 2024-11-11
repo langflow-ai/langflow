@@ -11,7 +11,7 @@ from langflow.template import Output
 class Dotenv(Component):
     display_name = "Dotenv"
     description = "Load .env file into env vars"
-
+    icon = "AstraDB"
     inputs = [
         MultilineSecretInput(
             name="dotenv_file_content",

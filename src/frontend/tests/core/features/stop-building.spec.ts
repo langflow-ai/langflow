@@ -103,7 +103,7 @@ test("user must be able to stop a building", async ({ page }) => {
   // await page.waitForTimeout(1000);
 
   await page
-    .getByTestId("helpersParse Data")
+    .getByTestId("processingParse Data")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
   await page.getByTestId("zoom_out").click();

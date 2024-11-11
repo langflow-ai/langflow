@@ -43,7 +43,7 @@ test("should use webhook component on API", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page
-    .getByTestId("dataWebhook Input")
+    .getByTestId("dataWebhook")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
@@ -73,6 +73,4 @@ test("should use webhook component on API", async ({ page }) => {
   expect(clipboardContent).toContain("curl -X POST");
   expect(clipboardContent).toContain("webhook");
   await page.getByRole("tab", { name: "Tweaks" }).click();
-  // await page.getByText("Webhook Input").isVisible();
-  // await page.getByText("Webhook Input").click();
 });

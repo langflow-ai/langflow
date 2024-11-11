@@ -71,7 +71,7 @@ test.skip("should be able to upload a file", async ({ page }) => {
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("parse data");
   await page
-    .getByTestId("helpersParse Data")
+    .getByTestId("processingParse Data")
     .first()
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 

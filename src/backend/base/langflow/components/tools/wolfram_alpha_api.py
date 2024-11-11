@@ -7,14 +7,15 @@ from langflow.schema import Data
 
 
 class WolframAlphaAPIComponent(LCToolComponent):
-    display_name = "WolframAlphaAPI"
-    description = "Call Wolfram Alpha API."
+    display_name = "WolframAlpha API"
+    description = """Enables queries to Wolfram Alpha for computational data, facts, and calculations across various \
+topics, delivering structured responses. Example query: 'What is the population of France?'"""
     name = "WolframAlphaAPI"
 
     inputs = [
         MultilineInput(
             name="input_value",
-            display_name="Input",
+            display_name="Input Query",
         ),
         SecretStrInput(name="app_id", display_name="App ID", required=True),
     ]

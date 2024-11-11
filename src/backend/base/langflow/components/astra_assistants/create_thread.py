@@ -8,7 +8,7 @@ from langflow.template import Output
 class AssistantsCreateThread(ComponentWithCache):
     display_name = "Create Assistant Thread"
     description = "Creates a thread and returns the thread id"
-
+    icon = "AstraDB"
     inputs = [
         MultilineInput(
             name="env_set",

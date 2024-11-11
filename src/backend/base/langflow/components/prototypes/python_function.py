@@ -14,7 +14,7 @@ class PythonFunctionComponent(Component):
     description = "Define and execute a Python function that returns a Data object or a Message."
     icon = "Python"
     name = "PythonFunction"
-    beta = True
+    legacy = True
 
     inputs = [
         CodeInput(

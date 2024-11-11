@@ -6,7 +6,6 @@ from .split_text import SplitTextComponent
 from .sub_flow import SubFlowComponent
 
 __all__ = [
-    "ConditionalRouterComponent",
     "ExtractKeyFromDataComponent",
     "FlowToolComponent",
     "ListFlowsComponent",

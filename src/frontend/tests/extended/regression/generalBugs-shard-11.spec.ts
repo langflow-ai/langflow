@@ -35,7 +35,7 @@ test("user should be able to use ComposIO without getting api_key error", async 
 
   await page.waitForTimeout(1000);
 
-  const modelElement = await page.getByTestId("toolkitsComposio Tools");
+  const modelElement = await page.getByTestId("composioComposio Tools");
   const targetElement = await page.locator('//*[@id="react-flow-id"]');
   await modelElement.dragTo(targetElement);
 
@@ -102,7 +102,9 @@ test("user should be able to use connect tools", async ({ page }) => {
 
   await page.waitForTimeout(1000);
 
-  modelElement = await page.getByTestId("agentsTool Calling Agent");
+  modelElement = await page.getByTestId(
+    "langchain_utilitiesTool Calling Agent",
+  );
   targetElement = await page.locator('//*[@id="react-flow-id"]');
   await modelElement.dragTo(targetElement);
 
