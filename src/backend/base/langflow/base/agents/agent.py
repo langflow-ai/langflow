@@ -190,7 +190,7 @@ class LCToolsAgentComponent(LCAgentComponent):
             input_types=["Tool", "BaseTool", "StructuredTool"],
             is_list=True,
             required=True,
-            info="Tools for the agent",
+            info="These are the tools that the agent can use to help with tasks.",
         ),
         *LCAgentComponent._base_inputs,
     ]
