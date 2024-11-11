@@ -1,0 +1,67 @@
+#!/Users/mendon.kissling/Documents/GitHub/langflow/testenv/lf-nightly/bin/python3
+# -*- coding: utf-8 -*-
+
+
+import argparse
+import json
+import sys
+
+import jsonpointer
+
+parser = argparse.ArgumentParser(
+    description='Resolve a JSON pointer on JSON files')
+
+# Accept pointer as argument or as file
+ptr_group = parser.add_mutually_exclusive_group(required=True)
+
+ptr_group.add_argument('-f', '--pointer-file', type=argparse.FileType('r'),
+                       nargs='?',
+                       help='File containing a JSON pointer expression')
+
+ptr_group.add_argument('POINTER', type=str, nargs='?',
+                       help='A JSON pointer expression')
+
+parser.add_argument('FILE', type=argparse.FileType('r'), nargs='+',
+                    help='Files for which the pointer should be resolved')
+parser.add_argument('--indent', type=int, default=None,
+                    help='Indent output by n spaces')
+parser.add_argument('-v', '--version', action='version',
+                    version='%(prog)s ' + jsonpointer.__version__)
+
+
+def main():
+    try:
+        resolve_files()
+    except KeyboardInterrupt:
+        sys.exit(1)
+
+
+def parse_pointer(args):
+    if args.POINTER:
+        ptr = args.POINTER
+    elif args.pointer_file:
+        ptr = args.pointer_file.read().strip()
+    else:
+        parser.print_usage()
+        sys.exit(1)
+
+    return ptr
+
+
+def resolve_files():
+    """ Resolve a JSON pointer on JSON files """
+    args = parser.parse_args()
+
+    ptr = parse_pointer(args)
+
+    for f in args.FILE:
+        doc = json.load(f)
+        try:
+            result = jsonpointer.resolve_pointer(doc, ptr)
+            print(json.dumps(result, indent=args.indent))
+        except jsonpointer.JsonPointerException as e:
+            print('Could not resolve pointer: %s' % str(e), file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()

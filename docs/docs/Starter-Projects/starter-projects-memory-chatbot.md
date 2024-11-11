@@ -23,13 +23,13 @@ This flow extends the [Basic Prompting](http://localhost:3000/starter-projects/
 ---
 
 
-### Create the memory chatbot project {#70ce99381b7043a1b417a81e9ae74c72}
+## Create the memory chatbot project {#70ce99381b7043a1b417a81e9ae74c72}
 
 1. From the Langflow dashboard, click **New Project**.
 2. Select **Memory Chatbot**.
-3. The **Memory Chatbot** flow is created .
+3. The **Memory Chatbot** flow is created.
 
-![](./1511598495.png)
+![](/img/starter-flow-memory-chatbot.png)
 
 
 This flow uses the same components as the Basic Prompting one, but extends it with a **Chat Memory** component. This component retrieves previous messages and sends them to the **Prompt** component to fill a part of the **Template** with context.
@@ -38,13 +38,10 @@ This flow uses the same components as the Basic Prompting one, but extends it wi
 By clicking the template, you'll see the prompt editor like below:
 
 
-![](./450254819.png)
-
-
 This gives the **OpenAI** component a memory of previous chat messages.
 
 
-### Run {#a110cad860584c98af1aead006035378}
+## Run {#a110cad860584c98af1aead006035378}
 
 1. Open the Playground.
 2. Type multiple questions. In the **Memories** tab, your queries are logged in order. Up to 100 queries are stored by default. Try telling the AI your name and asking `What is my name?` on a second message, or `What is the first subject I asked you about?` to validate that previous knowledge is taking effect.
@@ -55,10 +52,6 @@ Check and adjust advanced parameters by opening the Advanced Settings of the **
 
 :::
 
-
-
-
-![](./1079168789.png)
 
 
 ## Session ID {#4e68c3c0750942f98c45c1c45d7ffbbe}

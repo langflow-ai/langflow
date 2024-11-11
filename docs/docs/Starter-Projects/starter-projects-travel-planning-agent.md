@@ -22,7 +22,7 @@ This opens a starter project with the necessary components to run an agentic app
 
 ## Travel Planning Agent flow
 
-![](./starter-flow-travel-planning-agent.png)
+![](/img/starter-flow-travel-agent.png)
 
 The **Travel Planning Agent** flow consists of these components:
 

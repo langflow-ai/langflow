@@ -1,0 +1,97 @@
+'\" t
+.\"     Title: clevercsv-detect
+.\"    Author: G.J.J. van den Burg
+.\" Generator: Wilderness <https://pypi.org/project/wilderness>
+.\"      Date: 2023-09-24
+.\"    Manual: clevercsv Manual
+.\"    Source: clevercsv 0.8.2
+.\"  Language: English
+.\"
+.TH "CLEVERCSV-DETECT" "1" "2023\-09\-24" "Clevercsv 0\&.8\&.2" "Clevercsv Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting *
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+clevercsv-detect \- Detect the dialect of a CSV file
+.SH "SYNOPSIS"
+.sp
+.nf
+\fIclevercsv detect [\-c | \-\-consistency] [\-e ENCODING | \-\-encoding=ENCODING]
+                 [\-n NUM_CHARS | \-\-num\-chars=NUM_CHARS] [ \-p | \-\-plain |
+                 \-j | \-\-json ] [\-\-no\-skip] [\-\-add\-runtime] <path>
+.fi
+.sp
+.SH "DESCRIPTION"
+.sp
+Detect the dialect of a CSV file.
+.SH "OPTIONS"
+.sp
+.sp
+.sp
+\-h, \-\-help
+.RS 4
+show this help message and exit
+.RE
+.PP
+\-c, \-\-consistency
+.RS 4
+By default, the dialect of CSV files is detected using atwo\-step process. First, a strict set of checks is used to see if the file adheres to a very basic format (for example, when all cells in the file are integers). If none of these checks succeed, the data consistency measure of Van den Burg, et al. (2019) is used to detect the dialect. With this option, you can force the detection to always use the data consistency measure. This can be useful for testing or research purposes, for instance.
+.RE
+.PP
+\-e, \-\-encoding
+.RS 4
+The file encoding of the given CSV file is automatically detected using chardet. While chardet is incredibly accurate, it is not perfect. In the rare cases that it makes a mistake in detecting the file encoding, you can override the encoding by providing it through this flag. Moreover, when you have a number of CSV files with a known file encoding, you can use this option to speed up the code generation process.
+.RE
+.PP
+\-n, \-\-num\-chars
+.RS 4
+On large CSV files, dialect detection can sometimes be a bit slow due to the large number of possible dialects to consider. To alleviate this, you can limit the number of characters to use for detection.
+.sp
+One aspect to keep in mind is that CleverCSV may need to read a specific number of characters to be able to correctly infer the dialect. For example, in the ``imdb.csv`` file in the GitHub repository, the correct dialect can only be found after at least 66 lines of the file are read. Therefore, if there is availability to run CleverCSV on the entire file, that is generally recommended.
+.RE
+.PP
+\-p, \-\-plain
+.RS 4
+Print the components of the dialect on separate lines
+.RE
+.PP
+\-j, \-\-json
+.RS 4
+Print the dialect to standard output in the form of a JSON object. This object will always have the 'delimiter', 'quotechar', 'escapechar', and 'strict' keys. If \-\-add\-runtime is specified, it will also have a 'runtime' key.
+.RE
+.PP
+\-\-no\-skip
+.RS 4
+The data consistency score used for dialect detection consists of two components: a pattern score and a type score. The type score lies between 0 and 1. When computing the data consistency measures for different dialects, we skip the computation of the type score if we see that the pattern score is lower than the best data consistency score we've seen so far. This option can be used to disable this behaviour and compute the type score for all dialects. This is mainly useful for debugging and testing purposes.
+.RE
+.PP
+\-\-add\-runtime
+.RS 4
+Add the runtime of the detection to the detection output.
+.RE
+.PP
+<path>
+.RS 4
+Path to the CSV file
+.RE
+.PP
+.sp
+.SH "CLEVERCSV"
+.sp
+Part of the CleverCSV suite

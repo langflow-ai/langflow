@@ -15,8 +15,6 @@ slug: /workspace
 The **Langflow Workspace** is where you assemble new flows and create AIs by connecting and running components. 
 
 
-![](./310382168.png)
-
 
 ### Sidebar {#9d571b1d46804a01bcd8fbb9a4677af4}
 
@@ -24,16 +22,11 @@ The **Langflow Workspace** is where you assemble new flows and create AIs by c
 Located on the left, this the sidebar includes several collapsible sections that categorize the different types of pre-built components available in Langflow. Use the search bar to locate components by name.
 
 
-![](./1769489314.png)
-
 
 ### Canvas {#5b050d0f8406436a9201f4711f0063ae}
 
 
 The canvas is the main area in the center where you can drag and drop components to create workflows.
-
-
-![](./1224026366.png)
 
 
 Use canvas controls in the bottom left side for zooming in and out, resetting the view, and locking or unlocking the canvas.
@@ -44,8 +37,6 @@ Use canvas controls in the bottom left side for zooming in and out, resetting th
 
 In the top navigation bar, the dropdown menu labeled with the project name offers several management and customization options for the current flow in the Langflow Workspace.
 
-
-![](./1801518600.png)
 
 - **New**: Create a new flow from scratch.
 - **Settings**: Adjust settings specific to the current flow, such as its Name, Description, and Endpoint Name.
@@ -61,8 +52,6 @@ In the top navigation bar, the dropdown menu labeled with the project name offer
 
 The toolbar at the bottom-right corner that provides options for executing, accessing the API, and sharing workflows.
 
-
-![](./563382604.png)
 
 - **Playground**: Button that executes the current flow in the workspace.
 - **API**: Provides API access details and integration options for the current flow.

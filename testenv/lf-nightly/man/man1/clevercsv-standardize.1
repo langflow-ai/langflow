@@ -1,0 +1,90 @@
+'\" t
+.\"     Title: clevercsv-standardize
+.\"    Author: G.J.J. van den Burg
+.\" Generator: Wilderness <https://pypi.org/project/wilderness>
+.\"      Date: 2023-09-24
+.\"    Manual: clevercsv Manual
+.\"    Source: clevercsv 0.8.2
+.\"  Language: English
+.\"
+.TH "CLEVERCSV-STANDARDIZE" "1" "2023\-09\-24" "Clevercsv 0\&.8\&.2" "Clevercsv Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting *
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+clevercsv-standardize \- Convert a CSV file to one that conforms to RFC-4180
+.SH "SYNOPSIS"
+.sp
+.nf
+\fIclevercsv standardize [\-e ENCODING | \-\-encoding=ENCODING] [\-i | \-\-in\-place]
+                      [\-n NUM_CHARS | \-\-num\-chars=NUM_CHARS]
+                      [\-o OUTPUT | \-\-output=OUTPUT] [\-t | \-\-transpose]
+                      <path [path \&...]>
+.fi
+.sp
+.SH "DESCRIPTION"
+.sp
+The standardize command can be used to convert a non\-standard CSVfile to the standard RFC\-4180 format [1]. When using the \-\-in\-place option, the return code of CleverCSV can be used to check whether a file was altered or not. The return codewill be 2 when the file was altered and 0 otherwise.
+.sp
+[1]: https://tools.ietf.org/html/rfc4180
+.SH "OPTIONS"
+.sp
+.sp
+.sp
+\-h, \-\-help
+.RS 4
+show this help message and exit
+.RE
+.PP
+\-e, \-\-encoding
+.RS 4
+The file encoding of the given CSV file is automatically detected using chardet. While chardet is incredibly accurate, it is not perfect. In the rare cases that it makes a mistake in detecting the file encoding, you can override the encoding by providing it through this flag. For this command, the provided encoding will also be used for the output file(s). When only one encoding is given, it will be used for all files given on the command line. When multiple encodings are given, the number must correspond to the number of files provided as input.
+.RE
+.PP
+\-i, \-\-in\-place
+.RS 4
+Standardize and overwrite the input file(s)
+.RE
+.PP
+\-n, \-\-num\-chars
+.RS 4
+On large CSV files, dialect detection can sometimes be a bit slow due to the large number of possible dialects to consider. To alleviate this, you can limit the number of characters to use for detection.
+.sp
+One aspect to keep in mind is that CleverCSV may need to read a specific number of characters to be able to correctly infer the dialect. For example, in the ``imdb.csv`` file in the GitHub repository, the correct dialect can only be found after at least 66 lines of the file are read. Therefore, if there is availability to run CleverCSV on the entire file, that is generally recommended.
+.RE
+.PP
+\-o, \-\-output
+.RS 4
+The output files to write the standardized input files to. The order of the input files and the order of the output files should match if this option is used with more than one input file.
+.RE
+.PP
+\-t, \-\-transpose
+.RS 4
+Transpose the columns of the input file(s) before writing
+.RE
+.PP
+<path>
+.RS 4
+Path to one or more CSV file(s)
+.RE
+.PP
+.sp
+.SH "CLEVERCSV"
+.sp
+Part of the CleverCSV suite

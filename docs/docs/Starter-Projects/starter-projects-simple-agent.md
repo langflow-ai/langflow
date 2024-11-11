@@ -18,7 +18,7 @@ This opens a starter project with the necessary components to run an agentic app
 
 ## Simple Agent flow
 
-![](./starter-flow-simple-agent.png)
+![](/img/starter-flow-simple-agent.png)
 
 The **Simple Agent** flow consists of these components:
 

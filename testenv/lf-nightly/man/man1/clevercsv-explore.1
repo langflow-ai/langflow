@@ -1,0 +1,88 @@
+'\" t
+.\"     Title: clevercsv-explore
+.\"    Author: G.J.J. van den Burg
+.\" Generator: Wilderness <https://pypi.org/project/wilderness>
+.\"      Date: 2023-09-24
+.\"    Manual: clevercsv Manual
+.\"    Source: clevercsv 0.8.2
+.\"  Language: English
+.\"
+.TH "CLEVERCSV-EXPLORE" "1" "2023\-09\-24" "Clevercsv 0\&.8\&.2" "Clevercsv Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting *
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+clevercsv-explore \- Explore the CSV file in an interactive Python shell
+.SH "SYNOPSIS"
+.sp
+.nf
+\fIclevercsv explore [\-e ENCODING | \-\-encoding=ENCODING]
+                  [\-n NUM_CHARS | \-\-num\-chars=NUM_CHARS] [\-p | \-\-pandas] <path>
+.fi
+.sp
+.SH "DESCRIPTION"
+.sp
+The explore command allows you to quickly explore a CSV file in an interactive Python shell. This command detects the dialect of the CSV file and drops you into a Python interactive shell (REPL), with the CSV file already loaded. Simply run:
+.sp
+.RS 4
+clevercsv explore FILE
+.RE
+.sp
+to start working with the file loaded as a list of lists. Alternatively, you can run:
+.sp
+.RS 4
+clevercsv explore \-p FILE
+.RE
+.sp
+to read the file as a Pandas dataframe.
+.SH "OPTIONS"
+.sp
+.sp
+.sp
+\-h, \-\-help
+.RS 4
+show this help message and exit
+.RE
+.PP
+\-e, \-\-encoding
+.RS 4
+The file encoding of the given CSV file is automatically detected using chardet. While chardet is incredibly accurate, it is not perfect. In the rare cases that it makes a mistake in detecting the file encoding, you can override the encoding by providing it through this flag. Moreover, when you have a number of CSV files with a known file encoding, you can use this option to speed up the code generation process.
+.RE
+.PP
+\-n, \-\-num\-chars
+.RS 4
+On large CSV files, dialect detection can sometimes be a bit slow due to the large number of possible dialects to consider. To alleviate this, you can limit the number of characters to use for detection.
+.sp
+One aspect to keep in mind is that CleverCSV may need to read a specific number of characters to be able to correctly infer the dialect. For example, in the ``imdb.csv`` file in the GitHub repository, the correct dialect can only be found after at least 66 lines of the file are read. Therefore, if there is availability to run CleverCSV on the entire file, that is generally recommended.
+.RE
+.PP
+\-p, \-\-pandas
+.RS 4
+By default, this command imports the CSV file as a list of lists. By enabling this option the script will be written such that the file will be read as a Pandas DataFrame instead.
+.RE
+.PP
+<path>
+.RS 4
+Path to the CSV file
+.RE
+.PP
+.sp
+.SH "CLEVERCSV"
+.sp
+Part of the CleverCSV suite

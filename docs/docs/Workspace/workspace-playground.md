@@ -12,7 +12,7 @@ The **Playground** is a dynamic interface designed for real-time interaction w
 As long as you have an [Input or Output](/components-io) component working, you can open it up by clicking the **Playground** button.
 
 
-![](./1109547993.png)
+![](/img/playground.png)
 
 
 :::tip
@@ -22,12 +22,7 @@ Notice how the **Playground's** window arrangement changes depending on what com
 :::
 
 
-
-
 You can also open a flow's **Playground** without entering its workspace. From **My Collections** or **Langflow Store**, click the **Playground** in one of the projects card.
-
-
-<ReactPlayer controls url="https://youtu.be/guaN0DOTxfo" />
 
 
 ## Memory Management {#821a5ee2a8a44d35b49943cba630511c}

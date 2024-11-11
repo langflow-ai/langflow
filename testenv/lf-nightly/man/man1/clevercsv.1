@@ -1,0 +1,109 @@
+'\" t
+.\"     Title: clevercsv
+.\"    Author: G.J.J. van den Burg
+.\" Generator: Wilderness <https://pypi.org/project/wilderness>
+.\"      Date: 2023-09-24
+.\"    Manual: clevercsv Manual
+.\"    Source: clevercsv 0.8.2
+.\"  Language: English
+.\"
+.TH "CLEVERCSV" "1" "2023\-09\-24" "Clevercsv 0\&.8\&.2" "Clevercsv Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting *
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+clevercsv \- CleverCSV command line tool
+.SH "SYNOPSIS"
+.sp
+.nf
+\fIclevercsv [\-h | \-\-help] [\-V | \-\-version] [\-v | \-\-verbose] <command \&...>
+.fi
+.sp
+.SH "DESCRIPTION"
+.sp
+CleverCSV is a Python library and command line tool for dealing with messy CSV files. It consists of a number of commands that can be used to analyze, explore, or standardize a messy CSV file.
+.sp
+Further help and documentation can be found online at https://github.com/alan\-turing\-institute/CleverCSV or https://clevercsv.readthedocs.io
+.SH "OPTIONS"
+.sp
+.sp
+.sp
+\-h, \-\-help
+.RS 4
+show this help message and exit
+.RE
+.PP
+\-V, \-\-version
+.RS 4
+Show version and exit
+.RE
+.PP
+\-v, \-\-verbose
+.RS 4
+Enable verbose mode
+.RE
+.PP
+.sp
+.SH "COMMANDS"
+.sp
+The following commands are available in CleverCSV:
+.sp
+clevercsv\-code(1)
+.RS 4
+Generate Python code to import a given CSV file
+.RE
+.sp
+clevercsv\-detect(1)
+.RS 4
+Detect the dialect of a CSV file
+.RE
+.sp
+clevercsv\-explore(1)
+.RS 4
+Infer the dialect and open the file in an interactive Python session
+.RE
+.sp
+clevercsv\-standardize(1)
+.RS 4
+Convert a messy CSV file to one that follows RFC\-4180
+.RE
+.sp
+clevercsv\-view(1)
+.RS 4
+Detect the dialect and open the CSV file using TabView
+.RE
+.SH "AUTHORS"
+.sp
+The CleverCSV package was originally written by Gerrit van den Burg and came out of scientific research on wrangling messy CSV files by Gerrit van den Burg, Alfredo Nazabal, and Charles Sutton. This research was conducted at and supported by The Alan Turing Institute. CleverCSV has since benefitted from a number of open\-source contributors on GitHub.
+.SH "REPORTING BUGS"
+.sp
+If you encounter an issue in CleverCSV, please open an issue or submit a pull request at https://github.com/alan\-turing\-institute/CleverCSV. Please don't hesitate, you're helping to make this project better for everyone!
+.SH "NOTES"
+.sp
+\fB1. \fRCleverCSV GitHub repository
+.br
+   https://github.com/alan\-turing\-institute/CleverCSV
+.sp
+\fB2. \fRCleverCSV documentation
+.br
+   https://clevercsv.readthedocs.io
+.sp
+\fB3. \fRWrangling Messy CSV Files by Detecting Row and Type Patterns
+.br
+   https://gertjanvandenburg.com/papers/VandenBurg_Nazabal_Sutton_\-_Wrangling_Messy_CSV_Files_by_Detecting_Row_and_Type_Patterns_2019.pdf
