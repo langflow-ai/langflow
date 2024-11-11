@@ -149,7 +149,7 @@ export default function NodeDescription({
             <Markdown
               linkTarget="_blank"
               className={cn(
-                "markdown prose flex h-full w-full flex-col text-[13px] leading-5 word-break-break-word",
+                "markdown nowheel prose flex h-full w-full flex-col text-[13px] leading-5 word-break-break-word",
                 mdClassName,
               )}
             >
