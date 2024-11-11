@@ -33,7 +33,7 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
             display_name="Chat Memory",
             is_list=True,
             advanced=True,
-            info="This keeps track of previous chats so the agent can remember what was said before.",
+            info="This input stores the chat history, allowing the agent to remember previous conversations.",
         ),
     ]
 

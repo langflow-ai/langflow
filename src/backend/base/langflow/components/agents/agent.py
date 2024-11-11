@@ -28,7 +28,7 @@ class AgentComponent(ToolCallingAgentComponent):
         DropdownInput(
             name="agent_llm",
             display_name="Model Provider",
-            info="The provider of the language model that the agent will use.",
+            info="The provider of the language model that the agent will use to generate responses.",
             options=[*sorted(MODEL_PROVIDERS_DICT.keys()), "Custom"],
             value="OpenAI",
             real_time_refresh=True,
@@ -38,7 +38,7 @@ class AgentComponent(ToolCallingAgentComponent):
         MultilineInput(
             name="system_prompt",
             display_name="Agent Instructions",
-            info="System Prompt: Instructions to guide the agent's behavior.",
+            info="System Prompt: Initial instructions and context provided to guide the agent's behavior.",
             value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
             advanced=False,
         ),
