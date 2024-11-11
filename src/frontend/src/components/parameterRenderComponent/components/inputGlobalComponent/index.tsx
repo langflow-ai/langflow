@@ -22,6 +22,7 @@ export default function InputGlobalComponent({
   password,
   editNode = false,
   placeholder,
+  isToolMode = false,
 }: InputProps<string, InputGlobalComponentType>): JSX.Element {
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
@@ -137,6 +138,7 @@ export default function InputGlobalComponent({
           { skipSnapshot },
         );
       }}
+      isToolMode={isToolMode}
     />
   );
 }
