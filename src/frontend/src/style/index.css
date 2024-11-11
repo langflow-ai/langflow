@@ -142,6 +142,14 @@
     --datatype-indigo-foreground: 226.5 100% 93.9%;
 
     --node-ring: 240 6% 90%;
+
+    --neon-fuschia: 340 100% 60%; /* hsl(340, 100%, 60%) */
+    --digital-orchid: 295 100% 75%; /* hsl(295, 100%, 75%) */
+    --plasma-purple: 262 97% 57%; /* hsl(262, 97%, 57%) */
+    --electric-blue: 248 99% 53%; /* hsl(248, 99%, 53%) */
+    --holo-frost: 186 98% 80%; /* hsl(186, 98%, 80%) */
+    --terminal-green: 129 98% 80%; /* hsl(129, 98%, 80%) */
+    --cosmic-void: 258 95% 16%; /* hsl(258, 95%, 16%) */
   }
 
   .dark {
