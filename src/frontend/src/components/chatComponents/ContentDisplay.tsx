@@ -12,7 +12,7 @@ export default function ContentDisplay({ content }: { content: ContentType }) {
   // First render the common BaseContent elements if they exist
   const renderHeader = content.header && (
     <>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 pb-[12px]">
         {content.header.icon && (
           <ForwardedIconComponent
             name={content.header.icon}
@@ -35,7 +35,7 @@ export default function ContentDisplay({ content }: { content: ContentType }) {
     </>
   );
   const renderDuration = content.duration !== undefined && (
-    <div className="absolute right-2 top-0">
+    <div className="absolute right-2 top-4">
       <DurationDisplay duration={content.duration} />
     </div>
   );
@@ -54,7 +54,7 @@ export default function ContentDisplay({ content }: { content: ContentType }) {
             components={{
               p({ node, ...props }) {
                 return (
-                  <span className="inline-block w-fit max-w-full">
+                  <span className="block w-fit max-w-full">
                     {props.children}
                   </span>
                 );
@@ -243,7 +243,7 @@ export default function ContentDisplay({ content }: { content: ContentType }) {
   }
 
   return (
-    <div className="relative">
+    <div className="relative p-[16px]">
       {renderHeader}
       {renderDuration}
       {contentData}

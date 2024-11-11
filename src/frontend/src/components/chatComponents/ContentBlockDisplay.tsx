@@ -141,7 +141,7 @@ export function ContentBlockDisplay({
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.2, delay: 0.1 }}
                   className={cn(
-                    "relative p-4",
+                    "relative",
                     index !== contentBlocks.length - 1 &&
                       "border-b border-border",
                   )}
@@ -190,7 +190,6 @@ export function ContentBlockDisplay({
                             >
                               <Separator
                                 orientation="horizontal"
-                                className="my-2"
                               />
                             </motion.div>
                           )}
