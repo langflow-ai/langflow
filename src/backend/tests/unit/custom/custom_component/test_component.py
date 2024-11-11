@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.crewai import CrewAIAgentComponent, SequentialTaskComponent
 from langflow.components.inputs import ChatInput
 from langflow.components.langchain_utilities import ToolCallingAgentComponent
