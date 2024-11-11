@@ -37,7 +37,6 @@ def ingestion_graph():
         api_endpoint="https://astra.example.com",
         token="token",  # noqa: S106
     )
-    vector_store.set_on_output(name="vector_store", value="mock_vector_store", cache=True)
     vector_store.set_on_output(name="base_retriever", value="mock_retriever", cache=True)
     vector_store.set_on_output(name="search_results", value=[Data(text="This is a test file.")], cache=True)
 
@@ -66,7 +65,6 @@ def rag_graph():
         ],
         cache=True,
     )
-    rag_vector_store.set_on_output(name="vector_store", value="mock_vector_store", cache=True)
     rag_vector_store.set_on_output(name="base_retriever", value="mock_retriever", cache=True)
     parse_data = ParseDataComponent(_id="parse-data-123")
     parse_data.set(data=rag_vector_store.search_documents)
