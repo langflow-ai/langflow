@@ -10,7 +10,7 @@ import { ZepMemoryIcon } from "@/icons/ZepMemory";
 import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import { GlobeOkIcon } from "@/icons/globe-ok";
-import { Mem0Icon } from "@/icons/mem0";
+import { Mem0Icon } from "@/icons/mem0ai";
 import {
   AlertCircle,
   AlertTriangle,
@@ -651,7 +651,7 @@ export const nodeIconsLucide: iconsType = {
   Milvus: MilvusIcon,
   ExaSearch: ExaIcon,
   ZepMemory: ZepMemoryIcon,
-  Mem0: Mem0Icon,
+  Mem0Ai: Mem0Icon,
   Langwatch: LangwatchIcon,
 
   //Node Icons
