@@ -4,7 +4,7 @@ sidebar_position: 1
 slug: /workspace-overview
 ---
 
-The **Workspace** is where you create AI applications by connecting and running components in flows.
+The **workspace** is where you create AI applications by connecting and running components in flows.
 
 The workspace controls allow you to adjust your view and lock your flows in place.
 
@@ -36,7 +36,7 @@ For more information, see the [API](/workspace-api).
 
 ## Collections, folders, and projects
 
-The **My Collection** page displays all the flows and components you've created in the Langflow Workspace.
+The **My Collection** page displays all the flows and components you've created in the Langflow workspace.
 
 Your **collection** is the top-level categorization for all of your projects.
 
@@ -44,26 +44,26 @@ Your **collection** is the top-level categorization for all of your projects.
 
 **My Projects** is the default folder where all new projects and components are initially stored.
 
+Collections, folders, projects, and flows are exchanged as JSON objects
+
 * To create a new folder, click 📁 **New Folder**.
 
-To rename a folder, double-click the folder name.
+* To rename a folder, double-click the folder name.
 
-To download a folder, click 📥 **Download**.
+* To download a folder, click 📥 **Download**.
 
-To upload a folder, click 📤 **Upload**.
+* To upload a folder, click 📤 **Upload**. The default maximum file upload size is 100 MB.
 
-Collections, folders, projects, and flows are exchanged as JSON objects.
-
-To move a file, drag and drop it into the desired folder.
+* To move a flow or component, drag and drop it into the desired folder.
 
 ## Options menu
 
-The dropdown menu labeled with the project name offers several management and customization options for the current flow in the Langflow Workspace.
+The dropdown menu labeled with the project name offers several management and customization options for the current flow in the Langflow workspace.
 
 * **New**: Create a new flow from scratch.
-* **Settings**: Adjust settings specific to the current flow, such as its Name, Description, and Endpoint Name.
+* **Settings**: Adjust settings specific to the current flow, such as its name, description, and endpoint name.
 * **Logs**: View logs for the current project, including execution history, errors, and other runtime events.
-* **Import**: Import a flow or component from a JSON file into the Workspace.
+* **Import**: Import a flow or component from a JSON file into the workspace.
 * **Export**: Export the current flow as a JSON file.
 * **Undo (⌘Z)**: Revert the last action taken in the project.
 * **Redo (⌘Y)**: Reapply a previously undone action.
@@ -71,7 +71,7 @@ The dropdown menu labeled with the project name offers several management and cu
 
 ## Settings
 
-Click ⚙️ **Settings** to access **Global Variables**, **Langflow API**, **Shortcuts**, and **Messages**.
+Click ⚙️ **Settings** to access **Global variables**, **Langflow API**, **Shortcuts**, and **Messages**.
 
 
 
