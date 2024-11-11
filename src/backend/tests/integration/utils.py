@@ -186,5 +186,4 @@ async def run_single_component(
 def build_component_instance_for_tests(version: str, file_name: str, **kwargs):
     component = download_component_from_github("prompts", file_name, version)
     cc_class = eval_custom_component_code(component._code)
-    cc_instance = cc_class(**kwargs)
-    return cc_instance()
+    return cc_class(**kwargs)
