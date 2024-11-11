@@ -2006,7 +2006,8 @@ class Graph:
 
         vertices_layers = self.layered_topological_sort(vertices)
         vertices_layers = self.sort_by_avg_build_time(vertices_layers)
-        # vertices_layers = self.sort_chat_inputs_first(vertices_layers)
+        # Sort the chat inputs first to speed up sending the User message to the UI
+        vertices_layers = self.sort_chat_inputs_first(vertices_layers)
         # Now we should sort each layer in a way that we make sure
         # vertex V does not depend on vertex V+1
         vertices_layers = self.sort_layer_by_dependency(vertices_layers)
