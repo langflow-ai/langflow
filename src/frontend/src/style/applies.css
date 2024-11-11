@@ -1261,10 +1261,6 @@
     @apply flex w-max items-center gap-1 rounded-lg text-foreground;
   }
 
-  .last-output-border {
-    @apply rounded-b-xl;
-  }
-
   .toolbar-wrapper {
     @apply flex h-10 items-center gap-1 rounded-xl border border-border bg-background p-1 shadow-sm;
   }
