@@ -331,6 +331,15 @@ export const flowGradients = [
   "linear-gradient(90deg, #2F10FE 0%, #98F4FE 100%)",
 ];
 
+export const swatchColors = [
+  "bg-neon-fuschia text-white",
+  "bg-digital-orchid text-plasma-purple",
+  "bg-plasma-purple text-digital-orchid",
+  "bg-electric-blue text-holo-frost",
+  "bg-holo-frost text-electric-blue",
+  "bg-terminal-green text-cosmic-void",
+];
+
 export const nodeColors: { [char: string]: string } = {
   inputs: "#10B981",
   outputs: "#AA2411",
