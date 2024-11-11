@@ -20,7 +20,7 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
             display_name="Language Model",
             input_types=["LanguageModel"],
             required=True,
-            info="The language model provider forthe agent.",
+            info="The language model that the agent will use.",
         ),
         MessageTextInput(
             name="system_prompt",
@@ -33,7 +33,7 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
             display_name="Chat Memory",
             is_list=True,
             advanced=True,
-            info="To store past interactions for chat continuity.",
+            info="This keeps track of previous chats so the agent can remember what was said before.",
         ),
     ]
 
