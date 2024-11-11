@@ -147,13 +147,10 @@ If so, you can share your component on the Langflow store.
 2. Undergo pre-validation before receiving an API key.
 
 
-3. To deploy your amazing component directly to the Langflow store, without it being merged into the main source code, navigate to your flow, and then click **Share**. The share window appears:
+3. To deploy your amazing component directly to the Langflow store, without it being merged into the main source code, navigate to your flow, and then click **Share**.
 
 
-![](./683296796.png)
-
-
-4. Choose whether you want to flow to be public or private. You can also **Export** your flow as a JSON file from this window. When you're ready to share the flow, click **Share Flow**. You should see a **Flow shared successfully** popup.
+4. In the share window, choose whether you want to flow to be public or private. You can also **Export** your flow as a JSON file from this window. When you're ready to share the flow, click **Share Flow**. You should see a **Flow shared successfully** popup.
 
 
 5. To confirm, navigate to the **Langflow Store** and filter results by **Created By Me**. You should see your new flow on the **Langflow Store**.
