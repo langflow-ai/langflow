@@ -10,7 +10,6 @@ import { ZepMemoryIcon } from "@/icons/ZepMemory";
 import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import { GlobeOkIcon } from "@/icons/globe-ok";
-import { Mem0Icon } from "@/icons/mem0ai";
 import {
   AlertCircle,
   AlertTriangle,
@@ -248,6 +247,7 @@ import { IFixIcon } from "../icons/IFixIt";
 import { LMStudioIcon } from "../icons/LMStudio";
 import { LangChainIcon } from "../icons/LangChain";
 import { MaritalkIcon } from "../icons/Maritalk";
+import { Mem0 } from "../icons/Mem0";
 import { MetaIcon } from "../icons/Meta";
 import { MidjourneyIcon } from "../icons/Midjorney";
 import { MongoDBIcon } from "../icons/MongoDB";
@@ -481,6 +481,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Unstructured", name: "unstructured", icon: "Unstructured" },
   { display_name: "Git", name: "git", icon: "GitLoader" },
   { display_name: "Confluence", name: "confluence", icon: "Confluence" },
+  { display_name: "Mem0", name: "mem0", icon: "Mem0" },
 ];
 
 export const categoryIcons = {
@@ -651,8 +652,8 @@ export const nodeIconsLucide: iconsType = {
   Milvus: MilvusIcon,
   ExaSearch: ExaIcon,
   ZepMemory: ZepMemoryIcon,
-  Mem0Ai: Mem0Icon,
   Langwatch: LangwatchIcon,
+  Mem0,
 
   //Node Icons
   model_specs: FileSliders,
