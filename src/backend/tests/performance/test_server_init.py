@@ -57,7 +57,7 @@ async def test_get_and_cache_all_types_dict():
     from langflow.interface.types import get_and_cache_all_types_dict
 
     settings_service = await asyncio.to_thread(get_settings_service)
-    result = await asyncio.to_thread(get_and_cache_all_types_dict, settings_service)
+    result = await get_and_cache_all_types_dict(settings_service)
     assert result is not None
     assert "test_performance.db" in settings_service.settings.database_url
 
