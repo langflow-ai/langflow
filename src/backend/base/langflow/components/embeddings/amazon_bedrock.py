@@ -9,7 +9,6 @@ from langflow.io import DropdownInput, MessageTextInput, Output
 class AmazonBedrockEmbeddingsComponent(LCModelComponent):
     display_name: str = "Amazon Bedrock Embeddings"
     description: str = "Generate embeddings using Amazon Bedrock models."
-    documentation = "https://python.langchain.com/docs/modules/data_connection/text_embedding/integrations/bedrock"
     icon = "Amazon"
     name = "AmazonBedrockEmbeddings"
 
@@ -20,15 +19,82 @@ class AmazonBedrockEmbeddingsComponent(LCModelComponent):
             options=["amazon.titan-embed-text-v1"],
             value="amazon.titan-embed-text-v1",
         ),
-        SecretStrInput(name="aws_access_key", display_name="Access Key"),
-        SecretStrInput(name="aws_secret_key", display_name="Secret Key"),
-        MessageTextInput(
+        SecretStrInput(
+            name="aws_access_key_id",
+            display_name="AWS Access Key ID",
+            info="The access key for your AWS account."
+            "Usually set in Python code as the environment variable 'AWS_ACCESS_KEY_ID'.",
+        ),
+        SecretStrInput(
+            name="aws_secret_access_key",
+            display_name="AWS Secret Access Key",
+            info="The secret key for your AWS account. "
+            "Usually set in Python code as the environment variable 'AWS_SECRET_ACCESS_KEY'.",
+        ),
+        SecretStrInput(
+            name="aws_session_token",
+            display_name="AWS Session Token",
+            advanced=True,
+            info="The session key for your AWS account. "
+            "Only needed for temporary credentials. "
+            "Usually set in Python code as the environment variable 'AWS_SESSION_TOKEN'.",
+        ),
+        SecretStrInput(
             name="credentials_profile_name",
             display_name="Credentials Profile Name",
             advanced=True,
+            info="The name of the profile to use from your "
+            "~/.aws/credentials file. "
+            "If not provided, the default profile will be used.",
         ),
-        MessageTextInput(name="region_name", display_name="Region Name", value="us-east-1"),
-        MessageTextInput(name="endpoint_url", display_name=" Endpoint URL", advanced=True),
+        DropdownInput(
+            name="region_name",
+            display_name="Region Name",
+            value="us-east-1",
+            options=[
+                "us-west-2",
+                "us-west-1",
+                "us-gov-west-1",
+                "us-gov-east-1",
+                "us-east-2",
+                "us-east-1",
+                "sa-east-1",
+                "me-south-1",
+                "me-central-1",
+                "il-central-1",
+                "eu-west-3",
+                "eu-west-2",
+                "eu-west-1",
+                "eu-south-2",
+                "eu-south-1",
+                "eu-north-1",
+                "eu-central-2",
+                "eu-central-1",
+                "cn-northwest-1",
+                "cn-north-1",
+                "ca-west-1",
+                "ca-central-1",
+                "ap-southeast-5",
+                "ap-southeast-4",
+                "ap-southeast-3",
+                "ap-southeast-2",
+                "ap-southeast-1",
+                "ap-south-2",
+                "ap-south-1",
+                "ap-northeast-3",
+                "ap-northeast-2",
+                "ap-northeast-1",
+                "ap-east-1",
+                "af-south-1",
+            ],
+            info="The AWS region where your Bedrock resources are located.",
+        ),
+        MessageTextInput(
+            name="endpoint_url",
+            display_name="Endpoint URL",
+            advanced=True,
+            info="The URL of the AWS Bedrock endpoint to use.",
+        ),
     ]
 
     outputs = [
@@ -36,12 +102,13 @@ class AmazonBedrockEmbeddingsComponent(LCModelComponent):
     ]
 
     def build_embeddings(self) -> Embeddings:
-        if self.aws_access_key:
+        if self.aws_access_key_id or self.aws_secret_access_key:
             import boto3
 
             session = boto3.Session(
-                aws_access_key_id=self.aws_access_key,
-                aws_secret_access_key=self.aws_secret_key,
+                aws_access_key_id=self.aws_access_key_id,
+                aws_secret_access_key=self.aws_secret_access_key,
+                aws_session_token=self.aws_session_token,
             )
         elif self.credentials_profile_name:
             import boto3
