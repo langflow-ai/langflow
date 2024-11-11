@@ -108,10 +108,12 @@ class CustomComponent(BaseComponent):
 
     @property
     def trace_name(self) -> str:
-        if self._id is None:
+        if hasattr(self, "_id") and self._id is None:
             msg = "Component id is not set"
             raise ValueError(msg)
-        return f"{self.display_name} ({self._id})"
+        if hasattr(self, "_id"):
+            return f"{self.display_name} ({self._id})"
+        return f"{self.display_name}"
 
     def update_state(self, name: str, value: Any) -> None:
         if not self._vertex:
