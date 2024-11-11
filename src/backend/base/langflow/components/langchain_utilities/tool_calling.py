@@ -20,7 +20,7 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
             display_name="Language Model",
             input_types=["LanguageModel"],
             required=True,
-            info="The language model that the agent will use.",
+            info="Language model that the agent utilizes to perform tasks effectively.",
         ),
         MessageTextInput(
             name="system_prompt",
