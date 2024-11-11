@@ -1,16 +1,8 @@
 import pytest
 from langflow.components.prompts import PromptComponent
-from langflow.custom.eval import eval_custom_component_code
 
 from tests.constants import SUPPORTED_VERSIONS
-from tests.integration.utils import download_component_from_github
-
-
-def build_component_instance_for_tests(version: str, file_name: str = "Prompt", **kwargs):
-    component = download_component_from_github("prompts", file_name, version)
-    cc_class = eval_custom_component_code(component._code)
-    cc_instance = cc_class(**kwargs)
-    return cc_instance()
+from tests.integration.utils import build_component_instance_for_tests
 
 
 @pytest.mark.usefixtures("client")
