@@ -21,7 +21,12 @@ class WikiDataAPIWrapper(BaseModel):
 
     def results(self, query: str) -> list[dict[str, Any]]:
         # Define request parameters for WikiData API
-        params = {"action": "wbsearchentities", "format": "json", "search": query, "language": "en"}
+        params = {
+            "action": "wbsearchentities",
+            "format": "json",
+            "search": query,
+            "language": "en",
+        }
 
         # Send request to WikiData API
         response = httpx.get(self.wikidata_api_url, params=params)
@@ -35,10 +40,12 @@ class WikiDataAPIWrapper(BaseModel):
         try:
             results = self.results(query)
             if not results:
-                raise ToolException("No search results found for the given query.")
+                msg = "No search results found for the given query."
+
+                raise ToolException(msg)
 
             # Process and structure the results
-            processed_results = [
+            return [
                 {
                     "label": result.get("label", ""),
                     "description": result.get("description", ""),
@@ -48,10 +55,9 @@ class WikiDataAPIWrapper(BaseModel):
                 for result in results
             ]
 
-            return processed_results
-
         except Exception as e:
             error_message = f"Error in WikiData Search API: {e!s}"
+
             raise ToolException(error_message) from e
 
 
@@ -81,6 +87,7 @@ class WikiDataSearchComponent(LCToolComponent):
         )
 
         self.status = "WikiData Search API Tool for Langchain"
+
         return tool
 
     def run_model(self) -> list[Data]:
