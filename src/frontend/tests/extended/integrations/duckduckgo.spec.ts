@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test.skip("user should be able to use duckduckgo search component", async ({
+test("user should be able to use duckduckgo search component", async ({
   page,
 }) => {
   await page.goto("/");
@@ -60,22 +60,19 @@ test.skip("user should be able to use duckduckgo search component", async ({
         "built successfully",
       ) ?? false;
 
-    const isRateLimit =
-      (await page.evaluate((el) => el.textContent, result))?.includes(
-        "ratelimit",
-      ) ?? false;
+    await page.waitForTimeout(500);
+    await page.getByTestId("output-inspection-data").first().click();
+    await page.waitForTimeout(1000);
 
     if (isBuiltSuccessfully) {
-      await page.waitForTimeout(1000);
-      await page.getByTestId("output-inspection-data").first().click();
       await page.getByRole("gridcell").first().click();
       const searchResults = await page.getByPlaceholder("Empty").inputValue();
       expect(searchResults.length).toBeGreaterThan(10);
       expect(searchResults.toLowerCase()).toContain("langflow");
-    } else if (isRateLimit) {
-      expect(true).toBeTruthy();
     } else {
-      expect(true).toBeFalsy();
+      const value = await page.getByPlaceholder("Empty").inputValue();
+      expect(value.length).toBeGreaterThan(10);
+      expect(value.toLowerCase()).toContain("ratelimit");
     }
   }
 });
