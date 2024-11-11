@@ -44,18 +44,21 @@ class LCAgentComponent(Component):
             display_name="Handle Parse Errors",
             value=True,
             advanced=True,
+            info="Handle parsing errors in the agent.",
         ),
         BoolInput(
             name="verbose",
             display_name="Verbose",
             value=True,
             advanced=True,
+            info="Whether to print verbose output.",
         ),
         IntInput(
             name="max_iterations",
             display_name="Max Iterations",
             value=15,
             advanced=True,
+            info="The maximum number of iterations for the agent.",
         ),
         MultilineInput(
             name="agent_description",
@@ -187,6 +190,7 @@ class LCToolsAgentComponent(LCAgentComponent):
             input_types=["Tool", "BaseTool", "StructuredTool"],
             is_list=True,
             required=True,
+            info="Tools for the agent",
         ),
         *LCAgentComponent._base_inputs,
     ]

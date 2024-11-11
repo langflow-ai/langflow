@@ -15,14 +15,26 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
 
     inputs = [
         *LCToolsAgentComponent._base_inputs,
-        HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
+        HandleInput(
+            name="llm",
+            display_name="Language Model",
+            input_types=["LanguageModel"],
+            required=True,
+            info="The language model provider forthe agent.",
+        ),
         MessageTextInput(
             name="system_prompt",
             display_name="System Prompt",
             info="Initial instructions and context provided to guide the agent's behavior.",
             value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
         ),
-        DataInput(name="chat_history", display_name="Chat Memory", is_list=True, advanced=True),
+        DataInput(
+            name="chat_history",
+            display_name="Chat Memory",
+            is_list=True,
+            advanced=True,
+            info="To store past interactions for chat continuity.",
+        ),
     ]
 
     def get_chat_history_data(self) -> list[Data] | None:
