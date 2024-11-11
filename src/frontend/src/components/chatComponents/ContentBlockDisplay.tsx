@@ -42,9 +42,7 @@ export function ContentBlockDisplay({
     state === "partial" ? lastContent?.header?.icon || "Bot" : "Bot";
 
   const headerTitle =
-    (state === "partial"
-      ? (lastContent?.header?.title ?? "Steps")
-      : "Finished");
+    state === "partial" ? (lastContent?.header?.title ?? "Steps") : "Finished";
   // show the block title only if state === "partial"
   const showBlockTitle = state === "partial";
 
@@ -94,7 +92,7 @@ export function ContentBlockDisplay({
                 <Markdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeMathjax]}
-                  className="inline-block w-fit max-w-full text-primary text-[14px] font-semibold"
+                  className="inline-block w-fit max-w-full text-[14px] font-semibold text-primary"
                 >
                   {headerTitle}
                 </Markdown>
@@ -188,9 +186,7 @@ export function ContentBlockDisplay({
                               exit={{ opacity: 0 }}
                               transition={{ duration: 0.2 }}
                             >
-                              <Separator
-                                orientation="horizontal"
-                              />
+                              <Separator orientation="horizontal" />
                             </motion.div>
                           )}
                         </AnimatePresence>
