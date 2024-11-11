@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import json
 from collections.abc import AsyncIterator, Generator, Iterator
@@ -434,7 +435,7 @@ class InterfaceVertex(ComponentVertex):
             and hasattr(self.custom_component, "should_store_message")
             and hasattr(self.custom_component, "store_message")
         ):
-            self.custom_component.store_message(message)
+            await asyncio.to_thread(self.custom_component.store_message, message)
         log_vertex_build(
             flow_id=self.graph.flow_id,
             vertex_id=self.id,

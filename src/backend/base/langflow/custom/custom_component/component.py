@@ -797,7 +797,8 @@ class Component(CustomComponent):
                 return await self._build_with_tracing()
             return await self._build_without_tracing()
         except StreamingError as e:
-            self.send_error(
+            await asyncio.to_thread(
+                self.send_error,
                 exception=e.cause,
                 session_id=self.graph.session_id,
                 trace_name=getattr(self, "trace_name", None),
@@ -805,7 +806,8 @@ class Component(CustomComponent):
             )
             raise e.cause  # noqa: B904
         except Exception as e:
-            self.send_error(
+            await asyncio.to_thread(
+                self.send_error,
                 exception=e,
                 session_id=self.graph.session_id,
                 source=Source(id=self._id, display_name=self.display_name, source=self.display_name),

@@ -1,3 +1,5 @@
+import asyncio
+
 from langchain_core.tools import StructuredTool
 
 from langflow.base.agents.agent import LCToolsAgentComponent
@@ -58,7 +60,7 @@ class AgentComponent(ToolCallingAgentComponent):
         if llm_model is None:
             msg = "No language model selected"
             raise ValueError(msg)
-        self.chat_history = self.get_memory_data()
+        self.chat_history = await asyncio.to_thread(self.get_memory_data)
 
         if self.add_current_date_tool:
             if not isinstance(self.tools, list):  # type: ignore[has-type]
