@@ -1,15 +1,16 @@
 import os
 
 import pytest
+from pydantic import BaseModel
+
 from langflow.base.tools.component_tool import ComponentToolkit
-from langflow.components.agents import ToolCallingAgentComponent
+from langflow.components.langchain_utilities import ToolCallingAgentComponent
 from langflow.components.models import OpenAIModelComponent
 from langflow.components.outputs import ChatOutput
 from langflow.components.tools.calculator import CalculatorToolComponent
 from langflow.graph import Graph
 from langflow.schema.data import Data
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
-from pydantic import BaseModel
 
 
 @pytest.fixture
