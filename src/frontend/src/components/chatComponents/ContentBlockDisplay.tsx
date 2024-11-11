@@ -43,8 +43,8 @@ export function ContentBlockDisplay({
 
   const headerTitle =
     (state === "partial"
-      ? lastContent?.header?.title
-      : contentBlocks[0]?.title) || "Steps";
+      ? (lastContent?.header?.title ?? "Agent Steps")
+      : "Finished");
   // show the block title only if state === "partial"
   const showBlockTitle = state === "partial";
 
