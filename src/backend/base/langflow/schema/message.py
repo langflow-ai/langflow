@@ -339,12 +339,15 @@ class ErrorMessage(Message):
 
     def __init__(
         self,
-        exception: Exception,
+        exception: BaseException,
         session_id: str,
         source: Source,
         trace_name: str | None = None,
         flow_id: str | None = None,
     ) -> None:
+        # This is done to avoid circular imports
+        if exception.__class__.__name__ == "ExceptionWithMessageError" and exception.__cause__ is not None:
+            exception = exception.__cause__
         # Get the error reason
         reason = f"**{exception.__class__.__name__}**\n"
         if hasattr(exception, "body") and "message" in exception.body:

@@ -14,9 +14,8 @@ from langflow.schema.message import Message
 
 
 class ExceptionWithMessageError(Exception):
-    def __init__(self, e: Exception, agent_message: Message):
+    def __init__(self, agent_message: Message):
         self.agent_message = agent_message
-        self.exception = e
         super().__init__()
 
 
@@ -253,5 +252,5 @@ async def process_agent_events(
                 start_time = start_time or perf_counter()
         agent_message.properties.state = "complete"
     except Exception as e:
-        raise ExceptionWithMessageError(e, agent_message) from e
+        raise ExceptionWithMessageError(agent_message) from e
     return Message(**agent_message.model_dump())
