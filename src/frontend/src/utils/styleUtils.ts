@@ -1,8 +1,12 @@
 import { AIMLIcon } from "@/icons/AIML";
 import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
+import { ExaIcon } from "@/icons/Exa";
+import { LangwatchIcon } from "@/icons/Langwatch";
+import { MilvusIcon } from "@/icons/Milvus";
 import Perplexity from "@/icons/Perplexity/Perplexity";
 import { TavilyIcon } from "@/icons/Tavily";
 import { UnstructuredIcon } from "@/icons/Unstructured";
+import { ZepMemoryIcon } from "@/icons/ZepMemory";
 import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import { GlobeOkIcon } from "@/icons/globe-ok";
@@ -12,6 +16,7 @@ import {
   ArrowBigUp,
   ArrowLeft,
   ArrowRight,
+  ArrowRightLeft,
   ArrowUpRight,
   ArrowUpToLine,
   Bell,
@@ -44,6 +49,7 @@ import {
   Clipboard,
   Code,
   Code2,
+  Cog,
   Combine,
   Command,
   Compass,
@@ -53,6 +59,7 @@ import {
   Cpu,
   CpuIcon,
   Database,
+  DatabaseZap,
   Delete,
   Dot,
   Download,
@@ -142,6 +149,7 @@ import {
   PlusCircle,
   PlusSquare,
   PocketKnife,
+  Radio,
   Redo,
   RefreshCcw,
   RefreshCcwDot,
@@ -161,6 +169,7 @@ import {
   Share,
   Share2,
   Shield,
+  Sigma,
   Sliders,
   SlidersHorizontal,
   Snowflake,
@@ -458,10 +467,11 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Text Splitters", name: "textsplitters", icon: "Scissors" },
   { display_name: "Toolkits", name: "toolkits", icon: "Package2" },
   { display_name: "Tools", name: "tools", icon: "Hammer" },
+  { display_name: "Logic", name: "logic", icon: "ArrowRightLeft" },
+  { display_name: "Processing", name: "processing", icon: "ListFilter" },
 ];
 
 export const SIDEBAR_BUNDLES = [
-  { display_name: "CrewAI", name: "crewai", icon: "CrewAi" },
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
   { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
   {
@@ -469,11 +479,18 @@ export const SIDEBAR_BUNDLES = [
     name: "astra_assistants",
     icon: "AstraDB",
   },
-  { display_name: "Google", name: "google", icon: "Google" },
-  { display_name: "Firecrawl", name: "firecrawl", icon: "FirecrawlCrawlApi" },
   { display_name: "Notion", name: "Notion", icon: "Notion" },
   { display_name: "NVIDIA", name: "nvidia", icon: "NVIDIA" },
   { display_name: "Vectara", name: "vectara", icon: "Vectara" },
+  { display_name: "Google", name: "google", icon: "Google" },
+  { display_name: "CrewAI", name: "crewai", icon: "CrewAI" },
+  { display_name: "Composio", name: "composio", icon: "Composio" },
+  { display_name: "Cohere", name: "cohere", icon: "Cohere" },
+  { display_name: "Firecrawl", name: "firecrawl", icon: "FirecrawlCrawlApi" },
+  { display_name: "Unstructured", name: "unstructured", icon: "Unstructured" },
+  { display_name: "Git", name: "git", icon: "GitLoader" },
+  { display_name: "Confluence", name: "confluence", icon: "Confluence" },
+  { display_name: "Mem0", name: "mem0", icon: "Mem0" },
 ];
 
 export const categoryIcons = {
@@ -622,6 +639,7 @@ export const nodeIconsLucide: iconsType = {
   WolframAlphaAPIWrapper: SvgWolfram,
   WikipediaQueryRun: SvgWikipedia,
   WolframAlphaQueryRun: SvgWolfram,
+  WolframAlphaAPI: SvgWolfram,
   group_components: GradientUngroup,
   Streamlit,
   Discord: FaDiscord,
@@ -640,6 +658,11 @@ export const nodeIconsLucide: iconsType = {
   GithubIcon,
   FaGithub,
   FaApple,
+  Milvus: MilvusIcon,
+  ExaSearch: ExaIcon,
+  ZepMemory: ZepMemoryIcon,
+  Langwatch: LangwatchIcon,
+  Mem0,
 
   //Node Icons
   model_specs: FileSliders,
@@ -836,5 +859,9 @@ export const nodeIconsLucide: iconsType = {
   CircleCheckBig,
   ZoomIn,
   ZoomOut,
-  Mem0,
+  Sigma,
+  Radio,
+  DatabaseZap,
+  Cog,
+  ArrowRightLeft,
 };
