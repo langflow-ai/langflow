@@ -283,15 +283,17 @@ def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: UUID | None =
         return FlowRead.model_validate(flow, from_attributes=True)
 
 
-def generate_unique_flow_name(flow_name, user_id, session):
+async def generate_unique_flow_name(flow_name, user_id, session):
     original_name = flow_name
     n = 1
     while True:
         # Check if a flow with the given name exists
-        existing_flow = session.exec(
-            select(Flow).where(
-                Flow.name == flow_name,
-                Flow.user_id == user_id,
+        existing_flow = (
+            await session.exec(
+                select(Flow).where(
+                    Flow.name == flow_name,
+                    Flow.user_id == user_id,
+                )
             )
         ).first()
 
