@@ -45,10 +45,16 @@ def validate_code(code):
                     importlib.import_module(alias.name)
                 except ModuleNotFoundError as e:
                     errors["imports"]["errors"].append(str(e))
+        elif isinstance(node, ast.ImportFrom):
+            errors["imports"]["errors"].append(f"Import statements are not allowed: {node.module}")
 
     # Evaluate the function definition
     for node in tree.body:
         if isinstance(node, ast.FunctionDef):
+            for default in node.args.defaults:
+                if isinstance(default, ast.Call) and isinstance(default.func, ast.Name):
+                    if default.func.id in ["eval", "exec"]:
+                        errors["function"]["errors"].append(f"Use of {default.func.id} is not allowed")
             code_obj = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
             try:
                 exec(code_obj)

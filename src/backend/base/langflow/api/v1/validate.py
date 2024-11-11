@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from loguru import logger
+from ast import literal_eval
 
 from langflow.api.v1.base import Code, CodeValidationResponse, PromptValidationResponse, ValidatePromptRequest
 from langflow.base.prompts.api_utils import process_prompt_template
@@ -8,11 +9,11 @@ from langflow.utils.validate import validate_code
 # build router
 router = APIRouter(prefix="/validate", tags=["Validate"])
 
-
+# WARNING: This endpoint should not be directly called by arbitrary users. Use it at your own risk.
 @router.post("/code", status_code=200)
 async def post_validate_code(code: Code) -> CodeValidationResponse:
     try:
-        errors = validate_code(code.code)
+        errors = validate_code(literal_eval(code.code))
         return CodeValidationResponse(
             imports=errors.get("imports", {}),
             function=errors.get("function", {}),

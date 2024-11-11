@@ -63,6 +63,17 @@ def square(x)
         "function": {"errors": ["expected ':' (<unknown>, line 4)"]},
     }
 
+    # Test case with a malicious code injection attempt
+    code4 = """
+def x(y=eval('__import__("os").system("ls")')):
+    pass
+"""
+    errors4 = validate_code(code4)
+    assert errors4 == {
+        "imports": {"errors": []},
+        "function": {"errors": ["Use of eval is not allowed"]},
+    }
+
 
 def test_execute_function_success():
     code = """
