@@ -5,7 +5,21 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" href="/favicon.ico" />
+
+    <!-- Safari mask icon (for Safari tab bar or bookmarks) -->
+    <link rel="mask-icon" href="/src/assets/favicons/langflow-icon-white.svg" color="#000000">
+    <link rel="mask-icon" href="/src/assets/favicons/langflow-icon-white.svg" color="#ffffff">
+
+    <!-- Dark mode serves white SVG icon -->
+    <link rel="icon" class="js-site-favicon" type="image/svg+xml" href="/src/assets/favicons/langflow-icon-white.svg" media="(prefers-color-scheme: dark)">
+    <!-- Light mode serves black SVG icon -->
+    <link rel="icon" class="js-site-favicon" type="image/svg+xml" href="/src/assets/favicons/langflow-icon-black.svg" media="(prefers-color-scheme: light)">
+
+    <!-- Dark mode serves white PNG icon fallback -->
+    <link rel="alternate icon" type="image/png" href="/src/assets/favicons/langflow-icon-white.png" media="(prefers-color-scheme: dark)">
+    <!-- Light mode serves black PNG icon fallback -->
+    <link rel="alternate icon" type="image/png" href="/src/assets/favicons/langflow-icon-black.png" media="(prefers-color-scheme: light)">
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -16,6 +30,23 @@
       src="/node_modules/ace-builds/src-min-noconflict/ace.js"
       type="module"
     ></script>
+    <script>
+      function updateFavicon() {
+        const darkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const favicon = document.querySelector('link[rel="icon"]');
+        if (darkMode) {
+          favicon.href = "path/to/icon-dark.svg";
+        } else {
+          favicon.href = "path/to/icon-light.svg";
+        }
+      }
+    
+      // Run on page load
+      updateFavicon();
+    
+      // Listen for theme changes and update favicon
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateFavicon);
+    </script>
     <title>Langflow</title>
   </head>
   <body id="body" class="dark" style="width: 100%; height: 100%">
