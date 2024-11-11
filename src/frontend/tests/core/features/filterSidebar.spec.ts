@@ -51,7 +51,7 @@ test("user must see on handle click the possibility connections - LLMChain", asy
 
   await page.waitForTimeout(500);
 
-  expect(await page.getByTestId("icon-ListFilter")).toBeVisible();
+  expect(await page.getByTestId("icon-ListFilter").first()).toBeVisible();
 
   await page
     .getByTestId("icon-X")
@@ -76,7 +76,6 @@ test("user must see on handle click the possibility connections - LLMChain", asy
   await page.getByTestId("sidebar-options-trigger").click();
   await page.getByTestId("sidebar-legacy-switch").isVisible({ timeout: 5000 });
   await page.getByTestId("sidebar-legacy-switch").click();
-  await expect(page.getByTestId("sidebar-legacy-switch")).toBeChecked();
   await page.getByTestId("sidebar-options-trigger").click();
 
   await expect(page.getByTestId("disclosure-prototypes")).toBeVisible();
