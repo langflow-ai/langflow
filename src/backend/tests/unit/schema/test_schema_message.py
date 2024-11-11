@@ -89,6 +89,7 @@ def test_message_from_ai_text():
     assert lc_message.content == text
 
 
+@pytest.mark.usefixtures("langflow_cache_dir")
 def test_message_with_single_image(sample_image):
     """Test creating a message with text and an image."""
     text = "Check out this image"
@@ -116,6 +117,7 @@ def test_message_with_multiple_images(sample_image, langflow_cache_dir):
     flow_dir = langflow_cache_dir / "test_flow"
     second_image = flow_dir / "second_image.png"
     shutil.copy2(str(sample_image), str(second_image))
+    assert second_image.exists()
 
     # Use platformdirs for the real cache location
     real_cache_dir = Path(user_cache_dir("langflow_test")) / "test_flow"
