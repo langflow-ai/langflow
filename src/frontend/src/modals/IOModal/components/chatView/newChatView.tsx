@@ -12,6 +12,9 @@ import { useFileHandler } from "./chatInput/hooks/use-file-handler";
 import ChatInput from "./chatInput/newChatInput";
 import LogoIcon from "./chatMessage/components/chatLogoIcon";
 import ChatMessage from "./chatMessage/newChatMessage";
+import LangflowLogo from "@/assets/LangflowLogo.svg?react";
+import ChainLogo from "@/assets/logo.svg?react";
+import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
 
 export default function ChatView({
   sendMessage,
@@ -144,11 +147,11 @@ export default function ChatView({
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center">
             <div className="flex flex-col items-center justify-center gap-4 p-8">
-              <img
-                src="/src/assets/logo.svg"
-                alt="Chain logo"
-                className="h-[40px] w-[40px] scale-[1.5]"
-              />
+              {ENABLE_NEW_LOGO ? (
+                <LangflowLogo title="Langflow logo" className="h-[40px] w-[40px] scale-[1.5]" />
+              ): (
+                <ChainLogo title="Langflow logo" className="h-[40px] w-[40px] scale-[1.5]" />
+              )}
               <div className="flex flex-col items-center justify-center">
                 <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
                   New chat
