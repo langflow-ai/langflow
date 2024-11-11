@@ -931,7 +931,7 @@
             "base_classes": [
               "Message"
             ],
-            "beta": true,
+            "beta": false,
             "category": "agents",
             "conditional_paths": [],
             "custom_fields": {},
