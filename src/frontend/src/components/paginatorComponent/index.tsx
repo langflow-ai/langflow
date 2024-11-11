@@ -44,91 +44,85 @@ export default function PaginatorComponent({
 
   return (
     <>
-      <div className="flex items-center justify-between px-2">
-        <div className="flex-1 text-xs text-muted-foreground"></div>
-        <div
-          className={
-            storeComponent
-              ? "flex items-center lg:space-x-6"
-              : "flex items-center space-x-6 lg:space-x-8"
-          }
-        >
-          <div className="flex items-center space-x-2">
-            <p className="text-xs font-medium text-secondary-foreground">
-              Rows per page
-            </p>
-            <Select
-              onValueChange={handleValueChange}
-              value={pageSize.toString()}
-            >
-              <SelectTrigger className="w-[80px]">
-                <SelectValue placeholder="10" />
-              </SelectTrigger>
-              <SelectContent>
-                {rowsCount.map((item, i) => (
-                  <SelectItem key={i} value={item.toString()}>
-                    {item}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex w-[60px] items-center justify-end text-xs font-medium text-secondary-foreground">
-            Page {pageIndex}
-            {!storeComponent && <> of {maxIndex}</>}
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              disabled={pageIndex <= 1}
-              variant="ghost"
-              className="hidden h-8 w-8 p-0 lg:flex"
-              onClick={() => {
-                paginate(1, size);
-              }}
-              size={"icon"}
-            >
-              <span className="sr-only">Go to first page</span>
-              <IconComponent name="ChevronsLeft" className="h-4 w-4" />
-            </Button>
-            <Button
-              disabled={disableFirstPage}
-              onClick={() => {
-                if (pageIndex > 0) {
-                  paginate(pageIndex - 1, size);
-                }
-              }}
-              variant="ghost"
-              className="h-8 w-8 p-0"
-              size={"icon"}
-            >
-              <span className="sr-only">Go to previous page</span>
-              <IconComponent name="ChevronLeft" className="h-4 w-4" />
-            </Button>
-            <Button
-              disabled={disableLastPage}
-              onClick={() => {
-                paginate(pageIndex + 1, size);
-              }}
-              variant="ghost"
-              className="h-8 w-8 p-0"
-              size={"icon"}
-            >
-              <span className="sr-only">Go to next page</span>
-              <IconComponent name="ChevronRight" className="h-4 w-4" />
-            </Button>
-            <Button
-              disabled={disableLastPage}
-              variant="ghost"
-              className="hidden h-8 w-8 p-0 lg:flex"
-              size={"icon"}
-              onClick={() => {
-                paginate(maxIndex, size);
-              }}
-            >
-              <span className="sr-only">Go to last page</span>
-              <IconComponent name="ChevronsRight" className="h-4 w-4" />
-            </Button>
-          </div>
+      <div
+        className={
+          storeComponent
+            ? "flex items-center lg:space-x-6"
+            : "flex items-center space-x-6 lg:space-x-8"
+        }
+      >
+        <div className="flex items-center space-x-2">
+          <p className="text-xs font-medium text-secondary-foreground">
+            Rows per page
+          </p>
+          <Select onValueChange={handleValueChange} value={pageSize.toString()}>
+            <SelectTrigger className="w-[80px]">
+              <SelectValue placeholder="10" />
+            </SelectTrigger>
+            <SelectContent>
+              {rowsCount.map((item, i) => (
+                <SelectItem key={i} value={item.toString()}>
+                  {item}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex w-[60px] items-center justify-end text-xs font-medium text-secondary-foreground">
+          Page {pageIndex}
+          {!storeComponent && <> of {maxIndex}</>}
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            disabled={pageIndex <= 1}
+            variant="ghost"
+            className="hidden h-8 w-8 p-0 lg:flex"
+            onClick={() => {
+              paginate(1, size);
+            }}
+            size={"icon"}
+          >
+            <span className="sr-only">Go to first page</span>
+            <IconComponent name="ChevronsLeft" className="h-4 w-4" />
+          </Button>
+          <Button
+            disabled={disableFirstPage}
+            onClick={() => {
+              if (pageIndex > 0) {
+                paginate(pageIndex - 1, size);
+              }
+            }}
+            variant="ghost"
+            className="h-8 w-8 p-0"
+            size={"icon"}
+          >
+            <span className="sr-only">Go to previous page</span>
+            <IconComponent name="ChevronLeft" className="h-4 w-4" />
+          </Button>
+          <Button
+            disabled={disableLastPage}
+            onClick={() => {
+              paginate(pageIndex + 1, size);
+            }}
+            variant="ghost"
+            className="h-8 w-8 p-0"
+            size={"icon"}
+          >
+            <span className="sr-only">Go to next page</span>
+            <IconComponent name="ChevronRight" className="h-4 w-4" />
+          </Button>
+          <Button
+            disabled={disableLastPage}
+            variant="ghost"
+            className="hidden h-8 w-8 p-0 lg:flex"
+            size={"icon"}
+            onClick={() => {
+              paginate(maxIndex, size);
+            }}
+          >
+            <span className="sr-only">Go to last page</span>
+            <IconComponent name="ChevronsRight" className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </>
