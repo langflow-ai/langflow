@@ -393,7 +393,7 @@ async def test_handle_on_chain_end_with_empty_return_values():
     assert isinstance(start_time, float)
 
 
-def test_handle_on_tool_start():
+async def test_handle_on_tool_start():
     """Test handle_on_tool_start event."""
     send_message = MagicMock(side_effect=lambda message: message)
     tool_blocks_map = {}
@@ -415,8 +415,9 @@ def test_handle_on_tool_start():
 
     assert len(updated_message.content_blocks) == 1
     assert len(updated_message.content_blocks[0].contents) > 0
+    tool_key = f"{event['name']}_{event['run_id']}"
     tool_content = updated_message.content_blocks[0].contents[-1]
-    assert tool_content == tool_blocks_map.get("test_run")
+    assert tool_content == tool_blocks_map.get(tool_key)
     assert isinstance(tool_content, ToolContent)
     assert tool_content.name == "test_tool"
     assert tool_content.tool_input == {"query": "tool input"}
@@ -453,6 +454,7 @@ async def test_handle_on_tool_end():
 
     updated_message, start_time = handle_on_tool_end(end_event, agent_message, tool_blocks_map, send_message, 0.0)
 
+    f"{end_event['name']}_{end_event['run_id']}"
     tool_content = updated_message.content_blocks[0].contents[-1]
     assert tool_content.name == "test_tool"
     assert tool_content.output == "tool output"
