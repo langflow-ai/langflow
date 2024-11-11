@@ -142,6 +142,26 @@ class AgentComponent(ToolCallingAgentComponent):
             if field_value in provider_configs:
                 fields_to_add, fields_to_delete = provider_configs[field_value]
 
+
+                # Ensure default keys are not in fields to add or fields to delete
+                default_keys = [
+                    "code",
+                    "_type",
+                    "agent_llm",
+                    "tools",
+                    "input_value",
+                    "add_current_date_tool",
+                    "system_prompt",
+                    "agent_description",
+                    "max_iterations",
+                    "handle_parsing_errors",
+                    "verbose",
+                ]
+                for key in default_keys:
+                    if key in fields_to_add or key in fields_to_delete:
+                        msg = f"Default key '{key}' should not be in fields to add or delete."
+                        raise ValueError(msg)
+
                 # Delete fields from other providers
                 for fields in fields_to_delete:
                     self.delete_fields(build_config, fields)

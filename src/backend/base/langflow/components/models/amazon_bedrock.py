@@ -19,6 +19,7 @@ class AmazonBedrockComponent(LCModelComponent):
             display_name="AWS Bedrock Model ID",
             options=AWS_MODEL_IDs,
             value="anthropic.claude-3-haiku-20240307-v1:0",
+            real_time_refresh=True,
             info="List of available model IDs to choose from.",
         ),
         SecretStrInput(

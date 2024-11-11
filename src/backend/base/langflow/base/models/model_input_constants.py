@@ -16,6 +16,7 @@ def get_filtered_inputs(component_class):
         if input_.name not in base_input_names
     ]
 
+
 # def get_filtered_inputs_aws(component_class):
 #     base_input_names = {field.name for field in LCModelComponent._base_inputs}
 #     required_input_names = {"aws_model_id", "aws_access_key_id", "aws_secret_access_key","aws_region_name"}
@@ -24,6 +25,7 @@ def get_filtered_inputs(component_class):
 #         for input_ in component_class().inputs
 #         if input_.name in required_input_names and input_.name not in base_input_names
 #     ]
+
 
 def set_advanced_true(component_input):
     component_input.advanced = True
@@ -50,8 +52,8 @@ GROQ_FIELDS = create_input_fields_dict(GROQ_INPUTS, "groq")
 ANTHROPIC_FIELDS = create_input_fields_dict(ANTHROPIC_INPUTS, "anthropic")
 NVIDIA_FIELDS = create_input_fields_dict(NVIDIA_INPUTS, "nvidia")
 OLLAMA_FIELDS = create_input_fields_dict(OLLAMA_INPUTS, "ollama")
-BEDROCK_FIELDS = create_input_fields_dict(BEDROCK_INPUTS, "aws")
-MODEL_PROVIDERS = ["Azure OpenAI", "OpenAI", "Groq", "Anthropic", "NVIDIA", "OLLAMA"]
+BEDROCK_FIELDS = create_input_fields_dict(BEDROCK_INPUTS, "amazon_bedrock")
+
 
 MODEL_PROVIDERS_DICT = {
     "Azure OpenAI": {
@@ -82,7 +84,7 @@ MODEL_PROVIDERS_DICT = {
     "Amazon Bedrock": {
         "fields": BEDROCK_FIELDS,
         "inputs": BEDROCK_INPUTS,
-        "prefix": "aws_",
+        "prefix": "amazon_bedrock_",
         "component_class": AmazonBedrockComponent(),
     },
     "OLLAMA": {
@@ -90,6 +92,6 @@ MODEL_PROVIDERS_DICT = {
         "inputs": OLLAMA_INPUTS,
         "prefix": "ollama_",
         "component_class": ChatOllamaComponent(),
-    }
+    },
 }
 ALL_PROVIDER_FIELDS: list[str] = [field for provider in MODEL_PROVIDERS_DICT.values() for field in provider["fields"]]
