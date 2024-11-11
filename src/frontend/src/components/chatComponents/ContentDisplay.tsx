@@ -8,7 +8,13 @@ import SimplifiedCodeTabComponent from "../codeTabsComponent/ChatCodeTabComponen
 import ForwardedIconComponent from "../genericIconComponent";
 import DurationDisplay from "./DurationDisplay";
 
-export default function ContentDisplay({ content, chatId }: { content: ContentType, chatId: string }) {
+export default function ContentDisplay({
+  content,
+  chatId,
+}: {
+  content: ContentType;
+  chatId: string;
+}) {
   // First render the common BaseContent elements if they exist
   const renderHeader = content.header && (
     <>

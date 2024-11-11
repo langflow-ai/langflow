@@ -192,7 +192,10 @@ export function ContentBlockDisplay({
                             </motion.div>
                           )}
                         </AnimatePresence>
-                        <ContentDisplay content={content} chatId={`${chatId}-${index}`} />
+                        <ContentDisplay
+                          content={content}
+                          chatId={`${chatId}-${index}`}
+                        />
                       </motion.div>
                     ))}
                   </div>
