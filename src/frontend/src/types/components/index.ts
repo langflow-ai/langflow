@@ -40,6 +40,7 @@ export type InputComponentType = {
   isObjectOption?: boolean;
   onChangeFolderName?: (e: any) => void;
   nodeStyle?: boolean;
+  isToolMode?: boolean;
 };
 export type DropDownComponent = {
   disabled?: boolean;
