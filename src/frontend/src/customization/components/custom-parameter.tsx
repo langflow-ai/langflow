@@ -51,7 +51,7 @@ export function getCustomParameterTitle({
   isFlexView,
 }: {
   title: string;
-  nodeId: string,
+  nodeId: string;
   isFlexView: boolean;
 }) {
   return (
