@@ -81,7 +81,7 @@ const HomePage = ({ type }) => {
       dragMessage={`Drag your ${folderName} here`}
     >
       <div
-        className="flex h-full w-full flex-col xl:container"
+        className="flex w-full flex-col xl:container"
         data-testid="cards-wrapper"
       >
         {/* TODO: Move to Datastax LF and update Icon */}
@@ -177,7 +177,7 @@ const HomePage = ({ type }) => {
         </div>
 
         {!isLoading && !isEmptyFolder && data.pagination.total >= 10 && (
-          <div className="relative flex justify-end px-3 py-6">
+          <div className="relative flex shrink-0 justify-end px-3 py-6">
             <PaginatorComponent
               storeComponent={true}
               pageIndex={data.pagination.page}
