@@ -144,7 +144,7 @@ class YouTubeTranscriptsComponent(LCToolComponent):
             )
 
             transcripts = loader.load()
-            if transcript_format == TranscriptFormat.TEXT:
+            if transcript_format == TranscriptFormat.TEXT and len(transcripts) > 0:
                 return Data(data={"transcript": transcripts[0].page_content})
             return [Data(data={"content": doc.page_content, "metadata": doc.metadata}) for doc in transcripts]
         except Exception as exc:
