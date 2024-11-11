@@ -9,21 +9,30 @@ from langflow.schema import Data
 
 class ToolCallingAgentComponent(LCToolsAgentComponent):
     display_name: str = "Tool Calling Agent"
-    description: str = "An agent designed to utilize various tools seamlessly within workflows."
+    description: str = (
+        "An agent designed to utilize various tools seamlessly within workflows."
+    )
     icon = "LangChain"
     beta = True
     name = "ToolCallingAgent"
 
     inputs = [
         *LCToolsAgentComponent._base_inputs,
-        HandleInput(name="llm", display_name="Language Model", input_types=["LanguageModel"], required=True),
+        HandleInput(
+            name="llm",
+            display_name="Language Model",
+            input_types=["LanguageModel"],
+            required=True,
+        ),
         MessageTextInput(
             name="system_prompt",
             display_name="System Prompt",
-            info="Initial instructions and context provided to guide the agent's behavior.",
+            info="System prompt to guide the agent's behavior.",
             value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
         ),
-        DataInput(name="chat_history", display_name="Chat Memory", is_list=True, advanced=True),
+        DataInput(
+            name="chat_history", display_name="Chat Memory", is_list=True, advanced=True
+        ),
     ]
 
     def get_chat_history_data(self) -> list[Data] | None:
