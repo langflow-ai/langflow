@@ -1,3 +1,4 @@
+import os
 import shutil
 from pathlib import Path
 
@@ -114,6 +115,7 @@ def test_message_with_single_image(sample_image):
 def test_message_with_multiple_images(sample_image, langflow_cache_dir):
     """Test creating a message with multiple images."""
     # Create a second image in the cache directory
+    assert os.environ["LANGFLOW_CONFIG_DIR"] == str(langflow_cache_dir)
     flow_dir = langflow_cache_dir / "test_flow"
     second_image = flow_dir / "second_image.png"
     shutil.copy2(str(sample_image), str(second_image))
