@@ -1,8 +1,8 @@
-import httpx
-from typing import Any, List
+from typing import Any
 
-from pydantic import BaseModel, Field
+import httpx
 from langchain_core.tools import StructuredTool, ToolException
+from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
@@ -19,24 +19,19 @@ class WikiDataAPIWrapper(BaseModel):
 
     wikidata_api_url: str = "https://www.wikidata.org/w/api.php"
 
-    def results(self, query: str) -> List[dict[str, Any]]:
+    def results(self, query: str) -> list[dict[str, Any]]:
         # Define request parameters for WikiData API
-        params = {
-            'action': 'wbsearchentities',
-            'format': 'json',
-            'search': query,
-            'language': 'en'
-        }
-        
+        params = {"action": "wbsearchentities", "format": "json", "search": query, "language": "en"}
+
         # Send request to WikiData API
         response = httpx.get(self.wikidata_api_url, params=params)
         response.raise_for_status()
         response_json = response.json()
-        
+
         # Extract and return search results
         return response_json.get("search", [])
 
-    def run(self, query: str) -> List[dict[str, Any]]:
+    def run(self, query: str) -> list[dict[str, Any]]:
         try:
             results = self.results(query)
             if not results:
@@ -52,7 +47,7 @@ class WikiDataAPIWrapper(BaseModel):
                 }
                 for result in results
             ]
-            
+
             return processed_results
 
         except Exception as e:
@@ -76,7 +71,7 @@ class WikiDataSearchComponent(LCToolComponent):
 
     def build_tool(self) -> Tool:
         wrapper = WikiDataAPIWrapper()
-        
+
         # Define the tool using StructuredTool and wrapper's run method
         tool = StructuredTool.from_function(
             name="wikidata_search_api",
@@ -88,7 +83,7 @@ class WikiDataSearchComponent(LCToolComponent):
         self.status = "WikiData Search API Tool for Langchain"
         return tool
 
-    def run_model(self) -> List[Data]:
+    def run_model(self) -> list[Data]:
         tool = self.build_tool()
 
         results = tool.run({"query": self.query})
@@ -101,7 +96,7 @@ class WikiDataSearchComponent(LCToolComponent):
                     "id": result["id"],
                     "concepturi": result["concepturi"],
                     "description": result["description"],
-                }
+                },
             )
             for result in results
         ]
