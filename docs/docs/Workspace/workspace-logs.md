@@ -11,6 +11,6 @@ The **Logs** pane provides a detailed record of all component executions withi
 
 ![](/img/logs.png)
 
-2. All cells in the Logs view can be opened and inspected.
+2. All cells in the **Logs** view can be opened and inspected.
 
 
