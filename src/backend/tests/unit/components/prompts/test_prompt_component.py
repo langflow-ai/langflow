@@ -2,7 +2,6 @@ import pytest
 from langflow.components.prompts import PromptComponent
 
 from tests.base import DID_NOT_EXIST, ComponentTestBase
-from tests.constants import SUPPORTED_VERSIONS
 from tests.integration.utils import build_component_instance_for_tests
 
 
@@ -26,13 +25,11 @@ class TestPromptComponent(ComponentTestBase):
         assert "name" in node_data["template"]
         assert node_data["template"]["name"]["value"] == "John"
 
-    @pytest.mark.parametrize("version", SUPPORTED_VERSIONS)
-    def test_prompt_component_versions(self, version):
-        if self.FILE_NAMES_MAPPING[version] is DID_NOT_EXIST:
+    @pytest.mark.parametrize(("version", "file_name"), list(FILE_NAMES_MAPPING.items()))
+    def test_prompt_component_versions(self, version, file_name):
+        if file_name is DID_NOT_EXIST:
             pytest.skip(f"Prompt component did not exist in version {version}")
-        result = build_component_instance_for_tests(
-            version, file_name=self.FILE_NAMES_MAPPING[version], **self.DEFAULT_KWARGS
-        )
+        result = build_component_instance_for_tests(version, file_name=file_name, **self.DEFAULT_KWARGS)
         assert result is not None
 
     def test_prompt_component_latest(self):
