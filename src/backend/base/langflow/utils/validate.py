@@ -29,7 +29,10 @@ def validate_code(code):
     try:
         tree = ast.parse(code)
     except Exception as e:  # noqa: BLE001
-        logger.opt(exception=True).debug("Error parsing code")
+        if hasattr(logger, "opt"):
+            logger.opt(exception=True).debug("Error parsing code")
+        else:
+            logger.debug("Error parsing code")
         errors["function"]["errors"].append(str(e))
         return errors
 
