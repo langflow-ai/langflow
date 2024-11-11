@@ -241,6 +241,13 @@ const config = {
           foreground: "hsl(var(--datatype-indigo-foreground))",
         },
         "node-ring": "hsl(var(--node-ring))",
+        "neon-fuschia": "hsl(var(--neon-fuschia))",
+        "digital-orchid": "hsl(var(--digital-orchid))",
+        "plasma-purple": "hsl(var(--plasma-purple))",
+        "electric-blue": "hsl(var(--electric-blue))",
+        "holo-frost": "hsl(var(--holo-frost))",
+        "terminal-green": "hsl(var(--terminal-green))",
+        "cosmic-void": "hsl(var(--cosmic-void))",
       },
       borderRadius: {
         lg: `var(--radius)`,
