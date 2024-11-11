@@ -1,6 +1,7 @@
 import { AIMLIcon } from "@/icons/AIML";
 import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
 import { ExaIcon } from "@/icons/Exa";
+import { LangwatchIcon } from "@/icons/Langwatch";
 import { MilvusIcon } from "@/icons/Milvus";
 import Perplexity from "@/icons/Perplexity/Perplexity";
 import { TavilyIcon } from "@/icons/Tavily";
@@ -9,6 +10,7 @@ import { ZepMemoryIcon } from "@/icons/ZepMemory";
 import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import { GlobeOkIcon } from "@/icons/globe-ok";
+import { Mem0Icon } from "@/icons/mem0";
 import {
   AlertCircle,
   AlertTriangle,
@@ -649,6 +651,8 @@ export const nodeIconsLucide: iconsType = {
   Milvus: MilvusIcon,
   ExaSearch: ExaIcon,
   ZepMemory: ZepMemoryIcon,
+  Mem0: Mem0Icon,
+  Langwatch: LangwatchIcon,
 
   //Node Icons
   model_specs: FileSliders,
