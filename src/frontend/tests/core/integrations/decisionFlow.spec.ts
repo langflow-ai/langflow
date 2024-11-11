@@ -191,6 +191,11 @@ test("should create a flow with decision", async ({ page }) => {
     timeout: 30000,
   });
   await page.getByTestId("blank-flow").click();
+
+  await page.getByTestId("sidebar-options-trigger").click();
+  await page.getByTestId("sidebar-legacy-switch").isVisible({ timeout: 5000 });
+  await page.getByTestId("sidebar-legacy-switch").click();
+
   //---------------------------------- CHAT INPUT
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("chat input");
@@ -234,25 +239,25 @@ test("should create a flow with decision", async ({ page }) => {
   await page.getByTestId("sidebar-search-input").fill("parse data");
   await page.waitForTimeout(500);
   await page
-    .getByTestId("helpersParse Data")
+    .getByTestId("processingParse Data")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page
-    .getByTestId("helpersParse Data")
+    .getByTestId("processingParse Data")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   //---------------------------------- PASS
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("pass");
   await page.waitForTimeout(500);
   await page
-    .getByTestId("prototypesPass")
+    .getByTestId("logicPass")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.waitForTimeout(500);
   await page
-    .getByTestId("prototypesPass")
+    .getByTestId("logicPass")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.waitForTimeout(500);
   await page
-    .getByTestId("prototypesPass")
+    .getByTestId("logicPass")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   //---------------------------------- PROMPT
   await page.getByTestId("sidebar-search-input").click();
@@ -273,7 +278,7 @@ test("should create a flow with decision", async ({ page }) => {
   await page.getByTestId("sidebar-search-input").fill("conditional router");
   await page.waitForTimeout(500);
   await page
-    .getByTestId("prototypesConditional Router")
+    .getByTestId("logicIf-Else")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   //---------------------------------- CHAT OUTPUT
   await page.getByTestId("sidebar-search-input").click();
@@ -293,7 +298,7 @@ test("should create a flow with decision", async ({ page }) => {
   await page.waitForTimeout(500);
   await moveElementByX(page, "Chat Output", 700, 0);
   await page.waitForTimeout(500);
-  await moveElementByX(page, "Conditional Router", 1100, 0);
+  await moveElementByX(page, "If-Else", 1100, 0);
   await page.waitForTimeout(500);
   await page.getByTestId("fit_view").click();
   await moveElementByX(page, "OpenAI", 980, 0);
@@ -384,7 +389,7 @@ test("should create a flow with decision", async ({ page }) => {
     .nth(0)
     .click();
   await page
-    .getByTestId("handle-conditionalrouter-shownode-input text-left")
+    .getByTestId("handle-conditionalrouter-shownode-text input-left")
     .nth(0)
     .click();
   await page.getByTestId("popover-anchor-input-match_text").fill("TRUE");
@@ -405,7 +410,7 @@ test("should create a flow with decision", async ({ page }) => {
   await page.getByTestId("showignored_message").last().click();
   await page.getByText("Close").last().click();
   await page
-    .getByTestId("handle-conditionalrouter-shownode-true route-right")
+    .getByTestId("handle-conditionalrouter-shownode-true-right")
     .nth(0)
     .click();
   await page
@@ -413,7 +418,7 @@ test("should create a flow with decision", async ({ page }) => {
     .nth(1)
     .click();
   await page
-    .getByTestId("handle-conditionalrouter-shownode-false route-right")
+    .getByTestId("handle-conditionalrouter-shownode-false-right")
     .nth(0)
     .click();
   await page
