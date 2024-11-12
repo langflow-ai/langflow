@@ -164,7 +164,14 @@ const Sidebar = React.forwardRef<
     },
     ref,
   ) => {
-    const { state } = useSidebar();
+    const { state, setOpen } = useSidebar();
+
+    React.useEffect(() => {
+      if (collapsible === "none") {
+        console.log("collapsible === none");
+        setOpen(true);
+      }
+    }, [collapsible]);
 
     if (collapsible === "none") {
       return (
@@ -213,7 +220,7 @@ const Sidebar = React.forwardRef<
         />
         <div
           className={cn(
-            "z-45 absolute inset-y-0 flex h-full transition-[left,right,width] duration-200 ease-linear",
+            "absolute inset-y-0 z-50 flex h-full transition-[left,right,width] duration-200 ease-linear",
             // Adjust width based on state and device
             "w-[--sidebar-width]",
             "max-sm:group-data-[state=collapsed]:w-[--sidebar-width-icon]",
@@ -260,7 +267,7 @@ const SidebarTrigger = React.forwardRef<
       data-sidebar="trigger"
       variant="ghost"
       size="icon"
-      className={cn("h-8 w-8", className)}
+      className={cn("h-7 w-7 text-muted-foreground", className)}
       onClick={(event) => {
         onClick?.(event);
         toggleSidebar();
