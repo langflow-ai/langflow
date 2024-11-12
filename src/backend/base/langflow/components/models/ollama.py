@@ -82,6 +82,7 @@ class ChatOllamaComponent(LCModelComponent):
             display_name="Model Name",
             value="llama3.1",
             info="Refer to https://ollama.com/library for more models.",
+            real_time_refresh=True,
             refresh_button=True,
         ),
         FloatInput(

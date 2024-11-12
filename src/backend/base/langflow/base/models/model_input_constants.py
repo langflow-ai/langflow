@@ -3,6 +3,7 @@ from langflow.components.models.anthropic import AnthropicModelComponent
 from langflow.components.models.azure_openai import AzureChatOpenAIComponent
 from langflow.components.models.groq import GroqModel
 from langflow.components.models.nvidia import NVIDIAModelComponent
+from langflow.components.models.ollama import ChatOllamaComponent
 from langflow.components.models.openai import OpenAIModelComponent
 
 
@@ -29,7 +30,7 @@ AZURE_INPUTS = get_filtered_inputs(AzureChatOpenAIComponent)
 GROQ_INPUTS = get_filtered_inputs(GroqModel)
 ANTHROPIC_INPUTS = get_filtered_inputs(AnthropicModelComponent)
 NVIDIA_INPUTS = get_filtered_inputs(NVIDIAModelComponent)
-
+OLLAMA_INPUTS = get_filtered_inputs(ChatOllamaComponent)
 
 OPENAI_FIELDS = {input_.name: input_ for input_ in OPENAI_INPUTS}
 
@@ -38,8 +39,9 @@ AZURE_FIELDS = create_input_fields_dict(AZURE_INPUTS, "azure")
 GROQ_FIELDS = create_input_fields_dict(GROQ_INPUTS, "groq")
 ANTHROPIC_FIELDS = create_input_fields_dict(ANTHROPIC_INPUTS, "anthropic")
 NVIDIA_FIELDS = create_input_fields_dict(NVIDIA_INPUTS, "nvidia")
+OLLAMA_FIELDS = create_input_fields_dict(OLLAMA_INPUTS, "ollama")
 
-MODEL_PROVIDERS = ["Azure OpenAI", "OpenAI", "Groq", "Anthropic", "NVIDIA"]
+MODEL_PROVIDERS = ["Azure OpenAI", "OpenAI", "Groq", "Anthropic", "NVIDIA", "Ollama"]
 
 MODEL_PROVIDERS_DICT = {
     "Azure OpenAI": {
@@ -66,6 +68,12 @@ MODEL_PROVIDERS_DICT = {
         "inputs": NVIDIA_INPUTS,
         "prefix": "nvidia_",
         "component_class": NVIDIAModelComponent(),
+    },
+    "Ollama": {
+        "fields": OLLAMA_FIELDS,
+        "inputs": OLLAMA_INPUTS,
+        "prefix": "ollama_",
+        "component_class": ChatOllamaComponent(),
     },
 }
 ALL_PROVIDER_FIELDS: list[str] = [field for provider in MODEL_PROVIDERS_DICT.values() for field in provider["fields"]]
