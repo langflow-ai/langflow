@@ -11,7 +11,7 @@ Any dependencies are added to the [pyproject.toml](https://github.com/langflow-
 
 ### Contribute an example component to Langflow
 
-You have a new document loader called **MyCustomDocumentLoader** and it would look awesome in Langflow.
+Anyone can contribute an example component. For example, if you created a new document loader called **MyCustomDocumentLoader**, you can follow these steps to contribute it to Langflow.
 
 1. Write your loader as an object of the [CustomComponent](https://github.com/langflow-ai/langflow/blob/dev/src/backend/base/langflow/custom/custom_component/custom_component.py) class. You'll create a new class, `MyCustomDocumentLoader`, that will inherit from `CustomComponent` and override the base class's methods.
 2. Define optional attributes like `display_name`, `description`, and `documentation` to provide information about your custom component.

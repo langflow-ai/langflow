@@ -4,7 +4,7 @@ sidebar_position: 3
 slug: /contributing-github-discussions
 ---
 
-If you're looking for help with your code, consider posting a question on the Langflow [GitHub Discussions board](https://github.com/langflow-ai/langflow/discussions). The Langflow team cannot provide individual support via email. We also believe that help is much more valuable if it's **shared publicly**, so that more people can benefit from it.
+If you're looking for help with your code, consider posting a question on the Langflow [GitHub Discussions board](https://github.com/langflow-ai/langflow/discussions). The Langflow team cannot provide individual support via email. The team also believes that help is much more valuable if it's shared publicly, so that more people can benefit from it.
 
 Since the Discussions board is public, please follow this guidance when posting your code questions.
 

@@ -10,7 +10,7 @@ We respect your privacy and are committed to protecting your data. We do not col
 
 ## Opt out of telemetry
 
-You can opt out of telemetry by setting the `LANGFLOW_DO_NOT_TRACK` or `DO_NOT_TRACK` environment variable to `true` before running Langflow. This will disable telemetry data collection.
+To opt out of telemetry, set the `LANGFLOW_DO_NOT_TRACK` or `DO_NOT_TRACK` environment variable to `true` before running Langflow. This disables telemetry data collection.
 
 ## Data that Langflow collects
 

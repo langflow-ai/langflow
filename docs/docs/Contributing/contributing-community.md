@@ -1,5 +1,5 @@
 ---
-title: Community
+title: Join the Langflow community
 sidebar_position: 5
 slug: /contributing-community
 ---
