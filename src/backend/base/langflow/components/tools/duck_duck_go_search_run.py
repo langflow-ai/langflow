@@ -2,6 +2,7 @@ from typing import Any
 
 from langchain.tools import StructuredTool
 from langchain_community.tools import DuckDuckGoSearchRun
+from langchain_core.tools import ToolException
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
@@ -38,14 +39,18 @@ class DuckDuckGoSearchComponent(LCToolComponent):
         wrapper = self._build_wrapper()
 
         def search_func(query: str, max_results: int = 5, max_snippet_length: int = 100) -> list[dict[str, Any]]:
-            full_results = wrapper.run(f"{query} (site:*)")
-            result_list = full_results.split("\n")[:max_results]
-            limited_results = []
-            for result in result_list:
-                limited_result = {
-                    "snippet": result[:max_snippet_length],
-                }
-                limited_results.append(limited_result)
+            try:
+                full_results = wrapper.run(f"{query} (site:*)")
+                result_list = full_results.split("\n")[:max_results]
+                limited_results = []
+                for result in result_list:
+                    limited_result = {
+                        "snippet": result[:max_snippet_length],
+                    }
+                    limited_results.append(limited_result)
+            except Exception as e:
+                msg = f"Error in DuckDuckGo Search: {e!s}"
+                raise ToolException(msg) from e
             return limited_results
 
         tool = StructuredTool.from_function(
@@ -67,5 +72,5 @@ class DuckDuckGoSearchComponent(LCToolComponent):
             }
         )
         data_list = [Data(data=result, text=result.get("snippet", "")) for result in results]
-        self.status = data_list
+        self.status = data_list  # type: ignore[assignment]
         return data_list

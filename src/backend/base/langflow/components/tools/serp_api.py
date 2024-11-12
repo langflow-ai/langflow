@@ -2,6 +2,7 @@ from typing import Any
 
 from langchain.tools import StructuredTool
 from langchain_community.utilities.serpapi import SerpAPIWrapper
+from langchain_core.tools import ToolException
 from loguru import logger
 from pydantic import BaseModel, Field
 
@@ -9,6 +10,23 @@ from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
 from langflow.inputs import DictInput, IntInput, MultilineInput, SecretStrInput
 from langflow.schema import Data
+
+
+class SerpAPISchema(BaseModel):
+    """Schema for SerpAPI search parameters."""
+
+    query: str = Field(..., description="The search query")
+    params: dict[str, Any] | None = Field(
+        default={
+            "engine": "google",
+            "google_domain": "google.com",
+            "gl": "us",
+            "hl": "en",
+        },
+        description="Additional search parameters",
+    )
+    max_results: int = Field(5, description="Maximum number of results to return")
+    max_snippet_length: int = Field(100, description="Maximum length of each result snippet")
 
 
 class SerpAPIComponent(LCToolComponent):
@@ -27,46 +45,50 @@ class SerpAPIComponent(LCToolComponent):
         IntInput(name="max_snippet_length", display_name="Max Snippet Length", value=100, advanced=True),
     ]
 
-    class SerpAPISchema(BaseModel):
-        query: str = Field(..., description="The search query")
-        params: dict[str, Any] | None = Field(default_factory=dict, description="Additional search parameters")
-        max_results: int = Field(5, description="Maximum number of results to return")
-        max_snippet_length: int = Field(100, description="Maximum length of each result snippet")
-
-    def _build_wrapper(self) -> SerpAPIWrapper:
-        if self.search_params:
+    def _build_wrapper(self, params: dict[str, Any] | None = None) -> SerpAPIWrapper:
+        """Build a SerpAPIWrapper with the provided parameters."""
+        params = params or {}
+        if params:
             return SerpAPIWrapper(
                 serpapi_api_key=self.serpapi_api_key,
-                params=self.search_params,
+                params=params,
             )
         return SerpAPIWrapper(serpapi_api_key=self.serpapi_api_key)
 
     def build_tool(self) -> Tool:
-        wrapper = self._build_wrapper()
+        wrapper = self._build_wrapper(self.search_params)  # noqa: F841
 
         def search_func(
             query: str, params: dict[str, Any] | None = None, max_results: int = 5, max_snippet_length: int = 100
         ) -> list[dict[str, Any]]:
-            params = params or {}
-            full_results = wrapper.results(query, **params)
-            organic_results = full_results.get("organic_results", [])[:max_results]
+            try:
+                # rebuild the wrapper if params are provided
+                if params:
+                    wrapper = self._build_wrapper(params)
 
-            limited_results = []
-            for result in organic_results:
-                limited_result = {
-                    "title": result.get("title", "")[:max_snippet_length],
-                    "link": result.get("link", ""),
-                    "snippet": result.get("snippet", "")[:max_snippet_length],
-                }
-                limited_results.append(limited_result)
+                full_results = wrapper.results(query)
+                organic_results = full_results.get("organic_results", [])[:max_results]
 
+                limited_results = []
+                for result in organic_results:
+                    limited_result = {
+                        "title": result.get("title", "")[:max_snippet_length],
+                        "link": result.get("link", ""),
+                        "snippet": result.get("snippet", "")[:max_snippet_length],
+                    }
+                    limited_results.append(limited_result)
+
+            except Exception as e:
+                error_message = f"Error in SerpAPI search: {e!s}"
+                logger.debug(error_message)
+                raise ToolException(error_message) from e
             return limited_results
 
         tool = StructuredTool.from_function(
             name="serp_search_api",
             description="Search for recent results using SerpAPI with result limiting",
             func=search_func,
-            args_schema=self.SerpAPISchema,
+            args_schema=SerpAPISchema,
         )
 
         self.status = "SerpAPI Tool created"
@@ -91,5 +113,5 @@ class SerpAPIComponent(LCToolComponent):
             self.status = f"Error: {e}"
             return [Data(data={"error": str(e)}, text=str(e))]
 
-        self.status = data_list
+        self.status = data_list  # type: ignore[assignment]
         return data_list
