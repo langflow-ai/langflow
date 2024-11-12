@@ -60,6 +60,21 @@ CONFIG_ATTRIBUTES = ["_display_name", "_description", "_icon", "_name", "_metada
 
 
 class PlaceholderGraph(NamedTuple):
+    """A placeholder graph structure for components, providing backwards compatibility.
+
+    and enabling component execution without a full graph object.
+
+    This lightweight structure contains essential information typically found in a complete graph,
+    allowing components to function in isolation or in simplified contexts.
+
+    Attributes:
+        flow_id (str | None): Unique identifier for the flow, if applicable.
+        user_id (str | None): Identifier of the user associated with the flow, if any.
+        session_id (str | None): Identifier for the current session, if applicable.
+        context (dict): Additional contextual information for the component's execution.
+        flow_name (str | None): Name of the flow, if available.
+    """
+
     flow_id: str | None
     user_id: str | None
     session_id: str | None
@@ -75,6 +90,8 @@ class Component(CustomComponent):
     _current_output: str = ""
     _metadata: dict = {}
     _ctx: dict = {}
+    _code: str | None = None
+    _logs: list[Log] = []
 
     def __init__(self, **kwargs) -> None:
         # if key starts with _ it is a config
@@ -195,7 +212,7 @@ class Component(CustomComponent):
         _instance_getter.__annotations__["return"] = state_model
         return _instance_getter
 
-    def __deepcopy__(self, memo):
+    def __deepcopy__(self, memo: dict) -> Component:
         if id(self) in memo:
             return memo[id(self)]
         kwargs = deepcopy(self.__config, memo)
@@ -209,7 +226,7 @@ class Component(CustomComponent):
         new_component._parameters = self._parameters
         new_component._attributes = self._attributes
         new_component._output_logs = self._output_logs
-        new_component._logs = self._logs
+        new_component._logs = self._logs  # type: ignore[attr-defined]
         memo[id(self)] = new_component
         return new_component
 
