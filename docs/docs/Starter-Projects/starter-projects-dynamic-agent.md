@@ -1,4 +1,8 @@
-# Dynamic Agent
+---
+title: Dynamic agent
+sidebar_position: 7
+slug: /starter-projects-dynamic-agent
+---
 
 Build a **Dynamic Agent** flow for an agentic application using the CrewAI.
 

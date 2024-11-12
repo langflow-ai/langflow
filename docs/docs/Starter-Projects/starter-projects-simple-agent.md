@@ -1,4 +1,8 @@
-# Simple Agent
+---
+title: Simple agent
+sidebar_position: 6
+slug: /starter-projects-simple-agent
+---
 
 Build a **Simple Agent** flow for an agentic application using the Tool-calling agent.
 
