@@ -126,6 +126,7 @@ def test_message_with_multiple_images(sample_image, langflow_cache_dir):
     real_cache_dir.mkdir(parents=True, exist_ok=True)
     real_second_image = real_cache_dir / "second_image.png"
     shutil.copy2(str(sample_image), str(real_second_image))
+    assert real_second_image.exists()
 
     text = "Multiple images"
     message = Message(
