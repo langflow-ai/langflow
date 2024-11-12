@@ -8,7 +8,13 @@ import SimplifiedCodeTabComponent from "../codeTabsComponent/ChatCodeTabComponen
 import ForwardedIconComponent from "../genericIconComponent";
 import DurationDisplay from "./DurationDisplay";
 
-export default function ContentDisplay({ content }: { content: ContentType }) {
+export default function ContentDisplay({
+  content,
+  chatId,
+}: {
+  content: ContentType;
+  chatId: string;
+}) {
   // First render the common BaseContent elements if they exist
   const renderHeader = content.header && (
     <>
@@ -36,7 +42,7 @@ export default function ContentDisplay({ content }: { content: ContentType }) {
   );
   const renderDuration = content.duration !== undefined && (
     <div className="absolute right-2 top-4">
-      <DurationDisplay duration={content.duration} />
+      <DurationDisplay duration={content.duration} chatId={chatId} />
     </div>
   );
 

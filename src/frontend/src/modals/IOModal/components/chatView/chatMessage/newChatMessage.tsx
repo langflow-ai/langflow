@@ -479,6 +479,7 @@ export default function ChatMessage({
                   chat.properties?.state === "partial"
                 }
                 state={chat.properties?.state}
+                chatId={chat.id}
               />
             )}
             {!chat.isSend ? (

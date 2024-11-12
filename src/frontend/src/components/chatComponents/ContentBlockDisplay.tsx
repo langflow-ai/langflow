@@ -17,12 +17,14 @@ interface ContentBlockDisplayProps {
   contentBlocks: ContentBlock[];
   isLoading?: boolean;
   state?: string;
+  chatId: string;
 }
 
 export function ContentBlockDisplay({
   contentBlocks,
   isLoading,
   state,
+  chatId,
 }: ContentBlockDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -100,7 +102,7 @@ export function ContentBlockDisplay({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <DurationDisplay duration={totalDuration} />
+            <DurationDisplay duration={totalDuration} chatId={chatId} />
             <motion.div
               animate={{ rotate: isExpanded ? 180 : 0 }}
               transition={{ duration: 0.2, ease: "easeInOut" }}
@@ -190,7 +192,10 @@ export function ContentBlockDisplay({
                             </motion.div>
                           )}
                         </AnimatePresence>
-                        <ContentDisplay content={content} />
+                        <ContentDisplay
+                          content={content}
+                          chatId={`${chatId}-${index}`}
+                        />
                       </motion.div>
                     ))}
                   </div>
