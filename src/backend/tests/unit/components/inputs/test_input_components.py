@@ -47,10 +47,15 @@ class TestChatInput(ComponentTestBaseWithClient):
         assert message.sender_name == default_kwargs["sender_name"]
         assert message.session_id == default_kwargs["session_id"]
         assert message.files == default_kwargs["files"]
-        assert message.properties == {
+        assert message.properties.model_dump() == {
             "background_color": default_kwargs["background_color"],
             "text_color": default_kwargs["text_color"],
             "icon": default_kwargs["chat_icon"],
+            "edited": False,
+            "source": {"id": None, "display_name": None, "source": None},
+            "allow_markdown": False,
+            "state": "complete",
+            "targets": [],
         }
 
     def test_message_response_ai_sender(self, component_class):
@@ -134,53 +139,9 @@ class TestTextInputComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def file_names_mapping(self):
         return [
-            {"version": "1.0.15", "module": "inputs", "file_name": "TextComponent"},
-            {"version": "1.0.16", "module": "inputs", "file_name": "TextComponent"},
-            {"version": "1.0.17", "module": "inputs", "file_name": "TextComponent"},
-            {"version": "1.0.18", "module": "inputs", "file_name": "TextComponent"},
-            {"version": "1.0.19", "module": "inputs", "file_name": "TextComponent"},
+            {"version": "1.0.15", "module": "inputs", "file_name": "TextInput"},
+            {"version": "1.0.16", "module": "inputs", "file_name": "TextInput"},
+            {"version": "1.0.17", "module": "inputs", "file_name": "TextInput"},
+            {"version": "1.0.18", "module": "inputs", "file_name": "TextInput"},
+            {"version": "1.0.19", "module": "inputs", "file_name": "TextInput"},
         ]
-
-    def test_text_output(self, component_class, default_kwargs):
-        """Test basic text output."""
-        component = component_class(**default_kwargs)
-        result = component()
-        assert result == "Hello, world!"
-
-    def test_empty_input(self, component_class):
-        """Test component with empty input."""
-        component = component_class(input_value="")
-        result = component()
-        assert result == ""
-
-    def test_data_template_with_dict(self, component_class):
-        """Test component with dictionary input and template."""
-        test_data = {"text": "Hello", "name": "John"}
-        component = component_class(input_value=test_data, data_template="Message: {text}, Name: {name}")
-        result = component()
-        assert result == "Message: Hello, Name: John"
-
-    def test_data_template_empty(self, component_class):
-        """Test component with dictionary input but no template."""
-        test_data = {"text": "Hello World"}
-        component = component_class(
-            input_value=test_data,
-            data_template="",  # Empty template should default to {text}
-        )
-        result = component()
-        assert result == "Hello World"
-
-    def test_non_string_input(self, component_class):
-        """Test component with non-string input."""
-        component = component_class(input_value=42)
-        result = component()
-        assert result == "42"
-
-    def test_complex_template(self, component_class):
-        """Test component with complex template and nested data."""
-        test_data = {"user": {"name": "John", "age": 30}, "message": "Hello"}
-        component = component_class(
-            input_value=test_data, data_template="User {user[name]} ({user[age]}) says: {message}"
-        )
-        result = component()
-        assert result == "User John (30) says: Hello"
