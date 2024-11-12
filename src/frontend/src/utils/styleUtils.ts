@@ -6,6 +6,7 @@ import { MilvusIcon } from "@/icons/Milvus";
 import Perplexity from "@/icons/Perplexity/Perplexity";
 import { TavilyIcon } from "@/icons/Tavily";
 import { UnstructuredIcon } from "@/icons/Unstructured";
+import YouTubeIcon from "@/icons/Youtube/youtube";
 import { ZepMemoryIcon } from "@/icons/ZepMemory";
 import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
@@ -658,6 +659,7 @@ export const nodeIconsLucide: iconsType = {
   GithubIcon,
   FaGithub,
   FaApple,
+  YouTube: YouTubeIcon,
   Milvus: MilvusIcon,
   ExaSearch: ExaIcon,
   ZepMemory: ZepMemoryIcon,
