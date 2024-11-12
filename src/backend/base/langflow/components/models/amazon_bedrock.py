@@ -38,7 +38,7 @@ class AmazonBedrockComponent(LCModelComponent):
         SecretStrInput(
             name="aws_session_token",
             display_name="AWS Session Token",
-            advanced=True,
+            advanced=False,
             info="The session key for your AWS account. "
             "Only needed for temporary credentials. "
             "Usually set in Python code as the environment variable 'AWS_SESSION_TOKEN'.",
