@@ -15,11 +15,11 @@ export const HeaderMenu = ({ children }) => (
 );
 
 export const HeaderMenuToggle = ({ children }) => (
-  <DropdownMenuTrigger className="group inline-flex w-full items-center justify-center gap-1 rounded-md px-2 py-2 pr-0">
-    <div className="flex items-center gap-1 rounded-full group-hover:bg-muted">
+  <DropdownMenuTrigger className="group inline-flex w-full items-center justify-center gap-1 rounded-md pr-0">
+    <div className="flex items-center gap-1 rounded-lg px-2 py-1.5 group-hover:bg-muted">
       {children}
       <ChevronsUpDown
-        className="mr-2 text-muted-foreground group-hover:text-foreground"
+        className="text-muted-foreground group-hover:text-foreground"
         size={"15px"}
         strokeWidth={"2px"}
       />
@@ -33,7 +33,7 @@ export const HeaderMenuItemLink = ({
   newPage = false,
   icon = "external-link",
 }) => (
-  <DropdownMenuItem className="cursor-pointer p-3 px-4" asChild>
+  <DropdownMenuItem className="cursor-pointer rounded-none p-3 px-4" asChild>
     <a
       href={href}
       className="group flex w-full items-center justify-between"
@@ -71,7 +71,7 @@ export const HeaderMenuItems = ({
 }: React.PropsWithChildren<{ position?: "left" | "right" }>) => {
   const positionClass = position === "left" ? "left-0" : "right-0";
   return (
-    <DropdownMenuContent className={cn("w-[20rem] p-1", positionClass)}>
+    <DropdownMenuContent className={cn("w-[20rem]", positionClass)}>
       {children}
     </DropdownMenuContent>
   );
