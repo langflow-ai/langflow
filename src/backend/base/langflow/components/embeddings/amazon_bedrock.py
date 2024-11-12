@@ -1,3 +1,4 @@
+from langflow.base.models.aws_constants import AWS_REGIONS
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Embeddings
 from langflow.inputs import SecretStrInput
@@ -22,12 +23,14 @@ class AmazonBedrockEmbeddingsComponent(LCModelComponent):
             display_name="AWS Access Key ID",
             info="The access key for your AWS account."
             "Usually set in Python code as the environment variable 'AWS_ACCESS_KEY_ID'.",
+            value="AWS_ACCESS_KEY_ID",
         ),
         SecretStrInput(
             name="aws_secret_access_key",
             display_name="AWS Secret Access Key",
             info="The secret key for your AWS account. "
             "Usually set in Python code as the environment variable 'AWS_SECRET_ACCESS_KEY'.",
+            value="AWS_SECRET_ACCESS_KEY",
         ),
         SecretStrInput(
             name="aws_session_token",
@@ -36,6 +39,7 @@ class AmazonBedrockEmbeddingsComponent(LCModelComponent):
             info="The session key for your AWS account. "
             "Only needed for temporary credentials. "
             "Usually set in Python code as the environment variable 'AWS_SESSION_TOKEN'.",
+            value="AWS_SESSION_TOKEN",
         ),
         SecretStrInput(
             name="credentials_profile_name",
@@ -44,47 +48,13 @@ class AmazonBedrockEmbeddingsComponent(LCModelComponent):
             info="The name of the profile to use from your "
             "~/.aws/credentials file. "
             "If not provided, the default profile will be used.",
+            value="AWS_CREDENTIALS_PROFILE_NAME",
         ),
         DropdownInput(
             name="region_name",
             display_name="Region Name",
             value="us-east-1",
-            options=[
-                "us-west-2",
-                "us-west-1",
-                "us-gov-west-1",
-                "us-gov-east-1",
-                "us-east-2",
-                "us-east-1",
-                "sa-east-1",
-                "me-south-1",
-                "me-central-1",
-                "il-central-1",
-                "eu-west-3",
-                "eu-west-2",
-                "eu-west-1",
-                "eu-south-2",
-                "eu-south-1",
-                "eu-north-1",
-                "eu-central-2",
-                "eu-central-1",
-                "cn-northwest-1",
-                "cn-north-1",
-                "ca-west-1",
-                "ca-central-1",
-                "ap-southeast-5",
-                "ap-southeast-4",
-                "ap-southeast-3",
-                "ap-southeast-2",
-                "ap-southeast-1",
-                "ap-south-2",
-                "ap-south-1",
-                "ap-northeast-3",
-                "ap-northeast-2",
-                "ap-northeast-1",
-                "ap-east-1",
-                "af-south-1",
-            ],
+            options=AWS_REGIONS,
             info="The AWS region where your Bedrock resources are located.",
         ),
         MessageTextInput(
