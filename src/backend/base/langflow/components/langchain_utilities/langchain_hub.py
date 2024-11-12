@@ -105,7 +105,7 @@ class LangChainHubPromptComponent(Component):
         original_params["template"] = prompt_value.to_string()
 
         # Now pass the filtered attributes to the function
-        prompt = Message.from_template_and_variables(**original_params)
+        prompt = Message.from_template(**original_params)
 
         self.status = prompt.text
 
