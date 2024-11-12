@@ -5,6 +5,4 @@ def get_model_name(llm, display_name: str | None = "Custom"):
     model_name = next((getattr(llm, attr) for attr in attributes_to_check if hasattr(llm, attr)), None)
 
     # If no matching attribute is found, return the class name as a fallback
-    return (
-        model_name if display_name is None else (display_name if model_name is None else f"{display_name} {model_name}")
-    )
+    return model_name if model_name is not None else display_name
