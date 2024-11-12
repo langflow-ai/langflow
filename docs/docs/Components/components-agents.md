@@ -2,6 +2,30 @@
 
 Agent components are used to define the behavior and capabilities of AI agents in your flow. Agents can interact with APIs, databases, and other services, but can also use LLMs as a reasoning engine to decide which course to take in your flow.
 
+## Agent component
+
+This component creates an agent that can use tools to answer questions and perform tasks based on given instructions.
+
+For more information on this component, see the [tool calling agent documentation](/agents-tool-calling-agent-component).
+
+### Parameters
+
+#### Inputs
+
+| Name                 | Type     | Description                                                                                     |
+|----------------------|----------|-------------------------------------------------------------------------------------------------|
+| agent_llm            | Dropdown | The provider of the language model that the agent will use to generate responses.               |
+| system_prompt        | String   | Initial instructions and context provided to guide the agent's behavior.                        |
+| tools                | List     | List of tools available for the agent to use.                                                   |
+| input_value          | String   | The input task or question for the agent to process.                                            |
+| add_current_date_tool| Boolean  | If true, adds a tool to the agent that returns the current date.                                |
+
+#### Outputs
+
+| Name     | Type    | Description                                     |
+|----------|---------|-------------------------------------------------|
+| response | Message | The agent's response to the given input task.   |
+
 ## CSV Agent
 
 This component creates a CSV agent from a CSV file and LLM.
