@@ -445,6 +445,7 @@ export const nodeColorsName: { [char: string]: string } = {
   Agent: "purple",
   Tool: "cyan",
   BaseChatMemory: "cyan",
+  BaseChatMessageHistory: "orange",
 };
 
 export const SIDEBAR_CATEGORIES = [
