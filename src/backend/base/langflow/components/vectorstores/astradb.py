@@ -262,8 +262,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                         "z_01_model_parameters",
                         "z_02_api_key_name",
                         "z_03_provider_api_key",
-                        "z_04_authentication"
-                    ]
+                        "z_04_authentication",
+                    ],
                 )
 
                 new_parameter = HandleInput(
@@ -278,13 +278,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         elif field_name == "embedding_provider":
             self.del_fields(
                 build_config,
-                [
-                    "model",
-                    "z_01_model_parameters",
-                    "z_02_api_key_name",
-                    "z_03_provider_api_key",
-                    "z_04_authentication"
-                ]
+                ["model", "z_01_model_parameters", "z_02_api_key_name", "z_03_provider_api_key", "z_04_authentication"],
             )
 
             model_options = self.VECTORIZE_PROVIDERS_MAPPING[field_value][1]
@@ -307,12 +301,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         elif field_name == "model":
             self.del_fields(
                 build_config,
-                [
-                    "z_01_model_parameters",
-                    "z_02_api_key_name",
-                    "z_03_provider_api_key",
-                    "z_04_authentication"
-                ]
+                ["z_01_model_parameters", "z_02_api_key_name", "z_03_provider_api_key", "z_04_authentication"],
             )
 
             new_parameter_1 = DictInput(
@@ -370,9 +359,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 setattr(self, attribute, None)
 
         # Fetch values from kwargs if any self.* attributes are None
-        provider_value = (
-            self.VECTORIZE_PROVIDERS_MAPPING.get(self.embedding_provider, [None])[0]
-            or kwargs.get("embedding_provider")
+        provider_value = self.VECTORIZE_PROVIDERS_MAPPING.get(self.embedding_provider, [None])[0] or kwargs.get(
+            "embedding_provider"
         )
         model_name = self.model or kwargs.get("model")
         authentication = {**(self.z_04_authentication or kwargs.get("z_04_authentication", {}))}
