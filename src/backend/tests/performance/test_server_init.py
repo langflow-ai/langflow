@@ -56,14 +56,6 @@ async def test_setup_llm_caching():
 
 
 @pytest.mark.benchmark
-async def test_initialize_super_user():
-    """Benchmark super user initialization."""
-    from langflow.initial_setup.setup import initialize_super_user_if_needed
-
-    await asyncio.to_thread(initialize_super_user_if_needed)
-
-
-@pytest.mark.benchmark
 async def test_get_and_cache_all_types_dict():
     """Benchmark get_and_cache_all_types_dict function."""
     from langflow.interface.types import get_and_cache_all_types_dict
