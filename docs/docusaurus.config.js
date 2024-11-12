@@ -123,7 +123,7 @@ const config = {
         title: "Langflow",
         logo: {
           alt: "Langflow",
-          src: "img/chain.png",
+          src: "/img/logo.svg",
         },
         items: [
           // right
