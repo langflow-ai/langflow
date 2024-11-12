@@ -792,6 +792,12 @@ class Component(CustomComponent):
 
     async def build_results(self):
         """Build the results of the component."""
+        if hasattr(self, "graph"):
+            session_id = self.graph.session_id
+        elif hasattr(self, "_session_id"):
+            session_id = self._session_id
+        else:
+            session_id = None
         try:
             if self._tracing_service:
                 return await self._build_with_tracing()
@@ -799,7 +805,7 @@ class Component(CustomComponent):
         except StreamingError as e:
             self.send_error(
                 exception=e.cause,
-                session_id=self.graph.session_id,
+                session_id=session_id,
                 trace_name=getattr(self, "trace_name", None),
                 source=e.source,
             )
@@ -807,7 +813,7 @@ class Component(CustomComponent):
         except Exception as e:
             self.send_error(
                 exception=e,
-                session_id=self.graph.session_id,
+                session_id=session_id,
                 source=Source(id=self._id, display_name=self.display_name, source=self.display_name),
                 trace_name=getattr(self, "trace_name", None),
             )
