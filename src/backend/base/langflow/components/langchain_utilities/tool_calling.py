@@ -25,7 +25,7 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
         MessageTextInput(
             name="system_prompt",
             display_name="System Prompt",
-            info="Initial instructions and context provided to guide the agent's behavior.",
+            info="System prompt to guide the agent's behavior.",
             value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
         ),
         DataInput(
