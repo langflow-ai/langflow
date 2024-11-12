@@ -36,9 +36,7 @@ class LangChainHubPromptComponent(Component):
         Output(display_name="Build Prompt", name="prompt", method="build_prompt"),
     ]
 
-    def update_build_config(
-        self, build_config: dict, field_value: str, field_name: str | None = None
-    ):
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         # If the field is not langchain_hub_prompt or the value is empty, return the build config as is
         if field_name != "langchain_hub_prompt" or not field_value:
             return build_config
@@ -70,9 +68,7 @@ class LangChainHubPromptComponent(Component):
             full_template = full_template + "\n" + message.template
 
         # No need to reprocess if we have them already
-        if all(
-            "param_" + custom_field in build_config for custom_field in custom_fields
-        ):
+        if all("param_" + custom_field in build_config for custom_field in custom_fields):
             return build_config
 
         # Easter egg: Show template in info popup
@@ -103,13 +99,8 @@ class LangChainHubPromptComponent(Component):
         template = self._fetch_langchain_hub_template()
 
         # Get the parameters from the attributes
-        params_dict = {
-            param: getattr(self, "param_" + param, f"{{{param}}}")
-            for param in template.input_variables
-        }
-        original_params = {
-            k: v.text if hasattr(v, "text") else v for k, v in params_dict.items()
-        }
+        params_dict = {param: getattr(self, "param_" + param, f"{{{param}}}") for param in template.input_variables}
+        original_params = {k: v.text if hasattr(v, "text") else v for k, v in params_dict.items()}
         prompt_value = template.invoke(original_params)
 
         # Update the template with the new value
@@ -132,6 +123,4 @@ class LangChainHubPromptComponent(Component):
             raise ValueError(msg)
 
         # Pull the prompt from LangChain Hub
-        return langchain.hub.pull(
-            self.langchain_hub_prompt, api_key=self.langchain_api_key
-        )
+        return langchain.hub.pull(self.langchain_hub_prompt, api_key=self.langchain_api_key)
