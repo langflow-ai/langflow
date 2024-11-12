@@ -144,15 +144,16 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
                 Edited {timeElapsed(flowData.updated_at)} ago
               </div>
             </div>
-            <div className="overflow-hidden truncate text-sm text-primary">
-              {flowData.description}
+            <div className="overflow-hidden text-sm text-primary">
+              <span className="block max-w-[110ch] truncate">
+                {flowData.description}
+              </span>
             </div>
           </div>
         </div>
 
         {/* right side */}
         <div className="ml-5 flex items-center gap-2">
-          <div className="w-0 lg:w-32 xl:w-44"></div>
           {/* {flowData.is_component ? (
             <></>
           ) : (
