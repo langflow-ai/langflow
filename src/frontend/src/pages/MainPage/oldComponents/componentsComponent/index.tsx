@@ -263,7 +263,6 @@ export default function ComponentsComponent({
           {!isLoading && flowsFromFolder?.length > 0 && (
             <div className="relative py-6">
               <PaginatorComponent
-                storeComponent={true}
                 pageIndex={pagination.page}
                 pageSize={pagination.size}
                 rowsCount={[10, 20, 50, 100]}

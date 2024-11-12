@@ -123,7 +123,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
             <ForwardedIconComponent
               name={getIcon()}
               aria-hidden="true"
-              className="h-5 w-5 text-foreground"
+              className="h-5 w-5"
             />
           </div>
           <div className="flex w-full min-w-0 items-center justify-between">
