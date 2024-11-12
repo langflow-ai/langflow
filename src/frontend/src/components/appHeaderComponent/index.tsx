@@ -47,7 +47,7 @@ export default function AppHeader(): JSX.Element {
   }, []);
 
   return (
-    <div className="z-[1] flex h-[62px] w-full items-center justify-between gap-2 border-b px-5 py-2.5 dark:bg-background">
+    <div className="flex h-[62px] w-full items-center justify-between gap-2 border-b px-5 py-2.5 dark:bg-background">
       {/* Left Section */}
       <div className={`flex gap-2`}>
         <Button
