@@ -147,7 +147,7 @@ export function ContentBlockDisplay({
                   )}
                 >
                   <AnimatePresence>
-                    {!showBlockTitle && (
+                    {showBlockTitle && (
                       <motion.div
                         initial={{ opacity: 0, height: 0, marginBottom: 0 }}
                         animate={{
