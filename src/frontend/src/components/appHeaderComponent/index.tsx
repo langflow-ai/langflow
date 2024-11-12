@@ -49,11 +49,11 @@ export default function AppHeader(): JSX.Element {
   return (
     <div className="flex h-[62px] w-full items-center justify-between gap-2 border-b px-5 py-2.5 dark:bg-background">
       {/* Left Section */}
-      <div className={`flex gap-2`}>
+      <div className={`flex items-center gap-2`}>
         <Button
           unstyled
           onClick={() => navigate("/")}
-          className="flex h-8 w-8 items-center"
+          className="mr-1 flex h-8 w-8 items-center"
           data-testid="icon-ChevronLeft"
         >
           {ENABLE_DATASTAX_LANGFLOW ? (
@@ -73,7 +73,7 @@ export default function AppHeader(): JSX.Element {
       </div>
 
       {/* Middle Section */}
-      <div className="w-full flex-1 truncate md:max-w-[57%] lg:absolute lg:left-1/2 lg:max-w-[43%] lg:-translate-x-1/2 xl:max-w-[41%] 2xl:max-w-[31%]">
+      <div className="w-full flex-1 truncate md:max-w-[57%] lg:absolute lg:left-1/2 lg:max-w-[43%] lg:-translate-x-1/2 xl:max-w-[31%]">
         <FlowMenu />
       </div>
 
@@ -123,7 +123,7 @@ export default function AppHeader(): JSX.Element {
                 className="side-bar-button-size h-[18px] w-[18px]"
                 aria-hidden="true"
               />
-              <span className="hidden whitespace-nowrap xl:inline">
+              <span className="hidden whitespace-nowrap 2xl:inline">
                 Notifications
               </span>
             </Button>
@@ -148,7 +148,7 @@ export default function AppHeader(): JSX.Element {
                   name="Store"
                   className="side-bar-button-size h-[18px] w-[18px]"
                 />
-                <span className="hidden whitespace-nowrap xl:inline">
+                <span className="hidden whitespace-nowrap 2xl:inline">
                   Store
                 </span>
               </Button>
@@ -177,7 +177,9 @@ export default function AppHeader(): JSX.Element {
                   className="side-bar-button-size h-[18px] w-[18px]"
                   aria-hidden="true"
                 />
-                Docs
+                <span className="hidden whitespace-nowrap 2xl:inline">
+                  Docs
+                </span>
               </Button>
             </ShadTooltip>
             <ShadTooltip content="Settings" side="bottom" styleClasses="z-10">
@@ -191,7 +193,9 @@ export default function AppHeader(): JSX.Element {
                   name="Settings"
                   className="side-bar-button-size h-[18px] w-[18px]"
                 />
-                Settings
+                <span className="hidden whitespace-nowrap 2xl:inline">
+                  Settings
+                </span>
               </Button>
             </ShadTooltip>
             <Separator
@@ -200,7 +204,7 @@ export default function AppHeader(): JSX.Element {
             />
           </>
         )}
-        <div className="ml-3 flex">
+        <div className="flex">
           <AccountMenu />
         </div>
       </div>

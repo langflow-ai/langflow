@@ -476,7 +476,7 @@ const SideBarFoldersButtonsComponent = ({
                                 data-testid={`input-folder`}
                               />
                             ) : (
-                              <span className="block w-full grow truncate text-[13px] opacity-100">
+                              <span className="block w-0 grow truncate text-[13px] opacity-100">
                                 {item.name}
                               </span>
                             )}
