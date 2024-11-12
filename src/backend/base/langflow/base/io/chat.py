@@ -25,7 +25,8 @@ class ChatComponent(Component):
 
         self.status = message_text
         if session_id and isinstance(message, Message) and isinstance(message.text, str):
-            messages = store_message(message, flow_id=self.graph.flow_id)
+            flow_id = self.graph.flow_id if hasattr(self, "graph") else None
+            messages = store_message(message, flow_id=flow_id)
             self.status = messages
             self._send_messages_events(messages)
 
@@ -50,8 +51,8 @@ class ChatComponent(Component):
                 self._send_message_event(message=stored_message, id_=id_)
 
     def get_properties_from_source_component(self):
-        if self.vertex.incoming_edges:
-            source_id = self.vertex.incoming_edges[0].source_id
+        if hasattr(self, "_vertex") and hasattr(self._vertex, "incoming_edges") and self._vertex.incoming_edges:
+            source_id = self._vertex.incoming_edges[0].source_id
             _source_vertex = self.graph.get_vertex(source_id)
             component = _source_vertex.custom_component
             source = component.display_name
