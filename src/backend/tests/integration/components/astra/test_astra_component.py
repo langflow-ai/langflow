@@ -99,7 +99,7 @@ def test_astra_vectorize():
     store = None
     try:
         options = {"provider": "nvidia", "modelName": "NV-Embed-QA"}
-        options_comp = {"provider": "nvidia", "z_00_model_name": "NV-Embed-QA"}
+        options_comp = {"embedding_provider": "nvidia", "model": "NV-Embed-QA"}
 
         store = AstraDBVectorStore(
             collection_name=VECTORIZE_COLLECTION,
@@ -150,8 +150,8 @@ def test_astra_vectorize_with_provider_api_key():
         }
 
         options_comp = {
-            "provider": "openai",
-            "z_00_model_name": "text-embedding-3-small",
+            "embedding_provider": "openai",
+            "model": "text-embedding-3-small",
             "z_01_model_parameters": {},
             "z_03_provider_api_key": "openai",
             "z_04_authentication": {},
@@ -206,8 +206,8 @@ def test_astra_vectorize_passes_authentication():
             "authentication": {"providerKey": "openai"},
         }
         options_comp = {
-            "provider": "openai",
-            "z_00_model_name": "text-embedding-3-small",
+            "embedding_provider": "openai",
+            "model": "text-embedding-3-small",
             "z_01_model_parameters": {},
             "z_04_authentication": {"providerKey": "openai"},
         }
