@@ -20,7 +20,7 @@ ND_MODEL_MAPPING = {
     "gpt-4o-mini": {"provider": "openai", "model": "gpt-4o-mini"},
     "gpt-4-turbo": {"provider": "openai", "model": "gpt-4-turbo-2024-04-09"},
     "claude-3-5-haiku": {"provider": "anthropic", "model": "claude-3-5-haiku-20241022"},
-    "claude-3.5-sonnet": {"provider": "anthropic", "model": "claude-3-5-sonnet-20241022"},
+    "claude-3.5-sonnet V2": {"provider": "anthropic", "model": "claude-3-5-sonnet-20241022"},
     "gemini-1.5-pro": {"provider": "google", "model": "gemini-1.5-pro-latest"},
     "gemini-1.5-flash": {"provider": "google", "model": "gemini-1.5-flash-latest"},
     "llama-3.1-70B": {"provider": "togetherai", "model": "Meta-Llama-3.1-70B-Instruct-Turbo"},
@@ -53,19 +53,7 @@ class NotDiamondComponent(LCModelComponent):
             display_name="Models",
             info="Select the models between which you want to route.",
             advanced=False,
-            options=[
-                "gpt-4o",
-                "gpt-4o-mini",
-                "gpt-4-turbo",
-                "claude-3-5-haiku",
-                "claude-3.5-sonnet",
-                "gemini-1.5-pro",
-                "gemini-1.5-flash",
-                "llama-3.1-70B",
-                "llama-3.1-405B",
-                "perplexity",
-                "mistral-large-2",
-            ],
+            options=ND_MODEL_MAPPING.keys(),
             value=["gpt-4o"],
         ),
         StrInput(
@@ -79,8 +67,8 @@ class NotDiamondComponent(LCModelComponent):
             display_name="Tradeoff",
             info="The tradeoff between cost and latency for the router to determine the best LLM for a given query.",
             advanced=False,
-            options=["cost", "latency"],
-            value="cost",
+            options=["quality", "cost", "latency"],
+            value="quality",
         ),
         BoolInput(
             name="hash_content",
@@ -105,10 +93,12 @@ class NotDiamondComponent(LCModelComponent):
 
         payload = {
             "messages": messages,
-            "tradeoff": self.tradeoff,
             "llm_providers": selected_models,
             "hash_content": self.hash_content,
         }
+
+        if self.tradeoff != "quality":
+            payload["tradeoff"] = self.tradeoff
 
         if self.preference_id and self.preference_id != "":
             payload["preference_id"] = self.preference_id
