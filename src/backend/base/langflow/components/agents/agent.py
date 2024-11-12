@@ -2,6 +2,7 @@ from langchain_core.tools import StructuredTool
 
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.base.models.model_input_constants import ALL_PROVIDER_FIELDS, MODEL_PROVIDERS_DICT
+from langflow.base.models.model_utils import get_model_name
 from langflow.components.helpers import CurrentDateComponent
 from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from langflow.components.memories.memory import MemoryComponent
@@ -56,6 +57,7 @@ class AgentComponent(ToolCallingAgentComponent):
 
     async def message_response(self) -> Message:
         llm_model = self.get_llm()
+        self.model_name = get_model_name(llm_model)
         if llm_model is None:
             msg = "No language model selected"
             raise ValueError(msg)
