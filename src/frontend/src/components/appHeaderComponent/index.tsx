@@ -204,7 +204,7 @@ export default function AppHeader(): JSX.Element {
             />
           </>
         )}
-        <div className="ml-3 flex">
+        <div className="flex">
           <AccountMenu />
         </div>
       </div>
