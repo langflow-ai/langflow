@@ -438,12 +438,6 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 "collection_embedding_api_key": dict_options.get("collection_embedding_api_key"),
             }
 
-            # Define the file path in the home folder
-            file_path = os.path.join(os.path.expanduser("~"), "data.txt")
-
-            # Write the dictionary to the file
-            with open(file_path, "w") as file:
-                file.write(str(embedding_dict))
         try:
             vector_store = AstraDBVectorStore(
                 collection_name=self.collection_name,
