@@ -1,8 +1,11 @@
+from langchain_core.tools import StructuredTool
+
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.base.models.model_input_constants import ALL_PROVIDER_FIELDS, MODEL_PROVIDERS_DICT
-from langflow.components.agents.tool_calling import ToolCallingAgentComponent
-from langflow.components.helpers.memory import MemoryComponent
-from langflow.io import DropdownInput, MultilineInput, Output
+from langflow.components.helpers import CurrentDateComponent
+from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
+from langflow.components.memories.memory import MemoryComponent
+from langflow.io import BoolInput, DropdownInput, MultilineInput, Output
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
 
@@ -16,7 +19,7 @@ class AgentComponent(ToolCallingAgentComponent):
     display_name: str = "Agent"
     description: str = "Define the agent's instructions, then enter a task to complete using tools."
     icon = "bot"
-    beta = True
+    beta = False
     name = "Agent"
 
     memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]
@@ -25,41 +28,62 @@ class AgentComponent(ToolCallingAgentComponent):
         DropdownInput(
             name="agent_llm",
             display_name="Model Provider",
+            info="The provider of the language model that the agent will use to generate responses.",
             options=[*sorted(MODEL_PROVIDERS_DICT.keys()), "Custom"],
             value="OpenAI",
             real_time_refresh=True,
-            refresh_button=True,
             input_types=[],
         ),
         *MODEL_PROVIDERS_DICT["OpenAI"]["inputs"],
         MultilineInput(
             name="system_prompt",
             display_name="Agent Instructions",
-            info="Initial instructions and context provided to guide the agent's behavior.",
+            info="System Prompt: Initial instructions and context provided to guide the agent's behavior.",
             value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
             advanced=False,
         ),
         *LCToolsAgentComponent._base_inputs,
         *memory_inputs,
+        BoolInput(
+            name="add_current_date_tool",
+            display_name="Add tool Current Date",
+            advanced=True,
+            info="If true, will add a tool to the agent that returns the current date.",
+            value=True,
+        ),
     ]
-    outputs = [Output(name="response", display_name="Response", method="get_response")]
+    outputs = [Output(name="response", display_name="Response", method="message_response")]
 
-    async def get_response(self) -> Message:
+    async def message_response(self) -> Message:
         llm_model = self.get_llm()
         if llm_model is None:
             msg = "No language model selected"
             raise ValueError(msg)
         self.chat_history = self.get_memory_data()
 
-        agent = self.set(
+        if self.add_current_date_tool:
+            if not isinstance(self.tools, list):  # type: ignore[has-type]
+                self.tools = []
+            # Convert CurrentDateComponent to a StructuredTool
+            current_date_tool = CurrentDateComponent().to_toolkit()[0]
+            if isinstance(current_date_tool, StructuredTool):
+                self.tools.append(current_date_tool)
+            else:
+                msg = "CurrentDateComponent must be converted to a StructuredTool"
+                raise ValueError(msg)
+
+        if not self.tools:
+            msg = "Tools are required to run the agent."
+            raise ValueError(msg)
+        self.set(
             llm=llm_model,
-            tools=[self.tools],
+            tools=self.tools,
             chat_history=self.chat_history,
             input_value=self.input_value,
             system_prompt=self.system_prompt,
         )
-
-        return await agent.message_response()
+        agent = self.create_agent_runnable()
+        return await self.run_agent(agent)
 
     def get_memory_data(self):
         memory_kwargs = {
@@ -148,7 +172,19 @@ class AgentComponent(ToolCallingAgentComponent):
             build_config = self.update_input_types(build_config)
 
             # Validate required keys
-            default_keys = ["code", "_type", "agent_llm", "tools", "input_value"]
+            default_keys = [
+                "code",
+                "_type",
+                "agent_llm",
+                "tools",
+                "input_value",
+                "add_current_date_tool",
+                "system_prompt",
+                "agent_description",
+                "max_iterations",
+                "handle_parsing_errors",
+                "verbose",
+            ]
             missing_keys = [key for key in default_keys if key not in build_config]
             if missing_keys:
                 msg = f"Missing required keys in build_config: {missing_keys}"

@@ -73,7 +73,7 @@ test("should be able to see output preview from grouped components and connect c
   await page.mouse.up();
 
   await page
-    .getByTestId("helpersCombine Text")
+    .getByTestId("processingCombine Text")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
   await page
@@ -88,7 +88,7 @@ test("should be able to see output preview from grouped components and connect c
   await page.mouse.up();
 
   await page
-    .getByTestId("helpersCombine Text")
+    .getByTestId("processingCombine Text")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
   await page

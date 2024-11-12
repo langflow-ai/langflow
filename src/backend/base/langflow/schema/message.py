@@ -5,14 +5,13 @@ import re
 import traceback
 from collections.abc import AsyncIterator, Iterator
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Annotated, Any, Literal
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import BaseChatPromptTemplate, ChatPromptTemplate, PromptTemplate
-from langchain_core.prompts.image import ImagePromptTemplate
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer, field_validator
 
@@ -29,9 +28,7 @@ from langflow.utils.constants import (
     MESSAGE_SENDER_NAME_USER,
     MESSAGE_SENDER_USER,
 )
-
-if TYPE_CHECKING:
-    from langchain_core.prompt_values import ImagePromptValue
+from langflow.utils.image import create_data_url
 
 
 class Message(Data):
@@ -203,9 +200,8 @@ class Message(Data):
             if isinstance(file, Image):
                 content_dicts.append(file.to_content_dict())
             else:
-                image_template = ImagePromptTemplate()
-                image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file})
-                content_dicts.append({"type": "image_url", "image_url": image_prompt_value.image_url})
+                image_url = create_data_url(file)
+                content_dicts.append({"type": "image_url", "image_url": {"url": image_url}})
         return content_dicts
 
     def load_lc_prompt(self):
@@ -246,10 +242,16 @@ class Message(Data):
         return formatted_prompt
 
     @classmethod
-    def from_template_and_variables(cls, template: str, **variables):
+    async def from_template_and_variables(cls, template: str, **variables):
+        # This method has to be async for backwards compatibility with versions
+        # >1.0.15, <1.1
+        return cls.from_template(template, **variables)
+
+    # Define a sync version for backwards compatibility with versions >1.0.15, <1.1
+    @classmethod
+    def from_template(cls, template: str, **variables):
         instance = cls(template=template, variables=variables)
         text = instance.format_text()
-        # Get all Message instances from the kwargs
         message = HumanMessage(content=text)
         contents = []
         for value in variables.values():
@@ -343,24 +345,28 @@ class ErrorMessage(Message):
 
     def __init__(
         self,
-        exception: Exception,
+        exception: BaseException,
         session_id: str,
         source: Source,
         trace_name: str | None = None,
         flow_id: str | None = None,
     ) -> None:
+        # This is done to avoid circular imports
+        if exception.__class__.__name__ == "ExceptionWithMessageError" and exception.__cause__ is not None:
+            exception = exception.__cause__
         # Get the error reason
-        reason = ""
+        reason = f"**{exception.__class__.__name__}**\n"
         if hasattr(exception, "body") and "message" in exception.body:
-            reason += f"{exception.body.get('message')}\n"
+            reason += f" - **{exception.body.get('message')}**\n"
         elif hasattr(exception, "code"):
             reason += f" - **Code: {exception.code}**\n"
         elif hasattr(exception, "args") and exception.args:
-            reason += f"**{exception.args[0]}**\n"
+            reason += f" - **Details: {exception.args[0]}**\n"
         elif isinstance(exception, ValidationError):
-            reason += f"```python\n{exception!s}\n```\n"
+            reason += f" - **Details:**\n\n```python\n{exception!s}\n```\n"
         else:
-            reason += f"**{exception.__class__.__name__}**\n"
+            reason += " - **An unknown error occurred.**\n"
+
         # Get the sender ID
         if trace_name:
             match = re.search(r"\((.*?)\)", trace_name)

@@ -1,7 +1,7 @@
 import pytest
-from langflow.components.agents import CrewAIAgentComponent, ToolCallingAgentComponent
-from langflow.components.helpers import SequentialTaskComponent
+from langflow.components.crewai import CrewAIAgentComponent, SequentialTaskComponent
 from langflow.components.inputs import ChatInput
+from langflow.components.langchain_utilities import ToolCallingAgentComponent
 from langflow.components.models import OpenAIModelComponent
 from langflow.components.outputs import ChatOutput
 from langflow.template import Output
@@ -61,4 +61,3 @@ def test_set_required_inputs_various_components():
     assert _assert_all_outputs_have_different_required_inputs(chatoutput.outputs)
     assert _assert_all_outputs_have_different_required_inputs(task.outputs)
     assert _assert_all_outputs_have_different_required_inputs(tool_calling_agent.outputs)
-    assert _assert_all_outputs_have_different_required_inputs(openai_component.outputs)

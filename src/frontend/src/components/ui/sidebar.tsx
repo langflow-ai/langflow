@@ -164,7 +164,14 @@ const Sidebar = React.forwardRef<
     },
     ref,
   ) => {
-    const { state } = useSidebar();
+    const { state, setOpen } = useSidebar();
+
+    React.useEffect(() => {
+      if (collapsible === "none") {
+        console.log("collapsible === none");
+        setOpen(true);
+      }
+    }, [collapsible]);
 
     if (collapsible === "none") {
       return (
@@ -260,7 +267,7 @@ const SidebarTrigger = React.forwardRef<
       data-sidebar="trigger"
       variant="ghost"
       size="icon"
-      className={cn("h-8 w-8", className)}
+      className={cn("h-7 w-7 text-muted-foreground", className)}
       onClick={(event) => {
         onClick?.(event);
         toggleSidebar();
@@ -518,6 +525,7 @@ const sidebarMenuButtonVariants = cva(
       },
       size: {
         default: "h-8 text-sm",
+        md: "h-9 text-sm",
         sm: "h-7 text-xs",
         lg: "h-12 text-sm group-data-[collapsible=icon]:!p-0",
       },

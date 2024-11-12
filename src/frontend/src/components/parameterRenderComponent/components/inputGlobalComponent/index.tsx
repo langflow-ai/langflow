@@ -21,6 +21,8 @@ export default function InputGlobalComponent({
   load_from_db,
   password,
   editNode = false,
+  placeholder,
+  isToolMode = false,
 }: InputProps<string, InputGlobalComponentType>): JSX.Element {
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
@@ -70,7 +72,7 @@ export default function InputGlobalComponent({
   return (
     <InputComponent
       nodeStyle
-      placeholder={getPlaceholder(disabled, "Type something...")}
+      placeholder={getPlaceholder(disabled, placeholder)}
       id={id}
       editNode={editNode}
       disabled={disabled}
@@ -136,6 +138,7 @@ export default function InputGlobalComponent({
           { skipSnapshot },
         );
       }}
+      isToolMode={isToolMode}
     />
   );
 }

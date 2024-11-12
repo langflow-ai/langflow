@@ -10,6 +10,7 @@ import { useEffect, useRef } from "react";
 import { default as IconComponent } from "../../../../components/genericIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import {
+  DEFAULT_TOOLSET_PLACEHOLDER,
   FLEX_VIEW_TYPES,
   ICON_STROKE_WIDTH,
   LANGFLOW_SUPPORTED_TYPES,
@@ -37,6 +38,7 @@ export default function NodeInputField({
   proxy,
   showNode,
   colorName,
+  isToolMode = false,
 }: NodeInputFieldComponentType): JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const nodes = useFlowStore((state) => state.nodes);
@@ -49,12 +51,11 @@ export default function NodeInputField({
   });
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const { handleNodeClass } = useHandleNodeClass(data.id);
-
   let disabled =
     edges.some(
       (edge) =>
         edge.targetHandle === scapedJSONStringfy(proxy ? { ...id, proxy } : id),
-    ) ?? false;
+    ) || isToolMode;
 
   const { handleOnNewValue } = useHandleOnNewValue({
     node: data.node!,
@@ -71,8 +72,9 @@ export default function NodeInputField({
   }, [optionalHandle]);
 
   const displayHandle =
-    !LANGFLOW_SUPPORTED_TYPES.has(type ?? "") ||
-    (optionalHandle && optionalHandle.length > 0);
+    (!LANGFLOW_SUPPORTED_TYPES.has(type ?? "") ||
+      (optionalHandle && optionalHandle.length > 0)) &&
+    !isToolMode;
 
   const isFlexView = FLEX_VIEW_TYPES.includes(type ?? "");
 
@@ -104,13 +106,13 @@ export default function NodeInputField({
   ) : (
     <div
       ref={ref}
-      className={
-        "relative mt-1 flex min-h-10 w-full flex-wrap items-center justify-between px-5 py-2" +
-        ((name === "code" && type === "code") ||
-        (name.includes("code") && proxy)
-          ? " hidden"
-          : "")
-      }
+      className={cn(
+        "relative mt-1 flex min-h-10 w-full flex-wrap items-center justify-between px-5 py-2",
+        isToolMode && "bg-primary/10",
+        (name === "code" && type === "code") || (name.includes("code") && proxy)
+          ? "hidden"
+          : "",
+      )}
     >
       {displayHandle && Handle}
       <div
@@ -127,6 +129,7 @@ export default function NodeInputField({
                   <span>
                     {getCustomParameterTitle({
                       title,
+                      nodeId: data.id,
                       isFlexView,
                     })}
                   </span>
@@ -139,6 +142,7 @@ export default function NodeInputField({
                     <span className="text-sm font-medium">
                       {getCustomParameterTitle({
                         title,
+                        nodeId: data.id,
                         isFlexView,
                       })}
                     </span>
@@ -181,6 +185,8 @@ export default function NodeInputField({
             handleNodeClass={handleNodeClass}
             nodeClass={data.node!}
             disabled={disabled}
+            placeholder={isToolMode ? DEFAULT_TOOLSET_PLACEHOLDER : undefined}
+            isToolMode={isToolMode}
           />
         )}
       </div>

@@ -6,6 +6,7 @@ import { classNames, cn } from "../../../../utils/utils";
 import IconComponent from "../../../genericIconComponent";
 import { Button } from "../../../ui/button";
 import { Input } from "../../../ui/input";
+import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import { InputListComponentType, InputProps } from "../../types";
 
 export default function InputListComponent({
@@ -15,6 +16,7 @@ export default function InputListComponent({
   editNode = false,
   componentName,
   id,
+  placeholder,
 }: InputProps<string[], InputListComponentType>): JSX.Element {
   useEffect(() => {
     if (disabled && value.length > 0 && value[0] !== "") {
@@ -72,7 +74,7 @@ export default function InputListComponent({
               editNode ? "input-edit-node" : "",
               disabled ? "disabled-state" : "",
             )}
-            placeholder="Type something..."
+            placeholder={getPlaceholder(disabled, placeholder)}
             onChange={(event) => handleInputChange(index, event.target.value)}
             data-testid={`${id}_${index}`}
           />

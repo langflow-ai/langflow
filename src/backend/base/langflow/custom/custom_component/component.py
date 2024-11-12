@@ -10,9 +10,10 @@ from typing import TYPE_CHECKING, Any, ClassVar, get_type_hints
 
 import nanoid
 import yaml
+from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, ValidationError
 
-from langflow.base.tools.constants import TOOL_OUTPUT_NAME
+from langflow.base.tools.constants import TOOL_OUTPUT_DISPLAY_NAME, TOOL_OUTPUT_NAME
 from langflow.custom.tree_visitor import RequiredInputsVisitor
 from langflow.exceptions.component import StreamingError
 from langflow.field_typing import Tool  # noqa: TCH001 Needed by _add_toolkit_output
@@ -23,7 +24,6 @@ from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import ErrorMessage, Message
 from langflow.schema.properties import Source
-from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
@@ -66,6 +66,7 @@ class Component(CustomComponent):
     _output_logs: dict[str, list[Log]] = {}
     _current_output: str = ""
     _metadata: dict = {}
+    _ctx: dict = {}
 
     def __init__(self, **kwargs) -> None:
         # if key starts with _ it is a config
@@ -98,8 +99,6 @@ class Component(CustomComponent):
         self.__config = config
         self._reset_all_output_values()
         super().__init__(**config)
-        if (FEATURE_FLAGS.add_toolkit_output) and hasattr(self, "_append_tool_output") and self.add_tool_output:
-            self._append_tool_output()
         if hasattr(self, "_trace_type"):
             self.trace_type = self._trace_type
         if not hasattr(self, "trace_type"):
@@ -112,6 +111,53 @@ class Component(CustomComponent):
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
         self._set_output_required_inputs()
+
+    @property
+    def ctx(self):
+        if not hasattr(self, "graph") or self.graph is None:
+            msg = "Graph not found. Please build the graph first."
+            raise ValueError(msg)
+        return self.graph.context
+
+    def add_to_ctx(self, key: str, value: Any, *, overwrite: bool = False) -> None:
+        """Add a key-value pair to the context.
+
+        Args:
+            key (str): The key to add.
+            value (Any): The value to associate with the key.
+            overwrite (bool, optional): Whether to overwrite the existing value. Defaults to False.
+
+        Raises:
+            ValueError: If the graph is not built.
+        """
+        if not hasattr(self, "graph") or self.graph is None:
+            msg = "Graph not found. Please build the graph first."
+            raise ValueError(msg)
+        if key in self.graph.context and not overwrite:
+            msg = f"Key {key} already exists in context. Set overwrite=True to overwrite."
+            raise ValueError(msg)
+        self.graph.context.update({key: value})
+
+    def update_ctx(self, value_dict: dict[str, Any]) -> None:
+        """Update the context with a dictionary of values.
+
+        Args:
+            value_dict (dict[str, Any]): The dictionary of values to update.
+
+        Raises:
+            ValueError: If the graph is not built.
+        """
+        if not hasattr(self, "graph") or self.graph is None:
+            msg = "Graph not found. Please build the graph first."
+            raise ValueError(msg)
+        if not isinstance(value_dict, dict):
+            msg = "Value dict must be a dictionary"
+            raise TypeError(msg)
+
+        self.graph.context.update(value_dict)
+
+    def _pre_run_setup(self):
+        pass
 
     def set_event_manager(self, event_manager: EventManager | None = None) -> None:
         self._event_manager = event_manager
@@ -325,6 +371,10 @@ class Component(CustomComponent):
 
     def run_and_validate_update_outputs(self, frontend_node: dict, field_name: str, field_value: Any):
         frontend_node = self.update_outputs(frontend_node, field_name, field_value)
+        if field_name == "tool_mode":
+            # Replace all outputs with the tool_output value if tool_mode is True
+            # else replace it with the original outputs
+            frontend_node["outputs"] = [self._build_tool_output()] if field_value else frontend_node["outputs"]
         return self._validate_frontend_node(frontend_node)
 
     def _validate_frontend_node(self, frontend_node: dict):
@@ -493,7 +543,7 @@ class Component(CustomComponent):
         # if value is a list of components, we need to process each component
         # Note this update make sure it is not a list str | int | float | bool | type(None)
         if isinstance(value, list) and not any(
-            isinstance(val, str | int | float | bool | type(None) | Message | Data) for val in value
+            isinstance(val, str | int | float | bool | type(None) | Message | Data | StructuredTool) for val in value
         ):
             for val in value:
                 self._process_connection_or_parameter(key, val)
@@ -590,7 +640,7 @@ class Component(CustomComponent):
                     f"You should pass one of the following: {methods}"
                 )
                 raise ValueError(msg)
-            if callable(input_value):
+            if callable(input_value) and hasattr(input_value, "__self__"):
                 msg = f"Input {name} is connected to {input_value.__self__.display_name}.{input_value.__name__}"
                 raise ValueError(msg)
             self._inputs[name].value = value
@@ -742,6 +792,12 @@ class Component(CustomComponent):
 
     async def build_results(self):
         """Build the results of the component."""
+        if hasattr(self, "graph"):
+            session_id = self.graph.session_id
+        elif hasattr(self, "_session_id"):
+            session_id = self._session_id
+        else:
+            session_id = None
         try:
             if self._tracing_service:
                 return await self._build_with_tracing()
@@ -749,7 +805,7 @@ class Component(CustomComponent):
         except StreamingError as e:
             self.send_error(
                 exception=e.cause,
-                session_id=self.graph.session_id,
+                session_id=session_id,
                 trace_name=getattr(self, "trace_name", None),
                 source=e.source,
             )
@@ -757,7 +813,7 @@ class Component(CustomComponent):
         except Exception as e:
             self.send_error(
                 exception=e,
-                session_id=self.graph.session_id,
+                session_id=session_id,
                 source=Source(id=self._id, display_name=self.display_name, source=self.display_name),
                 trace_name=getattr(self, "trace_name", None),
             )
@@ -766,7 +822,11 @@ class Component(CustomComponent):
     async def _build_results(self) -> tuple[dict, dict]:
         _results = {}
         _artifacts = {}
+        if hasattr(self, "_pre_run_setup"):
+            self._pre_run_setup()
         if hasattr(self, "outputs"):
+            if any(getattr(_input, "tool_mode", False) for _input in self.inputs):
+                self._append_tool_to_outputs_map()
             for output in self._outputs_map.values():
                 # Build the output if it's connected to some other vertex
                 # or if it's not connected to any vertex
@@ -872,7 +932,7 @@ class Component(CustomComponent):
 
     def to_toolkit(self) -> list[Tool]:
         component_toolkit = _get_component_toolkit()
-        return component_toolkit(component=self).get_tools()
+        return component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
 
     def get_project_name(self):
         if hasattr(self, "_tracing_service") and self._tracing_service:
@@ -900,10 +960,17 @@ class Component(CustomComponent):
 
     def _append_tool_output(self) -> None:
         if next((output for output in self.outputs if output.name == TOOL_OUTPUT_NAME), None) is None:
-            self.outputs.append(Output(name=TOOL_OUTPUT_NAME, display_name="Tool", method="to_toolkit", types=["Tool"]))
+            self.outputs.append(
+                Output(
+                    name=TOOL_OUTPUT_NAME,
+                    display_name=TOOL_OUTPUT_DISPLAY_NAME,
+                    method="to_toolkit",
+                    types=["Tool"],
+                )
+            )
 
     def send_message(self, message: Message, id_: str | None = None):
-        if self.graph.session_id and message is not None and not message.session_id:
+        if (hasattr(self, "graph") and self.graph.session_id) and (message is not None and not message.session_id):
             message.session_id = self.graph.session_id
         stored_message = self._store_message(message)
 
@@ -929,7 +996,8 @@ class Component(CustomComponent):
         return stored_message
 
     def _store_message(self, message: Message) -> Message:
-        messages = store_message(message, flow_id=self.graph.flow_id)
+        flow_id = self.graph.flow_id if hasattr(self, "graph") else None
+        messages = store_message(message, flow_id=flow_id)
         if len(messages) != 1:
             msg = "Only one message can be stored at a time."
             raise ValueError(msg)
@@ -1022,13 +1090,21 @@ class Component(CustomComponent):
         session_id: str,
         trace_name: str,
         source: Source,
-    ) -> None:
+    ) -> Message:
         """Send an error message to the frontend."""
+        flow_id = self.graph.flow_id if hasattr(self, "graph") else None
         error_message = ErrorMessage(
-            flow_id=self.graph.flow_id,
+            flow_id=flow_id,
             exception=exception,
             session_id=session_id,
             trace_name=trace_name,
             source=source,
         )
         self.send_message(error_message)
+        return error_message
+
+    def _append_tool_to_outputs_map(self):
+        self._outputs_map[TOOL_OUTPUT_NAME] = self._build_tool_output()
+
+    def _build_tool_output(self) -> Output:
+        return Output(name=TOOL_OUTPUT_NAME, display_name=TOOL_OUTPUT_DISPLAY_NAME, method="to_toolkit", types=["Tool"])

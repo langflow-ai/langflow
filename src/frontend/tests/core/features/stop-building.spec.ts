@@ -1,8 +1,9 @@
-import { expect, test } from "@playwright/test";
+import { test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 
 // TODO: fix this test
-test.skip("user must be able to stop a building", async ({ page }) => {
+test("user must be able to stop a building", async ({ page }) => {
+  test.skip(true, "Test is flaky");
   await page.goto("/");
   // await page.waitForTimeout(2000);
 
@@ -102,7 +103,7 @@ test.skip("user must be able to stop a building", async ({ page }) => {
   // await page.waitForTimeout(1000);
 
   await page
-    .getByTestId("helpersParse Data")
+    .getByTestId("processingParse Data")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
   await page.getByTestId("zoom_out").click();
@@ -230,7 +231,7 @@ class CustomComponent(Component):
     name = "CustomComponent"
 
     inputs = [
-        MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!"),
+        MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!", tool_mode=True),
     ]
 
     outputs = [
