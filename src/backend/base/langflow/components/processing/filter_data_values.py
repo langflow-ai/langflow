@@ -1,7 +1,7 @@
 from typing import Any
 
 from langflow.custom import Component
-from langflow.io import DataInput, DropdownInput, Output, StrInput
+from langflow.io import DataInput, DropdownInput, MessageTextInput, Output
 from langflow.schema import Data
 
 
@@ -17,14 +17,14 @@ class DataFilterComponent(Component):
 
     inputs = [
         DataInput(name="input_data", display_name="Input Data", info="The list of data items to filter.", is_list=True),
-        StrInput(
+        MessageTextInput(
             name="filter_key",
             display_name="Filter Key",
             info="The key to filter on (e.g., 'route').",
             value="route",
             input_types=["Data"],
         ),
-        StrInput(
+        MessageTextInput(
             name="filter_value",
             display_name="Filter Value",
             info="The value to filter by (e.g., 'CMIP').",
