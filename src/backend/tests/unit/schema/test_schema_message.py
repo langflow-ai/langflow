@@ -10,13 +10,11 @@ from platformdirs import user_cache_dir
 
 
 @pytest.fixture
-def langflow_cache_dir(tmp_path, monkeypatch):
+def langflow_cache_dir(tmp_path):
     """Create a temporary langflow cache directory."""
-    cache_dir = tmp_path / "langflow_test"
+    cache_dir = tmp_path / "langflow"
     cache_dir.mkdir(parents=True)
-    monkeypatch.setenv("LANGFLOW_CONFIG_DIR", str(cache_dir))
-    yield cache_dir
-    monkeypatch.undo()
+    return cache_dir
 
 
 @pytest.fixture
@@ -37,7 +35,7 @@ def sample_image(langflow_cache_dir):
     image_path.write_bytes(image_content)
 
     # Use platformdirs to get the cache directory
-    real_cache_dir = Path(user_cache_dir("langflow_test"))
+    real_cache_dir = Path(user_cache_dir("langflow"))
     real_cache_dir.mkdir(parents=True, exist_ok=True)
     real_flow_dir = real_cache_dir / "test_flow"
     real_flow_dir.mkdir(parents=True, exist_ok=True)
@@ -49,19 +47,9 @@ def sample_image(langflow_cache_dir):
     return image_path
 
 
-async def test_message_prompt_serialization():
+def test_message_prompt_serialization():
     template = "Hello, {name}!"
-    message = await Message.from_template_and_variables(template, name="Langflow")
-    assert message.text == "Hello, Langflow!"
-
-    prompt = message.load_lc_prompt()
-    assert isinstance(prompt, ChatPromptTemplate)
-    assert prompt.messages[0].content == "Hello, Langflow!"
-
-
-def test_message_sync_prompt_serialization():
-    template = "Hello, {name}!"
-    message = Message.from_template(template, name="Langflow")
+    message = Message.from_template_and_variables(template, name="Langflow")
     assert message.text == "Hello, Langflow!"
 
     prompt = message.load_lc_prompt()
@@ -89,7 +77,6 @@ def test_message_from_ai_text():
     assert lc_message.content == text
 
 
-@pytest.mark.usefixtures("langflow_cache_dir")
 def test_message_with_single_image(sample_image):
     """Test creating a message with text and an image."""
     text = "Check out this image"
@@ -109,6 +96,41 @@ def test_message_with_single_image(sample_image):
     assert lc_message.content[1]["type"] == "image_url"
     assert "url" in lc_message.content[1]["image_url"]
     assert lc_message.content[1]["image_url"]["url"].startswith("data:image/png;base64,")
+
+
+def test_message_with_multiple_images(sample_image, langflow_cache_dir):
+    """Test creating a message with multiple images."""
+    # Create a second image in the cache directory
+    flow_dir = langflow_cache_dir / "test_flow"
+    second_image = flow_dir / "second_image.png"
+    shutil.copy2(str(sample_image), str(second_image))
+
+    # Use platformdirs for the real cache location
+    real_cache_dir = Path(user_cache_dir("langflow")) / "test_flow"
+    real_cache_dir.mkdir(parents=True, exist_ok=True)
+    real_second_image = real_cache_dir / "second_image.png"
+    shutil.copy2(str(sample_image), str(real_second_image))
+
+    text = "Multiple images"
+    message = Message(
+        text=text,
+        sender=MESSAGE_SENDER_USER,
+        files=[f"test_flow/{sample_image.name}", f"test_flow/{second_image.name}"],
+    )
+    lc_message = message.to_lc_message()
+
+    assert isinstance(lc_message, HumanMessage)
+    assert isinstance(lc_message.content, list)
+    assert len(lc_message.content) == 3  # text + 2 images
+
+    # Check text content
+    assert lc_message.content[0] == {"type": "text", "text": text}
+
+    # Check both images
+    assert all(
+        content["type"] == "image_url" and content["image_url"]["url"].startswith("data:image/png;base64,")
+        for content in lc_message.content[1:]
+    )
 
 
 def test_message_with_invalid_image_path():
@@ -152,6 +174,6 @@ def test_message_to_lc_without_sender():
 def cleanup():
     yield
     # Clean up the real cache directory after tests
-    cache_dir = Path(user_cache_dir("langflow_test"))
+    cache_dir = Path(user_cache_dir("langflow"))
     if cache_dir.exists():
         shutil.rmtree(str(cache_dir))
