@@ -8,13 +8,13 @@ from tests.base import ComponentTestBaseWithClient
 class TestPromptComponent(ComponentTestBaseWithClient):
     component_class = PromptComponent
     DEFAULT_KWARGS = {"template": "Hello {name}!", "name": "John", "_session_id": "123"}
-    FILE_NAMES_MAPPING = {
-        "1.0.15": "Prompt",
-        "1.0.16": "Prompt",
-        "1.0.17": "Prompt",
-        "1.0.18": "Prompt",
-        "1.0.19": "Prompt",
-    }
+    FILE_NAMES_MAPPING = [
+        {"version": "1.0.15", "module": "prompts", "file_name": "Prompt"},
+        {"version": "1.0.16", "module": "prompts", "file_name": "Prompt"},
+        {"version": "1.0.17", "module": "prompts", "file_name": "Prompt"},
+        {"version": "1.0.18", "module": "prompts", "file_name": "Prompt"},
+        {"version": "1.0.19", "module": "prompts", "file_name": "Prompt"},
+    ]
 
     def test_post_code_processing(self):
         component = self.component_class(**self.DEFAULT_KWARGS)
