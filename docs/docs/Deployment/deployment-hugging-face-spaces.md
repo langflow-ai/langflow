@@ -1,5 +1,5 @@
 ---
-title: 🤗 Spaces
+title: HuggingFace Spaces
 sidebar_position: 0
 slug: /deployment-hugging-face-spaces
 ---
