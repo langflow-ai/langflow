@@ -12,7 +12,7 @@ export default function ContentDisplay({ content }: { content: ContentType }) {
   // First render the common BaseContent elements if they exist
   const renderHeader = content.header && (
     <>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 pb-[12px]">
         {content.header.icon && (
           <ForwardedIconComponent
             name={content.header.icon}
@@ -25,7 +25,7 @@ export default function ContentDisplay({ content }: { content: ContentType }) {
             <Markdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeMathjax]}
-              className="inline-block w-fit max-w-full"
+              className="inline-block w-fit max-w-full text-[14px] font-semibold text-foreground"
             >
               {content.header.title}
             </Markdown>
@@ -35,7 +35,7 @@ export default function ContentDisplay({ content }: { content: ContentType }) {
     </>
   );
   const renderDuration = content.duration !== undefined && (
-    <div className="absolute right-2 top-0">
+    <div className="absolute right-2 top-4">
       <DurationDisplay duration={content.duration} />
     </div>
   );
@@ -54,7 +54,7 @@ export default function ContentDisplay({ content }: { content: ContentType }) {
             components={{
               p({ node, ...props }) {
                 return (
-                  <span className="inline-block w-fit max-w-full">
+                  <span className="block w-fit max-w-full">
                     {props.children}
                   </span>
                 );
@@ -135,16 +135,91 @@ export default function ContentDisplay({ content }: { content: ContentType }) {
       break;
 
     case "tool_use":
+      const formatToolOutput = (output: any) => {
+        if (output === null || output === undefined) return "";
+
+        // If it's a string, render as markdown
+        if (typeof output === "string") {
+          return (
+            <Markdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeMathjax]}
+              className="markdown prose max-w-full text-[14px] font-normal dark:prose-invert"
+              components={{
+                pre({ node, ...props }) {
+                  return <>{props.children}</>;
+                },
+                code: ({ node, inline, className, children, ...props }) => {
+                  const match = /language-(\w+)/.exec(className || "");
+                  return !inline ? (
+                    <SimplifiedCodeTabComponent
+                      language={(match && match[1]) || ""}
+                      code={String(children).replace(/\n$/, "")}
+                    />
+                  ) : (
+                    <code className={className} {...props}>
+                      {children}
+                    </code>
+                  );
+                },
+              }}
+            >
+              {output}
+            </Markdown>
+          );
+        }
+
+        // For objects/arrays, format as JSON
+        try {
+          return (
+            <CodeBlock
+              language="json"
+              value={JSON.stringify(output, null, 2)}
+            />
+          );
+        } catch {
+          return String(output);
+        }
+      };
+
       contentData = (
-        <div>
-          {content.name && <div>Tool: {content.name}</div>}
-          <div>Input: {JSON.stringify(content.tool_input, null, 2)}</div>
-          {content.output && (
-            <div>Output: {JSON.stringify(content.output)}</div>
+        <div className="flex flex-col gap-2">
+          <Markdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeMathjax]}
+            className="markdown prose max-w-full text-[14px] font-normal dark:prose-invert"
+          >
+            {`${content.name ? `**Tool:** ${content.name}\n\n` : ""}**Input:**`}
+          </Markdown>
+          <CodeBlock
+            language="json"
+            value={JSON.stringify(content.tool_input, null, 2)}
+          />
+          {content.output !== undefined && (
+            <>
+              <Markdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeMathjax]}
+                className="markdown prose max-w-full text-[14px] font-normal dark:prose-invert"
+              >
+                **Output:**
+              </Markdown>
+              <div className="mt-1">{formatToolOutput(content.output)}</div>
+            </>
           )}
           {content.error && (
             <div className="text-red-500">
-              Error: {JSON.stringify(content.error)}
+              <Markdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeMathjax]}
+                className="markdown prose max-w-full text-[14px] font-normal dark:prose-invert"
+              >
+                **Error:**
+              </Markdown>
+              <CodeBlock
+                language="json"
+                value={JSON.stringify(content.error, null, 2)}
+              />
             </div>
           )}
         </div>
@@ -168,7 +243,7 @@ export default function ContentDisplay({ content }: { content: ContentType }) {
   }
 
   return (
-    <div className="relative">
+    <div className="relative p-[16px]">
       {renderHeader}
       {renderDuration}
       {contentData}

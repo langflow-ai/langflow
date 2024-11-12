@@ -129,6 +129,7 @@ export default function NodeInputField({
                   <span>
                     {getCustomParameterTitle({
                       title,
+                      nodeId: data.id,
                       isFlexView,
                     })}
                   </span>
@@ -141,6 +142,7 @@ export default function NodeInputField({
                     <span className="text-sm font-medium">
                       {getCustomParameterTitle({
                         title,
+                        nodeId: data.id,
                         isFlexView,
                       })}
                     </span>
@@ -184,6 +186,7 @@ export default function NodeInputField({
             nodeClass={data.node!}
             disabled={disabled}
             placeholder={isToolMode ? DEFAULT_TOOLSET_PLACEHOLDER : undefined}
+            isToolMode={isToolMode}
           />
         )}
       </div>
