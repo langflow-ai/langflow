@@ -10,17 +10,17 @@ from langflow.inputs import MultilineInput
 from langflow.schema import Data
 
 
-class WikiDataSearchSchema(BaseModel):
-    query: str = Field(..., description="The search query for WikiData")
+class WikidataSearchSchema(BaseModel):
+    query: str = Field(..., description="The search query for Wikidata")
 
 
-class WikiDataAPIWrapper(BaseModel):
-    """Wrapper around WikiData API."""
+class WikidataAPIWrapper(BaseModel):
+    """Wrapper around Wikidata API."""
 
     wikidata_api_url: str = "https://www.wikidata.org/w/api.php"
 
     def results(self, query: str) -> list[dict[str, Any]]:
-        # Define request parameters for WikiData API
+        # Define request parameters for Wikidata API
         params = {
             "action": "wbsearchentities",
             "format": "json",
@@ -28,7 +28,7 @@ class WikiDataAPIWrapper(BaseModel):
             "language": "en",
         }
 
-        # Send request to WikiData API
+        # Send request to Wikidata API
         response = httpx.get(self.wikidata_api_url, params=params)
         response.raise_for_status()
         response_json = response.json()
@@ -56,37 +56,37 @@ class WikiDataAPIWrapper(BaseModel):
             ]
 
         except Exception as e:
-            error_message = f"Error in WikiData Search API: {e!s}"
+            error_message = f"Error in Wikidata Search API: {e!s}"
 
             raise ToolException(error_message) from e
 
 
-class WikiDataSearchComponent(LCToolComponent):
-    display_name = "WikiData Search API"
-    description = "Performs a search using the WikiData API."
-    name = "WikiDataSearch"
+class WikidataAPIComponent(LCToolComponent):
+    display_name = "Wikidata API"
+    description = "Performs a search using the Wikidata API."
+    name = "WikidataAPI"
 
     inputs = [
         MultilineInput(
             name="query",
             display_name="Query",
-            info="The text query for similarity search on WikiData.",
+            info="The text query for similarity search on Wikidata.",
             required=True,
         ),
     ]
 
     def build_tool(self) -> Tool:
-        wrapper = WikiDataAPIWrapper()
+        wrapper = WikidataAPIWrapper()
 
         # Define the tool using StructuredTool and wrapper's run method
         tool = StructuredTool.from_function(
             name="wikidata_search_api",
-            description="Perform similarity search on WikiData API",
+            description="Perform similarity search on Wikidata API",
             func=wrapper.run,
-            args_schema=WikiDataSearchSchema,
+            args_schema=WikidataSearchSchema,
         )
 
-        self.status = "WikiData Search API Tool for Langchain"
+        self.status = "Wikidata Search API Tool for Langchain"
 
         return tool
 
