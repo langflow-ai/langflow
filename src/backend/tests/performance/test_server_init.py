@@ -5,10 +5,16 @@ import pytest
 from langflow.services.deps import get_settings_service
 
 
-@pytest.fixture(autouse=True)
-def setup_database_url(tmp_path, monkeypatch):
+@pytest.fixture(scope="module")
+def shared_tmp_path(tmp_path_factory):
+    """Create a shared temporary directory for all tests in the module."""
+    return tmp_path_factory.mktemp("test_db")
+
+
+@pytest.fixture
+def setup_database_url(shared_tmp_path, monkeypatch):
     """Setup a temporary database URL for testing."""
-    db_path = tmp_path / "test_performance.db"
+    db_path = shared_tmp_path / "test_performance.db"
     test_db_url = f"sqlite:///{db_path}"
 
     # Store original value
@@ -16,8 +22,6 @@ def setup_database_url(tmp_path, monkeypatch):
 
     # Set environment variable
     monkeypatch.setenv("LANGFLOW_DATABASE_URL", test_db_url)
-
-    # Reset settings service to ensure it picks up new database URL
 
     yield test_db_url
 
