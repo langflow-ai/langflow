@@ -41,6 +41,14 @@ test("user should be able to use youtube transcripts component", async ({
   await page.mouse.down();
   await page.getByTestId("fit_view").click();
 
+  let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+
+  while (outdatedComponents > 0) {
+    await page.getByTestId("icon-AlertTriangle").first().click();
+    await page.waitForTimeout(1000);
+    outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+  }
+
   await page
     .getByTestId("textarea_str_url")
     .fill("https://www.youtube.com/watch?v=VqhCQZaH4Vs");
