@@ -105,7 +105,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
 
   return currentFlow && onFlowPage ? (
     <div className="flex items-center justify-center gap-2 truncate">
-      <div className="header-menu-bar hidden justify-end truncate md:flex">
+      <div className="header-menu-bar hidden flex-1 justify-end truncate md:flex">
         {currentFolder?.name && (
           <div className="hidden truncate md:flex">
             <div
