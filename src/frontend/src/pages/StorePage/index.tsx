@@ -380,7 +380,6 @@ export default function StorePage(): JSX.Element {
         {!loading && searchData.length > 0 && (
           <div className="relative py-6">
             <PaginatorComponent
-              storeComponent={true}
               pageIndex={pageIndex}
               pageSize={pageSize}
               rowsCount={STORE_PAGINATION_ROWS_COUNT}
