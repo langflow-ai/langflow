@@ -17,7 +17,7 @@ async def create_event_queue():
     return asyncio.Queue()
 
 
-class TestComponent(Component):
+class ComponentForTesting(Component):
     """Test component that implements basic functionality."""
 
     def build(self) -> None:
@@ -40,7 +40,7 @@ async def test_component_message_sending():
     event_manager = EventManager(queue)
 
     # Create component
-    component = TestComponent()
+    component = ComponentForTesting()
     component.set_event_manager(event_manager)
 
     # Create a message
@@ -68,7 +68,7 @@ async def test_component_tool_output():
     event_manager = EventManager(queue)
 
     # Create component
-    component = TestComponent()
+    component = ComponentForTesting()
     component.set_event_manager(event_manager)
 
     # Create a message with tool content
@@ -101,7 +101,7 @@ async def test_component_error_handling():
     event_manager = EventManager(queue)
 
     # Create component
-    component = TestComponent()
+    component = ComponentForTesting()
     component.set_event_manager(event_manager)
 
     # Trigger an error
@@ -133,7 +133,7 @@ async def test_component_build_results():
     event_manager = EventManager(queue)
 
     # Create component
-    component = TestComponent()
+    component = ComponentForTesting()
     component.set_event_manager(event_manager)
 
     # Add outputs to the component
@@ -165,7 +165,7 @@ async def test_component_logging():
     event_manager = EventManager(queue)
 
     # Create component
-    component = TestComponent()
+    component = ComponentForTesting()
     component.set_event_manager(event_manager)
 
     # Set current output (required for logging)
@@ -205,7 +205,7 @@ async def test_component_streaming_message():
     mock_graph.flow_id = "12345678-1234-5678-1234-567812345678"  # Valid UUID string
     vertex.graph = mock_graph
 
-    component = TestComponent(_vertex=vertex)
+    component = ComponentForTesting(_vertex=vertex)
     component.set_event_manager(event_manager)
 
     # Create a chunk class that mimics LangChain's streaming format
