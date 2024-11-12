@@ -157,7 +157,7 @@ export function ContentBlockDisplay({
                         }}
                         exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="overflow-hidden font-medium pl-4 pt-[16px]"
+                        className="overflow-hidden pl-4 pt-[16px] font-medium"
                       >
                         <Markdown
                           className="text-[14px] font-semibold text-foreground"
