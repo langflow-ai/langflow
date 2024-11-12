@@ -101,7 +101,7 @@ class ComponentTestBase:
             pytest.skip(f"Skipping version {version} as it does not have a file name defined.")
 
         try:
-            instance = build_component_instance_for_tests(
+            instance, component_code = build_component_instance_for_tests(
                 version, file_name=mapping["file_name"], module=mapping["module"], **default_kwargs
             )
         except Exception as e:
@@ -122,7 +122,8 @@ class ComponentTestBase:
                 f"for version {version}:\n"
                 f"Module: {mapping['module']}\n"
                 f"File: {mapping['file_name']}\n"
-                f"Error: {e!s}"
+                f"Error: {e!s}\n"
+                f"Component Code: {component_code}"
             )
             raise AssertionError(msg) from e
 
