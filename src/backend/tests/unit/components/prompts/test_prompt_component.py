@@ -6,18 +6,26 @@ from tests.base import ComponentTestBaseWithClient
 
 @pytest.mark.usefixtures("client")
 class TestPromptComponent(ComponentTestBaseWithClient):
-    component_class = PromptComponent
-    DEFAULT_KWARGS = {"template": "Hello {name}!", "name": "John", "_session_id": "123"}
-    FILE_NAMES_MAPPING = [
-        {"version": "1.0.15", "module": "prompts", "file_name": "Prompt"},
-        {"version": "1.0.16", "module": "prompts", "file_name": "Prompt"},
-        {"version": "1.0.17", "module": "prompts", "file_name": "Prompt"},
-        {"version": "1.0.18", "module": "prompts", "file_name": "Prompt"},
-        {"version": "1.0.19", "module": "prompts", "file_name": "Prompt"},
-    ]
+    @pytest.fixture
+    def component_class(self):
+        return PromptComponent
 
-    def test_post_code_processing(self):
-        component = self.component_class(**self.DEFAULT_KWARGS)
+    @pytest.fixture
+    def default_kwargs(self):
+        return {"template": "Hello {name}!", "name": "John", "_session_id": "123"}
+
+    @pytest.fixture
+    def file_names_mapping(self):
+        return [
+            {"version": "1.0.15", "module": "prompts", "file_name": "Prompt"},
+            {"version": "1.0.16", "module": "prompts", "file_name": "Prompt"},
+            {"version": "1.0.17", "module": "prompts", "file_name": "Prompt"},
+            {"version": "1.0.18", "module": "prompts", "file_name": "Prompt"},
+            {"version": "1.0.19", "module": "prompts", "file_name": "Prompt"},
+        ]
+
+    def test_post_code_processing(self, component_class, default_kwargs):
+        component = component_class(**default_kwargs)
         frontend_node = component.to_frontend_node()
         node_data = frontend_node["data"]["node"]
         assert node_data["template"]["template"]["value"] == "Hello {name}!"
@@ -25,6 +33,6 @@ class TestPromptComponent(ComponentTestBaseWithClient):
         assert "name" in node_data["template"]
         assert node_data["template"]["name"]["value"] == "John"
 
-    def test_prompt_component_latest(self):
-        result = PromptComponent(**self.DEFAULT_KWARGS)()
+    def test_prompt_component_latest(self, component_class, default_kwargs):
+        result = component_class(**default_kwargs)()
         assert result is not None
