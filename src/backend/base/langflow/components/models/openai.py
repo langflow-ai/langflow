@@ -27,7 +27,12 @@ class OpenAIModelComponent(LCModelComponent):
             info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
             range_spec=RangeSpec(min=0, max=128000),
         ),
-        DictInput(name="model_kwargs", display_name="Model Kwargs", advanced=True),
+        DictInput(
+            name="model_kwargs",
+            display_name="Model Kwargs",
+            advanced=True,
+            info="Additional keyword arguments to pass to the model.",
+        ),
         BoolInput(
             name="json_mode",
             display_name="JSON Mode",
