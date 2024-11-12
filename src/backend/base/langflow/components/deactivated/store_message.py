@@ -17,7 +17,8 @@ class StoreMessageComponent(CustomComponent):
         self,
         message: Message,
     ) -> Message:
-        store_message(message, flow_id=self.graph.flow_id)
+        flow_id = self.graph.flow_id if hasattr(self, "graph") else None
+        store_message(message, flow_id=flow_id)
         self.status = get_messages()
 
         return message
