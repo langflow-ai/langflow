@@ -14,7 +14,7 @@ class AmazonBedrockEmbeddingsComponent(LCModelComponent):
         DropdownInput(
             name="model_id",
             display_name="Model Id",
-            options=["amazon.titan-embed-text-v1"],
+            options=["amazon.titan-embed-text-v1", "amazon.titan-embed-text-v2:0"],
             value="amazon.titan-embed-text-v1",
         ),
         SecretStrInput(
