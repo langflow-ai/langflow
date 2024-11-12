@@ -568,7 +568,7 @@ export default function NodeToolbarComponent({
             }}
           >
             {hasCode && (
-              <SelectItem value={"code"} className="m-auto">
+              <SelectItem value={"code"}>
                 <ToolbarSelectItem
                   shortcut={
                     shortcuts.find((obj) => obj.name === "Code")?.shortcut!
@@ -580,10 +580,7 @@ export default function NodeToolbarComponent({
               </SelectItem>
             )}
             {nodeLength > 0 && (
-              <SelectItem
-                value={nodeLength === 0 ? "disabled" : "advanced"}
-                className="m-auto"
-              >
+              <SelectItem value={nodeLength === 0 ? "disabled" : "advanced"}>
                 <ToolbarSelectItem
                   shortcut={
                     shortcuts.find((obj) => obj.name === "Advanced Settings")
@@ -595,7 +592,7 @@ export default function NodeToolbarComponent({
                 />
               </SelectItem>
             )}
-            <SelectItem value={"save"} className="m-auto">
+            <SelectItem value={"save"}>
               <ToolbarSelectItem
                 shortcut={
                   shortcuts.find((obj) => obj.name === "Save Component")
@@ -606,7 +603,7 @@ export default function NodeToolbarComponent({
                 dataTestId="save-button-modal"
               />
             </SelectItem>
-            <SelectItem value={"duplicate"} className="m-auto">
+            <SelectItem value={"duplicate"}>
               <ToolbarSelectItem
                 shortcut={
                   shortcuts.find((obj) => obj.name === "Duplicate")?.shortcut!
@@ -616,7 +613,7 @@ export default function NodeToolbarComponent({
                 dataTestId="copy-button-modal"
               />
             </SelectItem>
-            <SelectItem value={"copy"} className="m-auto">
+            <SelectItem value={"copy"}>
               <ToolbarSelectItem
                 shortcut={
                   shortcuts.find((obj) => obj.name === "Copy")?.shortcut!
@@ -627,7 +624,7 @@ export default function NodeToolbarComponent({
               />
             </SelectItem>
             {isOutdated && (
-              <SelectItem value={"update"} className="m-auto">
+              <SelectItem value={"update"}>
                 <ToolbarSelectItem
                   shortcut={
                     shortcuts.find((obj) => obj.name === "Update")?.shortcut!
@@ -639,11 +636,7 @@ export default function NodeToolbarComponent({
               </SelectItem>
             )}
             {hasStore && (
-              <SelectItem
-                value={"Share"}
-                disabled={!hasApiKey || !validApiKey}
-                className="m-auto"
-              >
+              <SelectItem value={"Share"} disabled={!hasApiKey || !validApiKey}>
                 <ToolbarSelectItem
                   shortcut={
                     shortcuts.find((obj) => obj.name === "Component Share")
@@ -657,7 +650,6 @@ export default function NodeToolbarComponent({
             )}
 
             <SelectItem
-              className="m-auto"
               value={"documentation"}
               disabled={data.node?.documentation === ""}
             >
@@ -672,7 +664,6 @@ export default function NodeToolbarComponent({
             </SelectItem>
             {isMinimal && (
               <SelectItem
-                className="m-auto"
                 value={"show"}
                 data-testid={`${showNode ? "minimize" : "expand"}-button-modal`}
               >
@@ -687,7 +678,7 @@ export default function NodeToolbarComponent({
               </SelectItem>
             )}
             {isGroup && (
-              <SelectItem value="ungroup" className="m-auto">
+              <SelectItem value="ungroup">
                 <ToolbarSelectItem
                   shortcut={
                     shortcuts.find((obj) => obj.name === "Group")?.shortcut!
@@ -698,7 +689,7 @@ export default function NodeToolbarComponent({
                 />
               </SelectItem>
             )}
-            <SelectItem value="freeze" className="m-auto">
+            <SelectItem value="freeze">
               <ToolbarSelectItem
                 shortcut={
                   shortcuts.find((obj) => obj.name === "Freeze")?.shortcut!
@@ -709,7 +700,7 @@ export default function NodeToolbarComponent({
                 style={`${frozen ? " text-ice" : ""} transition-all`}
               />
             </SelectItem>
-            <SelectItem value="freezeAll" className="m-auto">
+            <SelectItem value="freezeAll">
               <ToolbarSelectItem
                 shortcut={
                   shortcuts.find((obj) => obj.name === "Freeze Path")?.shortcut!
@@ -720,7 +711,7 @@ export default function NodeToolbarComponent({
                 style={`${frozen ? " text-ice" : ""} transition-all`}
               />
             </SelectItem>
-            <SelectItem value="Download" className="m-auto">
+            <SelectItem value="Download">
               <ToolbarSelectItem
                 shortcut={
                   shortcuts.find((obj) => obj.name === "Download")?.shortcut!
@@ -730,10 +721,7 @@ export default function NodeToolbarComponent({
                 dataTestId="download-button-modal"
               />
             </SelectItem>
-            <SelectItem
-              value={"delete"}
-              className="m-auto focus:bg-red-400/[.20]"
-            >
+            <SelectItem value={"delete"} className="focus:bg-red-400/[.20]">
               <div className="font-red flex text-status-red">
                 <IconComponent
                   name="Trash2"
@@ -751,7 +739,7 @@ export default function NodeToolbarComponent({
               </div>
             </SelectItem>
             {hasToolMode && (
-              <SelectItem value="toolMode" className="m-auto">
+              <SelectItem value="toolMode">
                 <ToolbarSelectItem
                   shortcut={
                     shortcuts.find((obj) => obj.name === "Tool Mode")?.shortcut!
