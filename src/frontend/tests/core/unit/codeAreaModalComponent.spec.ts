@@ -40,6 +40,8 @@ test("CodeAreaModalComponent", async ({ page }) => {
   await page.getByTestId("sidebar-legacy-switch").isVisible({ timeout: 5000 });
   await page.getByTestId("sidebar-legacy-switch").click();
 
+  await page.waitForTimeout(1000);
+
   await page
     .getByTestId("prototypesPython Function")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));

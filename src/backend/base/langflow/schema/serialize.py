@@ -8,7 +8,7 @@ from pydantic.v1 import BaseModel as BaseModelV1
 
 def recursive_serialize_or_str(obj):
     try:
-        if isinstance(obj, type) and issubclass(obj, BaseModel):
+        if isinstance(obj, type) and issubclass(obj, BaseModel | BaseModelV1):
             # This a type BaseModel and not an instance of it
             return repr(obj)
         if isinstance(obj, str):
