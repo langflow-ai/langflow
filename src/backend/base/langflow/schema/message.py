@@ -242,10 +242,16 @@ class Message(Data):
         return formatted_prompt
 
     @classmethod
-    def from_template_and_variables(cls, template: str, **variables):
+    async def from_template_and_variables(cls, template: str, **variables):
+        # This method has to be async for backwards compatibility with versions
+        # >1.0.15, <1.1
+        return cls.from_template(template, **variables)
+
+    # Define a sync version for backwards compatibility with versions >1.0.15, <1.1
+    @classmethod
+    def from_template(cls, template: str, **variables):
         instance = cls(template=template, variables=variables)
         text = instance.format_text()
-        # Get all Message instances from the kwargs
         message = HumanMessage(content=text)
         contents = []
         for value in variables.values():
@@ -339,12 +345,15 @@ class ErrorMessage(Message):
 
     def __init__(
         self,
-        exception: Exception,
+        exception: BaseException,
         session_id: str,
         source: Source,
         trace_name: str | None = None,
         flow_id: str | None = None,
     ) -> None:
+        # This is done to avoid circular imports
+        if exception.__class__.__name__ == "ExceptionWithMessageError" and exception.__cause__ is not None:
+            exception = exception.__cause__
         # Get the error reason
         reason = f"**{exception.__class__.__name__}**\n"
         if hasattr(exception, "body") and "message" in exception.body:

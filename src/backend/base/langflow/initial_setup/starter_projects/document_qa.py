@@ -1,8 +1,8 @@
 from langflow.components.data import FileComponent
-from langflow.components.helpers import ParseDataComponent
 from langflow.components.inputs import ChatInput
 from langflow.components.models import OpenAIModelComponent
 from langflow.components.outputs import ChatOutput
+from langflow.components.processing import ParseDataComponent
 from langflow.components.prompts import PromptComponent
 from langflow.graph import Graph
 
