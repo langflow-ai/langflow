@@ -6,7 +6,7 @@ import inspect
 from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, ClassVar, get_type_hints
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, get_type_hints
 
 import nanoid
 import yaml
@@ -57,6 +57,14 @@ def _get_component_toolkit():
 
 BACKWARDS_COMPATIBLE_ATTRIBUTES = ["user_id", "vertex", "tracing_service"]
 CONFIG_ATTRIBUTES = ["_display_name", "_description", "_icon", "_name", "_metadata"]
+
+
+class PlaceholderGraph(NamedTuple):
+    flow_id: str | None
+    user_id: str | None
+    session_id: str | None
+    context: dict
+    flow_name: str | None
 
 
 class Component(CustomComponent):
@@ -627,6 +635,15 @@ class Component(CustomComponent):
             return self.__dict__[f"_{name}"]
         if name.startswith("_") and name[1:] in BACKWARDS_COMPATIBLE_ATTRIBUTES:
             return self.__dict__[name]
+        if name == "graph":
+            # If it got up to here it means it was going to raise
+            session_id = self._session_id if hasattr(self, "_session_id") else None
+            user_id = self._user_id if hasattr(self, "_user_id") else None
+            flow_name = self._flow_name if hasattr(self, "_flow_name") else None
+            flow_id = self._flow_id if hasattr(self, "_flow_id") else None
+            return PlaceholderGraph(
+                flow_id=flow_id, user_id=user_id, session_id=session_id, context={}, flow_name=flow_name
+            )
         msg = f"{name} not found in {self.__class__.__name__}"
         raise AttributeError(msg)
 
