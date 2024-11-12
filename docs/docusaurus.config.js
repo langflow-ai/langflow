@@ -83,6 +83,14 @@ const config = {
       {
         redirects: [
           {
+            to: '/',
+            from: ['/whats-new-a-new-chapter-langflow', '/👋 Welcome-to-Langflow'],
+          },
+          {
+            to: '/getting-started-installation',
+            from: '/getting-started-common-installation-issues',
+          },
+          {
             to: '/workspace-overview',
             from: ['/365085a8-a90a-43f9-a779-f8769ec7eca1', '/My-Collection', '/workspace', '/settings-project-general-settings'],
           },
