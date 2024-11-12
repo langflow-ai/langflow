@@ -320,6 +320,10 @@ export default function GenericNode({
     return null;
   };
 
+  const hasToolMode =
+    data.node?.template &&
+    Object.values(data.node.template).some((field) => field.tool_mode);
+
   return (
     <>
       {memoizedNodeToolbarComponent}
@@ -357,6 +361,7 @@ export default function GenericNode({
                 showNode={showNode}
                 icon={data.node?.icon}
                 isGroup={!!data.node?.flow}
+                hasToolMode={hasToolMode ?? false}
               />
               <div className="generic-node-tooltip-div">
                 <NodeName
