@@ -102,7 +102,7 @@ class KubernetesSecretService(VariableService, Service):
         user_id: UUID | str,
         session: AsyncSession,
     ) -> list[str | None]:
-        variables = asyncio.to_thread(self.kubernetes_secrets.get_secret, name=encode_user_id(user_id))
+        variables = await asyncio.to_thread(self.kubernetes_secrets.get_secret, name=encode_user_id(user_id))
         if not variables:
             return []
 
