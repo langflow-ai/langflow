@@ -1050,7 +1050,7 @@ class Component(CustomComponent):
             raise ValueError(msg)
         message_table = message_tables[0]
         updated_message = Message(**message_table.model_dump())
-        self.vertex._added_message = updated_message
+        self._vertex._added_message = updated_message
         return updated_message
 
     def _stream_message(self, iterator: AsyncIterator | Iterator, message: Message) -> str:
