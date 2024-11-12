@@ -57,7 +57,9 @@ const HeaderComponent = ({
         className="flex items-center pb-8 text-xl font-semibold"
         data-testid="mainpage_title"
       >
-        <div className={cn("w-10 transition-all lg:hidden", open && "md:w-0")}>
+        <div
+          className={cn("h-7 w-10 transition-all lg:hidden", open && "md:w-0")}
+        >
           <div
             className={cn(
               "relative left-0 opacity-100 transition-all",
@@ -68,7 +70,7 @@ const HeaderComponent = ({
               <ForwardedIconComponent
                 name="PanelLeftOpen"
                 aria-hidden="true"
-                className="text-zinc-500 dark:text-zinc-400"
+                className=""
               />
             </SidebarTrigger>
           </div>
