@@ -164,7 +164,14 @@ const Sidebar = React.forwardRef<
     },
     ref,
   ) => {
-    const { state } = useSidebar();
+    const { state, setOpen } = useSidebar();
+
+    React.useEffect(() => {
+      if (collapsible === "none") {
+        console.log("collapsible === none");
+        setOpen(true);
+      }
+    }, [collapsible]);
 
     if (collapsible === "none") {
       return (
