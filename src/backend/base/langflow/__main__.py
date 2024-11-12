@@ -24,9 +24,7 @@ from sqlmodel import select
 
 from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
-from langflow.services.database.models.folder.utils import (
-    create_default_folder_if_it_doesnt_exist,
-)
+from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import async_session_scope, get_db_service, get_settings_service
 from langflow.services.settings.constants import DEFAULT_SUPERUSER
@@ -211,13 +209,18 @@ def run(
             click.launch(f"http://{host}:{port}")
         if process:
             process.join()
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as e:
         if process is not None:
             process.terminate()
-        sys.exit(0)
-    except Exception as e:  # noqa: BLE001
+        raise typer.Exit(0) from e
+    except Exception as e:
         logger.exception(e)
-        sys.exit(1)
+        raise typer.Exit(1) from e
+    # if receives SIGTERM, exit gracefully
+    except SystemExit as e:
+        if process is not None:
+            process.terminate()
+        raise typer.Exit(0) from e
 
 
 def wait_for_server_ready(host, port) -> None:
@@ -499,10 +502,7 @@ def api_key(
                 )
                 return None
             from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate
-            from langflow.services.database.models.api_key.crud import (
-                create_api_key,
-                delete_api_key,
-            )
+            from langflow.services.database.models.api_key.crud import create_api_key, delete_api_key
 
             api_key = (await session.exec(select(ApiKey).where(ApiKey.user_id == superuser.id))).first()
             if api_key:
@@ -568,4 +568,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        logger.exception(e)
+        raise typer.Exit(1) from e
