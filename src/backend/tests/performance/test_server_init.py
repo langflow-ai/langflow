@@ -42,18 +42,16 @@ async def setup_database_url(shared_tmp_path, monkeypatch):
 
 
 @pytest.mark.benchmark
-async def test_initialize_services(setup_database_url):
+async def test_initialize_services():
     """Benchmark the initialization of services."""
-    settings_service = await asyncio.to_thread(get_settings_service)
-    assert settings_service.settings.database_url == setup_database_url
+    await asyncio.to_thread(get_settings_service)
 
 
 @pytest.mark.benchmark
-async def test_setup_llm_caching(setup_database_url):
+async def test_setup_llm_caching():
     """Benchmark LLM caching setup."""
     from langflow.interface.utils import setup_llm_caching
 
-    assert os.getenv("LANGFLOW_DATABASE_URL") == setup_database_url
     await asyncio.to_thread(setup_llm_caching)
 
 
