@@ -22,8 +22,8 @@ export default function PageLayout({
   const navigate = useCustomNavigate();
 
   return (
-    <div className="flex h-full w-full flex-col justify-between overflow-auto bg-background px-6 pt-10">
-      <div className="mx-auto h-full w-full max-w-[1440px]">
+    <div className="flex w-full flex-1 flex-col justify-between overflow-auto bg-background px-6 pt-10">
+      <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col">
         <div className="flex flex-col gap-4">
           <CustomBanner />
           <div className="flex w-full items-center justify-between gap-4 space-y-0.5 py-2">
