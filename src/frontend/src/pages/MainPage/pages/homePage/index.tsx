@@ -181,7 +181,6 @@ const HomePage = ({ type }) => {
         {!isLoading && !isEmptyFolder && data.pagination.total >= 10 && (
           <div className="flex justify-end px-3 py-4">
             <PaginatorComponent
-              storeComponent={true}
               pageIndex={data.pagination.page}
               pageSize={data.pagination.size}
               rowsCount={[10, 20, 50, 100]}

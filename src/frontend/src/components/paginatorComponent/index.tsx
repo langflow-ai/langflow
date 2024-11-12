@@ -21,7 +21,6 @@ export default function PaginatorComponent({
   rowsCount = PAGINATION_ROWS_COUNT,
   totalRowsCount = 0,
   paginate,
-  storeComponent = false,
   pages,
 }: PaginatorComponentType) {
   const [size, setPageSize] = useState(pageSize);
@@ -44,13 +43,7 @@ export default function PaginatorComponent({
 
   return (
     <>
-      <div
-        className={
-          storeComponent
-            ? "flex items-center lg:space-x-6"
-            : "flex items-center space-x-6 lg:space-x-8"
-        }
-      >
+      <div className={"flex items-center space-x-6 lg:space-x-8"}>
         <div className="flex items-center space-x-2">
           <p className="text-xs font-medium text-secondary-foreground">
             Rows per page
@@ -68,9 +61,9 @@ export default function PaginatorComponent({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex w-[60px] items-center justify-end text-xs font-medium text-secondary-foreground">
+        <div className="flex items-center justify-end text-xs font-medium text-secondary-foreground">
           Page {pageIndex}
-          {!storeComponent && <> of {maxIndex}</>}
+          of {maxIndex}
         </div>
         <div className="flex items-center space-x-2">
           <Button
