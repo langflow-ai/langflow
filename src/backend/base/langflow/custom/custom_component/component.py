@@ -659,7 +659,7 @@ class Component(CustomComponent):
             flow_name = self._flow_name if hasattr(self, "_flow_name") else None
             flow_id = self._flow_id if hasattr(self, "_flow_id") else None
             return PlaceholderGraph(
-                flow_id=flow_id, user_id=user_id, session_id=session_id, context={}, flow_name=flow_name
+                flow_id=flow_id, user_id=str(user_id), session_id=session_id, context={}, flow_name=flow_name
             )
         msg = f"{name} not found in {self.__class__.__name__}"
         raise AttributeError(msg)
@@ -1066,9 +1066,7 @@ class Component(CustomComponent):
             msg = "Only one message can be updated at a time."
             raise ValueError(msg)
         message_table = message_tables[0]
-        updated_message = Message(**message_table.model_dump())
-        self._vertex._added_message = updated_message
-        return updated_message
+        return Message(**message_table.model_dump())
 
     def _stream_message(self, iterator: AsyncIterator | Iterator, message: Message) -> str:
         if not isinstance(iterator, AsyncIterator | Iterator):
