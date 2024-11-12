@@ -8,7 +8,7 @@ from langflow.schema import Data
 
 
 class CSVToDataComponent(Component):
-    display_name = "CSV to Data List"
+    display_name = "Load CSV"
     description = "Load a CSV file, CSV from a file path, or a valid CSV string and convert it to a list of Data"
     icon = "file-spreadsheet"
     beta = True
