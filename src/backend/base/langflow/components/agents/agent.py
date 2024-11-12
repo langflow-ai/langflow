@@ -19,7 +19,7 @@ class AgentComponent(ToolCallingAgentComponent):
     display_name: str = "Agent"
     description: str = "Define the agent's instructions, then enter a task to complete using tools."
     icon = "bot"
-    beta = True
+    beta = False
     name = "Agent"
 
     memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]
