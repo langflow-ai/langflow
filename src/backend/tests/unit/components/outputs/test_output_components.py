@@ -1,7 +1,7 @@
 import pytest
+
 from langflow.components.outputs import ChatOutput, TextOutputComponent
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
-
 from tests.base import ComponentTestBaseWithClient, ComponentTestBaseWithoutClient
 
 
