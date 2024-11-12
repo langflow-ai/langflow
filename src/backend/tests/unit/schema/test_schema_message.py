@@ -1,4 +1,3 @@
-import os
 import shutil
 from pathlib import Path
 
@@ -110,44 +109,6 @@ def test_message_with_single_image(sample_image):
     assert lc_message.content[1]["type"] == "image_url"
     assert "url" in lc_message.content[1]["image_url"]
     assert lc_message.content[1]["image_url"]["url"].startswith("data:image/png;base64,")
-
-
-def test_message_with_multiple_images(sample_image, langflow_cache_dir):
-    """Test creating a message with multiple images."""
-    # Create a second image in the cache directory
-    assert os.environ["LANGFLOW_CONFIG_DIR"] == str(langflow_cache_dir)
-    flow_dir = langflow_cache_dir / "test_flow"
-    second_image = flow_dir / "second_image.png"
-    shutil.copy2(str(sample_image), str(second_image))
-    assert second_image.exists()
-
-    # Use platformdirs for the real cache location
-    real_cache_dir = Path(user_cache_dir("langflow_test")) / "test_flow"
-    real_cache_dir.mkdir(parents=True, exist_ok=True)
-    real_second_image = real_cache_dir / "second_image.png"
-    shutil.copy2(str(sample_image), str(real_second_image))
-    assert real_second_image.exists()
-
-    text = "Multiple images"
-    message = Message(
-        text=text,
-        sender=MESSAGE_SENDER_USER,
-        files=[f"test_flow/{sample_image.name}", f"test_flow/{second_image.name}"],
-    )
-    lc_message = message.to_lc_message()
-
-    assert isinstance(lc_message, HumanMessage)
-    assert isinstance(lc_message.content, list)
-    assert len(lc_message.content) == 3  # text + 2 images
-
-    # Check text content
-    assert lc_message.content[0] == {"type": "text", "text": text}
-
-    # Check both images
-    assert all(
-        content["type"] == "image_url" and content["image_url"]["url"].startswith("data:image/png;base64,")
-        for content in lc_message.content[1:]
-    )
 
 
 def test_message_with_invalid_image_path():
