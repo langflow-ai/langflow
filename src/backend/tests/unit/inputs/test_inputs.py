@@ -1,4 +1,6 @@
 import pytest
+from pydantic import ValidationError
+
 from langflow.inputs.inputs import (
     BoolInput,
     CodeInput,
@@ -22,7 +24,6 @@ from langflow.inputs.inputs import (
 )
 from langflow.inputs.utils import instantiate_input
 from langflow.schema.message import Message
-from pydantic import ValidationError
 
 
 def test_table_input_valid():

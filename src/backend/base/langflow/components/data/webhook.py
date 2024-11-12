@@ -14,7 +14,7 @@ class WebhookComponent(Component):
         MultilineInput(
             name="data",
             display_name="Payload",
-            info="Use this field to quickly test the webhook component by providing a JSON payload.",
+            info="Receives a payload from external systems via HTTP POST.",
         )
     ]
     outputs = [
