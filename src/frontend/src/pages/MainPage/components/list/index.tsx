@@ -152,6 +152,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
 
         {/* right side */}
         <div className="ml-5 flex items-center gap-2">
+          <div className="w-0 lg:w-32 xl:w-44"></div>
           {/* {flowData.is_component ? (
             <></>
           ) : (
