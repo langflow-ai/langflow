@@ -1262,7 +1262,7 @@
   }
 
   .last-output-border {
-    @apply rounded-b-xl;
+    @apply rounded-b-[12.5px];
   }
 
   .toolbar-wrapper {
