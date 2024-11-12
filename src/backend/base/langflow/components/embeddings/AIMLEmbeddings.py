@@ -15,7 +15,11 @@ class AIMLEmbeddingsComponent(LCEmbeddingsModel):
         DropdownInput(
             name="model_name",
             display_name="Model Name",
-            options=[],
+            options=[
+                "text-embedding-3-small",
+                "text-embedding-3-large",
+                "text-embedding-ada-002",
+            ],
             required=True,
         ),
         SecretStrInput(
