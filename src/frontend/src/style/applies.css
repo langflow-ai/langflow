@@ -1213,7 +1213,7 @@
   }
 
   .disabled-state {
-    @apply pointer-events-none bg-secondary text-hard-zinc;
+    @apply pointer-events-none bg-secondary text-input;
   }
 
   .background-fade-input {
@@ -1258,11 +1258,11 @@
   }
 
   .node-toolbar-buttons {
-    @apply flex w-max min-w-10 items-center gap-1 rounded-lg text-foreground;
+    @apply flex w-max items-center gap-1 rounded-lg text-foreground;
   }
 
   .last-output-border {
-    @apply rounded-b-xl;
+    @apply rounded-b-[12.5px];
   }
 
   .toolbar-wrapper {

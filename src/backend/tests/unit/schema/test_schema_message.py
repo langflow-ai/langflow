@@ -49,7 +49,7 @@ def sample_image(langflow_cache_dir):
 
 def test_message_prompt_serialization():
     template = "Hello, {name}!"
-    message = Message.from_template_and_variables(template, name="Langflow")
+    message = Message.from_template(template, name="Langflow")
     assert message.text == "Hello, Langflow!"
 
     prompt = message.load_lc_prompt()
