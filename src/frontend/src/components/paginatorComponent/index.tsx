@@ -57,7 +57,7 @@ export default function PaginatorComponent({
         </span>
       </div>
       <div className={"flex items-center gap-2"}>
-        <div className="flex items-center gap-2 text-[13px] text-secondary-foreground">
+        <div className="flex items-center gap-1 text-[13px] text-secondary-foreground">
           <Select
             onValueChange={(value) => paginate(Number(value), size)}
             value={pageIndex.toString()}
