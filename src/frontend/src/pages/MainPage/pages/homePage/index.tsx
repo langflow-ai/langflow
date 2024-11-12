@@ -187,6 +187,7 @@ const HomePage = ({ type }) => {
               totalRowsCount={data.pagination.total}
               paginate={handlePageChange}
               pages={data.pagination.pages}
+              isComponent={flowType === "components"}
             />
           </div>
         )}

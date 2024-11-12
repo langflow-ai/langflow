@@ -4,16 +4,16 @@ import {
   PAGINATION_SIZE,
 } from "@/constants/constants";
 import { useEffect, useState } from "react";
+import { PaginatorComponentType } from "../../types/components";
+import IconComponent from "../genericIconComponent";
+import { Button } from "../ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../components/ui/select";
-import { PaginatorComponentType } from "../../types/components";
-import IconComponent from "../genericIconComponent";
-import { Button } from "../ui/button";
+} from "../ui/select";
 
 export default function PaginatorComponent({
   pageSize = PAGINATION_SIZE,
@@ -22,6 +22,7 @@ export default function PaginatorComponent({
   totalRowsCount = 0,
   paginate,
   pages,
+  isComponent,
 }: PaginatorComponentType) {
   const [size, setPageSize] = useState(pageSize);
   const [maxIndex, setMaxPageIndex] = useState(
@@ -42,42 +43,39 @@ export default function PaginatorComponent({
   };
 
   return (
-    <>
-      <div className={"flex items-center space-x-6 lg:space-x-8"}>
-        <div className="flex items-center space-x-2">
-          <p className="text-xs font-medium text-secondary-foreground">
-            Rows per page
-          </p>
-          <Select onValueChange={handleValueChange} value={pageSize.toString()}>
-            <SelectTrigger className="w-[80px]">
-              <SelectValue placeholder="10" />
+    <div className="flex flex-1 items-center justify-between px-6">
+      <div className="flex items-center justify-end gap-1 text-[13px] text-secondary-foreground">
+        {(pageIndex - 1) * pageSize + 1}-
+        {Math.min(totalRowsCount, (pageIndex - 1) * pageSize + pageSize)}{" "}
+        <span className="text-muted-foreground">
+          of {totalRowsCount}{" "}
+          {isComponent === undefined
+            ? "items"
+            : isComponent
+              ? "components"
+              : "flows"}
+        </span>
+      </div>
+      <div className={"flex items-center gap-2"}>
+        <div className="flex items-center gap-2 text-[13px] text-secondary-foreground">
+          <Select
+            onValueChange={(value) => paginate(Number(value), size)}
+            value={pageIndex.toString()}
+          >
+            <SelectTrigger className="h-7 w-fit gap-1 border-none p-1 pl-1.5 text-[13px] focus:border-none focus:ring-0 focus:!ring-offset-0">
+              <SelectValue placeholder="1" />
             </SelectTrigger>
             <SelectContent>
-              {rowsCount.map((item, i) => (
-                <SelectItem key={i} value={item.toString()}>
+              {Array.from({ length: maxIndex }, (_, i) => i + 1).map((item) => (
+                <SelectItem key={item} value={item.toString()}>
                   {item}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          <span className="text-muted-foreground">of {maxIndex} pages</span>
         </div>
-        <div className="flex items-center justify-end text-xs font-medium text-secondary-foreground">
-          Page {pageIndex}
-          of {maxIndex}
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            disabled={pageIndex <= 1}
-            variant="ghost"
-            className="hidden h-8 w-8 p-0 lg:flex"
-            onClick={() => {
-              paginate(1, size);
-            }}
-            size={"icon"}
-          >
-            <span className="sr-only">Go to first page</span>
-            <IconComponent name="ChevronsLeft" className="h-4 w-4" />
-          </Button>
+        <div className="flex items-center gap-1">
           <Button
             disabled={disableFirstPage}
             onClick={() => {
@@ -86,8 +84,7 @@ export default function PaginatorComponent({
               }
             }}
             variant="ghost"
-            className="h-8 w-8 p-0"
-            size={"icon"}
+            size={"iconMd"}
           >
             <span className="sr-only">Go to previous page</span>
             <IconComponent name="ChevronLeft" className="h-4 w-4" />
@@ -98,26 +95,13 @@ export default function PaginatorComponent({
               paginate(pageIndex + 1, size);
             }}
             variant="ghost"
-            className="h-8 w-8 p-0"
-            size={"icon"}
+            size={"iconMd"}
           >
             <span className="sr-only">Go to next page</span>
             <IconComponent name="ChevronRight" className="h-4 w-4" />
           </Button>
-          <Button
-            disabled={disableLastPage}
-            variant="ghost"
-            className="hidden h-8 w-8 p-0 lg:flex"
-            size={"icon"}
-            onClick={() => {
-              paginate(maxIndex, size);
-            }}
-          >
-            <span className="sr-only">Go to last page</span>
-            <IconComponent name="ChevronsRight" className="h-4 w-4" />
-          </Button>
         </div>
       </div>
-    </>
+    </div>
   );
 }
