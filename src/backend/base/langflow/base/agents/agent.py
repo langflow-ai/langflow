@@ -50,8 +50,7 @@ class LCAgentComponent(Component):
             name="verbose",
             display_name="Verbose",
             value=True,
-            advanced=True,
-            info="Print more details about the Agent's actions and thoughts.",
+            advanced=True
         ),
         IntInput(
             name="max_iterations",
