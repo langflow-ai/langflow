@@ -46,12 +46,7 @@ class LCAgentComponent(Component):
             advanced=True,
             info="Should the Agent fix errors when reading user input for better processing?",
         ),
-        BoolInput(
-            name="verbose",
-            display_name="Verbose",
-            value=True,
-            advanced=True
-        ),
+        BoolInput(name="verbose", display_name="Verbose", value=True, advanced=True),
         IntInput(
             name="max_iterations",
             display_name="Max Iterations",
