@@ -35,7 +35,6 @@ export function NodeIcon({
 
   const iconClassName = cn(
     "generic-node-icon",
-    !showNode ? " show-node-icon " : "",
     isLucideIcon ? "lucide-icon" : "integration-icon",
   );
 
@@ -51,7 +50,7 @@ export function NodeIcon({
         <div
           className={cn(
             hasToolMode ? "text-white" : "text-foreground",
-            !showNode && "min-h-8 min-w-8",
+            !showNode && "flex min-h-8 min-w-8 items-center justify-center",
             "bg-lucide-icon",
           )}
           style={{
@@ -61,21 +60,20 @@ export function NodeIcon({
           <IconComponent
             strokeWidth={ICON_STROKE_WIDTH}
             name={iconName}
-            className={cn(
-              iconClassName,
-              !showNode && "absolute -translate-x-0.5",
-            )}
+            className={cn(iconClassName)}
           />
         </div>
       );
     }
 
     return (
-      <IconComponent
-        name={iconName}
-        className={iconClassName}
-        iconColor={iconColor}
-      />
+      <div className={cn(!showNode && "min-h-8 min-w-8")}>
+        <IconComponent
+          name={iconName}
+          className={iconClassName}
+          iconColor={iconColor}
+        />
+      </div>
     );
   };
 
