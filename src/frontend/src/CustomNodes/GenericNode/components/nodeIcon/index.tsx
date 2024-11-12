@@ -50,7 +50,7 @@ export function NodeIcon({
       return (
         <div
           className={cn(
-            hasToolMode ? "text-white bg-blend-lighten" : "text-foreground",
+            hasToolMode ? "text-white" : "text-foreground",
             !showNode && "min-h-8 min-w-8",
             "bg-lucide-icon",
           )}
