@@ -1,5 +1,5 @@
 ---
-title: Installation
+title: Install Langflow
 sidebar_position: 1
 slug: /getting-started-installation
 ---
