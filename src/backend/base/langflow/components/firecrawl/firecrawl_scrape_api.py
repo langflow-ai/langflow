@@ -1,69 +1,69 @@
-from langflow.custom import CustomComponent
+from langflow.custom import Component
+from langflow.io import (
+    DataInput,
+    IntInput,
+    Output,
+    SecretStrInput,
+    StrInput,
+)
 from langflow.schema import Data
 
 
-class FirecrawlScrapeApi(CustomComponent):
+class FirecrawlScrapeApi(Component):
     display_name: str = "FirecrawlScrapeApi"
     description: str = "Firecrawl Scrape API."
     name = "FirecrawlScrapeApi"
 
     output_types: list[str] = ["Document"]
     documentation: str = "https://docs.firecrawl.dev/api-reference/endpoint/scrape"
-    field_config = {
-        "api_key": {
-            "display_name": "API Key",
-            "field_type": "str",
-            "required": True,
-            "password": True,
-            "info": "The API key to use Firecrawl API.",
-        },
-        "url": {
-            "display_name": "URL",
-            "field_type": "str",
-            "required": True,
-            "info": "The URL to scrape.",
-        },
-        "timeout": {
-            "display_name": "Timeout",
-            "info": "Timeout in milliseconds for the request.",
-            "field_type": "int",
-            "default_value": 10000,
-        },
-        "pageOptions": {
-            "display_name": "Page Options",
-            "info": "The page options to send with the request.",
-        },
-        "extractorOptions": {
-            "display_name": "Extractor Options",
-            "info": "The extractor options to send with the request.",
-        },
-    }
 
-    def build(
-        self,
-        api_key: str,
-        url: str,
-        timeout: int = 10000,
-        pageOptions: Data | None = None,  # noqa: N803
-        extractorOptions: Data | None = None,  # noqa: N803
-    ) -> Data:
+    inputs = [
+        SecretStrInput(
+            name="api_key",
+            display_name="API Key",
+            required=True,
+            password=True,
+            info="The API key to use Firecrawl API.",
+        ),
+        StrInput(
+            name="url",
+            display_name="URL",
+            required=True,
+            info="The URL to scrape.",
+        ),
+        IntInput(
+            name="timeout",
+            display_name="Timeout",
+            info="Timeout in milliseconds for the request.",
+        ),
+        DataInput(
+            name="scrapeOptions",
+            display_name="Scrape Options",
+            info="The page options to send with the request.",
+        ),
+        DataInput(  # https://docs.firecrawl.dev/features/extract
+            name="extractorOptions",
+            display_name="Extractor Options",
+            info="The extractor options to send with the request.",
+        ),
+    ]
+
+    outputs = [
+        Output(display_name="Data", name="data", method="crawl"),
+    ]
+
+    def crawl(self) -> list[Data]:
         try:
             from firecrawl.firecrawl import FirecrawlApp
         except ImportError as e:
             msg = "Could not import firecrawl integration package. Please install it with `pip install firecrawl-py`."
             raise ImportError(msg) from e
-        extractor_options_dict = extractorOptions.__dict__["data"]["text"] if extractorOptions else {}
 
-        page_options_dict = pageOptions.__dict__["data"]["text"] if pageOptions else {}
+        params = self.scrapeOptions.__dict__["data"] if self.scrapeOptions else {}
+        extractor_options_dict = self.extractorOptions.__dict__["data"] if self.extractorOptions else {}
+        if extractor_options_dict:
+            params["extract"] = extractor_options_dict
 
-        app = FirecrawlApp(api_key=api_key)
-        results = app.scrape_url(
-            url,
-            {
-                "timeout": str(timeout),
-                "extractorOptions": extractor_options_dict,
-                "pageOptions": page_options_dict,
-            },
-        )
-
+        app = FirecrawlApp(api_key=self.api_key)
+        results = app.scrape_url(self.url, params=params)
         return Data(data=results)
