@@ -100,7 +100,7 @@ class LangChainHubPromptComponent(Component):
 
         # Get the parameters from the attributes
         params_dict = {param: getattr(self, "param_" + param, f"{{{param}}}") for param in template.input_variables}
-        original_params = {k: v.text if hasattr(v, "text") else v for k, v in params_dict.items()}
+        original_params = {k: v.text if hasattr(v, "text") else v for k, v in params_dict.items() if v is not None}
         prompt_value = template.invoke(original_params)
 
         # Update the template with the new value
