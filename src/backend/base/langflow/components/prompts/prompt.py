@@ -22,7 +22,7 @@ class PromptComponent(Component):
     ]
 
     async def build_prompt(self) -> Message:
-        prompt = Message.from_template_and_variables(**self._attributes)
+        prompt = Message.from_template(**self._attributes)
         self.status = prompt.text
         return prompt
 
