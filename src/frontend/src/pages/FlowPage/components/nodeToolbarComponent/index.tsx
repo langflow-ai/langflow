@@ -52,6 +52,7 @@ export default function NodeToolbarComponent({
   onCloseAdvancedModal,
   updateNode,
   isOutdated,
+  setOpenShowMoreOptions,
 }: nodeToolbarPropsType): JSX.Element {
   const version = useDarkStore((state) => state.version);
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
@@ -344,6 +345,10 @@ export default function NodeToolbarComponent({
     (selectTriggerRef.current! as HTMLElement)?.click();
   };
 
+  const handleOpenChange = (open: boolean) => {
+    setOpenShowMoreOptions && setOpenShowMoreOptions(open);
+  };
+
   const [toolMode, setToolMode] = useState(() => {
     // Check if tool mode is explicitly set on the node
     const hasToolModeProperty = data.node?.tool_mode;
@@ -545,7 +550,11 @@ export default function NodeToolbarComponent({
           </ShadTooltip>
         </div>
 
-        <Select onValueChange={handleSelectChange} value={selectedValue!}>
+        <Select
+          onValueChange={handleSelectChange}
+          value={selectedValue!}
+          onOpenChange={handleOpenChange}
+        >
           <SelectTrigger ref={selectTriggerRef} className="w-56">
             <></>
           </SelectTrigger>
