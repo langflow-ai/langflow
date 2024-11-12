@@ -1,7 +1,7 @@
 ---
-title: Global Variables
-sidebar_position: 0
-slug: /settings-global-variables
+title: Global variables
+sidebar_position: 5
+slug: /configuration-global-variables
 ---
 
 import ReactPlayer from "react-player";
@@ -53,7 +53,7 @@ In **Settings > Global Variables**, the **Value** column shows the encrypted has
 
 4. In the **Update Variable** dialog, you can edit the following fields: **Variable Name**, **Value**, and **Apply To Fields**.
 
-5. Click **Update Variable**
+5. Click **Update Variable**.
 
 ## Delete a global variable
 
