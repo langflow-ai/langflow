@@ -183,7 +183,7 @@ async def run_single_component(
     return graph.get_vertex(component_id).built_object
 
 
-def build_component_instance_for_tests(version: str, file_name: str, **kwargs):
-    component = download_component_from_github("prompts", file_name, version)
+def build_component_instance_for_tests(version: str, module: str, file_name: str, **kwargs):
+    component = download_component_from_github(module, file_name, version)
     cc_class = eval_custom_component_code(component._code)
     return cc_class(**kwargs)
