@@ -44,18 +44,15 @@ class LCAgentComponent(Component):
             display_name="Handle Parse Errors",
             value=True,
             advanced=True,
+            info="Should the Agent fix errors when reading user input for better processing?",
         ),
-        BoolInput(
-            name="verbose",
-            display_name="Verbose",
-            value=True,
-            advanced=True,
-        ),
+        BoolInput(name="verbose", display_name="Verbose", value=True, advanced=True),
         IntInput(
             name="max_iterations",
             display_name="Max Iterations",
             value=15,
             advanced=True,
+            info="The maximum number of attempts the agent can make to complete its task before it stops.",
         ),
         MultilineInput(
             name="agent_description",
@@ -187,6 +184,7 @@ class LCToolsAgentComponent(LCAgentComponent):
             input_types=["Tool", "BaseTool", "StructuredTool"],
             is_list=True,
             required=True,
+            info="These are the tools that the agent can use to help with tasks.",
         ),
         *LCAgentComponent._base_inputs,
     ]
