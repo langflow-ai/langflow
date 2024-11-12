@@ -55,11 +55,15 @@ async def test_initialize_super_user():
 async def test_get_and_cache_all_types_dict():
     """Benchmark get_and_cache_all_types_dict function."""
     from langflow.interface.types import get_and_cache_all_types_dict
+    from langflow.services.utils import initialize_services
 
+    # Initialize services first to ensure we're using the test database
+    await asyncio.to_thread(initialize_services, fix_migration=False)
     settings_service = await asyncio.to_thread(get_settings_service)
     result = await get_and_cache_all_types_dict(settings_service)
     assert result is not None
-    assert "test_performance.db" in settings_service.settings.database_url
+    # The database URL should contain our temporary test database path
+    assert settings_service.settings.database_url.endswith("test_performance.db")
 
 
 @pytest.mark.benchmark
