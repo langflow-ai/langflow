@@ -127,7 +127,7 @@ const CustomInputPopover = ({
               disabled={disabled}
               required={required}
               className={cn(
-                "popover-input truncate pr-4",
+                "popover-input nodrag truncate pr-4",
                 editNode && "px-3",
                 editNode && disabled && "h-fit w-fit",
                 disabled &&
