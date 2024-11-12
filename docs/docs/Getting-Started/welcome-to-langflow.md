@@ -28,7 +28,7 @@ Langflow can be used for a wide range of AI applications, including:
 
 ## Community and Support
 
-Join Langflow's vibrant community of developers and AI enthusiasts. You can join discussions, share your projects, and get support through:
+Join Langflow's vibrant community of developers and AI enthusiasts. See the following resources to join discussions, share your projects, and get support:
 
 * [Contribute to Langflow](contributing-how-to-contribute)
 * [Langflow Discord Server](https://discord.gg/EqksyE2EX9)

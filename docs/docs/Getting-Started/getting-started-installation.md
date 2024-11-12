@@ -42,7 +42,7 @@ python -m langflow run
 
 3. Continue on to the [Quickstart](/getting-started-quickstart).
 
-## Manage Langflow version
+## Manage Langflow versions
 
 To upgrade Langflow to the latest version, use the pip upgrade command.
 
@@ -106,7 +106,7 @@ This folder can be found at:
 - **Linux or WSL2 on Windows**: `home/<username>/.cache/langflow/`
 - **MacOS**: `/Users/<username>/Library/Caches/langflow/`
 
-This error can occur during Langflow upgrades when the new version can't override `langflow-pre.db` in `.cache/langflow/`. Clearing the cache removes this file but will also erase your settings.
+This error can occur during Langflow upgrades when the new version can't override `langflow-pre.db` in `.cache/langflow/`. Clearing the cache removes this file but also erases your settings.
 
 If you wish to retain your files, back them up before clearing the folder.
 
