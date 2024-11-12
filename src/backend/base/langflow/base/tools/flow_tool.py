@@ -104,7 +104,7 @@ class FlowTool(BaseTool):
         """Use the tool asynchronously."""
         tweaks = self.build_tweaks_dict(args, kwargs)
         try:
-            run_id = self.graph.run_id if self.graph else None
+            run_id = self.graph.run_id if hasattr(self, "graph") and self.graph else None
         except Exception:  # noqa: BLE001
             logger.opt(exception=True).warning("Failed to set run_id")
             run_id = None
