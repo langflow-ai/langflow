@@ -111,7 +111,6 @@ dependencies = [
     "langchain-milvus>=0.1.1",
     "langchain-google-community~=2.0.1",
     "langchain-elasticsearch>=0.2.0",
-    "notdiamond>=0.0.24",
     "opensearch-py>=2.7.1",
     "langchain-ollama>=0.2.0",
     "sqlalchemy[aiosqlite,postgresql_psycopg2binary,postgresql_psycopgbinary]>=2.0.36",

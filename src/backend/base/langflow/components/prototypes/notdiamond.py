@@ -1,16 +1,13 @@
-import requests
 import warnings
 
+import requests
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from pydantic.v1 import SecretStr
 
-from notdiamond import NotDiamond
-
-from langflow.custom import Component
+from langflow.base.models.model import LCModelComponent
 from langflow.io import (
     BoolInput,
     DropdownInput,
-    MessageInput,
-    MessageTextInput,
     MultiselectInput,
     Output,
     SecretStrInput,
@@ -19,21 +16,21 @@ from langflow.io import (
 from langflow.schema.message import Message
 
 ND_MODEL_MAPPING = {
-    "gpt-4o": "openai/gpt-4o",
-    "gpt-4o-mini": "openai/gpt-4o-mini",
-    "gpt-4-turbo": "openai/gpt-4-turbo-2024-04-09",
-    "claude-3-5-haiku": "anthropic/claude-3-5-haiku-20241022",
-    "claude-3.5-sonnet": "anthropic/claude-3-5-sonnet-20241022",
-    "gemini-1.5-pro": "google/gemini-1.5-pro-latest",
-    "gemini-1.5-flash": "google/gemini-1.5-flash-latest",
-    "llama-3.1-70B": "meta/Meta-Llama-3.1-70B-Instruct-Turbo",
-    "llama-3.1-405B": "meta/Meta-Llama-3.1-405B-Instruct-Turbo",
-    "perplexity": "perplexity/llama-3.1-sonar-large-128k-online",
-    "mistral-large-2": "mistral/mistral-large-2407",
+    "gpt-4o": {"provider": "openai", "model": "gpt-4o"},
+    "gpt-4o-mini": {"provider": "openai", "model": "gpt-4o-mini"},
+    "gpt-4-turbo": {"provider": "openai", "model": "gpt-4-turbo-2024-04-09"},
+    "claude-3-5-haiku": {"provider": "anthropic", "model": "claude-3-5-haiku-20241022"},
+    "claude-3.5-sonnet": {"provider": "anthropic", "model": "claude-3-5-sonnet-20241022"},
+    "gemini-1.5-pro": {"provider": "google", "model": "gemini-1.5-pro-latest"},
+    "gemini-1.5-flash": {"provider": "google", "model": "gemini-1.5-flash-latest"},
+    "llama-3.1-70B": {"provider": "togetherai", "model": "Meta-Llama-3.1-70B-Instruct-Turbo"},
+    "llama-3.1-405B": {"provider": "togetherai", "model": "Meta-Llama-3.1-405B-Instruct-Turbo"},
+    "perplexity": {"provider": "perplexity", "model": "llama-3.1-sonar-large-128k-online"},
+    "mistral-large-2": {"provider": "mistral", "model": "mistral-large-2407"},
 }
 
 
-class NotDiamondComponent(Component):
+class NotDiamondComponent(LCModelComponent):
     display_name = "Not Diamond Router"
     description = "Call the right model at the right time with the world's most powerful AI model router."
     icon = "split"
@@ -43,13 +40,7 @@ class NotDiamondComponent(Component):
         super().__init__(*args, **kwargs)
 
     inputs = [
-        MessageInput(name="input_value", display_name="Input"),
-        MessageTextInput(
-            name="system_message",
-            display_name="System Message",
-            info="System message to pass to the model.",
-            advanced=True,
-        ),
+        *LCModelComponent._base_inputs,
         SecretStrInput(
             name="api_key",
             display_name="Not Diamond API Key",
@@ -103,27 +94,59 @@ class NotDiamondComponent(Component):
     outputs = [Output(display_name="Model", name="model_selected", method="model_select")]
 
     def model_select(self) -> str:
+        api_key = SecretStr(self.api_key).get_secret_value() if self.api_key else None
         input_value = self.input_value
         system_message = self.system_message
+        messages = self._format_input(input_value, system_message)
         selected_models = []
-
-        nd = NotDiamond(api_key=self.api_key)
 
         if self.models:
             selected_models = list(filter(None, [ND_MODEL_MAPPING.get(model) for model in self.models]))
 
-        # response = requests.post(
-        #     "https://api.notdiamond.ai/v2/modelRouter/modelSelect",
-        #     json={
-        #         "messages": [],
-        #         "tradeoff": self.tradeoff,
-        #         "llm_providers": selected_models,
-        #         "hash_content": self.hash_content,
-        #         "preference_id": self.preference_id,
-        #     },
-        # )
+        payload = {
+            "messages": messages,
+            "tradeoff": self.tradeoff,
+            "llm_providers": selected_models,
+            "hash_content": self.hash_content,
+        }
 
-        # return response.json()
+        if self.preference_id and self.preference_id != "":
+            payload["preference_id"] = self.preference_id
+
+        header = {
+            "Authorization": f"Bearer {api_key}",
+            "accept": "application/json",
+            "content-type": "application/json",
+        }
+
+        response = requests.post(
+            "https://api.notdiamond.ai/v2/modelRouter/modelSelect",
+            json=payload,
+            headers=header,
+            timeout=10,
+        )
+
+        result = response.json()
+
+        if "providers" not in result:
+            return result
+
+        providers = result["providers"]
+
+        if len(providers) == 0:
+            return "No providers returned from NotDiamond API."
+
+        chosen_provider = providers[0]
+        chosen_model = [
+            k
+            for k, v in ND_MODEL_MAPPING.items()
+            if v["provider"] == chosen_provider["provider"] and v["model"] == chosen_provider["model"]
+        ]
+
+        if len(chosen_model) == 0:
+            return "No model found by NotDiamond API."
+
+        return chosen_model[0]
 
     def _format_input(
         self,
@@ -147,6 +170,7 @@ class NotDiamondComponent(Component):
                                 *prompt.messages,  # type: ignore[has-type]
                             ]
                             system_message_added = True
+                        messages.extend(prompt.messages)
                     else:
                         messages.append(input_value.to_lc_message())
             else:
@@ -155,4 +179,14 @@ class NotDiamondComponent(Component):
         if system_message and not system_message_added:
             messages.insert(0, SystemMessage(content=system_message))
 
-        return messages
+        # Convert Langchain messages to OpenAI format
+        openai_messages = []
+        for msg in messages:
+            if isinstance(msg, HumanMessage):
+                openai_messages.append({"role": "user", "content": msg.content})
+            elif isinstance(msg, AIMessage):
+                openai_messages.append({"role": "assistant", "content": msg.content})
+            elif isinstance(msg, SystemMessage):
+                openai_messages.append({"role": "system", "content": msg.content})
+
+        return openai_messages

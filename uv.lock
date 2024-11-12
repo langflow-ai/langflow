@@ -3565,7 +3565,6 @@ dependencies = [
     { name = "metaphor-python" },
     { name = "networkx" },
     { name = "nltk" },
-    { name = "notdiamond" },
     { name = "numexpr" },
     { name = "opensearch-py" },
     { name = "pgvector" },
@@ -3715,7 +3714,6 @@ requires-dist = [
     { name = "metaphor-python", specifier = ">=0.1.11" },
     { name = "networkx", specifier = ">=3.1" },
     { name = "nltk", specifier = ">=3.9.1" },
-    { name = "notdiamond", specifier = ">=0.0.24" },
     { name = "numexpr", specifier = ">=2.8.6" },
     { name = "opensearch-py", specifier = ">=2.7.1" },
     { name = "pgvector", specifier = ">=0.2.3" },
@@ -4652,23 +4650,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/43/16/fc88b08840de0e0a72a2f9d8c6bae36be573e475a6326ae854bcc549fc45/nodeenv-1.9.1.tar.gz", hash = "sha256:6ec12890a2dab7946721edbfbcd91f3319c6ccc9aec47be7c7e6b7011ee6645f", size = 47437 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d2/1d/1b658dbd2b9fa9c4c9f32accbfc0205d532c8c6194dc0f2a4c0428e7128a/nodeenv-1.9.1-py2.py3-none-any.whl", hash = "sha256:ba11c9782d29c27c70ffbdda2d7415098754709be8a7056d79a737cd901155c9", size = 22314 },
-]
-
-[[package]]
-name = "notdiamond"
-version = "0.3.24"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "aiohttp" },
-    { name = "litellm" },
-    { name = "pandas" },
-    { name = "pydantic-partial" },
-    { name = "python-dotenv" },
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/74/19/fd42859c00784835d879e7dc698cb7eb99086c764148d37975b46f3468dd/notdiamond-0.3.24.tar.gz", hash = "sha256:018a3192f50b5bc93d14a6d383826c15ea1d557f0a3cb327753132a0e42d1c3f", size = 49738 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7c/31/58b536c6ac3047a33f96a12f575e5bdbde3e8cc187d8eddfedaf31a9ce1f/notdiamond-0.3.24-py3-none-any.whl", hash = "sha256:eebcda0c0df49e7ff7f7c9c73a9055d690b4aebe464df27f4584c8fcc26d03b2", size = 56771 },
 ]
 
 [[package]]
@@ -5948,18 +5929,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/f7/ca/9c0854829311fb446020ebb540ee22509731abad886d2859c855dd29b904/pydantic_core-2.23.4-pp310-pypy310_pp73-musllinux_1_1_aarch64.whl", hash = "sha256:d06b0c8da4f16d1d1e352134427cb194a0a6e19ad5db9161bf32b2113409e728", size = 1957926 },
     { url = "https://files.pythonhosted.org/packages/c0/1c/7836b67c42d0cd4441fcd9fafbf6a027ad4b79b6559f80cf11f89fd83648/pydantic_core-2.23.4-pp310-pypy310_pp73-musllinux_1_1_x86_64.whl", hash = "sha256:ba1a0996f6c2773bd83e63f18914c1de3c9dd26d55f4ac302a7efe93fb8e7433", size = 2100342 },
     { url = "https://files.pythonhosted.org/packages/a9/f9/b6bcaf874f410564a78908739c80861a171788ef4d4f76f5009656672dfe/pydantic_core-2.23.4-pp310-pypy310_pp73-win_amd64.whl", hash = "sha256:9a5bce9d23aac8f0cf0836ecfc033896aa8443b501c58d0602dbfd5bd5b37753", size = 1920344 },
-]
-
-[[package]]
-name = "pydantic-partial"
-version = "0.5.5"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pydantic" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/3f/a0/605813c761cd71fe9b9c2138f064adeea6b733c3756e3a61b32edde4caab/pydantic_partial-0.5.5.tar.gz", hash = "sha256:a903bdf6b2b30c850865843645432537eae81713fba59ee03bae567eb4c4ff3b", size = 6323 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/79/45/a4eca7f2d8892a58666cc34d50d43eb29c229e18d5098b8e7bcf67b8867e/pydantic_partial-0.5.5-py3-none-any.whl", hash = "sha256:1e2f1b2c99ee1e8cd0af82c48873d51b1551bbea10c308b65367c9fa1030e4ba", size = 7753 },
 ]
 
 [[package]]
