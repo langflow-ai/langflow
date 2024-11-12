@@ -26,13 +26,13 @@ Chat with your flow, view inputs and outputs, and modify your AI's memories to t
 
 Any input or output component can be opened in the **Playground** and tested in real time.
 
-For more information, see the [Playground](/workspace-playground).
+For more information, see the [Playground documentation](/workspace-playground).
 
 ## API
 
 The **API** pane provides code templates to integrate your flows into external applications.
 
-For more information, see the [API](/workspace-api).
+For more information, see the [API documentation](/workspace-api).
 
 ## Collections, folders, and projects
 
