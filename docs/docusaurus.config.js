@@ -84,7 +84,7 @@ const config = {
         redirects: [
           {
             to: '/',
-            from: ['/whats-new-a-new-chapter-langflow', '/👋 Welcome-to-Langflow']
+            from: ['/whats-new-a-new-chapter-langflow', '/👋 Welcome-to-Langflow'],
           },
           {
             to: '/getting-started-installation',

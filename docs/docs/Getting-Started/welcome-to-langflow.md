@@ -9,24 +9,23 @@ Langflow is a new, visual framework for building multi-agent and RAG application
 Its intuitive interface allows for easy manipulation of AI building blocks, enabling developers to quickly prototype and turn their ideas into powerful, real-world solutions.
 
 Langflow empowers developers to rapidly prototype and build AI applications with its user-friendly interface and powerful features. Whether you're a seasoned AI developer or just starting out, Langflow provides the tools you need to bring your AI ideas to life.
-Get started with Langflow today and unlock the potential of AI for your projects!
 
-## Visual Flow Builder
+## Visual flow builder
 
 Langflow is an intuitive visual flow builder. This drag-and-drop interface allows developers to create complex AI workflows without writing extensive code. You can easily connect different components, such as prompts, language models, and data sources, to build sophisticated AI applications.
 
 ![Langflow in action](./1160086633.gif)
 
-## Use Cases
+## Use cases
 
 Langflow can be used for a wide range of AI applications, including:
 
-* [Craft Intelligent Chatbots](/starter-projects-memory-chatbot)
-* [Build Document Analysis Systems](/starter-projects-document-qa)
-* [Generate Compelling Content](/starter-projects-blog-writer)
-* [Orchestrate Multi-Agent Applications](/starter-projects-simple-agent)
+* [Craft intelligent chatbots](/starter-projects-memory-chatbot)
+* [Build document analysis systems](/starter-projects-document-qa)
+* [Generate compelling content](/starter-projects-blog-writer)
+* [Orchestrate multi-agent applications](/starter-projects-simple-agent)
 
-## Community and Support
+## Community and support
 
 Join Langflow's vibrant community of developers and AI enthusiasts. See the following resources to join discussions, share your projects, and get support:
 

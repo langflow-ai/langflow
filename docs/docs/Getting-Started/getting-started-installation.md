@@ -6,7 +6,7 @@ slug: /getting-started-installation
 
 You can deploy Langflow either locally or as a hosted service with [**Datastax Langflow**](#datastax-langflow).
 
-## Install Langflow Locally
+## Install Langflow locally
 
 Install Langflow locally with [pip](https://pypi.org/project/pip/) or [pipx](https://pipx.pypa.io/stable/installation/).
 
@@ -16,7 +16,7 @@ Install Langflow locally with [pip](https://pypi.org/project/pip/) or [pipx](ht
 * [pip](https://pypi.org/project/pip/) or [pipx](https://pipx.pypa.io/stable/installation/) installed
 * Before installing Langflow, we recommend creating a virtual environment to isolate your Python dependencies with [venv](https://docs.python.org/3/library/venv.html) or [conda](https://anaconda.org/anaconda/conda)
 
-### Install Langflow
+### Install Langflow with pip or pipx
 
 Install Langflow with pip:
 
@@ -40,7 +40,7 @@ python -m langflow run
 
 2. Confirm that a local Langflow instance starts by visiting `http://127.0.0.1:7860` in a Chromium-based browser.
 
-3. Continue on to the [Quickstart](/getting-started-quickstart).
+Now that Langflow is running, follow the [Quickstart](/getting-started-quickstart) to create your first flow.
 
 ## Manage Langflow versions
 
