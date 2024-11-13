@@ -112,10 +112,10 @@ const HeaderComponent = ({
                 value={debouncedSearch}
                 onChange={handleSearch}
               />
-              <div className="relative mr-2 flex rounded-lg border border-zinc-100 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800">
+              <div className="relative mr-2 flex rounded-lg border border-muted bg-muted">
                 {/* Sliding Indicator */}
                 <div
-                  className={`absolute top-[3px] h-[33px] w-8 transform rounded-lg bg-white shadow-md transition-transform duration-300 dark:bg-black ${
+                  className={`absolute top-[3px] h-[33px] w-8 transform rounded-lg bg-background shadow-md transition-transform duration-300 ${
                     view === "list"
                       ? "left-[2px] translate-x-0"
                       : "left-[6px] translate-x-full"
@@ -130,15 +130,15 @@ const HeaderComponent = ({
                     size="icon"
                     className={`group relative z-10 mx-[2px] my-[2px] flex-1 rounded-lg p-2 ${
                       view === viewType
-                        ? "text-black dark:text-white"
-                        : "text-zinc-500 dark:hover:bg-zinc-800"
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:bg-muted"
                     }`}
                     onClick={() => setView(viewType as "list" | "grid")}
                   >
                     <ForwardedIconComponent
                       name={viewType === "list" ? "Menu" : "LayoutGrid"}
                       aria-hidden="true"
-                      className="h-4 w-4 group-hover:text-black dark:group-hover:text-white"
+                      className="h-4 w-4 group-hover:text-foreground"
                     />
                   </Button>
                 ))}
