@@ -77,5 +77,11 @@ test("Simple Agent", async ({ page }) => {
   await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
 
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(500);
+
+  await page.getByTestId("button_run_chat output").last().click();
+
+  await page.waitForSelector("text=built successfully", {
+    timeout: 10000 * 60 * 3,
+  });
 });
