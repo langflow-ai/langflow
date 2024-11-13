@@ -510,16 +510,16 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         else:
             return {}
 
-        filter = self.advanced_search_filter or {}
+        filter_arg = self.advanced_search_filter or {}
 
         if search_filter:
             self.log(
-                f"`search_filter` is deprecated, use `advanced_search_filter` instead. Cleaned `search_filter` is: {search_filter}"
+                self.log(f"`search_filter` is deprecated. Use `advanced_search_filter`. Cleaned: {search_filter}")
             )
-            filter.update(search_filter)
+            filter_arg.update(search_filter)
 
-        if filter:
-            args["filter"] = filter
+        if filter_arg:
+            args["filter"] = filter_arg
 
         return args
 
@@ -533,7 +533,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         try:
             search_args = self._build_search_args()
         except Exception as e:
-            raise ValueError(f"Error in AstraDBVectorStore._build_search_args: {e}") from e
+            msg = f"Error in AstraDBVectorStore._build_search_args: {e}"
+            raise ValueError(msg) from e
 
         if not search_args:
             self.log("No search input or filters provided. Skipping search.")
@@ -546,7 +547,8 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             self.log(f"Calling vector_store.{search_method} with args: {search_args}")
             docs = getattr(vector_store, search_method)(**search_args)
         except Exception as e:
-            raise ValueError(f"Error performing {search_method} in AstraDBVectorStore: {e}") from e
+            msg = f"Error performing {search_method} in AstraDBVectorStore: {e}"
+            raise ValueError(msg) from e
 
         self.log(f"Retrieved documents: {len(docs)}")
 
