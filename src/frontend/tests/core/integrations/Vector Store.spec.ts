@@ -32,7 +32,7 @@ test("Vector Store RAG", async ({ page }) => {
     modalCount = 0;
   }
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -123,6 +123,11 @@ test("Vector Store RAG", async ({ page }) => {
     .getByTestId("popover-anchor-input-api_endpoint")
     .nth(1)
     .fill(process.env.ASTRA_DB_API_ENDPOINT ?? "");
+
+  await page
+    .getByTestId("popover-anchor-input-collection_name")
+    .nth(0)
+    .fill("test");
   const fileChooserPromise = page.waitForEvent("filechooser");
   await page.getByTestId("icon-Upload").last().click();
   const fileChooser = await fileChooserPromise;
