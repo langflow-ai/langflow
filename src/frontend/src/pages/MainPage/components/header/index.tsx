@@ -112,16 +112,26 @@ const HeaderComponent = ({
                 value={debouncedSearch}
                 onChange={handleSearch}
               />
-              <div className="px-py mr-2 flex rounded-lg border border-zinc-100 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800">
+              <div className="relative mr-2 flex rounded-lg border border-zinc-100 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800">
+                {/* Sliding Indicator */}
+                <div
+                  className={`absolute top-[3px] h-[33px] w-8 transform rounded-lg bg-white shadow-md transition-transform duration-300 dark:bg-black ${
+                    view === "list"
+                      ? "left-[2px] translate-x-0"
+                      : "left-[6px] translate-x-full"
+                  }`}
+                ></div>
+
+                {/* Buttons */}
                 {["list", "grid"].map((viewType) => (
                   <Button
                     key={viewType}
                     unstyled
                     size="icon"
-                    className={`group mx-[2px] my-[2px] rounded-lg p-2 ${
+                    className={`group relative z-10 mx-[2px] my-[2px] flex-1 rounded-lg p-2 ${
                       view === viewType
-                        ? "bg-white text-black shadow-md dark:bg-black dark:text-white"
-                        : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:hover:bg-zinc-800"
+                        ? "text-black dark:text-white"
+                        : "text-zinc-500 dark:hover:bg-zinc-800"
                     }`}
                     onClick={() => setView(viewType as "list" | "grid")}
                   >
@@ -135,18 +145,6 @@ const HeaderComponent = ({
               </div>
             </div>
             <div className="flex gap-2">
-              {/* <ShadTooltip content="Store" side="bottom">
-            <Button variant="outline" onClick={() => navigate("/store")}>
-              <ForwardedIconComponent
-                name="store"
-                aria-hidden="true"
-                className="h-4 w-4"
-              />
-              <span className="hidden whitespace-nowrap font-semibold md:inline">
-                Browse Store
-              </span>
-            </Button>
-          </ShadTooltip> */}
               <ShadTooltip content="New Flow" side="bottom">
                 <Button
                   variant="default"
