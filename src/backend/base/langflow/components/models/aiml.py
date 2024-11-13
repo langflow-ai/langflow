@@ -1,3 +1,5 @@
+from typing import override
+
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
 
@@ -5,14 +7,7 @@ from langflow.base.models.aiml_constants import AimlModels
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.inputs import (
-    DictInput,
-    DropdownInput,
-    FloatInput,
-    IntInput,
-    SecretStrInput,
-    StrInput,
-)
+from langflow.inputs import DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
 from langflow.inputs.inputs import HandleInput
 
 
@@ -64,8 +59,9 @@ class AIMLModelComponent(LCModelComponent):
         ),
     ]
 
+    @override
     def update_build_config(self, field_value: str, build_config: dict, field_name: str | None = None):
-        if field_name == "api_key" or field_name == "aiml_api_base" or field_name == "model_name":
+        if field_name in ("api_key", "aiml_api_base", "model_name"):
             aiml = AimlModels()
             aiml.get_aiml_models()
             build_config["model_name"]["options"] = aiml.chat_models
@@ -81,7 +77,8 @@ class AIMLModelComponent(LCModelComponent):
 
         openai_api_key = aiml_api_key.get_secret_value() if isinstance(aiml_api_key, SecretStr) else aiml_api_key
 
-        # TODO Once OpenAI fixes their o1 models, this part will need to be removed to work correctly with o1 temperature settings.
+        # TODO: Once OpenAI fixes their o1 models, this part will need to be removed
+        # to work correctly with o1 temperature settings.
         if "o1" in model_name:
             temperature = 1
 

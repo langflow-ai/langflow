@@ -1,5 +1,3 @@
-from typing import Any
-
 import httpx
 from openai import APIConnectionError, APIError
 
@@ -13,7 +11,7 @@ class AimlModels:
         self.tts_models = []
         self.language_models = []
 
-    def get_aiml_models(self) -> list[dict[str, Any]]:
+    def get_aiml_models(self):
         try:
             with httpx.Client() as client:
                 response = client.get("https://api.aimlapi.com/models")
