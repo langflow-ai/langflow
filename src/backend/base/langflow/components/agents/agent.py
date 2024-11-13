@@ -200,12 +200,14 @@ class AgentComponent(ToolCallingAgentComponent):
                 raise ValueError(msg)
         if isinstance(self.agent_llm, str) and self.agent_llm in MODEL_PROVIDERS_DICT:
             provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)
-            component_class = provider_info.get("component_class")
-            prefix = provider_info.get("prefix")
-            if component_class and hasattr(component_class, "update_build_config"):
-                # Call each component class's update_build_config method
-                # remove the prefix from the field_name
-                field_name = field_name.replace(prefix, "")
-                build_config = component_class.update_build_config(build_config, field_value, field_name)
+            if provider_info:
+                component_class = provider_info.get("component_class")
+                prefix = provider_info.get("prefix")
+                if component_class and hasattr(component_class, "update_build_config"):
+                    # Call each component class's update_build_config method
+                    # remove the prefix from the field_name
+                    if isinstance(field_name, str) and isinstance(prefix, str):
+                        field_name = field_name.replace(prefix, "")
+                    build_config = component_class.update_build_config(build_config, field_value, field_name)
 
         return build_config
