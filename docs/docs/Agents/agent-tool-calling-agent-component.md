@@ -8,7 +8,7 @@ Developing **agents** in Langchain is complex.
 
 The `AgentComponent` is a tool for easily creating an AI agent capable of reasoning through tasks using tools you provide.
 
-The component contains all of the elements you'll need for creating an Agent. Instead of managing LLM models and providers, pick your model and enter your API key. Instead of connecting a **Prompt** component, enter instructions in the component's **Agent Instruction** fields. It even includes an optional `current-date`
+The component contains all of the elements you'll need for creating an Agent. Instead of managing LLM models and providers, pick your model and enter your API key. Instead of connecting a **Prompt** component, enter instructions in the component's **Agent Instruction** fields.
 
 <img src="/img/tool-calling-agent-component.png" alt="Prompt component" style={{display: 'block', margin: 'auto', width: 300}} />
 

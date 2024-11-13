@@ -8,7 +8,7 @@ slug: /agents-overview
 
 Instead of developers having to create logical statements to direct every possible path of a program, an agent can operate with autonomy. They can leverage external tools and APIs to gather information and take action, demonstrate chain-of-thought reasoning, and generate tailored text for specific purposes.
 
-To simplify the development of agents, Langflow created a custom [Tool calling agent](/components-agents) component that simplifies configuration and lets developers focus on solving problems with agents.
+To simplify the development of agents, Langflow created a custom [Tool calling agent](/components-agents#agent-component) component that simplifies configuration and lets developers focus on solving problems with agents.
 
 <img src="/img/tool-calling-agent-component.png" alt="Prompt component" style={{display: 'block', margin: 'auto', width: 300}} />
 
