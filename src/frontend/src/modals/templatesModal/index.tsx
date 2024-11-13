@@ -32,6 +32,18 @@ export default function TemplatesModal({
       ],
     },
     {
+      title: "Use Cases",
+      items: [
+        { title: "Assistants", icon: "BotMessageSquare", id: "assistants" },
+        { title: "Classification", icon: "Tags", id: "classification" },
+        { title: "Coding", icon: "TerminalIcon", id: "coding" },
+        { title: "Content Generation", icon: "Newspaper", id: "content-generation" },
+        { title: "Q&A", icon: "Database", id: "q-a" },
+        // { title: "Summarization", icon: "Bot", id: "summarization" },
+        { title: "Web Scraping", icon: "CodeXml", id: "web-scraping" },
+      ],
+    },
+    {
       title: "Methodology",
       items: [
         { title: "Prompting", icon: "MessagesSquare", id: "chatbots" },
