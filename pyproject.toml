@@ -12,7 +12,7 @@ packages = ["src/backend/langflow"]
 
 [project]
 name = "langflow"
-version = "1.0.19.post2"
+version = "1.1.0"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.13"
 license = "MIT"
