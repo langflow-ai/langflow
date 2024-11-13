@@ -1,30 +1,62 @@
+import { CustomLink } from "@/customization/components/custom-link";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocation } from "react-router-dom";
-import { cn } from "../../utils/utils";
-import HorizontalScrollFadeComponent from "../horizontalScrollFadeComponent";
-import SideBarButtonsComponent from "./components/sideBarButtons";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "../ui/sidebar";
 
-type SidebarNavProps = {
+type SideBarButtonsComponentProps = {
   items: {
     href?: string;
     title: string;
     icon: React.ReactNode;
   }[];
-  className?: string;
+  handleOpenNewFolderModal?: () => void;
 };
 
-export default function SidebarNav({
-  className,
-  items,
-  ...props
-}: SidebarNavProps) {
+const SideBarButtonsComponent = ({ items }: SideBarButtonsComponentProps) => {
   const location = useLocation();
   const pathname = location.pathname;
 
+  const isMobile = useIsMobile();
+
   return (
-    <nav className={cn(className)} {...props}>
-      <HorizontalScrollFadeComponent>
-        <SideBarButtonsComponent items={items} pathname={pathname} />
-      </HorizontalScrollFadeComponent>
-    </nav>
+    <Sidebar collapsible={isMobile ? "icon" : "none"} className="border-none">
+      <SidebarContent className="pr-6">
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {items.map((item, index) => (
+                <SidebarMenuItem key={index}>
+                  <CustomLink to={item.href!}>
+                    <SidebarMenuButton
+                      size="md"
+                      isActive={
+                        item.href ? pathname.endsWith(item.href) : false
+                      }
+                      data-testid={`sidebar-nav-${item.title}`}
+                      tooltip={item.title}
+                    >
+                      {item.icon}
+                      <span className="block max-w-full truncate">
+                        {item.title}
+                      </span>
+                    </SidebarMenuButton>
+                  </CustomLink>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+    </Sidebar>
   );
-}
+};
+
+export default SideBarButtonsComponent;
