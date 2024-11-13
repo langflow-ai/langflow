@@ -14,7 +14,7 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { FlowType } from "@/types/flow";
 import { swatchColors } from "@/utils/styleUtils";
-import { cn } from "@/utils/utils";
+import { cn, getNumberFromString } from "@/utils/utils";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import useDescriptionModal from "../../oldComponents/componentsComponent/hooks/use-description-modal";
@@ -101,7 +101,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
   const swatchIndex =
     (flowData.gradient && parseInt(flowData.gradient)
       ? parseInt(flowData.gradient)
-      : (flowData.gradient?.length ?? flowData.name.length)) %
+      : getNumberFromString(flowData.gradient ?? flowData.id)) %
     swatchColors.length;
 
   return (

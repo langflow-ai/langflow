@@ -115,6 +115,12 @@ export function getRandomKeyByssmm(): string {
   return seconds + milliseconds + Math.abs(Math.floor(Math.random() * 10001));
 }
 
+export function getNumberFromString(str: string): number {
+  const hash = str.split("").reduce((acc, char) => {
+    return char.charCodeAt(0) + ((acc << 5) - acc);
+  }, 0);
+  return hash;
+}
 export function buildTweakObject(tweak: tweakType) {
   tweak.forEach((el) => {
     Object.keys(el).forEach((key) => {
