@@ -1,4 +1,8 @@
-# Travel Planning Agent
+---
+title: Travel planning agent
+sidebar_position: 8
+slug: /starter-projects-travel-planning-agent
+---
 
 Build a **Travel Planning Agent** flow for an agentic application using the multiple Tool-calling agents.
 
