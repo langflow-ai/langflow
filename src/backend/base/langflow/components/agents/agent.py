@@ -4,8 +4,8 @@ from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.base.models.model_input_constants import ALL_PROVIDER_FIELDS, MODEL_PROVIDERS_DICT
 from langflow.base.models.model_utils import get_model_name
 from langflow.components.helpers import CurrentDateComponent
+from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
-from langflow.components.memories.memory import MemoryComponent
 from langflow.io import BoolInput, DropdownInput, MultilineInput, Output
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
@@ -129,8 +129,16 @@ class AgentComponent(ToolCallingAgentComponent):
         return build_config
 
     def update_build_config(self, build_config: dotdict, field_value: str, field_name: str | None = None) -> dotdict:
+        # Iterate over all providers in the MODEL_PROVIDERS_DICT
+        # Existing logic for updating build_config
         if field_name == "agent_llm":
-            # Define provider configurations as (fields_to_add, fields_to_delete)
+            provider_info = MODEL_PROVIDERS_DICT.get(field_value)
+            if provider_info:
+                component_class = provider_info.get("component_class")
+                if component_class and hasattr(component_class, "update_build_config"):
+                    # Call the component class's update_build_config method
+                    build_config = component_class.update_build_config(build_config, field_value, field_name)
+
             provider_configs: dict[str, tuple[dict, list[dict]]] = {
                 provider: (
                     MODEL_PROVIDERS_DICT[provider]["fields"],
@@ -142,7 +150,6 @@ class AgentComponent(ToolCallingAgentComponent):
                 )
                 for provider in MODEL_PROVIDERS_DICT
             }
-
             if field_value in provider_configs:
                 fields_to_add, fields_to_delete = provider_configs[field_value]
 
@@ -170,7 +177,6 @@ class AgentComponent(ToolCallingAgentComponent):
                     input_types=["LanguageModel"],
                 )
                 build_config.update({"agent_llm": custom_component.to_dict()})
-
             # Update input types for all fields
             build_config = self.update_input_types(build_config)
 
@@ -192,5 +198,16 @@ class AgentComponent(ToolCallingAgentComponent):
             if missing_keys:
                 msg = f"Missing required keys in build_config: {missing_keys}"
                 raise ValueError(msg)
+        if isinstance(self.agent_llm, str) and self.agent_llm in MODEL_PROVIDERS_DICT:
+            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)
+            if provider_info:
+                component_class = provider_info.get("component_class")
+                prefix = provider_info.get("prefix")
+                if component_class and hasattr(component_class, "update_build_config"):
+                    # Call each component class's update_build_config method
+                    # remove the prefix from the field_name
+                    if isinstance(field_name, str) and isinstance(prefix, str):
+                        field_name = field_name.replace(prefix, "")
+                    build_config = component_class.update_build_config(build_config, field_value, field_name)
 
         return build_config

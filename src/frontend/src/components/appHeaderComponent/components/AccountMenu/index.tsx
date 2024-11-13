@@ -126,9 +126,11 @@ export const AccountMenu = () => {
                 Logout
               </HeaderMenuItemLink>
             ) : (
-              <HeaderMenuItemButton onClick={handleLogout} icon="log-out">
-                Logout
-              </HeaderMenuItemButton>
+              !autoLogin && (
+                <HeaderMenuItemButton onClick={handleLogout} icon="log-out">
+                  Logout
+                </HeaderMenuItemButton>
+              )
             )}
           </HeaderMenuItemsSection>
         </HeaderMenuItems>
