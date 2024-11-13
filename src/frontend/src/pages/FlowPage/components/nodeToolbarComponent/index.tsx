@@ -52,6 +52,7 @@ export default function NodeToolbarComponent({
   onCloseAdvancedModal,
   updateNode,
   isOutdated,
+  setOpenShowMoreOptions,
 }: nodeToolbarPropsType): JSX.Element {
   const version = useDarkStore((state) => state.version);
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
@@ -344,10 +345,14 @@ export default function NodeToolbarComponent({
     (selectTriggerRef.current! as HTMLElement)?.click();
   };
 
+  const handleOpenChange = (open: boolean) => {
+    setOpenShowMoreOptions && setOpenShowMoreOptions(open);
+  };
+
   const [toolMode, setToolMode] = useState(() => {
     // Check if tool mode is explicitly set on the node
     const hasToolModeProperty = data.node?.tool_mode;
-    if (hasToolModeProperty !== undefined) {
+    if (hasToolModeProperty) {
       return hasToolModeProperty;
     }
 
@@ -380,6 +385,7 @@ export default function NodeToolbarComponent({
   }, [zoom]);
 
   if (scale === null) return <></>;
+
   return (
     <>
       <div
@@ -544,13 +550,21 @@ export default function NodeToolbarComponent({
           </ShadTooltip>
         </div>
 
-        <Select onValueChange={handleSelectChange} value={selectedValue!}>
-          <SelectTrigger ref={selectTriggerRef}>
+        <Select
+          onValueChange={handleSelectChange}
+          value={selectedValue!}
+          onOpenChange={handleOpenChange}
+        >
+          <SelectTrigger ref={selectTriggerRef} className="w-62">
             <></>
           </SelectTrigger>
           <SelectContent
-            className="relative min-w-[14rem] bg-background"
-            style={{ transform: `scale(${scale})`, transformOrigin: "top" }}
+            className={"relative top-1 w-56 bg-background"}
+            style={{
+              transform: `scale(${scale})`,
+              transformOrigin: "top",
+              left: scale === 1 ? "4.5rem" : `${1.7 * (scale - 1)}rem`,
+            }}
           >
             {hasCode && (
               <SelectItem value={"code"}>

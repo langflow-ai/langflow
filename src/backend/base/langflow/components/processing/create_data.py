@@ -13,6 +13,7 @@ class CreateDataComponent(Component):
     description: str = "Dynamically create a Data with a specified number of fields."
     name: str = "CreateData"
     MAX_FIELDS = 15  # Define a constant for maximum number of fields
+    legacy = True
 
     inputs = [
         IntInput(

@@ -70,8 +70,6 @@ const SideBarFoldersButtonsComponent = ({
   const urlWithoutPath =
     pathname.split("/").length < (ENABLE_CUSTOM_PARAM ? 5 : 4);
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
-  const folderIdDragging = useFolderStore((state) => state.folderIdDragging);
-
   const checkPathName = (itemId: string) => {
     if (urlWithoutPath && itemId === myCollectionId) {
       return true;
@@ -476,7 +474,7 @@ const SideBarFoldersButtonsComponent = ({
                                 data-testid={`input-folder`}
                               />
                             ) : (
-                              <span className="block w-full grow truncate text-[13px] opacity-100">
+                              <span className="block w-0 grow truncate text-[13px] opacity-100">
                                 {item.name}
                               </span>
                             )}

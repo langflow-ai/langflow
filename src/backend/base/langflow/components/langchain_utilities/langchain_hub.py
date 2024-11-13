@@ -9,7 +9,7 @@ from langflow.schema.message import Message
 
 
 class LangChainHubPromptComponent(Component):
-    display_name: str = "LangChain Hub"
+    display_name: str = "Prompt Hub"
     description: str = "Prompt Component that uses LangChain Hub prompts"
     beta = True
     icon = "LangChain"

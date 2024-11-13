@@ -1,4 +1,4 @@
-from langflow.base.models.aws_constants import AWS_REGIONS
+from langflow.base.models.aws_constants import AWS_EMBEDDING_MODEL_IDS, AWS_REGIONS
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Embeddings
 from langflow.inputs import SecretStrInput
@@ -15,7 +15,7 @@ class AmazonBedrockEmbeddingsComponent(LCModelComponent):
         DropdownInput(
             name="model_id",
             display_name="Model Id",
-            options=["amazon.titan-embed-text-v1"],
+            options=AWS_EMBEDDING_MODEL_IDS,
             value="amazon.titan-embed-text-v1",
         ),
         SecretStrInput(
@@ -35,7 +35,7 @@ class AmazonBedrockEmbeddingsComponent(LCModelComponent):
         SecretStrInput(
             name="aws_session_token",
             display_name="AWS Session Token",
-            advanced=True,
+            advanced=False,
             info="The session key for your AWS account. "
             "Only needed for temporary credentials. "
             "Usually set in Python code as the environment variable 'AWS_SESSION_TOKEN'.",
