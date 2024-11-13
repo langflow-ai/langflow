@@ -55,6 +55,8 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
 
   await page.waitForSelector("text=new user added", { timeout: 30000 });
 
+  await page.waitForTimeout(1000);
+
   expect(await page.getByText(randomName, { exact: true }).isVisible()).toBe(
     true,
   );
@@ -63,6 +65,8 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
   await page.getByText("Delete", { exact: true }).last().click();
 
   await page.waitForSelector("text=user deleted", { timeout: 30000 });
+
+  await page.waitForTimeout(1000);
 
   expect(await page.getByText(randomName, { exact: true }).isVisible()).toBe(
     false,
