@@ -14,6 +14,8 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { FlowType } from "@/types/flow";
 import { getInputsAndOutputs } from "@/utils/storeUtils";
+import { swatchColors } from "@/utils/styleUtils";
+import { cn } from "@/utils/utils";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import useDescriptionModal from "../../oldComponents/componentsComponent/hooks/use-description-modal";
@@ -99,6 +101,12 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
 
   const { onDragStart } = useDragStart(flowData);
 
+  const swatchIndex =
+    (flowData.gradient && parseInt(flowData.gradient)
+      ? parseInt(flowData.gradient)
+      : (flowData.gradient?.length ?? flowData.name.length)) %
+    swatchColors.length;
+
   return (
     <>
       <Card
@@ -111,11 +119,11 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
         }`}
       >
         <div className="flex w-full items-center gap-4">
-          <div className={`flex rounded-lg bg-muted p-3`}>
+          <div className={cn(`flex rounded-lg p-3`, swatchColors[swatchIndex])}>
             <ForwardedIconComponent
               name={getIcon()}
               aria-hidden="true"
-              className="h-5 w-5 text-foreground"
+              className="h-5 w-5"
             />
           </div>
           <div className="flex w-full min-w-0 items-center justify-between">

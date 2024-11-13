@@ -13,6 +13,8 @@ import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { FlowType } from "@/types/flow";
+import { swatchColors } from "@/utils/styleUtils";
+import { cn } from "@/utils/utils";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import useDescriptionModal from "../../oldComponents/componentsComponent/hooks/use-description-modal";
@@ -96,6 +98,12 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
 
   const descriptionModal = useDescriptionModal([flowData?.id], "flow");
 
+  const swatchIndex =
+    (flowData.gradient && parseInt(flowData.gradient)
+      ? parseInt(flowData.gradient)
+      : (flowData.gradient?.length ?? flowData.name.length)) %
+    swatchColors.length;
+
   return (
     <>
       <Card
@@ -115,12 +123,15 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
         >
           {/* Icon */}
           <div
-            className={`item-center flex justify-center rounded-lg bg-muted p-3`}
+            className={cn(
+              `item-center flex justify-center rounded-lg p-3`,
+              swatchColors[swatchIndex],
+            )}
           >
             <ForwardedIconComponent
               name={flowData?.icon || getIcon()}
               aria-hidden="true"
-              className="flex h-5 w-5 items-center justify-center text-foreground"
+              className="flex h-5 w-5 items-center justify-center"
             />
           </div>
 
@@ -133,8 +144,10 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
                 Edited {timeElapsed(flowData.updated_at)} ago
               </div>
             </div>
-            <div className="overflow-hidden truncate text-sm text-primary">
-              {flowData.description}
+            <div className="overflow-hidden text-sm text-primary">
+              <span className="block max-w-[110ch] truncate">
+                {flowData.description}
+              </span>
             </div>
           </div>
         </div>

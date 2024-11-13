@@ -4,9 +4,9 @@ from langchain_core.tools import StructuredTool
 
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.base.models.model_input_constants import ALL_PROVIDER_FIELDS, MODEL_PROVIDERS_DICT
-from langflow.components.agents.tool_calling import ToolCallingAgentComponent
 from langflow.components.helpers import CurrentDateComponent
-from langflow.components.helpers.memory import MemoryComponent
+from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
+from langflow.components.memories.memory import MemoryComponent
 from langflow.io import BoolInput, DropdownInput, MultilineInput, Output
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
@@ -21,7 +21,7 @@ class AgentComponent(ToolCallingAgentComponent):
     display_name: str = "Agent"
     description: str = "Define the agent's instructions, then enter a task to complete using tools."
     icon = "bot"
-    beta = True
+    beta = False
     name = "Agent"
 
     memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]
@@ -30,6 +30,7 @@ class AgentComponent(ToolCallingAgentComponent):
         DropdownInput(
             name="agent_llm",
             display_name="Model Provider",
+            info="The provider of the language model that the agent will use to generate responses.",
             options=[*sorted(MODEL_PROVIDERS_DICT.keys()), "Custom"],
             value="OpenAI",
             real_time_refresh=True,
@@ -39,7 +40,7 @@ class AgentComponent(ToolCallingAgentComponent):
         MultilineInput(
             name="system_prompt",
             display_name="Agent Instructions",
-            info="Initial instructions and context provided to guide the agent's behavior.",
+            info="System Prompt: Initial instructions and context provided to guide the agent's behavior.",
             value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
             advanced=False,
         ),

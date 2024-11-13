@@ -13,6 +13,7 @@ from langflow.template import Output
 class AssistantsRun(ComponentWithCache):
     display_name = "Run Assistant"
     description = "Executes an Assistant Run against a thread"
+    icon = "AstraDB"
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)

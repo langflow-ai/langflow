@@ -38,6 +38,7 @@ export default function InputComponent({
   name,
   onChangeFolderName,
   nodeStyle,
+  isToolMode,
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
@@ -178,12 +179,15 @@ export default function InputComponent({
             )}
           >
             <ForwardedIconComponent
-              name={getIconName(
-                disabled!,
-                selectedOption!,
-                optionsIcon,
-                nodeStyle!,
-              )}
+              name={
+                getIconName(
+                  disabled!,
+                  selectedOption!,
+                  optionsIcon,
+                  nodeStyle!,
+                  isToolMode!,
+                ) || "ChevronsUpDown"
+              }
               className={cn(
                 disabled ? "cursor-grab text-placeholder" : "cursor-pointer",
                 "icon-size",

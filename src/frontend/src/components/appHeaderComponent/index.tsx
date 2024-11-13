@@ -1,4 +1,6 @@
 import AlertDropdown from "@/alerts/alertDropDown";
+import DataStaxLogo from "@/assets/DataStaxLogo.svg?react";
+import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import ShadTooltip from "@/components/shadTooltipComponent";
 import { CustomOrgSelector } from "@/customization/components/custom-org-selector";
 import { CustomProductSelector } from "@/customization/components/custom-product-selector";
@@ -13,8 +15,6 @@ import { useEffect, useRef, useState } from "react";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
-import ShortDataStaxLogo from "./assets/ShortDataStaxLogo.svg?react";
-import ShortLangFlowIcon from "./assets/ShortLangFlowIcon.svg?react";
 import { AccountMenu } from "./components/AccountMenu";
 import FlowMenu from "./components/FlowMenu";
 import GithubStarComponent from "./components/GithubStarButton";
@@ -47,24 +47,24 @@ export default function AppHeader(): JSX.Element {
   }, []);
 
   return (
-    <div className="z-[1] flex h-[62px] w-full items-center justify-between gap-2 border-b px-5 py-2.5 dark:bg-background">
+    <div className="flex h-[62px] w-full items-center justify-between gap-2 border-b px-5 py-2.5 dark:bg-background">
       {/* Left Section */}
-      <div className={`flex gap-2`}>
+      <div className={`flex items-center gap-2`}>
         <Button
           unstyled
           onClick={() => navigate("/")}
-          className="flex h-8 w-8 items-center"
+          className="mr-1 flex h-8 w-8 items-center"
           data-testid="icon-ChevronLeft"
         >
           {ENABLE_DATASTAX_LANGFLOW ? (
-            <ShortDataStaxLogo className="fill-black dark:fill-[white]" />
+            <DataStaxLogo className="fill-black dark:fill-[white]" />
           ) : ENABLE_NEW_LOGO ? (
-            <ShortLangFlowIcon className="h-5 w-5 fill-black dark:fill-[white]" />
+            <LangflowLogo className="h-5 w-6" />
           ) : (
             <span className="fill-black text-2xl dark:fill-white">⛓️</span>
           )}
         </Button>
-        {!ENABLE_DATASTAX_LANGFLOW && (
+        {ENABLE_DATASTAX_LANGFLOW && (
           <>
             <CustomOrgSelector />
             <CustomProductSelector />
@@ -123,7 +123,7 @@ export default function AppHeader(): JSX.Element {
                 className="side-bar-button-size h-[18px] w-[18px]"
                 aria-hidden="true"
               />
-              <span className="hidden whitespace-nowrap xl:inline">
+              <span className="hidden whitespace-nowrap 2xl:inline">
                 Notifications
               </span>
             </Button>
@@ -148,7 +148,7 @@ export default function AppHeader(): JSX.Element {
                   name="Store"
                   className="side-bar-button-size h-[18px] w-[18px]"
                 />
-                <span className="hidden whitespace-nowrap xl:inline">
+                <span className="hidden whitespace-nowrap 2xl:inline">
                   Store
                 </span>
               </Button>
@@ -177,7 +177,9 @@ export default function AppHeader(): JSX.Element {
                   className="side-bar-button-size h-[18px] w-[18px]"
                   aria-hidden="true"
                 />
-                Docs
+                <span className="hidden whitespace-nowrap 2xl:inline">
+                  Docs
+                </span>
               </Button>
             </ShadTooltip>
             <ShadTooltip content="Settings" side="bottom" styleClasses="z-10">
@@ -191,7 +193,9 @@ export default function AppHeader(): JSX.Element {
                   name="Settings"
                   className="side-bar-button-size h-[18px] w-[18px]"
                 />
-                Settings
+                <span className="hidden whitespace-nowrap 2xl:inline">
+                  Settings
+                </span>
               </Button>
             </ShadTooltip>
             <Separator
@@ -200,7 +204,7 @@ export default function AppHeader(): JSX.Element {
             />
           </>
         )}
-        <div className="ml-3 flex">
+        <div className="flex">
           <AccountMenu />
         </div>
       </div>
