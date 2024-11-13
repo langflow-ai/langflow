@@ -2,7 +2,7 @@
 
 Agent components are used to define the behavior and capabilities of AI agents in your flow. Agents can interact with APIs, databases, and other services, but can also use LLMs as a reasoning engine to decide which course to take in your flow.
 
-## Agent component
+## Agent component {#agent-component}
 
 This component creates an agent that can use tools to answer questions and perform tasks based on given instructions.
 
