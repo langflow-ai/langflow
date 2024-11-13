@@ -8,7 +8,6 @@ class ConditionalRouterComponent(Component):
     description = "Routes an input message to a corresponding output based on text comparison."
     icon = "split"
     name = "ConditionalRouter"
-    legacy = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
