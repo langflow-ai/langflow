@@ -30,7 +30,7 @@ We've chosen [Astra DB](https://astra.datastax.com/signup?utm_source=langflow-p
 	- API Endpoint
 
 
-## Create the vector store RAG project {#e3ed64193e5e448f81279e1d54ba43cf}
+## Create the vector store RAG flow 
 
 1. From the Langflow dashboard, click **New Flow**.
 2. Select **Vector Store RAG**.
@@ -39,7 +39,7 @@ We've chosen [Astra DB](https://astra.datastax.com/signup?utm_source=langflow-p
 ![](/img/starter-flow-vector-rag.png)
 
 
-The vector store RAG flow is built of two separate flows. Ingestion and query.
+The vector store RAG flow is built of two separate flows for ingestion and query.
 
 
 The **ingestion** part (bottom of the screen) populates the vector store with data from a local file. It ingests data from a file (**File**), splits it into chunks (**Split Text**), indexes it in Astra DB (**Astra DB**), and computes embeddings for the chunks using an embedding model (**OpenAI Embeddings**). 
@@ -78,7 +78,7 @@ The **query** part (top of the screen) allows users to retrieve embedded vecto
 	5. Repeat the above steps for the **API Endpoint** field, pasting your Astra API Endpoint instead (`https://ASTRA_DB_ID-ASTRA_DB_REGION.apps.astra.datastax.com`).
 	6. Add the global variable to both the **Astra DB** and **Astra DB Search** components.
 
-## Run the Vector Store RAG {#815a6536d2d548d987f0f4e375a58b15}
+## Run the Vector Store RAG flow
 
 1. Click the **Playground** button. Here you can chat with the AI that uses context from the database you created.
 2. Type a message and press Enter. (Try something like "What topics do you know about?")

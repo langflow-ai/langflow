@@ -24,7 +24,7 @@ Click **New Flow**, and then select the **Travel Planning Agent** project.
 
 This opens a starter project with the necessary components to run an agentic application using multiple Tool-calling agents.
 
-## Travel Planning Agent flow
+## Create the travel planning agent flow
 
 ![](/img/starter-flow-travel-agent.png)
 
@@ -37,7 +37,7 @@ The **Travel Planning Agent** flow consists of these components:
 * The **Chat Output** component prints the flow's output to the chat.
 * The **OpenAI** model component sends the user input and prompt to the OpenAI API and receives a response.
 
-## Run the Travel Planning Agent flow
+## Run the travel planning agent flow
 
 1. Add your credentials to the Open AI and Search API components.
 2. In the **Chat output** component, click ▶️ Play to start the end-to-end application flow.

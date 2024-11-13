@@ -13,7 +13,7 @@ slug: /getting-started-quickstart
 * [pip](https://pypi.org/project/pip/) or [pipx](https://pipx.pypa.io/stable/installation/) installed
 * Before installing Langflow, we recommend creating a virtual environment to isolate your Python dependencies with [venv](https://docs.python.org/3/library/venv.html) or [conda](https://anaconda.org/anaconda/conda)
 
-## Create the Basic Prompting project {#c029603ddb1f42f5b28df92e58426ab3}
+## Create the basic prompting flow
 
 
 1. From the Langflow dashboard, click **New Flow**.

@@ -20,7 +20,7 @@ OpenAI uses this loaded data to generate a blog post, as instructed by the **Tex
 - [OpenAI API key created](https://platform.openai.com/)
 
 
-## Create the blog writer project {#0c1a9c65b7d640f693ec3aad963416ff}
+## Create the blog writer flow {#0c1a9c65b7d640f693ec3aad963416ff}
 
 1. From the Langflow dashboard, click **New Flow**.
 2. Select **Blog Writer**.
@@ -51,7 +51,7 @@ Blog:
 The `{instructions}` value is received from the **Text input** component, and one or more `{references}` are received from a list of URLs parsed from the **URL** component.
 
 
-### Run the Blog Writer flow {#b93be7a567f5400293693b31b8d0f81a}
+### Run the blog writer flow {#b93be7a567f5400293693b31b8d0f81a}
 
 1. Click the **Playground** button. Here you can chat with the AI that has access to the **URL** content.
 2. Click the **Lighting Bolt** icon to run it.
