@@ -108,8 +108,6 @@ async function waitForTemplateVisibility(page: Page, templateIds: string[]) {
 // Your test code
 const templateIds = [
   "template_travel-planning-agents",
-  "template_sequential-tasks-agent",
   "template_dynamic-agent",
-  "template_hierarchical-tasks-agent",
   "template_simple-agent",
 ];

@@ -50,15 +50,13 @@ test("dropDownComponent", async ({ page }) => {
 
   await page.getByTestId("dropdown_str_model_id").click();
 
-  await page
-    .getByTestId("anthropic.claude-3-haiku-20240307-v1:0-10-option")
-    .click();
+  await page.getByText("anthropic.claude-v2", { exact: true }).first().click();
 
   let value = await page
-    .getByTestId("anthropic.claude-3-haiku-20240307-v1:0-10-option")
+    .getByTestId("dropdown_str_model_id")
     .first()
     .innerText();
-  if (value !== "anthropic.claude-3-haiku-20240307-v1:0") {
+  if (value !== "anthropic.claude-v2") {
     expect(false).toBeTruthy();
   }
 
