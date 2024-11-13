@@ -1,7 +1,7 @@
 "use client";
 
 import * as SelectPrimitive from "@radix-ui/react-select";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import * as React from "react";
 import { cn } from "../../utils/utils";
 
@@ -13,8 +13,10 @@ const SelectValue = SelectPrimitive.Value;
 
 const SelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
->(({ className, children, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger> & {
+    direction?: "up" | "down";
+  }
+>(({ className, children, direction = "down", ...props }, ref) => (
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
@@ -25,7 +27,11 @@ const SelectTrigger = React.forwardRef<
   >
     {children}
     <SelectPrimitive.Icon asChild>
-      <ChevronDown className="h-4 w-4" />
+      {direction === "up" ? (
+        <ChevronUp className="h-4 w-4" />
+      ) : (
+        <ChevronDown className="h-4 w-4" />
+      )}
     </SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>
 ));

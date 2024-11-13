@@ -62,7 +62,10 @@ export default function PaginatorComponent({
             onValueChange={(value) => paginate(Number(value), size)}
             value={pageIndex.toString()}
           >
-            <SelectTrigger className="h-7 w-fit gap-1 border-none p-1 pl-1.5 text-[13px] focus:border-none focus:ring-0 focus:!ring-offset-0">
+            <SelectTrigger
+              direction="up"
+              className="h-7 w-fit gap-1 border-none p-1 pl-1.5 text-[13px] focus:border-none focus:ring-0 focus:!ring-offset-0"
+            >
               <SelectValue placeholder="1" />
             </SelectTrigger>
             <SelectContent>

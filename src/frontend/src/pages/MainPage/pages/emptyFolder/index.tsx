@@ -31,9 +31,7 @@ export const EmptyFolder = ({ setOpenModal }: EmptyFolderProps) => {
             aria-hidden="true"
             className="h-4 w-4"
           />
-          <span className="hidden whitespace-nowrap font-semibold md:inline">
-            New Flow
-          </span>
+          <span className="whitespace-nowrap font-semibold">New Flow</span>
         </Button>
       </div>
     </div>
