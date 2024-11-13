@@ -20,7 +20,7 @@ Learn how to build a flow starting with the **Tool calling agent** component, an
 - [An OpenAI API key](https://platform.openai.com/)
 - [A Search API key](https://www.searchapi.io/)
 
-## Create a problem-solving agent
+## Create a problem-solving agent with AgentComponent
 
 Create a problem-solving agent in Langflow, starting with the **Tool calling agent**.
 
@@ -39,11 +39,12 @@ This basic flow enables you to chat with the agent with the **Playground** after
 Your agent can now query the Search API for information.
 7. Connect a **Calculator** tool for solving basic math problems.
 8. Connect an **API Request** component to the agent.
-This component is not in the **Tools** category, but the agent can still use it as a tool.
+This component is not in the **Tools** category, but the agent can still use it as a tool by enabling **Tool Mode**.
 To enable **Tool Mode** on the component, click **Tool Mode**.
 The component's fields change dynamically based on the mode it's in.
 
 <img src="/img/tool-calling-agent-add-tools.png" alt="Chat with agent component" style={{display: 'block', margin: 'auto', width: 600}} />
+
 
 ## Solve problems with the agent
 
@@ -140,3 +141,60 @@ An agent can use flows that are saved in your workspace as tools.
 3. Connect the tool output to the agent's tools input.
 4. Ask the agent, `What tools are you using to answer my questions?`
 Your **Flow as tool** flow should be visible in the response.
+
+
+## Make any component a tool
+
+If the component you want to use as a tool doesn't have a **Tool Mode** button, modify the component's code to add `tool_mode=True`.
+
+To make the **Webhook** component a tool, do the following.
+
+1. Add a **Webhook** component to your workspace.
+2. In the **Webhook** component, click **Code**.
+3. Add `tool_mode=True,` to the component code.
+
+```python
+import json
+
+from langflow.custom import Component
+from langflow.io import MultilineInput, Output
+from langflow.schema import Data
+
+
+class WebhookComponent(Component):
+    display_name = "Webhook"
+    description = "Defines a webhook input for the flow."
+    name = "Webhook"
+
+    inputs = [
+        MultilineInput(
+            name="data",
+            display_name="Payload",
+            info="Receives a payload from external systems via HTTP POST.",
+            tool_mode=True,
+        )
+    ]
+    outputs = [
+        Output(display_name="Data", name="output_data", method="build_data"),
+    ]
+
+    def build_data(self) -> Data:
+        message: str | Data = ""
+        if not self.data:
+            self.status = "No data provided."
+            return Data(data={})
+        try:
+            body = json.loads(self.data or "{}")
+        except json.JSONDecodeError:
+            body = {"payload": self.data}
+            message = f"Invalid JSON payload. Please check the format.\n\n{self.data}"
+        data = Data(data=body)
+        if not message:
+            message = data
+        self.status = message
+        return data
+```
+
+4. Click **Check & Save**.
+
+Your component now has a **Tool Mode** button, and can be used by an agent.
