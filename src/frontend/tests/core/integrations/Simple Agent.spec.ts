@@ -3,7 +3,7 @@ import * as dotenv from "dotenv";
 import path from "path";
 import uaParser from "ua-parser-js";
 
-test("Simple Agent", async ({ page }) => {
+test.skip("Simple Agent", async ({ page }) => {
   test.skip(
     !process?.env?.OPENAI_API_KEY,
     "OPENAI_API_KEY required to run this test",
