@@ -1,4 +1,8 @@
-# Agents
+---
+title: Agents
+sidebar_position: 12
+slug: /components-agents
+---
 
 Agent components are used to define the behavior and capabilities of AI agents in your flow. Agents can interact with APIs, databases, and other services, but can also use LLMs as a reasoning engine to decide which course to take in your flow.
 
