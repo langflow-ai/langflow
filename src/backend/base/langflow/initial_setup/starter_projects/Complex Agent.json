@@ -683,7 +683,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from crewai import Crew, Process\n\nfrom langflow.base.agents.crewai.crew import BaseCrewComponent\nfrom langflow.io import HandleInput\n\n\nclass HierarchicalCrewComponent(BaseCrewComponent):\n    display_name: str = \"Hierarchical Crew\"\n    description: str = (\n        \"Represents a group of agents, defining how they should collaborate and the tasks they should perform.\"\n    )\n    documentation: str = \"https://docs.crewai.com/how-to/Hierarchical/\"\n    icon = \"CrewAI\"\n\n    inputs = [\n        *BaseCrewComponent._base_inputs,\n        HandleInput(name=\"agents\", display_name=\"Agents\", input_types=[\"Agent\"], is_list=True),\n        HandleInput(name=\"tasks\", display_name=\"Tasks\", input_types=[\"HierarchicalTask\"], is_list=True),\n        HandleInput(name=\"manager_llm\", display_name=\"Manager LLM\", input_types=[\"LanguageModel\"], required=False),\n        HandleInput(name=\"manager_agent\", display_name=\"Manager Agent\", input_types=[\"Agent\"], required=False),\n    ]\n\n    def build_crew(self) -> Crew:\n        tasks, agents = self.get_tasks_and_agents()\n        return Crew(\n            agents=agents,\n            tasks=tasks,\n            process=Process.hierarchical,\n            verbose=self.verbose,\n            memory=self.memory,\n            cache=self.use_cache,\n            max_rpm=self.max_rpm,\n            share_crew=self.share_crew,\n            function_calling_llm=self.function_calling_llm,\n            manager_agent=self.manager_agent,\n            manager_llm=self.manager_llm,\n            step_callback=self.get_step_callback(),\n            task_callback=self.get_task_callback(),\n        )\n"
+                "value": "import os\n\nfrom crewai import Crew, Process\n\nfrom langflow.base.agents.crewai.crew import BaseCrewComponent\nfrom langflow.io import HandleInput, SecretStrInput\n\n\nclass HierarchicalCrewComponent(BaseCrewComponent):\n    display_name: str = \"Hierarchical Crew\"\n    description: str = (\n        \"Represents a group of agents, defining how they should collaborate and the tasks they should perform.\"\n    )\n    documentation: str = \"https://docs.crewai.com/how-to/Hierarchical/\"\n    icon = \"CrewAI\"\n\n    inputs = [\n        *BaseCrewComponent._base_inputs,\n        HandleInput(name=\"agents\", display_name=\"Agents\", input_types=[\"Agent\"], is_list=True),\n        HandleInput(name=\"tasks\", display_name=\"Tasks\", input_types=[\"HierarchicalTask\"], is_list=True),\n        HandleInput(name=\"manager_llm\", display_name=\"Manager LLM\", input_types=[\"LanguageModel\"], required=False),\n        HandleInput(name=\"manager_agent\", display_name=\"Manager Agent\", input_types=[\"Agent\"], required=False),\n        SecretStrInput(\n            name=\"openai_api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            value=\"OPENAI_API_KEY\",\n        ),\n    ]\n\n    def build_crew(self) -> Crew:\n        tasks, agents = self.get_tasks_and_agents()\n\n        # Set the OpenAI API Key\n        if self.openai_api_key:\n            os.environ[\"OPENAI_API_KEY\"] = self.openai_api_key\n\n        return Crew(\n            agents=agents,\n            tasks=tasks,\n            process=Process.hierarchical,\n            verbose=self.verbose,\n            memory=self.memory,\n            cache=self.use_cache,\n            max_rpm=self.max_rpm,\n            share_crew=self.share_crew,\n            function_calling_llm=self.function_calling_llm,\n            manager_agent=self.manager_agent,\n            manager_llm=self.manager_llm,\n            step_callback=self.get_step_callback(),\n            task_callback=self.get_task_callback(),\n        )\n"
               },
               "function_calling_llm": {
                 "advanced": true,
@@ -768,6 +768,25 @@
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": false
+              },
+              "openai_api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": false,
+                "display_name": "OpenAI API Key",
+                "dynamic": false,
+                "info": "The OpenAI API Key to use for the OpenAI model.",
+                "input_types": [
+                  "Message"
+                ],
+                "load_from_db": true,
+                "name": "openai_api_key",
+                "password": true,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": "OPENAI_API_KEY"
               },
               "share_crew": {
                 "advanced": true,
