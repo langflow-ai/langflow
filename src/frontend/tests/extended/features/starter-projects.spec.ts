@@ -34,9 +34,9 @@ test("user must be able to interact with starter projects", async ({
     page.getByTestId("template_basic-prompting-(hello,-world)"),
   ).not.toBeVisible();
 
-  expect(page.getByTestId("template_document-qa").first()).toBeVisible();
+  expect(page.getByTestId("template_document-q&a").first()).toBeVisible();
   expect(
-    page.getByTestId(`template_sequential-tasks-agent`).first(),
+    page.getByTestId(`template_sequential-tasks-agents`).first(),
   ).toBeVisible();
 
   expect(page.getByTestId("template_vector-store")).not.toBeVisible();

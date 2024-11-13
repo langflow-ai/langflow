@@ -28,9 +28,11 @@ test("should delete a flow", async ({ page }) => {
   await page.waitForTimeout(1000);
   await page.getByText("Success! Your API Key has been saved.").isVisible();
 
-  await page.waitForSelector("text=Store", { timeout: 30000 });
+  await page.waitForSelector('[data-testid="button-store"]', {
+    timeout: 30000,
+  });
 
-  await page.getByText("Store").nth(0).click();
+  await page.getByTestId("button-store").click();
   await page.waitForLoadState("networkidle");
 
   // Get and click install button

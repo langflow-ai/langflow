@@ -22,7 +22,8 @@ test("should delete a component", async ({ page }) => {
   await page.waitForTimeout(1000);
   await page.getByText("Success! Your API Key has been saved.").isVisible();
   await page.waitForTimeout(1000);
-  await page.getByText("Store").nth(0).click();
+  await page.getByTestId("button-store").click();
+
   await page.getByTestId("install-Basic RAG").click();
   await page.waitForTimeout(5000);
   await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
@@ -31,10 +32,10 @@ test("should delete a component", async ({ page }) => {
   await page.getByTestId("icon-ChevronLeft").first().click();
   await page.getByText("Components").first().click();
   await page.getByText("Basic RAG").first().isVisible();
-  await page.waitForSelector('[data-testid="checkbox-component"]', {
+  await page.waitForSelector('[data-testid="home-dropdown-menu"]', {
     timeout: 100000,
   });
-  await page.getByTestId("checkbox-component").first().click();
+  await page.getByTestId("home-dropdown-menu").first().click();
   await page.getByTestId("icon-Trash2").click();
   await page
     .getByText("Are you sure you want to delete the selected component?")
