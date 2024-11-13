@@ -28,6 +28,7 @@ type SidebarContext = {
   open: boolean;
   setOpen: (open: boolean) => void;
   toggleSidebar: () => void;
+  defaultOpen: boolean;
 };
 
 const SidebarContext = React.createContext<SidebarContext | null>(null);
@@ -114,8 +115,9 @@ const SidebarProvider = React.forwardRef<
         open,
         setOpen,
         toggleSidebar,
+        defaultOpen,
       }),
-      [state, open, setOpen, toggleSidebar],
+      [state, open, setOpen, toggleSidebar, defaultOpen],
     );
 
     return (
@@ -164,22 +166,30 @@ const Sidebar = React.forwardRef<
     },
     ref,
   ) => {
-    const { state } = useSidebar();
+    const { state, setOpen, defaultOpen } = useSidebar();
+
+    React.useEffect(() => {
+      if (collapsible === "none") {
+        setOpen(true);
+      } else {
+        setOpen(defaultOpen);
+      }
+    }, [collapsible]);
 
     if (collapsible === "none") {
       return (
         <div
-          className={cn(
-            "group flex h-full w-[--sidebar-width] flex-col bg-background text-foreground",
-            className,
-          )}
+          className={cn("group flex h-full flex-col")}
           data-side={side}
           ref={ref}
           {...props}
         >
           <div
             data-sidebar="sidebar"
-            className="flex h-full w-full flex-col group-data-[side=left]:border-r group-data-[side=right]:border-l"
+            className={cn(
+              "group flex h-full w-[--sidebar-width] flex-col bg-background text-foreground group-data-[side=left]:border-r group-data-[side=right]:border-l",
+              className,
+            )}
           >
             {children}
           </div>
@@ -213,7 +223,7 @@ const Sidebar = React.forwardRef<
         />
         <div
           className={cn(
-            "z-45 absolute inset-y-0 flex h-full transition-[left,right,width] duration-200 ease-linear",
+            "absolute inset-y-0 z-50 flex h-full transition-[left,right,width] duration-200 ease-linear",
             // Adjust width based on state and device
             "w-[--sidebar-width]",
             "max-sm:group-data-[state=collapsed]:w-[--sidebar-width-icon]",
@@ -260,7 +270,7 @@ const SidebarTrigger = React.forwardRef<
       data-sidebar="trigger"
       variant="ghost"
       size="icon"
-      className={cn("h-8 w-8", className)}
+      className={cn("h-7 w-7 text-muted-foreground", className)}
       onClick={(event) => {
         onClick?.(event);
         toggleSidebar();
