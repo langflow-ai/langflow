@@ -103,6 +103,7 @@ jobs:
             echo "Server terminated successfully"
           fi
       - name: Publish to PyPI
+        if: steps.check-version.outputs.skipped == 'false'
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
