@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import path from "path";
 
-test.skip("should be able to upload a file", async ({ page }) => {
+test("should be able to upload a file", async ({ page }) => {
   await page.goto("/");
   await page.waitForSelector('[data-testid="mainpage_title"]', {
     timeout: 30000,
