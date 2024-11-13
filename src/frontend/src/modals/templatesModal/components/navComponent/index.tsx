@@ -60,6 +60,7 @@ export function Nav({ categories, currentTab, setCurrentTab }: NavProps) {
                       onClick={() => setCurrentTab(link.id)}
                       isActive={currentTab === link.id}
                       data-testid={`side_nav_options_${link.title.toLowerCase().replace(/\s+/g, "-")}`}
+                      tooltip={link.title}
                     >
                       <ForwardedIconComponent
                         name={link.icon}

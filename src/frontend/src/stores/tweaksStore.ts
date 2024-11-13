@@ -72,7 +72,7 @@ export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
       const originalNodeTemplate = originalNodes?.find((n) => n.id === node.id)
         ?.data?.node?.template;
       const nodeTemplate = node.data?.node?.template;
-      if (originalNodeTemplate && nodeTemplate) {
+      if (originalNodeTemplate && nodeTemplate && node.type === "genericNode") {
         const currentTweak = {};
         Object.keys(nodeTemplate).forEach((name) => {
           if (
