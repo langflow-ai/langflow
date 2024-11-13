@@ -1,5 +1,5 @@
 ---
-title: Tool calling agent component
+title: Create a problem solving agent
 sidebar_position: 2
 slug: /agents-tool-calling-agent-component
 ---
@@ -18,7 +18,7 @@ Learn how to build a flow starting with the **Tool calling agent** component, an
 
 - [Langflow installed and running](/getting-started-installation)
 - [OpenAI API key created](https://platform.openai.com/)
-- [Search API key created](https://www.searchapi.io/).
+- [Search API key created](https://www.searchapi.io/)
 
 ## Create a problem-solving agent
 
@@ -43,6 +43,8 @@ This component is not in the **Tools** category, can still be used as a tool by 
 To enable **Tool Mode** on component, click **Tool Mode**.
 The component's fields change dynamically based on the mode its in.
 
+<img src="/img/tool-calling-agent-add-tools.png" alt="Chat with agent component" style={{display: 'block', margin: 'auto', width: 600}} />
+
 ## Solve problems with the agent
 
 Your agent now has tools for web search, doing basic math, and performing API requests. You can solve many problems with just these capabilities.
@@ -54,24 +56,87 @@ Point **API Request** to some docs, tell your agent `You are a knowledgeable sof
 
 See what problems you can solve with this flow. As your problem becomes more specialized, add a tool. For example, the [simple agent starter project](/starter-projects-simple-agent) adds a Python REPL component to solve math problems too challenging for the calculator.
 
+## Add custom components as tools {#components-as-tools}
 
+Custom components can be used as tools by an agent.
+
+1. To add a custom component to the problem solving agent flow, click **New Custom Component**.
+
+2. Add custom Python code to the custom component.
+Here's a text analyzer for sentiment analysis.
+
+```python
+from langflow.custom import Component
+from langflow.io import MessageTextInput, Output
+from langflow.schema import Data
+import re
+
+class TextAnalyzerComponent(Component):
+    display_name = "Text Analyzer"
+    description = "Analyzes and transforms input text."
+    documentation: str = "http://docs.langflow.org/components/custom"
+    icon = "chart-bar"
+    name = "TextAnalyzerComponent"
+
+    inputs = [
+        MessageTextInput(
+            name="input_text",
+            display_name="Input Text",
+            info="Enter text to analyze",
+            value="Hello, World!",
+            tool_mode=True,
+        ),
+    ]
+
+    outputs = [
+        Output(display_name="Analysis Result", name="output", method="analyze_text"),
+    ]
+
+    def analyze_text(self) -> Data:
+        text = self.input_text
+        
+        # Perform text analysis
+        word_count = len(text.split())
+        char_count = len(text)
+        sentence_count = len(re.findall(r'\w+[.!?]', text))
+        
+        # Transform text
+        reversed_text = text[::-1]
+        uppercase_text = text.upper()
+        
+        analysis_result = {
+            "original_text": text,
+            "word_count": word_count,
+            "character_count": char_count,
+            "sentence_count": sentence_count,
+            "reversed_text": reversed_text,
+            "uppercase_text": uppercase_text
+        }
+        
+        data = Data(value=analysis_result)
+        self.status = data
+        return data
+```
+
+3. To enable the custom component as a tool, click the **Tool Mode** button.
+4. Connect the tool output to the agent's tools input.
+5. Ask the agent, `What tools are you using to answer my questions?`
+Your response will be similar to this, and includes your custom component.
+```plain
+I have access to several tools that assist me in answering your questions, including:
+Search API: This allows me to search for recent information or results on the web.
+HTTP Requests: I can make HTTP requests to various URLs to retrieve data or interact with APIs.
+Calculator: I can evaluate basic arithmetic expressions.
+Text Analyzer: I can analyze and transform input text.
+Current Date and Time: I can retrieve the current date and time in various time zones.
+```
 
 ## Add flows as tools
 
+Flows saved in your workspace can be used as tools by an agent.
 
-## Add components as tools {#components-as-tools}
-
-Components that are not in the **Tools** category can still be used as tools by an agent.
-
-Click the **Tool Mode** button on a component to enable it.
-
-For example, the **API Request** component makes a helpful tool for an agent. 
-Here are a few examples to get you started.
-
-### URL
-
-### API
-
-### CURRENT Date
-
-### Custom Component
+1. To add a **Flow as tool** component, click and drag a **Flow as tool** component to your workspace.
+2. Select the flow you want the agent to use as a tool.
+3. Connect the tool output to the agent's tools input.
+4. Ask the agent, `What tools are you using to answer my questions?`
+Your **Flow as tool** flow should be visible in the response.
