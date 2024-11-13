@@ -32,7 +32,7 @@ test("user must be able to check similarity between embedding texts", async ({
   //first component
 
   await page.getByTestId("sidebar-search-input").click();
-  await page.getByTestId("sidebar-search-input").fill("openai");
+  await page.getByTestId("sidebar-search-input").fill("openai embedding");
   // await page.waitForTimeout(1000);
 
   await page
@@ -50,24 +50,7 @@ test("user must be able to check similarity between embedding texts", async ({
 
   await page.mouse.up();
 
-  //second component
-
-  await page
-    .getByTestId("embeddingsOpenAI Embeddings")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-  await page.getByTestId("zoom_out").click();
-  await page
-    .locator('//*[@id="react-flow-id"]')
-    .hover()
-    .then(async () => {
-      await page.mouse.down();
-      await page.mouse.move(-50, 50);
-    });
-
-  await page.mouse.up();
-
-  //third component
+  await page.waitForTimeout(1000);
 
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("text embedder");
