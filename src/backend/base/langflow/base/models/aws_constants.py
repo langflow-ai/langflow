@@ -48,7 +48,6 @@ AWS_EMBEDDING_MODEL_IDS = [
     # Amazon Titan Embedding Models
     "amazon.titan-embed-text-v1",
     "amazon.titan-embed-text-v2:0",
-    "amazon.titan-embed-image-v1",
     # Cohere Embedding Models
     "cohere.embed-english-v3",
     "cohere.embed-multilingual-v3",
