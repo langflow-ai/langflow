@@ -54,7 +54,7 @@ This component is particularly useful in workflows that require conditional rout
 
 ## Flow as Tool
 
-This component constructs a Tool from a function that runs a loaded flow.
+This component constructs a tool from a function that runs a loaded flow.
 
 ### Parameters
 
@@ -65,13 +65,13 @@ This component constructs a Tool from a function that runs a loaded flow.
 | flow_name        | Dropdown | The name of the flow to run.                               |
 | tool_name        | String   | The name of the tool.                                      |
 | tool_description | String   | The description of the tool.                               |
-| return_direct    | Boolean  | If true, returns the result directly from the Tool.        |
+| return_direct    | Boolean  | If true, returns the result directly from the tool.        |
 
 #### Outputs
 
 | Name           | Type | Description                            |
 |----------------|------|----------------------------------------|
-| api_build_tool | Tool | The constructed Tool from the flow.    |
+| api_build_tool | Tool | The constructed tool from the flow.    |
 
 ## Listen
 
@@ -89,11 +89,11 @@ This component listens for a notification and retrieves its associated state.
 
 | Name   | Type | Description                                |
 |--------|------|--------------------------------------------|
-| output | Data | The state associated with the notification |
+| output | Data | The state associated with the notification. |
 
 ## Notify
 
-This component generates a notification to be used by the Listen component.
+This component generates a notification for the Listen component to use.
 
 ### Parameters
 
@@ -123,7 +123,7 @@ The RunFlowComponent executes a specified flow within a larger workflow. It prov
 
 | Name        | Type         | Description                                           |
 |-------------|--------------|-------------------------------------------------------|
-| input_value | String       | The input value to be processed by the flow.          |
+| input_value | String       | The input value for the flow to process.          |
 | flow_name   | Dropdown     | The name of the flow to run.                          |
 | tweaks      | Nested Dict  | Tweaks to apply to the flow.                          |
 
