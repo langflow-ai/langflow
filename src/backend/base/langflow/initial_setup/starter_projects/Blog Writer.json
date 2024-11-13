@@ -576,6 +576,7 @@
             ],
             "frozen": false,
             "icon": "type",
+            "legacy": false,
             "lf_version": "1.0.19.post2",
             "metadata": {},
             "output_types": [],
