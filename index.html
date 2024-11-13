@@ -162,7 +162,7 @@
         function startConversation() {
             console.log('Starting WebSocket connection...');
             try {
-                ws = new WebSocket('ws://localhost:7860/api/v1/voice/ws');
+                ws = new WebSocket('ws://localhost:7860/api/v1/voice/ws/5dc5652d-4271-4ee1-9278-1f7998a43219');
                 console.log('WebSocket instance created:', ws);
 
                 ws.onopen = () => {
@@ -187,8 +187,8 @@
                     };
 
                     try {
-                        console.log('Attempting to send session config:', sessionConfig);
-                        ws.send(JSON.stringify(sessionConfig));
+                        //console.log('Attempting to send session config:', sessionConfig);
+                        //ws.send(JSON.stringify(sessionConfig));
                         console.log('Session config sent successfully');
                         startRecording();
                     } catch (error) {
