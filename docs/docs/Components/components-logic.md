@@ -1,4 +1,4 @@
-# Logic
+# Logic components in Langflow
 
 ## Conditional router
 
@@ -6,9 +6,7 @@ This component routes an input message to a corresponding output based on text c
 
 The ConditionalRouterComponent routes messages based on text comparison. It evaluates a condition by comparing two text inputs using a specified operator and routes the message accordingly.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name           | Type     | Description                                                       |
 |----------------|----------|-------------------------------------------------------------------|
@@ -20,7 +18,7 @@ The ConditionalRouterComponent routes messages based on text comparison. It eval
 | max_iterations | Integer  | The maximum number of iterations for the conditional router.      |
 | default_route  | Dropdown | The default route to take when max iterations are reached.        |
 
-#### Outputs
+### Outputs
 
 | Name         | Type    | Description                                |
 |--------------|---------|--------------------------------------------|
@@ -33,9 +31,7 @@ This component routes `Data` objects based on a condition applied to a specified
 
 This component is particularly useful in workflows that require conditional routing of complex data structures, enabling dynamic decision-making based on data content.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name          | Type     | Description                                                                       |
 |---------------|----------|-----------------------------------------------------------------------------------|
@@ -44,7 +40,7 @@ This component is particularly useful in workflows that require conditional rout
 | operator      | Dropdown | The operator to apply for comparing the values.                                   |
 | compare_value | String   | The value to compare against (not used for boolean validator).                    |
 
-#### Outputs
+### Outputs
 
 | Name         | Type        | Description                                          |
 |--------------|-------------|------------------------------------------------------|
@@ -56,9 +52,7 @@ This component is particularly useful in workflows that require conditional rout
 
 This component constructs a tool from a function that runs a loaded flow.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name             | Type     | Description                                                |
 |------------------|----------|------------------------------------------------------------|
@@ -67,7 +61,7 @@ This component constructs a tool from a function that runs a loaded flow.
 | tool_description | String   | The description of the tool.                               |
 | return_direct    | Boolean  | If true, returns the result directly from the tool.        |
 
-#### Outputs
+### Outputs
 
 | Name           | Type | Description                            |
 |----------------|------|----------------------------------------|
@@ -77,15 +71,13 @@ This component constructs a tool from a function that runs a loaded flow.
 
 This component listens for a notification and retrieves its associated state.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Type   | Description                                    |
 |------|--------|------------------------------------------------|
 | name | String | The name of the notification to listen for.    |
 
-#### Outputs
+### Outputs
 
 | Name   | Type | Description                                |
 |--------|------|--------------------------------------------|
@@ -95,9 +87,7 @@ This component listens for a notification and retrieves its associated state.
 
 This component generates a notification for the Listen component to use.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name   | Type    | Description                                                       |
 |--------|---------|-------------------------------------------------------------------|
@@ -105,7 +95,7 @@ This component generates a notification for the Listen component to use.
 | data   | Data    | The data to store in the notification.                            |
 | append | Boolean | If true, the record will be appended to the existing notification.|
 
-#### Outputs
+### Outputs
 
 | Name   | Type | Description                             |
 |--------|------|-----------------------------------------|
@@ -117,9 +107,7 @@ This component allows you to run a specified flow with given inputs and tweaks.
 
 The RunFlowComponent executes a specified flow within a larger workflow. It provides the ability to run a flow with custom inputs and apply tweaks to modify its behavior.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name        | Type         | Description                                           |
 |-------------|--------------|-------------------------------------------------------|
@@ -127,7 +115,7 @@ The RunFlowComponent executes a specified flow within a larger workflow. It prov
 | flow_name   | Dropdown     | The name of the flow to run.                          |
 | tweaks      | Nested Dict  | Tweaks to apply to the flow.                          |
 
-#### Outputs
+### Outputs
 
 | Name        | Type        | Description                                    |
 |-------------|-------------|------------------------------------------------|
@@ -139,15 +127,13 @@ This `SubFlowComponent` generates a component from a flow with all of its inputs
 
 This component can integrate entire flows as components within a larger workflow. It dynamically generates inputs based on the selected flow and executes the flow with provided parameters.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name      | Type     | Description                        |
 |-----------|----------|------------------------------------|
 | flow_name | Dropdown | The name of the flow to run.       |
 
-#### Outputs
+### Outputs
 
 | Name         | Type        | Description                           |
 |--------------|-------------|---------------------------------------|
