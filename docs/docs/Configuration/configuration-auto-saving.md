@@ -8,15 +8,15 @@ Langflow supports both manual and auto-saving functionality.
 
 ## Auto-saving {#auto-saving}
 
-When Langflow is in Auto-saving mode, all changes are saved automatically. Auto-save progress is indicated in the left side of the top bar.
+When Langflow is in auto-saving mode, all changes are saved automatically. Auto-save progress is indicated in the left side of the top bar.
 
-* When a flow is being saved, a Loading icon indicates that the flow is being saved in the database.
+* When a flow is being saved, a loading icon indicates that the flow is being saved in the database.
 
-* If you try to exit the flow page before auto-save completes, a dialog will appear to confirm you want to exit before the flow has saved.
+* If you try to exit the flow page before auto-save completes, you are prompted to confirm you want to exit before the flow has saved.
 
-* When the flow has successfully saved, click the 'Exit' button.
+* When the flow has successfully saved, click **Exit**.
 
-## Disable Auto Saving {#environment}
+## Disable auto-saving {#environment}
 
 To disable auto-saving, 
 
@@ -38,11 +38,11 @@ Alternatively, disable auto-saving by passing the `--no-auto-saving` flag at sta
 python -m langflow --no-auto-saving
 ```
 
-## Manual Saving {#manual-saving}
+## Save a flow manually {#manual-saving}
 
 When auto-saving is disabled, you will need to manually save your flow when making changes.
 
 To manually save your flow, click the **Save** button or enter Ctrl+S or Command+S.
 
-If you try to exit after making changes and not saving, a confirmation dialog will appear.
+If you try to exit after making changes and not saving, a confirmation dialog appears.
 

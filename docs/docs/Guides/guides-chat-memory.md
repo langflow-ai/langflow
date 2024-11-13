@@ -26,7 +26,7 @@ Memories can be visualized and managed directly from the **Playground**. You can
 
 Modifying these memories will influence the behavior of the chatbot responses, as long as an agent uses them. Here you have the ability to remove or edit previous messages, allowing them to manipulate and explore how these changes affect model responses.
 
-To modify chat memories, click your **Flow Name** and click **Logs**.
+To modify chat memories, click your **Flow Name**, and then click **Logs**.
 
 
 ![](/img/logs.png)
@@ -41,7 +41,7 @@ To modify chat memories, click your **Flow Name** and click **Logs**.
 Chat conversations store messages categorized by a `Session ID`. A a single flow can host multiple session IDs, and different flows can also share the same one.
 
 
-The **Chat Memory** component also retrieves message histories by `Session ID` which users can change in the component's **Controls** pane.
+The **Chat Memory** component also retrieves message histories by `Session ID`, which users can change in the component's **Controls** pane.
 
 ![](/img/chat-input-controls-pane.png)
 

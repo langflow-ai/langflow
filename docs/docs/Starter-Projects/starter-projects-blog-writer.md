@@ -34,7 +34,7 @@ This flow creates a one-shot article generator with **Prompt**, **OpenAI**, an
 The **URL** component extracts raw text and metadata from one or more web links.
 The **Parse Data** component converts the data coming from the **URL** component into plain text to feed the prompt.
 
-To examine the flow's prompt, click on the **Template** field of the **Prompt** component.
+To examine the flow's prompt, click the **Template** field of the **Prompt** component.
 
 ```plain
 Reference 1:

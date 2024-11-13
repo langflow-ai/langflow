@@ -51,7 +51,7 @@ The **Template** instructs the LLM to accept `{user_input}` and `Answer the u
 
 ## Run the Basic Prompting flow {#ef0e8283bfb646f99bbb825462d8cbab}
 
-1. To open the **Playground** pane, click the **Playground** button.
+1. To open the **Playground** pane, click **Playground**.
 This is where you can interact with your AI.
 2. Type a message and press Enter. The bot should respond in a markedly piratical manner!
 
