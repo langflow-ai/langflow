@@ -18,11 +18,11 @@ All agents have access to the **Search API** and **URL Content Fetcher** compone
 
 To use this flow, you need an [OpenAI API key](https://platform.openai.com/) and a [Search API key](https://www.searchapi.io/).
 
-## Open Langflow and start a new project
+## Open Langflow and start a new flow
 
-Click **New Flow**, and then select the **Travel Planning Agent** project.
+Click **New Flow**, and then select the **Travel Planning Agent** flow.
 
-This opens a starter project with the necessary components to run an agentic application using multiple Tool-calling agents.
+This opens a starter flow with the necessary components to run an agentic application using multiple Tool-calling agents.
 
 ## Create the travel planning agent flow
 

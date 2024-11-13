@@ -14,11 +14,11 @@ In this flow, the **Tool-calling agent** reasons using an **Open AI** LLM to sol
 
 To use this flow, you need an OpenAI API key.
 
-## Open Langflow and start a new project
+## Open Langflow and start a new flow
 
-Click **New Flow**, and then select the **Simple Agent** project.
+Click **New Flow**, and then select the **Simple Agent** flow.
 
-This opens a starter project with the necessary components to run an agentic application using the Tool-calling agent.
+This opens a starter flow with the necessary components to run an agentic application using the Tool-calling agent.
 
 ## Simple Agent flow
 

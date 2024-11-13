@@ -23,10 +23,10 @@ This article demonstrates how to use Langflow's prompt tools to issue basic prom
 - [Langflow installed and running](/getting-started-installation)
 - [OpenAI API key created](https://platform.openai.com/)
 
-## Create the basic prompting project {#19d5305239c841548a695e2bf7839e7a}
+## Create the basic prompting flow {#19d5305239c841548a695e2bf7839e7a}
 
 
-1. From the Langflow dashboard, click **New Flow**. 
+1. From the Langflow dashboard, click **New Flow**.
 
 
 2. Select **Basic Prompting**.

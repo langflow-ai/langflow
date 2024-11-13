@@ -6,7 +6,7 @@ slug: /starter-projects-memory-chatbot
 
 
 
-This flow extends the [basic prompting](http://localhost:3000/starter-projects/basic-prompting) flow to include a chat memory. This makes the AI remember previous user inputs.
+This flow extends the [basic prompting](/starter-projects-basic-prompting) flow to include a chat memory. This makes the AI remember previous user inputs.
 
 
 ## Prerequisites {#a71d73e99b1543bbba827207503cf31f}

@@ -15,7 +15,7 @@ RAG is backed by a **vector store**, a vector database which stores embeddings 
 This enables **vector search**, a more powerful and context-aware search.
 
 
-We've chosen [Astra DB](https://astra.datastax.com/signup?utm_source=langflow-pre-release&utm_medium=referral&utm_campaign=langflow-announcement&utm_content=create-a-free-astra-db-account) as the vector database for this starter project, but you can follow along with any of Langflow's vector database options.
+We've chosen [Astra DB](https://astra.datastax.com/signup?utm_source=langflow-pre-release&utm_medium=referral&utm_campaign=langflow-announcement&utm_content=create-a-free-astra-db-account) as the vector database for this starter flow, but you can follow along with any of Langflow's vector database options.
 
 
 ## Prerequisites {#6aa2c6dff6894eccadc39d4903d79e66}
@@ -30,11 +30,11 @@ We've chosen [Astra DB](https://astra.datastax.com/signup?utm_source=langflow-p
 	- API Endpoint
 
 
-## Create the vector store RAG flow 
+## Create the vector store RAG flow
 
 1. From the Langflow dashboard, click **New Flow**.
 2. Select **Vector Store RAG**.
-3. The **Vector Store RAG** project is created.
+3. The **Vector Store RAG** flowis created.
 
 ![](/img/starter-flow-vector-rag.png)
 
