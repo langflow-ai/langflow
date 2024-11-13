@@ -202,6 +202,15 @@ class AstraGraphVectorStoreComponent(LCVectorStoreComponent):
             raise ImportError(msg) from e
 
         try:
+            if not self.setup_mode:
+                self.setup_mode = self._inputs["setup_mode"].options[0]
+
+            setup_mode_value = SetupMode[self.setup_mode.upper()]
+        except KeyError as e:
+            msg = f"Invalid setup mode: {self.setup_mode}"
+            raise ValueError(msg) from e
+
+        try:
             vector_store = AstraDBGraphVectorStore(
                 embedding=self.embedding,
                 collection_name=self.collection_name,
@@ -210,16 +219,16 @@ class AstraGraphVectorStoreComponent(LCVectorStoreComponent):
                 token=self.token,
                 api_endpoint=self.api_endpoint,
                 namespace=self.namespace or None,
-                environment=parse_api_endpoint(self.api_endpoint).environment,
-                metric=self.metric,
+                environment=parse_api_endpoint(self.api_endpoint).environment if self.api_endpoint else None,
+                metric=self.metric or None,
                 batch_size=self.batch_size or None,
                 bulk_insert_batch_concurrency=self.bulk_insert_batch_concurrency or None,
                 bulk_insert_overwrite_concurrency=self.bulk_insert_overwrite_concurrency or None,
                 bulk_delete_concurrency=self.bulk_delete_concurrency or None,
-                setup_mode=SetupMode[self.setup_mode.upper()],
+                setup_mode=setup_mode_value,
                 pre_delete_collection=self.pre_delete_collection,
-                metadata_indexing_include=[s for s in self.metadata_indexing_include if s],
-                metadata_indexing_exclude=[s for s in self.metadata_indexing_exclude if s],
+                metadata_indexing_include=[s for s in self.metadata_indexing_include if s] or None,
+                metadata_indexing_exclude=[s for s in self.metadata_indexing_exclude if s] or None,
                 collection_indexing_policy=orjson.dumps(self.collection_indexing_policy)
                 if self.collection_indexing_policy
                 else None,
