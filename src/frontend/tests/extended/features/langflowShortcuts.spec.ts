@@ -21,11 +21,6 @@ test("LangflowShortcuts", async ({ page }) => {
 
   const getUA = await page.evaluate(() => navigator.userAgent);
   const userAgentInfo = uaParser(getUA);
-  let control = "Control";
-
-  if (userAgentInfo.os.name.includes("Mac")) {
-    control = "Meta";
-  }
 
   await page.waitForSelector('[data-testid="blank-flow"]', {
     timeout: 30000,
@@ -54,11 +49,11 @@ test("LangflowShortcuts", async ({ page }) => {
   await page.getByTestId("zoom_out").click();
   await page.getByTestId("zoom_out").click();
   await page.getByTestId("generic-node-title-arrangement").click();
-  await page.keyboard.press(`${control}+Shift+A`);
+  await page.keyboard.press(`ControlOrMeta+Shift+A`);
   await page.getByText("Close").last().click();
 
   await page.getByTestId("generic-node-title-arrangement").click();
-  await page.keyboard.press(`${control}+d`);
+  await page.keyboard.press(`ControlOrMeta+d`);
 
   let numberOfNodes = await page.getByTestId("title-Ollama")?.count();
   if (numberOfNodes != 2) {
@@ -76,10 +71,10 @@ test("LangflowShortcuts", async ({ page }) => {
   }
 
   await page.getByTestId("generic-node-title-arrangement").click();
-  await page.keyboard.press(`${control}+c`);
+  await page.keyboard.press(`ControlOrMeta+c`);
 
   await page.getByTestId("title-Ollama").click();
-  await page.keyboard.press(`${control}+v`);
+  await page.keyboard.press(`ControlOrMeta+v`);
 
   numberOfNodes = await page.getByTestId("title-Ollama")?.count();
   if (numberOfNodes != 2) {
@@ -90,13 +85,13 @@ test("LangflowShortcuts", async ({ page }) => {
   await page.keyboard.press("Backspace");
 
   await page.getByTestId("title-Ollama").click();
-  await page.keyboard.press(`${control}+x`);
+  await page.keyboard.press(`ControlOrMeta+x`);
 
   numberOfNodes = await page.getByTestId("title-Ollama")?.count();
   if (numberOfNodes != 0) {
     expect(false).toBeTruthy();
   }
-  await page.keyboard.press(`${control}+v`);
+  await page.keyboard.press(`ControlOrMeta+v`);
   numberOfNodes = await page.getByTestId("title-Ollama")?.count();
   if (numberOfNodes != 1) {
     expect(false).toBeTruthy();
@@ -108,12 +103,12 @@ test("LangflowShortcuts", async ({ page }) => {
   numberOfNodes = await page.getByTestId("title-Ollama")?.count();
   expect(numberOfNodes).toBe(0);
 
-  await page.keyboard.press(`${control}+z`);
+  await page.keyboard.press(`ControlOrMeta+z`);
   numberOfNodes = await page.getByTestId("title-Ollama")?.count();
   expect(numberOfNodes).toBe(1);
 
   // Test redo (Command+Y or Control+Y)
-  await page.keyboard.press(`${control}+y`);
+  await page.keyboard.press(`ControlOrMeta+y`);
   numberOfNodes = await page.getByTestId("title-Ollama")?.count();
   expect(numberOfNodes).toBe(0);
 });
