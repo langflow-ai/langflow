@@ -9,16 +9,14 @@ slug: /getting-started-quickstart
 ## Prerequisites {#b5f154a3a1d242c7bdf57acf0a552732}
 
 
----
-
-- [Python &gt;=3.10](https://www.python.org/downloads/release/python-3100/) and [pip](https://pypi.org/project/pip/) or [pipx](https://pipx.pypa.io/stable/installation/)
-- [OpenAI API key](https://platform.openai.com/)
-- [Langflow installed and running](/getting-started-installation)
+* [Python 3.10 to 3.12](https://www.python.org/downloads/release/python-3100/) installed
+* [pip](https://pypi.org/project/pip/) or [pipx](https://pipx.pypa.io/stable/installation/) installed
+* Before installing Langflow, we recommend creating a virtual environment to isolate your Python dependencies with [venv](https://docs.python.org/3/library/venv.html) or [conda](https://anaconda.org/anaconda/conda)
 
 ## Create the Basic Prompting project {#c029603ddb1f42f5b28df92e58426ab3}
 
 
-1. From the Langflow dashboard, click **New Project**.
+1. From the Langflow dashboard, click **New Flow**.
 
 
 2. Select **Basic Prompting**.
