@@ -98,7 +98,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             advanced=True,
         ),
         DropdownInput(
-            name="embedding_service",
+            name="embedding_choice",
             display_name="Embedding Model or Astra Vectorize",
             info="Determines whether to use Astra Vectorize for the collection.",
             options=["Embedding Model", "Astra Vectorize"],
@@ -239,7 +239,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         return build_config
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
-        if field_name == "embedding_service":
+        if field_name == "embedding_choice":
             if field_value == "Astra Vectorize":
                 self.del_fields(build_config, ["embedding"])
 
@@ -252,7 +252,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                     real_time_refresh=True,
                 ).to_dict()
 
-                self.insert_in_dict(build_config, "embedding_service", {"embedding_provider": new_parameter})
+                self.insert_in_dict(build_config, "embedding_choice", {"embedding_provider": new_parameter})
             else:
                 self.del_fields(
                     build_config,
@@ -273,7 +273,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                     info="Allows an embedding model configuration.",
                 ).to_dict()
 
-                self.insert_in_dict(build_config, "embedding_service", {"embedding": new_parameter})
+                self.insert_in_dict(build_config, "embedding_choice", {"embedding": new_parameter})
 
         elif field_name == "embedding_provider":
             self.del_fields(
@@ -410,7 +410,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             msg = f"Invalid setup mode: {self.setup_mode}"
             raise ValueError(msg) from e
 
-        if self.embedding_service == "Embedding Model":
+        if self.embedding_choice == "Embedding Model":
             embedding_dict = {"embedding": self.embedding}
         else:
             from astrapy.info import CollectionVectorServiceOptions
