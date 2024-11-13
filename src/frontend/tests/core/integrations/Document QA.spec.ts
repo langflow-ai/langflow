@@ -2,7 +2,7 @@ import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
-test.skip("Document QA", async ({ page }) => {
+test("Document Q&A", async ({ page }) => {
   test.skip(
     !process?.env?.OPENAI_API_KEY,
     "OPENAI_API_KEY required to run this test",
@@ -38,7 +38,7 @@ test.skip("Document QA", async ({ page }) => {
   }
 
   await page.getByTestId("side_nav_options_all-templates").click();
-  await page.getByRole("heading", { name: "Document QA" }).click();
+  await page.getByRole("heading", { name: "Document Q&A" }).click();
   await page.waitForTimeout(1000);
 
   await page.getByTestId("fit_view").click();

@@ -1,6 +1,6 @@
 const { test, expect } = require("@playwright/test");
 
-test.skip("vector store from starter projects should have its connections and nodes on the flow", async ({
+test("vector store from starter projects should have its connections and nodes on the flow", async ({
   page,
   request,
 }) => {

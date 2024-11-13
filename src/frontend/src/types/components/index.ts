@@ -545,6 +545,7 @@ export type nodeToolbarPropsType = {
   isOutdated: boolean;
   updateNode: () => void;
   closeToolbar?: () => void;
+  setOpenShowMoreOptions?: (open: boolean) => void;
 };
 
 export type parsedDataType = {
