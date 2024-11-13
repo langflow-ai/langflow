@@ -167,6 +167,8 @@ export default function GenericNode({
 
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
 
+  const [openShowMoreOptions, setOpenShowMoreOptions] = useState(false);
+
   const renderOutputParameter = (
     output: OutputFieldType,
     idx: number,
@@ -232,6 +234,7 @@ export default function GenericNode({
           onCloseAdvancedModal={() => {}}
           updateNode={handleUpdateCode}
           isOutdated={isOutdated && isUserEdited}
+          setOpenShowMoreOptions={setOpenShowMoreOptions}
         />
       </NodeToolbar>
     );
@@ -335,6 +338,7 @@ export default function GenericNode({
             : `h-[4.065rem] w-48 rounded-[0.75rem] ${!selected ? "border-[1px] border-border ring-[0.5px] ring-border" : ""}`,
           "generic-node-div group/node relative",
           !hasOutputs && "pb-4",
+          openShowMoreOptions && "nowheel",
         )}
       >
         <div
