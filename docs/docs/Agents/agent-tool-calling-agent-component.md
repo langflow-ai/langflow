@@ -16,7 +16,6 @@ Learn how to build a flow starting with the **Tool calling agent** component, an
 
 ## Prerequisites
 
-- [Langflow installed and running](/getting-started-installation)
 - [An OpenAI API key](https://platform.openai.com/)
 - [A Search API key](https://www.searchapi.io/)
 
