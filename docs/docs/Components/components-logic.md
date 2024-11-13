@@ -1,5 +1,7 @@
 # Logic components in Langflow
 
+Logic components provide functionalities for routing, conditional processing, and flow management.
+
 ## Conditional router
 
 This component routes an input message to a corresponding output based on text comparison.
