@@ -30,11 +30,6 @@ test("user should interact with link component", async ({ context, page }) => {
 
   const getUA = await page.evaluate(() => navigator.userAgent);
   const userAgentInfo = uaParser(getUA);
-  let control = "Control";
-
-  if (userAgentInfo.os.name.includes("Mac")) {
-    control = "Meta";
-  }
 
   await page.waitForSelector('[data-testid="blank-flow"]', {
     timeout: 30000,
@@ -81,7 +76,7 @@ test("user should interact with link component", async ({ context, page }) => {
     ],
   });
 
-  await page.locator("textarea").last().press(`${control}+a`);
+  await page.locator("textarea").last().press(`ControlOrMeta+a`);
   await page.keyboard.press("Backspace");
   await page.locator("textarea").last().fill(cleanCode);
   await page.locator('//*[@id="checkAndSaveBtn"]').click();

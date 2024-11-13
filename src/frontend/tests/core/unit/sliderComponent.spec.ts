@@ -30,11 +30,6 @@ test("user should be able to use slider input", async ({ page }) => {
 
   const getUA = await page.evaluate(() => navigator.userAgent);
   const userAgentInfo = uaParser(getUA);
-  let control = "Control";
-
-  if (userAgentInfo.os.name.includes("Mac")) {
-    control = "Meta";
-  }
 
   await page.waitForSelector('[data-testid="blank-flow"]', {
     timeout: 30000,
@@ -71,7 +66,7 @@ test("user should be able to use slider input", async ({ page }) => {
     "value=0.2, range_spec=RangeSpec(min=3, max=30, step=1), min_label='test', max_label='test2', min_label_icon='pencil-ruler', max_label_icon='palette', slider_buttons=False, slider_buttons_options=[], slider_input=False,",
   );
 
-  await page.locator("textarea").last().press(`${control}+a`);
+  await page.locator("textarea").last().press(`ControlOrMeta+a`);
   await page.keyboard.press("Backspace");
   await page.locator("textarea").last().fill(cleanCode);
   await page.locator('//*[@id="checkAndSaveBtn"]').click();

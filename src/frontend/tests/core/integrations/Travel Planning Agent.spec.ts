@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, Page, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
@@ -72,16 +72,6 @@ test("Travel Planning Agent", async ({ page }) => {
     filledApiKey = await page.getByTestId("remove-icon-badge").count();
   }
 
-  await page
-    .getByTestId("popover-anchor-input-api_key")
-    .last()
-    .fill(process.env.SEARCH_API_KEY ?? "");
-
-  await page
-    .getByTestId("popover-anchor-input-api_key")
-    .first()
-    .fill(process.env.OPENAI_API_KEY ?? "");
-
   const randomCity = cities[Math.floor(Math.random() * cities.length)];
   const randomCity2 = cities[Math.floor(Math.random() * cities.length)];
   const randomFood = foods[Math.floor(Math.random() * foods.length)];
@@ -93,54 +83,82 @@ test("Travel Planning Agent", async ({ page }) => {
       `Create a travel plan from ${randomCity} to ${randomCity2} with ${randomFood}`,
     );
 
-  await page.getByTestId("dropdown_str_model_name").click();
-  await page.getByTestId("gpt-4o-1-option").click();
+  let openAiLlms = await page.getByText("OpenAI", { exact: true }).count();
+  await page.waitForSelector('[data-testid="fit_view"]', {
+    timeout: 100000,
+  });
+
+  for (let i = 0; i < openAiLlms; i++) {
+    await page
+      .getByTestId("popover-anchor-input-api_key")
+      .nth(i + 1)
+      .fill(process.env.OPENAI_API_KEY ?? "");
+    await page.getByTestId("zoom_in").click();
+    await page.getByTestId("dropdown_str_model_name").nth(i).click();
+    await page.getByTestId("gpt-4o-1-option").last().click();
+    await page.waitForTimeout(1000);
+  }
+
+  await page
+    .getByTestId("popover-anchor-input-api_key")
+    .first()
+    .fill(process.env.SEARCH_API_KEY ?? "");
 
   await page.waitForTimeout(1000);
 
   await page.getByTestId("button_run_chat output").click();
 
-  const result = await Promise.race([
-    // Look for rate limit indicators
-    page.waitForSelector("text=429", { timeout: 10000 }),
-    page.waitForSelector("text=Too Many Requests", { timeout: 10000 }),
-    page.waitForResponse((response) => response.status() === 429, {
-      timeout: 10000,
-    }),
-  ]);
+  await page.getByTestId("button_run_chat output").last().click();
 
-  if (result) {
+  if (await checkRateLimit(page)) {
     console.log("Rate limit detected, skipping test");
     test.skip();
-  } else {
-    await page.getByTestId("button_run_chat output").click();
-
-    await page.waitForSelector("text=built successfully", {
-      timeout: 60000 * 3,
-    });
-
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
-    await page.getByText("Playground", { exact: true }).last().click();
-
-    await page.waitForSelector("text=default session", {
-      timeout: 30000,
-    });
-
-    await page.waitForTimeout(1000);
-
-    const output = await page.getByTestId("div-chat-message").allTextContents();
-    const outputText = output.join("\n");
-
-    expect(outputText.toLowerCase()).toContain("weather");
-    expect(outputText.toLowerCase()).toContain("budget");
-
-    expect(outputText.toLowerCase()).toContain(randomCity);
-    expect(outputText.toLowerCase()).toContain(randomCity2);
-    expect(outputText.toLowerCase()).toContain(randomFood);
   }
+
+  await page.waitForSelector("text=built successfully", {
+    timeout: 60000 * 3,
+  });
+
+  await page.getByText("built successfully").last().click({
+    timeout: 15000,
+  });
+
+  await page.getByText("Playground", { exact: true }).last().click();
+
+  await page.waitForSelector("text=default session", {
+    timeout: 30000,
+  });
+
+  await page.waitForTimeout(1000);
+
+  const output = await page.getByTestId("div-chat-message").allTextContents();
+  const outputText = output.join("\n");
+
+  expect(outputText.toLowerCase()).toContain("weather");
+  expect(outputText.toLowerCase()).toContain("budget");
+
+  expect(outputText.toLowerCase()).toContain(randomCity.toLowerCase());
+  expect(outputText.toLowerCase()).toContain(randomCity2.toLowerCase());
+  expect(outputText.toLowerCase()).toContain(randomFood.toLowerCase());
 });
+
+async function checkRateLimit(page: Page): Promise<boolean> {
+  try {
+    await Promise.race([
+      page.waitForSelector("text=429", { timeout: 10000 }),
+      page.waitForSelector("text=Too Many Requests", { timeout: 10000 }),
+      page.waitForResponse((response) => response.status() === 429, {
+        timeout: 10000,
+      }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("No rate limit detected")), 10000),
+      ),
+    ]);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 const cities = [
   "Tokyo",

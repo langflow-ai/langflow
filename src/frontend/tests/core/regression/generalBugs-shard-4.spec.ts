@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("should be able to move flow from folder, rename it and be displayed on correct folder", async ({
+test.skip("should be able to move flow from folder, rename it and be displayed on correct folder", async ({
   page,
 }) => {
   test.skip(true, "this functionality doesn't work yet w/ the uplift designs");

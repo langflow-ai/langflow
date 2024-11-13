@@ -129,7 +129,7 @@ test("user must be able to freeze a path", async ({ page }) => {
 
   await page.waitForTimeout(3000);
 
-  await page.getByText("openai").first().click();
+  await page.getByText("OpenAI", { exact: true }).last().click();
 
   await page.waitForTimeout(1000);
 

@@ -141,9 +141,9 @@ test("search components", async ({ page }) => {
   await page.getByTestId("fit_view").click();
   await page.getByTestId("zoom_out").click();
   await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
 
   await page.getByText("Chat Input").first().click();
+  await page.waitForTimeout(500);
   await page.getByTestId("more-options-modal").click();
 
   await page.getByTestId("icon-SaveAll").first().click();

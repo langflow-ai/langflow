@@ -275,7 +275,7 @@ test("should create a flow with decision", async ({ page }) => {
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   //---------------------------------- CONDITIONAL ROUTER
   await page.getByTestId("sidebar-search-input").click();
-  await page.getByTestId("sidebar-search-input").fill("conditional router");
+  await page.getByTestId("sidebar-search-input").fill("if else");
   await page.waitForTimeout(500);
   await page
     .getByTestId("logicIf-Else")

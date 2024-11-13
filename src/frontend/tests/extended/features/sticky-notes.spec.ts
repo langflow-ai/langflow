@@ -23,11 +23,6 @@ test("user should be able to interact with sticky notes", async ({ page }) => {
 
   const getUA = await page.evaluate(() => navigator.userAgent);
   const userAgentInfo = uaParser(getUA);
-  let control = "Control";
-
-  if (userAgentInfo.os.name.includes("Mac")) {
-    control = "Meta";
-  }
 
   const randomTitle = Math.random()
     .toString(36)
@@ -158,7 +153,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
   targetElement.click();
   await page.waitForTimeout(1000);
   targetElement.click();
-  await page.keyboard.press(`${control}+v`);
+  await page.keyboard.press(`ControlOrMeta+v`);
 
   await page.waitForTimeout(1000);
 

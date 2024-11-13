@@ -88,14 +88,9 @@ class CustomComponent(Component):
 
   const getUA = await page.evaluate(() => navigator.userAgent);
   const userAgentInfo = uaParser(getUA);
-  let control = "Control";
-
-  if (userAgentInfo.os.name.includes("Mac")) {
-    control = "Meta";
-  }
 
   await page.locator(".ace_content").click();
-  await page.keyboard.press(`${control}+A`);
+  await page.keyboard.press(`ControlOrMeta+A`);
   await page.locator("textarea").fill(waitTimeoutCode);
 
   await page.getByText("Check & Save").last().click();

@@ -30,11 +30,6 @@ test("user must be able to interact with table input component", async ({
 
   const getUA = await page.evaluate(() => navigator.userAgent);
   const userAgentInfo = uaParser(getUA);
-  let control = "Control";
-
-  if (userAgentInfo.os.name.includes("Mac")) {
-    control = "Meta";
-  }
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
@@ -101,7 +96,7 @@ class CustomComponent(Component):
         return data
   `;
 
-  await page.locator("textarea").press(`${control}+a`);
+  await page.locator("textarea").press(`ControlOrMeta+a`);
   await page.locator("textarea").fill(customCodeWithError);
 
   await page.getByText("Check & Save").last().click();
