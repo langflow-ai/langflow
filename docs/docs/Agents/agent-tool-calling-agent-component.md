@@ -45,7 +45,6 @@ The component's fields change dynamically based on the mode it's in.
 
 <img src="/img/tool-calling-agent-add-tools.png" alt="Chat with agent component" style={{display: 'block', margin: 'auto', width: 600}} />
 
-
 ## Solve problems with the agent
 
 Your agent now has tools for performing a web search, doing basic math, and performing API requests. You can solve many problems with just these capabilities.
@@ -56,6 +55,23 @@ Point **API Request** to an online rules document, tell your agent `You are a fu
 Point **API Request** to some docs, tell your agent `You are a knowledgeable software developer who uses the tools at your disposal`, and start learning.
 
 See what problems you can solve with this flow. As your problem becomes more specialized, add a tool. For example, the [simple agent starter project](/starter-projects-simple-agent) adds a Python REPL component to solve math problems that are too challenging for the calculator.
+
+## Use an agent as a tool
+
+The agent component itself also supports **Tool Mode** for creating multi-agent flows.
+
+Add an agent to your problem-solving flow that uses a different OpenAI model for more specialized problem solving.
+
+1. Click and drag an **Agent** component to your workspace.
+2. Add your **Open AI API Key** to the **Agent** component.
+3. In the **Model Name** field, select `gpt-4o`.
+4. Click **Tool Mode** to use this new agent as a tool.
+5. Connect the new agent's **Toolset** port to the previously created agent's **Tools** port.
+6. Connect **Search API** and **API Request** to the new agent.
+The new agent will use `gpt-4o` for the larger tasks of scraping and searching information that requires large context windows.
+The problem-solving agent will now use this agent as a tool, with its unique LLM and toolset.
+
+<img src="/img/tool-calling-agent-as-tool.png" alt="Chat with agent component" style={{display: 'block', margin: 'auto', width: 600}} />
 
 ## Add custom components as tools {#components-as-tools}
 
@@ -132,6 +148,37 @@ Text Analyzer: I can analyze and transform input text.
 Current Date and Time: I can retrieve the current date and time in various time zones.
 ```
 
+4. Click **Check & Save**.
+
+Your component now has a **Tool Mode** button, and can be used by an agent.
+
+### Make any component a tool
+
+These components support **Tool Mode**:
+
+* **URL**
+* **API request**
+* **Calculator**
+* **Current date**
+
+If the component you want to use as a tool doesn't have a **Tool Mode** button, add `tool_mode=True` to the component's code under `MessageTextInput`.
+
+For example, in the [components as tools](#components-as-tools) example above, `tool_mode=True,` is added so the custom component can be used as a tool.
+
+```python
+inputs = [
+    MessageTextInput(
+        name="input_text",
+        display_name="Input Text",
+        info="Enter text to analyze",
+        value="Hello, World!",
+        tool_mode=True,
+    ),
+]
+```
+
+**Tool Mode** supports the `MessageTextInput` type.
+
 ## Add flows as tools
 
 An agent can use flows that are saved in your workspace as tools.
@@ -143,58 +190,3 @@ An agent can use flows that are saved in your workspace as tools.
 Your **Flow as tool** flow should be visible in the response.
 
 
-## Make any component a tool
-
-If the component you want to use as a tool doesn't have a **Tool Mode** button, modify the component's code to add `tool_mode=True`.
-
-To make the **Webhook** component a tool, do the following.
-
-1. Add a **Webhook** component to your workspace.
-2. In the **Webhook** component, click **Code**.
-3. Add `tool_mode=True,` to the component code.
-
-```python
-import json
-
-from langflow.custom import Component
-from langflow.io import MultilineInput, Output
-from langflow.schema import Data
-
-
-class WebhookComponent(Component):
-    display_name = "Webhook"
-    description = "Defines a webhook input for the flow."
-    name = "Webhook"
-
-    inputs = [
-        MultilineInput(
-            name="data",
-            display_name="Payload",
-            info="Receives a payload from external systems via HTTP POST.",
-            tool_mode=True,
-        )
-    ]
-    outputs = [
-        Output(display_name="Data", name="output_data", method="build_data"),
-    ]
-
-    def build_data(self) -> Data:
-        message: str | Data = ""
-        if not self.data:
-            self.status = "No data provided."
-            return Data(data={})
-        try:
-            body = json.loads(self.data or "{}")
-        except json.JSONDecodeError:
-            body = {"payload": self.data}
-            message = f"Invalid JSON payload. Please check the format.\n\n{self.data}"
-        data = Data(data=body)
-        if not message:
-            message = data
-        self.status = message
-        return data
-```
-
-4. Click **Check & Save**.
-
-Your component now has a **Tool Mode** button, and can be used by an agent.
