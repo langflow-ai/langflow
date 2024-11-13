@@ -102,7 +102,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
   const { onDragStart } = useDragStart(flowData);
 
   const swatchIndex =
-    (flowData.gradient && parseInt(flowData.gradient)
+    (flowData.gradient && !isNaN(parseInt(flowData.gradient))
       ? parseInt(flowData.gradient)
       : getNumberFromString(flowData.gradient ?? flowData.id)) %
     swatchColors.length;

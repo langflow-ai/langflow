@@ -117,7 +117,7 @@ export function getRandomKeyByssmm(): string {
 
 export function getNumberFromString(str: string): number {
   const hash = str.split("").reduce((acc, char) => {
-    return char.charCodeAt(0) + ((acc << 5) - acc);
+    return char.charCodeAt(0) + acc;
   }, 0);
   return hash;
 }

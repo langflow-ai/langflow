@@ -99,7 +99,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
   const descriptionModal = useDescriptionModal([flowData?.id], "flow");
 
   const swatchIndex =
-    (flowData.gradient && parseInt(flowData.gradient)
+    (flowData.gradient && !isNaN(parseInt(flowData.gradient))
       ? parseInt(flowData.gradient)
       : getNumberFromString(flowData.gradient ?? flowData.id)) %
     swatchColors.length;

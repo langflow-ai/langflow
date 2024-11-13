@@ -11,9 +11,9 @@ export default function TemplateCardComponent({
   onClick,
 }: TemplateCardComponentProps) {
   const swatchIndex =
-    (example.gradient && parseInt(example.gradient)
+    (example.gradient && !isNaN(parseInt(example.gradient))
       ? parseInt(example.gradient)
-      : getNumberFromString(example.gradient ?? example.id)) %
+      : getNumberFromString(example.gradient ?? example.name)) %
     swatchColors.length;
 
   const handleKeyDown = (e) => {
