@@ -347,7 +347,7 @@ export default function NodeToolbarComponent({
   const [toolMode, setToolMode] = useState(() => {
     // Check if tool mode is explicitly set on the node
     const hasToolModeProperty = data.node?.tool_mode;
-    if (hasToolModeProperty !== undefined) {
+    if (hasToolModeProperty) {
       return hasToolModeProperty;
     }
 
