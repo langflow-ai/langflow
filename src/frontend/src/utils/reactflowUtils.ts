@@ -1597,6 +1597,7 @@ export const createNewFlow = (
     data: flowData,
     id: "",
     icon: flow?.icon ?? undefined,
+    gradient: flow?.gradient ?? undefined,
     is_component: flow?.is_component ?? false,
     folder_id: folderId,
     endpoint_name: flow?.endpoint_name ?? undefined,
