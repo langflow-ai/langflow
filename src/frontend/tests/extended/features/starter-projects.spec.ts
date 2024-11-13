@@ -1,6 +1,6 @@
 import { expect, Page, test } from "@playwright/test";
 
-test.skip("user must be able to interact with starter projects", async ({
+test("user must be able to interact with starter projects", async ({
   page,
   context,
 }) => {
