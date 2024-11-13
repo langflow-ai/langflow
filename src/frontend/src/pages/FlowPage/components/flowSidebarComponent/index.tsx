@@ -133,7 +133,7 @@ export function FlowSidebarComponent() {
   useEffect(() => {
     const options = {
       keys: ["display_name", "description", "type", "category"],
-      threshold: 0.3,
+      threshold: 0.2,
     };
 
     const fuseData = Object.entries(data).flatMap(([category, items]) =>
@@ -171,7 +171,6 @@ export function FlowSidebarComponent() {
       if (fuse) {
         const fuseResults = fuse.search(search);
         setSortedCategories(fuseResults.map((result) => result.item.category));
-
         combinedResults = combinedResultsFn(fuseResults, data);
 
         const traditionalResults = traditionalSearchMetadata(data, searchTerm);
