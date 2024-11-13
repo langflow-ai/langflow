@@ -44,15 +44,10 @@ test("should be able to select all with ctrl + A on advanced modal", async ({
 
   const getUA = await page.evaluate(() => navigator.userAgent);
   const userAgentInfo = uaParser(getUA);
-  let control = "Control";
-
-  if (userAgentInfo.os.name.includes("Mac")) {
-    control = "Meta";
-  }
 
   await page.getByTestId("div-generic-node").click();
 
-  await page.keyboard.press(`${control}+Shift+A`);
+  await page.keyboard.press(`ControlOrMeta+Shift+A`);
 
   await page.waitForTimeout(1000);
 

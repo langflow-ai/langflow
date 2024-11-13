@@ -40,11 +40,6 @@ test("Simple Agent", async ({ page }) => {
 
   const getUA = await page.evaluate(() => navigator.userAgent);
   const userAgentInfo = uaParser(getUA);
-  let control = "Control";
-
-  if (userAgentInfo.os.name.includes("Mac")) {
-    control = "Meta";
-  }
 
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Simple Agent" }).first().click();

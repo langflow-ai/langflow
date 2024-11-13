@@ -73,7 +73,7 @@ test("Vector Store RAG", async ({ page }) => {
       '"pre_delete_collection": self.pre_delete_collection or False,',
       '"pre_delete_collection": self.pre_delete_collection or False,\n            "environment": "dev",',
     );
-    await page.locator("textarea").last().press(`${control}+a`);
+    await page.locator("textarea").last().press(`ControlOrMeta+a`);
     await page.keyboard.press("Backspace");
     await page.locator("textarea").last().fill(cleanCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
@@ -82,7 +82,7 @@ test("Vector Store RAG", async ({ page }) => {
     await page.waitForTimeout(500);
     await page.getByTestId("code-button-modal").click();
     await page.waitForTimeout(500);
-    await page.locator("textarea").last().press(`${control}+a`);
+    await page.locator("textarea").last().press(`ControlOrMeta+a`);
     await page.keyboard.press("Backspace");
     await page.locator("textarea").last().fill(cleanCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
