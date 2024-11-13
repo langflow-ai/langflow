@@ -74,6 +74,7 @@ test("should be able to select all with ctrl + A on advanced modal", async ({
   await page.getByPlaceholder("Type something...").last().click();
   await page.waitForTimeout(1000);
 
+<<<<<<< HEAD
   await page.keyboard.down("ControlOrMeta");
   await page.waitForTimeout(200);
   await page.keyboard.press("a");
@@ -85,6 +86,13 @@ test("should be able to select all with ctrl + A on advanced modal", async ({
   await page.waitForTimeout(200);
   await page.keyboard.press("c");
   await page.keyboard.up("ControlOrMeta");
+=======
+  await page.keyboard.press("ControlOrMeta+a");
+
+  await page.waitForTimeout(1000);
+
+  await page.keyboard.press("ControlOrMeta+c");
+>>>>>>> c160a07b3258759ca944e8a36b838308551056f5
 
   await page.waitForTimeout(1000);
 
@@ -92,17 +100,11 @@ test("should be able to select all with ctrl + A on advanced modal", async ({
 
   await page.waitForTimeout(1000);
 
-  await page.keyboard.down("ControlOrMeta");
-  await page.waitForTimeout(200);
-  await page.keyboard.press("a");
-  await page.keyboard.up("ControlOrMeta");
+  await page.keyboard.press("ControlOrMeta+a");
 
   await page.waitForTimeout(1000);
 
-  await page.keyboard.down("ControlOrMeta");
-  await page.waitForTimeout(200);
-  await page.keyboard.press("v");
-  await page.keyboard.up("ControlOrMeta");
+  await page.keyboard.press("ControlOrMeta+v");
 
   value = await page.getByPlaceholder("Type something...").nth(2).inputValue();
   expect(value).toBe("ollama_test_ctrl_a_second_input");
