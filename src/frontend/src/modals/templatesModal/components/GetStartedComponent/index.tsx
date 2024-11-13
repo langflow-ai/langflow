@@ -19,7 +19,7 @@ export default function GetStartedComponent() {
       bgImage: memoryChatbot,
       bgHorizontalImage: memoryChatbotHorizontal,
       icon: "MessagesSquare",
-      category: "Basic prompting",
+      category: "prompting",
       flow: examples.find((example) => example.name === "Basic Prompting"),
     },
     {
@@ -33,7 +33,7 @@ export default function GetStartedComponent() {
       bgImage: multiAgent,
       bgHorizontalImage: multiAgentHorizontal,
       icon: "Bot",
-      category: "Simple agent",
+      category: "Agents",
       flow: examples.find((example) => example.name === "Simple Agent"),
     },
   ];
