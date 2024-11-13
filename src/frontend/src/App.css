@@ -133,27 +133,8 @@ body {
   outline: none;
 }
 
-:root {
-  --selected: #2196f3;
-}
-
-.dark {
-  --selected: #0369a1;
-}
-
-/* selected */
-:root {
-  --selected-light: var(--selected, #2196f3);
-  --selected-dark: var(--selected, #0369a1);
-}
-
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: var(--selected-light) !important;
-  stroke-width: 2px !important;
-}
-
-:root.dark .react-flow__edge.selected .react-flow__edge-path {
-  stroke: var(--selected-dark) !important;
+  stroke: var(--selected) !important;
   stroke-width: 2px !important;
 }
 

@@ -2,6 +2,7 @@ import { countHandlesFn } from "@/CustomNodes/helpers/count-handles";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
+import ToggleShadComponent from "@/components/parameterRenderComponent/components/toggleShadComponent";
 import { Button } from "@/components/ui/button";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
@@ -346,7 +347,7 @@ export default function NodeToolbarComponent({
   const [toolMode, setToolMode] = useState(() => {
     // Check if tool mode is explicitly set on the node
     const hasToolModeProperty = data.node?.tool_mode;
-    if (hasToolModeProperty !== undefined) {
+    if (hasToolModeProperty) {
       return hasToolModeProperty;
     }
 
@@ -495,7 +496,7 @@ export default function NodeToolbarComponent({
             >
               <Button
                 className={cn(
-                  "node-toolbar-buttons",
+                  "node-toolbar-buttons h-[2rem]",
                   toolMode && "text-primary",
                 )}
                 variant="ghost"
@@ -514,39 +515,25 @@ export default function NodeToolbarComponent({
                   )}
                 />
                 <span className="text-[13px] font-medium">Tool Mode</span>
+                <ToggleShadComponent
+                  value={toolMode}
+                  editNode={false}
+                  handleOnNewValue={() => {}}
+                  disabled={false}
+                  size="medium"
+                  showToogle={false}
+                  id="tool-mode-toggle"
+                />
               </Button>
             </ShadTooltip>
           )}
-          <ShadTooltip
-            content={
-              <ShortcutDisplay
-                {...shortcuts.find(
-                  ({ name }) => name.toLowerCase() === "copy",
-                )!}
-              />
-            }
-            side="top"
-            styleClasses="relative bottom-2"
-          >
-            <Button
-              className="node-toolbar-buttons h-[2.125rem]"
-              variant="ghost"
-              onClick={(event) => {
-                event.preventDefault();
-                handleSelectChange("copy");
-              }}
-              size="node-toolbar"
-            >
-              <IconComponent name="Copy" className="h-4 w-4" />
-            </Button>
-          </ShadTooltip>
           <ShadTooltip
             content="Show More"
             side="top"
             styleClasses="relative bottom-2"
           >
             <Button
-              className="node-toolbar-buttons h-[2rem]"
+              className="node-toolbar-buttons h-[2rem] w-[2rem]"
               variant="ghost"
               onClick={handleButtonClick}
               size="node-toolbar"

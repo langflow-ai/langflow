@@ -1,5 +1,6 @@
 import { convertTestName } from "@/components/storeCardComponent/utils/convert-test-name";
-import { BG_NOISE, flowGradients } from "@/utils/styleUtils";
+import { swatchColors } from "@/utils/styleUtils";
+import { cn } from "@/utils/utils";
 import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../components/genericIconComponent";
@@ -9,10 +10,11 @@ export default function TemplateCardComponent({
   example,
   onClick,
 }: TemplateCardComponentProps) {
-  const directionIndex =
-    (example.gradient && example.gradient.split(",").length == 1
-      ? example.gradient.length
-      : example.name.length) % flowGradients.length;
+  const swatchIndex =
+    (example.gradient && parseInt(example.gradient)
+      ? parseInt(example.gradient)
+      : (example.gradient?.length ?? example.name.length)) %
+    swatchColors.length;
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" || e.key === " ") {
@@ -20,13 +22,6 @@ export default function TemplateCardComponent({
       onClick();
     }
   };
-
-  const bgGradient =
-    BG_NOISE +
-    "," +
-    (example.gradient && example.gradient.split(",").length > 1
-      ? "linear-gradient(90deg, " + example.gradient + ")"
-      : flowGradients[directionIndex]);
 
   return (
     <div
@@ -36,22 +31,14 @@ export default function TemplateCardComponent({
       onClick={onClick}
     >
       <div
-        className="relative h-20 w-20 shrink-0 overflow-hidden rounded-md p-4 outline-none ring-ring"
-        style={{
-          backgroundImage: bgGradient,
-          transform: "scale(1)",
-          transition: "transform 0.3s ease-in-out",
-        }}
+        className={cn(
+          "relative h-20 w-20 shrink-0 overflow-hidden rounded-md p-4 outline-none ring-ring",
+          swatchColors[swatchIndex],
+        )}
       >
-        <div
-          className="absolute inset-0 transition-transform duration-300 group-hover:scale-125 group-focus-visible:scale-125"
-          style={{
-            backgroundImage: bgGradient,
-          }}
-        />
         <IconComponent
           name={example.icon || "FileText"}
-          className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 text-white duration-300 group-hover:scale-105 group-focus-visible:scale-105"
+          className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 duration-300 group-hover:scale-105 group-focus-visible:scale-105"
         />
       </div>
       <div className="flex flex-1 flex-col justify-between">

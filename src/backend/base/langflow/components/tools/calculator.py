@@ -23,6 +23,7 @@ class CalculatorToolComponent(LCToolComponent):
             name="expression",
             display_name="Expression",
             info="The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').",
+            tool_mode=True,
         ),
     ]
 

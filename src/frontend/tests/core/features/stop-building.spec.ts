@@ -82,7 +82,7 @@ test("user must be able to stop a building", async ({ page }) => {
   // await page.waitForTimeout(1000);
 
   await page
-    .getByTestId("helpersSplit Text")
+    .getByTestId("processingSplit Text")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
   await page.getByTestId("zoom_out").click();
@@ -103,7 +103,7 @@ test("user must be able to stop a building", async ({ page }) => {
   // await page.waitForTimeout(1000);
 
   await page
-    .getByTestId("helpersParse Data")
+    .getByTestId("processingParse Data")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
   await page.getByTestId("zoom_out").click();
@@ -231,7 +231,7 @@ class CustomComponent(Component):
     name = "CustomComponent"
 
     inputs = [
-        MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!"),
+        MessageTextInput(name="input_value", display_name="Input Value", value="Hello, World!", tool_mode=True),
     ]
 
     outputs = [

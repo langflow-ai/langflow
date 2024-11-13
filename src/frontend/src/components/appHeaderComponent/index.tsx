@@ -1,4 +1,6 @@
 import AlertDropdown from "@/alerts/alertDropDown";
+import DataStaxLogo from "@/assets/DataStaxLogo.svg?react";
+import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import ShadTooltip from "@/components/shadTooltipComponent";
 import { CustomOrgSelector } from "@/customization/components/custom-org-selector";
 import { CustomProductSelector } from "@/customization/components/custom-product-selector";
@@ -13,8 +15,6 @@ import { useEffect, useRef, useState } from "react";
 import ForwardedIconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
-import ShortDataStaxLogo from "./assets/ShortDataStaxLogo.svg?react";
-import ShortLangFlowIcon from "./assets/ShortLangFlowIcon.svg?react";
 import { AccountMenu } from "./components/AccountMenu";
 import FlowMenu from "./components/FlowMenu";
 import GithubStarComponent from "./components/GithubStarButton";
@@ -47,24 +47,24 @@ export default function AppHeader(): JSX.Element {
   }, []);
 
   return (
-    <div className="fixed left-0 top-0 z-[1] flex h-[62px] w-full items-center border-b px-5 py-2.5 dark:bg-background">
+    <div className="flex h-[62px] w-full items-center justify-between gap-2 border-b px-5 py-2.5 dark:bg-background">
       {/* Left Section */}
-      <div className={`absolute left-[20px] flex gap-2`}>
+      <div className={`flex items-center gap-2`}>
         <Button
           unstyled
           onClick={() => navigate("/")}
-          className="flex h-8 w-8 items-center"
+          className="mr-1 flex h-8 w-8 items-center"
           data-testid="icon-ChevronLeft"
         >
           {ENABLE_DATASTAX_LANGFLOW ? (
-            <ShortDataStaxLogo className="fill-black dark:fill-[white]" />
+            <DataStaxLogo className="fill-black dark:fill-[white]" />
           ) : ENABLE_NEW_LOGO ? (
-            <ShortLangFlowIcon className="h-5 w-5 fill-black dark:fill-[white]" />
+            <LangflowLogo className="h-5 w-6" />
           ) : (
             <span className="fill-black text-2xl dark:fill-white">⛓️</span>
           )}
         </Button>
-        {!ENABLE_DATASTAX_LANGFLOW && (
+        {ENABLE_DATASTAX_LANGFLOW && (
           <>
             <CustomOrgSelector />
             <CustomProductSelector />
@@ -73,17 +73,17 @@ export default function AppHeader(): JSX.Element {
       </div>
 
       {/* Middle Section */}
-      <div className="absolute left-[225px] right-[225px] truncate md:left-[230px] md:right-[230px] lg:left-[350px] lg:right-[350px] xl:left-[350px] xl:right-[350px] 2xl:left-[500px] 2xl:right-[500px]">
+      <div className="w-full flex-1 truncate md:max-w-[57%] lg:absolute lg:left-1/2 lg:max-w-[43%] lg:-translate-x-1/2 xl:max-w-[31%]">
         <FlowMenu />
       </div>
 
       {/* Right Section */}
-      <div className={`absolute right-[20px] flex gap-2`}>
+      <div className={`flex items-center gap-2`}>
         {!ENABLE_DATASTAX_LANGFLOW && (
           <>
             <Button
               unstyled
-              className="flex hidden items-center whitespace-nowrap 2xl:inline"
+              className="hidden items-center whitespace-nowrap 2xl:inline"
               onClick={() =>
                 window.open("https://github.com/langflow-ai/langflow", "_blank")
               }
@@ -113,15 +113,17 @@ export default function AppHeader(): JSX.Element {
             >
               <span
                 className={
-                  notificationCenter ? `header-notifications-dot` : "hidden"
+                  notificationCenter
+                    ? `absolute left-[31px] top-[10px] h-1 w-1 rounded-full bg-destructive`
+                    : "hidden"
                 }
               />
               <ForwardedIconComponent
-                name="bell"
+                name="Bell"
                 className="side-bar-button-size h-[18px] w-[18px]"
                 aria-hidden="true"
               />
-              <span className="hidden whitespace-nowrap lg:inline">
+              <span className="hidden whitespace-nowrap 2xl:inline">
                 Notifications
               </span>
             </Button>
@@ -136,7 +138,7 @@ export default function AppHeader(): JSX.Element {
             >
               <Button
                 variant="ghost"
-                className={`flex items-center text-sm font-medium ${lastPath === "store" ? "bg-accent text-accent-foreground" : ""}`}
+                className={` ${lastPath === "store" ? "bg-accent text-accent-foreground" : ""}`}
                 onClick={() => {
                   navigate("/store");
                 }}
@@ -146,7 +148,7 @@ export default function AppHeader(): JSX.Element {
                   name="Store"
                   className="side-bar-button-size h-[18px] w-[18px]"
                 />
-                <span className="hidden whitespace-nowrap lg:inline">
+                <span className="hidden whitespace-nowrap 2xl:inline">
                   Store
                 </span>
               </Button>
@@ -175,7 +177,9 @@ export default function AppHeader(): JSX.Element {
                   className="side-bar-button-size h-[18px] w-[18px]"
                   aria-hidden="true"
                 />
-                Docs
+                <span className="hidden whitespace-nowrap 2xl:inline">
+                  Docs
+                </span>
               </Button>
             </ShadTooltip>
             <ShadTooltip content="Settings" side="bottom" styleClasses="z-10">
@@ -189,7 +193,9 @@ export default function AppHeader(): JSX.Element {
                   name="Settings"
                   className="side-bar-button-size h-[18px] w-[18px]"
                 />
-                Settings
+                <span className="hidden whitespace-nowrap 2xl:inline">
+                  Settings
+                </span>
               </Button>
             </ShadTooltip>
             <Separator
@@ -198,7 +204,7 @@ export default function AppHeader(): JSX.Element {
             />
           </>
         )}
-        <div className="ml-3 flex">
+        <div className="flex">
           <AccountMenu />
         </div>
       </div>
