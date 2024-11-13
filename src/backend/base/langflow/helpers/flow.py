@@ -82,13 +82,20 @@ async def run_flow(
     output_type: str | None = "chat",
     user_id: str | None = None,
     run_id: str | None = None,
+    session_id: str | None = None,
+    graph: Graph | None = None,
 ) -> list[RunOutputs]:
     if user_id is None:
         msg = "Session is invalid"
         raise ValueError(msg)
-    graph = await load_flow(user_id, flow_id, flow_name, tweaks)
+    if graph is None:
+        graph = await load_flow(user_id, flow_id, flow_name, tweaks)
     if run_id:
         graph.set_run_id(UUID(run_id))
+    if session_id:
+        graph.session_id = session_id
+    if user_id:
+        graph.user_id = user_id
 
     if inputs is None:
         inputs = []
