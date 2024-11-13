@@ -38,11 +38,10 @@ class AmazonBedrockComponent(LCModelComponent):
         SecretStrInput(
             name="aws_session_token",
             display_name="AWS Session Token",
-            advanced=True,
+            advanced=False,
             info="The session key for your AWS account. "
             "Only needed for temporary credentials. "
             "Usually set in Python code as the environment variable 'AWS_SESSION_TOKEN'.",
-            value="AWS_SESSION_TOKEN",
             load_from_db=False,
         ),
         SecretStrInput(
@@ -52,7 +51,6 @@ class AmazonBedrockComponent(LCModelComponent):
             info="The name of the profile to use from your "
             "~/.aws/credentials file. "
             "If not provided, the default profile will be used.",
-            value="AWS_CREDENTIALS_PROFILE_NAME",
             load_from_db=False,
         ),
         DropdownInput(
