@@ -1,5 +1,5 @@
 ---
-title: Create flows with agents
+title: Agents overview
 sidebar_position: 1
 slug: /agents-overview
 ---
