@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
-test.skip("fresh start playground", async ({ page }) => {
+test("fresh start playground", async ({ page }) => {
   if (!process.env.CI) {
     dotenv.config({ path: path.resolve(__dirname, "../../.env") });
   }
