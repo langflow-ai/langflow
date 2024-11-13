@@ -554,7 +554,6 @@ export default function NodeToolbarComponent({
           onValueChange={handleSelectChange}
           value={selectedValue!}
           onOpenChange={handleOpenChange}
-          open
         >
           <SelectTrigger ref={selectTriggerRef} className="w-62">
             <></>
