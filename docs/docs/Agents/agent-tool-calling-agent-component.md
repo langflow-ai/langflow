@@ -61,7 +61,7 @@ See what problems you can solve with this flow. As your problem becomes more spe
 
 An agent can use custom components as tools.
 
-1. To add a custom component to the problem solving agent flow, click **New Custom Component**.
+1. To add a custom component to the problem-solving agent flow, click **New Custom Component**.
 
 2. Add custom Python code to the custom component.
 Here's an example text analyzer for sentiment analysis.
