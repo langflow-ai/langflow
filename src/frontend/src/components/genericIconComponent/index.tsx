@@ -36,9 +36,9 @@ export const ForwardedIconComponent = memo(
         nodeIconsLucide[name] ||
         nodeIconsLucide[
           name
-            .split("-")
-            .map((x) => String(x[0]).toUpperCase() + String(x).slice(1))
-            .join("")
+            ?.split("-")
+            ?.map((x) => String(x[0]).toUpperCase() + String(x).slice(1))
+            ?.join("")
         ];
       if (!TargetIcon) {
         if (!dynamicIconImports[name]) {
