@@ -6,7 +6,7 @@ from langflow.field_typing import Text
 
 
 class SQLExecutorComponent(CustomComponent):
-    display_name = "SQL Executor"
+    display_name = "SQL Query"
     description = "Execute SQL query."
     name = "SQLExecutor"
     beta: bool = True

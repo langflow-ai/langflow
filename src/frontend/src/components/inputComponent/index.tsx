@@ -179,13 +179,15 @@ export default function InputComponent({
             )}
           >
             <ForwardedIconComponent
-              name={getIconName(
-                disabled!,
-                selectedOption!,
-                optionsIcon,
-                nodeStyle!,
-                isToolMode!,
-              )}
+              name={
+                getIconName(
+                  disabled!,
+                  selectedOption!,
+                  optionsIcon,
+                  nodeStyle!,
+                  isToolMode!,
+                ) || "ChevronsUpDown"
+              }
               className={cn(
                 disabled ? "cursor-grab text-placeholder" : "cursor-pointer",
                 "icon-size",

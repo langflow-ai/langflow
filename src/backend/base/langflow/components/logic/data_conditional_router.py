@@ -9,7 +9,6 @@ class DataConditionalRouterComponent(Component):
     display_name = "Condition"
     description = "Route Data object(s) based on a condition applied to a specified key, including boolean validation."
     icon = "split"
-    beta = True
     name = "DataConditionalRouter"
     legacy = True
 

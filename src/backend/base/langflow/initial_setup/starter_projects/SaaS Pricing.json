@@ -6,37 +6,8 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "PythonREPLTool",
-            "id": "PythonREPLTool-QaSW0",
-            "name": "api_build_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-7mKwO",
-            "inputTypes": [
-              "Tool",
-              "BaseTool",
-              "StructuredTool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-PythonREPLTool-QaSW0{œdataTypeœ:œPythonREPLToolœ,œidœ:œPythonREPLTool-QaSW0œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-Agent-7mKwO{œfieldNameœ:œtoolsœ,œidœ:œAgent-7mKwOœ,œinputTypesœ:[œToolœ,œBaseToolœ,œStructuredToolœ],œtypeœ:œotherœ}",
-        "source": "PythonREPLTool-QaSW0",
-        "sourceHandle": "{œdataTypeœ: œPythonREPLToolœ, œidœ: œPythonREPLTool-QaSW0œ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-7mKwO",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-7mKwOœ, œinputTypesœ: [œToolœ, œBaseToolœ, œStructuredToolœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
             "dataType": "CalculatorTool",
-            "id": "CalculatorTool-2c9q3",
+            "id": "CalculatorTool-DF8xQ",
             "name": "api_build_tool",
             "output_types": [
               "Tool"
@@ -44,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-7mKwO",
+            "id": "Agent-5e01q",
             "inputTypes": [
               "Tool",
               "BaseTool",
@@ -53,38 +24,11 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-CalculatorTool-2c9q3{œdataTypeœ:œCalculatorToolœ,œidœ:œCalculatorTool-2c9q3œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-Agent-7mKwO{œfieldNameœ:œtoolsœ,œidœ:œAgent-7mKwOœ,œinputTypesœ:[œToolœ,œBaseToolœ,œStructuredToolœ],œtypeœ:œotherœ}",
-        "source": "CalculatorTool-2c9q3",
-        "sourceHandle": "{œdataTypeœ: œCalculatorToolœ, œidœ: œCalculatorTool-2c9q3œ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-7mKwO",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-7mKwOœ, œinputTypesœ: [œToolœ, œBaseToolœ, œStructuredToolœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-GA9eO",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "Agent-7mKwO",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-GA9eO{œdataTypeœ:œChatInputœ,œidœ:œChatInput-GA9eOœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-7mKwO{œfieldNameœ:œinput_valueœ,œidœ:œAgent-7mKwOœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-GA9eO",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-GA9eOœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-7mKwO",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-7mKwOœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-CalculatorTool-DF8xQ{œdataTypeœ:œCalculatorToolœ,œidœ:œCalculatorTool-DF8xQœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-Agent-5e01q{œfieldNameœ:œtoolsœ,œidœ:œAgent-5e01qœ,œinputTypesœ:[œToolœ,œBaseToolœ,œStructuredToolœ],œtypeœ:œotherœ}",
+        "source": "CalculatorTool-DF8xQ",
+        "sourceHandle": "{œdataTypeœ: œCalculatorToolœ, œidœ: œCalculatorTool-DF8xQœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-5e01q",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-5e01qœ, œinputTypesœ: [œToolœ, œBaseToolœ, œStructuredToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -92,7 +36,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-7mKwO",
+            "id": "Agent-5e01q",
             "name": "response",
             "output_types": [
               "Message"
@@ -100,55 +44,87 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-iwrl6",
+            "id": "ChatOutput-s1eJK",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-7mKwO{œdataTypeœ:œAgentœ,œidœ:œAgent-7mKwOœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-iwrl6{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-iwrl6œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Agent-7mKwO",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-7mKwOœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-iwrl6",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-iwrl6œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Agent-5e01q{œdataTypeœ:œAgentœ,œidœ:œAgent-5e01qœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-s1eJK{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-s1eJKœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Agent-5e01q",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-5e01qœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-s1eJK",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-s1eJKœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-KkcsZ",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Agent-5e01q",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-KkcsZ{œdataTypeœ:œPromptœ,œidœ:œPrompt-KkcsZœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-5e01q{œfieldNameœ:œinput_valueœ,œidœ:œAgent-5e01qœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-KkcsZ",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-KkcsZœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-5e01q",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-5e01qœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-GA9eO",
+          "description": "Create a prompt template with dynamic variables.",
+          "display_name": "Prompt",
+          "id": "Prompt-KkcsZ",
           "node": {
             "base_classes": [
               "Message"
             ],
             "beta": false,
             "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Get chat inputs from the Playground.",
-            "display_name": "Chat Input",
+            "custom_fields": {
+              "template": [
+                "monthly_infrastructure_costs",
+                "customer_support_cost",
+                "continuous_development_cost",
+                "desired_profit_margin",
+                "estimated_subscribers"
+              ]
+            },
+            "description": "Create a prompt template with dynamic variables.",
+            "display_name": "Prompt",
             "documentation": "",
             "edited": false,
             "field_order": [
-              "input_value",
-              "should_store_message",
-              "sender",
-              "sender_name",
-              "session_id",
-              "files"
+              "template"
             ],
             "frozen": false,
-            "icon": "MessagesSquare",
+            "icon": "prompts",
             "legacy": false,
-            "lf_version": "1.0.19",
+            "lf_version": "1.0.19.post2",
             "metadata": {},
             "output_types": [],
             "outputs": [
               {
                 "cache": true,
-                "display_name": "Message",
-                "method": "message_response",
-                "name": "message",
+                "display_name": "Prompt Message",
+                "method": "build_prompt",
+                "name": "prompt",
                 "selected": "Message",
                 "types": [
                   "Message"
@@ -159,48 +135,6 @@
             "pinned": false,
             "template": {
               "_type": "Component",
-              "background_color": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Background Color",
-                "dynamic": false,
-                "info": "The background color of the icon.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "background_color",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "chat_icon": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Icon",
-                "dynamic": false,
-                "info": "The icon of the message.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "chat_icon",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -217,185 +151,156 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import DropdownInput, FileInput, MessageTextInput, MultilineInput, Output\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        _background_color = self.background_color\n        _text_color = self.text_color\n        _icon = self.chat_icon\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\"background_color\": _background_color, \"text_color\": _text_color, \"icon\": _icon},\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(self) -> Message:\n        prompt = Message.from_template(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
               },
-              "files": {
-                "_input_type": "FileInput",
-                "advanced": true,
-                "display_name": "Files",
-                "dynamic": false,
-                "fileTypes": [
-                  "txt",
-                  "md",
-                  "mdx",
-                  "csv",
-                  "json",
-                  "yaml",
-                  "yml",
-                  "xml",
-                  "html",
-                  "htm",
-                  "pdf",
-                  "docx",
-                  "py",
-                  "sh",
-                  "sql",
-                  "js",
-                  "ts",
-                  "tsx",
-                  "jpg",
-                  "jpeg",
-                  "png",
-                  "bmp",
-                  "image"
-                ],
-                "file_path": "",
-                "info": "Files to be sent with the message.",
-                "list": true,
-                "name": "files",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "file",
-                "value": ""
-              },
-              "input_value": {
-                "_input_type": "MultilineInput",
+              "continuous_development_cost": {
                 "advanced": false,
-                "display_name": "Text",
+                "display_name": "continuous_development_cost",
                 "dynamic": false,
-                "info": "Message to be passed as input.",
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
                 "input_types": [
-                  "Message"
+                  "Message",
+                  "Text"
                 ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
-                "name": "input_value",
+                "name": "continuous_development_cost",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
                 "type": "str",
-                "value": "Write a short python script to calculate 4+4, run it and display the result by printing it."
+                "value": "3000"
               },
-              "sender": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "display_name": "Sender Type",
+              "customer_support_cost": {
+                "advanced": false,
+                "display_name": "customer_support_cost",
                 "dynamic": false,
-                "info": "Type of sender.",
-                "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "User"
-              },
-              "sender_name": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Sender Name",
-                "dynamic": false,
-                "info": "Name of the sender.",
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
                 "input_types": [
-                  "Message"
+                  "Message",
+                  "Text"
                 ],
                 "list": false,
                 "load_from_db": false,
-                "name": "sender_name",
+                "multiline": true,
+                "name": "customer_support_cost",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
                 "type": "str",
-                "value": "User"
+                "value": "1000"
               },
-              "session_id": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Session ID",
+              "desired_profit_margin": {
+                "advanced": false,
+                "display_name": "desired_profit_margin",
                 "dynamic": false,
-                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
                 "input_types": [
-                  "Message"
+                  "Message",
+                  "Text"
                 ],
                 "list": false,
                 "load_from_db": false,
-                "name": "session_id",
+                "multiline": true,
+                "name": "desired_profit_margin",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
                 "type": "str",
-                "value": ""
+                "value": "30"
               },
-              "should_store_message": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Store Messages",
+              "estimated_subscribers": {
+                "advanced": false,
+                "display_name": "estimated_subscribers",
                 "dynamic": false,
-                "info": "Store the message in the history.",
-                "list": false,
-                "name": "should_store_message",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "text_color": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Text Color",
-                "dynamic": false,
-                "info": "The text color of the name",
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
                 "input_types": [
-                  "Message"
+                  "Message",
+                  "Text"
                 ],
                 "list": false,
                 "load_from_db": false,
-                "name": "text_color",
+                "multiline": true,
+                "name": "estimated_subscribers",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
                 "type": "str",
-                "value": ""
+                "value": "200"
+              },
+              "monthly_infrastructure_costs": {
+                "advanced": false,
+                "display_name": "monthly_infrastructure_costs",
+                "dynamic": false,
+                "field_type": "str",
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "monthly_infrastructure_costs",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": "2000"
+              },
+              "template": {
+                "_input_type": "PromptInput",
+                "advanced": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "name": "template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "prompt",
+                "value": "To calculate the monthly subscription price of the software based on the following data:\n\nMonthly infrastructure costs: ${monthly_infrastructure_costs}\nCustomer support: ${customer_support_cost}\nContinuous development: {continuous_development_cost}\nDesired profit margin: {desired_profit_margin}%\nEstimated number of subscribers: {estimated_subscribers}\n\nFollow the step to formulate the answer:\nFixed costs:\nProfit margin:\nTotal amount needed:\nPrice per subscriber:\nThe minimum subscription price per subscriber is:"
               }
-            }
+            },
+            "tool_mode": false
           },
-          "type": "ChatInput"
+          "type": "Prompt"
         },
         "dragging": false,
-        "height": 234,
-        "id": "ChatInput-GA9eO",
+        "height": 693,
+        "id": "Prompt-KkcsZ",
         "position": {
-          "x": 62.413733671682394,
-          "y": 1065.4595268030878
+          "x": 1349.861745038984,
+          "y": 347.90475109976467
         },
         "positionAbsolute": {
-          "x": 62.413733671682394,
-          "y": 1065.4595268030878
+          "x": 1349.861745038984,
+          "y": 347.90475109976467
         },
         "selected": false,
         "type": "genericNode",
@@ -403,7 +308,9 @@
       },
       {
         "data": {
-          "id": "ChatOutput-iwrl6",
+          "description": "Display a chat message in the Playground.",
+          "display_name": "Chat Output",
+          "id": "ChatOutput-s1eJK",
           "node": {
             "base_classes": [
               "Message"
@@ -421,12 +328,15 @@
               "sender",
               "sender_name",
               "session_id",
-              "data_template"
+              "data_template",
+              "background_color",
+              "chat_icon",
+              "text_color"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.0.19",
+            "lf_version": "1.0.19.post2",
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -461,6 +371,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -482,6 +393,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -521,13 +433,14 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "{text}"
               },
               "input_value": {
-                "_input_type": "MessageTextInput",
+                "_input_type": "MessageInput",
                 "advanced": false,
                 "display_name": "Text",
                 "dynamic": false,
@@ -563,6 +476,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Machine"
@@ -583,6 +497,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -604,6 +519,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -641,139 +557,27 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
               }
-            }
+            },
+            "tool_mode": false
           },
           "type": "ChatOutput"
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-iwrl6",
+        "id": "ChatOutput-s1eJK",
         "position": {
-          "x": 1503.4431369392628,
-          "y": 552.5679265365819
+          "x": 2240.3625274769397,
+          "y": 355.16302699218204
         },
         "positionAbsolute": {
-          "x": 1503.4431369392628,
-          "y": 552.5679265365819
-        },
-        "selected": true,
-        "type": "genericNode",
-        "width": 320
-      },
-      {
-        "data": {
-          "id": "CalculatorTool-2c9q3",
-          "node": {
-            "base_classes": [
-              "Data",
-              "list",
-              "Sequence",
-              "Tool"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Perform basic arithmetic operations on a given expression.",
-            "display_name": "Calculator",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "expression"
-            ],
-            "frozen": false,
-            "icon": "calculator",
-            "legacy": false,
-            "lf_version": "1.0.19",
-            "metadata": {},
-            "official": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "cache": true,
-                "display_name": "Data",
-                "method": "run_model",
-                "name": "api_run_model",
-                "required_inputs": [],
-                "selected": "Data",
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "cache": true,
-                "display_name": "Tool",
-                "method": "build_tool",
-                "name": "api_build_tool",
-                "required_inputs": [],
-                "selected": "Tool",
-                "types": [
-                  "Tool"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "import ast\nimport operator\n\nfrom langchain.tools import StructuredTool\nfrom langchain_core.tools import ToolException\nfrom loguru import logger\nfrom pydantic import BaseModel, Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import MessageTextInput\nfrom langflow.schema import Data\n\n\nclass CalculatorToolComponent(LCToolComponent):\n    display_name = \"Calculator\"\n    description = \"Perform basic arithmetic operations on a given expression.\"\n    icon = \"calculator\"\n    name = \"CalculatorTool\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"expression\",\n            display_name=\"Expression\",\n            info=\"The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').\",\n            tool_mode=True,\n        ),\n    ]\n\n    class CalculatorToolSchema(BaseModel):\n        expression: str = Field(..., description=\"The arithmetic expression to evaluate.\")\n\n    def run_model(self) -> list[Data]:\n        return self._evaluate_expression(self.expression)\n\n    def build_tool(self) -> Tool:\n        return StructuredTool.from_function(\n            name=\"calculator\",\n            description=\"Evaluate basic arithmetic expressions. Input should be a string containing the expression.\",\n            func=self._eval_expr_with_error,\n            args_schema=self.CalculatorToolSchema,\n        )\n\n    def _eval_expr(self, node):\n        # Define the allowed operators\n        operators = {\n            ast.Add: operator.add,\n            ast.Sub: operator.sub,\n            ast.Mult: operator.mul,\n            ast.Div: operator.truediv,\n            ast.Pow: operator.pow,\n        }\n        if isinstance(node, ast.Num):\n            return node.n\n        if isinstance(node, ast.BinOp):\n            return operators[type(node.op)](self._eval_expr(node.left), self._eval_expr(node.right))\n        if isinstance(node, ast.UnaryOp):\n            return operators[type(node.op)](self._eval_expr(node.operand))\n        if isinstance(node, ast.Call):\n            msg = (\n                \"Function calls like sqrt(), sin(), cos() etc. are not supported. \"\n                \"Only basic arithmetic operations (+, -, *, /, **) are allowed.\"\n            )\n            raise TypeError(msg)\n        msg = f\"Unsupported operation or expression type: {type(node).__name__}\"\n        raise TypeError(msg)\n\n    def _eval_expr_with_error(self, expression: str) -> list[Data]:\n        try:\n            return self._evaluate_expression(expression)\n        except Exception as e:\n            raise ToolException(str(e)) from e\n\n    def _evaluate_expression(self, expression: str) -> list[Data]:\n        try:\n            # Parse the expression and evaluate it\n            tree = ast.parse(expression, mode=\"eval\")\n            result = self._eval_expr(tree.body)\n\n            # Format the result to a reasonable number of decimal places\n            formatted_result = f\"{result:.6f}\".rstrip(\"0\").rstrip(\".\")\n\n            self.status = formatted_result\n            return [Data(data={\"result\": formatted_result})]\n\n        except (SyntaxError, TypeError, KeyError) as e:\n            error_message = f\"Invalid expression: {e}\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n        except ZeroDivisionError:\n            error_message = \"Error: Division by zero\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n        except Exception as e:  # noqa: BLE001\n            logger.opt(exception=True).debug(\"Error evaluating expression\")\n            error_message = f\"Error: {e}\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n"
-              },
-              "expression": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Expression",
-                "dynamic": false,
-                "info": "The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "expression",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "2+2"
-              }
-            }
-          },
-          "type": "CalculatorTool"
-        },
-        "dragging": false,
-        "height": 302,
-        "id": "CalculatorTool-2c9q3",
-        "position": {
-          "x": 57.99937502347552,
-          "y": 149.36767868834886
-        },
-        "positionAbsolute": {
-          "x": 57.99937502347552,
-          "y": 149.36767868834886
+          "x": 2240.3625274769397,
+          "y": 355.16302699218204
         },
         "selected": false,
         "type": "genericNode",
@@ -781,158 +585,45 @@
       },
       {
         "data": {
-          "description": "A tool for running Python code in a REPL environment.",
-          "display_name": "Python REPL Tool",
-          "id": "PythonREPLTool-QaSW0",
+          "id": "note-H6OpG",
           "node": {
-            "base_classes": [
-              "Data",
-              "Tool"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "A tool for running Python code in a REPL environment.",
-            "display_name": "Python REPL Tool",
+            "description": "# SaaS Pricing Calculator\n\nWelcome to the SaaS Pricing Calculator! This flow helps you determine the optimal monthly subscription price for your software service.\n\n## Instructions\n\n1. Prepare Your Data\n   - Gather information on monthly infrastructure costs\n   - Calculate customer support expenses\n   - Estimate continuous development costs\n   - Decide on your desired profit margin\n   - Determine the estimated number of subscribers\n\n2. Input Values\n   - Enter the gathered data into the respective fields in the Prompt node\n   - Double-check the accuracy of your inputs\n\n3. Run the Flow\n   - Click the \"Run\" button to start the calculation process\n   - The flow will use Chain-of-Thought prompting to guide the AI through the steps\n\n4. Review the Results\n   - Examine the output in the Chat Output node\n   - The result will show a breakdown of costs and the final subscription price\n\n5. Adjust and Refine\n   - If needed, modify your inputs to explore different pricing scenarios\n   - Re-run the flow to see how changes affect the final price\n\nRemember: Regularly update your costs and subscriber estimates to keep your pricing model accurate and competitive! 💼📊",
+            "display_name": "",
             "documentation": "",
-            "edited": false,
-            "field_order": [
-              "name",
-              "description",
-              "global_imports",
-              "code"
-            ],
-            "frozen": false,
-            "legacy": false,
-            "lf_version": "1.0.19",
-            "metadata": {},
-            "output_types": [],
-            "outputs": [
-              {
-                "cache": true,
-                "display_name": "Data",
-                "method": "run_model",
-                "name": "api_run_model",
-                "required_inputs": [],
-                "selected": "Data",
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "cache": true,
-                "display_name": "Tool",
-                "method": "build_tool",
-                "name": "api_build_tool",
-                "required_inputs": [],
-                "selected": "Tool",
-                "types": [
-                  "Tool"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "import importlib\n\nfrom langchain.tools import StructuredTool\nfrom langchain_core.tools import ToolException\nfrom langchain_experimental.utilities import PythonREPL\nfrom loguru import logger\nfrom pydantic import BaseModel, Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import StrInput\nfrom langflow.schema import Data\n\n\nclass PythonREPLToolComponent(LCToolComponent):\n    display_name = \"Python REPL Tool\"\n    description = \"A tool for running Python code in a REPL environment.\"\n    name = \"PythonREPLTool\"\n\n    inputs = [\n        StrInput(\n            name=\"name\",\n            display_name=\"Tool Name\",\n            info=\"The name of the tool.\",\n            value=\"python_repl\",\n        ),\n        StrInput(\n            name=\"description\",\n            display_name=\"Tool Description\",\n            info=\"A description of the tool.\",\n            value=\"A Python shell. Use this to execute python commands. \"\n            \"Input should be a valid python command. \"\n            \"If you want to see the output of a value, you should print it out with `print(...)`.\",\n        ),\n        StrInput(\n            name=\"global_imports\",\n            display_name=\"Global Imports\",\n            info=\"A comma-separated list of modules to import globally, e.g. 'math,numpy'.\",\n            value=\"math\",\n        ),\n        StrInput(\n            name=\"code\",\n            display_name=\"Python Code\",\n            info=\"The Python code to execute.\",\n            value=\"print('Hello, World!')\",\n        ),\n    ]\n\n    class PythonREPLSchema(BaseModel):\n        code: str = Field(..., description=\"The Python code to execute.\")\n\n    def get_globals(self, global_imports: str | list[str]) -> dict:\n        global_dict = {}\n        if isinstance(global_imports, str):\n            modules = [module.strip() for module in global_imports.split(\",\")]\n        elif isinstance(global_imports, list):\n            modules = global_imports\n        else:\n            msg = \"global_imports must be either a string or a list\"\n            raise TypeError(msg)\n\n        for module in modules:\n            try:\n                imported_module = importlib.import_module(module)\n                global_dict[imported_module.__name__] = imported_module\n            except ImportError as e:\n                msg = f\"Could not import module {module}\"\n                raise ImportError(msg) from e\n        return global_dict\n\n    def build_tool(self) -> Tool:\n        _globals = self.get_globals(self.global_imports)\n        python_repl = PythonREPL(_globals=_globals)\n\n        def run_python_code(code: str) -> str:\n            try:\n                return python_repl.run(code)\n            except Exception as e:\n                logger.opt(exception=True).debug(\"Error running Python code\")\n                raise ToolException(str(e)) from e\n\n        tool = StructuredTool.from_function(\n            name=self.name,\n            description=self.description,\n            func=run_python_code,\n            args_schema=self.PythonREPLSchema,\n        )\n\n        self.status = f\"Python REPL Tool created with global imports: {self.global_imports}\"\n        return tool\n\n    def run_model(self) -> list[Data]:\n        tool = self.build_tool()\n        result = tool.run(self.code)\n        return [Data(data={\"result\": result})]\n"
-              },
-              "description": {
-                "_input_type": "StrInput",
-                "advanced": false,
-                "display_name": "Tool Description",
-                "dynamic": false,
-                "info": "A description of the tool.",
-                "list": false,
-                "load_from_db": false,
-                "name": "description",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "A Python shell. Use this to execute python commands. Input should be a valid python command. If you want to see the output of a value, you should print it out with `print(...)`."
-              },
-              "global_imports": {
-                "_input_type": "StrInput",
-                "advanced": false,
-                "display_name": "Global Imports",
-                "dynamic": false,
-                "info": "A comma-separated list of modules to import globally, e.g. 'math,numpy'.",
-                "list": false,
-                "load_from_db": false,
-                "name": "global_imports",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "math"
-              },
-              "name": {
-                "_input_type": "StrInput",
-                "advanced": false,
-                "display_name": "Tool Name",
-                "dynamic": false,
-                "info": "The name of the tool.",
-                "list": false,
-                "load_from_db": false,
-                "name": "name",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "python_repl"
-              }
-            }
+            "template": {}
           },
-          "type": "PythonREPLTool"
+          "type": "note"
         },
         "dragging": false,
-        "height": 475,
-        "id": "PythonREPLTool-QaSW0",
+        "height": 800,
+        "id": "note-H6OpG",
         "position": {
-          "x": 63.43047038993518,
-          "y": 536.9058769625287
+          "x": 689.7659055360411,
+          "y": 68.95847391680593
         },
         "positionAbsolute": {
-          "x": 63.43047038993518,
-          "y": 536.9058769625287
+          "x": 689.7659055360411,
+          "y": 68.95847391680593
         },
+        "resizing": false,
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "style": {
+          "height": 800,
+          "width": 600
+        },
+        "type": "noteNode",
+        "width": 600
       },
       {
         "data": {
-          "id": "Agent-7mKwO",
+          "description": "Define the agent's instructions, then enter a task to complete using tools.",
+          "display_name": "Agent",
+          "id": "Agent-5e01q",
           "node": {
             "base_classes": [
               "Message"
             ],
             "beta": false,
-            "category": "agents",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Define the agent's instructions, then enter a task to complete using tools.",
@@ -957,19 +648,20 @@
               "handle_parsing_errors",
               "verbose",
               "max_iterations",
+              "agent_description",
               "memory",
               "sender",
               "sender_name",
               "n_messages",
               "session_id",
               "order",
-              "template"
+              "template",
+              "add_current_date_tool"
             ],
             "frozen": false,
             "icon": "bot",
-            "key": "Agent",
             "legacy": false,
-            "lf_version": "1.0.19",
+            "lf_version": "1.0.19.post2",
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -1025,7 +717,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "A helpful assistant with access to tools."
+                "value": "A helpful assistant with access to the following tools:"
               },
               "agent_llm": {
                 "_input_type": "DropdownInput",
@@ -1037,6 +729,7 @@
                 "input_types": [],
                 "name": "agent_llm",
                 "options": [
+                  "Amazon Bedrock",
                   "Anthropic",
                   "Azure OpenAI",
                   "Groq",
@@ -1046,10 +739,10 @@
                 ],
                 "placeholder": "",
                 "real_time_refresh": true,
-                "refresh_button": false,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "OpenAI"
@@ -1071,7 +764,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -1089,7 +782,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain_core.tools import StructuredTool\n\nfrom langflow.base.agents.agent import LCToolsAgentComponent\nfrom langflow.base.models.model_input_constants import ALL_PROVIDER_FIELDS, MODEL_PROVIDERS_DICT\nfrom langflow.components.helpers import CurrentDateComponent\nfrom langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent\nfrom langflow.components.memories.memory import MemoryComponent\nfrom langflow.io import BoolInput, DropdownInput, MultilineInput, Output\nfrom langflow.schema.dotdict import dotdict\nfrom langflow.schema.message import Message\n\n\ndef set_advanced_true(component_input):\n    component_input.advanced = True\n    return component_input\n\n\nclass AgentComponent(ToolCallingAgentComponent):\n    display_name: str = \"Agent\"\n    description: str = \"Define the agent's instructions, then enter a task to complete using tools.\"\n    icon = \"bot\"\n    beta = False\n    name = \"Agent\"\n\n    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]\n\n    inputs = [\n        DropdownInput(\n            name=\"agent_llm\",\n            display_name=\"Model Provider\",\n            info=\"The provider of the language model that the agent will use to generate responses.\",\n            options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n            value=\"OpenAI\",\n            real_time_refresh=True,\n            input_types=[],\n        ),\n        *MODEL_PROVIDERS_DICT[\"OpenAI\"][\"inputs\"],\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Agent Instructions\",\n            info=\"System Prompt: Initial instructions and context provided to guide the agent's behavior.\",\n            value=\"You are a helpful assistant that can use tools to answer questions and perform tasks.\",\n            advanced=False,\n        ),\n        *LCToolsAgentComponent._base_inputs,\n        *memory_inputs,\n        BoolInput(\n            name=\"add_current_date_tool\",\n            display_name=\"Add tool Current Date\",\n            advanced=True,\n            info=\"If true, will add a tool to the agent that returns the current date.\",\n            value=True,\n        ),\n    ]\n    outputs = [Output(name=\"response\", display_name=\"Response\", method=\"message_response\")]\n\n    async def message_response(self) -> Message:\n        llm_model = self.get_llm()\n        if llm_model is None:\n            msg = \"No language model selected\"\n            raise ValueError(msg)\n        self.chat_history = self.get_memory_data()\n\n        if self.add_current_date_tool:\n            if not isinstance(self.tools, list):  # type: ignore[has-type]\n                self.tools = []\n            # Convert CurrentDateComponent to a StructuredTool\n            current_date_tool = CurrentDateComponent().to_toolkit()[0]\n            if isinstance(current_date_tool, StructuredTool):\n                self.tools.append(current_date_tool)\n            else:\n                msg = \"CurrentDateComponent must be converted to a StructuredTool\"\n                raise ValueError(msg)\n\n        if not self.tools:\n            msg = \"Tools are required to run the agent.\"\n            raise ValueError(msg)\n        self.set(\n            llm=llm_model,\n            tools=self.tools,\n            chat_history=self.chat_history,\n            input_value=self.input_value,\n            system_prompt=self.system_prompt,\n        )\n        agent = self.create_agent_runnable()\n        return await self.run_agent(agent)\n\n    def get_memory_data(self):\n        memory_kwargs = {\n            component_input.name: getattr(self, f\"{component_input.name}\") for component_input in self.memory_inputs\n        }\n\n        return MemoryComponent().set(**memory_kwargs).retrieve_messages()\n\n    def get_llm(self):\n        if isinstance(self.agent_llm, str):\n            try:\n                provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n                if provider_info:\n                    component_class = provider_info.get(\"component_class\")\n                    inputs = provider_info.get(\"inputs\")\n                    prefix = provider_info.get(\"prefix\", \"\")\n                    return self._build_llm_model(component_class, inputs, prefix)\n            except Exception as e:\n                msg = f\"Error building {self.agent_llm} language model\"\n                raise ValueError(msg) from e\n        return self.agent_llm\n\n    def _build_llm_model(self, component, inputs, prefix=\"\"):\n        model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n        return component.set(**model_kwargs).build_model()\n\n    def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:\n        \"\"\"Delete specified fields from build_config.\"\"\"\n        for field in fields:\n            build_config.pop(field, None)\n\n    def update_input_types(self, build_config: dotdict) -> dotdict:\n        \"\"\"Update input types for all fields in build_config.\"\"\"\n        for key, value in build_config.items():\n            if isinstance(value, dict):\n                if value.get(\"input_types\") is None:\n                    build_config[key][\"input_types\"] = []\n            elif hasattr(value, \"input_types\") and value.input_types is None:\n                value.input_types = []\n        return build_config\n\n    def update_build_config(self, build_config: dotdict, field_value: str, field_name: str | None = None) -> dotdict:\n        if field_name == \"agent_llm\":\n            # Define provider configurations as (fields_to_add, fields_to_delete)\n            provider_configs: dict[str, tuple[dict, list[dict]]] = {\n                provider: (\n                    MODEL_PROVIDERS_DICT[provider][\"fields\"],\n                    [\n                        MODEL_PROVIDERS_DICT[other_provider][\"fields\"]\n                        for other_provider in MODEL_PROVIDERS_DICT\n                        if other_provider != provider\n                    ],\n                )\n                for provider in MODEL_PROVIDERS_DICT\n            }\n\n            if field_value in provider_configs:\n                fields_to_add, fields_to_delete = provider_configs[field_value]\n\n                # Delete fields from other providers\n                for fields in fields_to_delete:\n                    self.delete_fields(build_config, fields)\n\n                # Add provider-specific fields\n                if field_value == \"OpenAI\" and not any(field in build_config for field in fields_to_add):\n                    build_config.update(fields_to_add)\n                else:\n                    build_config.update(fields_to_add)\n                # Reset input types for agent_llm\n                build_config[\"agent_llm\"][\"input_types\"] = []\n            elif field_value == \"Custom\":\n                # Delete all provider fields\n                self.delete_fields(build_config, ALL_PROVIDER_FIELDS)\n                # Update with custom component\n                custom_component = DropdownInput(\n                    name=\"agent_llm\",\n                    display_name=\"Language Model\",\n                    options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n                    value=\"Custom\",\n                    real_time_refresh=True,\n                    input_types=[\"LanguageModel\"],\n                )\n                build_config.update({\"agent_llm\": custom_component.to_dict()})\n\n            # Update input types for all fields\n            build_config = self.update_input_types(build_config)\n\n            # Validate required keys\n            default_keys = [\n                \"code\",\n                \"_type\",\n                \"agent_llm\",\n                \"tools\",\n                \"input_value\",\n                \"add_current_date_tool\",\n                \"system_prompt\",\n                \"agent_description\",\n                \"max_iterations\",\n                \"handle_parsing_errors\",\n                \"verbose\",\n            ]\n            missing_keys = [key for key in default_keys if key not in build_config]\n            if missing_keys:\n                msg = f\"Missing required keys in build_config: {missing_keys}\"\n                raise ValueError(msg)\n\n        return build_config\n"
+                "value": "from langchain_core.tools import StructuredTool\n\nfrom langflow.base.agents.agent import LCToolsAgentComponent\nfrom langflow.base.models.model_input_constants import ALL_PROVIDER_FIELDS, MODEL_PROVIDERS_DICT\nfrom langflow.base.models.model_utils import get_model_name\nfrom langflow.components.helpers import CurrentDateComponent\nfrom langflow.components.helpers.memory import MemoryComponent\nfrom langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent\nfrom langflow.io import BoolInput, DropdownInput, MultilineInput, Output\nfrom langflow.schema.dotdict import dotdict\nfrom langflow.schema.message import Message\n\n\ndef set_advanced_true(component_input):\n    component_input.advanced = True\n    return component_input\n\n\nclass AgentComponent(ToolCallingAgentComponent):\n    display_name: str = \"Agent\"\n    description: str = \"Define the agent's instructions, then enter a task to complete using tools.\"\n    icon = \"bot\"\n    beta = False\n    name = \"Agent\"\n\n    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]\n\n    inputs = [\n        DropdownInput(\n            name=\"agent_llm\",\n            display_name=\"Model Provider\",\n            info=\"The provider of the language model that the agent will use to generate responses.\",\n            options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n            value=\"OpenAI\",\n            real_time_refresh=True,\n            input_types=[],\n        ),\n        *MODEL_PROVIDERS_DICT[\"OpenAI\"][\"inputs\"],\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Agent Instructions\",\n            info=\"System Prompt: Initial instructions and context provided to guide the agent's behavior.\",\n            value=\"You are a helpful assistant that can use tools to answer questions and perform tasks.\",\n            advanced=False,\n        ),\n        *LCToolsAgentComponent._base_inputs,\n        *memory_inputs,\n        BoolInput(\n            name=\"add_current_date_tool\",\n            display_name=\"Add tool Current Date\",\n            advanced=True,\n            info=\"If true, will add a tool to the agent that returns the current date.\",\n            value=True,\n        ),\n    ]\n    outputs = [Output(name=\"response\", display_name=\"Response\", method=\"message_response\")]\n\n    async def message_response(self) -> Message:\n        llm_model, display_name = self.get_llm()\n        self.model_name = get_model_name(llm_model, display_name=display_name)\n        if llm_model is None:\n            msg = \"No language model selected\"\n            raise ValueError(msg)\n        self.chat_history = self.get_memory_data()\n\n        if self.add_current_date_tool:\n            if not isinstance(self.tools, list):  # type: ignore[has-type]\n                self.tools = []\n            # Convert CurrentDateComponent to a StructuredTool\n            current_date_tool = CurrentDateComponent().to_toolkit()[0]\n            if isinstance(current_date_tool, StructuredTool):\n                self.tools.append(current_date_tool)\n            else:\n                msg = \"CurrentDateComponent must be converted to a StructuredTool\"\n                raise ValueError(msg)\n\n        if not self.tools:\n            msg = \"Tools are required to run the agent.\"\n            raise ValueError(msg)\n        self.set(\n            llm=llm_model,\n            tools=self.tools,\n            chat_history=self.chat_history,\n            input_value=self.input_value,\n            system_prompt=self.system_prompt,\n        )\n        agent = self.create_agent_runnable()\n        return await self.run_agent(agent)\n\n    def get_memory_data(self):\n        memory_kwargs = {\n            component_input.name: getattr(self, f\"{component_input.name}\") for component_input in self.memory_inputs\n        }\n\n        return MemoryComponent().set(**memory_kwargs).retrieve_messages()\n\n    def get_llm(self):\n        if isinstance(self.agent_llm, str):\n            try:\n                provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n                if provider_info:\n                    component_class = provider_info.get(\"component_class\")\n                    display_name = component_class.display_name\n                    inputs = provider_info.get(\"inputs\")\n                    prefix = provider_info.get(\"prefix\", \"\")\n                    return self._build_llm_model(component_class, inputs, prefix), display_name\n            except Exception as e:\n                msg = f\"Error building {self.agent_llm} language model\"\n                raise ValueError(msg) from e\n        return self.agent_llm, None\n\n    def _build_llm_model(self, component, inputs, prefix=\"\"):\n        model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n        return component.set(**model_kwargs).build_model()\n\n    def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:\n        \"\"\"Delete specified fields from build_config.\"\"\"\n        for field in fields:\n            build_config.pop(field, None)\n\n    def update_input_types(self, build_config: dotdict) -> dotdict:\n        \"\"\"Update input types for all fields in build_config.\"\"\"\n        for key, value in build_config.items():\n            if isinstance(value, dict):\n                if value.get(\"input_types\") is None:\n                    build_config[key][\"input_types\"] = []\n            elif hasattr(value, \"input_types\") and value.input_types is None:\n                value.input_types = []\n        return build_config\n\n    def update_build_config(self, build_config: dotdict, field_value: str, field_name: str | None = None) -> dotdict:\n        if field_name == \"agent_llm\":\n            # Define provider configurations as (fields_to_add, fields_to_delete)\n            provider_configs: dict[str, tuple[dict, list[dict]]] = {\n                provider: (\n                    MODEL_PROVIDERS_DICT[provider][\"fields\"],\n                    [\n                        MODEL_PROVIDERS_DICT[other_provider][\"fields\"]\n                        for other_provider in MODEL_PROVIDERS_DICT\n                        if other_provider != provider\n                    ],\n                )\n                for provider in MODEL_PROVIDERS_DICT\n            }\n\n            if field_value in provider_configs:\n                fields_to_add, fields_to_delete = provider_configs[field_value]\n\n                # Delete fields from other providers\n                for fields in fields_to_delete:\n                    self.delete_fields(build_config, fields)\n\n                # Add provider-specific fields\n                if field_value == \"OpenAI\" and not any(field in build_config for field in fields_to_add):\n                    build_config.update(fields_to_add)\n                else:\n                    build_config.update(fields_to_add)\n                # Reset input types for agent_llm\n                build_config[\"agent_llm\"][\"input_types\"] = []\n            elif field_value == \"Custom\":\n                # Delete all provider fields\n                self.delete_fields(build_config, ALL_PROVIDER_FIELDS)\n                # Update with custom component\n                custom_component = DropdownInput(\n                    name=\"agent_llm\",\n                    display_name=\"Language Model\",\n                    options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n                    value=\"Custom\",\n                    real_time_refresh=True,\n                    input_types=[\"LanguageModel\"],\n                )\n                build_config.update({\"agent_llm\": custom_component.to_dict()})\n\n            # Update input types for all fields\n            build_config = self.update_input_types(build_config)\n\n            # Validate required keys\n            default_keys = [\n                \"code\",\n                \"_type\",\n                \"agent_llm\",\n                \"tools\",\n                \"input_value\",\n                \"add_current_date_tool\",\n                \"system_prompt\",\n                \"agent_description\",\n                \"max_iterations\",\n                \"handle_parsing_errors\",\n                \"verbose\",\n            ]\n            missing_keys = [key for key in default_keys if key not in build_config]\n            if missing_keys:\n                msg = f\"Missing required keys in build_config: {missing_keys}\"\n                raise ValueError(msg)\n\n        return build_config\n"
               },
               "handle_parsing_errors": {
                 "_input_type": "BoolInput",
@@ -1123,6 +816,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": true,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1238,6 +932,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "gpt-4o-mini"
@@ -1291,6 +986,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Ascending"
@@ -1363,6 +1059,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Machine and User"
@@ -1383,6 +1080,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1404,6 +1102,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1426,10 +1125,11 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "You are a helpful assistant that can use tools to answer questions and perform tasks."
+                "value": "# Subscription Pricing Calculator\n\n## Purpose\nCalculate the optimal monthly subscription price for a software product based on operational costs, desired profit margin, and estimated subscriber base.\n\n## Input Variables\nThe system requires the following inputs:\n- Monthly infrastructure costs (numeric)\n- Customer support costs (numeric)\n- Continuous development costs (numeric)\n- Desired profit margin (percentage)\n- Estimated number of subscribers (numeric)\n\n## Calculation Process\nFollow these steps to determine the subscription price:\n\n### Step 1: Total Monthly Costs\nCalculate the sum of all fixed operational costs:\n```\ntotal_monthly_costs = infrastructure_costs + support_costs + development_costs\n```\n\n### Step 2: Profit Margin Calculation\nCalculate the profit margin amount based on total costs:\n```\nprofit_amount = total_monthly_costs × (profit_margin_percentage / 100)\n```\n\n### Step 3: Total Revenue Required\nCalculate the total monthly revenue needed:\n```\ntotal_revenue_needed = total_monthly_costs + profit_amount\n```\n\n### Step 4: Per-Subscriber Price\nCalculate the minimum price per subscriber:\n```\nsubscription_price = total_revenue_needed ÷ estimated_subscribers\n```\n\n## Output Format\nPresent the results in the following structure:\n\nFixed costs: [sum of all costs]\nProfit margin: [calculated profit amount]\nTotal amount needed: [total revenue required]\nPrice per subscriber: [calculated subscription price]\n\nFinal recommendation: \"The minimum subscription price per subscriber should be [price] to achieve the desired profit margin of [percentage]%\"\n\n## Notes\n- All monetary values should be rounded to 2 decimal places\n- Ensure all input values are positive numbers\n- Validate that the estimated subscribers count is greater than zero\n- The profit margin percentage should be between 0 and 100"
               },
               "temperature": {
                 "_input_type": "FloatInput",
@@ -1464,6 +1164,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1483,7 +1184,7 @@
                 "list": true,
                 "name": "tools",
                 "placeholder": "",
-                "required": true,
+                "required": false,
                 "show": true,
                 "title_case": false,
                 "trace_as_metadata": true,
@@ -1506,20 +1207,134 @@
                 "type": "bool",
                 "value": true
               }
-            }
+            },
+            "tool_mode": false
           },
           "type": "Agent"
         },
         "dragging": false,
-        "height": 680,
-        "id": "Agent-7mKwO",
+        "height": 650,
+        "id": "Agent-5e01q",
         "position": {
-          "x": 966.8637275749741,
-          "y": 198.5272428958864
+          "x": 1819.2633856623966,
+          "y": 138.32023808479687
         },
         "positionAbsolute": {
-          "x": 966.8637275749741,
-          "y": 198.5272428958864
+          "x": 1819.2633856623966,
+          "y": 138.32023808479687
+        },
+        "selected": false,
+        "type": "genericNode",
+        "width": 320
+      },
+      {
+        "data": {
+          "id": "CalculatorTool-DF8xQ",
+          "node": {
+            "base_classes": [
+              "Data",
+              "Tool"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Perform basic arithmetic operations on a given expression.",
+            "display_name": "Calculator",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "expression"
+            ],
+            "frozen": false,
+            "icon": "calculator",
+            "legacy": false,
+            "lf_version": "1.0.19.post2",
+            "metadata": {},
+            "output_types": [],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Data",
+                "method": "run_model",
+                "name": "api_run_model",
+                "required_inputs": [],
+                "selected": "Data",
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "cache": true,
+                "display_name": "Tool",
+                "method": "build_tool",
+                "name": "api_build_tool",
+                "required_inputs": [],
+                "selected": "Tool",
+                "types": [
+                  "Tool"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "import ast\nimport operator\n\nfrom langchain.tools import StructuredTool\nfrom langchain_core.tools import ToolException\nfrom loguru import logger\nfrom pydantic import BaseModel, Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import MessageTextInput\nfrom langflow.schema import Data\n\n\nclass CalculatorToolComponent(LCToolComponent):\n    display_name = \"Calculator\"\n    description = \"Perform basic arithmetic operations on a given expression.\"\n    icon = \"calculator\"\n    name = \"CalculatorTool\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"expression\",\n            display_name=\"Expression\",\n            info=\"The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').\",\n            tool_mode=True,\n        ),\n    ]\n\n    class CalculatorToolSchema(BaseModel):\n        expression: str = Field(..., description=\"The arithmetic expression to evaluate.\")\n\n    def run_model(self) -> list[Data]:\n        return self._evaluate_expression(self.expression)\n\n    def build_tool(self) -> Tool:\n        return StructuredTool.from_function(\n            name=\"calculator\",\n            description=\"Evaluate basic arithmetic expressions. Input should be a string containing the expression.\",\n            func=self._eval_expr_with_error,\n            args_schema=self.CalculatorToolSchema,\n        )\n\n    def _eval_expr(self, node):\n        # Define the allowed operators\n        operators = {\n            ast.Add: operator.add,\n            ast.Sub: operator.sub,\n            ast.Mult: operator.mul,\n            ast.Div: operator.truediv,\n            ast.Pow: operator.pow,\n        }\n        if isinstance(node, ast.Num):\n            return node.n\n        if isinstance(node, ast.BinOp):\n            return operators[type(node.op)](self._eval_expr(node.left), self._eval_expr(node.right))\n        if isinstance(node, ast.UnaryOp):\n            return operators[type(node.op)](self._eval_expr(node.operand))\n        if isinstance(node, ast.Call):\n            msg = (\n                \"Function calls like sqrt(), sin(), cos() etc. are not supported. \"\n                \"Only basic arithmetic operations (+, -, *, /, **) are allowed.\"\n            )\n            raise TypeError(msg)\n        msg = f\"Unsupported operation or expression type: {type(node).__name__}\"\n        raise TypeError(msg)\n\n    def _eval_expr_with_error(self, expression: str) -> list[Data]:\n        try:\n            return self._evaluate_expression(expression)\n        except Exception as e:\n            raise ToolException(str(e)) from e\n\n    def _evaluate_expression(self, expression: str) -> list[Data]:\n        try:\n            # Parse the expression and evaluate it\n            tree = ast.parse(expression, mode=\"eval\")\n            result = self._eval_expr(tree.body)\n\n            # Format the result to a reasonable number of decimal places\n            formatted_result = f\"{result:.6f}\".rstrip(\"0\").rstrip(\".\")\n\n            self.status = formatted_result\n            return [Data(data={\"result\": formatted_result})]\n\n        except (SyntaxError, TypeError, KeyError) as e:\n            error_message = f\"Invalid expression: {e}\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n        except ZeroDivisionError:\n            error_message = \"Error: Division by zero\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n        except Exception as e:  # noqa: BLE001\n            logger.opt(exception=True).debug(\"Error evaluating expression\")\n            error_message = f\"Error: {e}\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n"
+              },
+              "expression": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Expression",
+                "dynamic": false,
+                "info": "The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "expression",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "CalculatorTool"
+        },
+        "dragging": false,
+        "height": 167,
+        "id": "CalculatorTool-DF8xQ",
+        "position": {
+          "x": 1347.154214046272,
+          "y": 28.770424745017564
+        },
+        "positionAbsolute": {
+          "x": 1347.154214046272,
+          "y": 28.770424745017564
         },
         "selected": false,
         "type": "genericNode",
@@ -1527,21 +1342,20 @@
       }
     ],
     "viewport": {
-      "x": 147.77504195332347,
-      "y": 14.254381863292224,
-      "zoom": 0.5119423065126806
+      "x": -251.17743782763955,
+      "y": 134.52045967838717,
+      "zoom": 0.6368650431844803
     }
   },
-  "description": "Single Agent Flow to get you started. This flow contains a calculator and a Python REPL tool, that could be used by our tool calling agent.",
+  "description": "Calculate SaaS subscription price based on costs, profit margin, and subscribers using step-by-step method and Chain-of-Thought prompting. ",
   "endpoint_name": null,
-  "icon": "Users",
-  "id": "ad7caf8a-3357-4a2c-81d5-90c0ffb4ad3f",
+  "icon": "calculator",
+  "id": "9357f72e-2121-4541-8e7d-74b7ba2ada2b",
   "is_component": false,
-  "last_tested_version": "1.0.19",
-  "name": "Simple Agent",
+  "last_tested_version": "1.0.19.post2",
+  "name": "SaaS Pricing",
   "tags": [
     "agents",
-    "openai",
-    "chatbots"
+    "assistants"
   ]
 }
