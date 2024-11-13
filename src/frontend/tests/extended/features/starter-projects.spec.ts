@@ -107,7 +107,12 @@ async function waitForTemplateVisibility(page: Page, templateIds: string[]) {
 
 // Your test code
 const templateIds = [
+  "template_instagram-copywriter",
+  "template_saas-pricing",
   "template_travel-planning-agents",
-  "template_dynamic-agent",
+  "template_research-agent",
   "template_simple-agent",
+  "template_youtube-transcript-q&a",
+  "template_sequential-tasks-agents",
+  "template_market-research",
 ];

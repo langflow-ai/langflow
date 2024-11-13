@@ -50,10 +50,12 @@ test("dropDownComponent", async ({ page }) => {
 
   await page.getByTestId("dropdown_str_model_id").click();
 
-  await page.getByText("anthropic.claude-v2", { exact: true }).first().click();
+  await page
+    .getByTestId(/anthropic\.claude-3-haiku-20240307-v1:0.*option/)
+    .click();
 
   let value = await page
-    .getByTestId("dropdown_str_model_id")
+    .getByTestId(/anthropic\.claude-3-haiku-20240307-v1:0.*option/)
     .first()
     .innerText();
   if (value !== "anthropic.claude-v2") {
@@ -126,7 +128,7 @@ test("dropDownComponent", async ({ page }) => {
   value = await page
     .getByTestId("value-dropdown-dropdown_str_edit_model_id")
     .innerText();
-  if (value !== "cohere.embed-multilingual-v3") {
+  if (value !== "cohere.command-r-plus-v1:0") {
     expect(false).toBeTruthy();
   }
 
@@ -135,7 +137,7 @@ test("dropDownComponent", async ({ page }) => {
   value = await page
     .getByTestId("value-dropdown-dropdown_str_model_id")
     .innerText();
-  if (value !== "cohere.embed-multilingual-v3") {
+  if (value !== "cohere.command-r-plus-v1:0") {
     expect(false).toBeTruthy();
   }
   await page.getByTestId("code-button-modal").click();
