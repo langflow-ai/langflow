@@ -58,6 +58,7 @@ class TracingService(Service):
         self.running = False
         self.worker_task: asyncio.Task | None = None
         self.end_trace_tasks: set[asyncio.Task] = set()
+        self.deactivated = self.settings_service.settings.deactivate_tracing
 
     async def log_worker(self) -> None:
         while self.running or not self.logs_queue.empty():
@@ -70,7 +71,7 @@ class TracingService(Service):
                 self.logs_queue.task_done()
 
     async def start(self) -> None:
-        if self.running:
+        if self.running or self.deactivated:
             return
         try:
             self.running = True
@@ -208,6 +209,9 @@ class TracingService(Service):
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
     ):
+        if self.deactivated:
+            yield self
+            return
         trace_id = trace_name
         if component._vertex:
             trace_id = component._vertex.id
@@ -251,6 +255,8 @@ class TracingService(Service):
         return inputs
 
     def get_langchain_callbacks(self) -> list[BaseCallbackHandler]:
+        if self.deactivated:
+            return []
         callbacks = []
         for tracer in self._tracers.values():
             if not tracer.ready:  # type: ignore[truthy-function]

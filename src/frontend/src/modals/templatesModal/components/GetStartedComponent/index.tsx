@@ -19,8 +19,8 @@ export default function GetStartedComponent() {
       bgImage: memoryChatbot,
       bgHorizontalImage: memoryChatbotHorizontal,
       icon: "MessagesSquare",
-      category: "Prompting",
-      flow: examples.find((example) => example.name === "Memory Chatbot"),
+      category: "prompting",
+      flow: examples.find((example) => example.name === "Basic Prompting"),
     },
     {
       bgImage: vectorRag,
@@ -34,13 +34,13 @@ export default function GetStartedComponent() {
       bgHorizontalImage: multiAgentHorizontal,
       icon: "Bot",
       category: "Agents",
-      flow: examples.find((example) => example.name === "Dynamic Agent"),
+      flow: examples.find((example) => example.name === "Simple Agent"),
     },
   ];
 
   return (
     <div className="flex flex-1 flex-col gap-4 md:gap-8">
-      <BaseModal.Header description="Start with templates showcasing Langflow's Chatbot, RAG, and Agent use cases.">
+      <BaseModal.Header description="Start with templates showcasing Langflow's Prompting, RAG, and Agent use cases.">
         Get started
       </BaseModal.Header>
       <div className="grid flex-1 grid-cols-1 gap-4 lg:grid-cols-3">
