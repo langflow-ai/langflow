@@ -60,10 +60,6 @@ test("Vector Store RAG", async ({ page }) => {
   if (process?.env?.ASTRA_DB_API_ENDPOINT?.includes("astra-dev")) {
     const getUA = await page.evaluate(() => navigator.userAgent);
     const userAgentInfo = uaParser(getUA);
-    let control = "Control";
-    if (userAgentInfo.os.name.includes("Mac")) {
-      control = "Meta";
-    }
     await page.getByTestId("title-Astra DB").first().click();
     await page.waitForTimeout(500);
     await page.getByTestId("code-button-modal").click();

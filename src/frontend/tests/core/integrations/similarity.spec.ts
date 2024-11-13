@@ -30,7 +30,6 @@ test("user must be able to check similarity between embedding texts", async ({
   await page.getByTestId("blank-flow").click();
 
   //first component
-
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("openai embedding");
   await page.waitForTimeout(500);
