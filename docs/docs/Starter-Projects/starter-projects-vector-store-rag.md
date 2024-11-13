@@ -32,7 +32,7 @@ We've chosen [Astra DB](https://astra.datastax.com/signup?utm_source=langflow-p
 
 ## Create the vector store RAG project {#e3ed64193e5e448f81279e1d54ba43cf}
 
-1. From the Langflow dashboard, click **New Project**.
+1. From the Langflow dashboard, click **New Flow**.
 2. Select **Vector Store RAG**.
 3. The **Vector Store RAG** project is created.
 

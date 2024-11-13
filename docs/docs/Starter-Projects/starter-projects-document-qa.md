@@ -20,7 +20,7 @@ Build a question-and-answer chatbot with a document loaded from local memory.
 
 ## Create the Document QA project {#204500104f024553aab2b633bb99f603}
 
-1. From the Langflow dashboard, click **New Project**.
+1. From the Langflow dashboard, click **New Flow**.
 2. Select **Document QA**.
 3. The **Document QA** project is created.
 

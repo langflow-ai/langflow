@@ -22,7 +22,7 @@ OpenAI uses this loaded data to generate a blog post, as instructed by the **Tex
 
 ## Create the blog writer project {#0c1a9c65b7d640f693ec3aad963416ff}
 
-1. From the Langflow dashboard, click **New Project**.
+1. From the Langflow dashboard, click **New Flow**.
 2. Select **Blog Writer**.
 3. The **Blog Writer** flow is created.
 

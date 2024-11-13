@@ -25,7 +25,7 @@ This flow extends the [Basic Prompting](http://localhost:3000/starter-projects/
 
 ## Create the memory chatbot project {#70ce99381b7043a1b417a81e9ae74c72}
 
-1. From the Langflow dashboard, click **New Project**.
+1. From the Langflow dashboard, click **New Flow**.
 2. Select **Memory Chatbot**.
 3. The **Memory Chatbot** flow is created.
 

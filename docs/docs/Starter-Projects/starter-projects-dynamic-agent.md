@@ -20,7 +20,7 @@ To use this flow, you need an [OpenAI API key](https://platform.openai.com/) and
 
 ## Open Langflow and start a new project
 
-Click **New Project**, and then select the **Dynamic Agent** project.
+Click **New Flow**, and then select the **Dynamic Agent** project.
 
 This opens a starter project with the necessary components to run an agentic application using CrewAI.
 
