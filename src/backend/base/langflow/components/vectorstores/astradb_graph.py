@@ -50,14 +50,8 @@ class AstraGraphVectorStoreComponent(LCVectorStoreComponent):
             required=True,
         ),
         StrInput(
-            name="link_to_metadata_key",
-            display_name="Outgoing links metadata key",
-            info="Metadata key used for outgoing links.",
-            advanced=True,
-        ),
-        StrInput(
-            name="link_from_metadata_key",
-            display_name="Incoming links metadata key",
+            name="metadata_incoming_links_key",
+            display_name="Metadata incoming links key",
             info="Metadata key used for incoming links.",
             advanced=True,
         ),
@@ -214,8 +208,7 @@ class AstraGraphVectorStoreComponent(LCVectorStoreComponent):
             vector_store = AstraDBGraphVectorStore(
                 embedding=self.embedding,
                 collection_name=self.collection_name,
-                link_to_metadata_key=self.link_to_metadata_key or "links_to",
-                link_from_metadata_key=self.link_from_metadata_key or "links_from",
+                metadata_incoming_links_key=self.metadata_incoming_links_key or "incoming_links",
                 token=self.token,
                 api_endpoint=self.api_endpoint,
                 namespace=self.namespace or None,
