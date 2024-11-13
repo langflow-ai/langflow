@@ -1,6 +1,6 @@
 import { convertTestName } from "@/components/storeCardComponent/utils/convert-test-name";
 import { swatchColors } from "@/utils/styleUtils";
-import { cn } from "@/utils/utils";
+import { cn, getNumberFromString } from "@/utils/utils";
 import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../components/genericIconComponent";
@@ -11,9 +11,9 @@ export default function TemplateCardComponent({
   onClick,
 }: TemplateCardComponentProps) {
   const swatchIndex =
-    (example.gradient && parseInt(example.gradient)
+    (example.gradient && !isNaN(parseInt(example.gradient))
       ? parseInt(example.gradient)
-      : (example.gradient?.length ?? example.name.length)) %
+      : getNumberFromString(example.gradient ?? example.name)) %
     swatchColors.length;
 
   const handleKeyDown = (e) => {

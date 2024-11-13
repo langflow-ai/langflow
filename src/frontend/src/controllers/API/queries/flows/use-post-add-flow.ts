@@ -14,6 +14,7 @@ interface IPostAddFlow {
   folder_id: string;
   endpoint_name: string | undefined;
   icon: string | undefined;
+  gradient: string | undefined;
 }
 
 export const usePostAddFlow: useMutationFunctionType<
@@ -31,6 +32,7 @@ export const usePostAddFlow: useMutationFunctionType<
       is_component: payload.is_component,
       folder_id: payload.folder_id || null,
       icon: payload.icon || null,
+      gradient: payload.gradient || null,
       endpoint_name: payload.endpoint_name || null,
     });
 
