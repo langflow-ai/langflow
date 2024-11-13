@@ -142,10 +142,10 @@ export const GeneralPage = () => {
   }
 
   return (
-    <div className="flex h-full w-full flex-col gap-6">
+    <div className="flex h-full w-full flex-col gap-6 overflow-x-hidden">
       <GeneralPageHeaderComponent />
 
-      <div className="grid gap-6">
+      <div className="flex w-full flex-col gap-6">
         {ENABLE_PROFILE_ICONS && (
           <ProfilePictureFormComponent
             profilePicture={profilePicture}

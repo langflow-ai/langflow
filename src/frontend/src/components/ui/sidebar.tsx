@@ -28,6 +28,7 @@ type SidebarContext = {
   open: boolean;
   setOpen: (open: boolean) => void;
   toggleSidebar: () => void;
+  defaultOpen: boolean;
 };
 
 const SidebarContext = React.createContext<SidebarContext | null>(null);
@@ -114,8 +115,9 @@ const SidebarProvider = React.forwardRef<
         open,
         setOpen,
         toggleSidebar,
+        defaultOpen,
       }),
-      [state, open, setOpen, toggleSidebar],
+      [state, open, setOpen, toggleSidebar, defaultOpen],
     );
 
     return (
@@ -164,29 +166,30 @@ const Sidebar = React.forwardRef<
     },
     ref,
   ) => {
-    const { state, setOpen } = useSidebar();
+    const { state, setOpen, defaultOpen } = useSidebar();
 
     React.useEffect(() => {
       if (collapsible === "none") {
-        console.log("collapsible === none");
         setOpen(true);
+      } else {
+        setOpen(defaultOpen);
       }
     }, [collapsible]);
 
     if (collapsible === "none") {
       return (
         <div
-          className={cn(
-            "group flex h-full w-[--sidebar-width] flex-col bg-background text-foreground",
-            className,
-          )}
+          className={cn("group flex h-full flex-col")}
           data-side={side}
           ref={ref}
           {...props}
         >
           <div
             data-sidebar="sidebar"
-            className="flex h-full w-full flex-col group-data-[side=left]:border-r group-data-[side=right]:border-l"
+            className={cn(
+              "group flex h-full w-[--sidebar-width] flex-col bg-background text-foreground group-data-[side=left]:border-r group-data-[side=right]:border-l",
+              className,
+            )}
           >
             {children}
           </div>
