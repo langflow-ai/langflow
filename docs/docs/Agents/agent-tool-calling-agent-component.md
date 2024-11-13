@@ -152,7 +152,7 @@ Current Date and Time: I can retrieve the current date and time in various time 
 
 Your component now has a **Tool Mode** button, and can be used by an agent.
 
-### Make any component a tool
+## Make any component a tool
 
 These components support **Tool Mode**:
 
@@ -165,6 +165,8 @@ If the component you want to use as a tool doesn't have a **Tool Mode** button, 
 
 For example, in the [components as tools](#components-as-tools) example above, `tool_mode=True,` is added so the custom component can be used as a tool.
 
+**Tool Mode** supports the `MessageTextInput` type.
+
 ```python
 inputs = [
     MessageTextInput(
@@ -176,8 +178,6 @@ inputs = [
     ),
 ]
 ```
-
-**Tool Mode** supports the `MessageTextInput` type.
 
 ## Add flows as tools
 
