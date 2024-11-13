@@ -1130,7 +1130,7 @@
               },
               "stream": {
                 "_input_type": "BoolInput",
-                "advanced": true,
+                "advanced": false,
                 "display_name": "Stream",
                 "dynamic": false,
                 "info": "Stream the response from the model. Streaming works only in Chat.",
@@ -1146,7 +1146,7 @@
               },
               "system_message": {
                 "_input_type": "MessageTextInput",
-                "advanced": true,
+                "advanced": false,
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",

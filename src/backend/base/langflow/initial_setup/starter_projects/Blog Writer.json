@@ -1171,7 +1171,7 @@
                 "value": 1
               },
               "stream": {
-                "advanced": true,
+                "advanced": false,
                 "display_name": "Stream",
                 "dynamic": false,
                 "info": "Stream the response from the model. Streaming works only in Chat.",
@@ -1186,7 +1186,7 @@
                 "value": false
               },
               "system_message": {
-                "advanced": true,
+                "advanced": false,
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
