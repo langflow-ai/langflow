@@ -4,11 +4,13 @@ import json
 import os
 import pkgutil
 import threading
+from json.decoder import JSONDecodeError
 
 import astra_assistants.tools as astra_assistants_tools
 import requests
 from astra_assistants import OpenAIWithDefaultKey, patch
 from astra_assistants.tools.tool_interface import ToolInterface
+from requests.exceptions import RequestException
 
 from langflow.services.cache.utils import CacheMiss
 
@@ -26,8 +28,14 @@ def get_patched_openai_client(shared_component_cache):
 
 
 url = "https://raw.githubusercontent.com/BerriAI/litellm/refs/heads/main/model_prices_and_context_window.json"
-response = requests.get(url, timeout=10)
-data = json.loads(response.text)
+try:
+    response = requests.get(url, timeout=10)
+    response.raise_for_status()
+    data = json.loads(response.text)
+except RequestException:
+    data = {}
+except JSONDecodeError:
+    data = {}
 
 # Extract the model names into a Python list
 litellm_model_names = [model for model in data if model != "sample_spec"]
