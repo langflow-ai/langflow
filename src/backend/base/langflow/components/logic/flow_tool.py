@@ -75,7 +75,7 @@ class FlowToolComponent(LCToolComponent):
     ]
 
     def build_tool(self) -> Tool:
-        FlowTool.update_forward_refs()
+        FlowTool.model_rebuild()
         if "flow_name" not in self._attributes or not self._attributes["flow_name"]:
             msg = "Flow name is required"
             raise ValueError(msg)
@@ -84,7 +84,10 @@ class FlowToolComponent(LCToolComponent):
         if not flow_data:
             msg = "Flow not found."
             raise ValueError(msg)
-        graph = Graph.from_payload(flow_data.data["data"])
+        graph = Graph.from_payload(
+            flow_data.data["data"],
+            user_id=str(self.user_id),
+        )
         try:
             graph.set_run_id(self.graph.run_id)
         except Exception:  # noqa: BLE001
@@ -98,6 +101,7 @@ class FlowToolComponent(LCToolComponent):
             inputs=inputs,
             flow_id=str(flow_data.id),
             user_id=str(self.user_id),
+            session_id=self.graph.session_id if hasattr(self, "graph") else None,
         )
         description_repr = repr(tool.description).strip("'")
         args_str = "\n".join([f"- {arg_name}: {arg_data['description']}" for arg_name, arg_data in tool.args.items()])

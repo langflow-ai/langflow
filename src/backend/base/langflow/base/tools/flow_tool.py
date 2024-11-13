@@ -23,6 +23,7 @@ class FlowTool(BaseTool):
     graph: Graph | None = None
     flow_id: str | None = None
     user_id: str | None = None
+    session_id: str | None = None
     inputs: list[Vertex] = []
     get_final_results_only: bool = True
 
@@ -59,9 +60,11 @@ class FlowTool(BaseTool):
 
         run_outputs = run_until_complete(
             run_flow(
+                graph=self.graph,
                 tweaks={key: {"input_value": value} for key, value in tweaks.items()},
                 flow_id=self.flow_id,
                 user_id=self.user_id,
+                session_id=self.session_id,
             )
         )
         if not run_outputs:
@@ -113,6 +116,8 @@ class FlowTool(BaseTool):
             flow_id=self.flow_id,
             user_id=self.user_id,
             run_id=run_id,
+            session_id=self.session_id,
+            graph=self.graph,
         )
         if not run_outputs:
             return "No output"
