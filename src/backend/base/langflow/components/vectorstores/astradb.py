@@ -492,26 +492,30 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
 
     def _build_search_args(self):
         query = self.search_input if isinstance(self.search_input, str) and self.search_input.strip() else None
-        search_filter = {k: v for k, v in self.search_filter.items() if k and v and k.strip()} if self.search_filter else None
+        search_filter = (
+            {k: v for k, v in self.search_filter.items() if k and v and k.strip()} if self.search_filter else None
+        )
 
-        if query:            
+        if query:
             args = {
                 "query": query,
                 "search_type": self._map_search_type(),
                 "k": self.number_of_results,
                 "score_threshold": self.search_score_threshold,
-            } 
+            }
         elif self.advanced_search_filter or search_filter:
             args = {
                 "n": self.number_of_results,
             }
         else:
             return {}
-        
+
         filter = self.advanced_search_filter or {}
 
         if search_filter:
-            self.log(f"`search_filter` is deprecated, use `advanced_search_filter` instead. Cleaned `search_filter` is: {search_filter}")
+            self.log(
+                f"`search_filter` is deprecated, use `advanced_search_filter` instead. Cleaned `search_filter` is: {search_filter}"
+            )
             filter.update(search_filter)
 
         if filter:
@@ -521,7 +525,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
 
     def search_documents(self, vector_store=None) -> list[Data]:
         vector_store = vector_store or self.build_vector_store()
-        
+
         self.log(f"Search input: {self.search_input}")
         self.log(f"Search type: {self.search_type}")
         self.log(f"Number of results: {self.number_of_results}")
@@ -537,7 +541,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
 
         docs = []
         search_method = "search" if "query" in search_args else "metadata_search"
-        
+
         try:
             self.log(f"Calling vector_store.{search_method} with args: {search_args}")
             docs = getattr(vector_store, search_method)(**search_args)
