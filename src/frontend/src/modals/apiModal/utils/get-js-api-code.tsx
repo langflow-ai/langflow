@@ -24,9 +24,7 @@ export default function getJsApiCode({
   const hasChatInput = inputs.some((input) => input.type === "ChatInput");
   const hasChatOutput = outputs.some((output) => output.type === "ChatOutput");
 
-  return `let inputValue = "";
-  
-fetch(
+  return `${activeTweaks ? "" : 'let inputValue = "";\n\n'}fetch(
   "${window.location.protocol}//${window.location.host}/api/v1/run/${endpointName || flowId}?stream=false",
   {
     method: "POST",
