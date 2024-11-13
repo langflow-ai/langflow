@@ -12,10 +12,10 @@
   },
   "dependencies": {
     "@code-hike/mdx": "^0.9.0",
-    "@docusaurus/core": "^3.2.0",
-    "@docusaurus/plugin-client-redirects": "^3.4.0",
-    "@docusaurus/plugin-google-tag-manager": "^3.2.0",
-    "@docusaurus/preset-classic": "^3.2.0",
+    "@docusaurus/core": "3.5.2",
+    "@docusaurus/plugin-client-redirects": "3.5.2",
+    "@docusaurus/plugin-google-tag-manager": "3.5.2",
+    "@docusaurus/preset-classic": "3.5.2",
     "@easyops-cn/docusaurus-search-local": "^0.44.3",
     "@mdx-js/react": "^3.0.1",
     "@mendable/search": "^0.0.206",
@@ -32,7 +32,7 @@
     "tailwindcss": "^3.4.4"
   },
   "devDependencies": {
-    "@docusaurus/module-type-aliases": "^3.2.0",
+    "@docusaurus/module-type-aliases": "3.5.2",
     "@tsconfig/docusaurus": "^2.0.3",
     "cross-var": "^1.1.0",
     "typescript": "^5.2.2"
