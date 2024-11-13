@@ -1789,7 +1789,7 @@
         "data": {
           "id": "note-FCbTW",
           "node": {
-            "description": "### Basic Prompt Chaining\n\nThis flow demonstrates fundamental prompt chaining principles:\n\n1. **Chain Structure**\n   • User input → First Prompt → LLM\n   • First output → Second Prompt → LLM\n   • Second output → Final Prompt → LLM\n   • Final output\n\n2. **Key Technique Elements**\n   • Each prompt is specifically designed to process previous output\n   • Output formatting ensures clean handoff between stages\n   • Context flows naturally through the chain\n   • Each LLM call builds upon previous results\n\n3. **Technical Implementation**\n   • Multiple prompt templates working in sequence\n   • Strategic input/output connections\n   • Consistent message handling between stages\n   • Progressive refinement through the chain\n\nThis pattern can be adapted for any use case by modifying the prompt templates while keeping the same chaining structure.",
+            "description": "### Prompt Chaining\n\nThis flow demonstrates fundamental prompt chaining principles:\n\n1. **Chain Structure**\n   • User input → First Prompt → LLM\n   • First output → Second Prompt → LLM\n   • Second output → Final Prompt → LLM\n   • Final output\n\n2. **Key Technique Elements**\n   • Each prompt is specifically designed to process previous output\n   • Output formatting ensures clean handoff between stages\n   • Context flows naturally through the chain\n   • Each LLM call builds upon previous results\n\n3. **Technical Implementation**\n   • Multiple prompt templates working in sequence\n   • Strategic input/output connections\n   • Consistent message handling between stages\n   • Progressive refinement through the chain\n\nThis pattern can be adapted for any use case by modifying the prompt templates while keeping the same chaining structure.",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2178,7 +2178,7 @@
   "id": "b5b0c252-95ae-4b07-8211-67c8b12ea60e",
   "is_component": false,
   "last_tested_version": "1.0.19.post2",
-  "name": "Basic Prompt Chaining",
+  "name": "Prompt Chaining",
   "tags": [
     "chatbots"
   ]

@@ -44,7 +44,7 @@ export default function TemplatesModal({
         },
         { title: "Q&A", icon: "Database", id: "q-a" },
         // { title: "Summarization", icon: "Bot", id: "summarization" },
-        { title: "Web Scraping", icon: "CodeXml", id: "web-scraping" },
+        // { title: "Web Scraping", icon: "CodeXml", id: "web-scraping" },
       ],
     },
     {
