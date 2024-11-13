@@ -82,6 +82,17 @@ test("Simple Agent", async ({ page }) => {
   await page.getByTestId("button_run_chat output").last().click();
 
   await page.waitForSelector("text=built successfully", {
-    timeout: 10000 * 60 * 3,
+    timeout: 10000 * 60 * 5,
   });
+
+  await page.getByTestId("playground-btn-flow-io").click();
+
+  const textContents = await page
+    .getByTestId("div-chat-message")
+    .allTextContents();
+
+  const concatAllText = textContents.join(" ").toLowerCase();
+
+  expect(concatAllText).toContain("apple");
+  expect(concatAllText.length).toBeGreaterThan(100);
 });
