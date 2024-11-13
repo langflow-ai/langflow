@@ -40,6 +40,7 @@ Your agent can now query the Search API for information.
 7. Connect a **Calculator** tool for solving basic math problems.
 8. Connect an **API Request** component to the agent.
 This component is not in the **Tools** category, but the agent can still use it as a tool by enabling **Tool Mode**.
+**Tool Mode** makes a component into a tool by adding a **Toolset** port that can be connected to an agent's **Tools** port.
 To enable **Tool Mode** on the component, click **Tool Mode**.
 The component's fields change dynamically based on the mode it's in.
 
