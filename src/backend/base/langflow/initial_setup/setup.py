@@ -51,14 +51,15 @@ def update_projects_components_with_latest_component_versions(project_data, all_
     # and update it all
     all_types_dict_flat = {}
     for category in all_types_dict.values():
-        for component in category.values():
-            all_types_dict_flat[component["display_name"]] = component
+        for key, component in category.items():
+            all_types_dict_flat[key] = component  # noqa: PERF403
     node_changes_log = defaultdict(list)
     project_data_copy = deepcopy(project_data)
     for node in project_data_copy.get("nodes", []):
         node_data = node.get("data").get("node")
-        if node_data.get("display_name") in all_types_dict_flat:
-            latest_node = all_types_dict_flat.get(node_data.get("display_name"))
+        node_type = node.get("data").get("type")
+        if node_type in all_types_dict_flat:
+            latest_node = all_types_dict_flat.get(node_type)
             latest_template = latest_node.get("template")
             node_data["template"]["code"] = latest_template["code"]
 
@@ -66,12 +67,12 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                 node_data["outputs"] = latest_node["outputs"]
             if node_data["template"]["_type"] != latest_template["_type"]:
                 node_data["template"]["_type"] = latest_template["_type"]
-                if node_data.get("display_name") != "Prompt":
+                if node_type != "Prompt":
                     node_data["template"] = latest_template
                 else:
                     for key, value in latest_template.items():
                         if key not in node_data["template"]:
-                            node_changes_log[node_data["display_name"]].append(
+                            node_changes_log[node_type].append(
                                 {
                                     "attr": key,
                                     "old_value": None,
@@ -80,7 +81,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                             )
                             node_data["template"][key] = value
                         elif isinstance(value, dict) and value.get("value"):
-                            node_changes_log[node_data["display_name"]].append(
+                            node_changes_log[node_type].append(
                                 {
                                     "attr": key,
                                     "old_value": node_data["template"][key],
@@ -91,7 +92,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                     for key in node_data["template"]:
                         if key not in latest_template:
                             node_data["template"][key]["input_types"] = DEFAULT_PROMPT_INTUT_TYPES
-                node_changes_log[node_data["display_name"]].append(
+                node_changes_log[node_type].append(
                     {
                         "attr": "_type",
                         "old_value": node_data["template"]["_type"],
@@ -105,7 +106,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                         # Check if it needs to be updated
                         and latest_node[attr] != node_data.get(attr)
                     ):
-                        node_changes_log[node_data["display_name"]].append(
+                        node_changes_log[node_type].append(
                             {
                                 "attr": attr,
                                 "old_value": node_data.get(attr),
@@ -127,7 +128,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                             # Check if it needs to be updated
                             and field_dict[attr] != node_data["template"][field_name][attr]
                         ):
-                            node_changes_log[node_data["display_name"]].append(
+                            node_changes_log[node_type].append(
                                 {
                                     "attr": f"{field_name}.{attr}",
                                     "old_value": node_data["template"][field_name][attr],
@@ -136,7 +137,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                             )
                             node_data["template"][field_name][attr] = field_dict[attr]
             # Remove fields that are not in the latest template
-            if node_data.get("display_name") != "Prompt":
+            if node_type != "Prompt":
                 for field_name in list(node_data["template"].keys()):
                     if field_name not in latest_template:
                         node_data["template"].pop(field_name)

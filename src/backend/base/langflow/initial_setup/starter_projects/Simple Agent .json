@@ -1486,7 +1486,7 @@
       "zoom": 0.8828160439097184
     }
   },
-  "description": "A basic agent linked to the Yahoo Finance tool for quick access to stock prices, market trends, and financial data.",
+  "description": "Get started with an agent that calls the Yahoo Finance tool for quick access to stock prices, market trends, and financial data.",
   "endpoint_name": null,
   "icon": "Bot",
   "id": "a774332d-6fb5-43b6-96a4-d3eb8e62ddc0",
