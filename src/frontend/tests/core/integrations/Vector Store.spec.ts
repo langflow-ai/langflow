@@ -136,7 +136,7 @@ test("Vector Store RAG", async ({ page }) => {
   );
   await page.getByText("test_file.txt").isVisible();
   await page.waitForTimeout(1000);
-  await page.getByTestId("button_run_astra db").first().click();
+  await page.getByTestId("button_run_astra db").last().click();
   await page.waitForSelector("text=built successfully", { timeout: 60000 * 2 });
   await page.getByText("built successfully").last().click({
     timeout: 30000,
@@ -146,7 +146,7 @@ test("Vector Store RAG", async ({ page }) => {
   await page.getByText("built successfully").last().click({
     timeout: 30000,
   });
-  await page.getByTestId("button_run_astra db").last().click();
+  await page.getByTestId("button_run_astra db").first().click();
   await page.waitForSelector("text=built successfully", { timeout: 60000 * 2 });
   await page.getByText("built successfully").last().click({
     timeout: 30000,
@@ -156,7 +156,9 @@ test("Vector Store RAG", async ({ page }) => {
     timeout: 100000,
   });
   await page.getByTestId("input-chat-playground").last().fill("hello");
-  await page.getByTestId("icon-LucideSend").last().click();
+  await page.getByTestId("input-chat-playground").last().click();
+  await page.keyboard.press("Enter");
+
   await page
     .getByText("This is a test file.", { exact: true })
     .last()
