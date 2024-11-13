@@ -10,8 +10,8 @@ class ExtractDataKeyComponent(Component):
         "Data objects and return the extracted value(s) as Data object(s)."
     )
     icon = "key"
-    beta = True
     name = "ExtractaKey"
+    legacy = True
 
     inputs = [
         DataInput(

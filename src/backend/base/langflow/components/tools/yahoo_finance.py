@@ -50,7 +50,8 @@ class YahooFinanceSchema(BaseModel):
 
 class YfinanceToolComponent(LCToolComponent):
     display_name = "Yahoo Finance"
-    description = "Access financial data and market information using Yahoo Finance."
+    description = """Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) \
+to access financial data and market information from Yahoo Finance."""
     icon = "trending-up"
     name = "YahooFinanceTool"
 

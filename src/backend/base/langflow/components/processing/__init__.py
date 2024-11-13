@@ -8,6 +8,7 @@ from .message_to_data import MessageToDataComponent
 from .parse_data import ParseDataComponent
 from .parse_json_data import ParseJSONDataComponent
 from .select_data import SelectDataComponent
+from .split_text import SplitTextComponent
 from .update_data import UpdateDataComponent
 
 __all__ = [
@@ -22,4 +23,5 @@ __all__ = [
     "ParseJSONDataComponent",
     "JSONCleaner",
     "CombineTextComponent",
+    "SplitTextComponent",
 ]

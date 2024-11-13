@@ -14,8 +14,8 @@ class JSONToDataComponent(Component):
         "Convert a JSON file, JSON from a file path, or a JSON string to a Data object or a list of Data objects"
     )
     icon = "braces"
-    beta = True
     name = "JSONtoData"
+    legacy = True
 
     inputs = [
         FileInput(

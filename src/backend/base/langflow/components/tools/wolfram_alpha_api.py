@@ -9,13 +9,12 @@ from langflow.schema import Data
 class WolframAlphaAPIComponent(LCToolComponent):
     display_name = "WolframAlpha API"
     description = """Enables queries to Wolfram Alpha for computational data, facts, and calculations across various \
-topics, delivering structured responses. Example query: 'What is the population of France?'"""
+topics, delivering structured responses."""
     name = "WolframAlphaAPI"
 
     inputs = [
         MultilineInput(
-            name="input_value",
-            display_name="Input Query",
+            name="input_value", display_name="Input Query", info="Example query: 'What is the population of France?'"
         ),
         SecretStrInput(name="app_id", display_name="App ID", required=True),
     ]

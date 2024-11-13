@@ -77,7 +77,7 @@ test("user must be able to freeze a component", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page
-    .getByTestId("helpersSplit Text")
+    .getByTestId("processingSplit Text")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
   await page.getByTestId("zoom_out").click();

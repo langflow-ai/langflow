@@ -15,7 +15,6 @@ class RunFlowComponent(Component):
     display_name = "Run Flow"
     description = "A component to run a flow."
     name = "RunFlow"
-    beta: bool = True
     legacy: bool = True
     icon = "workflow"
 

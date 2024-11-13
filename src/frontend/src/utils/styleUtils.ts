@@ -470,8 +470,8 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Outputs", name: "outputs", icon: "Upload" },
   { display_name: "Prompts", name: "prompts", icon: "TerminalSquare" },
   { display_name: "Data", name: "data", icon: "Database" },
+  { display_name: "Processing", name: "processing", icon: "ListFilter" },
   { display_name: "Models", name: "models", icon: "BrainCircuit" },
-  { display_name: "Helpers", name: "helpers", icon: "Wand2" },
   { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
   { display_name: "Embeddings", name: "embeddings", icon: "Binary" },
   { display_name: "Agents", name: "agents", icon: "Bot" },
@@ -486,7 +486,7 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Toolkits", name: "toolkits", icon: "Package2" },
   { display_name: "Tools", name: "tools", icon: "Hammer" },
   { display_name: "Logic", name: "logic", icon: "ArrowRightLeft" },
-  { display_name: "Processing", name: "processing", icon: "ListFilter" },
+  { display_name: "Helpers", name: "helpers", icon: "Wand2" },
 ];
 
 export const SIDEBAR_BUNDLES = [

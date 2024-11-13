@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING
 
 import pytest
+from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.inputs import ChatInput
-from langflow.components.memories import MemoryComponent
 from langflow.components.models import OpenAIModelComponent
 from langflow.components.outputs import ChatOutput
 from langflow.components.prompts import PromptComponent

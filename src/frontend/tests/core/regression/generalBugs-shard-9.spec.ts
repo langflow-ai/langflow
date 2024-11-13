@@ -76,7 +76,7 @@ test("memory should work as expect", async ({ page }) => {
   await page.mouse.up();
 
   await page
-    .getByTestId("memoriesChat Memory")
+    .getByTestId("helpersMessage History")
     .first()
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 

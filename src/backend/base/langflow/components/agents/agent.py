@@ -4,8 +4,8 @@ from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.base.models.model_input_constants import ALL_PROVIDER_FIELDS, MODEL_PROVIDERS_DICT
 from langflow.base.models.model_utils import get_model_name
 from langflow.components.helpers import CurrentDateComponent
+from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
-from langflow.components.memories.memory import MemoryComponent
 from langflow.io import BoolInput, DropdownInput, MultilineInput, Output
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message

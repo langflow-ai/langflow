@@ -10,6 +10,7 @@ class SelectDataComponent(Component):
     description: str = "Select a single data from a list of data."
     name: str = "SelectData"
     icon = "prototypes"
+    legacy = True
 
     inputs = [
         DataInput(

@@ -16,7 +16,7 @@ from langflow.schema.dotdict import dotdict
 
 class SearXNGToolComponent(LCToolComponent):
     search_headers: dict = {}
-    display_name = "SearXNG Search Tool"
+    display_name = "SearXNG Search"
     description = "A component that searches for tools using SearXNG."
     name = "SearXNGTool"
     legacy: bool = True
