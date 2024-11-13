@@ -6,7 +6,7 @@ slug: /agents-tool-calling-agent-component
 
 Developing **agents** in Langchain is complex.
 
-The `AgentComponent` is a tool for easily creating an AI agent capable of analyzing tasks using tools you provide.
+The `AgentComponent` is a component for easily creating an AI agent capable of analyzing tasks using tools you provide.
 
 The component contains all of the elements you'll need for creating an agent. Instead of managing LLM models and providers, pick your model and enter your API key. Instead of connecting a **Prompt** component, enter instructions in the component's **Agent Instruction** fields.
 
