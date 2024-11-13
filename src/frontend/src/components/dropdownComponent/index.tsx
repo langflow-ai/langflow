@@ -2,8 +2,8 @@ import { PopoverAnchor } from "@radix-ui/react-popover";
 import Fuse from "fuse.js";
 import { cloneDeep } from "lodash";
 import { ChangeEvent, useEffect, useRef, useState } from "react";
-import { DropDownComponentType } from "../../types/components";
-import { cn } from "../../utils/utils";
+import { DropDownComponent } from "../../types/components";
+import { cn, formatPlaceholderName } from "../../utils/utils";
 import { default as ForwardedIconComponent } from "../genericIconComponent";
 import ShadTooltip from "../shadTooltipComponent";
 import { Button } from "../ui/button";
@@ -31,7 +31,12 @@ export default function Dropdown({
   editNode = false,
   id = "",
   children,
-}: DropDownComponentType): JSX.Element {
+  name,
+}: DropDownComponent): JSX.Element {
+  const placeholderName = name
+    ? formatPlaceholderName(name)
+    : "Choose an option...";
+
   const [open, setOpen] = useState(children ? true : false);
 
   const refButton = useRef<HTMLButtonElement>(null);
@@ -91,11 +96,16 @@ export default function Dropdown({
           value !== "" &&
           filteredOptions.find((option) => option === value)
             ? filteredOptions.find((option) => option === value)
-            : "Choose an option..."}
+            : placeholderName}
         </span>
         <ForwardedIconComponent
           name="ChevronsUpDown"
-          className="ml-2 h-4 w-4 shrink-0 opacity-50"
+          className={cn(
+            "ml-2 h-4 w-4 shrink-0 text-foreground",
+            disabled
+              ? "hover:text-placeholder-foreground"
+              : "hover:text-foreground",
+          )}
         />
       </Button>
     </PopoverTrigger>

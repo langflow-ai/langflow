@@ -130,7 +130,7 @@ export function detectBrokenEdgesEdges(nodes: NodeType[], edges: Edge[]) {
         displayName: targetNode.data.node!.display_name,
         field:
           targetNode.data.node!.template[targetHandleObject.fieldName]
-            .display_name,
+            ?.display_name ?? targetHandleObject.fieldName,
       },
     };
   }
@@ -1596,6 +1596,8 @@ export const createNewFlow = (
     name: flow?.name ? flow.name : "Untitled document",
     data: flowData,
     id: "",
+    icon: flow?.icon ?? undefined,
+    gradient: flow?.gradient ?? undefined,
     is_component: flow?.is_component ?? false,
     folder_id: folderId,
     endpoint_name: flow?.endpoint_name ?? undefined,
@@ -1718,4 +1720,15 @@ export function checkOldComponents({ nodes }: { nodes: any[] }) {
         "(CustomComponent):",
       ),
   );
+}
+
+export function someFlowTemplateFields(
+  { nodes }: { nodes: NodeType[] },
+  validateFn: (field: InputFieldType) => boolean,
+): boolean {
+  return nodes.some((node) => {
+    return Object.keys(node.data.node?.template ?? {}).some((field) => {
+      return validateFn((node.data.node?.template ?? {})[field]);
+    });
+  });
 }

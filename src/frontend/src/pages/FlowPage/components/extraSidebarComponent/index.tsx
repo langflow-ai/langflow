@@ -1,4 +1,7 @@
-import { ENABLE_MVPS } from "@/customization/feature-flags";
+import {
+  ENABLE_INTEGRATIONS,
+  ENABLE_MVPS,
+} from "@/customization/feature-flags";
 import { useStoreStore } from "@/stores/storeStore";
 import { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
@@ -17,6 +20,7 @@ import { nodeIconsLucide } from "../../../../utils/styleUtils";
 import ParentDisclosureComponent from "../ParentDisclosureComponent";
 import { SidebarCategoryComponent } from "./SidebarCategoryComponent";
 
+import { useUtilityStore } from "@/stores/utilityStore";
 import { SidebarFilterComponent } from "./sidebarFilterComponent";
 import { sortKeys } from "./utils";
 
@@ -27,6 +31,8 @@ export default function ExtraSidebar(): JSX.Element {
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const hasStore = useStoreStore((state) => state.hasStore);
   const filterType = useFlowStore((state) => state.filterType);
+
+  const featureFlags = useUtilityStore((state) => state.featureFlags);
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [dataFilter, setFilterData] = useState(data);
@@ -245,7 +251,7 @@ export default function ExtraSidebar(): JSX.Element {
               <div key={index}></div>
             ),
           )}
-        <>
+        {(ENABLE_INTEGRATIONS || featureFlags?.mvp_components) && (
           <ParentDisclosureComponent
             defaultOpen={true}
             key={`${search.length !== 0}-${getFilterEdge.length !== 0}-Bundle`}
@@ -273,7 +279,7 @@ export default function ExtraSidebar(): JSX.Element {
                 ),
               )}
           </ParentDisclosureComponent>
-        </>
+        )}
         <ParentDisclosureComponent
           defaultOpen={search.length !== 0 || getFilterEdge.length !== 0}
           key={`${search.length !== 0}-${getFilterEdge.length !== 0}-Advanced`}

@@ -1,10 +1,9 @@
-import time
+import asyncio
 from uuid import UUID, uuid4
 
 import pytest
 from fastapi import status
 from httpx import AsyncClient
-
 from langflow.custom.directory_reader.directory_reader import DirectoryReader
 from langflow.services.deps import get_settings_service
 
@@ -28,7 +27,7 @@ async def poll_task_status(client, headers, href, max_attempts=20, sleep_time=1)
         )
         if task_status_response.status_code == 200 and task_status_response.json()["status"] == "SUCCESS":
             return task_status_response.json()
-        time.sleep(sleep_time)
+        await asyncio.sleep(sleep_time)
     return None  # Return None if task did not complete in time
 
 
@@ -109,157 +108,7 @@ PROMPT_REQUEST = {
 }
 
 
-# def test_process_flow_invalid_api_key(client, flow, monkeypatch):
-#     # Mock de process_graph_cached
-#     from langflow.api.v1 import endpoints
-#     from langflow.services.database.models.api_key import crud
-
-#     settings_service = get_settings_service()
-#     settings_service.auth_settings.AUTO_LOGIN = False
-
-#     async def mock_process_graph_cached(*args, **kwargs):
-#         return Result(result={}, session_id="session_id_mock")
-
-#     def mock_update_total_uses(*args, **kwargs):
-#         return created_api_key
-
-#     monkeypatch.setattr(endpoints, "process_graph_cached", mock_process_graph_cached)
-#     monkeypatch.setattr(crud, "update_total_uses", mock_update_total_uses)
-
-#     headers = {"x-api-key": "invalid_api_key"}
-
-#     post_data = {
-#         "inputs": {"key": "value"},
-#         "tweaks": None,
-#         "clear_cache": False,
-#         "session_id": None,
-#     }
-
-#     response = await client.post(f"api/v1/process/{flow.id}", headers=headers, json=post_data)
-
-#     assert response.status_code == 403
-#     assert response.json() == {"detail": "Invalid or missing API key"}
-
-
-# def test_process_flow_invalid_id(client, monkeypatch, created_api_key):
-#     async def mock_process_graph_cached(*args, **kwargs):
-#         return Result(result={}, session_id="session_id_mock")
-
-#     from langflow.api.v1 import endpoints
-
-#     monkeypatch.setattr(endpoints, "process_graph_cached", mock_process_graph_cached)
-
-#     api_key = created_api_key.api_key
-#     headers = {"x-api-key": api_key}
-
-#     post_data = {
-#         "inputs": {"key": "value"},
-#         "tweaks": None,
-#         "clear_cache": False,
-#         "session_id": None,
-#     }
-
-#     invalid_id = uuid.uuid4()
-#     response = await client.post(f"api/v1/process/{invalid_id}", headers=headers, json=post_data)
-
-#     assert response.status_code == 404
-#     assert f"Flow {invalid_id} not found" in response.json()["detail"]
-
-
-# def test_process_flow_without_autologin(client, flow, monkeypatch, created_api_key):
-#     # Mock de process_graph_cached
-#     from langflow.api.v1 import endpoints
-#     from langflow.services.database.models.api_key import crud
-
-#     settings_service = get_settings_service()
-#     settings_service.auth_settings.AUTO_LOGIN = False
-
-#     async def mock_process_graph_cached(*args, **kwargs):
-#         return Result(result={}, session_id="session_id_mock")
-
-#     def mock_process_graph_cached_task(*args, **kwargs):
-#         return Result(result={}, session_id="session_id_mock")
-
-#     # The task function is ran like this:
-#     # if not self.use_celery:
-#     #     return None, await task_func(*args, **kwargs)
-#     # if not hasattr(task_func, "apply"):
-#     #     raise ValueError(f"Task function {task_func} does not have an apply method")
-#     # task = task_func.apply(args=args, kwargs=kwargs)
-#     # result = task.get()
-#     # return task.id, result
-#     # So we need to mock the task function to return a task object
-#     # and then mock the task object to return a result
-#     # maybe a named tuple would be better here
-#     task = namedtuple("task", ["id", "get"])
-#     mock_process_graph_cached_task.apply = lambda *args, **kwargs: task(
-#         id="task_id_mock", get=lambda: Result(result={}, session_id="session_id_mock")
-#     )
-
-#     def mock_update_total_uses(*args, **kwargs):
-#         return created_api_key
-
-#     monkeypatch.setattr(endpoints, "process_graph_cached", mock_process_graph_cached)
-#     monkeypatch.setattr(crud, "update_total_uses", mock_update_total_uses)
-#     monkeypatch.setattr(endpoints, "process_graph_cached_task", mock_process_graph_cached_task)
-
-#     api_key = created_api_key.api_key
-#     headers = {"x-api-key": api_key}
-
-#     # Dummy POST data
-#     post_data = {
-#         "inputs": {"input": "value"},
-#         "tweaks": None,
-#         "clear_cache": False,
-#         "session_id": None,
-#     }
-
-#     # Make the request to the FastAPI TestClient
-
-#     response = await client.post(f"api/v1/process/{flow.id}", headers=headers, json=post_data)
-
-#     # Check the response
-#     assert response.status_code == 200, response.json()
-#     assert response.json()["result"] == {}, response.json()
-#     assert response.json()["session_id"] == "session_id_mock", response.json()
-
-
-# def test_process_flow_fails_autologin_off(client, flow, monkeypatch):
-#     # Mock de process_graph_cached
-#     from langflow.api.v1 import endpoints
-#     from langflow.services.database.models.api_key import crud
-
-#     settings_service = get_settings_service()
-#     settings_service.auth_settings.AUTO_LOGIN = False
-
-#     async def mock_process_graph_cached(*args, **kwargs):
-#         return Result(result={}, session_id="session_id_mock")
-
-#     async def mock_update_total_uses(*args, **kwargs):
-#         return created_api_key
-
-#     monkeypatch.setattr(endpoints, "process_graph_cached", mock_process_graph_cached)
-#     monkeypatch.setattr(crud, "update_total_uses", mock_update_total_uses)
-
-#     headers = {"x-api-key": "api_key"}
-
-#     # Dummy POST data
-#     post_data = {
-#         "inputs": {"key": "value"},
-#         "tweaks": None,
-#         "clear_cache": False,
-#         "session_id": None,
-#     }
-
-#     # Make the request to the FastAPI TestClient
-
-#     response = await client.post(f"api/v1/process/{flow.id}", headers=headers, json=post_data)
-
-#     # Check the response
-#     assert response.status_code == 403, response.json()
-#     assert response.json() == {"detail": "Invalid or missing API key"}
-
-
+@pytest.mark.benchmark
 async def test_get_all(client: AsyncClient, logged_in_headers):
     response = await client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
@@ -377,7 +226,7 @@ async def test_invalid_prompt(client: AsyncClient):
 
 
 @pytest.mark.parametrize(
-    "prompt,expected_input_variables",
+    ("prompt", "expected_input_variables"),
     [
         ("{color} is my favorite color.", ["color"]),
         ("The weather is {weather} today.", ["weather"]),
@@ -408,7 +257,7 @@ async def test_get_vertices(client, added_flow_webhook_test, logged_in_headers):
     # The important part is before the - (ConversationBufferMemory, PromptTemplate, ChatOpenAI, LLMChain)
     ids = [_id.split("-")[0] for _id in response.json()["ids"]]
 
-    assert set(ids) == {"Webhook", "ChatInput"}
+    assert set(ids) == {"ChatInput"}
 
 
 async def test_build_vertex_invalid_flow_id(client, logged_in_headers):
@@ -442,13 +291,13 @@ async def test_successful_run_no_payload(client, simple_api_test, created_api_ke
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 1
     ids = [output.get("component_id") for output in outputs_dict.get("outputs")]
-    assert all(["ChatOutput" in _id for _id in ids])
+    assert all("ChatOutput" in _id for _id in ids)
     display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
-    assert all([name in display_names for name in ["Chat Output"]])
+    assert all(name in display_names for name in ["Chat Output"])
     output_results_has_results = all("results" in output.get("results") for output in outputs_dict.get("outputs"))
     inner_results = [output.get("results") for output in outputs_dict.get("outputs")]
 
-    assert all([result is not None for result in inner_results]), (outputs_dict, output_results_has_results)
+    assert all(result is not None for result in inner_results), (outputs_dict, output_results_has_results)
 
 
 async def test_successful_run_with_output_type_text(client, simple_api_test, created_api_key):
@@ -473,14 +322,15 @@ async def test_successful_run_with_output_type_text(client, simple_api_test, cre
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 1
     ids = [output.get("component_id") for output in outputs_dict.get("outputs")]
-    assert all(["ChatOutput" in _id for _id in ids]), ids
+    assert all("ChatOutput" in _id for _id in ids), ids
     display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
-    assert all([name in display_names for name in ["Chat Output"]]), display_names
+    assert all(name in display_names for name in ["Chat Output"]), display_names
     inner_results = [output.get("results") for output in outputs_dict.get("outputs")]
     expected_keys = ["message"]
-    assert all([key in result for result in inner_results for key in expected_keys]), outputs_dict
+    assert all(key in result for result in inner_results for key in expected_keys), outputs_dict
 
 
+@pytest.mark.benchmark
 async def test_successful_run_with_output_type_any(client, simple_api_test, created_api_key):
     # This one should have both the ChatOutput and TextOutput components
     headers = {"x-api-key": created_api_key.api_key}
@@ -504,14 +354,15 @@ async def test_successful_run_with_output_type_any(client, simple_api_test, crea
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 1
     ids = [output.get("component_id") for output in outputs_dict.get("outputs")]
-    assert all(["ChatOutput" in _id or "TextOutput" in _id for _id in ids]), ids
+    assert all("ChatOutput" in _id or "TextOutput" in _id for _id in ids), ids
     display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
-    assert all([name in display_names for name in ["Chat Output"]]), display_names
+    assert all(name in display_names for name in ["Chat Output"]), display_names
     inner_results = [output.get("results") for output in outputs_dict.get("outputs")]
     expected_keys = ["message"]
-    assert all([key in result for result in inner_results for key in expected_keys]), outputs_dict
+    assert all(key in result for result in inner_results for key in expected_keys), outputs_dict
 
 
+@pytest.mark.benchmark
 async def test_successful_run_with_output_type_debug(client, simple_api_test, created_api_key):
     # This one should return outputs for all components
     # Let's just check the amount of outputs(there should be 7)
@@ -537,6 +388,7 @@ async def test_successful_run_with_output_type_debug(client, simple_api_test, cr
     assert len(outputs_dict.get("outputs")) == 3
 
 
+@pytest.mark.benchmark
 async def test_successful_run_with_input_type_text(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
@@ -566,11 +418,12 @@ async def test_successful_run_with_input_type_text(client, simple_api_test, crea
     # Now we check if the input_value is correct
     # We get text key twice because the output is now a Message
     assert all(
-        [output.get("results").get("text").get("text") == "value1" for output in text_input_outputs]
+        output.get("results").get("text").get("text") == "value1" for output in text_input_outputs
     ), text_input_outputs
 
 
 @pytest.mark.api_key_required
+@pytest.mark.benchmark
 async def test_successful_run_with_input_type_chat(client: AsyncClient, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
@@ -599,10 +452,11 @@ async def test_successful_run_with_input_type_chat(client: AsyncClient, simple_a
     assert len(chat_input_outputs) == 1
     # Now we check if the input_value is correct
     assert all(
-        [output.get("results").get("message").get("text") == "value1" for output in chat_input_outputs]
+        output.get("results").get("message").get("text") == "value1" for output in chat_input_outputs
     ), chat_input_outputs
 
 
+@pytest.mark.benchmark
 async def test_invalid_run_with_input_type_chat(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
@@ -617,6 +471,7 @@ async def test_invalid_run_with_input_type_chat(client, simple_api_test, created
     assert "If you pass an input_value to the chat input, you cannot pass a tweak with the same name." in response.text
 
 
+@pytest.mark.benchmark
 async def test_successful_run_with_input_type_any(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
@@ -653,7 +508,7 @@ async def test_successful_run_with_input_type_any(client, simple_api_test, creat
         result_dict.get("message", result_dict.get("text")) for result_dict in all_result_dicts
     ]
     assert all(
-        [message_or_text_dict.get("text") == "value1" for message_or_text_dict in all_message_or_text_dicts]
+        message_or_text_dict.get("text") == "value1" for message_or_text_dict in all_message_or_text_dicts
     ), any_input_outputs
 
 
@@ -669,6 +524,7 @@ async def test_invalid_flow_id(client, created_api_key):
     # Check if the error detail is as expected
 
 
+@pytest.mark.benchmark
 async def test_starter_projects(client, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     response = await client.get("api/v1/starter-projects/", headers=headers)

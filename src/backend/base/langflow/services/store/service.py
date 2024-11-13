@@ -37,12 +37,12 @@ async def user_data_context(store_service: StoreService, api_key: str | None = N
     # Fetch and set user data to the context variable
     if api_key:
         try:
-            user_data, _ = await store_service._get(
+            user_data, _ = await store_service.get(
                 f"{store_service.base_url}/users/me", api_key, params={"fields": "id"}
             )
             user_data_var.set(user_data[0])
         except HTTPStatusError as exc:
-            if exc.response.status_code == 403:
+            if exc.response.status_code == httpx.codes.FORBIDDEN:
                 msg = "Invalid API key"
                 raise ValueError(msg) from exc
     try:
@@ -53,8 +53,7 @@ async def user_data_context(store_service: StoreService, api_key: str | None = N
 
 
 def get_id_from_search_string(search_string: str) -> str | None:
-    """
-    Extracts the ID from a search string.
+    """Extracts the ID from a search string.
 
     Args:
         search_string (str): The search string to extract the ID from.
@@ -74,9 +73,10 @@ def get_id_from_search_string(search_string: str) -> str | None:
 
 
 class StoreService(Service):
-    """This is a service that integrates langflow with the store which
-    is a Directus instance. It allows to search, get and post components to
-    the store."""
+    """This is a service that integrates langflow with the store which is a Directus instance.
+
+    It allows to search, get and post components to the store.
+    """
 
     name = "store_service"
 
@@ -112,11 +112,11 @@ class StoreService(Service):
         # If it is, return True
         # If it is not, return False
         try:
-            user_data, _ = await self._get(f"{self.base_url}/users/me", api_key, params={"fields": "id"})
+            user_data, _ = await self.get(f"{self.base_url}/users/me", api_key, params={"fields": "id"})
 
             return "id" in user_data[0]
         except HTTPStatusError as exc:
-            if exc.response.status_code in [403, 401]:
+            if exc.response.status_code in {403, 401}:
                 return False
             msg = f"Unexpected status code: {exc.response.status_code}"
             raise ValueError(msg) from exc
@@ -124,7 +124,7 @@ class StoreService(Service):
             msg = f"Unexpected error: {exc}"
             raise ValueError(msg) from exc
 
-    async def _get(
+    async def get(
         self, url: str, api_key: str | None = None, params: dict[str, Any] | None = None
     ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         """Utility method to perform GET requests."""
@@ -133,8 +133,8 @@ class StoreService(Service):
             try:
                 response = await client.get(url, headers=headers, params=params, timeout=self.timeout)
                 response.raise_for_status()
-            except HTTPError as exc:
-                raise exc
+            except HTTPError:
+                raise
             except Exception as exc:
                 msg = f"GET failed: {exc}"
                 raise ValueError(msg) from exc
@@ -159,9 +159,9 @@ class StoreService(Service):
                 )
                 response.raise_for_status()
             return response.json()
-        except HTTPError as exc:
-            raise exc
-        except Exception:
+        except HTTPError:
+            raise
+        except Exception:  # noqa: BLE001
             logger.opt(exception=True).debug("Webhook failed")
 
     def build_tags_filter(self, tags: list[str]):
@@ -173,6 +173,7 @@ class StoreService(Service):
     async def count_components(
         self,
         filter_conditions: list[dict[str, Any]],
+        *,
         api_key: str | None = None,
         use_api_key: bool | None = False,
     ) -> int:
@@ -182,7 +183,7 @@ class StoreService(Service):
 
         api_key = api_key if use_api_key else None
 
-        results, _ = await self._get(self.components_url, api_key, params)
+        results, _ = await self.get(self.components_url, api_key, params)
         return int(results[0].get("count", 0))
 
     @staticmethod
@@ -198,6 +199,7 @@ class StoreService(Service):
 
     def build_filter_conditions(
         self,
+        *,
         component_id: str | None = None,
         search: str | None = None,
         private: bool | None = None,
@@ -257,6 +259,7 @@ class StoreService(Service):
 
     async def query_components(
         self,
+        *,
         api_key: str | None = None,
         sort: list[str] | None = None,
         page: int = 1,
@@ -286,7 +289,7 @@ class StoreService(Service):
         # so we don't need to risk passing an invalid api_key
         # and getting 401
         api_key = api_key if use_api_key else None
-        results, metadata = await self._get(self.components_url, api_key, params)
+        results, metadata = await self.get(self.components_url, api_key, params)
         if isinstance(results, dict):
             results = [results]
 
@@ -313,7 +316,7 @@ class StoreService(Service):
                 }
             ),
         }
-        results, _ = await self._get(self.components_url, api_key, params)
+        results, _ = await self.get(self.components_url, api_key, params)
         return [result["id"] for result in results]
 
     # Which of the components is parent of the user's components
@@ -333,7 +336,7 @@ class StoreService(Service):
                 }
             ),
         }
-        results, _ = await self._get(self.components_url, api_key, params)
+        results, _ = await self.get(self.components_url, api_key, params)
         return [result["id"] for result in results]
 
     async def download(self, api_key: str, component_id: UUID) -> DownloadComponentResponse:
@@ -342,7 +345,7 @@ class StoreService(Service):
         if not self.download_webhook_url:
             msg = "DOWNLOAD_WEBHOOK_URL is not set"
             raise ValueError(msg)
-        component, _ = await self._get(url, api_key, params)
+        component, _ = await self.get(url, api_key, params)
         await self.call_webhook(api_key, self.download_webhook_url, component_id)
         if len(component) > 1:
             msg = "Something went wrong while downloading the component"
@@ -434,7 +437,7 @@ class StoreService(Service):
     async def get_tags(self) -> list[dict[str, Any]]:
         url = f"{self.base_url}/items/tags"
         params = {"fields": "id,name"}
-        tags, _ = await self._get(url, api_key=None, params=params)
+        tags, _ = await self.get(url, api_key=None, params=params)
         return tags
 
     async def get_user_likes(self, api_key: str) -> list[dict[str, Any]]:
@@ -442,7 +445,7 @@ class StoreService(Service):
         params = {
             "fields": "id,likes",
         }
-        likes, _ = await self._get(url, api_key, params)
+        likes, _ = await self.get(url, api_key, params)
         return likes
 
     async def get_component_likes_count(self, component_id: str, api_key: str | None = None) -> int:
@@ -451,7 +454,7 @@ class StoreService(Service):
         params = {
             "fields": "id,count(liked_by)",
         }
-        result, _ = await self._get(url, api_key=api_key, params=params)
+        result, _ = await self.get(url, api_key=api_key, params=params)
         if len(result) == 0:
             msg = "Component not found"
             raise ValueError(msg)
@@ -487,7 +490,7 @@ class StoreService(Service):
                 timeout=self.timeout,
             )
             response.raise_for_status()
-        if response.status_code == 200:
+        if response.status_code == httpx.codes.OK:
             result = response.json()
 
             if isinstance(result, list):
@@ -501,6 +504,7 @@ class StoreService(Service):
 
     async def get_list_component_response_model(
         self,
+        *,
         component_id: str | None = None,
         search: str | None = None,
         private: bool | None = None,
@@ -543,10 +547,10 @@ class StoreService(Service):
                 if metadata:
                     comp_count = metadata.get("filter_count", 0)
             except HTTPStatusError as exc:
-                if exc.response.status_code == 403:
+                if exc.response.status_code == httpx.codes.FORBIDDEN:
                     msg = "You are not authorized to access this public resource"
                     raise ForbiddenError(msg) from exc
-                if exc.response.status_code == 401:
+                if exc.response.status_code == httpx.codes.UNAUTHORIZED:
                     msg = "You are not authorized to access this resource. Please check your API key."
                     raise APIKeyError(msg) from exc
             except Exception as exc:
@@ -565,10 +569,10 @@ class StoreService(Service):
                 elif not metadata:
                     comp_count = 0
             except HTTPStatusError as exc:
-                if exc.response.status_code == 403:
+                if exc.response.status_code == httpx.codes.FORBIDDEN:
                     msg = "You are not authorized to access this public resource"
                     raise ForbiddenError(msg) from exc
-                if exc.response.status_code == 401:
+                if exc.response.status_code == httpx.codes.UNAUTHORIZED:
                     msg = "You are not authorized to access this resource. Please check your API key."
                     raise APIKeyError(msg) from exc
 
@@ -587,7 +591,8 @@ class StoreService(Service):
                         )
                         authorized = True
                         result = updated_result
-                    except Exception:
+                    except Exception:  # noqa: BLE001
+                        logger.opt(exception=True).debug("Error updating components with user data")
                         # If we get an error here, it means the user is not authorized
                         authorized = False
         return ListComponentResponseModel(results=result, authorized=authorized, count=comp_count)

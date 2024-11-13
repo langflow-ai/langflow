@@ -34,7 +34,7 @@ def list_flows(*, user_id: str | None = None) -> list[Data]:
     try:
         with session_scope() as session:
             flows = session.exec(
-                select(Flow).where(Flow.user_id == user_id).where(Flow.is_component == False)  # noqa
+                select(Flow).where(Flow.user_id == user_id).where(Flow.is_component == False)  # noqa: E712
             ).all()
 
             return [flow.to_data() for flow in flows]
@@ -82,13 +82,20 @@ async def run_flow(
     output_type: str | None = "chat",
     user_id: str | None = None,
     run_id: str | None = None,
+    session_id: str | None = None,
+    graph: Graph | None = None,
 ) -> list[RunOutputs]:
     if user_id is None:
         msg = "Session is invalid"
         raise ValueError(msg)
-    graph = await load_flow(user_id, flow_id, flow_name, tweaks)
+    if graph is None:
+        graph = await load_flow(user_id, flow_id, flow_name, tweaks)
     if run_id:
         graph.set_run_id(UUID(run_id))
+    if session_id:
+        graph.session_id = session_id
+    if user_id:
+        graph.user_id = user_id
 
     if inputs is None:
         inputs = []
@@ -107,7 +114,7 @@ async def run_flow(
         for vertex in graph.vertices
         if output_type == "debug"
         or (
-            vertex.is_output and (output_type == "any" or output_type in vertex.id.lower())  # type: ignore
+            vertex.is_output and (output_type == "any" or output_type in vertex.id.lower())  # type: ignore[operator]
         )
     ]
 
@@ -125,12 +132,12 @@ async def run_flow(
 def generate_function_for_flow(
     inputs: list[Vertex], flow_id: str, user_id: str | UUID | None
 ) -> Callable[..., Awaitable[Any]]:
-    """
-    Generate a dynamic flow function based on the given inputs and flow ID.
+    """Generate a dynamic flow function based on the given inputs and flow ID.
 
     Args:
         inputs (List[Vertex]): The list of input vertices for the flow.
         flow_id (str): The ID of the flow.
+        user_id (str | UUID | None): The user ID associated with the flow.
 
     Returns:
         Coroutine: The dynamic flow function.
@@ -186,7 +193,7 @@ async def flow_function({func_args}):
         if run_output is not None:
             for output in run_output.outputs:
                 if output:
-                    data.extend(build_data_from_result_data(output, get_final_results_only=True))
+                    data.extend(build_data_from_result_data(output))
         return format_flow_output_data(data)
     except Exception as e:
         raise ToolException(f'Error running flow: ' + e)
@@ -194,19 +201,19 @@ async def flow_function({func_args}):
 
     compiled_func = compile(func_body, "<string>", "exec")
     local_scope: dict = {}
-    exec(compiled_func, globals(), local_scope)
+    exec(compiled_func, globals(), local_scope)  # noqa: S102
     return local_scope["flow_function"]
 
 
 def build_function_and_schema(
     flow_data: Data, graph: Graph, user_id: str | UUID | None
 ) -> tuple[Callable[..., Awaitable[Any]], type[BaseModel]]:
-    """
-    Builds a dynamic function and schema for a given flow.
+    """Builds a dynamic function and schema for a given flow.
 
     Args:
         flow_data (Data): The flow record containing information about the flow.
         graph (Graph): The graph representing the flow.
+        user_id (str): The user ID associated with the flow.
 
     Returns:
         Tuple[Callable, BaseModel]: A tuple containing the dynamic function and the schema.
@@ -219,8 +226,7 @@ def build_function_and_schema(
 
 
 def get_flow_inputs(graph: Graph) -> list[Vertex]:
-    """
-    Retrieves the flow inputs from the given graph.
+    """Retrieves the flow inputs from the given graph.
 
     Args:
         graph (Graph): The graph object representing the flow.
@@ -232,8 +238,7 @@ def get_flow_inputs(graph: Graph) -> list[Vertex]:
 
 
 def build_schema_from_inputs(name: str, inputs: list[Vertex]) -> type[BaseModel]:
-    """
-    Builds a schema from the given inputs.
+    """Builds a schema from the given inputs.
 
     Args:
         name (str): The name of the schema.
@@ -249,12 +254,11 @@ def build_schema_from_inputs(name: str, inputs: list[Vertex]) -> type[BaseModel]
         field_name = input_.display_name.lower().replace(" ", "_")
         description = input_.description
         fields[field_name] = (str, Field(default="", description=description))
-    return create_model(name, **fields)  # type: ignore
+    return create_model(name, **fields)
 
 
 def get_arg_names(inputs: list[Vertex]) -> list[dict[str, str]]:
-    """
-    Returns a list of dictionaries containing the component name and its corresponding argument name.
+    """Returns a list of dictionaries containing the component name and its corresponding argument name.
 
     Args:
         inputs (List[Vertex]): A list of Vertex objects representing the inputs.
@@ -286,15 +290,17 @@ def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: UUID | None =
         return FlowRead.model_validate(flow, from_attributes=True)
 
 
-def generate_unique_flow_name(flow_name, user_id, session):
+async def generate_unique_flow_name(flow_name, user_id, session):
     original_name = flow_name
     n = 1
     while True:
         # Check if a flow with the given name exists
-        existing_flow = session.exec(
-            select(Flow).where(
-                Flow.name == flow_name,
-                Flow.user_id == user_id,
+        existing_flow = (
+            await session.exec(
+                select(Flow).where(
+                    Flow.name == flow_name,
+                    Flow.user_id == user_id,
+                )
             )
         ).first()
 

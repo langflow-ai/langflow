@@ -14,10 +14,13 @@ if TYPE_CHECKING:
 
 
 class BaseTracer(ABC):
+    trace_id: UUID
+
     @abstractmethod
     def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
         raise NotImplementedError
 
+    @property
     @abstractmethod
     def ready(self) -> bool:
         raise NotImplementedError
@@ -31,7 +34,7 @@ class BaseTracer(ABC):
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
-    ):
+    ) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -42,7 +45,7 @@ class BaseTracer(ABC):
         outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
         logs: Sequence[Log | dict] = (),
-    ):
+    ) -> None:
         raise NotImplementedError
 
     @abstractmethod
@@ -52,7 +55,7 @@ class BaseTracer(ABC):
         outputs: dict[str, Any],
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         raise NotImplementedError
 
     @abstractmethod

@@ -43,6 +43,7 @@ export type APIClassType = {
   output_types?: Array<string>;
   custom_fields?: CustomFieldsType;
   beta?: boolean;
+  legacy?: boolean;
   documentation: string;
   error?: string;
   official?: boolean;
@@ -51,6 +52,7 @@ export type APIClassType = {
   lf_version?: string;
   flow?: FlowType;
   field_order?: string[];
+  tool_mode?: boolean;
   [key: string]:
     | Array<string>
     | string

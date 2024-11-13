@@ -21,7 +21,7 @@ test("user should be able to use ComposIO without getting api_key error", async 
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title").count();
   }
@@ -30,25 +30,21 @@ test("user should be able to use ComposIO without getting api_key error", async 
     timeout: 30000,
   });
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("composio");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("composio");
 
   await page.waitForTimeout(1000);
 
-  const modelElement = await page.getByTestId("toolkitsComposio Tools");
+  const modelElement = await page.getByTestId("composioComposio Tools");
   const targetElement = await page.locator('//*[@id="react-flow-id"]');
   await modelElement.dragTo(targetElement);
 
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.waitForTimeout(1000);
 
@@ -74,7 +70,7 @@ test("user should be able to use connect tools", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title").count();
   }
@@ -83,12 +79,8 @@ test("user should be able to use connect tools", async ({ page }) => {
     timeout: 30000,
   });
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("search api");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("search api");
 
   await page.waitForTimeout(1000);
 
@@ -99,27 +91,29 @@ test("user should be able to use connect tools", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.waitForTimeout(1000);
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("tool calling agent");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("tool calling agent");
 
   await page.waitForTimeout(1000);
 
-  modelElement = await page.getByTestId("agentsTool Calling Agent");
+  modelElement = await page.getByTestId(
+    "langchain_utilitiesTool Calling Agent",
+  );
   targetElement = await page.locator('//*[@id="react-flow-id"]');
   await modelElement.dragTo(targetElement);
 
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   //connection
   const searchApiOutput = await page

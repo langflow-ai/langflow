@@ -18,11 +18,11 @@ def run_in_thread(coro):
     result = None
     exception = None
 
-    def target():
+    def target() -> None:
         nonlocal result, exception
         try:
             result = asyncio.run(coro)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             exception = e
 
     thread = threading.Thread(target=target)

@@ -51,6 +51,11 @@ import { useTypesStore } from "./typesStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
+  fitViewNode: (nodeId) => {
+    if (get().reactFlowInstance && get().nodes.find((n) => n.id === nodeId)) {
+      get().reactFlowInstance?.fitView({ nodes: [{ id: nodeId }] });
+    }
+  },
   autoSaveFlow: undefined,
   componentsToUpdate: false,
   updateComponentsToUpdate: (nodes) => {
@@ -106,6 +111,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   hasIO: get()?.inputs?.length > 0 || get()?.outputs?.length > 0,
   setFlowPool: (flowPool) => {
     set({ flowPool });
+  },
+  updateToolMode: (nodeId: string, toolMode: boolean) => {
+    get().setNode(nodeId, (node) => ({
+      ...node,
+      data: { ...node.data, node: { ...node.data.node, tool_mode: toolMode } },
+    }));
   },
   updateFreezeStatus: (nodeIds: string[], freeze: boolean) => {
     get().setNodes((oldNodes) => {
@@ -269,14 +280,32 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     return get().nodes.find((node) => node.id === id);
   },
   deleteNode: (nodeId) => {
-    get().setNodes(
-      get().nodes.filter((node) =>
-        typeof nodeId === "string"
-          ? node.id !== nodeId
-          : !nodeId.includes(node.id),
-      ),
+    const { filteredNodes, deletedNode } = get().nodes.reduce<{
+      filteredNodes: Node[];
+      deletedNode: Node | null;
+    }>(
+      (acc, node) => {
+        const isMatch =
+          typeof nodeId === "string"
+            ? node.id === nodeId
+            : nodeId.includes(node.id);
+
+        if (isMatch) {
+          acc.deletedNode = node;
+        } else {
+          acc.filteredNodes.push(node);
+        }
+
+        return acc;
+      },
+      { filteredNodes: [], deletedNode: null },
     );
-    track("Component Deleted", { nodeId });
+
+    get().setNodes(filteredNodes);
+
+    if (deletedNode) {
+      track("Component Deleted", { componentType: deletedNode.data.type });
+    }
   },
   deleteEdge: (edgeId) => {
     get().setEdges(
@@ -504,6 +533,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     files,
     silent,
     setLockChat,
+    session,
   }: {
     startNodeId?: string;
     stopNodeId?: string;
@@ -511,6 +541,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     files?: string[];
     silent?: boolean;
     setLockChat?: (lock: boolean) => void;
+    session?: string;
   }) => {
     get().setIsBuilding(true);
     get().setLockChat(true);
@@ -536,7 +567,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         get().updateBuildStatus(ids, BuildStatus.ERROR);
         throw new Error("Invalid components");
       }
-      get().updateEdgesRunningByNodes(nodes, true);
+      // get().updateEdgesRunningByNodes(nodes, true);
     }
     function handleBuildUpdate(
       vertexBuildData: VertexBuildTypeAPI,
@@ -615,6 +646,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       useFlowStore.getState().updateBuildStatus([vertexBuildData.id], status);
     }
     await buildFlowVerticesWithFallback({
+      session,
       input_value,
       files,
       flowId: currentFlow!.id,
@@ -657,10 +689,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         get().setLockChat(false);
       },
       onBuildError: (title: string, list: string[], elementList) => {
-        const idList = elementList
-          .map((element) => element.id)
-          .filter(Boolean) as string[];
-        useFlowStore.getState().updateBuildStatus(idList, BuildStatus.BUILT);
+        const idList =
+          (elementList
+            ?.map((element) => element.id)
+            .filter(Boolean) as string[]) ?? get().nodes.map((n) => n.id);
+        useFlowStore.getState().updateBuildStatus(idList, BuildStatus.ERROR);
         if (get().componentsToUpdate)
           setErrorData({
             title:
@@ -680,6 +713,15 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           .map((element) => element.reference)
           .filter(Boolean) as string[];
         get().updateBuildStatus(idList, BuildStatus.BUILDING);
+
+        const edges = get().edges;
+        const newEdges = edges.map((edge) => {
+          if (idList.includes(edge.data.targetHandle.id)) {
+            edge.className = "ran";
+          }
+          return edge;
+        });
+        set({ edges: newEdges });
       },
       onValidateNodes: validateSubgraph,
       nodes: get().nodes || undefined,
@@ -700,14 +742,30 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   updateEdgesRunningByNodes: (ids: string[], running: boolean) => {
     const edges = get().edges;
     const newEdges = edges.map((edge) => {
-      if (ids.includes(edge.source) && ids.includes(edge.target)) {
+      if (ids.includes(edge.data.sourceHandle.id)) {
         edge.animated = running;
         edge.className = running ? "running" : "";
+      } else {
+        edge.animated = false;
+        edge.className = "not-running";
       }
       return edge;
     });
     set({ edges: newEdges });
   },
+  clearEdgesRunningByNodes: async (): Promise<void> => {
+    return new Promise<void>((resolve) => {
+      const edges = get().edges;
+      const newEdges = edges.map((edge) => {
+        edge.animated = false;
+        edge.className = "";
+        return edge;
+      });
+      set({ edges: newEdges });
+      resolve();
+    });
+  },
+
   updateVerticesBuild: (
     vertices: {
       verticesIds: string[];
@@ -798,6 +856,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   filterType: undefined,
   setFilterType: (filterType) => {
     set({ filterType });
+  },
+  currentBuildingNodeId: undefined,
+  setCurrentBuildingNodeId: (nodeIds) => {
+    set({ currentBuildingNodeId: nodeIds });
   },
 }));
 

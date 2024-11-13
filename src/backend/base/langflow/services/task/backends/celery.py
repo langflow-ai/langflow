@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-from celery.result import AsyncResult  # type: ignore
+from celery.result import AsyncResult
 
 from langflow.services.task.backends.base import TaskBackend
 from langflow.worker import celery_app
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 class CeleryBackend(TaskBackend):
     name = "celery"
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.celery_app = celery_app
 
     def launch_task(self, task_func: Callable[..., Any], *args: Any, **kwargs: Any) -> tuple[str, AsyncResult]:

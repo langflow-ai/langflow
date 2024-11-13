@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from functools import wraps
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from loguru import logger
 
@@ -15,8 +15,7 @@ if TYPE_CHECKING:
 
 
 def check_cached_vector_store(f):
-    """
-    Decorator to check for cached vector stores, and returns them if they exist.
+    """Decorator to check for cached vector stores, and returns them if they exist.
 
     Note: caching only occurs during the execution of a component - they do not persist
     across separate invocations of the component. This method exists so that components with
@@ -33,7 +32,7 @@ def check_cached_vector_store(f):
         self._cached_vector_store = result
         return result
 
-    check_cached._is_cached_vector_store_checked = True
+    check_cached.is_cached_vector_store_checked = True
     return check_cached
 
 
@@ -42,13 +41,11 @@ class LCVectorStoreComponent(Component):
     _cached_vector_store: VectorStore | None = None
 
     def __init_subclass__(cls, **kwargs):
-        """
-        Enforces the check cached decorator on all subclasses
-        """
+        """Enforces the check cached decorator on all subclasses."""
         super().__init_subclass__(**kwargs)
         if hasattr(cls, "build_vector_store"):
             method = cls.build_vector_store
-            if not hasattr(method, "_is_cached_vector_store_checked"):
+            if not hasattr(method, "is_cached_vector_store_checked"):
                 msg = (
                     f"The method 'build_vector_store' in class {cls.__name__} "
                     "must be decorated with @check_cached_vector_store"
@@ -67,14 +64,9 @@ class LCVectorStoreComponent(Component):
             name="search_results",
             method="search_documents",
         ),
-        Output(
-            display_name="Vector Store",
-            name="vector_store",
-            method="cast_vector_store",
-        ),
     ]
 
-    def _validate_outputs(self):
+    def _validate_outputs(self) -> None:
         # At least these three outputs must be defined
         required_output_methods = [
             "build_base_retriever",
@@ -98,13 +90,14 @@ class LCVectorStoreComponent(Component):
         k=10,
         **kwargs,
     ) -> list[Data]:
-        """
-        Search for data in the vector store based on the input value and search type.
+        """Search for data in the vector store based on the input value and search type.
 
         Args:
             input_value (Text): The input value to search for.
             search_type (str): The type of search to perform.
             vector_store (VectorStore): The vector store to search in.
+            k (int): The number of results to return.
+            **kwargs: Additional keyword arguments to pass to the vector store search method.
 
         Returns:
             List[Data]: A list of data matching the search criteria.
@@ -112,7 +105,6 @@ class LCVectorStoreComponent(Component):
         Raises:
             ValueError: If invalid inputs are provided.
         """
-
         docs: list[Document] = []
         if input_value and isinstance(input_value, str) and hasattr(vector_store, "search"):
             docs = vector_store.search(query=input_value, search_type=search_type.lower(), k=k, **kwargs)
@@ -123,13 +115,8 @@ class LCVectorStoreComponent(Component):
         self.status = data
         return data
 
-    def cast_vector_store(self) -> VectorStore:
-        return cast(VectorStore, self.build_vector_store())
-
     def build_base_retriever(self) -> Retriever:  # type: ignore[type-var]
-        """
-        Builds the BaseRetriever object.
-        """
+        """Builds the BaseRetriever object."""
         if self._cached_vector_store is not None:
             vector_store = self._cached_vector_store
         else:
@@ -145,9 +132,7 @@ class LCVectorStoreComponent(Component):
         raise ValueError(msg)
 
     def search_documents(self) -> list[Data]:
-        """
-        Search for documents in the vector store.
-        """
+        """Search for documents in the vector store."""
         search_query: str = self.search_query
         if not search_query:
             self.status = ""
@@ -170,16 +155,12 @@ class LCVectorStoreComponent(Component):
         return search_results
 
     def get_retriever_kwargs(self):
-        """
-        Get the retriever kwargs. Implementations can override this method to provide custom retriever kwargs.
-        """
+        """Get the retriever kwargs. Implementations can override this method to provide custom retriever kwargs."""
         return {}
 
     @abstractmethod
     @check_cached_vector_store
     def build_vector_store(self) -> VectorStore:
-        """
-        Builds the Vector Store object.
-        """
+        """Builds the Vector Store object."""
         msg = "build_vector_store method must be implemented."
         raise NotImplementedError(msg)

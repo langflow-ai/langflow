@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
 import emoji
-from emoji import purely_emoji  # type: ignore
+from emoji import purely_emoji
 from fastapi import HTTPException, status
 from loguru import logger
-from pydantic import field_serializer, field_validator
+from pydantic import BaseModel, field_serializer, field_validator
 from sqlalchemy import Text, UniqueConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
@@ -21,6 +21,8 @@ if TYPE_CHECKING:
     from langflow.services.database.models.message import MessageTable
     from langflow.services.database.models.user import User
     from langflow.services.database.models.vertex_builds.model import VertexBuildTable
+
+HEX_COLOR_LENGTH = 7
 
 
 class FlowBase(SQLModel):
@@ -54,6 +56,7 @@ class FlowBase(SQLModel):
         return v
 
     @field_validator("icon_bg_color")
+    @classmethod
     def validate_icon_bg_color(cls, v):
         if v is not None and not isinstance(v, str):
             msg = "Icon background color must be a string"
@@ -64,12 +67,13 @@ class FlowBase(SQLModel):
             raise ValueError(msg)
 
         # validate that it is a valid hex color
-        if v and len(v) != 7:
+        if v and len(v) != HEX_COLOR_LENGTH:
             msg = "Icon background color must be 7 characters long"
             raise ValueError(msg)
         return v
 
     @field_validator("icon")
+    @classmethod
     def validate_icon_atr(cls, v):
         #   const emojiRegex = /\p{Emoji}/u;
         # const isEmoji = emojiRegex.test(data?.node?.icon!);
@@ -109,12 +113,13 @@ class FlowBase(SQLModel):
         return v
 
     @field_validator("data")
-    def validate_json(v):
+    @classmethod
+    def validate_json(cls, v):
         if not v:
             return v
         if not isinstance(v, dict):
             msg = "Flow must be a valid JSON"
-            raise ValueError(msg)
+            raise ValueError(msg)  # noqa: TRY004
 
         # data must contain nodes and edges
         if "nodes" not in v:
@@ -128,7 +133,7 @@ class FlowBase(SQLModel):
 
     # updated_at can be serialized to JSON
     @field_serializer("updated_at")
-    def serialize_datetime(value):
+    def serialize_datetime(self, value):
         if isinstance(value, datetime):
             # I'm getting 2024-05-29T17:57:17.631346
             # and I want 2024-05-29T17:57:17-05:00
@@ -139,6 +144,7 @@ class FlowBase(SQLModel):
         return value
 
     @field_validator("updated_at", mode="before")
+    @classmethod
     def validate_dt(cls, v):
         if v is None:
             return v
@@ -148,11 +154,12 @@ class FlowBase(SQLModel):
         return datetime.fromisoformat(v)
 
 
-class Flow(FlowBase, table=True):  # type: ignore
+class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
     data: dict | None = Field(default=None, sa_column=Column(JSON))
     user_id: UUID | None = Field(index=True, foreign_key="user.id", nullable=True)
     user: "User" = Relationship(back_populates="flows")
+    icon: str | None = Field(default=None, nullable=True)
     tags: list[str] | None = Field(sa_column=Column(JSON), default=[])
     folder_id: UUID | None = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
     folder: Optional["Folder"] = Relationship(back_populates="flows")
@@ -186,6 +193,33 @@ class FlowRead(FlowBase):
     id: UUID
     user_id: UUID | None = Field()
     folder_id: UUID | None = Field()
+
+
+class FlowHeader(BaseModel):
+    """Model representing a header for a flow - Without the data.
+
+    Attributes:
+    -----------
+    id : UUID
+        Unique identifier for the flow.
+    name : str
+        The name of the flow.
+    folder_id : UUID | None, optional
+        The ID of the folder containing the flow. None if not associated with a folder.
+    is_component : bool | None, optional
+        Flag indicating whether the flow is a component.
+    endpoint_name : str | None, optional
+        The name of the endpoint associated with this flow.
+    description : str | None, optional
+        A description of the flow.
+    """
+
+    id: UUID
+    name: str
+    folder_id: UUID | None = None
+    is_component: bool | None = None
+    endpoint_name: str | None = None
+    description: str | None = None
 
 
 class FlowUpdate(SQLModel):

@@ -41,7 +41,7 @@ class LangSmithTracer(BaseTracer):
             )
             self._run_tree.add_event({"name": "Start", "time": datetime.now(timezone.utc).isoformat()})
             self._children: dict[str, RunTree] = {}
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.opt(exception=True).debug("Error setting up LangSmith tracer")
             self._ready = False
 
@@ -49,7 +49,7 @@ class LangSmithTracer(BaseTracer):
     def ready(self):
         return self._ready
 
-    def setup_langsmith(self):
+    def setup_langsmith(self) -> bool:
         if os.getenv("LANGCHAIN_API_KEY") is None:
             return False
         try:
@@ -64,14 +64,14 @@ class LangSmithTracer(BaseTracer):
 
     def add_trace(
         self,
-        trace_id: str,
+        trace_id: str,  # noqa: ARG002
         trace_name: str,
         trace_type: str,
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
-        vertex: Vertex | None = None,
-    ):
-        if not self._ready:
+        vertex: Vertex | None = None,  # noqa: ARG002
+    ) -> None:
+        if not self._ready or not self._run_tree:
             return
         processed_inputs = {}
         if inputs:
@@ -117,13 +117,13 @@ class LangSmithTracer(BaseTracer):
 
     def end_trace(
         self,
-        trace_id: str,
+        trace_id: str,  # noqa: ARG002
         trace_name: str,
         outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
         logs: Sequence[Log | dict] = (),
     ):
-        if not self._ready:
+        if not self._ready or trace_name not in self._children:
             return
         child = self._children[trace_name]
         raw_outputs = {}
@@ -155,8 +155,8 @@ class LangSmithTracer(BaseTracer):
         outputs: dict[str, Any],
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
-    ):
-        if not self._ready:
+    ) -> None:
+        if not self._ready or not self._run_tree:
             return
         self._run_tree.add_metadata({"inputs": inputs})
         if metadata:

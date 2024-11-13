@@ -23,7 +23,7 @@ test("user must see on handle click the possibility connections - RetrievalQA", 
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -34,23 +34,28 @@ test("user must see on handle click the possibility connections - RetrievalQA", 
   );
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("retrievalqa");
+
+  await page.waitForTimeout(1000);
+
+  await page.getByTestId("sidebar-options-trigger").click();
+  await page.getByTestId("sidebar-legacy-switch").isVisible({ timeout: 5000 });
+  await page.getByTestId("sidebar-legacy-switch").click();
+  await expect(page.getByTestId("sidebar-legacy-switch")).toBeChecked();
+  await page.getByTestId("sidebar-options-trigger").click();
+
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("retrievalqa");
 
   await page.waitForTimeout(1000);
   await page
-    .getByTestId("chainsRetrieval QA")
+    .getByTestId("langchain_utilitiesRetrieval QA")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
   await page.waitForTimeout(500);
 
   let visibleElementHandle;
@@ -79,11 +84,12 @@ test("user must see on handle click the possibility connections - RetrievalQA", 
     "disclosure-vector stores",
     "disclosure-embeddings",
     "disclosure-agents",
-    "disclosure-chains",
     "disclosure-memories",
-    "disclosure-prototypes",
-    "disclosure-retrievers",
-    "disclosure-text splitters",
+    "disclosure-logic",
+    "disclosure-tools",
+    "disclosure-bundles-langchain",
+    "disclosure-bundles-assemblyai",
+    "disclosure-bundles-datastax",
   ];
 
   const elementTestIds = [
@@ -91,15 +97,15 @@ test("user must see on handle click the possibility connections - RetrievalQA", 
     "outputsChat Output",
     "dataAPI Request",
     "modelsAmazon Bedrock",
-    "helpersChat Memory",
+    "helpersMessage History",
     "vectorstoresAstra DB",
     "embeddingsAmazon Bedrock Embeddings",
-    "agentsTool Calling Agent",
-    "chainsConversationChain",
+    "langchain_utilitiesTool Calling Agent",
+    "langchain_utilitiesConversationChain",
     "memoriesAstra DB Chat Memory",
-    "prototypesConditional Router",
-    "retrieversSelf Query Retriever",
-    "textsplittersCharacterTextSplitter",
+    "logicCondition",
+    "langchain_utilitiesSelf Query Retriever",
+    "langchain_utilitiesCharacterTextSplitter",
   ];
 
   await Promise.all(
@@ -112,24 +118,31 @@ test("user must see on handle click the possibility connections - RetrievalQA", 
     ),
   );
 
-  await page.getByPlaceholder("Search").click();
+  await page.getByTestId("sidebar-search-input").click();
 
-  const notVisibleModelSpecsTestIds = [
-    "model_specsVertexAI",
-    "model_specsCTransformers",
-    "model_specsAmazon Bedrock",
+  const visibleModelSpecsTestIds = [
+    "modelsAIML",
+    "modelsAmazon Bedrock",
+    "modelsAnthropic",
     "modelsAzure OpenAI",
-    "model_specsAzureChatOpenAI",
-    "model_specsChatAnthropic",
-    "model_specsChatLiteLLM",
-    "model_specsChatOllama",
-    "model_specsChatOpenAI",
-    "model_specsChatVertexAI",
+    "modelsCohere",
+    "modelsGoogle Generative AI",
+    "modelsGroq",
+    "modelsHuggingFace",
+    "modelsLM Studio",
+    "modelsMaritalk",
+    "modelsMistralAI",
+    "modelsNVIDIA",
+    "modelsOllama",
+    "modelsOpenAI",
+    "modelsPerplexity",
+    "modelsQianfan",
+    "modelsVertex AI",
   ];
 
   await Promise.all(
-    notVisibleModelSpecsTestIds.map((id) =>
-      expect(page.getByTestId(id)).not.toBeVisible(),
+    visibleModelSpecsTestIds.map((id) =>
+      expect(page.getByTestId(id)).toBeVisible(),
     ),
   );
 
@@ -167,6 +180,6 @@ test("user must see on handle click the possibility connections - RetrievalQA", 
 
   await expect(page.getByTestId("disclosure-helpers")).toBeVisible();
   await expect(page.getByTestId("disclosure-agents")).toBeVisible();
-  await expect(page.getByTestId("disclosure-chains")).toBeVisible();
-  await expect(page.getByTestId("disclosure-prototypes")).toBeVisible();
+  await expect(page.getByTestId("disclosure-memories")).toBeVisible();
+  await expect(page.getByTestId("disclosure-logic")).toBeVisible();
 });

@@ -30,36 +30,32 @@ test("should use webhook component on API", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("webhook");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("webhook");
 
   await page.waitForTimeout(1000);
 
   await page
-    .getByTestId("dataWebhook Input")
+    .getByTestId("dataWebhook")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.waitForSelector('[title="fit view"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
   });
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.waitForTimeout(1000);
   await page.getByText("API", { exact: true }).click();
@@ -77,6 +73,4 @@ test("should use webhook component on API", async ({ page }) => {
   expect(clipboardContent).toContain("curl -X POST");
   expect(clipboardContent).toContain("webhook");
   await page.getByRole("tab", { name: "Tweaks" }).click();
-  // await page.getByText("Webhook Input").isVisible();
-  // await page.getByText("Webhook Input").click();
 });

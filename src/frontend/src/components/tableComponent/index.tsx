@@ -7,6 +7,8 @@ import { ElementRef, forwardRef, useRef, useState } from "react";
 import {
   DEFAULT_TABLE_ALERT_MSG,
   DEFAULT_TABLE_ALERT_TITLE,
+  NO_COLUMN_DEFINITION_ALERT_DESCRIPTION,
+  NO_COLUMN_DEFINITION_ALERT_TITLE,
 } from "../../constants/constants";
 import { useDarkStore } from "../../stores/darkStore";
 import "../../style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
@@ -148,6 +150,25 @@ const TableComponent = forwardRef<
           </Alert>
         </div>
       );
+    }
+
+    if (colDef.length === 0) {
+      {
+        return (
+          <div className="flex h-full w-full items-center justify-center rounded-md border">
+            <Alert variant={"default"} className="w-fit">
+              <ForwardedIconComponent
+                name="AlertCircle"
+                className="h-5 w-5 text-primary"
+              />
+              <AlertTitle>{NO_COLUMN_DEFINITION_ALERT_TITLE}</AlertTitle>
+              <AlertDescription>
+                {NO_COLUMN_DEFINITION_ALERT_DESCRIPTION}
+              </AlertDescription>
+            </Alert>
+          </div>
+        );
+      }
     }
     return (
       <div

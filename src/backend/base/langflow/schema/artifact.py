@@ -2,11 +2,13 @@ from collections.abc import Generator
 from enum import Enum
 
 from fastapi.encoders import jsonable_encoder
+from loguru import logger
 from pydantic import BaseModel
 
-from langflow.schema import Data
+from langflow.schema.data import Data
+from langflow.schema.encoders import CUSTOM_ENCODERS
 from langflow.schema.message import Message
-from langflow.schema.schema import recursive_serialize_or_str
+from langflow.schema.serialize import recursive_serialize_or_str
 
 
 class ArtifactType(str, Enum):
@@ -42,10 +44,8 @@ def get_artifact_type(value, build_result=None) -> str:
             result = ArtifactType.ARRAY
 
     if result == ArtifactType.UNKNOWN and (
-        build_result
-        and isinstance(build_result, Generator)
-        or isinstance(value, Message)
-        and isinstance(value.text, Generator)
+        (build_result and isinstance(build_result, Generator))
+        or (isinstance(value, Message) and isinstance(value.text, Generator))
     ):
         result = ArtifactType.STREAM
 
@@ -66,9 +66,10 @@ def post_process_raw(raw, artifact_type: str):
     elif artifact_type == ArtifactType.UNKNOWN.value and raw is not None:
         if isinstance(raw, BaseModel | dict):
             try:
-                raw = jsonable_encoder(raw)
+                raw = jsonable_encoder(raw, custom_encoder=CUSTOM_ENCODERS)
                 artifact_type = ArtifactType.OBJECT.value
-            except Exception:
+            except Exception:  # noqa: BLE001
+                logger.opt(exception=True).debug(f"Error converting to json: {raw} ({type(raw)})")
                 raw = "Built Successfully ✨"
         else:
             raw = "Built Successfully ✨"

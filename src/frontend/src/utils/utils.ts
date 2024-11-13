@@ -115,6 +115,12 @@ export function getRandomKeyByssmm(): string {
   return seconds + milliseconds + Math.abs(Math.floor(Math.random() * 10001));
 }
 
+export function getNumberFromString(str: string): number {
+  const hash = str.split("").reduce((acc, char) => {
+    return char.charCodeAt(0) + acc;
+  }, 0);
+  return hash;
+}
 export function buildTweakObject(tweak: tweakType) {
   tweak.forEach((el) => {
     Object.keys(el).forEach((key) => {
@@ -528,7 +534,18 @@ export function generateBackendColumnsFromValue(rows: Object[]): ColumnField[] {
       display_name: column.headerName ?? "",
       sortable: true,
       filterable: true,
+      default: null, // Initialize default to null or appropriate value
     };
+
+    // Attempt to infer the default value from the data, if possible
+    if (rows.length > 0) {
+      const sampleValue = rows[0][column.field ?? ""];
+      if (sampleValue !== undefined) {
+        newColumn.default = sampleValue;
+      }
+    }
+
+    // Determine the formatter based on the sample value
     if (rows[0] && rows[0][column.field ?? ""]) {
       const value = rows[0][column.field ?? ""] as any;
       if (typeof value === "string") {
@@ -538,7 +555,6 @@ export function generateBackendColumnsFromValue(rows: Object[]): ColumnField[] {
           newColumn.formatter = FormatterType.text;
         }
       } else if (typeof value === "object" && value !== null) {
-        // Check if the object is a Date object
         if (
           Object.prototype.toString.call(value) === "[object Date]" ||
           value instanceof Date
@@ -623,6 +639,18 @@ export function addPlusSignes(array: string[]): string[] {
   });
 }
 
+export function removeDuplicatesBasedOnAttribute<T>(
+  arr: T[],
+  attribute: string,
+): T[] {
+  const seen = new Set();
+  const filteredChatHistory = arr.filter((item) => {
+    const duplicate = seen.has(item[attribute]);
+    seen.add(item[attribute]);
+    return !duplicate;
+  });
+  return filteredChatHistory;
+}
 export function isSupportedNodeTypes(type: string) {
   return Object.keys(DRAG_EVENTS_CUSTOM_TYPESS).some((key) => key === type);
 }
@@ -630,3 +658,21 @@ export function isSupportedNodeTypes(type: string) {
 export function getNodeRenderType(MIMEtype: string) {
   return DRAG_EVENTS_CUSTOM_TYPESS[MIMEtype];
 }
+
+export const formatPlaceholderName = (name) => {
+  const formattedName = name
+    .split("_")
+    .map((word: string) => word.toLowerCase())
+    .join(" ");
+
+  const firstWord = formattedName.split(" ")[0];
+  const prefix = /^[aeiou]/i.test(firstWord) ? "an" : "a";
+
+  return `Select ${prefix} ${formattedName}`;
+};
+
+export const isStringArray = (value: unknown): value is string[] => {
+  return (
+    Array.isArray(value) && value.every((item) => typeof item === "string")
+  );
+};

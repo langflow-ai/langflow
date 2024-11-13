@@ -1,4 +1,6 @@
-from langflow.components.astra_assistants.util import get_patched_openai_client
+from loguru import logger
+
+from langflow.base.astra_assistants.util import get_patched_openai_client
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.inputs import MultilineInput, StrInput
 from langflow.schema.message import Message
@@ -6,7 +8,7 @@ from langflow.template import Output
 
 
 class AssistantsCreateAssistant(ComponentWithCache):
-    icon = "bot"
+    icon = "AstraDB"
     display_name = "Create Assistant"
     description = "Creates an Assistant and returns it's id"
 
@@ -43,12 +45,12 @@ class AssistantsCreateAssistant(ComponentWithCache):
         Output(display_name="Assistant ID", name="assistant_id", method="process_inputs"),
     ]
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.client = get_patched_openai_client(self._shared_component_cache)
 
     def process_inputs(self) -> Message:
-        print(f"env_set is {self.env_set}")
+        logger.info(f"env_set is {self.env_set}")
         assistant = self.client.beta.assistants.create(
             name=self.assistant_name,
             instructions=self.instructions,

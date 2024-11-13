@@ -1,8 +1,8 @@
 from collections.abc import Callable
 from typing import cast
 
-from crewai import Agent, Crew, Process, Task  # type: ignore
-from crewai.task import TaskOutput  # type: ignore
+from crewai import Agent, Crew, Process, Task
+from crewai.task import TaskOutput
 from langchain_core.agents import AgentAction, AgentFinish
 
 from langflow.custom import Component
@@ -52,7 +52,7 @@ class BaseCrewComponent(Component):
     def get_task_callback(
         self,
     ) -> Callable:
-        def task_callback(task_output: TaskOutput):
+        def task_callback(task_output: TaskOutput) -> None:
             vertex_id = self._vertex.id if self._vertex else self.display_name or self.__class__.__name__
             self.log(task_output.model_dump(), name=f"Task (Agent: {task_output.agent}) - {vertex_id}")
 
@@ -61,7 +61,7 @@ class BaseCrewComponent(Component):
     def get_step_callback(
         self,
     ) -> Callable:
-        def step_callback(agent_output: AgentFinish | list[tuple[AgentAction, str]]):
+        def step_callback(agent_output: AgentFinish | list[tuple[AgentAction, str]]) -> None:
             _id = self._vertex.id if self._vertex else self.display_name
             if isinstance(agent_output, AgentFinish):
                 messages = agent_output.messages
@@ -78,6 +78,6 @@ class BaseCrewComponent(Component):
     async def build_output(self) -> Message:
         crew = self.build_crew()
         result = await crew.kickoff_async()
-        message = Message(text=result, sender=MESSAGE_SENDER_AI)
+        message = Message(text=result.raw, sender=MESSAGE_SENDER_AI)
         self.status = message
         return message

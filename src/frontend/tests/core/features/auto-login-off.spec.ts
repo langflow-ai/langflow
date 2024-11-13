@@ -55,6 +55,8 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
 
   await page.waitForSelector("text=new user added", { timeout: 30000 });
 
+  await page.waitForTimeout(1000);
+
   expect(await page.getByText(randomName, { exact: true }).isVisible()).toBe(
     true,
   );
@@ -63,6 +65,8 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
   await page.getByText("Delete", { exact: true }).last().click();
 
   await page.waitForSelector("text=user deleted", { timeout: 30000 });
+
+  await page.waitForTimeout(1000);
 
   expect(await page.getByText(randomName, { exact: true }).isVisible()).toBe(
     false,
@@ -99,7 +103,11 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
   ).toBe(true);
 
   //user must see just your own flows
-  await page.getByText("My Collection", { exact: true }).last().click();
+  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    timeout: 100000,
+  });
+
+  await page.getByTestId("icon-ChevronLeft").first().click();
 
   await page.waitForSelector('[id="new-project-btn"]', {
     timeout: 30000,
@@ -116,22 +124,23 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-  await page.waitForSelector('[title="fit view"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
   });
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("flow-configuration-button").click();
-  await page.getByText("Settings", { exact: true }).last().click();
+  await page.getByText("Flow Settings", { exact: true }).last().click();
 
   await page.getByPlaceholder("Flow Name").fill(randomFlowName);
 
@@ -139,21 +148,29 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
 
   await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
     timeout: 100000,
+    state: "visible",
   });
+
+  await page.waitForTimeout(1000);
 
   await page.getByTestId("icon-ChevronLeft").first().click();
 
   await page.waitForSelector('[data-testid="search-store-input"]:enabled', {
     timeout: 30000,
+    state: "visible",
   });
+
+  await page.waitForTimeout(2000);
 
   expect(
     await page.getByText(randomFlowName, { exact: true }).last().isVisible(),
   ).toBe(true);
 
+  await page.waitForTimeout(500);
+
   await page.getByTestId("user-profile-settings").click();
 
-  await page.getByText("Log Out", { exact: true }).click();
+  await page.getByText("Logout", { exact: true }).click();
 
   await page.waitForSelector("text=sign in to langflow", { timeout: 30000 });
 
@@ -163,24 +180,23 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
 
   await page.getByRole("button", { name: "Sign In" }).click();
 
-  await page.waitForSelector('[data-testid="mainpage_title"]', {
-    timeout: 30000,
-  });
-
   await page.waitForSelector('[id="new-project-btn"]', {
     timeout: 30000,
   });
 
   expect(
     (
-      await page.waitForSelector("text=this folder is empty", {
-        timeout: 30000,
-      })
+      await page.waitForSelector(
+        "text=Begin with a template, or start from scratch.",
+        {
+          timeout: 30000,
+        },
+      )
     ).isVisible(),
   );
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -189,19 +205,20 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
     timeout: 30000,
   });
 
-  await page.getByText("New Project", { exact: true }).click();
+  await page.getByText("New Flow", { exact: true }).click();
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-  await page.waitForSelector('[title="fit view"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
   });
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("flow-configuration-button").click();
-  await page.getByText("Settings", { exact: true }).last().click();
+  await page.getByText("Flow Settings", { exact: true }).last().click();
 
   await page.getByPlaceholder("Flow Name").fill(secondRandomFlowName);
 
@@ -223,13 +240,15 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
     await page.getByText(secondRandomFlowName, { exact: true }).isVisible(),
   ).toBe(true);
 
+  await page.waitForTimeout(500);
+
   expect(
     await page.getByText(randomFlowName, { exact: true }).isVisible(),
   ).toBe(false);
 
   await page.getByTestId("user-profile-settings").click();
 
-  await page.getByText("Log Out", { exact: true }).click();
+  await page.getByText("Logout", { exact: true }).click();
 
   await page.waitForSelector("text=sign in to langflow", { timeout: 30000 });
 
@@ -249,6 +268,8 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
   expect(
     await page.getByText(secondRandomFlowName, { exact: true }).isVisible(),
   ).toBe(false);
+  await page.waitForTimeout(500);
+
   expect(
     await page.getByText(randomFlowName, { exact: true }).isVisible(),
   ).toBe(true);

@@ -1,6 +1,7 @@
 import { ParameterRenderComponent } from "@/components/parameterRenderComponent";
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { APIClassType, InputFieldType } from "@/types/api";
+import { cn } from "@/utils/utils";
 
 export function CustomParameterComponent({
   handleOnNewValue,
@@ -12,6 +13,8 @@ export function CustomParameterComponent({
   handleNodeClass,
   nodeClass,
   disabled,
+  placeholder,
+  isToolMode,
 }: {
   handleOnNewValue: handleOnNewValueType;
   name: string;
@@ -22,6 +25,8 @@ export function CustomParameterComponent({
   handleNodeClass: (value: any, code?: string, type?: string) => void;
   nodeClass: APIClassType;
   disabled: boolean;
+  placeholder?: string;
+  isToolMode?: boolean;
 }) {
   return (
     <ParameterRenderComponent
@@ -34,6 +39,8 @@ export function CustomParameterComponent({
       handleNodeClass={handleNodeClass}
       nodeClass={nodeClass}
       disabled={disabled}
+      placeholder={placeholder}
+      isToolMode={isToolMode}
     />
   );
 }
@@ -41,11 +48,22 @@ export function CustomParameterComponent({
 export function getCustomParameterTitle({
   title,
   nodeId,
+  isFlexView,
 }: {
   title: string;
   nodeId: string;
+  isFlexView: boolean;
 }) {
-  return title;
+  return (
+    <div className={cn(isFlexView && "max-w-56 truncate")}>
+      <span
+        data-testid={`title-${title.toLocaleLowerCase()}`}
+        className="text-[13px]"
+      >
+        {title}
+      </span>
+    </div>
+  );
 }
 
 export function CustomParameterLabel({

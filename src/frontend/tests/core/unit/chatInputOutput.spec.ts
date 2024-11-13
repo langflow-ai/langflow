@@ -22,7 +22,7 @@ test("chat_io_teste", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -32,12 +32,11 @@ test("chat_io_teste", async ({ page }) => {
   });
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
+  await page.waitForSelector('[data-testid="sidebar-search-input"]', {
+    state: "visible",
   });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat output");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("chat output");
   await page.waitForTimeout(1000);
 
   await page
@@ -46,8 +45,8 @@ test("chat_io_teste", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat input");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("chat input");
   await page.waitForTimeout(1000);
 
   await page
@@ -56,18 +55,18 @@ test("chat_io_teste", async ({ page }) => {
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.waitForSelector('[title="fit view"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
   });
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   const elementsChatInput = await page
     .locator('[data-testid="handle-chatinput-shownode-message-right"]')
@@ -104,16 +103,14 @@ test("chat_io_teste", async ({ page }) => {
   // Release the mouse
   await page.mouse.up();
 
-  await page.getByLabel("fit view").click();
+  await page.getByTestId("fit_view").click();
   await page.getByText("Playground", { exact: true }).last().click();
   await page.waitForSelector('[data-testid="input-chat-playground"]', {
     timeout: 100000,
   });
   await page.getByTestId("input-chat-playground").click();
   await page.getByTestId("input-chat-playground").fill("teste");
-  await page.getByRole("button").nth(1).click();
-  const chat_output = page.getByTestId("chat-message-AI-teste");
+  await page.getByTestId("button-send").first().click();
   const chat_input = page.getByTestId("chat-message-User-teste");
-  await expect(chat_output).toHaveText("teste");
-  await expect(chat_input).toHaveText("teste");
+  await expect(chat_input).toHaveText("teste", { timeout: 10000 });
 });

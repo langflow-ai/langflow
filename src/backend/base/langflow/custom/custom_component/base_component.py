@@ -31,15 +31,15 @@ class BaseComponent:
     _user_id: str | UUID | None = None
     _template_config: dict = {}
 
-    def __init__(self, **data):
-        self.cache = TTLCache(maxsize=1024, ttl=60)
+    def __init__(self, **data) -> None:
+        self.cache: TTLCache = TTLCache(maxsize=1024, ttl=60)
         for key, value in data.items():
             if key == "user_id":
                 self._user_id = value
             else:
                 setattr(self, key, value)
 
-    def __setattr__(self, key, value):
+    def __setattr__(self, key, value) -> None:
         if key == "_user_id" and self._user_id is not None:
             logger.warning("user_id is immutable and cannot be changed.")
         super().__setattr__(key, value)
@@ -69,9 +69,7 @@ class BaseComponent:
 
     @staticmethod
     def get_template_config(component):
-        """
-        Gets the template configuration for the custom component itself.
-        """
+        """Gets the template configuration for the custom component itself."""
         template_config = {}
 
         for attribute, func in ATTR_FUNC_MAPPING.items():
@@ -87,8 +85,7 @@ class BaseComponent:
         return template_config
 
     def build_template_config(self) -> dict:
-        """
-        Builds the template configuration for the custom component.
+        """Builds the template configuration for the custom component.
 
         Returns:
             A dictionary representing the template configuration.

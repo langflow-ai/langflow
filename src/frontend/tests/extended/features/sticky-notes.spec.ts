@@ -1,4 +1,3 @@
-import { ENABLE_MVPS } from "@/../../src/customization/feature-flags";
 import { expect, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 
@@ -24,11 +23,6 @@ test("user should be able to interact with sticky notes", async ({ page }) => {
 
   const getUA = await page.evaluate(() => navigator.userAgent);
   const userAgentInfo = uaParser(getUA);
-  let control = "Control";
-
-  if (userAgentInfo.os.name.includes("Mac")) {
-    control = "Meta";
-  }
 
   const randomTitle = Math.random()
     .toString(36)
@@ -58,7 +52,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
   `;
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -67,9 +61,6 @@ The future of AI is both exciting and uncertain. As the technology continues to 
     timeout: 30000,
   });
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
   await page.getByTestId("add_note").click();
 
   await page.waitForTimeout(1000);
@@ -80,17 +71,17 @@ The future of AI is both exciting and uncertain. As the technology continues to 
   await page.mouse.up();
   await page.mouse.down();
 
-  await page.waitForSelector('[title="fit view"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
   });
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("note_node").click();
 
-  await page.locator(".generic-node-desc").last().dblclick();
+  await page.locator(".generic-node-desc-text").last().dblclick();
   await page.getByTestId("textarea").fill(noteText);
 
   expect(await page.getByText("2500/2500")).toBeVisible();
@@ -109,7 +100,10 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
   let hasStyles = await element?.evaluate((el) => {
     const style = window.getComputedStyle(el);
-    return style.backgroundColor === "rgb(241, 245, 249)";
+    return (
+      style.backgroundColor === "rgb(252, 211, 77)" ||
+      style.backgroundColor === "rgb(253, 230, 138)"
+    );
   });
   expect(hasStyles).toBe(true);
 
@@ -117,7 +111,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
   await page.getByTestId("color_picker").click();
 
-  await page.getByTestId("color_picker_button_red").click();
+  await page.getByTestId("color_picker_button_rose").click();
   await page.waitForTimeout(1000);
 
   await page.getByTestId("note_node").click();
@@ -126,7 +120,11 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
   hasStyles = await element?.evaluate((el) => {
     const style = window.getComputedStyle(el);
-    return style.backgroundColor === "rgb(254, 226, 226)";
+
+    return (
+      style.backgroundColor === "rgb(253, 164, 175)" ||
+      style.backgroundColor === "rgb(254, 205, 211)"
+    );
   });
   expect(hasStyles).toBe(true);
 
@@ -145,9 +143,9 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
   await page.waitForTimeout(1000);
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   targetElement.focus();
   targetElement.click();
@@ -155,20 +153,14 @@ The future of AI is both exciting and uncertain. As the technology continues to 
   targetElement.click();
   await page.waitForTimeout(1000);
   targetElement.click();
-  await page.keyboard.press(`${control}+v`);
+  await page.keyboard.press(`ControlOrMeta+v`);
 
   await page.waitForTimeout(1000);
 
   titleNumber = await page.getByText(randomTitle).count();
   expect(titleNumber).toBe(3);
 
-  await page.getByTestId("note_node").last().click();
-  await page.getByTestId("more-options-modal").click();
-  await page.getByText("Delete").last().click();
-
-  await page.waitForTimeout(1000);
-
-  await page.getByTestId("note_node").last().click();
+  await page.getByTestId("note_node").nth(0).focus();
   await page.getByTestId("more-options-modal").click();
   await page.getByText("Delete").last().click();
 
@@ -176,5 +168,5 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
   titleNumber = await page.getByText(randomTitle).count();
 
-  expect(titleNumber).toBe(1);
+  expect(titleNumber).toBe(2);
 });

@@ -1,10 +1,11 @@
+import SideBarButtonsComponent from "@/components/sidebarComponent";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { ENABLE_PROFILE_ICONS } from "@/customization/feature-flags";
 import useAuthStore from "@/stores/authStore";
 import { useStoreStore } from "@/stores/storeStore";
 import { Outlet } from "react-router-dom";
 import ForwardedIconComponent from "../../components/genericIconComponent";
 import PageLayout from "../../components/pageLayout";
-import SidebarNav from "../../components/sidebarComponent";
 
 export default function SettingsPage(): JSX.Element {
   const autoLogin = useAuthStore((state) => state.autoLogin);
@@ -76,19 +77,18 @@ export default function SettingsPage(): JSX.Element {
   );
   return (
     <PageLayout
+      backTo={"/"}
       title="Settings"
       description="Manage the general settings for Langflow."
     >
-      <div className="flex h-full w-full space-y-8 lg:flex-row lg:space-x-8 lg:space-y-0">
-        <aside className="flex h-full shrink-0 flex-col space-y-6 lg:w-[20vw]">
-          <SidebarNav items={sidebarNavItems} />
-        </aside>
-        <div className="flex h-full w-full flex-1 flex-col">
-          <div className="flex-1 pb-8">
+      <SidebarProvider width="15rem" defaultOpen={false}>
+        <SideBarButtonsComponent items={sidebarNavItems} />
+        <main className="flex flex-1 overflow-hidden">
+          <div className="flex flex-1 flex-col overflow-x-hidden pt-1">
             <Outlet />
           </div>
-        </div>
-      </div>
+        </main>
+      </SidebarProvider>
     </PageLayout>
   );
 }

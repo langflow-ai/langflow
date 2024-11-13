@@ -13,7 +13,7 @@ class FolderBase(SQLModel):
     description: str | None = Field(default=None, sa_column=Column(Text))
 
 
-class Folder(FolderBase, table=True):  # type: ignore
+class Folder(FolderBase, table=True):  # type: ignore[call-arg]
     id: UUID | None = Field(default_factory=uuid4, primary_key=True)
     parent_id: UUID | None = Field(default=None, foreign_key="folder.id")
 

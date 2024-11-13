@@ -13,15 +13,20 @@ import { StoreGuard } from "./components/storeGuard";
 import ContextWrapper from "./contexts";
 import { CustomNavigate } from "./customization/components/custom-navigate";
 import { BASENAME } from "./customization/config-constants";
-import { ENABLE_CUSTOM_PARAM } from "./customization/feature-flags";
+import {
+  ENABLE_CUSTOM_PARAM,
+  ENABLE_HOMEPAGE,
+} from "./customization/feature-flags";
 import { AppAuthenticatedPage } from "./pages/AppAuthenticatedPage";
 import { AppInitPage } from "./pages/AppInitPage";
 import { AppWrapperPage } from "./pages/AppWrapperPage";
 import { DashboardWrapperPage } from "./pages/DashboardWrapperPage";
 import FlowPage from "./pages/FlowPage";
 import LoginPage from "./pages/LoginPage";
-import MyCollectionComponent from "./pages/MainPage/components/myCollectionComponent";
-import HomePage from "./pages/MainPage/pages/mainPage";
+import MyCollectionComponent from "./pages/MainPage/oldComponents/myCollectionComponent";
+import OldHomePage from "./pages/MainPage/oldPages/mainPage";
+import CollectionPage from "./pages/MainPage/pages";
+import HomePage from "./pages/MainPage/pages/homePage";
 import SettingsPage from "./pages/SettingsPage";
 import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
 import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
@@ -60,48 +65,83 @@ const router = createBrowserRouter(
           >
             <Route path="" element={<AppAuthenticatedPage />}>
               <Route path="" element={<DashboardWrapperPage />}>
-                <Route path="" element={<HomePage />}>
+                <Route
+                  path=""
+                  element={
+                    ENABLE_HOMEPAGE ? <CollectionPage /> : <OldHomePage />
+                  }
+                >
                   <Route
                     index
-                    element={<CustomNavigate replace to={"all"} />}
+                    element={<CustomNavigate replace to={"flows"} />}
                   />
                   <Route
                     path="flows/"
-                    element={<MyCollectionComponent key="flows" type="flow" />}
+                    element={
+                      ENABLE_HOMEPAGE ? (
+                        <HomePage key="flows" type="flows" />
+                      ) : (
+                        <MyCollectionComponent key="flows" type="flows" />
+                      )
+                    }
                   >
                     <Route
                       path="folder/:folderId"
                       element={
-                        <MyCollectionComponent key="flows" type="flow" />
+                        ENABLE_HOMEPAGE ? (
+                          <HomePage key="flows" type="flows" />
+                        ) : (
+                          <MyCollectionComponent key="flows" type="flows" />
+                        )
                       }
                     />
                   </Route>
                   <Route
                     path="components/"
                     element={
-                      <MyCollectionComponent
-                        key="components"
-                        type="component"
-                      />
+                      ENABLE_HOMEPAGE ? (
+                        <HomePage key="components" type="components" />
+                      ) : (
+                        <MyCollectionComponent
+                          key="components"
+                          type="component"
+                        />
+                      )
                     }
                   >
                     <Route
                       path="folder/:folderId"
                       element={
-                        <MyCollectionComponent
-                          key="components"
-                          type="component"
-                        />
+                        ENABLE_HOMEPAGE ? (
+                          <HomePage key="components" type="components" />
+                        ) : (
+                          <MyCollectionComponent
+                            key="components"
+                            type="component"
+                          />
+                        )
                       }
                     />
                   </Route>
                   <Route
                     path="all/"
-                    element={<MyCollectionComponent key="all" type="all" />}
+                    element={
+                      ENABLE_HOMEPAGE ? (
+                        <HomePage key="flows" type="flows" />
+                      ) : (
+                        <MyCollectionComponent key="all" type="all" />
+                      )
+                    }
                   >
                     <Route
                       path="folder/:folderId"
-                      element={<MyCollectionComponent key="all" type="all" />}
+                      element={
+                        ENABLE_HOMEPAGE ? (
+                          <HomePage key="flows" type="flows" />
+                        ) : (
+                          <MyCollectionComponent key="all" type="all" />
+                        )
+                      }
                     />
                   </Route>
                 </Route>
@@ -161,9 +201,9 @@ const router = createBrowserRouter(
                 </Route>
                 <Route path="view" element={<ViewPage />} />
               </Route>
-              <Route path="playground/:id/">
+              {/* <Route path="playground/:id/">
                 <Route path="" element={<PlaygroundPage />} />
-              </Route>
+              </Route> */}
             </Route>
           </Route>
           <Route

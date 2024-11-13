@@ -1,10 +1,8 @@
 from typing import Any
 
-from astra_assistants import patch  # type: ignore
-from openai import OpenAI
 from openai.lib.streaming import AssistantEventHandler
 
-from langflow.components.astra_assistants.util import get_patched_openai_client
+from langflow.base.astra_assistants.util import get_patched_openai_client
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
 from langflow.inputs import MultilineInput
 from langflow.schema import dotdict
@@ -15,8 +13,9 @@ from langflow.template import Output
 class AssistantsRun(ComponentWithCache):
     display_name = "Run Assistant"
     description = "Executes an Assistant Run against a thread"
+    icon = "AstraDB"
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.client = get_patched_openai_client(self._shared_component_cache)
         self.thread_id = None
@@ -26,7 +25,7 @@ class AssistantsRun(ComponentWithCache):
         build_config: dotdict,
         field_value: Any,
         field_name: str | None = None,
-    ):
+    ) -> None:
         if field_name == "thread_id":
             if field_value is None:
                 thread = self.client.beta.threads.create()
@@ -63,37 +62,28 @@ class AssistantsRun(ComponentWithCache):
     outputs = [Output(display_name="Assistant Response", name="assistant_response", method="process_inputs")]
 
     def process_inputs(self) -> Message:
-        patch(OpenAI())
-        try:
-            text = ""
+        text = ""
 
-            if self.thread_id is None:
-                thread = self.client.beta.threads.create()
-                self.thread_id = thread.id
+        if self.thread_id is None:
+            thread = self.client.beta.threads.create()
+            self.thread_id = thread.id
 
-            # add the user message
-            self.client.beta.threads.messages.create(thread_id=self.thread_id, role="user", content=self.user_message)
+        # add the user message
+        self.client.beta.threads.messages.create(thread_id=self.thread_id, role="user", content=self.user_message)
 
-            class EventHandler(AssistantEventHandler):
-                def __init__(self):
-                    super().__init__()
+        class EventHandler(AssistantEventHandler):
+            def __init__(self) -> None:
+                super().__init__()
 
-                def on_exception(self, exception: Exception) -> None:
-                    print(f"Exception: {exception}")
-                    raise exception
+            def on_exception(self, exception: Exception) -> None:
+                raise exception
 
-            event_handler = EventHandler()
-            with self.client.beta.threads.runs.create_and_stream(
-                thread_id=self.thread_id,
-                assistant_id=self.assistant_id,
-                event_handler=event_handler,
-            ) as stream:
-                # return stream.text_deltas
-                for part in stream.text_deltas:
-                    text += part
-                    print(part)
-            return Message(text=text)
-        except Exception as e:
-            print(e)
-            msg = f"Error running assistant: {e}"
-            raise Exception(msg) from e
+        event_handler = EventHandler()
+        with self.client.beta.threads.runs.create_and_stream(
+            thread_id=self.thread_id,
+            assistant_id=self.assistant_id,
+            event_handler=event_handler,
+        ) as stream:
+            for part in stream.text_deltas:
+                text += part
+        return Message(text=text)

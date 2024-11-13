@@ -1,7 +1,6 @@
 import { track } from "@/customization/utils/analytics";
 import { useState } from "react";
 import { Control } from "react-hook-form";
-import IOModal from "../../modals/IOModal";
 import useAlertStore from "../../stores/alertStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowType } from "../../types/flow";
@@ -37,11 +36,12 @@ export default function CollectionCardComponent({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const getFlowById = useFlowsManagerStore((state) => state.getFlowById);
-  const [openPlayground, setOpenPlayground] = useState(false);
+  // const [openPlayground, setOpenPlayground] = useState(false);
   const [loadingPlayground, setLoadingPlayground] = useState(false);
   const selectedFlowsComponentsCards = useFlowsManagerStore(
     (state) => state.selectedFlowsComponentsCards,
   );
+
   function hasPlayground(flow?: FlowType) {
     if (!flow) {
       return false;
@@ -60,9 +60,9 @@ export default function CollectionCardComponent({
     e.stopPropagation();
     track("Playground Button Clicked", { flowId: data.id });
     setLoadingPlayground(true);
-    const flow = getFlowById(data.id);
-    if (flow) {
-      if (!hasPlayground(flow)) {
+
+    if (data) {
+      if (!hasPlayground(data)) {
         setErrorData({
           title: "Error",
           list: ["This flow doesn't have a playground."],
@@ -70,8 +70,8 @@ export default function CollectionCardComponent({
         setLoadingPlayground(false);
         return;
       }
-      setCurrentFlow(flow);
-      setOpenPlayground(true);
+      setCurrentFlow(data);
+      // setOpenPlayground(true);
       setLoadingPlayground(false);
     } else {
       setErrorData({
@@ -152,7 +152,7 @@ export default function CollectionCardComponent({
         <CardFooter>
           <div className="z-50 flex w-full items-center justify-between gap-2">
             <div className="flex w-full flex-wrap items-end justify-end gap-2">
-              {playground && (
+              {/* {playground && (
                 <Button
                   disabled={loadingPlayground || !hasPlayground(data)}
                   key={data.id}
@@ -173,12 +173,12 @@ export default function CollectionCardComponent({
                   )}
                   Playground
                 </Button>
-              )}
+              )} */}
             </div>
           </div>
         </CardFooter>
       </Card>
-      {openPlayground && (
+      {/* {openPlayground && (
         <IOModal
           key={data.id}
           cleanOnClose={true}
@@ -187,7 +187,7 @@ export default function CollectionCardComponent({
         >
           <></>
         </IOModal>
-      )}
+      )} */}
     </>
   );
 }

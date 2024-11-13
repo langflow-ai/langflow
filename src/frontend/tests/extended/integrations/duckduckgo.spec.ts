@@ -23,18 +23,14 @@ test("user should be able to use duckduckgo search component", async ({
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("duck");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("duck");
 
   await page.waitForTimeout(1000);
 
@@ -43,7 +39,7 @@ test("user should be able to use duckduckgo search component", async ({
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   await page
     .getByTestId("popover-anchor-input-input_value")
@@ -51,17 +47,32 @@ test("user should be able to use duckduckgo search component", async ({
 
   await page.getByTestId("button_run_duckduckgo search").click();
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
-  await page.waitForSelector("text=built successfully", { timeout: 30000 });
+  const result = await Promise.race([
+    page.waitForSelector("text=built successfully", { timeout: 30000 }),
+    page.waitForSelector("text=ratelimit", { timeout: 30000 }),
+  ]);
 
-  await page.waitForTimeout(1000);
+  if (result) {
+    const isBuiltSuccessfully =
+      (await page.evaluate((el) => el.textContent, result))?.includes(
+        "built successfully",
+      ) ?? false;
 
-  await page.getByTestId("output-inspection-data").first().click();
+    await page.waitForTimeout(500);
+    await page.getByTestId("output-inspection-data").first().click();
+    await page.waitForTimeout(1000);
 
-  await page.getByRole("gridcell").first().click();
-
-  const searchResults = await page.getByPlaceholder("Empty").inputValue();
-  expect(searchResults.length).toBeGreaterThan(10);
-  expect(searchResults.toLowerCase()).toContain("langflow");
+    if (isBuiltSuccessfully) {
+      await page.getByRole("gridcell").first().click();
+      const searchResults = await page.getByPlaceholder("Empty").inputValue();
+      expect(searchResults.length).toBeGreaterThan(10);
+      expect(searchResults.toLowerCase()).toContain("langflow");
+    } else {
+      const value = await page.getByPlaceholder("Empty").inputValue();
+      expect(value.length).toBeGreaterThan(10);
+      expect(value.toLowerCase()).toContain("ratelimit");
+    }
+  }
 });

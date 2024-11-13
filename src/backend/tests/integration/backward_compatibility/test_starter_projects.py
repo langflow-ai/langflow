@@ -1,10 +1,10 @@
 import pytest
 from langflow.schema.message import Message
+
 from tests.api_keys import get_openai_api_key
 from tests.integration.utils import download_flow_from_github, run_json_flow
 
 
-@pytest.mark.asyncio
 @pytest.mark.api_key_required
 async def test_1_0_15_basic_prompting():
     api_key = get_openai_api_key()

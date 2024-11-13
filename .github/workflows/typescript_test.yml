@@ -41,6 +41,7 @@ jobs:
       matrix:
         shardIndex: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         shardTotal: [10]
+
     env:
       OPENAI_API_KEY: ${{ inputs.openai_api_key || secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ inputs.store_api_key || secrets.STORE_API_KEY }}
@@ -119,6 +120,7 @@ jobs:
           max_attempts: 2
           command: |
             cd src/frontend
+            npx playwright test ${{ inputs.tests_folder }} --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --list
             npx playwright test ${{ inputs.tests_folder }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
 
       - name: Upload blob report to GitHub Actions Artifacts

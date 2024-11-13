@@ -4,7 +4,7 @@ from langflow.services.database.models.message.model import MessageTable, Messag
 from langflow.services.deps import session_scope
 
 
-def update_message(message_id: UUID, message: MessageUpdate | dict):
+def update_message(message_id: UUID | str, message: MessageUpdate | dict):
     if not isinstance(message, MessageUpdate):
         message = MessageUpdate(**message)
     with session_scope() as session:

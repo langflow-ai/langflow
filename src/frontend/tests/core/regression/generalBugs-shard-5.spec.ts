@@ -20,7 +20,7 @@ test("should be able to see output preview from grouped components and connect c
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -30,28 +30,24 @@ test("should be able to see output preview from grouped components and connect c
   });
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("text input");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("text input");
   await page.waitForTimeout(1000);
 
   await page
     .getByTestId("inputsText Input")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
   await page
     .locator('//*[@id="react-flow-id"]')
     .hover()
     .then(async () => {
       await page.mouse.down();
-      await page.mouse.move(-600, 300);
+      await page.mouse.move(-200, 100);
       await page.waitForTimeout(400);
     });
 
@@ -61,9 +57,8 @@ test("should be able to see output preview from grouped components and connect c
     .getByTestId("inputsText Input")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("combine text");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("combine text");
   await page.waitForTimeout(1000);
 
   await page
@@ -71,14 +66,14 @@ test("should be able to see output preview from grouped components and connect c
     .hover()
     .then(async () => {
       await page.mouse.down();
-      await page.mouse.move(-600, 300);
+      await page.mouse.move(-200, 100);
       await page.waitForTimeout(400);
     });
 
   await page.mouse.up();
 
   await page
-    .getByTestId("helpersCombine Text")
+    .getByTestId("processingCombine Text")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
   await page
@@ -86,14 +81,14 @@ test("should be able to see output preview from grouped components and connect c
     .hover()
     .then(async () => {
       await page.mouse.down();
-      await page.mouse.move(-600, 300);
+      await page.mouse.move(-200, 100);
       await page.waitForTimeout(400);
     });
 
   await page.mouse.up();
 
   await page
-    .getByTestId("helpersCombine Text")
+    .getByTestId("processingCombine Text")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
   await page
@@ -101,15 +96,14 @@ test("should be able to see output preview from grouped components and connect c
     .hover()
     .then(async () => {
       await page.mouse.down();
-      await page.mouse.move(-600, 300);
+      await page.mouse.move(-200, 100);
       await page.waitForTimeout(200);
     });
 
   await page.mouse.up();
 
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("text output");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("text output");
   await page.waitForTimeout(1000);
 
   await page
@@ -117,7 +111,7 @@ test("should be able to see output preview from grouped components and connect c
     .hover()
     .then(async () => {
       await page.mouse.down();
-      await page.mouse.move(-600, 300);
+      await page.mouse.move(-200, 100);
     });
 
   await page.mouse.up();
@@ -126,52 +120,44 @@ test("should be able to see output preview from grouped components and connect c
     .getByTestId("outputsText Output")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("fit view").click({
+  await page.getByTestId("fit_view").click({
     force: true,
   });
+  await page.waitForTimeout(500);
 
   //connection 1
   const elementCombineTextOutput0 = await page
-    .getByTestId("handle-combinetext-shownode-combined text-right")
+    .getByTestId("div-handle-combinetext-shownode-combined text-right")
     .nth(0);
   await elementCombineTextOutput0.click();
 
   const blockedHandle = await page
-    .getByTestId("gradient-handle-textinput-shownode-text-right")
+    .getByTestId("div-handle-textinput-shownode-text-right")
     .nth(2);
   const secondBlockedHandle = await page
-    .getByTestId("gradient-handle-combinetext-shownode-combined text-right")
+    .getByTestId("div-handle-combinetext-shownode-combined text-right")
     .nth(2);
   const thirdBlockedHandle = await page
-    .getByTestId("gradient-handle-textoutput-shownode-text-right")
+    .getByTestId("div-handle-textoutput-shownode-text-right")
     .nth(0);
 
   const hasGradient = await blockedHandle?.evaluate((el) => {
     const style = window.getComputedStyle(el);
-    return (
-      style.backgroundImage.includes("conic-gradient") &&
-      style.backgroundImage.includes("rgb(203, 213, 225)")
-    );
+    return style.backgroundColor === "rgb(228, 228, 231)";
   });
 
   await page.waitForTimeout(500);
 
   const secondHasGradient = await secondBlockedHandle?.evaluate((el) => {
     const style = window.getComputedStyle(el);
-    return (
-      style.backgroundImage.includes("conic-gradient") &&
-      style.backgroundImage.includes("rgb(203, 213, 225)")
-    );
+    return style.backgroundColor === "rgb(228, 228, 231)";
   });
 
   await page.waitForTimeout(500);
 
   const thirdHasGradient = await thirdBlockedHandle?.evaluate((el) => {
     const style = window.getComputedStyle(el);
-    return (
-      style.backgroundImage.includes("conic-gradient") &&
-      style.backgroundImage.includes("rgb(203, 213, 225)")
-    );
+    return style.backgroundColor === "rgb(228, 228, 231)";
   });
 
   await page.waitForTimeout(500);
@@ -181,16 +167,16 @@ test("should be able to see output preview from grouped components and connect c
   expect(thirdHasGradient).toBe(true);
 
   const unlockedHandle = await page
-    .getByTestId("gradient-handle-textinput-shownode-text-left")
+    .getByTestId("div-handle-textinput-shownode-text-left")
     .last();
   const secondUnlockedHandle = await page
-    .getByTestId("gradient-handle-combinetext-shownode-second text-left")
+    .getByTestId("div-handle-combinetext-shownode-second text-left")
     .last();
   const thirdUnlockedHandle = await page
-    .getByTestId("gradient-handle-combinetext-shownode-second text-left")
+    .getByTestId("div-handle-combinetext-shownode-second text-left")
     .first();
   const fourthUnlockedHandle = await page
-    .getByTestId("gradient-handle-textoutput-shownode-text-left")
+    .getByTestId("div-handle-textoutput-shownode-text-left")
     .first();
 
   const hasGradientUnlocked = await unlockedHandle?.evaluate((el) => {
@@ -217,10 +203,7 @@ test("should be able to see output preview from grouped components and connect c
 
   const thirdHasGradientLocked = await thirdUnlockedHandle?.evaluate((el) => {
     const style = window.getComputedStyle(el);
-    return (
-      style.backgroundImage.includes("conic-gradient") &&
-      style.backgroundImage.includes("rgb(203, 213, 225)")
-    );
+    return style.backgroundColor === "rgb(228, 228, 231)";
   });
 
   await page.waitForTimeout(500);
@@ -252,11 +235,17 @@ test("should be able to see output preview from grouped components and connect c
     .first()
     .click({ modifiers: ["Control"] });
   await page
-    .getByTestId("title-Combine Text")
+    .getByTestId("title-delimiter")
     .last()
     .click({ modifiers: ["Control"] });
 
   await page.getByRole("button", { name: "Group" }).click();
+
+  await page.waitForTimeout(500);
+
+  await page.getByTitle("fit view").click();
+
+  await page.waitForTimeout(500);
 
   //connection 2
   const elementTextOutput0 = await page
@@ -300,7 +289,7 @@ test("should be able to see output preview from grouped components and connect c
 
   await page
     .getByPlaceholder("Type something...", { exact: true })
-    .nth(6)
+    .nth(4)
     .fill(thirdRandomName);
   await page.waitForTimeout(500);
 
@@ -312,7 +301,7 @@ test("should be able to see output preview from grouped components and connect c
 
   await page
     .getByPlaceholder("Type something...", { exact: true })
-    .nth(4)
+    .nth(2)
     .fill("-");
 
   await page.waitForTimeout(500);

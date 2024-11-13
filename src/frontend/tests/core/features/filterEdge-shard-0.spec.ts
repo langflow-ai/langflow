@@ -17,29 +17,31 @@ test("user must see on handle hover a tooltip with possibility connections", asy
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("retrievalqa");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("retrievalqa");
+
+  await page.getByTestId("sidebar-options-trigger").click();
+  await page.getByTestId("sidebar-legacy-switch").isVisible({ timeout: 5000 });
+  await page.getByTestId("sidebar-legacy-switch").click();
+  await expect(page.getByTestId("sidebar-legacy-switch")).toBeChecked();
+  await page.getByTestId("sidebar-options-trigger").click();
 
   await page.waitForTimeout(1000);
   await page
-    .getByTestId("chainsRetrieval QA")
+    .getByTestId("langchain_utilitiesRetrieval QA")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   const outputElements = await page
     .getByTestId("handle-retrievalqa-shownode-text-right")
@@ -64,17 +66,17 @@ test("user must see on handle hover a tooltip with possibility connections", asy
         .first(),
     ).toBeVisible();
 
-    await expect(page.getByText("Output:").first()).toBeVisible();
+    await expect(page.getByText("Output type:").first()).toBeVisible();
 
     await expect(
       page.getByTestId("output-tooltip-message").first(),
     ).toBeVisible();
   });
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   const rqaChainInputElements1 = await page
     .getByTestId("handle-retrievalqa-shownode-language model-left")
@@ -98,16 +100,16 @@ test("user must see on handle hover a tooltip with possibility connections", asy
         .first(),
     ).toBeVisible();
 
-    await expect(page.getByText("Input:").first()).toBeVisible();
+    await expect(page.getByText("Input type:").first()).toBeVisible();
 
     await expect(
       page.getByTestId("input-tooltip-languagemodel").first(),
     ).toBeVisible();
   });
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   const rqaChainInputElements0 = await page
     .getByTestId("handle-retrievalqa-shownode-retriever-left")
@@ -131,17 +133,17 @@ test("user must see on handle hover a tooltip with possibility connections", asy
         .first(),
     ).toBeVisible();
 
-    await expect(page.getByText("Input:").first()).toBeVisible();
+    await expect(page.getByText("Input type:").first()).toBeVisible();
 
     await expect(
       page.getByTestId("input-tooltip-retriever").first(),
     ).toBeVisible();
   });
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   const rqaChainInputElements2 = await page
     .getByTestId("handle-retrievalqa-shownode-memory-left")
@@ -165,7 +167,7 @@ test("user must see on handle hover a tooltip with possibility connections", asy
         .first(),
     ).toBeVisible();
 
-    await expect(page.getByText("Input:").first()).toBeVisible();
+    await expect(page.getByText("Input type:").first()).toBeVisible();
 
     await expect(
       page.getByTestId("input-tooltip-basechatmemory").first(),

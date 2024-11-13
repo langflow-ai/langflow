@@ -18,6 +18,7 @@ export const ForwardedIconComponent = memo(
         strokeWidth,
         id = "",
         skipFallback = false,
+        dataTestId = "",
       }: IconComponentProps,
       ref,
     ) => {
@@ -31,7 +32,14 @@ export const ForwardedIconComponent = memo(
         return () => clearTimeout(timer);
       }, []);
 
-      let TargetIcon = nodeIconsLucide[name];
+      let TargetIcon =
+        nodeIconsLucide[name] ||
+        nodeIconsLucide[
+          name
+            ?.split("-")
+            ?.map((x) => String(x[0]).toUpperCase() + String(x).slice(1))
+            ?.join("")
+        ];
       if (!TargetIcon) {
         if (!dynamicIconImports[name]) {
           TargetIcon = nodeIconsLucide["unknown"];
@@ -62,7 +70,9 @@ export const ForwardedIconComponent = memo(
             className={className}
             style={style}
             ref={ref}
-            data-testid={id ? `${id}-${name}` : `icon-${name}`}
+            data-testid={
+              dataTestId ? dataTestId : id ? `${id}-${name}` : `icon-${name}`
+            }
           />
         </Suspense>
       );

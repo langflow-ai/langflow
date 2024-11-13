@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
@@ -32,18 +32,19 @@ test("Memory Chatbot", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Memory Chatbot" }).click();
   await page.waitForTimeout(1000);
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.waitForTimeout(1000);
 
@@ -55,9 +56,19 @@ test("Memory Chatbot", async ({ page }) => {
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
-  await page
-    .getByTestId("popover-anchor-input-api_key")
-    .fill(process.env.OPENAI_API_KEY ?? "");
+  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  while (filledApiKey > 0) {
+    await page.getByTestId("remove-icon-badge").first().click();
+    await page.waitForTimeout(1000);
+    filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  }
+
+  const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
+  const isApiKeyInputVisible = await apiKeyInput.isVisible();
+
+  if (isApiKeyInputVisible) {
+    await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+  }
 
   await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
@@ -86,7 +97,7 @@ test("Memory Chatbot", async ({ page }) => {
     .getByTestId("input-chat-playground")
     .last()
     .fill("Remember that I'm a lion");
-  await page.getByTestId("icon-LucideSend").last().click();
+  await page.getByTestId("button-send").last().click();
 
   await page.waitForSelector('[data-testid="input-chat-playground"]', {
     timeout: 100000,
@@ -97,11 +108,11 @@ test("Memory Chatbot", async ({ page }) => {
     .last()
     .fill("try reproduce the sound I made in words");
 
-  await page.waitForSelector('[data-testid="icon-LucideSend"]', {
+  await page.waitForSelector('[data-testid="button-send"]', {
     timeout: 100000,
   });
 
-  await page.getByTestId("icon-LucideSend").last().click();
+  await page.getByTestId("button-send").last().click();
 
   await page.waitForSelector("text=roar", { timeout: 30000 });
   await page.getByText("roar").last().isVisible();
@@ -115,7 +126,8 @@ test("Memory Chatbot", async ({ page }) => {
   await page.getByText("files", { exact: true }).last().isVisible();
 
   await page.getByRole("gridcell").last().isVisible();
-  await page.getByTestId("icon-Trash2").first().click();
+  await page.getByRole("combobox").click();
+  await page.getByLabel("Delete").click();
   await page.waitForSelector('[data-testid="input-chat-playground"]', {
     timeout: 100000,
   });

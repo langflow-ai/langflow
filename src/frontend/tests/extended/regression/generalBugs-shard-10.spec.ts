@@ -15,8 +15,8 @@ test("freeze must work correctly", async ({ page }) => {
   await page.goto("/");
   await page.waitForTimeout(1000);
 
-  const promptText = "THIS IS A TEST PROMPT";
-  const newPromptText = "TEST TEST TEST TEST TEST";
+  const promptText = "answer as you are a dog";
+  const newPromptText = "answer as you are a bird";
 
   let modalCount = 0;
   try {
@@ -29,15 +29,16 @@ test("freeze must work correctly", async ({ page }) => {
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.waitForTimeout(1000);
 
-  await page.getByTitle("fit view").click();
+  await page.getByTestId("fit_view").click();
 
   await page.getByText("openai").first().click();
   await page.keyboard.press("Delete");
@@ -60,25 +61,17 @@ test("freeze must work correctly", async ({ page }) => {
 
   await page.locator('//*[@id="react-flow-id"]').hover();
 
-  await page.getByTestId("promptarea_prompt_template-ExternalLink").click();
+  await page.getByTestId("button_open_prompt_modal").click();
 
   await page.getByTestId("modal-promptarea_prompt_template").fill(promptText);
 
-  let promptValue = await page
-    .getByTestId("modal-promptarea_prompt_template")
-    .inputValue();
-
   await page.getByText("Check & Save").click();
 
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(1000);
 
   await page.getByTestId("button_run_chat output").click();
 
-  await page.waitForTimeout(3000);
-
-  await page.getByTestId("button_run_chat output").click();
-
-  await page.waitForTimeout(3000);
+  await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
   await page.getByTestId("playground-btn-flow-io").click();
 
@@ -87,8 +80,6 @@ test("freeze must work correctly", async ({ page }) => {
     .allTextContents();
 
   const concatAllText = textContents.join(" ");
-
-  expect(concatAllText).toContain(promptValue);
 
   await page.waitForTimeout(1000);
   await page.getByText("Close").last().click();
@@ -105,7 +96,7 @@ test("freeze must work correctly", async ({ page }) => {
 
   await page.locator('//*[@id="react-flow-id"]').click();
 
-  await page.getByTestId("promptarea_prompt_template-ExternalLink").click();
+  await page.getByTestId("button_open_prompt_modal").click();
 
   await page.getByTestId("edit-prompt-sanitized").first().click();
 
@@ -113,19 +104,11 @@ test("freeze must work correctly", async ({ page }) => {
     .getByTestId("modal-promptarea_prompt_template")
     .fill(newPromptText);
 
-  promptValue = await page
-    .getByTestId("modal-promptarea_prompt_template")
-    .inputValue();
-
   await page.getByText("Check & Save").click();
 
   await page.getByTestId("button_run_chat output").click();
 
-  await page.waitForTimeout(3000);
-
-  await page.getByTestId("button_run_chat output").click();
-
-  await page.waitForTimeout(3000);
+  await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
   await page.getByTestId("playground-btn-flow-io").click();
 
@@ -135,6 +118,5 @@ test("freeze must work correctly", async ({ page }) => {
 
   const concatAllText2 = textContents2.join(" ");
 
-  expect(concatAllText2).toContain(promptText);
-  expect(concatAllText2).not.toContain(newPromptText);
+  expect(concatAllText2).toBe(concatAllText);
 });

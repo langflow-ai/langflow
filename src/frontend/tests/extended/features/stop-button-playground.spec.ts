@@ -24,33 +24,23 @@ test("User must be able to stop building from inside Playground", async ({
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForSelector('[data-testid="extended-disclosure"]', {
-    timeout: 1000,
-  });
-  await page.getByTestId("extended-disclosure").click();
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("custom");
 
   await page.waitForTimeout(1000);
 
-  await page
-    .locator('//*[@id="helpersCustom Component"]')
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
+  await page.getByTestId("sidebar-custom-component-button").click();
   await page.getByTitle("fit view").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
   await page.getByTitle("zoom out").click();
 
-  await page.getByPlaceholder("Search").click();
-  await page.getByPlaceholder("Search").fill("chat output");
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("chat output");
 
   await page.waitForTimeout(1000);
 
@@ -58,10 +48,10 @@ test("User must be able to stop building from inside Playground", async ({
     .getByTestId("outputsChat Output")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("div-generic-node").nth(0).click();
 
@@ -98,23 +88,18 @@ class CustomComponent(Component):
 
   const getUA = await page.evaluate(() => navigator.userAgent);
   const userAgentInfo = uaParser(getUA);
-  let control = "Control";
-
-  if (userAgentInfo.os.name.includes("Mac")) {
-    control = "Meta";
-  }
 
   await page.locator(".ace_content").click();
-  await page.keyboard.press(`${control}+A`);
+  await page.keyboard.press(`ControlOrMeta+A`);
   await page.locator("textarea").fill(waitTimeoutCode);
 
   await page.getByText("Check & Save").last().click();
 
   await page.waitForTimeout(1000);
 
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-  await page.getByTitle("zoom out").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   //connection 1
   const elementCustomComponentOutput = await page
@@ -139,20 +124,20 @@ class CustomComponent(Component):
 
   await page.waitForTimeout(1000);
 
-  await page.waitForSelector('[data-testid="icon-Square"]', {
+  await page.waitForSelector('[data-testid="button-stop"]', {
     timeout: 30000,
   });
 
-  const elements = await page.$$('[data-testid="icon-Square"]');
+  const elements = await page.$$('[data-testid="button-stop"]');
 
   if (elements.length > 0) {
     const lastElement = elements[elements.length - 1];
     await lastElement.waitForElementState("visible");
   }
 
-  expect(await page.getByTestId("icon-Square").last()).toBeVisible();
+  expect(await page.getByTestId("button-stop").last()).toBeVisible();
 
-  await page.getByTestId("icon-Square").last().click();
+  await page.getByTestId("button-stop").last().click();
 
   await page.waitForSelector("text=build stopped", { timeout: 30000 });
   expect(await page.getByText("build stopped").isVisible()).toBeTruthy();

@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
-test("user must be able to create a new flow clicking on Start Here button", async ({
+test("user must be able to create a new flow clicking on New Flow button", async ({
   page,
 }) => {
   test.skip(
@@ -29,7 +29,7 @@ test("user must be able to create a new flow clicking on Start Here button", asy
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -40,20 +40,21 @@ test("user must be able to create a new flow clicking on Start Here button", asy
 
   await page.getByText("New Folder").last().click();
 
-  await page.waitForSelector("text=start here", { timeout: 30000 });
+  await page.waitForSelector("text=new flow", { timeout: 30000 });
 
   await page.waitForTimeout(1000);
 
   expect(
     (
-      await page.waitForSelector("text=start here", {
+      await page.waitForSelector("text=new flow", {
         timeout: 30000,
       })
     ).isVisible(),
   );
 
-  await page.getByText("Start Here", { exact: true }).click();
+  await page.getByText("New Flow", { exact: true }).click();
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.waitForSelector("text=playground", { timeout: 30000 });
   await page.waitForSelector("text=api", { timeout: 30000 });
