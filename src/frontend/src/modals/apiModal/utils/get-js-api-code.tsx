@@ -1,3 +1,4 @@
+import useFlowStore from "@/stores/flowStore";
 import { GetCodeType } from "@/types/tweaks";
 
 /**
@@ -17,85 +18,31 @@ export default function getJsApiCode({
 }: GetCodeType): string {
   let tweaksString = "{}";
   if (tweaksBuildedObject)
-    tweaksString = JSON.stringify(tweaksBuildedObject, null, 2);
+    tweaksString = JSON.stringify(tweaksBuildedObject, null, 8);
+  const inputs = useFlowStore.getState().inputs;
+  const outputs = useFlowStore.getState().outputs;
+  const hasChatInput = inputs.some((input) => input.type === "ChatInput");
+  const hasChatOutput = outputs.some((output) => output.type === "ChatOutput");
 
-  return `class LangflowClient {
-    constructor(baseURL, apiKey) {
-        this.baseURL = baseURL;
-        this.apiKey = apiKey;
-    }
-
-    async post(endpoint, body, headers = {"Content-Type": "application/json"}) {
-        if (this.apiKey) {
-            headers["x-api-key"] = \`\${this.apiKey}\`;
-        }
-        const url = \`\${this.baseURL}\${endpoint}\`;
-        try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: headers,
-                body: JSON.stringify(body)
-            });
-
-            const responseMessage = await response.json();
-            if (!response.ok) {
-                throw new Error(\`\${response.status} \${response.statusText} - \${JSON.stringify(responseMessage)}\`);
-            }
-            return responseMessage;
-        } catch (error) {
-            console.error(\`Error during POST request: \${error.message}\`);
-            throw error;
-        }
-    }
-
-    async initiateSession(flowId, inputValue, inputType = 'chat', outputType = 'chat', tweaks = {}) {
-        const endpoint = \`/api/v1/run/\${flowId}\`;
-        return this.post(endpoint, { ${activeTweaks ? "" : "input_value: inputValue, "}input_type: inputType, output_type: outputType, tweaks: tweaks });
-    }
-
-    async runFlow(flowIdOrName, inputValue, inputType = 'chat', outputType = 'chat', tweaks, onError) {
-        try {
-            const initResponse = await this.initiateSession(flowIdOrName, inputValue, inputType, outputType, tweaks);
-            return initResponse;
-        } catch (error) {
-            onError('Error initiating session');
-        }
-    }
-  }
-
-  async function main(inputValue, inputType = 'chat', outputType = 'chat') {
-    const flowIdOrName = '${endpointName || flowId}';
-    const langflowClient = new LangflowClient('${window.location.protocol}//${window.location.host}',
-          ${isAuth ? "'your-api-key'" : "null"});
-    const tweaks = ${tweaksString};
-
-    try {
-        const response = await langflowClient.runFlow(
-            flowIdOrName,
-            inputValue,
-            inputType,
-            outputType,
-            tweaks,
-            (error) => console.error("Error:", error) // onError
-        );
-
-        if (response) {
-            const flowOutputs = response.outputs[0];
-            const firstComponentOutputs = flowOutputs.outputs[0];
-            const output = firstComponentOutputs.outputs.message;
-
-            console.log("Final Output:", output.message.text);
-        }
-    } catch (error) {
-        console.error('Main Error:', error.message);
-    }
-  }
-
-  const args = process.argv.slice(2);
-  main(
-    args[0], // inputValue
-    args[1], // inputType
-    args[2], // outputType
-  );
-  `;
+  return `let inputValue = "";
+  
+fetch(
+  "${window.location.protocol}//${window.location.host}/api/v1/run/${endpointName || flowId}?stream=false",
+  {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer <TOKEN>",
+      "Content-Type": "application/json",${isAuth ? '\n\t\t\t"x-api-key": <your api key>' : ""}
+    },
+    body: JSON.stringify({${activeTweaks ? "" : "\n\t\t\tinput_value: inputValue, "}
+      output_type: ${hasChatOutput ? '"chat"' : '"text"'},
+      input_type: ${hasChatInput ? '"chat"' : '"text"'},
+      tweaks: ${tweaksString}
+    }),
+  },
+)
+  .then(res => res.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));
+`;
 }
