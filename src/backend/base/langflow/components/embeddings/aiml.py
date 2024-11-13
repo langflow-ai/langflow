@@ -1,5 +1,4 @@
-from src.backend.base.langflow.base.embeddings.aiml_embeddings import AIMLEmbeddingsImpl
-
+from langflow.base.embeddings.aiml_embeddings import AIMLEmbeddingsImpl
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
 from langflow.inputs.inputs import DropdownInput
