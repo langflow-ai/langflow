@@ -2,6 +2,7 @@ from langchain_core.tools import StructuredTool
 
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.base.models.model_input_constants import ALL_PROVIDER_FIELDS, MODEL_PROVIDERS_DICT
+from langflow.base.models.model_utils import get_model_name
 from langflow.components.helpers import CurrentDateComponent
 from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from langflow.components.memories.memory import MemoryComponent
@@ -55,7 +56,8 @@ class AgentComponent(ToolCallingAgentComponent):
     outputs = [Output(name="response", display_name="Response", method="message_response")]
 
     async def message_response(self) -> Message:
-        llm_model = self.get_llm()
+        llm_model, display_name = self.get_llm()
+        self.model_name = get_model_name(llm_model, display_name=display_name)
         if llm_model is None:
             msg = "No language model selected"
             raise ValueError(msg)
@@ -98,13 +100,14 @@ class AgentComponent(ToolCallingAgentComponent):
                 provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)
                 if provider_info:
                     component_class = provider_info.get("component_class")
+                    display_name = component_class.display_name
                     inputs = provider_info.get("inputs")
                     prefix = provider_info.get("prefix", "")
-                    return self._build_llm_model(component_class, inputs, prefix)
+                    return self._build_llm_model(component_class, inputs, prefix), display_name
             except Exception as e:
                 msg = f"Error building {self.agent_llm} language model"
                 raise ValueError(msg) from e
-        return self.agent_llm
+        return self.agent_llm, None
 
     def _build_llm_model(self, component, inputs, prefix=""):
         model_kwargs = {input_.name: getattr(self, f"{prefix}{input_.name}") for input_ in inputs}
