@@ -513,9 +513,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         filter_arg = self.advanced_search_filter or {}
 
         if search_filter:
-            self.log(
-                self.log(f"`search_filter` is deprecated. Use `advanced_search_filter`. Cleaned: {search_filter}")
-            )
+            self.log(self.log(f"`search_filter` is deprecated. Use `advanced_search_filter`. Cleaned: {search_filter}"))
             filter_arg.update(search_filter)
 
         if filter_arg:
