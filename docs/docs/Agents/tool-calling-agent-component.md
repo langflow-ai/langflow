@@ -48,8 +48,8 @@ The component's fields change dynamically based on the mode its in.
 Your agent now has tools for web search, doing basic math, and performing API requests. You can solve many problems with just these capabilities.
 
 * Your tabletop game group cancelled, and you're stuck at home.
-Point **API Request** to an online rules document, tell your agent `You are a fun Game Master who uses the tools at your disposal.` and play a game.
-
+Point **API Request** to an online rules document, tell your agent `You are a fun Game Master who uses the tools at your disposal.` and play a game.t
+t
 * You need to learn a new software language quickly.
 Point **API Request** to some docs, tell your agent `You are a knowledgeable software developer who uses the tools at your disposal.` and start learning.
 
