@@ -51,6 +51,7 @@ const CustomInputPopoverObject = ({
     <Popover modal open={showOptions} onOpenChange={setShowOptions}>
       <PopoverAnchor>
         <Input
+          autoComplete="off"
           id={id}
           ref={refInput}
           type="text"
