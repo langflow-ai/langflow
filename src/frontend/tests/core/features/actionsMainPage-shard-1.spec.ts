@@ -93,7 +93,7 @@ test("search flows", async ({ page }) => {
   await page.getByTestId("icon-ChevronLeft").first().click();
   await page.getByText("New Flow", { exact: true }).click();
   await page.getByTestId("side_nav_options_all-templates").click();
-  await page.getByRole("heading", { name: "Document QA" }).click();
+  await page.getByRole("heading", { name: "Document Q&A" }).click();
 
   await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
     timeout: 100000,
@@ -102,7 +102,7 @@ test("search flows", async ({ page }) => {
   await page.getByTestId("icon-ChevronLeft").first().click();
   await page.getByPlaceholder("Search flows").fill("Memory Chatbot");
   await page.getByText("Memory Chatbot", { exact: true }).isVisible();
-  await page.getByText("Document QA", { exact: true }).isHidden();
+  await page.getByText("Document Q&A", { exact: true }).isHidden();
   await page.getByText("Basic Prompting", { exact: true }).isHidden();
 });
 
