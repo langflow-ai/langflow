@@ -199,7 +199,6 @@ class AgentComponent(ToolCallingAgentComponent):
                 msg = f"Missing required keys in build_config: {missing_keys}"
                 raise ValueError(msg)
         if isinstance(self.agent_llm, str) and self.agent_llm in MODEL_PROVIDERS_DICT:
-
             provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)
             component_class = provider_info.get("component_class")
             prefix = provider_info.get("prefix")
