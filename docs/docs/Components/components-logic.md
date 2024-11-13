@@ -35,8 +35,8 @@ This component is particularly useful in workflows that require conditional rout
 
 | Name          | Type     | Description                                                                       |
 |---------------|----------|-----------------------------------------------------------------------------------|
-| data_input    | Data     | The Data object or list of Data objects to process.                               |
-| key_name      | String   | The name of the key in the Data object(s) to check.                               |
+| data_input    | Data     | The data object or list of data objects to process.                               |
+| key_name      | String   | The name of the key in the data object to check.                               |
 | operator      | Dropdown | The operator to apply for comparing the values.                                   |
 | compare_value | String   | The value to compare against (not used for boolean validator).                    |
 
