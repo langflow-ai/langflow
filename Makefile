@@ -39,14 +39,8 @@ patch: ## bump the version in langflow and langflow-base
 check_tools:
 	@command -v uv >/dev/null 2>&1 || { echo >&2 "$(RED)uv is not installed. Aborting.$(NC)"; exit 1; }
 	@command -v npm >/dev/null 2>&1 || { echo >&2 "$(RED)NPM is not installed. Aborting.$(NC)"; exit 1; }
-	@command -v pipx >/dev/null 2>&1 || { echo >&2 "$(RED)pipx is not installed. Aborting.$(NC)"; exit 1; }
-	@$(MAKE) check_env
 	@echo "$(GREEN)All required tools are installed.$(NC)"
 
-# check if Python version is compatible
-check_env: ## check if Python version is compatible
-	@chmod +x scripts/setup/check_env.sh
-	@scripts/setup/check_env.sh "$(PYTHON_REQUIRED)"
 
 help: ## show this help message
 	@echo '----'
