@@ -86,11 +86,11 @@ function NoteNode({
                 ? ""
                 : "dark:!ring-background dark:text-background",
             )}
-            mdClassName={
+            mdClassName={cn(
               COLOR_OPTIONS[bgColor] === null
                 ? "dark:prose-invert"
-                : "dark:!text-background"
-            }
+                : "dark:!text-background",
+            )}
             style={{ backgroundColor: COLOR_OPTIONS[bgColor] ?? "#00000000" }}
             charLimit={2500}
             nodeId={data.id}

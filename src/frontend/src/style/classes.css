@@ -249,6 +249,7 @@ pre code {
   width: 100%;
   /* Background color */
   background-color: hsl(var(--code-background)) !important;
+  color: hsl(var(--code-foreground)) !important;
 }
 
 pre {
