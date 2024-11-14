@@ -52,7 +52,7 @@ async def test_component_message_sending():
     )
 
     # Send the message
-    sent_message = await asyncio.to_thread(component.send_message, message)
+    sent_message = await asyncio.to_thread(component.asend_message, message)
 
     # Verify the message was sent
     assert sent_message.id is not None
@@ -85,7 +85,7 @@ async def test_component_tool_output():
     )
 
     # Send the message
-    sent_message = await asyncio.to_thread(component.send_message, message)
+    sent_message = await asyncio.to_thread(component.asend_message, message)
 
     # Verify the message was stored and processed
     assert sent_message.id is not None
@@ -179,7 +179,7 @@ async def test_component_logging():
         )
 
     # Register the log event with custom callback
-    event_manager.register_event("on_log", "info", callback=log_callback)
+    await event_manager.register_event("on_log", "info", callback=log_callback)
 
     # Log a message
     await asyncio.to_thread(component.log, "Test log message")
@@ -197,7 +197,7 @@ async def test_component_streaming_message():
     """Test component's streaming message functionality."""
     queue = await create_event_queue()
     event_manager = EventManager(queue)
-    event_manager.register_event("on_token", "token")
+    await event_manager.register_event("on_token", "token")
 
     # Create a proper mock vertex with graph and flow_id
     vertex = MagicMock()
@@ -227,7 +227,7 @@ async def test_component_streaming_message():
     )
 
     # Send the streaming message
-    sent_message = await asyncio.to_thread(component.send_message, message)
+    sent_message = await asyncio.to_thread(component.asend_message, message)
 
     # Verify the message
     assert sent_message.id is not None
