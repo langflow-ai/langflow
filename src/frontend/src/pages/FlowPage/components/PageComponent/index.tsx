@@ -551,6 +551,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             onNodeDragStop={onNodeDragStop}
             onDrop={onDrop}
             onSelectionChange={onSelectionChange}
+            fitView={true}
             deleteKeyCode={[]}
             className="theme-attribution"
             minZoom={0.01}
