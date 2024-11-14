@@ -21,19 +21,25 @@ test("user can add components by hovering and clicking the plus icon", async ({
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 3000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
   // Start with blank flow
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="sidebar-search-input"]', {
+    timeout: 3000,
+  });
 
   // Search for a component
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("chat input");
-  await page.waitForTimeout(500);
 
+  await page.waitForSelector('[data-testid="inputsChat Input"]', {
+    timeout: 2000,
+  });
   // Hover over the component and verify plus icon
   const componentLocator = page.getByTestId("inputsChat Input");
   // Find the plus icon within the specific component container
@@ -55,7 +61,6 @@ test("user can add components by hovering and clicking the plus icon", async ({
 
   await expect(plusIcon).toBeVisible();
 
-  await page.waitForTimeout(500);
 
   const opacityAfterHover = await plusIcon.evaluate((el) =>
     window.getComputedStyle(el).getPropertyValue("opacity"),
