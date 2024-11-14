@@ -10,8 +10,7 @@ from sqlmodel import Session, col, select
 
 from langflow.schema.message import Message
 from langflow.services.database.models.message.model import MessageRead, MessageTable
-from langflow.services.deps import session_scope
-from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
+from langflow.services.deps import async_session_scope, session_scope
 
 
 def get_messages(
@@ -53,6 +52,34 @@ def get_messages(
         if limit:
             stmt = stmt.limit(limit)
         messages = session.exec(stmt)
+        return [Message(**d.model_dump()) for d in messages]
+
+
+async def aget_messages(
+    sender: str | None = None,
+    sender_name: str | None = None,
+    session_id: str | None = None,
+    order_by: str | None = "timestamp",
+    order: str | None = "DESC",
+    flow_id: UUID | None = None,
+    limit: int | None = None,
+):
+    async with async_session_scope() as session:
+        stmt = select(MessageTable).where(MessageTable.error == False)  # noqa: E712
+        if sender:
+            stmt = stmt.where(MessageTable.sender == sender)
+        if sender_name:
+            stmt = stmt.where(MessageTable.sender_name == sender_name)
+        if session_id:
+            stmt = stmt.where(MessageTable.session_id == session_id)
+        if flow_id:
+            stmt = stmt.where(MessageTable.flow_id == flow_id)
+        if order_by:
+            col = getattr(MessageTable, order_by).desc() if order == "DESC" else getattr(MessageTable, order_by).asc()
+            stmt = stmt.order_by(col)
+        if limit:
+            stmt = stmt.limit(limit)
+        messages = await session.exec(stmt)
         return [Message(**d.model_dump()) for d in messages]
 
 
