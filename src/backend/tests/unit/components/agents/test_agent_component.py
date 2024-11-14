@@ -5,6 +5,7 @@ from langflow.components.agents.agent import AgentComponent
 from langflow.components.tools.calculator import CalculatorToolComponent
 
 
+@pytest.mark.usefixtures("client")
 @pytest.mark.api_key_required
 async def test_agent_component_with_calculator():
     # Mock inputs
@@ -22,6 +23,7 @@ async def test_agent_component_with_calculator():
         model_name="gpt-4o",
         llm_type="OpenAI",
         temperature=temperature,
+        _session_id="test_session_id",
     )
 
     response = await agent.message_response()
