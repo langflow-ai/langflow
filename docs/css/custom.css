@@ -5,6 +5,7 @@
  */
 :root {
   --ifm-background-color: var(--token-primary-bg-c);
+  --ifm-color-primary: hsla(330, 81%, 60%, 1);
   --ifm-navbar-link-hover-color: initial;
   --ifm-navbar-padding-vertical: 0;
   --ifm-navbar-item-padding-vertical: 0;

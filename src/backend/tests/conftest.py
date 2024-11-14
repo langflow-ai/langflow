@@ -16,7 +16,6 @@ from asgi_lifespan import LifespanManager
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
-from langflow.components.inputs import ChatInput
 from langflow.graph import Graph
 from langflow.initial_setup.setup import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_password_hash
@@ -278,6 +277,13 @@ def json_memory_chatbot_no_llm():
     return pytest.MEMORY_CHATBOT_NO_LLM.read_text(encoding="utf-8")
 
 
+@pytest.fixture(autouse=True)
+def deactivate_tracing(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_DEACTIVATE_TRACING", "true")
+    yield
+    monkeypatch.undo()
+
+
 @pytest.fixture(name="client")
 async def client_fixture(
     session: Session,  # noqa: ARG001
@@ -531,6 +537,8 @@ async def added_webhook_test(client, json_webhook_test, logged_in_headers):
 
 @pytest.fixture
 async def flow_component(client: AsyncClient, logged_in_headers):
+    from langflow.components.inputs import ChatInput
+
     chat_input = ChatInput()
     graph = Graph(start=chat_input, end=chat_input)
     graph_dict = graph.dump(name="Chat Input Component")

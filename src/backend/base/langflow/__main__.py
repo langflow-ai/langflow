@@ -1,5 +1,7 @@
+import asyncio
 import inspect
 import platform
+import signal
 import socket
 import sys
 import time
@@ -23,11 +25,9 @@ from sqlmodel import select
 
 from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
-from langflow.services.database.models.folder.utils import (
-    create_default_folder_if_it_doesnt_exist,
-)
+from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
 from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service, get_settings_service, session_scope
+from langflow.services.deps import async_session_scope, get_db_service, get_settings_service
 from langflow.services.settings.constants import DEFAULT_SUPERUSER
 from langflow.services.utils import initialize_services
 from langflow.utils.version import fetch_latest_version, get_version_info
@@ -74,6 +74,13 @@ def set_var_for_macos_issue() -> None:
         # https://stackoverflow.com/questions/75747888/uwsgi-segmentation-fault-with-flask-python-app-behind-nginx-after-running-for-2 # noqa: E501
         os.environ["no_proxy"] = "*"  # to avoid error with gunicorn
         logger.debug("Set OBJC_DISABLE_INITIALIZE_FORK_SAFETY to YES to avoid error")
+
+
+def handle_sigterm(signum, frame):  # noqa: ARG001
+    """Handle SIGTERM signal gracefully."""
+    logger.info("Received SIGTERM signal. Performing graceful shutdown...")
+    # Raise SystemExit to trigger graceful shutdown
+    sys.exit(0)
 
 
 @app.command()
@@ -149,6 +156,9 @@ def run(
     ),
 ) -> None:
     """Run Langflow."""
+    # Register SIGTERM handler
+    signal.signal(signal.SIGTERM, handle_sigterm)
+
     if env_file:
         load_dotenv(env_file, override=True)
 
@@ -210,13 +220,20 @@ def run(
             click.launch(f"http://{host}:{port}")
         if process:
             process.join()
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, SystemExit) as e:
+        logger.info("Shutting down server...")
         if process is not None:
             process.terminate()
-        sys.exit(0)
-    except Exception as e:  # noqa: BLE001
+            process.join(timeout=15)  # Wait up to 15 seconds for process to terminate
+            if process.is_alive():
+                logger.warning("Process did not terminate gracefully, forcing...")
+                process.kill()
+        raise typer.Exit(0) from e
+    except Exception as e:
         logger.exception(e)
-        sys.exit(1)
+        if process is not None:
+            process.terminate()
+        raise typer.Exit(1) from e
 
 
 def wait_for_server_ready(host, port) -> None:
@@ -358,9 +375,6 @@ def print_banner(host: str, port: int) -> None:
 def run_langflow(host, port, log_level, options, app) -> None:
     """Run Langflow server on localhost."""
     if platform.system() == "Windows":
-        # Run using uvicorn on MacOS and Windows
-        # Windows doesn't support gunicorn
-        # MacOS requires an env variable to be set to use gunicorn
         import uvicorn
 
         uvicorn.run(
@@ -373,7 +387,28 @@ def run_langflow(host, port, log_level, options, app) -> None:
     else:
         from langflow.server import LangflowApplication
 
-        LangflowApplication(app, options).run()
+        server = LangflowApplication(app, options)
+
+        def graceful_shutdown(signum, frame):  # noqa: ARG001
+            """Gracefully shutdown the server when receiving SIGTERM."""
+            # Suppress click exceptions during shutdown
+            import click
+
+            click.echo = lambda *args, **kwargs: None  # noqa: ARG005
+
+            logger.info("Gracefully shutting down server...")
+            # For Gunicorn workers, we raise SystemExit to trigger graceful shutdown
+            raise SystemExit(0)
+
+        # Register signal handlers
+        signal.signal(signal.SIGTERM, graceful_shutdown)
+        signal.signal(signal.SIGINT, graceful_shutdown)
+
+        try:
+            server.run()
+        except (KeyboardInterrupt, SystemExit):
+            # Suppress the exception output
+            sys.exit(0)
 
 
 @app.command()
@@ -486,28 +521,56 @@ def api_key(
     if not auth_settings.AUTO_LOGIN:
         typer.echo("Auto login is disabled. API keys cannot be created through the CLI.")
         return
-    with session_scope() as session:
-        from langflow.services.database.models.user.model import User
 
-        superuser = session.exec(select(User).where(User.username == DEFAULT_SUPERUSER)).first()
-        if not superuser:
-            typer.echo("Default superuser not found. This command requires a superuser and AUTO_LOGIN to be enabled.")
-            return
-        from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate
-        from langflow.services.database.models.api_key.crud import (
-            create_api_key,
-            delete_api_key,
-        )
+    async def aapi_key():
+        async with async_session_scope() as session:
+            from langflow.services.database.models.user.model import User
 
-        api_key = session.exec(select(ApiKey).where(ApiKey.user_id == superuser.id)).first()
-        if api_key:
-            delete_api_key(session, api_key.id)
+            superuser = (await session.exec(select(User).where(User.username == DEFAULT_SUPERUSER))).first()
+            if not superuser:
+                typer.echo(
+                    "Default superuser not found. This command requires a superuser and AUTO_LOGIN to be enabled."
+                )
+                return None
+            from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate
+            from langflow.services.database.models.api_key.crud import create_api_key, delete_api_key
 
-        api_key_create = ApiKeyCreate(name="CLI")
-        unmasked_api_key = create_api_key(session, api_key_create, user_id=superuser.id)
-        session.commit()
-        # Create a banner to display the API key and tell the user it won't be shown again
-        api_key_banner(unmasked_api_key)
+            api_key = (await session.exec(select(ApiKey).where(ApiKey.user_id == superuser.id))).first()
+            if api_key:
+                await delete_api_key(session, api_key.id)
+
+            api_key_create = ApiKeyCreate(name="CLI")
+            unmasked_api_key = await create_api_key(session, api_key_create, user_id=superuser.id)
+            await session.commit()
+            return unmasked_api_key
+
+    unmasked_api_key = asyncio.run(aapi_key())
+    # Create a banner to display the API key and tell the user it won't be shown again
+    api_key_banner(unmasked_api_key)
+
+
+def show_version(*, value: bool):
+    if value:
+        default = "DEV"
+        raw_info = get_version_info()
+        version = raw_info.get("version", default) if raw_info else default
+        typer.echo(f"langflow {version}")
+        raise typer.Exit
+
+
+@app.callback()
+def version_option(
+    *,
+    version: bool = typer.Option(
+        None,
+        "--version",
+        "-v",
+        callback=show_version,
+        is_eager=True,
+        help="Show the version and exit.",
+    ),
+):
+    pass
 
 
 def api_key_banner(unmasked_api_key) -> None:
@@ -536,4 +599,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        logger.exception(e)
+        raise typer.Exit(1) from e

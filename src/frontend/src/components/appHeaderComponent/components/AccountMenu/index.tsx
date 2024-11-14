@@ -42,20 +42,24 @@ export const AccountMenu = () => {
       <HeaderMenu>
         <HeaderMenuToggle>
           <div
-            className="h-7 w-7 rounded-full focus-visible:outline-0"
+            className="h-7 w-7 rounded-lg focus-visible:outline-0"
             data-testid="user-profile-settings"
           >
             {ENABLE_DATASTAX_LANGFLOW ? <CustomProfileIcon /> : <ProfileIcon />}
           </div>
         </HeaderMenuToggle>
         <HeaderMenuItems position="right">
-          {ENABLE_DATASTAX_LANGFLOW && <CustomHeaderMenuItemsTitle />}
+          {ENABLE_DATASTAX_LANGFLOW && (
+            <HeaderMenuItemsSection>
+              <CustomHeaderMenuItemsTitle />
+            </HeaderMenuItemsSection>
+          )}
           <HeaderMenuItemsSection>
             <div className="flex h-[46px] w-full items-center justify-between px-3">
-              <div className="text-xs font-medium text-zinc-500">
+              <div className="pl-1 text-xs text-zinc-500">
                 Version {version}
               </div>
-              <ThemeButtons />
+              {!ENABLE_DATASTAX_LANGFLOW && <ThemeButtons />}
             </div>
             {ENABLE_DATASTAX_LANGFLOW ? (
               <HeaderMenuItemLink newPage href={`/settings/org/${id}/overview`}>
@@ -116,17 +120,21 @@ export const AccountMenu = () => {
               Join the Langflow Discord
             </HeaderMenuItemLink>
           </HeaderMenuItemsSection>
-          <HeaderMenuItemsSection>
-            {ENABLE_DATASTAX_LANGFLOW ? (
+          {ENABLE_DATASTAX_LANGFLOW ? (
+            <HeaderMenuItemsSection>
               <HeaderMenuItemLink href="/session/logout" icon="log-out">
                 Logout
               </HeaderMenuItemLink>
-            ) : (
-              <HeaderMenuItemButton onClick={handleLogout} icon="log-out">
-                Logout
-              </HeaderMenuItemButton>
-            )}
-          </HeaderMenuItemsSection>
+            </HeaderMenuItemsSection>
+          ) : (
+            !autoLogin && (
+              <HeaderMenuItemsSection>
+                <HeaderMenuItemButton onClick={handleLogout} icon="log-out">
+                  Logout
+                </HeaderMenuItemButton>
+              </HeaderMenuItemsSection>
+            )
+          )}
         </HeaderMenuItems>
       </HeaderMenu>
       <CustomFeedbackDialog

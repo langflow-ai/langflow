@@ -1,31 +1,8 @@
-import importlib
+def get_model_name(llm, display_name: str | None = "Custom"):
+    attributes_to_check = ["model_name", "model", "model_id", "deployment_name"]
 
-from langflow.base.models.model import LCModelComponent
-from langflow.inputs.inputs import InputTypes
+    # Use a generator expression with next() to find the first matching attribute
+    model_name = next((getattr(llm, attr) for attr in attributes_to_check if hasattr(llm, attr)), None)
 
-
-def get_model_info() -> dict[str, dict[str, str | list[InputTypes]]]:
-    """Get inputs for all model components."""
-    model_inputs = {}
-    models_module = importlib.import_module("langflow.components.models")
-    model_component_names = getattr(models_module, "__all__", [])
-
-    for name in model_component_names:
-        if name in ("base", "DynamicLLMComponent"):  # Skip the base module
-            continue
-
-        component_class = getattr(models_module, name)
-        if issubclass(component_class, LCModelComponent):
-            component = component_class()
-            base_input_names = {input_field.name for input_field in LCModelComponent._base_inputs}
-            input_fields_list = [
-                input_field for input_field in component.inputs if input_field.name not in base_input_names
-            ]
-            component_display_name = component.display_name
-            model_inputs[name] = {
-                "display_name": component_display_name,
-                "inputs": input_fields_list,
-                "icon": component.icon,
-            }
-
-    return model_inputs
+    # If no matching attribute is found, return the class name as a fallback
+    return model_name if model_name is not None else display_name

@@ -1,14 +1,38 @@
-# Agents
+---
+title: Types of agents in Langflow
+sidebar_position: 12
+slug: /components-agents
+---
 
-Agent components are used to define the behavior and capabilities of AI agents in your flow. Agents can interact with APIs, databases, and other services, but can also use LLMs as a reasoning engine to decide which course to take in your flow.
+Agent components are used to define the behavior and capabilities of AI agents in your flow. Agents can interact with APIs, databases, and other services and use LLMs as a reasoning engine to decide which course to take in your flow.
+
+## Agent component {#agent-component}
+
+This component creates an agent that can use tools to answer questions and perform tasks based on given instructions.
+
+For more information on this component, see the [tool calling agent documentation](/agents-tool-calling-agent-component).
+
+### Inputs
+
+| Name                 | Type     | Description                                                                                     |
+|----------------------|----------|-------------------------------------------------------------------------------------------------|
+| agent_llm            | Dropdown | The provider of the language model that the agent will use to generate responses.               |
+| system_prompt        | String   | Initial instructions and context provided to guide the agent's behavior.                        |
+| tools                | List     | List of tools available for the agent to use.                                                   |
+| input_value          | String   | The input task or question for the agent to process.                                            |
+| add_current_date_tool| Boolean  | If true, adds a tool to the agent that returns the current date.                                |
+
+### Outputs
+
+| Name     | Type    | Description                                     |
+|----------|---------|-------------------------------------------------|
+| response | Message | The agent's response to the given input task.   |
 
 ## CSV Agent
 
 This component creates a CSV agent from a CSV file and LLM.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -16,7 +40,7 @@ This component creates a CSV agent from a CSV file and LLM.
 | path | File | Path to the CSV file |
 | agent_type | String | Type of agent to create (zero-shot-react-description, openai-functions, or openai-tools) |
 
-#### Outputs
+### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -28,9 +52,7 @@ This component represents an Agent of CrewAI, allowing for the creation of speci
 
 For more information, see the [CrewAI documentation](https://docs.crewai.com/core-concepts/Agents/).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -45,7 +67,7 @@ For more information, see the [CrewAI documentation](https://docs.crewai.com/cor
 | allow_code_execution | Allow Code Execution | Whether the agent is allowed to execute code |
 | kwargs | kwargs | Additional keyword arguments for the agent |
 
-#### Outputs
+### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -57,9 +79,7 @@ This component represents a group of agents, managing how they should collaborat
 
 For more information, see the [CrewAI documentation](https://docs.crewai.com/how-to/Hierarchical/).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -74,7 +94,7 @@ For more information, see the [CrewAI documentation](https://docs.crewai.com/how
 | share_crew | Share Crew | Determines if the crew information is shared among agents |
 | function_calling_llm | Function Calling LLM | Specifies the language model for function calling |
 
-#### Outputs
+### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -84,16 +104,14 @@ For more information, see the [CrewAI documentation](https://docs.crewai.com/how
 
 This component creates a JSON agent from a JSON or YAML file and an LLM.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Type | Description |
 |------|------|-------------|
 | llm | LanguageModel | Language model to use for the agent |
 | path | File | Path to the JSON or YAML file |
 
-#### Outputs
+### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -105,9 +123,7 @@ This component creates an OpenAI Tools Agent using LangChain.
 
 For more information, see the [LangChain documentation](https://python.langchain.com/v0.1/docs/modules/agents/agent_types/openai_tools/).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -117,7 +133,7 @@ For more information, see the [LangChain documentation](https://python.langchain
 | chat_history | List[Data] | Optional chat history for the agent |
 | tools | List[Tool] | List of tools available to the agent |
 
-#### Outputs
+### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -129,9 +145,7 @@ This component creates an OpenAPI Agent to interact with APIs defined by OpenAPI
 
 For more information, see the LangChain documentation on OpenAPI Agents.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -139,7 +153,7 @@ For more information, see the LangChain documentation on OpenAPI Agents.
 | path | File | Path to the OpenAPI specification file (JSON or YAML) |
 | allow_dangerous_requests | Boolean | Whether to allow potentially dangerous API requests |
 
-#### Outputs
+### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -149,9 +163,7 @@ For more information, see the LangChain documentation on OpenAPI Agents.
 
 This component creates a SQL Agent to interact with SQL databases.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -159,7 +171,7 @@ This component creates a SQL Agent to interact with SQL databases.
 | database_uri | String | URI of the SQL database to connect to |
 | extra_tools | List[Tool] | Additional tools to provide to the agent (optional) |
 
-#### Outputs
+### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -171,9 +183,7 @@ This component represents a group of agents with tasks that are executed sequent
 
 For more information, see the [CrewAI documentation](https://docs.crewai.com/how-to/Sequential/).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -185,7 +195,7 @@ For more information, see the [CrewAI documentation](https://docs.crewai.com/how
 | share_crew | Share Crew | Determines if the crew information is shared among agents |
 | function_calling_llm | Function Calling LLM | Specifies the language model for function calling |
 
-#### Outputs
+### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -197,9 +207,7 @@ This component creates a CrewAI Task and its associated Agent, allowing for the 
 
 For more information, see the [CrewAI documentation](https://docs.crewai.com/how-to/Sequential/).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -218,7 +226,7 @@ For more information, see the [CrewAI documentation](https://docs.crewai.com/how
 | async_execution | Async Execution | Boolean flag indicating asynchronous task execution |
 | previous_task | Previous Task | The previous task in the sequence (for chaining) |
 
-#### Outputs
+### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -228,9 +236,7 @@ For more information, see the [CrewAI documentation](https://docs.crewai.com/how
 
 This component creates a Tool Calling Agent using LangChain.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -240,7 +246,7 @@ This component creates a Tool Calling Agent using LangChain.
 | chat_history | List[Data] | Optional chat history for the agent |
 | tools | List[Tool] | List of tools available to the agent |
 
-#### Outputs
+### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -250,16 +256,14 @@ This component creates a Tool Calling Agent using LangChain.
 
 This component creates a Vector Store Agent using LangChain.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Type | Description |
 |------|------|-------------|
 | llm | LanguageModel | Language model to use for the agent |
 | vectorstore | VectorStoreInfo | Vector store information for the agent to use |
 
-#### Outputs
+### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -269,16 +273,14 @@ This component creates a Vector Store Agent using LangChain.
 
 This component creates a Vector Store Router Agent using LangChain.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Type | Description |
 |------|------|-------------|
 | llm | LanguageModel | Language model to use for the agent |
 | vectorstores | List[VectorStoreInfo] | List of vector store information for the agent to route between |
 
-#### Outputs
+### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -290,9 +292,7 @@ This component creates an XML Agent using LangChain.
 
 The agent uses XML formatting for tool instructions to the Language Model.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -300,7 +300,7 @@ The agent uses XML formatting for tool instructions to the Language Model.
 | user_prompt | String | Custom prompt template for the agent (includes XML formatting instructions) |
 | tools | List[Tool] | List of tools available to the agent |
 
-#### Outputs
+### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|

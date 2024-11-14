@@ -15,7 +15,7 @@ import {
 import { cn } from "@/utils/utils";
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import { X } from "lucide-react";
-import React, { useState } from "react";
+import { useState } from "react";
 
 const CustomInputPopover = ({
   id,
@@ -68,7 +68,7 @@ const CustomInputPopover = ({
         <div
           data-testid={`anchor-${id}`}
           className={cn(
-            "primary-input border-1 flex h-full min-h-[2.375rem] flex-wrap items-center px-3",
+            "primary-input noflow nowheel nopan nodelete nodrag border-1 flex h-full min-h-[2.375rem] cursor-default flex-wrap items-center px-3",
             editNode && "min-h-7 p-0",
             editNode && disabled && "min-h-5 border-muted p-0",
             disabled && "bg-muted text-muted",
@@ -97,11 +97,10 @@ const CustomInputPopover = ({
             ))
           ) : selectedOption?.length > 0 ? (
             <Badge
-              variant="secondary"
+              variant={nodeStyle ? "emerald" : "secondary"}
               className={cn(
-                "flex items-center gap-1 truncate bg-muted",
-                nodeStyle &&
-                  "font-jetbrains rounded-[3px] bg-emerald-100 px-1 text-emerald-700 hover:bg-emerald-200",
+                "flex items-center gap-1 truncate",
+                nodeStyle ? "font-jetbrains rounded-[3px] px-1" : "bg-muted",
               )}
             >
               <div className="max-w-36 truncate">{selectedOption}</div>
@@ -128,7 +127,7 @@ const CustomInputPopover = ({
               disabled={disabled}
               required={required}
               className={cn(
-                "popover-input truncate pr-4",
+                "popover-input nodrag truncate pr-4",
                 editNode && "px-3",
                 editNode && disabled && "h-fit w-fit",
                 disabled &&

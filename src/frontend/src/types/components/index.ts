@@ -1,4 +1,3 @@
-import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { ReactElement, ReactNode } from "react";
 import { ReactFlowJsonObject } from "reactflow";
 import { InputOutput } from "../../constants/enums";
@@ -10,7 +9,6 @@ import {
 } from "../api";
 import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
-import { ColumnField } from "../utils/functions";
 import { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
   name?: string;
@@ -42,6 +40,7 @@ export type InputComponentType = {
   isObjectOption?: boolean;
   onChangeFolderName?: (e: any) => void;
   nodeStyle?: boolean;
+  isToolMode?: boolean;
 };
 export type DropDownComponent = {
   disabled?: boolean;
@@ -92,6 +91,7 @@ export type NodeOutputFieldComponentType = {
   outputProxy?: OutputFieldProxyType;
   lastOutput?: boolean;
   colorName?: string[];
+  isToolMode?: boolean;
 };
 
 export type NodeInputFieldComponentType = {
@@ -108,6 +108,7 @@ export type NodeInputFieldComponentType = {
   proxy: { field: string; id: string } | undefined;
   showNode: boolean;
   colorName?: string[];
+  isToolMode?: boolean;
 };
 
 export type IOJSONInputComponentType = {
@@ -124,6 +125,7 @@ export type outputComponentType = {
   idx: number;
   name: string;
   proxy?: OutputFieldProxyType;
+  isToolMode?: boolean;
 };
 
 export type DisclosureComponentType = {
@@ -335,8 +337,8 @@ export type PaginatorComponentType = {
   rowsCount?: number[];
   totalRowsCount: number;
   paginate: (pageIndex: number, pageSize: number) => void;
-  storeComponent?: boolean;
   pages?: number;
+  isComponent?: boolean;
 };
 
 export type ConfirmationModalType = {
@@ -543,6 +545,7 @@ export type nodeToolbarPropsType = {
   isOutdated: boolean;
   updateNode: () => void;
   closeToolbar?: () => void;
+  setOpenShowMoreOptions?: (open: boolean) => void;
 };
 
 export type parsedDataType = {

@@ -1,15 +1,13 @@
+import { Separator } from "@/components/ui/separator";
 import {
   useDeleteMessages,
   useGetMessagesQuery,
 } from "@/controllers/API/queries/messages";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useEffect, useState } from "react";
-import AccordionComponent from "../../components/accordionComponent";
 import IconComponent from "../../components/genericIconComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
-import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import { CHAT_FORM_DIALOG_SUBTITLE } from "../../constants/constants";
 import { InputOutput } from "../../constants/enums";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore from "../../stores/flowStore";
@@ -271,7 +269,7 @@ export default function IOModal({
                 : "w-0",
             )}
           >
-            <div className="flex h-full flex-col overflow-y-auto border-r border-border bg-muted p-6 text-center custom-scroll dark:bg-background">
+            <div className="flex h-full flex-col overflow-y-auto border-r border-border bg-muted p-4 text-center custom-scroll dark:bg-canvas">
               <div className="flex items-center gap-2 pb-8">
                 <ShadTooltip
                   styleClasses="z-50"
@@ -307,7 +305,7 @@ export default function IOModal({
                           <Button
                             data-testid="new-chat"
                             variant="ghost"
-                            className="flex h-8 w-8 items-center justify-center !p-0"
+                            className="flex h-8 w-8 items-center justify-center !p-0 hover:bg-secondary-hover"
                             onClick={(_) => {
                               setvisibleSession(undefined);
                               setSelectedViewField(undefined);
@@ -355,7 +353,7 @@ export default function IOModal({
               )}
             </div>
           </div>
-          <div className="flex h-full min-w-96 flex-grow bg-background dark:bg-accent">
+          <div className="flex h-full min-w-96 flex-grow bg-background">
             {selectedViewField && (
               <div
                 className={cn(
@@ -411,7 +409,7 @@ export default function IOModal({
             )}
             <div
               className={cn(
-                "flex h-full w-full flex-col justify-between p-6",
+                "flex h-full w-full flex-col justify-between p-4",
                 selectedViewField ? "hidden" : "",
               )}
             >
@@ -424,7 +422,7 @@ export default function IOModal({
                   </div>
                 )}
                 <div className={cn(sidebarOpen ? "lg:hidden" : "")}>
-                  <div className="-ml-4 -mt-4 flex items-center gap-2">
+                  <div className="flex items-center gap-2">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -442,11 +440,12 @@ export default function IOModal({
                 <div
                   className={cn(
                     sidebarOpen ? "pointer-events-none opacity-0" : "",
-                    "absolute right-10 top-2 flex h-8 w-8 items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                    "absolute right-12 top-2 flex h-8 items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
                   )}
                 >
                   <ShadTooltip styleClasses="z-50" content="New Chat">
                     <Button
+                      className="mr-2 h-[32px] w-[32px] hover:bg-secondary-hover"
                       variant="ghost"
                       size="icon"
                       onClick={(_) => {
@@ -456,10 +455,11 @@ export default function IOModal({
                     >
                       <IconComponent
                         name="Plus"
-                        className="h-[18px] w-[18px] text-ring"
+                        className="!h-[18px] !w-[18px] text-ring"
                       />
                     </Button>
                   </ShadTooltip>
+                  <Separator orientation="vertical" />
                 </div>
               </div>
               {haveChat ? (

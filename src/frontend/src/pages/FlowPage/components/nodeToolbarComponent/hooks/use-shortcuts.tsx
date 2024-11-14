@@ -17,6 +17,7 @@ export default function useShortcuts({
   shareComponent,
   ungroup,
   minimizeFunction,
+  activateToolMode,
 }: {
   showOverrideModal?: boolean;
   showModalAdvanced?: boolean;
@@ -32,6 +33,7 @@ export default function useShortcuts({
   shareComponent?: () => void;
   ungroup?: () => void;
   minimizeFunction?: () => void;
+  activateToolMode?: () => void;
 }) {
   const advanced = useShortcutsStore((state) => state.advanced);
   const minimize = useShortcutsStore((state) => state.minimize);
@@ -43,6 +45,7 @@ export default function useShortcuts({
   const download = useShortcutsStore((state) => state.download);
   const freeze = useShortcutsStore((state) => state.freeze);
   const freezeAll = useShortcutsStore((state) => state.FreezePath);
+  const toolMode = useShortcutsStore((state) => state.toolMode);
 
   function handleFreezeAll(e: KeyboardEvent) {
     if (isWrappedWithClass(e, "noflow") || !FreezeAllVertices) return;
@@ -114,6 +117,12 @@ export default function useShortcuts({
     minimizeFunction();
   }
 
+  function handleToolModeWShortcut(e: KeyboardEvent) {
+    if (isWrappedWithClass(e, "noflow") || !activateToolMode) return;
+    e.preventDefault();
+    activateToolMode();
+  }
+
   useHotkeys(minimize, handleMinimizeWShortcut, { preventDefault: true });
   useHotkeys(group, handleGroupWShortcut, { preventDefault: true });
   useHotkeys(component, handleShareWShortcut, { preventDefault: true });
@@ -124,4 +133,5 @@ export default function useShortcuts({
   useHotkeys(download, handleDownloadWShortcut, { preventDefault: true });
   useHotkeys(freeze, handleFreeze);
   useHotkeys(freezeAll, handleFreezeAll);
+  useHotkeys(toolMode, handleToolModeWShortcut, { preventDefault: true });
 }

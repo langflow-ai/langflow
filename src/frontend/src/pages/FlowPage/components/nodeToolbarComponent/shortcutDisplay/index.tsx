@@ -18,7 +18,7 @@ export default function ShortcutDisplay({
           {name && <span> {name} </span>}
           <span
             className={cn(
-              "flex items-center rounded-sm bg-muted px-1.5 py-[0.1em] text-lg text-muted-foreground",
+              "flex h-[16px] w-[16px] items-center justify-center rounded-sm bg-muted text-muted-foreground",
               name && "ml-3",
             )}
           >

@@ -5,16 +5,15 @@ import re
 import traceback
 from collections.abc import AsyncIterator, Iterator
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Annotated, Any, Literal
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from fastapi.encoders import jsonable_encoder
 from langchain_core.load import load
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import BaseChatPromptTemplate, ChatPromptTemplate, PromptTemplate
-from langchain_core.prompts.image import ImagePromptTemplate
 from loguru import logger
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_serializer, field_validator
 
 from langflow.base.prompts.utils import dict_values_to_string
 from langflow.schema.content_block import ContentBlock
@@ -22,16 +21,14 @@ from langflow.schema.content_types import ErrorContent
 from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
 from langflow.schema.properties import Properties, Source
-from langflow.schema.utils import timestamp_to_str_validator  # noqa: TCH001
+from langflow.schema.validators import timestamp_to_str_validator  # noqa: TCH001
 from langflow.utils.constants import (
     MESSAGE_SENDER_AI,
     MESSAGE_SENDER_NAME_AI,
     MESSAGE_SENDER_NAME_USER,
     MESSAGE_SENDER_USER,
 )
-
-if TYPE_CHECKING:
-    from langchain_core.prompt_values import ImagePromptValue
+from langflow.utils.image import create_data_url
 
 
 class Message(Data):
@@ -59,6 +56,28 @@ class Message(Data):
     def validate_flow_id(cls, value):
         if isinstance(value, UUID):
             value = str(value)
+        return value
+
+    @field_validator("content_blocks", mode="before")
+    @classmethod
+    def validate_content_blocks(cls, value):
+        # value may start with [ or not
+        if isinstance(value, list):
+            return [
+                ContentBlock.model_validate_json(v) if isinstance(v, str) else ContentBlock.model_validate(v)
+                for v in value
+            ]
+        if isinstance(value, str):
+            value = json.loads(value) if value.startswith("[") else [ContentBlock.model_validate_json(value)]
+        return value
+
+    @field_validator("properties", mode="before")
+    @classmethod
+    def validate_properties(cls, value):
+        if isinstance(value, str):
+            value = Properties.model_validate_json(value)
+        elif isinstance(value, dict):
+            value = Properties.model_validate(value)
         return value
 
     @field_serializer("flow_id")
@@ -181,9 +200,8 @@ class Message(Data):
             if isinstance(file, Image):
                 content_dicts.append(file.to_content_dict())
             else:
-                image_template = ImagePromptTemplate()
-                image_prompt_value: ImagePromptValue = image_template.invoke(input={"path": file})
-                content_dicts.append({"type": "image_url", "image_url": image_prompt_value.image_url})
+                image_url = create_data_url(file)
+                content_dicts.append({"type": "image_url", "image_url": {"url": image_url}})
         return content_dicts
 
     def load_lc_prompt(self):
@@ -224,10 +242,16 @@ class Message(Data):
         return formatted_prompt
 
     @classmethod
-    def from_template_and_variables(cls, template: str, **variables):
+    async def from_template_and_variables(cls, template: str, **variables):
+        # This method has to be async for backwards compatibility with versions
+        # >1.0.15, <1.1
+        return cls.from_template(template, **variables)
+
+    # Define a sync version for backwards compatibility with versions >1.0.15, <1.1
+    @classmethod
+    def from_template(cls, template: str, **variables):
         instance = cls(template=template, variables=variables)
         text = instance.format_text()
-        # Get all Message instances from the kwargs
         message = HumanMessage(content=text)
         contents = []
         for value in variables.values():
@@ -321,18 +345,27 @@ class ErrorMessage(Message):
 
     def __init__(
         self,
-        exception: Exception,
+        exception: BaseException,
         session_id: str,
         source: Source,
         trace_name: str | None = None,
         flow_id: str | None = None,
     ) -> None:
+        # This is done to avoid circular imports
+        if exception.__class__.__name__ == "ExceptionWithMessageError" and exception.__cause__ is not None:
+            exception = exception.__cause__
         # Get the error reason
-        reason = exception.__class__.__name__
+        reason = f"**{exception.__class__.__name__}**\n"
         if hasattr(exception, "body") and "message" in exception.body:
-            reason = exception.body.get("message")
+            reason += f" - **{exception.body.get('message')}**\n"
         elif hasattr(exception, "code"):
-            reason = exception.code
+            reason += f" - **Code: {exception.code}**\n"
+        elif hasattr(exception, "args") and exception.args:
+            reason += f" - **Details: {exception.args[0]}**\n"
+        elif isinstance(exception, ValidationError):
+            reason += f" - **Details:**\n\n```python\n{exception!s}\n```\n"
+        else:
+            reason += " - **An unknown error occurred.**\n"
 
         # Get the sender ID
         if trace_name:
@@ -359,14 +392,16 @@ class ErrorMessage(Message):
             content_blocks=[
                 ContentBlock(
                     title="Error",
-                    content=ErrorContent(
-                        type="error",
-                        component=source.display_name,
-                        field=str(exception.field) if hasattr(exception, "field") else None,
-                        reason=reason,
-                        solution=str(exception.solution) if hasattr(exception, "solution") else None,
-                        traceback=traceback.format_exc(),
-                    ),
+                    contents=[
+                        ErrorContent(
+                            type="error",
+                            component=source.display_name,
+                            field=str(exception.field) if hasattr(exception, "field") else None,
+                            reason=reason,
+                            solution=str(exception.solution) if hasattr(exception, "solution") else None,
+                            traceback=traceback.format_exc(),
+                        )
+                    ],
                 )
             ],
             flow_id=flow_id,

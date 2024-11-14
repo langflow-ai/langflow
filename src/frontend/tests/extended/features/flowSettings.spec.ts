@@ -32,7 +32,7 @@ test("flowSettings", async ({ page }) => {
   await page.waitForTimeout(1000);
 
   await page.getByTestId("flow_name").click();
-  await page.getByText("Settings").first().click();
+  await page.getByText("Flow Settings").first().click();
   await page
     .getByPlaceholder("Flow name")
     .fill(
@@ -56,7 +56,7 @@ test("flowSettings", async ({ page }) => {
   await page.getByText("Changes saved successfully").isVisible();
 
   await page.getByTestId("flow_name").click();
-  await page.getByText("Settings").first().click();
+  await page.getByText("Flow Settings").first().click();
 
   const flowName = await page.getByPlaceholder("Flow name").inputValue();
   const flowDescription = await page

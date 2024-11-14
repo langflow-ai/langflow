@@ -112,6 +112,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setFlowPool: (flowPool) => {
     set({ flowPool });
   },
+  updateToolMode: (nodeId: string, toolMode: boolean) => {
+    get().setNode(nodeId, (node) => ({
+      ...node,
+      data: { ...node.data, node: { ...node.data.node, tool_mode: toolMode } },
+    }));
+  },
   updateFreezeStatus: (nodeIds: string[], freeze: boolean) => {
     get().setNodes((oldNodes) => {
       const newNodes = cloneDeep(oldNodes);
@@ -711,7 +717,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         const edges = get().edges;
         const newEdges = edges.map((edge) => {
           if (idList.includes(edge.data.targetHandle.id)) {
-            edge.className = "runned";
+            edge.className = "ran";
           }
           return edge;
         });

@@ -8,7 +8,7 @@ from langflow.template import Output
 
 
 class AssistantsCreateAssistant(ComponentWithCache):
-    icon = "bot"
+    icon = "AstraDB"
     display_name = "Create Assistant"
     description = "Creates an Assistant and returns it's id"
 

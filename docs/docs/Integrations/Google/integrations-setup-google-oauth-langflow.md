@@ -1,5 +1,5 @@
 ---
-title: "Setup Google OAuth for Langflow Integration"
+title: "Integrate Google OAuth with Langflow"
 slug: /integrations-setup-google-oauth-langflow
 sidebar_position: 3
 description: "A comprehensive guide on creating a Google OAuth app, obtaining tokens, and integrating them with Langflow's Google components."
@@ -12,11 +12,11 @@ import TOCInline from '@theme/TOCInline';
 Langflow supports [Google OAuth](https://developers.google.com/identity/protocols/oauth2) for seamless integration with the following Google products.
 
 - **Gmail Loader**
-   Loads emails from Gmail using the provided credentials.
+  Loads emails from Gmail using the provided credentials.
 - **Google Drive Loader**
-   Loads documents from Google Drive using provided credentials.
+  Loads documents from Google Drive using provided credentials.
 - **Google Drive Search**
-   Searches Google Drive files using provided credentials and query parameters.
+  Searches Google Drive files using provided credentials and query parameters.
 
 To set up Google OAuth, create an OAuth app in Google Cloud, obtain the necessary credentials and access tokens, and add them to Langflow’s Google components.
 
@@ -24,7 +24,7 @@ To set up Google OAuth, create an OAuth app in Google Cloud, obtain the necessar
 
 1. Navigate to the [Google Cloud Console](https://console.cloud.google.com/).
 
-2. Click **Select a project** to choose an existing projec, or create a new project.
+2. Click **Select a project** to choose an existing project, or create a new project.
 
 ![OAuth Client ID and Secret](/img/google/create-a-google-cloud-project.gif)
 
@@ -52,20 +52,17 @@ With your OAuth application configured and your credentials JSON file created, f
 2. Add a **Google OAuth Token** component to your flow.
 3. Input in the field **Credentials File** on the Google OAuth Token component, the JSON file containing the Client ID credentials you downloaded from Google in the [previous steps](#5b8981b15d86192d17b0e5725c1f95e7).
 4. Click the **Play** button in the **Google OAuth Token** component to authenticate your application.
-When the component code is executed, a new tab may open in the browser to authenticate your application using your Google Cloud account. You must authenitcate with the account where you created the OAuth credentials for your application.
-If a new tab does not open automatically, check the Langflow **Logs** for the Google authentication URL. Open this URL in your browser to complete the authentication. Only after authenticating will the JSON token be generated.
+   When the component code is executed, a new tab should open in the browser to authenticate your application using your Google Cloud account. You must authenticate with the account where you created the OAuth credentials for your application.
+   If a new tab does not open automatically, check the Langflow **Logs** for the Google authentication URL. Open this URL in your browser to complete the authentication. Only after authenticating will the JSON token be generated.
 
 5. After successful authentication, your Langflow application can now request and refresh tokens for your application. These tokens enable Langflow to interact with Google services on your behalf and execute the requests you’ve specified.
-By default, token validity is managed by Google’s servers. In Langflow, tokens refresh automatically after initial authentication. However, if your application is inactive for an extended period, the tokens may expire, requiring you to re-authenticate to resume use in Langflow.
+   By default, token validity is managed by Google’s servers. In Langflow, tokens refresh automatically after initial authentication. However, if your application is inactive for an extended period, the tokens may expire, requiring you to re-authenticate to resume use in Langflow.
 
 ## Configure Google Components in Langflow
 
 In this example, use the **Google Drive Loader** component to load a text file hosted on Google Drive, translate the text to Spanish, and return it to a chat output.
 
-For a pre-built example of this flow, download this JSON file to your local machine.
-
-- Flow Google Drive Docs Translations Example -
-  (<a href="./files/Google_Drive_Docs_Translations_Example.json" download>Download link</a>)
+For a pre-built example of this flow, download the <a href="./files/Google_Drive_Docs_Translations_Example.json" download>Google Drive Document Translation Example Flow JSON</a> to your local machine.
 
 To import the downloaded JSON to Langflow, click **Options**, and then select **Import**.
 
@@ -76,15 +73,14 @@ To import the downloaded JSON to Langflow, click **Options**, and then select **
 Remember to convert the data output from the Google OAuth Token component to text using the `Parse Data` component.
 
 3. To allow the Langflow component to access the file in Google Drive, copy the Google Drive File ID from the document's URL.
-The file ID is located between `/d/` and `/edit` in a Google Drive document's URL.
-For example, in the URL `https://drive.google.com/file/d/1a2b3c4D5E6F7gHI8J9klmnopQ/edit`, the File ID is `1a2b3c4D5E6F7gHI8J9klmnopQ`.
+   The file ID is located between `/d/` and `/edit` in a Google Drive document's URL.
+   For example, in the URL `https://drive.google.com/file/d/1a2b3c4D5E6F7gHI8J9klmnopQ/edit`, the File ID is `1a2b3c4D5E6F7gHI8J9klmnopQ`.
 
 4. Paste the copied Google Drive File ID into the **Document ID** field in the **Google Drive Loader** component.
 
 5. Test the component’s functionality within your flow to ensure a successful connection.
 
 By following these steps, your Langflow environment will be fully integrated with Google services, providing a powerful tool for automating workflows that involve Google Gmail, Drive, and more.
-
 
 ---
 
@@ -93,9 +89,6 @@ By following these steps, your Langflow environment will be fully integrated wit
 - **Token Expiration**: Ensure to refresh your tokens periodically if you encounter authentication errors.
 - **Permission Errors**: Double-check your OAuth consent settings and scopes in your Google Cloud account as well as in your Langflow component settings to ensure you’ve granted the necessary permissions.
 - **A new window for authentication did not open?**: Check the Langflow Logs and look for text similar to **Please visit this URL to authorize this application: https://accounts.google.com/...**
-Visit this message's URL for authentication.
-
+  Visit this message's URL for authentication.
 
 ---
-
-

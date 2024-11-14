@@ -36,6 +36,10 @@ const config = {
       },
     },
     extend: {
+      screens: {
+        xl: "1200px",
+        "2xl": "1400px",
+      },
       keyframes: {
         wiggle: {
           "0%, 100%": { transform: "scale(100%)" },
@@ -69,11 +73,9 @@ const config = {
         "build-trigger": "var(--build-trigger)",
         "chat-trigger": "var(--chat-trigger)",
         "chat-trigger-disabled": "var(--chat-trigger-disabled)",
-        "blur-shared": "var(--blur-shared)",
         "dark-blue": "var(--dark-blue)",
         "dark-gray": "var(--dark-gray)",
         "dark-red": "var(--dark-red)",
-        "note-placeholder": "var(--note-placeholder)",
         error: {
           DEFAULT: "var(--error)",
           background: "var(--error-background)",
@@ -97,7 +99,11 @@ const config = {
         "medium-high-indigo": "var(--medium-high-indigo)",
         "medium-indigo": "var(--medium-indigo)",
         "medium-low-gray": "var(--medium-low-gray)",
-        "note-amber": "var(--note-amber)",
+        "note-amber": "hsl(var(--note-amber))",
+        "note-neutral": "hsl(var(--note-neutral))",
+        "note-rose": "hsl(var(--note-rose))",
+        "note-blue": "hsl(var(--note-blue))",
+        "note-lime": "hsl(var(--note-lime))",
         "status-green": "var(--status-green)",
         "status-red": "var(--status-red)",
         "status-yellow": "var(--status-yellow)",
@@ -118,20 +124,21 @@ const config = {
         "chat-bot-icon": "var(--chat-bot-icon)",
         "chat-user-icon": "var(--chat-user-icon)",
         "code-background": "hsl(var(--code-background))",
-        canvas: "hsl(var(--canvas))",
+        canvas: {
+          DEFAULT: "hsl(var(--canvas))",
+          dot: "hsl(var(--canvas-dot))",
+        },
         ice: "var(--ice)",
         selected: "var(--selected)",
         hover: "var(--hover)",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
-        "error-red":"hsl(var(--error-red))",
-        "error-red-border":"hsl(var(--error-red-border))",
+        "error-red": "hsl(var(--error-red))",
+        "error-red-border": "hsl(var(--error-red-border))",
         "node-selected": "hsl(var(--node-selected))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
-        "emerald-success": "hsl(var(--emerald-success))",
-        "accent-emerald-foreground": "hsl(var(--accent-emerald-foreground))",
         "emerald-smooth": "hsl(var(--emaral-smooth))",
         "emerald-hard": "hsl(var(--emeral-hard))",
         placeholder: "hsl(var(--placeholder))",
@@ -163,6 +170,7 @@ const config = {
         "accent-emerald": {
           DEFAULT: "hsl(var(--accent-emerald))",
           foreground: "hsl(var(--accent-emerald-foreground))",
+          hover: "hsl(var(--accent-emerald-hover))",
         },
         "accent-indigo": {
           DEFAULT: "hsl(var(--accent-indigo))",
@@ -184,61 +192,62 @@ const config = {
           DEFAULT: "hsl(var(--tooltip))",
           foreground: "hsl(var(--tooltip-foreground))",
         },
-        "inner-yellow": {
-          DEFAULT: "hsl(var(--inner-yellow))",
-          foreground: "hsl(var(--inner-foreground-yellow))",
-          muted: "hsl(var(--inner-yellow-muted-foreground))",
+        "code-block": {
+          DEFAULT: "#18181B",
+          muted: "#27272A",
         },
-        "inner-blue": {
-          DEFAULT: "hsl(var(--inner-blue))",
-          foreground: "hsl(var(--inner-foreground-blue))",
-          muted: "hsl(var(--inner-blue-muted-foreground))",
+        "datatype-yellow": {
+          DEFAULT: "hsl(var(--datatype-yellow))",
+          foreground: "hsl(var(--datatype-yellow-foreground))",
         },
-        "inner-gray": {
-          DEFAULT: "hsl(var(--inner-gray))",
-          foreground: "hsl(var(--inner-foreground-gray))",
-          muted: "hsl(var(--inner-gray-muted-foreground))",
+        "datatype-blue": {
+          DEFAULT: "hsl(var(--datatype-blue))",
+          foreground: "hsl(var(--datatype-blue-foreground))",
         },
-        "inner-lime": {
-          DEFAULT: "hsl(var(--inner-lime))",
-          foreground: "hsl(var(--inner-foreground-lime))",
-          muted: "hsl(var(--inner-lime-muted-foreground))",
+        "datatype-gray": {
+          DEFAULT: "hsl(var(--datatype-gray))",
+          foreground: "hsl(var(--datatype-gray-foreground))",
         },
-        "inner-red": {
-          DEFAULT: "hsl(var(--inner-red))",
-          foreground: "hsl(var(--inner-foreground-red))",
-          muted: "hsl(var(--inner-red-muted-foreground))",
+        "datatype-lime": {
+          DEFAULT: "hsl(var(--datatype-lime))",
+          foreground: "hsl(var(--datatype-lime-foreground))",
         },
-        "inner-violet": {
-          DEFAULT: "hsl(var(--inner-violet))",
-          foreground: "hsl(var(--inner-foreground-violet))",
-          muted: "hsl(var(--inner-violet-muted-foreground))",
+        "datatype-red": {
+          DEFAULT: "hsl(var(--datatype-red))",
+          foreground: "hsl(var(--datatype-red-foreground))",
         },
-        "inner-emerald": {
-          DEFAULT: "hsl(var(--inner-emerald))",
-          foreground: "hsl(var(--inner-foreground-emerald))",
-          muted: "hsl(var(--inner-emerald-muted-foreground))",
+        "datatype-violet": {
+          DEFAULT: "hsl(var(--datatype-violet))",
+          foreground: "hsl(var(--datatype-violet-foreground))",
         },
-        "inner-fuchsia": {
-          DEFAULT: "hsl(var(--inner-fuchsia))",
-          foreground: "hsl(var(--inner-foreground-fuchsia))",
-          muted: "hsl(var(--inner-fuchsia-muted-foreground))",
+        "datatype-emerald": {
+          DEFAULT: "hsl(var(--datatype-emerald))",
+          foreground: "hsl(var(--datatype-emerald-foreground))",
         },
-        "inner-purple": {
-          DEFAULT: "hsl(var(--inner-purple))",
-          foreground: "hsl(var(--inner-foreground-purple))",
-          muted: "hsl(var(--inner-purple-muted-foreground))",
+        "datatype-fuchsia": {
+          DEFAULT: "hsl(var(--datatype-fuchsia))",
+          foreground: "hsl(var(--datatype-fuchsia-foreground))",
         },
-        "inner-cyan": {
-          DEFAULT: "hsl(var(--inner-cyan))",
-          foreground: "hsl(var(--inner-foreground-cyan))",
-          muted: "hsl(var(--inner-cyan-muted-foreground))",
+        "datatype-purple": {
+          DEFAULT: "hsl(var(--datatype-purple))",
+          foreground: "hsl(var(--datatype-purple-foreground))",
         },
-        "inner-indigo": {
-          DEFAULT: "hsl(var(--inner-indigo))",
-          foreground: "hsl(var(--inner-foreground-indigo))",
-          muted: "hsl(var(--inner-indigo-muted-foreground))",
+        "datatype-cyan": {
+          DEFAULT: "hsl(var(--datatype-cyan))",
+          foreground: "hsl(var(--datatype-cyan-foreground))",
         },
+        "datatype-indigo": {
+          DEFAULT: "hsl(var(--datatype-indigo))",
+          foreground: "hsl(var(--datatype-indigo-foreground))",
+        },
+        "node-ring": "hsl(var(--node-ring))",
+        "neon-fuschia": "hsl(var(--neon-fuschia))",
+        "digital-orchid": "hsl(var(--digital-orchid))",
+        "plasma-purple": "hsl(var(--plasma-purple))",
+        "electric-blue": "hsl(var(--electric-blue))",
+        "holo-frost": "hsl(var(--holo-frost))",
+        "terminal-green": "hsl(var(--terminal-green))",
+        "cosmic-void": "hsl(var(--cosmic-void))",
       },
       borderRadius: {
         lg: `var(--radius)`,
@@ -252,6 +261,7 @@ const config = {
       fontFamily: {
         sans: ["var(--font-sans)", ...fontFamily.sans],
         mono: ["var(--font-mono)", ...fontFamily.mono],
+        chivo: ["var(--font-chivo)", ...fontFamily.sans],
       },
       boxShadow: {
         "frozen-ring": "0 0 10px 2px rgba(128, 190, 230, 0.5)",
@@ -260,6 +270,14 @@ const config = {
       },
       backdropBlur: {
         xs: "2px",
+      },
+      zIndex: {
+        '60': '60',
+        '70': '70',
+        '80': '80',
+        '90': '90',
+        '100': '100',
+        '999': '999',
       },
     },
   },
@@ -301,7 +319,7 @@ const config = {
           wordBreak: "break-word",
         },
         ".arrow-hide": {
-          "&::-webkit-inner-spin-button": {
+          "&::-webkit-datatype-spin-button": {
             "-webkit-appearance": "none",
             margin: 0,
           },
@@ -370,34 +388,34 @@ const config = {
     tailwindcssTypography,
     tailwindcssDottedBackground,
     plugin(function ({ addUtilities, theme, e }) {
-      const colors = theme('colors');
+      const colors = theme("colors");
 
-      const generateUtilities = (colors, prefix = '') => {
+      const generateUtilities = (colors, prefix = "") => {
         return Object.keys(colors).reduce((acc, colorName) => {
           const colorValue = colors[colorName];
           const className = prefix ? `${prefix}-${e(colorName)}` : e(colorName);
 
-          if (typeof colorValue === 'string') {
+          if (typeof colorValue === "string") {
             acc[`.truncate-${className}`] = {
-              position: 'relative',
-              overflow: 'hidden',
-              '&::after': {
+              position: "relative",
+              overflow: "hidden",
+              "&::after": {
                 content: '""',
-                position: 'absolute',
-                inset: '0 0 0 0',
+                position: "absolute",
+                inset: "0 0 0 0",
                 background: `linear-gradient(to right, transparent, 75%, ${colorValue})`,
               },
             };
-          } else if (typeof colorValue === 'object') {
+          } else if (typeof colorValue === "object") {
             // Use the DEFAULT value for the base class if it exists
             if (colorValue.DEFAULT) {
               acc[`.truncate-${className}`] = {
-                position: 'relative',
-                overflow: 'hidden',
-                '&::after': {
+                position: "relative",
+                overflow: "hidden",
+                "&::after": {
                   content: '""',
-                  position: 'absolute',
-                  inset: '0 0 0 0',
+                  position: "absolute",
+                  inset: "0 0 0 0",
                   background: `linear-gradient(to right, transparent, ${colorValue.DEFAULT})`,
                 },
               };
@@ -412,7 +430,7 @@ const config = {
 
       const newUtilities = generateUtilities(colors);
 
-      addUtilities(newUtilities, ['responsive', 'hover']);
+      addUtilities(newUtilities, ["responsive", "hover"]);
     }),
     plugin(({ addVariant }) => {
       addVariant("group-increment-hover", ":merge(.group-increment):hover &");
