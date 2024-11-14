@@ -99,6 +99,31 @@ export default defineConfig({
     //     },
     //   },
     // },
+    {
+      name: "starter-projects",
+      testMatch: /.*\.spec\.ts/,
+      grep: /@starter-project/,
+    },
+    {
+      name: "components",
+      testMatch: /.*\.spec\.ts/,
+      grep: /@component/,
+    },
+    {
+      name: "workspace",
+      testMatch: /.*\.spec\.ts/,
+      grep: /@workspace/,
+    },
+    {
+      name: "api",
+      testMatch: /.*\.spec\.ts/,
+      grep: /@api/,
+    },
+    {
+      name: "database",
+      testMatch: /.*\.spec\.ts/,
+      grep: /@database/,
+    },
   ],
   webServer: [
     {
