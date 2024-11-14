@@ -1,0 +1,36 @@
+name: Create Release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release"
+        required: true
+        type: string
+      ref:
+        description: "Commit to tag the release"
+        required: true
+        type: string
+      pre_release:
+        description: "Pre-release tag"
+        required: true
+        type: boolean
+
+jobs:
+  create_release:
+    name: Create Release Job
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-main
+          path: dist
+      - name: Create Release Notes
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "dist/*"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          generateReleaseNotes: true
+          prerelease: ${{ inputs.pre_release }}
+          tag: v${{ inputs.version }}
+          commit: ${{ inputs.ref }}
