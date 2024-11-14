@@ -2,7 +2,7 @@ from langflow.custom import Component
 from langflow.helpers.data import data_to_text
 from langflow.io import DataInput, MultilineInput, Output, StrInput
 from langflow.schema.message import Message
-
+from langflow.schema import Data
 
 class ParseDataComponent(Component):
     display_name = "Parse Data"
@@ -23,13 +23,33 @@ class ParseDataComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Text", name="text", method="parse_data"),
+        Output(display_name="Text", 
+               name="text", 
+               info="Data as a single Message, with each input Data separated by Separator", 
+               method="parse_data"),
+        Output(display_name="Data", 
+               name="data_out", 
+               info="Data as a list of new Data, each having `text` formatted by Template", 
+               method="parse_data_as_list"),
     ]
 
-    def parse_data(self) -> Message:
+    def _parse(self, sep: str):
         data = self.data if isinstance(self.data, list) else [self.data]
         template = self.template
+        result = data_to_text(template, data, sep=sep)
+        return result, data
 
-        result_string = data_to_text(template, data, sep=self.sep)
+    def parse_data(self) -> Message:
+        result_string, _ = self._parse(self.sep)
         self.status = result_string
         return Message(text=result_string)
+
+    def parse_data_as_list(self) -> list[Data]:
+        text_list, data_list = self._parse(None)
+        result_data = [
+            Data(data={**item.data, "text": text})
+            for item, text in zip(data_list, text_list)
+        ]
+
+        self.status = result_data        
+        return result_data
