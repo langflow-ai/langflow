@@ -91,6 +91,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   );
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
+  const isEmptyFlow = useRef(nodes.length === 0);
   const onNodesChange = useFlowStore((state) => state.onNodesChange);
   const onEdgesChange = useFlowStore((state) => state.onEdgesChange);
   const setNodes = useFlowStore((state) => state.setNodes);
@@ -551,8 +552,8 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             onNodeDragStop={onNodeDragStop}
             onDrop={onDrop}
             onSelectionChange={onSelectionChange}
-            fitView={true}
             deleteKeyCode={[]}
+            fitView={isEmptyFlow.current ? false : true}
             className="theme-attribution"
             minZoom={0.01}
             maxZoom={8}
