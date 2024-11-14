@@ -1,3 +1,4 @@
+import { getIconName } from "@/components/inputComponent/components/helpers/get-icon-name";
 import { GRADIENT_CLASS } from "@/constants/constants";
 import ComponentTextModal from "@/modals/textAreaModal";
 import { useRef, useState } from "react";
@@ -58,6 +59,8 @@ export default function TextAreaComponent({
   id = "",
   updateVisibility,
   password,
+  placeholder,
+  isToolMode = false,
 }: InputProps<string, TextAreaComponentType>): JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
@@ -105,7 +108,7 @@ export default function TextAreaComponent({
 
       <IconComponent
         dataTestId={`button_open_text_area_modal_${id}${editNode ? "_advanced" : ""}`}
-        name={disabled ? "lock" : "Scan"}
+        name={getIconName(disabled, "", "", false, isToolMode) || "Scan"}
         className={cn(
           "cursor-pointer bg-background",
           externalLinkIconClasses.icon,
@@ -131,7 +134,7 @@ export default function TextAreaComponent({
         onChange={handleInputChange}
         disabled={disabled}
         className={getInputClassName()}
-        placeholder={getPlaceholder(disabled, "Type something...")}
+        placeholder={getPlaceholder(disabled, placeholder)}
         aria-label={disabled ? value : undefined}
         ref={inputRef}
         type={password ? (passwordVisible ? "text" : "password") : "text"}

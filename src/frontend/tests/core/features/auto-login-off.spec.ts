@@ -55,6 +55,8 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
 
   await page.waitForSelector("text=new user added", { timeout: 30000 });
 
+  await page.waitForTimeout(1000);
+
   expect(await page.getByText(randomName, { exact: true }).isVisible()).toBe(
     true,
   );
@@ -63,6 +65,8 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
   await page.getByText("Delete", { exact: true }).last().click();
 
   await page.waitForSelector("text=user deleted", { timeout: 30000 });
+
+  await page.waitForTimeout(1000);
 
   expect(await page.getByText(randomName, { exact: true }).isVisible()).toBe(
     false,
@@ -136,7 +140,7 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
   await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("flow-configuration-button").click();
-  await page.getByText("Settings", { exact: true }).last().click();
+  await page.getByText("Flow Settings", { exact: true }).last().click();
 
   await page.getByPlaceholder("Flow Name").fill(randomFlowName);
 
@@ -147,7 +151,7 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
     state: "visible",
   });
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   await page.getByTestId("icon-ChevronLeft").first().click();
 
@@ -156,9 +160,13 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
     state: "visible",
   });
 
+  await page.waitForTimeout(2000);
+
   expect(
     await page.getByText(randomFlowName, { exact: true }).last().isVisible(),
   ).toBe(true);
+
+  await page.waitForTimeout(500);
 
   await page.getByTestId("user-profile-settings").click();
 
@@ -210,7 +218,7 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
   await page.getByTestId("zoom_out").click();
 
   await page.getByTestId("flow-configuration-button").click();
-  await page.getByText("Settings", { exact: true }).last().click();
+  await page.getByText("Flow Settings", { exact: true }).last().click();
 
   await page.getByPlaceholder("Flow Name").fill(secondRandomFlowName);
 
@@ -231,6 +239,8 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
   expect(
     await page.getByText(secondRandomFlowName, { exact: true }).isVisible(),
   ).toBe(true);
+
+  await page.waitForTimeout(500);
 
   expect(
     await page.getByText(randomFlowName, { exact: true }).isVisible(),
@@ -258,6 +268,8 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
   expect(
     await page.getByText(secondRandomFlowName, { exact: true }).isVisible(),
   ).toBe(false);
+  await page.waitForTimeout(500);
+
   expect(
     await page.getByText(randomFlowName, { exact: true }).isVisible(),
   ).toBe(true);

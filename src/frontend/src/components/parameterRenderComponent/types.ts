@@ -13,10 +13,16 @@ export type BaseInputProps<valueType = any> = {
   nodeClass?: APIClassType;
   handleNodeClass?: (value: any, code?: string, type?: string) => void;
   readonly?: boolean;
+  placeholder?: string;
+  isToolMode?: boolean;
 };
 
 // Generic type for composing input props
-export type InputProps<valueType = any, T = {}> = BaseInputProps<valueType> & T;
+export type InputProps<
+  valueType = any,
+  T = {},
+  U extends object = object,
+> = BaseInputProps<valueType> & T & { placeholder?: string };
 
 export type TableComponentType = {
   description: string;

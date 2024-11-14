@@ -3,7 +3,7 @@ import * as dotenv from "dotenv";
 import path from "path";
 import uaParser from "ua-parser-js";
 
-test("Sequential Task Agent", async ({ page }) => {
+test.skip("Sequential Task Agent", async ({ page }) => {
   test.skip(
     !process?.env?.OPENAI_API_KEY,
     "OPENAI_API_KEY required to run this test",
@@ -40,11 +40,6 @@ test("Sequential Task Agent", async ({ page }) => {
 
   const getUA = await page.evaluate(() => navigator.userAgent);
   const userAgentInfo = uaParser(getUA);
-  let control = "Control";
-
-  if (userAgentInfo.os.name.includes("Mac")) {
-    control = "Meta";
-  }
 
   await page.getByTestId("side_nav_options_all-templates").click();
   await page

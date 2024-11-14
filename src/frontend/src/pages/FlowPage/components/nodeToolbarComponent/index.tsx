@@ -1,14 +1,17 @@
 import { countHandlesFn } from "@/CustomNodes/helpers/count-handles";
+import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
+import ToggleShadComponent from "@/components/parameterRenderComponent/components/toggleShadComponent";
 import { Button } from "@/components/ui/button";
+import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import CodeAreaModal from "@/modals/codeAreaModal";
 import { APIClassType } from "@/types/api";
 import _, { cloneDeep } from "lodash";
 import { useEffect, useRef, useState } from "react";
-import { useReactFlow, useStore, useUpdateNodeInternals } from "reactflow";
+import { useStore, useUpdateNodeInternals } from "reactflow";
 import IconComponent from "../../../../components/genericIconComponent";
 import ShadTooltip from "../../../../components/shadTooltipComponent";
 import {
@@ -34,12 +37,7 @@ import {
   expandGroupNode,
   updateFlowPosition,
 } from "../../../../utils/reactflowUtils";
-import {
-  classNames,
-  cn,
-  getNodeLength,
-  openInNewTab,
-} from "../../../../utils/utils";
+import { cn, getNodeLength, openInNewTab } from "../../../../utils/utils";
 import useShortcuts from "./hooks/use-shortcuts";
 import ShortcutDisplay from "./shortcutDisplay";
 import ToolbarSelectItem from "./toolbarSelectItem";
@@ -54,6 +52,7 @@ export default function NodeToolbarComponent({
   onCloseAdvancedModal,
   updateNode,
   isOutdated,
+  setOpenShowMoreOptions,
 }: nodeToolbarPropsType): JSX.Element {
   const version = useDarkStore((state) => state.version);
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
@@ -76,7 +75,21 @@ export default function NodeToolbarComponent({
   const addFlow = useAddFlow();
 
   const isMinimal = countHandlesFn(data) <= 1 && numberOfOutputHandles <= 1;
+  function activateToolMode() {
+    const newValue = !toolMode;
+    setToolMode(newValue);
 
+    updateToolMode(data.id, newValue);
+    mutateTemplate(
+      newValue,
+      data.node!,
+      handleNodeClass,
+      postToolModeValue,
+      setNoticeData,
+      "tool_mode",
+    );
+    updateNodeInternals(data.id);
+  }
   function minimize() {
     if (isMinimal) {
       setShowNode((data.showNode ?? true) ? false : true);
@@ -130,6 +143,11 @@ export default function NodeToolbarComponent({
     setSuccessData({ title: `${data.id} saved successfully` });
     return;
   }
+  // Check if any of the data.node.template fields have tool_mode as True
+  // if so we can show the tool mode button
+  const hasToolMode =
+    data.node?.template &&
+    Object.values(data.node.template).some((field) => field.tool_mode);
 
   function openDocs() {
     if (data.node?.documentation) {
@@ -170,6 +188,7 @@ export default function NodeToolbarComponent({
     shareComponent,
     ungroup: handleungroup,
     minimizeFunction: minimize,
+    activateToolMode: activateToolMode,
   });
 
   const paste = useFlowStore((state) => state.paste);
@@ -188,6 +207,7 @@ export default function NodeToolbarComponent({
       });
     },
   });
+  const updateToolMode = useFlowStore((state) => state.updateToolMode);
 
   useEffect(() => {
     if (!showModalAdvanced) {
@@ -287,6 +307,9 @@ export default function NodeToolbarComponent({
           },
         );
         break;
+      case "toolMode":
+        activateToolMode();
+        break;
     }
 
     setSelectedValue(null);
@@ -322,6 +345,31 @@ export default function NodeToolbarComponent({
     (selectTriggerRef.current! as HTMLElement)?.click();
   };
 
+  const handleOpenChange = (open: boolean) => {
+    setOpenShowMoreOptions && setOpenShowMoreOptions(open);
+  };
+
+  const [toolMode, setToolMode] = useState(() => {
+    // Check if tool mode is explicitly set on the node
+    const hasToolModeProperty = data.node?.tool_mode;
+    if (hasToolModeProperty) {
+      return hasToolModeProperty;
+    }
+
+    // Otherwise check if node has component_as_tool output
+    const hasComponentAsTool = data.node?.outputs?.some(
+      (output) => output.name === "component_as_tool",
+    );
+
+    return hasComponentAsTool ?? false;
+  });
+
+  const postToolModeValue = usePostTemplateValue({
+    node: data.node!,
+    nodeId: data.id,
+    parameterId: "tool_mode",
+  });
+
   // Use ReactFlow's store selector to get zoom updates
   const zoom = useStore((state) => state.transform[2]);
   const [scale, setScale] = useState<number | null>(null);
@@ -337,6 +385,7 @@ export default function NodeToolbarComponent({
   }, [zoom]);
 
   if (scale === null) return <></>;
+
   return (
     <>
       <div
@@ -402,37 +451,95 @@ export default function NodeToolbarComponent({
               </Button>
             </ShadTooltip>
           )}
-
-          <ShadTooltip
-            content={
-              <ShortcutDisplay
-                {...shortcuts.find(
-                  ({ name }) => name.toLowerCase() === "copy",
-                )!}
-              />
-            }
-            side="top"
-            styleClasses="relative bottom-2"
-          >
-            <Button
-              className="node-toolbar-buttons h-[2.125rem]"
-              variant="ghost"
-              onClick={(event) => {
-                event.preventDefault();
-                handleSelectChange("copy");
-              }}
-              size="node-toolbar"
+          {!hasToolMode && (
+            <ShadTooltip
+              content={
+                <ShortcutDisplay
+                  {...shortcuts.find(
+                    ({ name }) => name.toLowerCase() === "freeze path",
+                  )!}
+                />
+              }
+              side="top"
             >
-              <IconComponent name="Copy" className="h-4 w-4" />
-            </Button>
-          </ShadTooltip>
+              <Button
+                className={cn(
+                  "node-toolbar-buttons",
+                  frozen && "text-blue-500",
+                )}
+                variant="ghost"
+                onClick={(event) => {
+                  event.preventDefault();
+                  takeSnapshot();
+                  FreezeAllVertices({
+                    flowId: currentFlowId,
+                    stopNodeId: data.id,
+                  });
+                }}
+                size="node-toolbar"
+              >
+                <IconComponent
+                  name="FreezeAll"
+                  className={cn(
+                    "h-4 w-4 transition-all",
+                    frozen ? "animate-wiggle text-ice" : "",
+                  )}
+                />
+                <span className="text-[13px] font-medium">Freeze Path</span>
+              </Button>
+            </ShadTooltip>
+          )}
+          {hasToolMode && (
+            <ShadTooltip
+              content={
+                <ShortcutDisplay
+                  {...shortcuts.find(
+                    ({ name }) => name.toLowerCase() === "tool mode",
+                  )!}
+                />
+              }
+              side="top"
+            >
+              <Button
+                className={cn(
+                  "node-toolbar-buttons h-[2rem]",
+                  toolMode && "text-primary",
+                )}
+                variant="ghost"
+                onClick={(event) => {
+                  event.preventDefault();
+                  takeSnapshot();
+                  handleSelectChange("toolMode");
+                }}
+                size="node-toolbar"
+              >
+                <IconComponent
+                  name="Hammer"
+                  className={cn(
+                    "h-4 w-4 transition-all",
+                    toolMode ? "text-primary" : "",
+                  )}
+                />
+                <span className="text-[13px] font-medium">Tool Mode</span>
+                <ToggleShadComponent
+                  value={toolMode}
+                  editNode={false}
+                  handleOnNewValue={() => {}}
+                  disabled={false}
+                  size="medium"
+                  showToogle={false}
+                  id="tool-mode-toggle"
+                />
+              </Button>
+            </ShadTooltip>
+          )}
           <ShadTooltip
             content="Show More"
             side="top"
             styleClasses="relative bottom-2"
           >
             <Button
-              className="node-toolbar-buttons h-[2rem]"
+              className="node-toolbar-buttons h-[2rem] w-[2rem]"
               variant="ghost"
               onClick={handleButtonClick}
               size="node-toolbar"
@@ -443,13 +550,21 @@ export default function NodeToolbarComponent({
           </ShadTooltip>
         </div>
 
-        <Select onValueChange={handleSelectChange} value={selectedValue!}>
-          <SelectTrigger ref={selectTriggerRef}>
+        <Select
+          onValueChange={handleSelectChange}
+          value={selectedValue!}
+          onOpenChange={handleOpenChange}
+        >
+          <SelectTrigger ref={selectTriggerRef} className="w-62">
             <></>
           </SelectTrigger>
           <SelectContent
-            className="relative min-w-[14rem] bg-background"
-            style={{ transform: `scale(${scale})`, transformOrigin: "top" }}
+            className={"relative top-1 w-56 bg-background"}
+            style={{
+              transform: `scale(${scale})`,
+              transformOrigin: "top",
+              left: scale === 1 ? "4.5rem" : `${1.7 * (scale - 1)}rem`,
+            }}
           >
             {hasCode && (
               <SelectItem value={"code"}>
@@ -622,6 +737,19 @@ export default function NodeToolbarComponent({
                 </span>
               </div>
             </SelectItem>
+            {hasToolMode && (
+              <SelectItem value="toolMode">
+                <ToolbarSelectItem
+                  shortcut={
+                    shortcuts.find((obj) => obj.name === "Tool Mode")?.shortcut!
+                  }
+                  value={"Tool Mode"}
+                  icon={"Hammer"}
+                  dataTestId="tool-mode-button"
+                  style={`${toolMode ? "text-primary" : ""} transition-all`}
+                />
+              </SelectItem>
+            )}
           </SelectContent>
         </Select>
 

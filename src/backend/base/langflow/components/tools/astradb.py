@@ -10,7 +10,7 @@ from langflow.schema import Data
 
 
 class AstraDBToolComponent(LCToolComponent):
-    display_name: str = "Astra DB Tool"
+    display_name: str = "Astra DB"
     description: str = "Create a tool to get data from DataStax Astra DB Collection"
     documentation: str = "https://astra.datastax.com"
     icon: str = "AstraDB"

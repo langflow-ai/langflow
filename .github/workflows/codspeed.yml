@@ -2,10 +2,20 @@ name: Run benchmarks
 
 on:
   push:
+    paths:
+      - "src/backend/base/**"
+      - "src/backend/tests/performance/**"
     branches:
       - "main" # or "master"
   pull_request:
+    paths:
+      - "src/backend/base/**"
+      - "src/backend/tests/performance/**"
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   codspeed:

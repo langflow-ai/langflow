@@ -19,6 +19,8 @@ open_browser ?= true
 path = src/backend/base/langflow/frontend
 workers ?= 1
 async ?= true
+lf ?= false
+ff ?= true
 all: help
 
 ######################
@@ -130,26 +132,20 @@ endif
 coverage: ## run the tests and generate a coverage report
 	@uv run coverage run
 	@uv run coverage erase
-	#@poetry run coverage run
-	#@poetry run coverage erase
 
 unit_tests: ## run unit tests
 	@uv sync --extra dev --frozen
-ifeq ($(async), true)
-	uv run pytest src/backend/tests \
-		--ignore=src/backend/tests/integration \
-		--instafail -n auto -ra -m "not api_key_required" \
-		--durations-path src/backend/tests/.test_durations \
-		--splitting-algorithm least_duration \
-		$(args)
-else
-	uv run pytest src/backend/tests \
-		--ignore=src/backend/tests/integration \
-		--instafail -ra -m "not api_key_required" \
-		--durations-path src/backend/tests/.test_durations \
-		--splitting-algorithm least_duration \
-		$(args)
-endif
+	@EXTRA_ARGS=""
+	@if [ "$(async)" = "true" ]; then \
+		EXTRA_ARGS="$$EXTRA_ARGS --instafail -n auto"; \
+	fi; \
+	if [ "$(lf)" = "true" ]; then \
+		EXTRA_ARGS="$$EXTRA_ARGS --lf"; \
+	fi; \
+	if [ "$(ff)" = "true" ]; then \
+		EXTRA_ARGS="$$EXTRA_ARGS --ff"; \
+	fi; \
+	uv run pytest src/backend/tests --ignore=src/backend/tests/integration $$EXTRA_ARGS --instafail -ra -m 'not api_key_required' --durations-path src/backend/tests/.test_durations --splitting-algorithm least_duration $(args)
 
 unit_tests_looponfail:
 	@make unit_tests args="-f"

@@ -14,9 +14,8 @@ from langflow.schema.message import Message
 
 
 class ExceptionWithMessageError(Exception):
-    def __init__(self, e: Exception, agent_message: Message):
+    def __init__(self, agent_message: Message):
         self.agent_message = agent_message
-        self.exception = e
         super().__init__()
 
 
@@ -40,11 +39,17 @@ def _build_agent_input_text_content(agent_input_dict: InputDict) -> str:
 
 def _calculate_duration(start_time: float) -> int:
     """Calculate duration in milliseconds from start time to now."""
+    # Handle the calculation
+    current_time = perf_counter()
     if isinstance(start_time, int):
-        # means it was transformed into ms so we need to reverse it
-        # to whatever perf_counter returns
-        return int((perf_counter() - start_time / 1000) * 1000)
-    return int((perf_counter() - start_time) * 1000)
+        # If we got an integer, treat it as milliseconds
+        duration = current_time - (start_time / 1000)
+        result = int(duration * 1000)
+    else:
+        # If we got a float, treat it as perf_counter time
+        result = int((current_time - start_time) * 1000)
+
+    return result
 
 
 def handle_on_chain_start(
@@ -106,10 +111,14 @@ def handle_on_tool_start(
     tool_name = event["name"]
     tool_input = event["data"].get("input")
     run_id = event.get("run_id", "")
+    tool_key = f"{tool_name}_{run_id}"
 
     # Create content blocks if they don't exist
     if not agent_message.content_blocks:
         agent_message.content_blocks = [ContentBlock(title="Agent Steps", contents=[])]
+
+    duration = _calculate_duration(start_time)
+    new_start_time = perf_counter()  # Get new start time for next operation
 
     # Create new tool content with the input exactly as received
     tool_content = ToolContent(
@@ -119,16 +128,16 @@ def handle_on_tool_start(
         output=None,
         error=None,
         header={"title": f"Accessing **{tool_name}**", "icon": "Hammer"},
-        duration=int(start_time * 1000),
+        duration=duration,  # Store the actual duration
     )
 
     # Store in map and append to message
-    tool_blocks_map[run_id] = tool_content
+    tool_blocks_map[tool_key] = tool_content
     agent_message.content_blocks[0].contents.append(tool_content)
 
     agent_message = send_message_method(message=agent_message)
-    tool_blocks_map[run_id] = agent_message.content_blocks[0].contents[-1]
-    return agent_message, start_time
+    tool_blocks_map[tool_key] = agent_message.content_blocks[0].contents[-1]
+    return agent_message, new_start_time
 
 
 def handle_on_tool_end(
@@ -139,16 +148,19 @@ def handle_on_tool_end(
     start_time: float,
 ) -> tuple[Message, float]:
     run_id = event.get("run_id", "")
-    tool_content = tool_blocks_map.get(run_id)
+    tool_name = event.get("name", "")
+    tool_key = f"{tool_name}_{run_id}"
+    tool_content = tool_blocks_map.get(tool_key)
 
     if tool_content and isinstance(tool_content, ToolContent):
         tool_content.output = event["data"].get("output")
-        # Calculate duration only when tool ends
+        duration = _calculate_duration(start_time)
+        tool_content.duration = duration
         tool_content.header = {"title": f"Executed **{tool_content.name}**", "icon": "Hammer"}
-        if isinstance(tool_content.duration, int):
-            tool_content.duration = _calculate_duration(tool_content.duration)
+
         agent_message = send_message_method(message=agent_message)
-        start_time = perf_counter()
+        new_start_time = perf_counter()  # Get new start time for next operation
+        return agent_message, new_start_time
     return agent_message, start_time
 
 
@@ -160,7 +172,9 @@ def handle_on_tool_error(
     start_time: float,
 ) -> tuple[Message, float]:
     run_id = event.get("run_id", "")
-    tool_content = tool_blocks_map.get(run_id)
+    tool_name = event.get("name", "")
+    tool_key = f"{tool_name}_{run_id}"
+    tool_content = tool_blocks_map.get(tool_key)
 
     if tool_content and isinstance(tool_content, ToolContent):
         tool_content.error = event["data"].get("error", "Unknown error")
@@ -246,12 +260,11 @@ async def process_agent_events(
                 agent_message, start_time = tool_handler(
                     event, agent_message, tool_blocks_map, send_message_method, start_time
                 )
-                start_time = start_time or perf_counter()
             elif event["event"] in CHAIN_EVENT_HANDLERS:
                 chain_handler = CHAIN_EVENT_HANDLERS[event["event"]]
                 agent_message, start_time = chain_handler(event, agent_message, send_message_method, start_time)
-                start_time = start_time or perf_counter()
         agent_message.properties.state = "complete"
-        return Message(**agent_message.model_dump())
     except Exception as e:
-        raise ExceptionWithMessageError(e, agent_message) from e
+        raise ExceptionWithMessageError(agent_message) from e
+
+    return Message(**agent_message.model_dump())

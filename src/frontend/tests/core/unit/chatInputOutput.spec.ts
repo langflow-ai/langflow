@@ -32,6 +32,9 @@ test("chat_io_teste", async ({ page }) => {
   });
 
   await page.getByTestId("blank-flow").click();
+  await page.waitForSelector('[data-testid="sidebar-search-input"]', {
+    state: "visible",
+  });
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("chat output");
   await page.waitForTimeout(1000);
