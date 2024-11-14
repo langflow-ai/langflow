@@ -24,8 +24,8 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
             display_name="MongoDB Atlas Combined Client Certificate",
             required=False,
             info="Client Certificate combined with the private key in the following format:\n "
-                 "-----BEGIN PRIVATE KEY-----\n...\n -----END PRIVATE KEY-----\n-----BEGIN CERTIFICATE-----\n"
-                 "...\n-----END CERTIFICATE-----\n",
+            "-----BEGIN PRIVATE KEY-----\n...\n -----END PRIVATE KEY-----\n-----BEGIN CERTIFICATE-----\n"
+            "...\n-----END CERTIFICATE-----\n",
         ),
         StrInput(name="db_name", display_name="Database Name", required=True),
         StrInput(name="collection_name", display_name="Collection Name", required=True),
