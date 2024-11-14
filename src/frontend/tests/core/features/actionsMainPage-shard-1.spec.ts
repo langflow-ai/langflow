@@ -78,7 +78,9 @@ test("search flows", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 30000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
   await page.getByTestId("side_nav_options_all-templates").click();
