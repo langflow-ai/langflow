@@ -50,7 +50,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
     def build_vector_store(self) -> MongoDBAtlasVectorSearch:
         try:
             from pymongo import MongoClient
-        except ImportError:
+        except ImportError as e:
             msg = "Please install pymongo to use MongoDB Atlas Vector Store"
             raise ImportError(msg) from e
 
