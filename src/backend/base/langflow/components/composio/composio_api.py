@@ -1,13 +1,14 @@
 from collections.abc import Sequence
 from typing import Any
 
+from composio.client.exceptions import NoItemsFound
 from composio_langchain import Action, App, ComposioToolSet
 from langchain_core.tools import Tool
 from loguru import logger
 from typing_extensions import override
 
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import DropdownInput, MessageTextInput, MultiselectInput, SecretStrInput, StrInput
+from langflow.inputs import DropdownInput, LinkInput, MessageTextInput, MultiselectInput, SecretStrInput, StrInput
 
 
 class ComposioAPIComponent(LCToolComponent):
@@ -34,20 +35,28 @@ class ComposioAPIComponent(LCToolComponent):
             info="The app name to use. Please refresh after selecting app name",
             refresh_button=True,
         ),
+        LinkInput(
+            name="auth_link",
+            display_name="Authentication Link",
+            value="",
+            info="Click to authenticate with the selected app",
+            dynamic=True,
+        ),
+        StrInput(
+            name="auth_status",
+            display_name="Auth Status",
+            value="Not Connected",
+            info="Current authentication status",
+            dynamic=True,
+        ),
         MultiselectInput(
             name="action_names",
             display_name="Actions to use",
-            required=False,
+            required=True,
             options=[],
             value=[],
             info="The actions to pass to agent to execute",
-        ),
-        StrInput(
-            name="auth_status_config",
-            display_name="Auth status",
-            value="",
-            refresh_button=True,
-            info="Open link or enter api key. Then refresh button",
+            dynamic=True,
         ),
     ]
 
@@ -150,19 +159,43 @@ class ComposioAPIComponent(LCToolComponent):
                 build_config = self._update_app_names_with_connected_status(build_config)
             return build_config
 
-        if field_name in {"app_names", "auth_status_config"}:
-            if hasattr(self, "api_key") and self.api_key != "":
-                build_config["auth_status_config"]["value"] = self._check_for_authorization(
-                    self._get_normalized_app_name()
-                )
+        if field_name in {"app_names"} and hasattr(self, "api_key") and self.api_key != "":
+            app_name = self._get_normalized_app_name()
+
+            # Check auth status
+            try:
+                toolset = self._build_wrapper()
+                entity = toolset.client.get_entity(id=self.entity_id)
+                try:
+                    entity.get_connection(app=app_name)
+                    build_config["auth_status"]["value"] = f"{app_name} CONNECTED"
+                    build_config["auth_link"]["value"] = ""  # Clear auth link when connected
+                except NoItemsFound:
+                    # Check if app uses API key auth
+                    auth_schemes = toolset.client.apps.get(app_name).auth_schemes
+                    if auth_schemes[0].auth_mode == "API_KEY":
+                        build_config["auth_status"]["value"] = "Enter API Key"
+                        build_config["auth_link"]["value"] = ""  # No link needed for API key auth
+                    else:
+                        # Generate OAuth auth URL
+                        auth_url = self._initiate_default_connection(entity, app_name)
+                        build_config["auth_link"]["value"] = auth_url
+                        build_config["auth_status"]["value"] = "Click link to authenticate"
+            except Exception as e:  # noqa: BLE001
+                logger.error(f"Error checking auth status: {e}")
+                build_config["auth_link"]["value"] = ""
+                build_config["auth_status"]["value"] = f"Error: {e!s}"
+
+            # Update action names
             all_action_names = list(Action.__annotations__)
             app_action_names = [
                 action_name
                 for action_name in all_action_names
-                if action_name.lower().startswith(self._get_normalized_app_name().lower() + "_")
+                if action_name.lower().startswith(app_name.lower() + "_")
             ]
             build_config["action_names"]["options"] = app_action_names
             build_config["action_names"]["value"] = [app_action_names[0]] if app_action_names else [""]
+
         return build_config
 
     def build_tool(self) -> Sequence[Tool]:
