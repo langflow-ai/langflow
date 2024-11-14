@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import inspect
 import json
 import time
@@ -7,6 +8,7 @@ from functools import partial
 from typing import Literal
 
 from fastapi.encoders import jsonable_encoder
+from jsonpatch import JsonPatch, make_patch
 from loguru import logger
 from typing_extensions import Protocol
 
@@ -26,6 +28,8 @@ class EventManager:
     def __init__(self, queue: asyncio.Queue):
         self.queue = queue
         self.events: dict[str, PartialEventCallback] = {}
+        self.message_states: dict[str, dict] = {}
+        self._lock = asyncio.Lock()
 
     @staticmethod
     def _validate_callback(callback: EventCallback) -> None:
@@ -60,19 +64,79 @@ class EventManager:
             _callback = partial(callback, manager=self, event_type=event_type)
         self.events[name] = _callback
 
-    def send_event(self, *, event_type: Literal["message", "error", "warning", "info", "token"], data: LoggableType):
+    async def get_patch(self, data: dict) -> JsonPatch | None:
+        """Generate a JSON patch if a previous state exists for the message."""
+        async with self._lock:
+            if not isinstance(data, dict) or "id" not in data:
+                return None
+
+            message_id = data["id"]
+            # Serialize data for comparison
+            data_serialized = jsonable_encoder(data)
+
+            if message_id in self.message_states:
+                old_state = self.message_states[message_id]
+                old_state_serialized = jsonable_encoder(old_state)
+                patch = make_patch(old_state_serialized, data_serialized)
+                if patch.patch:  # Only return if there are actual changes
+                    self.message_states[message_id] = copy.deepcopy(data)
+                    return patch
+
+            # Store initial state if not exists or no changes
+            self.message_states[message_id] = copy.deepcopy(data)
+            return None
+
+    async def send_event(
+        self,
+        *,
+        event_type: Literal[
+            "add_message",
+            "error",
+            "warning",
+            "info",
+            "token",
+            "vertices_sorted",
+            "build_start",
+            "build_end",
+            "end_vertex",
+        ],
+        data: LoggableType,
+    ):
         try:
-            if isinstance(data, dict) and event_type in ["message", "error", "warning", "info", "token"]:
+            if isinstance(data, dict) and event_type == "add_message":
+                patch = await self.get_patch(data)
+                if patch:
+                    # Create a new dict with just patch and id
+                    data = {
+                        "patch": patch.patch,
+                        "id": data["id"],
+                        "type": "patch",  # Add type to identify patch messages
+                    }
+                else:
+                    # If no patch, create a message event
+                    data = create_event_by_type(event_type, **data)
+            elif isinstance(data, dict) and event_type in ["message", "error", "warning", "info", "token"]:
                 data = create_event_by_type(event_type, **data)
         except TypeError as e:
             logger.debug(f"Error creating playground event: {e}")
-        except Exception:
+        except Exception as e:
+            logger.error(f"Unexpected error in send_event: {e}")
             raise
+
         jsonable_data = jsonable_encoder(data)
         json_data = {"event": event_type, "data": jsonable_data}
         event_id = f"{event_type}-{uuid.uuid4()}"
         str_data = json.dumps(json_data) + "\n\n"
         self.queue.put_nowait((event_id, str_data.encode("utf-8"), time.time()))
+
+    def clear_message_state(self, message_id: str) -> None:
+        """Clear the stored state for a message."""
+        self.message_states.pop(message_id, None)
+
+    def reset(self) -> None:
+        """Reset the event manager state."""
+        self.events.clear()
+        self.message_states.clear()
 
     def noop(self, *, data: LoggableType) -> None:
         pass
