@@ -15,8 +15,6 @@ on:
         required: true
         type: boolean
 
-env:
-  POETRY_VERSION: "1.8.2"
 jobs:
   create_release:
     name: Create Release Job
