@@ -286,7 +286,6 @@ test("user must be able to freeze a component", async ({ page }) => {
 
   await page.getByTestId("icon-Snowflake").click();
 
-
   await page.keyboard.press("Escape");
 
   await page.locator('//*[@id="react-flow-id"]').click();
