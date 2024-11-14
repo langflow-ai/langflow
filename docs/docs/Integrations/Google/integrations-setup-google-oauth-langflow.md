@@ -1,5 +1,5 @@
 ---
-title: "Integrate Google OAuth with Langflow"
+title: Integrate Google OAuth with Langflow
 slug: /integrations-setup-google-oauth-langflow
 sidebar_position: 3
 description: "A comprehensive guide on creating a Google OAuth app, obtaining tokens, and integrating them with Langflow's Google components."
@@ -7,40 +7,26 @@ description: "A comprehensive guide on creating a Google OAuth app, obtaining to
 
 import TOCInline from '@theme/TOCInline';
 
-# Integrate Google OAuth for Langflow
+Langflow integrates with [Google OAuth](https://developers.google.com/identity/protocols/oauth2) for authenticating the [Gmail Loader](/components-data#gmail-loader), [Google Drive Loader](components-data#google-drive-loader), and [Google Drive Search](/components-data#google-drive-search) components.
 
-Langflow supports [Google OAuth](https://developers.google.com/identity/protocols/oauth2) for seamless integration with the following Google products.
-
-- **Gmail Loader**
-  Loads emails from Gmail using the provided credentials.
-- **Google Drive Loader**
-  Loads documents from Google Drive using provided credentials.
-- **Google Drive Search**
-  Searches Google Drive files using provided credentials and query parameters.
-
-To set up Google OAuth, create an OAuth app in Google Cloud, obtain the necessary credentials and access tokens, and add them to Langflow’s Google components.
+Learn how to create an OAuth app in Google Cloud, obtain the necessary credentials and access tokens, and add them to Langflow’s Google components.
 
 ## Create an OAuth Application in Google Cloud {#5b8981b15d86192d17b0e5725c1f95e7}
 
 1. Navigate to the [Google Cloud Console](https://console.cloud.google.com/).
 
-2. Click **Select a project** to choose an existing project, or create a new project.
+2. Click **Select a project**, and then click **New Project** to create a new project.
 
 ![OAuth Client ID and Secret](/img/google/create-a-google-cloud-project.gif)
 
 3. To enable APIs for the project, select **APIs & Services** and click **Library**. Enable the APIs you need for your project. For example, if your flow uses the Google Drive component, enable the Google Drive API.
-4. To navigate to the OAuth consent screen, go to **APIs & Services** and click **OAuth consent screen**.
-5. Set up your OAuth consent screen with essential app details like the application name, user support email, required [scopes](https://developers.google.com/identity/protocols/oauth2/scopes) (permissions your app needs), and authorized domains.
+4. To navigate to the OAuth consent screen, click **APIs & Services**, and then click **OAuth consent screen**.
+5. Populate your OAuth consent screen with the application name, user support email, required [scopes](https://developers.google.com/identity/protocols/oauth2/scopes), and authorized domains.
+6. To create an **OAuth Client ID**, navigate to **Clients**, and then select **Create Client**.
+7. Choose **Desktop app** as the application type, and then name your client ID.
+8. Click **Create**. A Client ID and Client Secret are created. Download the credentials as a JSON file to your local machine and save it securely.
 
-![OAuth Consent Screen](/img/google/setup-oauth-consent-screen.png)
-
-6. Ensure you **publish** your app if it’s not restricted to internal use.
-7. To create an **OAuth Client ID**, navigate to **Credentials** and select **Create Credentials** > **OAuth Client ID**.
-8. Choose **Desktop app** as the application type.
-
-9. Click **Create**. A Client ID and Client Secret are created. Download the credentials as a JSON file to your local machine and save it securely.
-
-![OAuth Client ID and Secret](/img/google/create-oauth-client-id.png)
+![OAuth Client ID and Secret](/img/google/create-oauth-client-id.gif)
 
 ---
 
