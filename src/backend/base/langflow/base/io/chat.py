@@ -44,11 +44,11 @@ class ChatComponent(Component):
             category="message",
         )
 
-    def _send_messages_events(self, messages) -> None:
+    async def _send_messages_events(self, messages) -> None:
         if hasattr(self, "_event_manager") and self._event_manager:
             for stored_message in messages:
                 id_ = stored_message.id
-                self._send_message_event(message=stored_message, id_=id_)
+                await self._send_message_event(message=stored_message, id_=id_)
 
     def get_properties_from_source_component(self):
         if hasattr(self, "_vertex") and hasattr(self._vertex, "incoming_edges") and self._vertex.incoming_edges:
