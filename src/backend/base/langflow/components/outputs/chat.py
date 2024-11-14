@@ -90,7 +90,7 @@ class ChatOutput(ChatComponent):
             source_dict["source"] = source
         return Source(**source_dict)
 
-    def message_response(self) -> Message:
+    async def message_response(self) -> Message:
         _source, _icon, _display_name, _source_id = self.get_properties_from_source_component()
         _background_color = self.background_color
         _text_color = self.text_color
@@ -106,7 +106,7 @@ class ChatOutput(ChatComponent):
         message.properties.background_color = _background_color
         message.properties.text_color = _text_color
         if self.session_id and isinstance(message, Message) and self.should_store_message:
-            stored_message = self.send_message(
+            stored_message = await self.asend_message(
                 message,
             )
             self.message.value = stored_message
