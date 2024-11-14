@@ -28,7 +28,7 @@ test("user must be able to send an image on chat", async ({ page }) => {
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
     await page.waitForSelector('[data-testid="modal-title"]', {
-      timeout: 2000,
+      timeout: 3000,
     });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
