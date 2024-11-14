@@ -97,9 +97,7 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
 
   await page.waitForSelector("text=user edited", { timeout: 30000 });
 
-  await expect(
-    page.getByText(secondRandomName, { exact: true }),
-  ).toBeVisible({
+  await expect(page.getByText(secondRandomName, { exact: true })).toBeVisible({
     timeout: 2000,
   });
 
@@ -244,7 +242,9 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
     timeout: 30000,
   });
 
-  await expect(page.getByText(secondRandomFlowName, { exact: true })).toBeVisible({
+  await expect(
+    page.getByText(secondRandomFlowName, { exact: true }),
+  ).toBeVisible({
     timeout: 2000,
   });
 
