@@ -1,6 +1,8 @@
 import os
+from collections import defaultdict
 
 import orjson
+from astrapy import DataAPIClient
 from astrapy.admin import parse_api_endpoint
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
@@ -26,7 +28,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
     name = "AstraDB"
     icon: str = "AstraDB"
 
-    VECTORIZE_PROVIDERS_MAPPING = {
+    VECTORIZE_PROVIDERS_MAPPING = defaultdict(list, {
         "Azure OpenAI": ["azureOpenAI", ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"]],
         "Hugging Face - Dedicated": ["huggingfaceDedicated", ["endpoint-defined-model"]],
         "Hugging Face - Serverless": [
@@ -58,7 +60,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             "voyageAI",
             ["voyage-large-2-instruct", "voyage-law-2", "voyage-code-2", "voyage-large-2", "voyage-2"],
         ],
-    }
+    })
 
     inputs = [
         SecretStrInput(
@@ -106,7 +108,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             value="Embedding Model",
         ),
         HandleInput(
-            name="embedding",
+            name="embedding_model",
             display_name="Embedding Model",
             input_types=["Embeddings"],
             info="Allows an embedding model configuration.",
@@ -238,15 +240,52 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
 
         return build_config
 
+    def update_providers_mapping(self):
+        # If we don't have token or api_endpoint, we can't fetch the list of providers
+        if not self.token or not self.api_endpoint:
+            self.log("Astra DB token and API endpoint are required to fetch the list of Vectorize providers.")
+
+            return self.VECTORIZE_PROVIDERS_MAPPING
+
+        try:
+            self.log("Dynamically updating list of Vectorize providers.")
+
+            # Get the admin object
+            client = DataAPIClient(token=self.token)
+            admin = client.get_admin()
+
+            # Get the embedding providers
+            db_admin = admin.get_database_admin(self.api_endpoint)
+            embedding_providers = db_admin.find_embedding_providers().as_dict()
+
+            vectorize_providers_mapping = {}
+
+            # Map the provider display name to the provider key and models
+            for provider_key, provider_data in embedding_providers["embeddingProviders"].items():
+                display_name = provider_data["displayName"]
+                models = [model["name"] for model in provider_data["models"]]
+
+                vectorize_providers_mapping[display_name] = [provider_key, models]
+
+            # Sort the resulting dictionary
+            return dict(sorted(vectorize_providers_mapping.items()))
+        except Exception as e:  # noqa: BLE001
+            self.log(f"Error fetching Vectorize providers: {e}")
+
+            return self.VECTORIZE_PROVIDERS_MAPPING
+
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         if field_name == "embedding_choice":
             if field_value == "Astra Vectorize":
-                self.del_fields(build_config, ["embedding"])
+                self.del_fields(build_config, ["embedding_model"])
+
+                # Update the providers mapping
+                vectorize_providers = self.update_providers_mapping()
 
                 new_parameter = DropdownInput(
                     name="embedding_provider",
                     display_name="Embedding Provider",
-                    options=self.VECTORIZE_PROVIDERS_MAPPING.keys(),
+                    options=vectorize_providers.keys(),
                     value="",
                     required=True,
                     real_time_refresh=True,
@@ -267,13 +306,13 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 )
 
                 new_parameter = HandleInput(
-                    name="embedding",
+                    name="embedding_model",
                     display_name="Embedding Model",
                     input_types=["Embeddings"],
                     info="Allows an embedding model configuration.",
                 ).to_dict()
 
-                self.insert_in_dict(build_config, "embedding_choice", {"embedding": new_parameter})
+                self.insert_in_dict(build_config, "embedding_choice", {"embedding_model": new_parameter})
 
         elif field_name == "embedding_provider":
             self.del_fields(
@@ -281,7 +320,9 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 ["model", "z_01_model_parameters", "z_02_api_key_name", "z_03_provider_api_key", "z_04_authentication"],
             )
 
-            model_options = self.VECTORIZE_PROVIDERS_MAPPING[field_value][1]
+            # Update the providers mapping
+            vectorize_providers = self.update_providers_mapping()
+            model_options = vectorize_providers[field_value][1]
 
             new_parameter = DropdownInput(
                 name="model",
@@ -411,7 +452,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             raise ValueError(msg) from e
 
         if self.embedding_choice == "Embedding Model":
-            embedding_dict = {"embedding": self.embedding}
+            embedding_dict = {"embedding": self.embedding_model}
         else:
             from astrapy.info import CollectionVectorServiceOptions
 
