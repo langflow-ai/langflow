@@ -71,16 +71,17 @@
                     // Handle audio playback
                     const output = outputs[0];
                     if (output && output.length > 0 && this.isPlaying) {
-                        const outputChannel = output[0];
-
                         if (this.outputBuffers.length > 0) {
                             const currentBuffer = this.outputBuffers[0];
-                            const chunkSize = Math.min(outputChannel.length, currentBuffer.length);
+                            const chunkSize = Math.min(output[0].length, currentBuffer.length);
 
-                            // Copy data to output with simple gain
+                            // Copy data to both channels with same gain
                             const gain = 0.8;
-                            for (let i = 0; i < chunkSize; i++) {
-                                outputChannel[i] = currentBuffer[i] * gain;
+                            for (let channel = 0; channel < output.length; channel++) {
+                                const outputChannel = output[channel];
+                                for (let i = 0; i < chunkSize; i++) {
+                                    outputChannel[i] = currentBuffer[i] * gain;
+                                }
                             }
 
                             // Remove processed samples
@@ -289,12 +290,15 @@
 
                                     const float32Data = base64ToFloat32Array(data.delta);
                                     const audioBuffer = audioContext.createBuffer(
-                                        1,                    // mono
+                                        2,                    // Changed from 1 to 2 for stereo
                                         float32Data.length,
                                         24000                 // sample rate
                                     );
 
-                                    audioBuffer.copyToChannel(float32Data, 0);
+                                    // Copy same data to both channels
+                                    audioBuffer.copyToChannel(float32Data, 0);  // Left channel
+                                    audioBuffer.copyToChannel(float32Data, 1);  // Right channel
+
                                     audioQueue.push(audioBuffer);
 
                                     if (!isPlaying) {
