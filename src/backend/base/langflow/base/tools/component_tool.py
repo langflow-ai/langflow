@@ -56,7 +56,7 @@ def build_description(component: Component, output: Output) -> str:
     return f"{output.method}({args}) - {component.description}"
 
 
-def send_message_noop(
+async def async_send_message_noop(
     message: Message,
     text: str | None = None,  # noqa: ARG001
     background_color: str | None = None,  # noqa: ARG001
@@ -73,8 +73,8 @@ def send_message_noop(
 
 
 def patch_components_send_message(component: Component):
-    old_send_message = component.send_message
-    component.send_message = send_message_noop  # type: ignore[method-assign, assignment]
+    old_send_message = component.asend_message
+    component.asend_message = async_send_message_noop  # type: ignore[method-assign, assignment]
     return old_send_message
 
 
@@ -88,7 +88,7 @@ def _patch_send_message_decorator(component, func):
 
     async def async_wrapper(*args, **kwargs):
         original_send_message = component.send_message
-        component.send_message = send_message_noop
+        component.send_message = async_send_message_noop
         try:
             return await func(*args, **kwargs)
         finally:
@@ -96,7 +96,7 @@ def _patch_send_message_decorator(component, func):
 
     def sync_wrapper(*args, **kwargs):
         original_send_message = component.send_message
-        component.send_message = send_message_noop
+        component.send_message = async_send_message_noop
         try:
             return func(*args, **kwargs)
         finally:
@@ -106,14 +106,14 @@ def _patch_send_message_decorator(component, func):
 
 
 def _build_output_function(component: Component, output_method: Callable, event_manager: EventManager | None = None):
-    def output_function(*args, **kwargs):
+    async def output_function(*args, **kwargs):
         try:
             if event_manager:
-                event_manager.on_build_start(data={"id": component._id})
+                await event_manager.on_build_start(data={"id": component._id})
             component.set(*args, **kwargs)
             result = output_method()
             if event_manager:
-                event_manager.on_build_end(data={"id": component._id})
+                await event_manager.on_build_end(data={"id": component._id})
         except Exception as e:
             raise ToolException(e) from e
 
@@ -134,11 +134,11 @@ def _build_output_async_function(
     async def output_function(*args, **kwargs):
         try:
             if event_manager:
-                event_manager.on_build_start(data={"id": component._id})
+                await event_manager.on_build_start(data={"id": component._id})
             component.set(*args, **kwargs)
             result = await output_method()
             if event_manager:
-                event_manager.on_build_end(data={"id": component._id})
+                await event_manager.on_build_end(data={"id": component._id})
         except Exception as e:
             raise ToolException(e) from e
         if isinstance(result, Message):
@@ -224,7 +224,7 @@ class ComponentToolkit:
                     StructuredTool(
                         name=formatted_name,
                         description=build_description(self.component, output),
-                        func=_build_output_function(self.component, output_method, event_manager),
+                        coroutine=_build_output_function(self.component, output_method, event_manager),
                         args_schema=args_schema,
                         handle_tool_error=True,
                         callbacks=callbacks,
