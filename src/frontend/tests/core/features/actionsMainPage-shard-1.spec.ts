@@ -22,7 +22,9 @@ test("select and delete a flow", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 3000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
   await page.getByTestId("side_nav_options_all-templates").click();
@@ -34,16 +36,23 @@ test("select and delete a flow", async ({ page }) => {
 
   await page.getByTestId("icon-ChevronLeft").first().click();
 
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="home-dropdown-menu"]', {
+    timeout: 5000,
+  });
 
   await page.getByTestId("home-dropdown-menu").first().click();
-  await page.waitForTimeout(500);
-
+  await page.waitForSelector('[data-testid="icon-Trash2"]', {
+    timeout: 1000,
+  });
+  // click on the delete button
   await page.getByText("Delete").last().click();
-  await page.waitForTimeout(500);
+  await page.getByText("Note: This action is irreversible.").isVisible({
+    timeout: 1000,
+  });
 
+  //confirm the deletion in the modal
   await page.getByText("Delete").last().click();
-  await page.waitForTimeout(1000);
+
   await page.getByText("Selected items deleted successfully").isVisible();
 });
 
@@ -69,7 +78,9 @@ test("search flows", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 3000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
   await page.getByTestId("side_nav_options_all-templates").click();
@@ -128,7 +139,9 @@ test("search components", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 3000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
   await page.getByTestId("side_nav_options_all-templates").click();
@@ -143,7 +156,9 @@ test("search components", async ({ page }) => {
   await page.getByTestId("zoom_out").click();
 
   await page.getByText("Chat Input").first().click();
-  await page.waitForTimeout(500);
+  await page.waitForSelector('[data-testid="more-options-modal"]', {
+    timeout: 1000,
+  });
   await page.getByTestId("more-options-modal").click();
 
   await page.getByTestId("icon-SaveAll").first().click();
