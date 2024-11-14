@@ -76,24 +76,23 @@ body {
   height: 8px !important;
   border-radius: 10px;
 }
+
 *::-webkit-scrollbar {
   width: 8px !important;
   height: 8px !important;
-  border-radius: 10px;
 }
 
 ::-webkit-scrollbar-track {
   background-color: hsl(var(--muted)) !important;
-  border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--border)) !important;
+  background-color: hsl(var(--input)) !important;
   border-radius: 999px !important;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--ring)) !important;
+  background-color: hsl(var(--placeholder-foreground)) !important;
 }
 
 .jv-indent::-webkit-scrollbar-track {
