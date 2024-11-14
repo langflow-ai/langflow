@@ -49,6 +49,12 @@ We also provide a .vscode/launch.json file for debugging the backend in VSCode, 
 
 ### Prepare the environment
 
+Activate the virtual environment and install dependencies:
+
+```bash
+uv venv && source .venv/bin/activate && uv pip install .
+```
+
 Setting up hooks:
 
 ```bash
