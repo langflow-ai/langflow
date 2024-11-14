@@ -6,6 +6,7 @@ from langflow.components.models.openai import OpenAIModelComponent
 from langflow.components.tools.calculator import CalculatorToolComponent
 
 
+@pytest.mark.usefixtures("client")
 @pytest.mark.api_key_required
 async def test_tool_calling_agent_component():
     tools = [CalculatorToolComponent().build_tool()]  # Use the Calculator component as a tool
@@ -21,7 +22,7 @@ async def test_tool_calling_agent_component():
     )
     llm = llm_component.build_model()
 
-    agent = ToolCallingAgentComponent()
+    agent = ToolCallingAgentComponent(_session_id="test_session_id")
     agent.set(llm=llm, tools=[tools], chat_history=chat_history, input_value=input_value)
 
     # Chat output
