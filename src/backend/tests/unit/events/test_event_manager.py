@@ -5,7 +5,11 @@ import uuid
 
 import pytest
 from langflow.events.event_manager import EventManager
+from langflow.schema.content_block import ContentBlock
+from langflow.schema.content_types import TextContent
 from langflow.schema.log import LoggableType
+from langflow.schema.message import Message
+from loguru import logger
 
 
 class TestEventManager:
@@ -86,7 +90,7 @@ class TestEventManager:
         manager = EventManager(queue)
         manager.register_event("on_test_event", "test_type", manager.noop)
         data = {"key": "value", "nested": [1, 2, 3]}
-        manager.send_event(event_type="test_type", data=data)
+        await manager.send_event(event_type="test_type", data=data)
         event_id, str_data, event_time = await queue.get()
         assert event_id is not None
         assert str_data is not None
@@ -136,8 +140,8 @@ class TestEventManager:
         queue = asyncio.Queue()
         manager = EventManager(queue)
         manager.register_event("on_test_event", "test_type")
-        manager.on_test_event(data={"data_1": "value_1"})
-        manager.on_test_event(data={"data_2": "value_2"})
+        await manager.on_test_event(data={"data_1": "value_1"})
+        await manager.on_test_event(data={"data_2": "value_2"})
         try:
             event_id_1, _, _ = await queue.get()
             event_id_2, _, _ = await queue.get()
@@ -161,7 +165,7 @@ class TestEventManager:
         manager = EventManager(queue)
         manager.register_event("on_test_event", "test_type", manager.noop)
         event_data = "test_data"
-        manager.send_event(event_type="test_type", data=event_data)
+        await manager.send_event(event_type="test_type", data=event_data)
 
         event_id, str_data, _ = await queue.get()
         assert isinstance(event_id, uuid.UUID)
@@ -169,7 +173,8 @@ class TestEventManager:
         assert json.loads(str_data.decode("utf-8")) == {"event": "test_type", "data": event_data}
 
     # Registering an event without specifying the event_type argument and providing the event_type argument
-    def test_register_event_without_event_type_argument_fixed(self):
+    @pytest.mark.asyncio
+    async def test_register_event_without_event_type_argument_fixed(self):
         class MockQueue:
             def __init__(self):
                 self.data = []
@@ -179,8 +184,8 @@ class TestEventManager:
 
         queue = MockQueue()
         event_manager = EventManager(queue)
-        event_manager.register_event("on_test_event", "test_event_type", callback=event_manager.noop)
-        event_manager.send_event(event_type="test_type", data={"key": "value"})
+        await event_manager.register_event("on_test_event", "test_event_type", callback=event_manager.noop)
+        await event_manager.send_event(event_type="test_type", data={"key": "value"})
 
         assert len(queue.data) == 1
         event_id, str_data, timestamp = queue.data[0]
@@ -212,3 +217,185 @@ class TestEventManager:
         # Accessing a non-registered event callback should return the 'noop' function
         callback = event_manager.on_non_existing_event
         assert callback.__name__ == "noop"
+
+    @pytest.mark.asyncio
+    async def test_message_patch_generation(self):
+        queue = asyncio.Queue()
+        manager = EventManager(queue)
+
+        # Create initial message
+        message = Message(
+            id=str(uuid.uuid4()),
+            sender="AI",
+            sender_name="Test Agent",
+            text="Initial text",
+            content_blocks=[
+                ContentBlock(
+                    title="Test Block",
+                    contents=[
+                        TextContent(
+                            type="text",
+                            text="Initial content",
+                            duration=100,
+                            header={"title": "Input", "icon": "MessageSquare"},
+                        )
+                    ],
+                )
+            ],
+        )
+
+        # Send initial message
+        initial_data = message.model_dump()
+        logger.debug(f"Initial message data: {initial_data}")  # Debug log
+        await manager.send_event(event_type="message", data=initial_data)
+
+        # Modify message
+        message.text = "Updated text"
+        message.content_blocks[0].contents[0].text = "Updated content"
+
+        # Send updated message
+        updated_data = message.model_dump()
+        logger.debug(f"Updated message data: {updated_data}")  # Debug log
+        await manager.send_event(event_type="message", data=updated_data)
+
+        # Get the events from queue
+        assert queue.qsize() == 2
+        _, initial_event_data, _ = queue._queue[0]
+        _, updated_event_data, _ = queue._queue[1]
+
+        # Parse the events
+        initial_event = json.loads(initial_event_data.decode("utf-8"))
+        updated_event = json.loads(updated_event_data.decode("utf-8"))
+
+        # Debug output
+        logger.debug(f"Initial event data: {initial_event}")
+        logger.debug(f"Updated event data: {updated_event}")
+
+        # Verify patch was generated
+        assert "patch" not in initial_event["data"]
+        assert "patch" in updated_event["data"], f"Expected patch in data, got: {updated_event['data']}"
+
+        # Verify patch content
+        patch = updated_event["data"]["patch"]
+        assert isinstance(patch, list), f"Expected patch to be a list, got: {type(patch)}"
+
+        # Create a dict of all changes in the patch for easier verification
+        patch_changes = {p["path"]: p["value"] for p in patch if p["op"] == "replace"}
+
+        # Verify expected changes
+        assert patch_changes.get("/text") == "Updated text", "Text change not found in patch"
+        assert (
+            patch_changes.get("/content_blocks/0/contents/0/text") == "Updated content"
+        ), "Content block text change not found in patch"
+
+    @pytest.mark.asyncio
+    async def test_message_patch_no_changes(self):
+        queue = asyncio.Queue()
+        manager = EventManager(queue)
+
+        # Create message
+        message = Message(id="test-id", sender="AI", sender_name="Test Agent", text="Test text")
+
+        # Send same message twice
+        data = message.model_dump()
+        await manager.send_event(event_type="message", data=data)
+        await manager.send_event(event_type="message", data=data)
+
+        # Get the events
+        assert queue.qsize() == 2
+        _, first_event_data, _ = queue._queue[0]
+        _, second_event_data, _ = queue._queue[1]
+
+        first_event = json.loads(first_event_data.decode("utf-8"))
+        second_event = json.loads(second_event_data.decode("utf-8"))
+
+        # Verify no patch was generated for identical messages
+        assert "patch" not in first_event["data"]
+        assert "patch" not in second_event["data"]
+
+    @pytest.mark.asyncio
+    async def test_message_patch_with_complex_changes(self):
+        queue = asyncio.Queue()
+        manager = EventManager(queue)
+
+        # Create initial message with complex structure
+        message = Message(
+            id="test-id",
+            sender="AI",
+            sender_name="Test Agent",
+            text="Initial text",
+            content_blocks=[
+                ContentBlock(
+                    title="Test Block",
+                    contents=[
+                        TextContent(
+                            type="text",
+                            text="Content 1",
+                            duration=100,
+                            header={"title": "Input", "icon": "MessageSquare"},
+                        ),
+                        TextContent(
+                            type="text",
+                            text="Content 2",
+                            duration=200,
+                            header={"title": "Output", "icon": "MessageSquare"},
+                        ),
+                    ],
+                )
+            ],
+        )
+
+        # Send initial message
+        initial_data = message.model_dump()
+        await manager.send_event(event_type="message", data=initial_data)
+
+        # Make multiple changes
+        message.text = "Updated text"
+        message.content_blocks[0].contents[0].text = "Updated content 1"
+        message.content_blocks[0].contents[1].duration = 300
+        message.content_blocks[0].contents[1].header["title"] = "New Output"
+
+        # Send updated message
+        updated_data = message.model_dump()
+        await manager.send_event(event_type="message", data=updated_data)
+
+        # Get and parse events
+        assert queue.qsize() == 2
+        _, initial_event_data, _ = queue._queue[0]
+        _, updated_event_data, _ = queue._queue[1]
+
+        initial_event = json.loads(initial_event_data.decode("utf-8"))
+        updated_event = json.loads(updated_event_data.decode("utf-8"))
+
+        # Debug output
+        logger.debug(f"Initial event: {initial_event}")
+        logger.debug(f"Updated event: {updated_event}")
+
+        # Verify patch
+        assert "patch" not in initial_event["data"]
+        assert "patch" in updated_event["data"]
+
+        # Get the patch directly - it's already a list
+        patch = updated_event["data"]["patch"]
+        assert isinstance(patch, list), f"Expected patch to be a list, got: {type(patch)}"
+
+        # Create a dict of all changes in the patch for easier verification
+        patch_changes = {p["path"]: p["value"] for p in patch if p["op"] == "replace"}
+
+        # Debug output
+        logger.debug(f"Patch changes: {patch_changes}")
+
+        # Verify expected changes
+        expected_changes = {
+            "/text": "Updated text",
+            "/content_blocks/0/contents/0/text": "Updated content 1",
+            "/content_blocks/0/contents/1/duration": 300,
+            "/content_blocks/0/contents/1/header/title": "New Output",
+        }
+
+        # Verify each expected change
+        for path, expected_value in expected_changes.items():
+            assert path in patch_changes, f"Expected change at path {path} not found in patch"
+            assert patch_changes[path] == expected_value, (
+                f"Value mismatch at {path}. " f"Expected: {expected_value}, " f"Got: {patch_changes[path]}"
+            )
