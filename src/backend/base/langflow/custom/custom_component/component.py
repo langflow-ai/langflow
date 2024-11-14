@@ -1003,7 +1003,7 @@ class Component(CustomComponent):
                 )
             )
 
-    def send_message(self, message: Message, id_: str | None = None):
+    async def asend_message(self, message: Message, id_: str | None = None):
         if (hasattr(self, "graph") and self.graph.session_id) and (message is not None and not message.session_id):
             message.session_id = self.graph.session_id
         stored_message = self._store_message(message)
@@ -1016,18 +1016,21 @@ class Component(CustomComponent):
                 and message is not None
                 and isinstance(message.text, AsyncIterator | Iterator)
             ):
-                complete_message = self._stream_message(message.text, stored_message)
+                complete_message = await self._stream_message(message.text, stored_message)
                 stored_message.text = complete_message
                 stored_message = self._update_stored_message(stored_message)
             else:
                 # Only send message event for non-streaming messages
-                self._send_message_event(stored_message, id_=id_)
+                await self._send_message_event(stored_message, id_=id_)
         except Exception:
             # remove the message from the database
             delete_message(stored_message.id)
             raise
         self.status = stored_message
         return stored_message
+
+    def send_message(self, message: Message, id_: str | None = None):
+        return run_until_complete(self.asend_message(message, id_))
 
     def _store_message(self, message: Message) -> Message:
         flow_id = self.graph.flow_id if hasattr(self, "graph") else None
