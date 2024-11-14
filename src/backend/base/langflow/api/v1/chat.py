@@ -355,7 +355,7 @@ async def build_flow(
         except Exception as exc:
             msg = f"Error serializing vertex build response: {exc}"
             raise ValueError(msg) from exc
-        event_manager.on_end_vertex(data={"build_data": build_data})
+        await event_manager.on_end_vertex(data={"build_data": build_data})
         await client_consumed_queue.get()
         if vertex_build_response.valid and vertex_build_response.next_vertices_ids:
             tasks = []
@@ -380,9 +380,9 @@ async def build_flow(
                 return
             except Exception as e:
                 if isinstance(e, HTTPException):
-                    event_manager.on_error(data={"error": str(e.detail), "statusCode": e.status_code})
+                    await event_manager.on_error(data={"error": str(e.detail), "statusCode": e.status_code})
                     raise
-                event_manager.on_error(data={"error": str(e)})
+                await event_manager.on_error(data={"error": str(e)})
                 raise
 
             ids, vertices_to_run, graph = vertices_task.result()
@@ -391,11 +391,11 @@ async def build_flow(
                 ids, vertices_to_run, graph = await build_graph_and_get_order()
             except Exception as e:
                 if isinstance(e, HTTPException):
-                    event_manager.on_error(data={"error": str(e.detail), "statusCode": e.status_code})
+                    await event_manager.on_error(data={"error": str(e.detail), "statusCode": e.status_code})
                     raise
-                event_manager.on_error(data={"error": str(e)})
+                await event_manager.on_error(data={"error": str(e)})
                 raise
-        event_manager.on_vertices_sorted(data={"ids": ids, "to_run": vertices_to_run})
+        await event_manager.on_vertices_sorted(data={"ids": ids, "to_run": vertices_to_run})
         await client_consumed_queue.get()
 
         tasks = []
@@ -409,7 +409,7 @@ async def build_flow(
             for task in tasks:
                 task.cancel()
             return
-        event_manager.on_end(data={})
+        await event_manager.on_end(data={})
         await event_manager.queue.put((None, None, time.time))
 
     async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio.Queue) -> typing.AsyncGenerator:
