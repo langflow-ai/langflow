@@ -53,9 +53,12 @@ test("user must see on handle click the possibility connections - LLMChain", asy
   await page.getByTestId("zoom_out").click();
   await page.getByTestId("zoom_out").click();
   await page.getByTestId("zoom_out").click();
-  await page.waitForSelector('[data-testid="handle-apirequest-shownode-urls-left"]', {
-    timeout: 3000,
-  });
+  await page.waitForSelector(
+    '[data-testid="handle-apirequest-shownode-urls-left"]',
+    {
+      timeout: 3000,
+    },
+  );
   await page.getByTestId("handle-apirequest-shownode-urls-left").click();
 
   await page.waitForTimeout(500);
