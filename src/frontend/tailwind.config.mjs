@@ -124,6 +124,9 @@ const config = {
         "chat-bot-icon": "var(--chat-bot-icon)",
         "chat-user-icon": "var(--chat-user-icon)",
         "code-background": "hsl(var(--code-background))",
+        "code-description-background":
+          "hsl(var(--code-description-background))",
+        "code-foreground": "hsl(var(--code-foreground))",
         canvas: {
           DEFAULT: "hsl(var(--canvas))",
           dot: "hsl(var(--canvas-dot))",
