@@ -1,6 +1,6 @@
 <!-- markdownlint-disable MD030 -->
 
-# [![Langflow](./docs/static/img/logo.svg)](https://www.langflow.org)
+# [![Langflow](./docs/static/img/hero.png)](https://www.langflow.org)
 
 <p align="center" style="font-size: 12px;">
     Langflow is a low-code app builder for RAG and multi-agent AI applications. It’s Python-based and agnostic to any model, API, or database.
