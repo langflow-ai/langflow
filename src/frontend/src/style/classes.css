@@ -26,6 +26,7 @@ pre {
 }
 
 .react-flow__pane {
+  pointer-events: all;
   cursor: default;
 }
 
