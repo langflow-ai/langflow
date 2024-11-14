@@ -23,7 +23,9 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
             name="mongodb_atlas_client_cert",
             display_name="MongoDB Atlas Combined Client Certificate",
             required=False,
-            info="Client Certificate combined with the private key in the following format:\n -----BEGIN PRIVATE KEY-----\n...\n -----END PRIVATE KEY-----\n-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n",
+            info="Client Certificate combined with the private key in the following format:\n "
+                 "-----BEGIN PRIVATE KEY-----\n...\n -----END PRIVATE KEY-----\n-----BEGIN CERTIFICATE-----\n"
+                 "...\n-----END CERTIFICATE-----\n",
         ),
         StrInput(name="db_name", display_name="Database Name", required=True),
         StrInput(name="collection_name", display_name="Collection Name", required=True),
@@ -49,7 +51,8 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
         try:
             from pymongo import MongoClient
         except ImportError:
-            raise ImportError("Please install pymongo to use MongoDB Atlas Vector Store")
+            msg = "Please install pymongo to use MongoDB Atlas Vector Store"
+            raise ImportError(msg) from e
 
         # Create temporary files for the client certificate
         if self.enable_mtls:
@@ -67,7 +70,8 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
                     client_cert_path = client_cert_file.name
 
             except Exception as e:
-                raise ValueError(f"Failed to write certificate to temporary file: {e}")
+                msg = f"Failed to write certificate to temporary file: {e}"
+                raise ValueError(msg) from e
 
         try:
             if self.enable_mtls:
@@ -82,7 +86,8 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
             collection = mongo_client[self.db_name][self.collection_name]
             collection.drop()  # Drop collection to override the vector store
         except Exception as e:
-            raise ValueError(f"Failed to connect to MongoDB Atlas: {e}")
+            msg = f"Failed to connect to MongoDB Atlas: {e}"
+            raise ValueError(msg) from e
 
         documents = []
         for _input in self.ingest_data or []:
