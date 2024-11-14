@@ -121,7 +121,6 @@ test("user must be able to freeze a path", async ({ page }) => {
     timeout: 1000,
   });
 
-
   await page.getByTestId("button_run_chat output").click();
   await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
@@ -138,7 +137,7 @@ test("user must be able to freeze a path", async ({ page }) => {
 
   await page.getByText("Close").first().click();
 
-  await page.waitForSelector('text=OpenAI', {
+  await page.waitForSelector("text=OpenAI", {
     timeout: 1000,
   });
 

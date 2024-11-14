@@ -286,7 +286,6 @@ test("user must be able to freeze a component", async ({ page }) => {
 
   await page.getByTestId("icon-Snowflake").click();
 
-  // await page.waitForTimeout(500);
 
   await page.keyboard.press("Escape");
 
@@ -335,8 +334,6 @@ test("user must be able to freeze a component", async ({ page }) => {
   });
 
   await page.getByTestId("icon-Snowflake").last().click();
-
-  // await page.waitForTimeout(500);
 
   await page.keyboard.press("Escape");
 
