@@ -23,7 +23,7 @@ test("select and delete a flow", async ({ page }) => {
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
     await page.waitForSelector('[data-testid="modal-title"]', {
-      timeout: 30000,
+      timeout: 3000,
     });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -79,7 +79,7 @@ test("search flows", async ({ page }) => {
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
     await page.waitForSelector('[data-testid="modal-title"]', {
-      timeout: 30000,
+      timeout: 3000,
     });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -140,7 +140,7 @@ test("search components", async ({ page }) => {
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
     await page.waitForSelector('[data-testid="modal-title"]', {
-      timeout: 30000,
+      timeout: 3000,
     });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
