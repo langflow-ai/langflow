@@ -249,11 +249,16 @@ pre code {
   width: 100%;
   /* Background color */
   background-color: hsl(var(--code-background)) !important;
+  color: hsl(var(--code-foreground)) !important;
 }
 
 pre {
   /* Background color */
   background-color: hsl(var(--code-background)) !important;
+}
+
+.prose li::marker {
+  color: inherit !important;
 }
 
 [type="search"]:not(:placeholder-shown)::-webkit-search-cancel-button {

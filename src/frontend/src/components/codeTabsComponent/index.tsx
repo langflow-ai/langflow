@@ -2,10 +2,7 @@ import ShadTooltip from "@/components/shadTooltipComponent";
 import { useTweaksStore } from "@/stores/tweaksStore";
 import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import {
-  oneDark,
-  tomorrow,
-} from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import {
   Tabs,
   TabsContent,
@@ -14,7 +11,6 @@ import {
 } from "../../components/ui/tabs";
 import { useDarkStore } from "../../stores/darkStore";
 import { codeTabsPropsType } from "../../types/components";
-import { cn } from "../../utils/utils";
 import IconComponent from "../genericIconComponent";
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
@@ -152,7 +148,7 @@ export default function CodeTabsComponent({
               <SyntaxHighlighter
                 language={tab.language}
                 style={oneDark}
-                className="!my-0 h-full overflow-auto rounded-sm !rounded-t-none border border-t-0 border-border bg-code-block text-left custom-scroll"
+                className="!my-0 h-full overflow-auto rounded-sm !rounded-t-none border border-t-0 border-border text-left custom-scroll"
               >
                 {tab.code}
               </SyntaxHighlighter>

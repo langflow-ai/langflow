@@ -54,7 +54,7 @@ function NoteNode({
           setSize({ width: width - 25, height: height - 25 });
         }}
         isVisible={selected}
-        lineClassName="border-[3px] border-border"
+        lineClassName="!border !border-muted-foreground"
       />
       <div
         data-testid="note_node"
@@ -86,11 +86,11 @@ function NoteNode({
                 ? ""
                 : "dark:!ring-background dark:text-background",
             )}
-            mdClassName={
+            mdClassName={cn(
               COLOR_OPTIONS[bgColor] === null
                 ? "dark:prose-invert"
-                : "dark:!text-background"
-            }
+                : "dark:!text-background",
+            )}
             style={{ backgroundColor: COLOR_OPTIONS[bgColor] ?? "#00000000" }}
             charLimit={2500}
             nodeId={data.id}
