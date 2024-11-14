@@ -16,7 +16,7 @@ def docs_to_data(documents: list[Document]) -> list[Data]:
     return [Data.from_document(document) for document in documents]
 
 
-def data_to_text(template: str, data: Data | list[Data], sep: str = "\n") -> str|list[str]:
+def data_to_text(template: str, data: Data | list[Data], sep: str = "\n") -> str | list[str]:
     """Converts a list of Data to a list of texts.
 
     Args:
@@ -25,7 +25,7 @@ def data_to_text(template: str, data: Data | list[Data], sep: str = "\n") -> str
         sep (str): The separator to join the texts if specified.
 
     Returns:
-        str | list[str]: A single formatted text if `sep` is not None, 
+        str | list[str]: A single formatted text if `sep` is not None,
                          or a list of individual formatted texts it is None.
     """
     if isinstance(data, (Data)):
@@ -39,6 +39,7 @@ def data_to_text(template: str, data: Data | list[Data], sep: str = "\n") -> str
 
     formated_data = [template.format(data=value.data, **value.data) for value in _data]
     return formated_data if sep is None else sep.join(formated_data)
+
 
 def messages_to_text(template: str, messages: Message | list[Message]) -> str:
     """Converts a list of Messages to a list of texts.
