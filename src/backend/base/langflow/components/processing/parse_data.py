@@ -24,14 +24,18 @@ class ParseDataComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Text", 
-               name="text", 
-               info="Data as a single Message, with each input Data separated by Separator", 
-               method="parse_data"),
-        Output(display_name="Data List", 
-               name="data_out", 
-               info="Data as a list of new Data, each having `text` formatted by Template", 
-               method="parse_data_as_list"),
+        Output(
+            display_name="Text",
+            name="text",
+            info="Data as a single Message, with each input Data separated by Separator",
+            method="parse_data",
+        ),
+        Output(
+            display_name="Data List",
+            name="data_out",
+            info="Data as a list of new Data, each having `text` formatted by Template",
+            method="parse_data_as_list",
+        ),
     ]
 
     def _parse(self, sep: str):
