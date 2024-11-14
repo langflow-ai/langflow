@@ -15,6 +15,7 @@ import { useFileHandler } from "./chatInput/hooks/use-file-handler";
 import ChatInput from "./chatInput/newChatInput";
 import LogoIcon from "./chatMessage/components/chatLogoIcon";
 import ChatMessage from "./chatMessage/newChatMessage";
+import { VoiceAssistant } from "@/components/VoiceAssistant";
 
 export default function ChatView({
   sendMessage,

@@ -24,6 +24,7 @@ import TextAreaWrapper from "./components/textAreaWrapper/newTextAreaWrapper";
 import UploadFileButton from "./components/uploadFileButton/newUploadFileButton";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 import useFocusOnUnlock from "./hooks/use-focus-unlock";
+import { VoiceAssistant } from "@/components/VoiceAssistant";
 export default function ChatInput({
   lockChat,
   chatValue,
@@ -248,6 +249,9 @@ export default function ChatInput({
               handleFileChange={handleFileChange}
               handleButtonClick={handleButtonClick}
             />
+          </div>
+          <div className="">
+            <VoiceAssistant flowId={currentFlowId} />
           </div>
           <div className="">
             <ButtonSendWrapper

@@ -31,6 +31,7 @@ import IOFieldView from "./components/IOFieldView";
 import SessionSelector from "./components/IOFieldView/components/sessionSelector";
 import SessionView from "./components/SessionView";
 import ChatView from "./components/chatView";
+import { VoiceAssistant } from "@/components/VoiceAssistant";
 
 export default function IOModal({
   children,
@@ -528,6 +529,9 @@ export default function IOModal({
                     Select an IO component to view
                   </span>
                 )}
+                <div className="absolute bottom-20 right-4 z-50">
+                  <VoiceAssistant flowId={currentFlowId} />
+                </div>
               </div>
             </div>
           </div>
