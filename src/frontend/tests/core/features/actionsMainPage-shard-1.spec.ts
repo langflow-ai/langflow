@@ -139,7 +139,9 @@ test("search components", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 30000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
   await page.getByTestId("side_nav_options_all-templates").click();
@@ -154,7 +156,9 @@ test("search components", async ({ page }) => {
   await page.getByTestId("zoom_out").click();
 
   await page.getByText("Chat Input").first().click();
-  await page.waitForTimeout(500);
+  await page.waitForSelector('[data-testid="more-options-modal"]', {
+    timeout: 1000,
+  });
   await page.getByTestId("more-options-modal").click();
 
   await page.getByTestId("icon-SaveAll").first().click();
