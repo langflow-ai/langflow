@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
-test.skip("Blog Writer", async ({ page }) => {
+test("Blog Writer", async ({ page }) => {
   test.skip(
     !process?.env?.OPENAI_API_KEY,
     "OPENAI_API_KEY required to run this test",
@@ -112,29 +112,4 @@ test.skip("Blog Writer", async ({ page }) => {
   await page.getByText("turtles").last().isVisible();
   await page.getByText("sea").last().isVisible();
   await page.getByText("survival").last().isVisible();
-
-  //commented out for now because text input is not available in the playground
-
-  // await page.getByText("Instructions").last().click();
-
-  // const value = await page
-  //   .getByPlaceholder("Enter text...")
-  //   .last()
-  //   .inputValue();
-
-  // expect(value).toBe(
-  //   "Use the references above for style to write a new blog/tutorial about turtles. Suggest non-covered topics.",
-  // );
-
-  // await page.getByTestId("icon-ExternalLink").last().click();
-
-  // const count = await page
-  //   .getByText(
-  //     "Use the references above for style to write a new blog/tutorial about turtles. Suggest non-covered topics.",
-  //   )
-  //   .count();
-
-  // if (count <= 1) {
-  //   expect(false).toBe(true);
-  // }
 });

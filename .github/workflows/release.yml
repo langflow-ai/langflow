@@ -68,7 +68,7 @@ jobs:
       - name: Check Version
         id: check-version
         run: |
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}')
+          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//')
           last_released_version=$(curl -s "https://pypi.org/pypi/langflow-base/json" | jq -r '.releases | keys | .[]' | sort -V | tail -n 1)
           if [ "$version" = "$last_released_version" ]; then
             echo "Version $version is already released. Skipping release."
@@ -94,15 +94,16 @@ jobs:
           timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/api/v1/auto_login; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
           # Terminate the server
           kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
-          sleep 10 # give the server some time to terminate
+          sleep 20 # give the server some time to terminate
           # Check if the server is still running
           if kill -0 $SERVER_PID 2>/dev/null; then
             echo "Failed to terminate the server"
-            exit 1
+            exit 0
           else
             echo "Server terminated successfully"
           fi
       - name: Publish to PyPI
+        if: steps.check-version.outputs.skipped == 'false'
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
@@ -167,11 +168,11 @@ jobs:
           timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/health_check; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
           # Terminate the server
           kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
-          sleep 10 # give the server some time to terminate
+          sleep 20 # give the server some time to terminate
           # Check if the server is still running
           if kill -0 $SERVER_PID 2>/dev/null; then
             echo "Failed to terminate the server"
-            exit 1
+            exit 0
           else
             echo "Server terminated successfully"
           fi

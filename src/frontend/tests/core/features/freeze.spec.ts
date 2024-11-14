@@ -255,7 +255,7 @@ test("user must be able to freeze a component", async ({ page }) => {
   await page.getByText("Close").last().click();
   await page.getByText("Close").last().click();
 
-  await page.getByText("Split Text", { exact: true }).click();
+  await page.getByText("Split Text", { exact: true }).last().click();
 
   await page.waitForTimeout(1000);
 

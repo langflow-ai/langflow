@@ -2,7 +2,7 @@ import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
-test.skip("Basic Prompting (Hello, World)", async ({ page }) => {
+test("Basic Prompting (Hello, World)", async ({ page }) => {
   test.skip(
     !process?.env?.OPENAI_API_KEY,
     "OPENAI_API_KEY required to run this test",
