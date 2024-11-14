@@ -18,7 +18,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
 
     inputs = [
         SecretStrInput(name="mongodb_atlas_cluster_uri", display_name="MongoDB Atlas Cluster URI", required=True),
-        BoolInput(name="enable_mtls", display_name="Enable mTLS", value=False, required=True),
+        BoolInput(name="enable_mtls", display_name="Enable mTLS", value=False, advanced=True, required=True),
         SecretStrInput(
             name="mongodb_atlas_client_cert",
             display_name="MongoDB Atlas Combined Client Certificate",
