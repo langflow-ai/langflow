@@ -35,16 +35,14 @@ function NoteNode({
   }, []);
 
   const MemoNoteToolbarComponent = useMemo(
-    () => (
-      <div
-        className={cn(
-          "absolute -top-12 left-1/2 z-50 -translate-x-1/2",
-          selected ? "" : "hidden",
-        )}
-      >
-        <NoteToolbarComponent data={data} bgColor={bgColor} />
-      </div>
-    ),
+    () =>
+      selected ? (
+        <div className={cn("absolute -top-12 left-1/2 z-50 -translate-x-1/2")}>
+          <NoteToolbarComponent data={data} bgColor={bgColor} />
+        </div>
+      ) : (
+        <></>
+      ),
     [data, bgColor, selected],
   );
   return (

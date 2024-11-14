@@ -214,13 +214,8 @@ export default function GenericNode({
   }, [hiddenOutputs]);
 
   const memoizedNodeToolbarComponent = useMemo(() => {
-    return (
-      <div
-        className={cn(
-          "absolute -top-12 left-1/2 z-50 -translate-x-1/2",
-          selected ? "" : "hidden",
-        )}
-      >
+    return selected ? (
+      <div className={cn("absolute -top-12 left-1/2 z-50 -translate-x-1/2")}>
         <NodeToolbarComponent
           data={data}
           deleteNode={(id) => {
@@ -242,6 +237,8 @@ export default function GenericNode({
           setOpenShowMoreOptions={setOpenShowMoreOptions}
         />
       </div>
+    ) : (
+      <></>
     );
   }, [
     data,
