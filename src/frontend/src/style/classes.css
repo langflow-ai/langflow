@@ -257,6 +257,10 @@ pre {
   background-color: hsl(var(--code-background)) !important;
 }
 
+.prose li::marker {
+  color: inherit !important;
+}
+
 [type="search"]:not(:placeholder-shown)::-webkit-search-cancel-button {
   opacity: 1 !important;
 }
