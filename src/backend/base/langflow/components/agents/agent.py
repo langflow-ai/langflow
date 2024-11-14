@@ -61,7 +61,7 @@ class AgentComponent(ToolCallingAgentComponent):
         if llm_model is None:
             msg = "No language model selected"
             raise ValueError(msg)
-        self.chat_history = self.get_memory_data()
+        self.chat_history = await self.aget_memory_data()
 
         if self.add_current_date_tool:
             if not isinstance(self.tools, list):  # type: ignore[has-type]
@@ -87,12 +87,12 @@ class AgentComponent(ToolCallingAgentComponent):
         agent = self.create_agent_runnable()
         return await self.run_agent(agent)
 
-    def get_memory_data(self):
+    async def aget_memory_data(self):
         memory_kwargs = {
             component_input.name: getattr(self, f"{component_input.name}") for component_input in self.memory_inputs
         }
 
-        return MemoryComponent().set(**memory_kwargs).retrieve_messages()
+        return await MemoryComponent().set(**memory_kwargs).retrieve_messages()
 
     def get_llm(self):
         if isinstance(self.agent_llm, str):
