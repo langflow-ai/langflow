@@ -31,39 +31,45 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
 
     _cached_vector_store: AstraDBVectorStore | None = None
 
-    VECTORIZE_PROVIDERS_MAPPING = defaultdict(list, {
-        "Azure OpenAI": ["azureOpenAI", ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"]],
-        "Hugging Face - Dedicated": ["huggingfaceDedicated", ["endpoint-defined-model"]],
-        "Hugging Face - Serverless": [
-            "huggingface",
-            [
-                "sentence-transformers/all-MiniLM-L6-v2",
-                "intfloat/multilingual-e5-large",
-                "intfloat/multilingual-e5-large-instruct",
-                "BAAI/bge-small-en-v1.5",
-                "BAAI/bge-base-en-v1.5",
-                "BAAI/bge-large-en-v1.5",
+    VECTORIZE_PROVIDERS_MAPPING = defaultdict(
+        list,
+        {
+            "Azure OpenAI": [
+                "azureOpenAI",
+                ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"],
             ],
-        ],
-        "Jina AI": [
-            "jinaAI",
-            [
-                "jina-embeddings-v2-base-en",
-                "jina-embeddings-v2-base-de",
-                "jina-embeddings-v2-base-es",
-                "jina-embeddings-v2-base-code",
-                "jina-embeddings-v2-base-zh",
+            "Hugging Face - Dedicated": ["huggingfaceDedicated", ["endpoint-defined-model"]],
+            "Hugging Face - Serverless": [
+                "huggingface",
+                [
+                    "sentence-transformers/all-MiniLM-L6-v2",
+                    "intfloat/multilingual-e5-large",
+                    "intfloat/multilingual-e5-large-instruct",
+                    "BAAI/bge-small-en-v1.5",
+                    "BAAI/bge-base-en-v1.5",
+                    "BAAI/bge-large-en-v1.5",
+                ],
             ],
-        ],
-        "Mistral AI": ["mistral", ["mistral-embed"]],
-        "NVIDIA": ["nvidia", ["NV-Embed-QA"]],
-        "OpenAI": ["openai", ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"]],
-        "Upstage": ["upstageAI", ["solar-embedding-1-large"]],
-        "Voyage AI": [
-            "voyageAI",
-            ["voyage-large-2-instruct", "voyage-law-2", "voyage-code-2", "voyage-large-2", "voyage-2"],
-        ],
-    })
+            "Jina AI": [
+                "jinaAI",
+                [
+                    "jina-embeddings-v2-base-en",
+                    "jina-embeddings-v2-base-de",
+                    "jina-embeddings-v2-base-es",
+                    "jina-embeddings-v2-base-code",
+                    "jina-embeddings-v2-base-zh",
+                ],
+            ],
+            "Mistral AI": ["mistral", ["mistral-embed"]],
+            "NVIDIA": ["nvidia", ["NV-Embed-QA"]],
+            "OpenAI": ["openai", ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"]],
+            "Upstage": ["upstageAI", ["solar-embedding-1-large"]],
+            "Voyage AI": [
+                "voyageAI",
+                ["voyage-large-2-instruct", "voyage-law-2", "voyage-code-2", "voyage-large-2", "voyage-2"],
+            ],
+        },
+    )
 
     inputs = [
         SecretStrInput(
