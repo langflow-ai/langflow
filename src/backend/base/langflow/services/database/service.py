@@ -13,6 +13,7 @@ from alembic import command, util
 from alembic.config import Config
 from loguru import logger
 from sqlalchemy import event, inspect
+from sqlalchemy.dialects import sqlite as dialect_sqlite
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
@@ -117,9 +118,7 @@ class DatabaseService(Service):
         return connect_args
 
     def on_connection(self, dbapi_connection, _connection_record) -> None:
-        if isinstance(
-            dbapi_connection, sqlite3.Connection | sa.dialects.sqlite.aiosqlite.AsyncAdapt_aiosqlite_connection
-        ):
+        if isinstance(dbapi_connection, sqlite3.Connection | dialect_sqlite.aiosqlite.AsyncAdapt_aiosqlite_connection):
             pragmas: dict = self.settings_service.settings.sqlite_pragmas or {}
             pragmas_list = []
             for key, val in pragmas.items():
