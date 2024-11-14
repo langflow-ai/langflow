@@ -120,19 +120,21 @@ export const AccountMenu = () => {
               Join the Langflow Discord
             </HeaderMenuItemLink>
           </HeaderMenuItemsSection>
-          <HeaderMenuItemsSection>
-            {ENABLE_DATASTAX_LANGFLOW ? (
+          {ENABLE_DATASTAX_LANGFLOW ? (
+            <HeaderMenuItemsSection>
               <HeaderMenuItemLink href="/session/logout" icon="log-out">
                 Logout
               </HeaderMenuItemLink>
-            ) : (
-              !autoLogin && (
+            </HeaderMenuItemsSection>
+          ) : (
+            !autoLogin && (
+              <HeaderMenuItemsSection>
                 <HeaderMenuItemButton onClick={handleLogout} icon="log-out">
                   Logout
                 </HeaderMenuItemButton>
-              )
-            )}
-          </HeaderMenuItemsSection>
+              </HeaderMenuItemsSection>
+            )
+          )}
         </HeaderMenuItems>
       </HeaderMenu>
       <CustomFeedbackDialog
