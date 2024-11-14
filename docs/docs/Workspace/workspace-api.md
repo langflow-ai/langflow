@@ -9,7 +9,7 @@ import ReactPlayer from "react-player";
 The **API** section presents code templates for integrating your flow into external applications.
 
 
-![](./1862729633.png)
+![](/img/api-pane.png)
 
 
 ### cURL {#4eb287a8424349c4b0b436a6703de5f3}
@@ -36,9 +36,6 @@ The **Python Code** tab displays code to interact with your flow's `.json` f
 The **Tweaks** tab displays the available parameters for your flow. Modifying the parameters changes the code parameters across all windows. For example, changing the **Chat Input** component's `input_value` will change that value across all API calls.
 
 
-<ReactPlayer controls url="https://youtu.be/ISGKvHzJG8o" />
-
-
 ## Chat Widget {#48f121a6cb3243979a341753da0c2700}
 
 
@@ -57,16 +54,10 @@ You can get the HTML code embedded with the chat by clicking the Code button at 
 Clicking the Chat Widget HTML tab, you'll get the code to be inserted. Read below to learn how to use it with HTML, React and Angular.
 
 
-![](./566212295.png)
-
-
 ### Embed your flow into HTML {#6e84db2f2a0d451db6fa03c57e9bf9a4}
 
 
 The Chat Widget can be embedded into any HTML page, inside a `<body>` tag, as demonstrated in the video below.
-
-
-<ReactPlayer controls url="https://youtu.be/cVpNc-osfxQ" />
 
 
 ### Embed your flow with React {#fe5d3b1c42e74e4c84ebc9d1799b7665}
@@ -78,7 +69,6 @@ To embed the Chat Widget using React, insert this `<script>` tag into the Reac
 ```javascript
 <script src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
 ```
-
 
 
 Declare your Web Component and encapsulate it in a React component.

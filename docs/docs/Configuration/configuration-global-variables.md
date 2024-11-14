@@ -41,8 +41,6 @@ Because values are encrypted, you can't view the actual values of your global va
 In **Settings > Global Variables**, the **Value** column shows the encrypted hash for **Generic** type variables, and shows nothing for **Credential** type variables.
 :::
 
-<ReactPlayer controls url="https://youtu.be/RedPOCsYNAM" />
-
 ## Edit a global variable
 
 1. In the Langflow UI, click your profile icon, and then select **Settings**.

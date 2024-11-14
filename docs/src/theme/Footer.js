@@ -7,7 +7,7 @@ export default function FooterWrapper(props) {
   const iconSpan1 = React.createElement(
     "img",
     {
-      src: "/img/chain.png",
+      src: "/img/logo.svg",
       style: { width: "40px" },
     },
     null

@@ -18,15 +18,15 @@ All agents have access to the **Search API** and **URL Content Fetcher** compone
 
 To use this flow, you need an [OpenAI API key](https://platform.openai.com/) and a [Search API key](https://www.searchapi.io/).
 
-## Open Langflow and start a new project
+## Open Langflow and start a new flow
 
-Click **New Project**, and then select the **Travel Planning Agent** project.
+Click **New Flow**, and then select the **Travel Planning Agent** flow.
 
-This opens a starter project with the necessary components to run an agentic application using multiple Tool-calling agents.
+This opens a starter flow with the necessary components to run an agentic application using multiple Tool-calling agents.
 
-## Travel Planning Agent flow
+## Create the travel planning agent flow
 
-![](./starter-flow-travel-planning-agent.png)
+![](/img/starter-flow-travel-agent.png)
 
 The **Travel Planning Agent** flow consists of these components:
 
@@ -37,7 +37,7 @@ The **Travel Planning Agent** flow consists of these components:
 * The **Chat Output** component prints the flow's output to the chat.
 * The **OpenAI** model component sends the user input and prompt to the OpenAI API and receives a response.
 
-## Run the Travel Planning Agent flow
+## Run the travel planning agent flow
 
 1. Add your credentials to the Open AI and Search API components.
 2. In the **Chat output** component, click ▶️ Play to start the end-to-end application flow.

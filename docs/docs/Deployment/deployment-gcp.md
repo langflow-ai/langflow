@@ -18,7 +18,7 @@ The script will guide you through setting up a Debian-based VM with the Langflow
 
 1. Click below to launch Cloud Shell.
 
-[![GCP Deploy](./cloud_deploy.svg) Deploy to Google Cloud](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/langflow-ai/langflow&working_dir=scripts/gcp&shellonly=true&tutorial=walkthroughtutorial.md)
+[![GCP Deploy](/logos/cloud_deploy.svg) Deploy to Google Cloud](https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/langflow-ai/langflow&working_dir=scripts/gcp&shellonly=true&tutorial=walkthroughtutorial.md)
 
 2. Click **Trust repo**. Some gcloud commands might not run in an ephemeral Cloud Shell environment.
 3. Click **Start** and follow the tutorial to deploy Langflow.
