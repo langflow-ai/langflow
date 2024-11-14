@@ -529,9 +529,6 @@ def load_flows_from_directory() -> None:
     flows_path = settings_service.settings.load_flows_path
     if not flows_path:
         return
-    if not settings_service.auth_settings.AUTO_LOGIN:
-        logger.warning("AUTO_LOGIN is disabled, not loading flows from directory")
-        return
 
     with session_scope() as session:
         user = get_user_by_username(session, settings_service.auth_settings.SUPERUSER)
