@@ -296,8 +296,15 @@ export async function buildFlowVertices({
         return true;
       }
       case "add_message": {
-        //adds a message to the messsage table
-        useMessagesStore.getState().addMessage(data);
+        // Check if this is a patch message
+        console.log("message data", data);
+        if (data.type === "patch" && data.patch) {
+          // Apply the patch to the existing message
+          useMessagesStore.getState().applyMessagePatch(data.id, data.patch);
+        } else {
+          // Regular message, just add it
+          useMessagesStore.getState().addMessage(data);
+        }
         return true;
       }
       case "token": {

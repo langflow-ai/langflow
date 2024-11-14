@@ -1,15 +1,8 @@
+import { applyPatch } from "fast-json-patch";
 import { create } from "zustand";
 import { MessagesStoreType } from "../types/zustand/messages";
 
 export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
-  deleteSession: (id) => {
-    set((state) => {
-      const updatedMessages = state.messages.filter(
-        (msg) => msg.session_id !== id,
-      );
-      return { messages: updatedMessages };
-    });
-  },
   messages: [],
   setMessages: (messages) => {
     set(() => ({ messages: messages }));
@@ -35,8 +28,6 @@ export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
     }));
   },
   updateMessagePartial: (message) => {
-    // search for the message and update it
-    // look for the message list backwards to find the message faster
     set((state) => {
       const updatedMessages = [...state.messages];
       for (let i = state.messages.length - 1; i >= 0; i--) {
@@ -63,6 +54,32 @@ export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
       return { messages: updatedMessages };
     });
   },
+  applyMessagePatch: (messageId, patch) => {
+    set((state) => {
+      const updatedMessages = [...state.messages];
+      const messageIndex = updatedMessages.findIndex(
+        (msg) => msg.id === messageId,
+      );
+
+      if (messageIndex !== -1) {
+        try {
+          const patchResult = applyPatch(
+            updatedMessages[messageIndex],
+            patch,
+            true,
+            false,
+          );
+
+          updatedMessages[messageIndex] = patchResult.newDocument;
+          return { messages: updatedMessages };
+        } catch (error) {
+          console.error("Error applying patch:", error);
+          return state;
+        }
+      }
+      return state;
+    });
+  },
   clearMessages: () => {
     set(() => ({ messages: [] }));
   },
@@ -80,6 +97,14 @@ export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
       } catch (error) {
         reject(error);
       }
+    });
+  },
+  deleteSession: (id) => {
+    set((state) => {
+      const updatedMessages = state.messages.filter(
+        (msg) => msg.session_id !== id,
+      );
+      return { messages: updatedMessages };
     });
   },
 }));
