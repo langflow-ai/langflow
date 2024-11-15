@@ -6,6 +6,7 @@ services:
     dockerfilePath: ./docker/render.Dockerfile
     repo: https://github.com/InstroAISolutions/langflow
     branch: main
+    region: frankfurt
     plan: standard
     healthCheckPath: /health_check
     autoDeploy: false
@@ -22,4 +23,10 @@ services:
       - key: LANGFLOW_SUPERUSER
         value: instro
       - key: LANGFLOW_SUPERUSER_PASSWORD
-        value: 6p^m8jh5Z-Zjfu        
+        value: 6p^m8jh5Z-Zjfu              
+      - key: POSTGRES_USER
+        value: langflow_poc_user
+      - key: POSTGRES_PASSWORD
+        value: YoLhFJPzK5WJUJmv5HXg7GUf58iyWu9h
+      - key: POSTGRES_DB
+        value: langflow_poc
