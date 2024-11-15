@@ -99,7 +99,9 @@
     --error-red: 0, 86%, 97%; /*hsla(0, 86%, 97%)*/
     --error-red-border: 0, 96%, 89%; /*hsla(0,96%,89%)*/
 
-    --code-background: var(--canvas);
+    --code-background: 240 6% 10%;
+    --code-description-background: 240 6% 10%;
+    --code-foreground: 240 6% 90%;
     --placeholder: 240 5% 64.9%;
     --hard-zinc: 240 5.2% 33.9%;
     --smooth-red: 0 93.3% 94.1%;
@@ -240,7 +242,9 @@
     --status-green: #4ade80;
     --status-blue: #2563eb;
     --connection: #6d6c6c;
-    --code-background: var(--background);
+    --code-background: 240 6% 10%;
+    --code-description-background: 0 0% 0%;
+    --code-foreground: 240 6% 90%;
 
     --beta-background: rgb(37 99 235);
     --beta-foreground: rgb(219 234 254);

@@ -104,6 +104,7 @@ export type NodeInputFieldComponentType = {
   name: string;
   required: boolean;
   optionalHandle: Array<String> | undefined | null;
+  lastInput?: boolean;
   info: string;
   proxy: { field: string; id: string } | undefined;
   showNode: boolean;
