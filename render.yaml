@@ -23,9 +23,9 @@ services:
         value: instro
       - key: LANGFLOW_SUPERUSER_PASSWORD
         value: 6p^m8jh5Z-Zjfu              
-      - key: POSTGRES_USER
-        value: langflow_poc_vcal_user
-      - key: POSTGRES_PASSWORD
-        value: 0ab9dLTAvmMUXfimflbgP6VRDUFcdpt7
-      - key: POSTGRES_DB
-        value: langflow_poc_vcal
+      #- key: POSTGRES_USER
+      #  value: langflow_poc_vcal_user
+      #- key: POSTGRES_PASSWORD
+      #  value: 0ab9dLTAvmMUXfimflbgP6VRDUFcdpt7
+      #- key: POSTGRES_DB
+      #  value: langflow_poc_vcal
