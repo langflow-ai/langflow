@@ -3,6 +3,9 @@ import { Button } from "../ui/button";
 import { Mic, MicOff } from "lucide-react";
 import { workletCode } from "./streamProcessor";
 import { base64ToFloat32Array } from "./utils";
+import useFlowStore from "@/stores/flowStore";
+import { BuildStatus } from "@/constants/enums";
+import { useMessagesStore } from "@/stores/messagesStore";
 
 interface VoiceAssistantProps {
   flowId: string;
@@ -12,7 +15,7 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [status, setStatus] = useState("");
   const [message, setMessage] = useState("");
-  
+
   const audioContextRef = useRef<AudioContext | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const processorRef = useRef<AudioWorkletNode | null>(null);
@@ -20,17 +23,18 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
   const isPlayingRef = useRef(false);
   const microphoneRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const messagesStore = useMessagesStore();
 
   // Initialize audio context and websocket
   const initializeAudio = async () => {
     try {
       if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || 
+        audioContextRef.current = new (window.AudioContext ||
           (window as any).webkitAudioContext)({
           sampleRate: 24000
         });
       }
-      
+
       await audioContextRef.current.resume();
       startConversation();
     } catch (error) {
@@ -60,9 +64,9 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
 
         processorRef.current.port.onmessage = (event) => {
           if (event.data.type === 'input' && event.data.audio && wsRef.current) {
-            const base64Audio = btoa(String.fromCharCode.apply(null, 
+            const base64Audio = btoa(String.fromCharCode.apply(null,
               Array.from(new Uint8Array(event.data.audio.buffer))));
-            
+
             wsRef.current.send(JSON.stringify({
               type: 'input_audio_buffer.append',
               audio: base64Audio
@@ -126,15 +130,16 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
 
   const handleWebSocketMessage = (event: MessageEvent) => {
     const data = JSON.parse(event.data);
-    
+    const flowStore = useFlowStore.getState();
+
     switch (data.type) {
-      case 'response.content_part.added':
+      case "response.content_part.added":
         if (data.part?.type === 'text' && data.part.text) {
           setMessage(prev => prev + data.part.text);
         }
         break;
 
-      case 'response.audio.delta':
+      case "response.audio.delta":
         if (data.delta && audioContextRef.current) {
           try {
             const float32Data = base64ToFloat32Array(data.delta);
@@ -143,12 +148,9 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
               float32Data.length,
               24000
             );
-
             audioBuffer.copyToChannel(float32Data, 0);
             audioBuffer.copyToChannel(float32Data, 1);
-
             audioQueueRef.current.push(audioBuffer);
-
             if (!isPlayingRef.current) {
               playNextAudioChunk();
             }
@@ -158,7 +160,61 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
         }
         break;
 
-      case 'error':
+      case "flow.build.progress":
+        console.log("flow.build.progress", data);
+        const buildData = data.data;
+        switch (buildData.event) {
+          case "start":
+            flowStore.setIsBuilding(true);
+            flowStore.setLockChat(true);
+            break;
+
+          case "start_vertex":
+            flowStore.updateBuildStatus([buildData.vertex_id], BuildStatus.BUILDING);
+            const edges = flowStore.edges;
+            const newEdges = edges.map((edge) => {
+              if (buildData.vertex_id === edge.data.targetHandle.id) {
+                edge.animated = true;
+                edge.className = "running";
+              }
+              return edge;
+            });
+            flowStore.setEdges(newEdges);
+            break;
+
+          case "end_vertex":
+            flowStore.updateBuildStatus([buildData.vertex_id], BuildStatus.BUILT);
+            flowStore.addDataToFlowPool(
+              {
+                ...buildData.data.build_data,
+                run_id: buildData.run_id,
+                id: buildData.vertex_id,
+                valid: true
+              },
+              buildData.vertex_id
+            );
+            flowStore.updateEdgesRunningByNodes([buildData.vertex_id], false);
+            break;
+
+          case "error":
+            flowStore.updateBuildStatus([buildData.vertex_id], BuildStatus.ERROR);
+            flowStore.updateEdgesRunningByNodes([buildData.vertex_id], false);
+            break;
+
+          case "end":
+            flowStore.setIsBuilding(false);
+            flowStore.setLockChat(false);
+            flowStore.revertBuiltStatusFromBuilding();
+            flowStore.clearEdgesRunningByNodes();
+            break;
+
+          case "add_message":
+            messagesStore.addMessage(buildData.data);
+            break;
+        }
+        break;
+
+      case "error":
         console.error('Server error:', data.error);
         setStatus('Error: ' + data.error);
         break;
@@ -187,7 +243,7 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
         console.error('WebSocket Error:', error);
         setStatus('Connection error');
       };
-      
+
     } catch (error) {
       console.error('Failed to create WebSocket:', error);
       setStatus('Connection failed');
@@ -229,4 +285,4 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
       {message && <div className="text-sm">{message}</div>}
     </div>
   );
-} 
+}
