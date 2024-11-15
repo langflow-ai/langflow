@@ -19,3 +19,7 @@ services:
         value: 10000
       - key: LANGFLOW_LOG_LEVEL
         value: INFO
+      - key: LANGFLOW_SUPERUSER
+        value: instro
+      - key: LANGFLOW_SUPERUSER_PASSWORD
+        value: 6p^m8jh5Z-Zjfu        
