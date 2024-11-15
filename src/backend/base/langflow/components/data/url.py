@@ -25,8 +25,8 @@ class URLComponent(Component):
         ),
         DropdownInput(
             name="format",
-            display_name="Output format",
-            info="Output format. Use 'Text' to extract the text from the HTML or 'Raw HTML' for the raw HTML content.",
+            display_name="Output Format",
+            info="Output Format. Use 'Text' to extract the text from the HTML or 'Raw HTML' for the raw HTML content.",
             options=["Text", "Raw HTML"],
             value="Text",
         ),
