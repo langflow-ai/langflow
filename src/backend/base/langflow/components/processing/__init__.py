@@ -10,6 +10,7 @@ from .parse_json_data import ParseJSONDataComponent
 from .select_data import SelectDataComponent
 from .split_text import SplitTextComponent
 from .update_data import UpdateDataComponent
+from .add_metadata import AddMetadataComponent
 
 __all__ = [
     "CreateDataComponent",
@@ -24,4 +25,5 @@ __all__ = [
     "JSONCleaner",
     "CombineTextComponent",
     "SplitTextComponent",
+    "AddMetadataComponent",
 ]
