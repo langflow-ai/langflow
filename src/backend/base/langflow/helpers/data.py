@@ -55,7 +55,7 @@ def data_to_text_list(template: str, data: Data | list[Data]) -> tuple[list[str]
 
 
 def data_to_text(template: str, data: Data | list[Data], sep: str = "\n") -> str:
-    """Converts data into a formatted text string based on a given template.
+    r"""Converts data into a formatted text string based on a given template.
 
     Args:
         template (str): The template string used to format each data item.
