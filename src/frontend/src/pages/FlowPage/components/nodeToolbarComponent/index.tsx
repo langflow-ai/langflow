@@ -631,7 +631,7 @@ export default function NodeToolbarComponent({
                   dataTestId="docs-button-modal"
                 />
               </SelectItem>
-              {(isMinimal  || !showNode) && (
+              {(isMinimal || !showNode) && (
                 <SelectItem
                   value={"show"}
                   data-testid={`${showNode ? "minimize" : "expand"}-button-modal`}
