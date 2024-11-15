@@ -1,7 +1,9 @@
+import os
+
 from crewai import Agent, Crew, Process, Task
 
 from langflow.base.agents.crewai.crew import BaseCrewComponent
-from langflow.io import HandleInput
+from langflow.io import HandleInput, SecretStrInput
 from langflow.schema.message import Message
 
 
@@ -14,6 +16,12 @@ class SequentialCrewComponent(BaseCrewComponent):
     inputs = [
         *BaseCrewComponent._base_inputs,
         HandleInput(name="tasks", display_name="Tasks", input_types=["SequentialTask"], is_list=True),
+        SecretStrInput(
+            name="openai_api_key",
+            display_name="OpenAI API Key",
+            info="The OpenAI API Key to use for the OpenAI model.",
+            value="OPENAI_API_KEY",
+        ),
     ]
 
     def get_tasks_and_agents(self) -> tuple[list[Task], list[Agent]]:
@@ -21,6 +29,11 @@ class SequentialCrewComponent(BaseCrewComponent):
 
     def build_crew(self) -> Message:
         tasks, agents = self.get_tasks_and_agents()
+
+        # Set the OpenAI API Key
+        if self.openai_api_key:
+            os.environ["OPENAI_API_KEY"] = self.openai_api_key
+
         return Crew(
             agents=agents,
             tasks=tasks,
