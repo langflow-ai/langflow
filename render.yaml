@@ -12,7 +12,7 @@ services:
     autoDeploy: false
     envVars:
       - key: LANGFLOW_DATABASE_URL
-        value: postgresql://langflow_poc_user:YoLhFJPzK5WJUJmv5HXg7GUf58iyWu9h@dpg-csrngj1u0jms7393biv0-a/langflow_poc
+        value: postgresql://langflow_poc_vcal_user:0ab9dLTAvmMUXfimflbgP6VRDUFcdpt7@dpg-csrpm752ng1s73ac1fbg-a/langflow_poc_vcal
       - key: LANGFLOW_HOST
         value: 0.0.0.0
       - key: LANGFLOW_PORT
@@ -25,8 +25,8 @@ services:
       - key: LANGFLOW_SUPERUSER_PASSWORD
         value: 6p^m8jh5Z-Zjfu              
       - key: POSTGRES_USER
-        value: langflow_poc_user
+        value: langflow_poc_vcal_user
       - key: POSTGRES_PASSWORD
-        value: YoLhFJPzK5WJUJmv5HXg7GUf58iyWu9h
+        value: 0ab9dLTAvmMUXfimflbgP6VRDUFcdpt7
       - key: POSTGRES_DB
-        value: langflow_poc
+        value: langflow_poc_vcal
