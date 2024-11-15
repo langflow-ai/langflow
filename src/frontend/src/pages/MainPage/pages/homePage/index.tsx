@@ -91,7 +91,7 @@ const HomePage = ({ type }) => {
 
           {/* mt-10 to mt-8 for Datastax LF */}
           <div className="flex flex-1 flex-col justify-start px-5 pt-10">
-            <div className="flex flex-col justify-start">
+            <div className="flex h-full flex-col justify-start">
               <HeaderComponent
                 folderName={folderName}
                 flowType={flowType}

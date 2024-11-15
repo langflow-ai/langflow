@@ -229,7 +229,7 @@ class DatabaseService(Service):
                 try:
                     session.exec(text("SELECT * FROM alembic_version"))
                 except Exception:  # noqa: BLE001
-                    logger.opt(exception=True).info("Alembic not initialized")
+                    logger.debug("Alembic not initialized")
                     should_initialize_alembic = True
 
             if should_initialize_alembic:
