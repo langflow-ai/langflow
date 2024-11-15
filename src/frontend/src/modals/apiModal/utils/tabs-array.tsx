@@ -70,7 +70,8 @@ export function createTabsArray(
     tabs.push({
       name: "Golang Code",
       mode: "golang",
-      image: "https://w7.pngwing.com/pngs/566/160/png-transparent-golang-hd-logo-thumbnail.png",
+      image:
+        "https://w7.pngwing.com/pngs/566/160/png-transparent-golang-hd-logo-thumbnail.png",
       language: "go",
       code: codes.golangCode,
       hasTweaks: includeTweaks,
