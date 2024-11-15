@@ -49,7 +49,8 @@ class AddMetadataComponent(Component):
         elif isinstance(obj, Data):
             as_dict = obj.data
         else:
-            raise TypeError("Expected a Data object or a dictionary.")
+            msg = f"Expected a Data object or a dictionary but got {type(obj)}."
+            raise TypeError(msg)
 
         return {k: v for k, v in (as_dict or {}).items() if k and k.strip()}
 
