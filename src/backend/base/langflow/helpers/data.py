@@ -17,7 +17,7 @@ def docs_to_data(documents: list[Document]) -> list[Data]:
 
 
 def data_to_text_list(template: str, data: Data | list[Data]) -> tuple[list[str], list[Data]]:
-    """Formats `text` within Data objects based on a given template.
+    r"""Formats `text` within Data objects based on a given template.
 
     Converts a Data object or a list of Data objects into a tuple containing a list of formatted strings
     and a list of Data objects based on a given template.
