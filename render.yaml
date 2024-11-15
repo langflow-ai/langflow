@@ -6,7 +6,6 @@ services:
     dockerfilePath: ./docker/render.Dockerfile
     repo: https://github.com/InstroAISolutions/langflow
     branch: main
-    region: frankfurt
     plan: standard
     healthCheckPath: /health_check
     autoDeploy: false
