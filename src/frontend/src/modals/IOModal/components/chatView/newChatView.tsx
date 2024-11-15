@@ -5,11 +5,12 @@ import { TextShimmer } from "@/components/ui/TextShimmer";
 import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { ChatMessageType } from "../../../../types/chat";
 import { chatViewProps } from "../../../../types/components";
+import FlowRunningSqueleton from "../flowRunningSqueleton";
 import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 import { useFileHandler } from "./chatInput/hooks/use-file-handler";
 import ChatInput from "./chatInput/newChatInput";
@@ -123,6 +124,8 @@ export default function ChatView({
     setIsDragging(false);
   };
 
+  const flowRunningSkeletonMemo = useMemo(() => <FlowRunningSqueleton />, []);
+
   return (
     <div
       className="flex h-full w-full flex-col rounded-md"
@@ -179,18 +182,8 @@ export default function ChatView({
         >
           {lockChat &&
             chatHistory.length > 0 &&
-            !(chatHistory[chatHistory.length - 1]?.category === "error") && (
-              <div className="flex w-full gap-4 rounded-md p-2">
-                <LogoIcon />
-                <div className="flex items-center">
-                  <div>
-                    <TextShimmer className="" duration={1}>
-                      Flow running...
-                    </TextShimmer>
-                  </div>
-                </div>
-              </div>
-            )}
+            !(chatHistory[chatHistory.length - 1]?.category === "error") &&
+            flowRunningSkeletonMemo}
         </div>
       </div>
       <div className="m-auto w-5/6 max-w-[768px]">

@@ -271,6 +271,13 @@ export default function GenericNode({
         data.node!.template[templateField]?.show &&
         !data.node!.template[templateField]?.advanced && (
           <NodeInputField
+            lastInput={
+              idx ===
+                Object.keys(data.node!.template).filter(
+                  (templateField) => templateField.charAt(0) !== "_",
+                ).length -
+                  1 && !(shownOutputs.length > 0 || showHiddenOutputs)
+            }
             key={scapedJSONStringfy({
               inputTypes: data.node!.template[templateField].input_types,
               type: data.node!.template[templateField].type,

@@ -34,6 +34,7 @@ export default function NodeInputField({
   name = "",
   required = false,
   optionalHandle = null,
+  lastInput = false,
   info = "",
   proxy,
   showNode,
@@ -108,6 +109,7 @@ export default function NodeInputField({
       ref={ref}
       className={cn(
         "relative mt-1 flex min-h-10 w-full flex-wrap items-center justify-between px-5 py-2",
+        lastInput ? "rounded-b-[0.69rem]" : "",
         isToolMode && "bg-primary/10",
         (name === "code" && type === "code") || (name.includes("code") && proxy)
           ? "hidden"

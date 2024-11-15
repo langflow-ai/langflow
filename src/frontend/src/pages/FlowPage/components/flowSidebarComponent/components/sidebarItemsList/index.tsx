@@ -1,6 +1,5 @@
 import ShadTooltip from "@/components/shadTooltipComponent";
 import { removeCountFromString } from "@/utils/utils";
-import React from "react";
 import SidebarDraggableComponent from "../sidebarDraggableComponent";
 
 const SidebarItemsList = ({
@@ -14,12 +13,13 @@ const SidebarItemsList = ({
   return (
     <div className="flex flex-col gap-1 py-2">
       {Object.keys(dataFilter[item.name])
-        .sort((a, b) =>
-          sensitiveSort(
-            dataFilter[item.name][a].display_name,
-            dataFilter[item.name][b].display_name,
-          ),
-        )
+        .sort((a, b) => {
+          const itemA = dataFilter[item.name][a];
+          const itemB = dataFilter[item.name][b];
+          return itemA.score && itemB.score
+            ? itemA.score - itemB.score
+            : sensitiveSort(itemA.display_name, itemB.display_name);
+        })
         .map((SBItemName, idx) => {
           const currentItem = dataFilter[item.name][SBItemName];
 

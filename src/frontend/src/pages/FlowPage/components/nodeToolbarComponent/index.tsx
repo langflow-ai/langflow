@@ -91,7 +91,7 @@ export default function NodeToolbarComponent({
     updateNodeInternals(data.id);
   }
   function minimize() {
-    if (isMinimal) {
+    if (isMinimal || !showNode) {
       setShowNode((data.showNode ?? true) ? false : true);
       updateNodeInternals(data.id);
       return;
@@ -661,7 +661,7 @@ export default function NodeToolbarComponent({
                 dataTestId="docs-button-modal"
               />
             </SelectItem>
-            {isMinimal && (
+            {(isMinimal || !showNode) && (
               <SelectItem
                 value={"show"}
                 data-testid={`${showNode ? "minimize" : "expand"}-button-modal`}
