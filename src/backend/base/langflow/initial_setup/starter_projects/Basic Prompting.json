@@ -430,7 +430,7 @@
         "data": {
           "id": "undefined-emdQy",
           "node": {
-            "description": "## 📖 README\n\nPerform basic prompting with an OpenAI model.\n\n#### Quick Start\n- Add your **OpenAI API key** to the **OpenAI Model**\n- PLAYGROUND\n\nNext steps: Try changing the prompt to respond differently. Experiment by changing prompt template, temperature on the OpenAI model\n\nFor more details, check the [system prompting guide](https://docs.langflow.org/guides/system-prompting).",
+            "description": "## 📖 README\n\nPerform basic prompting with an OpenAI model.\n\n#### Quick Start\n- Add your **OpenAI API key** to the **OpenAI Model**\n- Open the **Playground** to chat with your bot.\n\n#### Next steps:\n Experiment by changing the prompt and the OpenAI model temperature to see how the bot's responses change.",
             "display_name": "Read Me",
             "documentation": "",
             "template": {
