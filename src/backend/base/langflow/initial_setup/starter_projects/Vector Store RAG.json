@@ -994,70 +994,70 @@
       },
       {
         "data": {
-            "id": "note-eIk12",
-            "node": {
-                "description": "## 📚 1. Load Data Flow\n\nRun this first! Load data from a local file and embed it into the vector database.\n\nSelect a Database and a Collection, or create new ones. \n\nClick ▶️ **Run component** on the **Astra DB** component to load your data.\n\n*If you're using OSS Langflow, add your Astra DB Application Token to the Astra DB component.\n\n#### Next steps:\n Experiment by changing the prompt and the contextual data to see how the retrieval flow's responses change.",
-                "display_name": "",
-                "documentation": "",
-                "template": {
-                    "backgroundColor": "neutral"
-                }
-            },
-            "type": "note"
+          "id": "note-UrQ0p",
+          "node": {
+            "description": "## 📚 1. Load Data Flow\n\nRun this first! Load data from a local file and embed it into the vector database.\n\nSelect a Database and a Collection, or create new ones. \n\nClick ▶️ **Run component** on the **Astra DB** component to load your data.\n\n*If you're using OSS Langflow, add your Astra DB Application Token to the Astra DB component.\n\n#### Next steps:\n Experiment by changing the prompt and the contextual data to see how the retrieval flow's responses change.",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "neutral"
+            }
+          },
+          "type": "note"
         },
         "dragging": false,
         "height": 324,
-        "id": "note-eIk12",
+        "id": "note-UrQ0p",
         "position": {
-            "x": 1269.2622515117293,
-            "y": 457.69688969506893
+          "x": 374.388314931542,
+          "y": 486.18094072679895
         },
         "positionAbsolute": {
-            "x": 1269.2622515117293,
-            "y": 457.69688969506893
+          "x": 374.388314931542,
+          "y": 486.18094072679895
+        },
+        "resizing": false,
+        "selected": true,
+        "style": {
+          "height": 324,
+          "width": 324
+        },
+        "type": "noteNode",
+        "width": 324
+      },
+      {
+        "data": {
+          "id": "note-39jdn",
+          "node": {
+            "description": "## 📖 README\n\nLoad your data into a vector database with the 📚 **Load Data** flow, and then use your data as chat context with the 🐕 **Retriever** flow.\n\n**🚨 Add your OpenAI API key as a global variable to easily add it to all of the OpenAI components in this flow.** \n\n**Quick start**:\n1. Run the 📚 **Load Data** flow.\n2. Run the 🐕 **Retriever** flow.\n\n**Next steps** \n\n- Experiment by changing the prompt and the loaded data to see how the bot's responses change. \n\nFor more info, see the [Langflow docs](https://docs.langflow.org/starter-projects-vector-store-rag).",
+            "display_name": "Read Me",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "neutral"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 798,
+        "id": "note-39jdn",
+        "position": {
+          "x": 94.28986613312418,
+          "y": 907.6428043837066
+        },
+        "positionAbsolute": {
+          "x": 94.28986613312418,
+          "y": 907.6428043837066
         },
         "resizing": false,
         "selected": false,
         "style": {
-            "height": 324,
-            "width": 324
-        },
-        "type": "noteNode",
-        "width": 324
-    },
-    {
-      "data": {
-          "id": "note-39jdn",
-          "node": {
-              "description": "## 📖 README\n\nLoad your data into a vector database with the 📚 **Load Data** flow, and then use your data as chat context with the 🐕 **Retriever** flow.\n\n**🚨 Add your OpenAI API key as a global variable to easily add it to all of the OpenAI components in this flow.** \n\n**Quick start**:\n1. Run the 📚 **Load Data** flow.\n2. Run the 🐕 **Retriever** flow.\n\n**Next steps** \n\n- Experiment by changing the prompt and the loaded data to see how the bot's responses change. \n\nFor more info, see the [Langflow docs](https://docs.langflow.org/starter-projects-vector-store-rag).",
-              "display_name": "Read Me",
-              "documentation": "",
-              "template": {
-                  "backgroundColor": "neutral"
-              }
-          },
-          "type": "note"
-      },
-      "dragging": false,
-      "height": 798,
-      "id": "note-39jdn",
-      "position": {
-          "x": 94.28986613312418,
-          "y": 907.6428043837066
-      },
-      "positionAbsolute": {
-          "x": 94.28986613312418,
-          "y": 907.6428043837066
-      },
-      "resizing": false,
-      "selected": false,
-      "style": {
           "height": 798,
           "width": 600
+        },
+        "type": "noteNode",
+        "width": 600
       },
-      "type": "noteNode",
-      "width": 600
-  },
       {
         "data": {
           "id": "OpenAIModel-H0ANr",
@@ -3243,30 +3243,30 @@
         "id": "note-igpjN",
         "type": "noteNode",
         "position": {
-            "x": 955.3277857006676,
-            "y": 1552.171191793604
+          "x": 955.3277857006676,
+          "y": 1552.171191793604
         },
         "data": {
-            "id": "note-igpjN",
-            "node": {
-                "description": "## 🐕 2. Retriever Flow\n\nDescription\n\nOpen the **Playground** and ask, ```What is the document is about?```\n",
-                "display_name": "",
-                "documentation": "",
-                "template": {
-                    "backgroundColor": "neutral"
-                }
-            },
-            "type": "note"
+          "id": "note-igpjN",
+          "node": {
+            "description": "## 🐕 2. Retriever Flow\n\nDescription\n\nOpen the **Playground** and ask, ```What is the document is about?```\n",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "neutral"
+            }
+          },
+          "type": "note"
         },
         "selected": false,
         "width": 325,
         "height": 325,
         "positionAbsolute": {
-            "x": 955.3277857006676,
-            "y": 1552.171191793604
+          "x": 955.3277857006676,
+          "y": 1552.171191793604
         },
         "dragging": false
-    },
+      },
       {
         "data": {
           "id": "OpenAIEmbeddings-ANgku",
