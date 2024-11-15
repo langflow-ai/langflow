@@ -17,8 +17,7 @@ def docs_to_data(documents: list[Document]) -> list[Data]:
 
 
 def data_to_text_list(template: str, data: Data | list[Data]) -> tuple[list[str], list[Data]]:
-    """
-    Converts a Data object or a list of Data objects into a tuple containing a list of formatted strings
+    """Converts a Data object or a list of Data objects into a tuple containing a list of formatted strings
     and a list of Data objects based on a given template.
 
     Args:
@@ -26,7 +25,7 @@ def data_to_text_list(template: str, data: Data | list[Data]) -> tuple[list[str]
         data (Data | list[Data]): A single Data object or a list of Data objects to be formatted.
 
     Returns:
-        tuple[list[str], list[Data]]: A tuple containing a list of formatted strings based on the 
+        tuple[list[str], list[Data]]: A tuple containing a list of formatted strings based on the
                                       provided template and data, and a list of Data objects.
     """
     if data is None:
@@ -47,9 +46,9 @@ def data_to_text_list(template: str, data: Data | list[Data]) -> tuple[list[str]
     formatted_text = [template.format(data=value.data, **value.data) for value in _data]
     return formatted_text, _data
 
+
 def data_to_text(template: str, data: Data | list[Data], sep: str = "\n") -> str:
-    """
-    Converts data into a formatted text string based on a given template.
+    """Converts data into a formatted text string based on a given template.
 
     Args:
         template (str): The template string used to format each data item.
@@ -62,6 +61,7 @@ def data_to_text(template: str, data: Data | list[Data], sep: str = "\n") -> str
     formatted_text, _ = data_to_text_list(template, data)
     sep = "\n" if sep is None else sep
     return sep.join(formatted_text)
+
 
 def messages_to_text(template: str, messages: Message | list[Message]) -> str:
     """Converts a list of Messages to a list of texts.

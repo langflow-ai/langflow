@@ -2,7 +2,7 @@ import copy
 import json
 from datetime import datetime
 from decimal import Decimal
-from typing import cast, Optional
+from typing import cast
 from uuid import UUID
 
 from langchain_core.documents import Document
@@ -54,11 +54,10 @@ class Data(BaseModel):
         """
         return self.data.get(self.text_key, self.default_value)
 
-    def set_text(self, text: Optional[str]) -> str:
-        """
-        Sets the text value in the data dictionary. 
+    def set_text(self, text: str | None) -> str:
+        """Sets the text value in the data dictionary.
          - `text` value of `None` is converted to an empty string.
-         - `text` value is converted to `str` 
+         - `text` value is converted to `str`
 
         Args:
             text (str): The text to be set in the data dictionary.
