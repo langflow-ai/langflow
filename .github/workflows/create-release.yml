@@ -6,51 +6,23 @@ on:
         description: "Version to release"
         required: true
         type: string
-      release_type:
-        description: "Type of release (base or main)"
+      ref:
+        description: "Commit to tag the release"
         required: true
-        type: choice
-        options:
-          - base
-          - main
+        type: string
+      pre_release:
+        description: "Pre-release tag"
+        required: true
+        type: boolean
 
-env:
-  POETRY_VERSION: "1.8.2"
 jobs:
-  release:
-    name: Build Langflow
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.check-version.outputs.version }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install poetry
-        run: pipx install poetry==${{ env.POETRY_VERSION }}
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: "poetry"
-      - name: Build project for distribution
-        run: |
-          if [ "${{ inputs.release_type }}" == "base" ]; then
-          make build base=true
-          else
-          make build main=true
-          fi
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist${{ inputs.release_type }}
-          path: ${{ inputs.release_type == 'base' && 'src/backend/base/dist' || 'dist' }}
   create_release:
     name: Create Release Job
     runs-on: ubuntu-latest
-    needs: release
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: dist${{ inputs.release_type }}
+          name: dist-main
           path: dist
       - name: Create Release Notes
         uses: ncipollo/release-action@v1
@@ -59,6 +31,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           generateReleaseNotes: true
-          prerelease: true
+          prerelease: ${{ inputs.pre_release }}
           tag: v${{ inputs.version }}
-          commit: dev
+          commit: ${{ inputs.ref }}

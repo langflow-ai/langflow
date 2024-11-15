@@ -2,7 +2,7 @@ import { Page, test } from "@playwright/test";
 import path from "path";
 import uaParser from "ua-parser-js";
 
-test.skip("Vector Store RAG", async ({ page }) => {
+test("Vector Store RAG", async ({ page }) => {
   test.skip(
     !process?.env?.OPENAI_API_KEY,
     "OPENAI_API_KEY required to run this test",
@@ -32,7 +32,7 @@ test.skip("Vector Store RAG", async ({ page }) => {
     modalCount = 0;
   }
   while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForTimeout(3000);
     modalCount = await page.getByTestId("modal-title")?.count();
   }
@@ -60,10 +60,6 @@ test.skip("Vector Store RAG", async ({ page }) => {
   if (process?.env?.ASTRA_DB_API_ENDPOINT?.includes("astra-dev")) {
     const getUA = await page.evaluate(() => navigator.userAgent);
     const userAgentInfo = uaParser(getUA);
-    let control = "Control";
-    if (userAgentInfo.os.name.includes("Mac")) {
-      control = "Meta";
-    }
     await page.getByTestId("title-Astra DB").first().click();
     await page.waitForTimeout(500);
     await page.getByTestId("code-button-modal").click();
@@ -73,7 +69,7 @@ test.skip("Vector Store RAG", async ({ page }) => {
       '"pre_delete_collection": self.pre_delete_collection or False,',
       '"pre_delete_collection": self.pre_delete_collection or False,\n            "environment": "dev",',
     );
-    await page.locator("textarea").last().press(`${control}+a`);
+    await page.locator("textarea").last().press(`ControlOrMeta+a`);
     await page.keyboard.press("Backspace");
     await page.locator("textarea").last().fill(cleanCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
@@ -82,7 +78,7 @@ test.skip("Vector Store RAG", async ({ page }) => {
     await page.waitForTimeout(500);
     await page.getByTestId("code-button-modal").click();
     await page.waitForTimeout(500);
-    await page.locator("textarea").last().press(`${control}+a`);
+    await page.locator("textarea").last().press(`ControlOrMeta+a`);
     await page.keyboard.press("Backspace");
     await page.locator("textarea").last().fill(cleanCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
@@ -123,6 +119,11 @@ test.skip("Vector Store RAG", async ({ page }) => {
     .getByTestId("popover-anchor-input-api_endpoint")
     .nth(1)
     .fill(process.env.ASTRA_DB_API_ENDPOINT ?? "");
+
+  await page
+    .getByTestId("popover-anchor-input-collection_name")
+    .nth(0)
+    .fill("test");
   const fileChooserPromise = page.waitForEvent("filechooser");
   await page.getByTestId("icon-Upload").last().click();
   const fileChooser = await fileChooserPromise;
@@ -131,7 +132,7 @@ test.skip("Vector Store RAG", async ({ page }) => {
   );
   await page.getByText("test_file.txt").isVisible();
   await page.waitForTimeout(1000);
-  await page.getByTestId("button_run_astra db").first().click();
+  await page.getByTestId("button_run_astra db").last().click();
   await page.waitForSelector("text=built successfully", { timeout: 60000 * 2 });
   await page.getByText("built successfully").last().click({
     timeout: 30000,
@@ -141,7 +142,7 @@ test.skip("Vector Store RAG", async ({ page }) => {
   await page.getByText("built successfully").last().click({
     timeout: 30000,
   });
-  await page.getByTestId("button_run_astra db").last().click();
+  await page.getByTestId("button_run_astra db").first().click();
   await page.waitForSelector("text=built successfully", { timeout: 60000 * 2 });
   await page.getByText("built successfully").last().click({
     timeout: 30000,
@@ -151,7 +152,9 @@ test.skip("Vector Store RAG", async ({ page }) => {
     timeout: 100000,
   });
   await page.getByTestId("input-chat-playground").last().fill("hello");
-  await page.getByTestId("icon-LucideSend").last().click();
+  await page.getByTestId("input-chat-playground").last().click();
+  await page.keyboard.press("Enter");
+
   await page
     .getByText("This is a test file.", { exact: true })
     .last()

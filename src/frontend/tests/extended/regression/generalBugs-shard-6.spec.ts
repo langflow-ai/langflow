@@ -28,6 +28,8 @@ test("should be able to see error when something goes wrong on Code Modal", asyn
 
   await page.getByTestId("blank-flow").click();
 
+  await page.waitForTimeout(1000);
+
   await page.getByTestId("sidebar-custom-component-button").click();
 
   await page.getByTestId("zoom_out").click();

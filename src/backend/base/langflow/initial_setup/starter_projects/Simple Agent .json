@@ -9,18 +9,12 @@
             "dataType": "YahooFinanceTool",
             "id": "YahooFinanceTool-PzHUy",
             "name": "api_build_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "Agent-KhAae",
-            "inputTypes": [
-              "Tool",
-              "BaseTool",
-              "StructuredTool"
-            ],
+            "inputTypes": ["Tool", "BaseTool", "StructuredTool"],
             "type": "other"
           }
         },
@@ -38,16 +32,12 @@
             "dataType": "ChatInput",
             "id": "ChatInput-dBek4",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "Agent-KhAae",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -65,16 +55,12 @@
             "dataType": "Agent",
             "id": "Agent-KhAae",
             "name": "response",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-ULcvr",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -92,9 +78,7 @@
           "display_name": "Agent",
           "id": "Agent-KhAae",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -142,9 +126,7 @@
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -173,9 +155,7 @@
                 "display_name": "Agent Description",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -224,9 +204,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -253,7 +231,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain_core.tools import StructuredTool\n\nfrom langflow.base.agents.agent import LCToolsAgentComponent\nfrom langflow.base.models.model_input_constants import ALL_PROVIDER_FIELDS, MODEL_PROVIDERS_DICT\nfrom langflow.base.models.model_utils import get_model_name\nfrom langflow.components.helpers import CurrentDateComponent\nfrom langflow.components.helpers.memory import MemoryComponent\nfrom langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent\nfrom langflow.io import BoolInput, DropdownInput, MultilineInput, Output\nfrom langflow.schema.dotdict import dotdict\nfrom langflow.schema.message import Message\n\n\ndef set_advanced_true(component_input):\n    component_input.advanced = True\n    return component_input\n\n\nclass AgentComponent(ToolCallingAgentComponent):\n    display_name: str = \"Agent\"\n    description: str = \"Define the agent's instructions, then enter a task to complete using tools.\"\n    icon = \"bot\"\n    beta = False\n    name = \"Agent\"\n\n    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]\n\n    inputs = [\n        DropdownInput(\n            name=\"agent_llm\",\n            display_name=\"Model Provider\",\n            info=\"The provider of the language model that the agent will use to generate responses.\",\n            options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n            value=\"OpenAI\",\n            real_time_refresh=True,\n            input_types=[],\n        ),\n        *MODEL_PROVIDERS_DICT[\"OpenAI\"][\"inputs\"],\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Agent Instructions\",\n            info=\"System Prompt: Initial instructions and context provided to guide the agent's behavior.\",\n            value=\"You are a helpful assistant that can use tools to answer questions and perform tasks.\",\n            advanced=False,\n        ),\n        *LCToolsAgentComponent._base_inputs,\n        *memory_inputs,\n        BoolInput(\n            name=\"add_current_date_tool\",\n            display_name=\"Add tool Current Date\",\n            advanced=True,\n            info=\"If true, will add a tool to the agent that returns the current date.\",\n            value=True,\n        ),\n    ]\n    outputs = [Output(name=\"response\", display_name=\"Response\", method=\"message_response\")]\n\n    async def message_response(self) -> Message:\n        llm_model, display_name = self.get_llm()\n        self.model_name = get_model_name(llm_model, display_name=display_name)\n        if llm_model is None:\n            msg = \"No language model selected\"\n            raise ValueError(msg)\n        self.chat_history = self.get_memory_data()\n\n        if self.add_current_date_tool:\n            if not isinstance(self.tools, list):  # type: ignore[has-type]\n                self.tools = []\n            # Convert CurrentDateComponent to a StructuredTool\n            current_date_tool = CurrentDateComponent().to_toolkit()[0]\n            if isinstance(current_date_tool, StructuredTool):\n                self.tools.append(current_date_tool)\n            else:\n                msg = \"CurrentDateComponent must be converted to a StructuredTool\"\n                raise ValueError(msg)\n\n        if not self.tools:\n            msg = \"Tools are required to run the agent.\"\n            raise ValueError(msg)\n        self.set(\n            llm=llm_model,\n            tools=self.tools,\n            chat_history=self.chat_history,\n            input_value=self.input_value,\n            system_prompt=self.system_prompt,\n        )\n        agent = self.create_agent_runnable()\n        return await self.run_agent(agent)\n\n    def get_memory_data(self):\n        memory_kwargs = {\n            component_input.name: getattr(self, f\"{component_input.name}\") for component_input in self.memory_inputs\n        }\n\n        return MemoryComponent().set(**memory_kwargs).retrieve_messages()\n\n    def get_llm(self):\n        if isinstance(self.agent_llm, str):\n            try:\n                provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n                if provider_info:\n                    component_class = provider_info.get(\"component_class\")\n                    display_name = component_class.display_name\n                    inputs = provider_info.get(\"inputs\")\n                    prefix = provider_info.get(\"prefix\", \"\")\n                    return self._build_llm_model(component_class, inputs, prefix), display_name\n            except Exception as e:\n                msg = f\"Error building {self.agent_llm} language model\"\n                raise ValueError(msg) from e\n        return self.agent_llm, None\n\n    def _build_llm_model(self, component, inputs, prefix=\"\"):\n        model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n        return component.set(**model_kwargs).build_model()\n\n    def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:\n        \"\"\"Delete specified fields from build_config.\"\"\"\n        for field in fields:\n            build_config.pop(field, None)\n\n    def update_input_types(self, build_config: dotdict) -> dotdict:\n        \"\"\"Update input types for all fields in build_config.\"\"\"\n        for key, value in build_config.items():\n            if isinstance(value, dict):\n                if value.get(\"input_types\") is None:\n                    build_config[key][\"input_types\"] = []\n            elif hasattr(value, \"input_types\") and value.input_types is None:\n                value.input_types = []\n        return build_config\n\n    def update_build_config(self, build_config: dotdict, field_value: str, field_name: str | None = None) -> dotdict:\n        if field_name == \"agent_llm\":\n            # Define provider configurations as (fields_to_add, fields_to_delete)\n            provider_configs: dict[str, tuple[dict, list[dict]]] = {\n                provider: (\n                    MODEL_PROVIDERS_DICT[provider][\"fields\"],\n                    [\n                        MODEL_PROVIDERS_DICT[other_provider][\"fields\"]\n                        for other_provider in MODEL_PROVIDERS_DICT\n                        if other_provider != provider\n                    ],\n                )\n                for provider in MODEL_PROVIDERS_DICT\n            }\n\n            if field_value in provider_configs:\n                fields_to_add, fields_to_delete = provider_configs[field_value]\n\n                # Delete fields from other providers\n                for fields in fields_to_delete:\n                    self.delete_fields(build_config, fields)\n\n                # Add provider-specific fields\n                if field_value == \"OpenAI\" and not any(field in build_config for field in fields_to_add):\n                    build_config.update(fields_to_add)\n                else:\n                    build_config.update(fields_to_add)\n                # Reset input types for agent_llm\n                build_config[\"agent_llm\"][\"input_types\"] = []\n            elif field_value == \"Custom\":\n                # Delete all provider fields\n                self.delete_fields(build_config, ALL_PROVIDER_FIELDS)\n                # Update with custom component\n                custom_component = DropdownInput(\n                    name=\"agent_llm\",\n                    display_name=\"Language Model\",\n                    options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n                    value=\"Custom\",\n                    real_time_refresh=True,\n                    input_types=[\"LanguageModel\"],\n                )\n                build_config.update({\"agent_llm\": custom_component.to_dict()})\n\n            # Update input types for all fields\n            build_config = self.update_input_types(build_config)\n\n            # Validate required keys\n            default_keys = [\n                \"code\",\n                \"_type\",\n                \"agent_llm\",\n                \"tools\",\n                \"input_value\",\n                \"add_current_date_tool\",\n                \"system_prompt\",\n                \"agent_description\",\n                \"max_iterations\",\n                \"handle_parsing_errors\",\n                \"verbose\",\n            ]\n            missing_keys = [key for key in default_keys if key not in build_config]\n            if missing_keys:\n                msg = f\"Missing required keys in build_config: {missing_keys}\"\n                raise ValueError(msg)\n\n        return build_config\n"
+                "value": "from langchain_core.tools import StructuredTool\n\nfrom langflow.base.agents.agent import LCToolsAgentComponent\nfrom langflow.base.models.model_input_constants import ALL_PROVIDER_FIELDS, MODEL_PROVIDERS_DICT\nfrom langflow.base.models.model_utils import get_model_name\nfrom langflow.components.helpers import CurrentDateComponent\nfrom langflow.components.helpers.memory import MemoryComponent\nfrom langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent\nfrom langflow.io import BoolInput, DropdownInput, MultilineInput, Output\nfrom langflow.schema.dotdict import dotdict\nfrom langflow.schema.message import Message\n\n\ndef set_advanced_true(component_input):\n    component_input.advanced = True\n    return component_input\n\n\nclass AgentComponent(ToolCallingAgentComponent):\n    display_name: str = \"Agent\"\n    description: str = \"Define the agent's instructions, then enter a task to complete using tools.\"\n    icon = \"bot\"\n    beta = False\n    name = \"Agent\"\n\n    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]\n\n    inputs = [\n        DropdownInput(\n            name=\"agent_llm\",\n            display_name=\"Model Provider\",\n            info=\"The provider of the language model that the agent will use to generate responses.\",\n            options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n            value=\"OpenAI\",\n            real_time_refresh=True,\n            input_types=[],\n        ),\n        *MODEL_PROVIDERS_DICT[\"OpenAI\"][\"inputs\"],\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Agent Instructions\",\n            info=\"System Prompt: Initial instructions and context provided to guide the agent's behavior.\",\n            value=\"You are a helpful assistant that can use tools to answer questions and perform tasks.\",\n            advanced=False,\n        ),\n        *LCToolsAgentComponent._base_inputs,\n        *memory_inputs,\n        BoolInput(\n            name=\"add_current_date_tool\",\n            display_name=\"Add tool Current Date\",\n            advanced=True,\n            info=\"If true, will add a tool to the agent that returns the current date.\",\n            value=True,\n        ),\n    ]\n    outputs = [Output(name=\"response\", display_name=\"Response\", method=\"message_response\")]\n\n    async def message_response(self) -> Message:\n        llm_model, display_name = self.get_llm()\n        self.model_name = get_model_name(llm_model, display_name=display_name)\n        if llm_model is None:\n            msg = \"No language model selected\"\n            raise ValueError(msg)\n        self.chat_history = self.get_memory_data()\n\n        if self.add_current_date_tool:\n            if not isinstance(self.tools, list):  # type: ignore[has-type]\n                self.tools = []\n            # Convert CurrentDateComponent to a StructuredTool\n            current_date_tool = CurrentDateComponent().to_toolkit()[0]\n            if isinstance(current_date_tool, StructuredTool):\n                self.tools.append(current_date_tool)\n            else:\n                msg = \"CurrentDateComponent must be converted to a StructuredTool\"\n                raise ValueError(msg)\n\n        if not self.tools:\n            msg = \"Tools are required to run the agent.\"\n            raise ValueError(msg)\n        self.set(\n            llm=llm_model,\n            tools=self.tools,\n            chat_history=self.chat_history,\n            input_value=self.input_value,\n            system_prompt=self.system_prompt,\n        )\n        agent = self.create_agent_runnable()\n        return await self.run_agent(agent)\n\n    def get_memory_data(self):\n        memory_kwargs = {\n            component_input.name: getattr(self, f\"{component_input.name}\") for component_input in self.memory_inputs\n        }\n\n        return MemoryComponent().set(**memory_kwargs).retrieve_messages()\n\n    def get_llm(self):\n        if isinstance(self.agent_llm, str):\n            try:\n                provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n                if provider_info:\n                    component_class = provider_info.get(\"component_class\")\n                    display_name = component_class.display_name\n                    inputs = provider_info.get(\"inputs\")\n                    prefix = provider_info.get(\"prefix\", \"\")\n                    return self._build_llm_model(component_class, inputs, prefix), display_name\n            except Exception as e:\n                msg = f\"Error building {self.agent_llm} language model\"\n                raise ValueError(msg) from e\n        return self.agent_llm, None\n\n    def _build_llm_model(self, component, inputs, prefix=\"\"):\n        model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n        return component.set(**model_kwargs).build_model()\n\n    def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:\n        \"\"\"Delete specified fields from build_config.\"\"\"\n        for field in fields:\n            build_config.pop(field, None)\n\n    def update_input_types(self, build_config: dotdict) -> dotdict:\n        \"\"\"Update input types for all fields in build_config.\"\"\"\n        for key, value in build_config.items():\n            if isinstance(value, dict):\n                if value.get(\"input_types\") is None:\n                    build_config[key][\"input_types\"] = []\n            elif hasattr(value, \"input_types\") and value.input_types is None:\n                value.input_types = []\n        return build_config\n\n    def update_build_config(self, build_config: dotdict, field_value: str, field_name: str | None = None) -> dotdict:\n        # Iterate over all providers in the MODEL_PROVIDERS_DICT\n        # Existing logic for updating build_config\n        if field_name == \"agent_llm\":\n            provider_info = MODEL_PROVIDERS_DICT.get(field_value)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call the component class's update_build_config method\n                    build_config = component_class.update_build_config(build_config, field_value, field_name)\n\n            provider_configs: dict[str, tuple[dict, list[dict]]] = {\n                provider: (\n                    MODEL_PROVIDERS_DICT[provider][\"fields\"],\n                    [\n                        MODEL_PROVIDERS_DICT[other_provider][\"fields\"]\n                        for other_provider in MODEL_PROVIDERS_DICT\n                        if other_provider != provider\n                    ],\n                )\n                for provider in MODEL_PROVIDERS_DICT\n            }\n            if field_value in provider_configs:\n                fields_to_add, fields_to_delete = provider_configs[field_value]\n\n                # Delete fields from other providers\n                for fields in fields_to_delete:\n                    self.delete_fields(build_config, fields)\n\n                # Add provider-specific fields\n                if field_value == \"OpenAI\" and not any(field in build_config for field in fields_to_add):\n                    build_config.update(fields_to_add)\n                else:\n                    build_config.update(fields_to_add)\n                # Reset input types for agent_llm\n                build_config[\"agent_llm\"][\"input_types\"] = []\n            elif field_value == \"Custom\":\n                # Delete all provider fields\n                self.delete_fields(build_config, ALL_PROVIDER_FIELDS)\n                # Update with custom component\n                custom_component = DropdownInput(\n                    name=\"agent_llm\",\n                    display_name=\"Language Model\",\n                    options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n                    value=\"Custom\",\n                    real_time_refresh=True,\n                    input_types=[\"LanguageModel\"],\n                )\n                build_config.update({\"agent_llm\": custom_component.to_dict()})\n            # Update input types for all fields\n            build_config = self.update_input_types(build_config)\n\n            # Validate required keys\n            default_keys = [\n                \"code\",\n                \"_type\",\n                \"agent_llm\",\n                \"tools\",\n                \"input_value\",\n                \"add_current_date_tool\",\n                \"system_prompt\",\n                \"agent_description\",\n                \"max_iterations\",\n                \"handle_parsing_errors\",\n                \"verbose\",\n            ]\n            missing_keys = [key for key in default_keys if key not in build_config]\n            if missing_keys:\n                msg = f\"Missing required keys in build_config: {missing_keys}\"\n                raise ValueError(msg)\n        if isinstance(self.agent_llm, str) and self.agent_llm in MODEL_PROVIDERS_DICT:\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                prefix = provider_info.get(\"prefix\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call each component class's update_build_config method\n                    # remove the prefix from the field_name\n                    if isinstance(field_name, str) and isinstance(prefix, str):\n                        field_name = field_name.replace(prefix, \"\")\n                    build_config = component_class.update_build_config(build_config, field_value, field_name)\n\n        return build_config\n"
               },
               "handle_parsing_errors": {
                 "_input_type": "BoolInput",
@@ -277,9 +255,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input provided by the user for the agent to process.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -353,9 +329,7 @@
                 "display_name": "External Memory",
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
-                "input_types": [
-                  "BaseChatMessageHistory"
-                ],
+                "input_types": ["BaseChatMessageHistory"],
                 "list": false,
                 "name": "memory",
                 "placeholder": "",
@@ -449,10 +423,7 @@
                 "dynamic": false,
                 "info": "Order of the messages.",
                 "name": "order",
-                "options": [
-                  "Ascending",
-                  "Descending"
-                ],
+                "options": ["Ascending", "Descending"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -468,9 +439,7 @@
                 "display_name": "Output Parser",
                 "dynamic": false,
                 "info": "The parser to use to parse the output of the model",
-                "input_types": [
-                  "OutputParser"
-                ],
+                "input_types": ["OutputParser"],
                 "list": false,
                 "name": "output_parser",
                 "placeholder": "",
@@ -521,11 +490,7 @@
                 "dynamic": false,
                 "info": "Filter by sender type.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User",
-                  "Machine and User"
-                ],
+                "options": ["Machine", "User", "Machine and User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -541,9 +506,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Filter by sender name.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -563,9 +526,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -585,9 +546,7 @@
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -624,9 +583,7 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -647,11 +604,7 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": [
-                  "Tool",
-                  "BaseTool",
-                  "StructuredTool"
-                ],
+                "input_types": ["Tool", "BaseTool", "StructuredTool"],
                 "list": true,
                 "name": "tools",
                 "placeholder": "",
@@ -704,10 +657,7 @@
           "display_name": "Yahoo Finance Tool",
           "id": "YahooFinanceTool-PzHUy",
           "node": {
-            "base_classes": [
-              "Data",
-              "Tool"
-            ],
+            "base_classes": ["Data", "Tool"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -715,11 +665,7 @@
             "display_name": "Yahoo Finance Tool",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "symbol",
-              "method",
-              "num_news"
-            ],
+            "field_order": ["symbol", "method", "num_news"],
             "frozen": false,
             "icon": "trending-up",
             "legacy": false,
@@ -734,9 +680,7 @@
                 "name": "api_run_model",
                 "required_inputs": [],
                 "selected": "Data",
-                "types": [
-                  "Data"
-                ],
+                "types": ["Data"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -746,9 +690,7 @@
                 "name": "api_build_tool",
                 "required_inputs": [],
                 "selected": "Tool",
-                "types": [
-                  "Tool"
-                ],
+                "types": ["Tool"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -771,7 +713,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import ast\nimport pprint\nfrom enum import Enum\n\nimport yfinance as yf\nfrom langchain.tools import StructuredTool\nfrom langchain_core.tools import ToolException\nfrom loguru import logger\nfrom pydantic import BaseModel, Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import DropdownInput, IntInput, MessageTextInput\nfrom langflow.schema import Data\n\n\nclass YahooFinanceMethod(Enum):\n    GET_INFO = \"get_info\"\n    GET_NEWS = \"get_news\"\n    GET_ACTIONS = \"get_actions\"\n    GET_ANALYSIS = \"get_analysis\"\n    GET_BALANCE_SHEET = \"get_balance_sheet\"\n    GET_CALENDAR = \"get_calendar\"\n    GET_CASHFLOW = \"get_cashflow\"\n    GET_INSTITUTIONAL_HOLDERS = \"get_institutional_holders\"\n    GET_RECOMMENDATIONS = \"get_recommendations\"\n    GET_SUSTAINABILITY = \"get_sustainability\"\n    GET_MAJOR_HOLDERS = \"get_major_holders\"\n    GET_MUTUALFUND_HOLDERS = \"get_mutualfund_holders\"\n    GET_INSIDER_PURCHASES = \"get_insider_purchases\"\n    GET_INSIDER_TRANSACTIONS = \"get_insider_transactions\"\n    GET_INSIDER_ROSTER_HOLDERS = \"get_insider_roster_holders\"\n    GET_DIVIDENDS = \"get_dividends\"\n    GET_CAPITAL_GAINS = \"get_capital_gains\"\n    GET_SPLITS = \"get_splits\"\n    GET_SHARES = \"get_shares\"\n    GET_FAST_INFO = \"get_fast_info\"\n    GET_SEC_FILINGS = \"get_sec_filings\"\n    GET_RECOMMENDATIONS_SUMMARY = \"get_recommendations_summary\"\n    GET_UPGRADES_DOWNGRADES = \"get_upgrades_downgrades\"\n    GET_EARNINGS = \"get_earnings\"\n    GET_INCOME_STMT = \"get_income_stmt\"\n\n\nclass YahooFinanceSchema(BaseModel):\n    symbol: str = Field(..., description=\"The stock symbol to retrieve data for.\")\n    method: YahooFinanceMethod = Field(YahooFinanceMethod.GET_INFO, description=\"The type of data to retrieve.\")\n    num_news: int | None = Field(5, description=\"The number of news articles to retrieve.\")\n\n\nclass YfinanceToolComponent(LCToolComponent):\n    display_name = \"Yahoo Finance\"\n    description = \"Access financial data and market information using Yahoo Finance.\"\n    icon = \"trending-up\"\n    name = \"YahooFinanceTool\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"symbol\",\n            display_name=\"Stock Symbol\",\n            info=\"The stock symbol to retrieve data for (e.g., AAPL, GOOG).\",\n        ),\n        DropdownInput(\n            name=\"method\",\n            display_name=\"Data Method\",\n            info=\"The type of data to retrieve.\",\n            options=list(YahooFinanceMethod),\n            value=\"get_news\",\n        ),\n        IntInput(\n            name=\"num_news\",\n            display_name=\"Number of News\",\n            info=\"The number of news articles to retrieve (only applicable for get_news).\",\n            value=5,\n        ),\n    ]\n\n    def run_model(self) -> list[Data]:\n        return self._yahoo_finance_tool(\n            self.symbol,\n            self.method,\n            self.num_news,\n        )\n\n    def build_tool(self) -> Tool:\n        return StructuredTool.from_function(\n            name=\"yahoo_finance\",\n            description=\"Access financial data and market information from Yahoo Finance.\",\n            func=self._yahoo_finance_tool,\n            args_schema=YahooFinanceSchema,\n        )\n\n    def _yahoo_finance_tool(\n        self,\n        symbol: str,\n        method: YahooFinanceMethod,\n        num_news: int | None = 5,\n    ) -> list[Data]:\n        ticker = yf.Ticker(symbol)\n\n        try:\n            if method == YahooFinanceMethod.GET_INFO:\n                result = ticker.info\n            elif method == YahooFinanceMethod.GET_NEWS:\n                result = ticker.news[:num_news]\n            else:\n                result = getattr(ticker, method.value)()\n\n            result = pprint.pformat(result)\n\n            if method == YahooFinanceMethod.GET_NEWS:\n                data_list = [Data(data=article) for article in ast.literal_eval(result)]\n            else:\n                data_list = [Data(data={\"result\": result})]\n\n        except Exception as e:\n            error_message = f\"Error retrieving data: {e}\"\n            logger.debug(error_message)\n            self.status = error_message\n            raise ToolException(error_message) from e\n\n        return data_list\n"
+                "value": "import ast\nimport pprint\nfrom enum import Enum\n\nimport yfinance as yf\nfrom langchain.tools import StructuredTool\nfrom langchain_core.tools import ToolException\nfrom loguru import logger\nfrom pydantic import BaseModel, Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import DropdownInput, IntInput, MessageTextInput\nfrom langflow.schema import Data\n\n\nclass YahooFinanceMethod(Enum):\n    GET_INFO = \"get_info\"\n    GET_NEWS = \"get_news\"\n    GET_ACTIONS = \"get_actions\"\n    GET_ANALYSIS = \"get_analysis\"\n    GET_BALANCE_SHEET = \"get_balance_sheet\"\n    GET_CALENDAR = \"get_calendar\"\n    GET_CASHFLOW = \"get_cashflow\"\n    GET_INSTITUTIONAL_HOLDERS = \"get_institutional_holders\"\n    GET_RECOMMENDATIONS = \"get_recommendations\"\n    GET_SUSTAINABILITY = \"get_sustainability\"\n    GET_MAJOR_HOLDERS = \"get_major_holders\"\n    GET_MUTUALFUND_HOLDERS = \"get_mutualfund_holders\"\n    GET_INSIDER_PURCHASES = \"get_insider_purchases\"\n    GET_INSIDER_TRANSACTIONS = \"get_insider_transactions\"\n    GET_INSIDER_ROSTER_HOLDERS = \"get_insider_roster_holders\"\n    GET_DIVIDENDS = \"get_dividends\"\n    GET_CAPITAL_GAINS = \"get_capital_gains\"\n    GET_SPLITS = \"get_splits\"\n    GET_SHARES = \"get_shares\"\n    GET_FAST_INFO = \"get_fast_info\"\n    GET_SEC_FILINGS = \"get_sec_filings\"\n    GET_RECOMMENDATIONS_SUMMARY = \"get_recommendations_summary\"\n    GET_UPGRADES_DOWNGRADES = \"get_upgrades_downgrades\"\n    GET_EARNINGS = \"get_earnings\"\n    GET_INCOME_STMT = \"get_income_stmt\"\n\n\nclass YahooFinanceSchema(BaseModel):\n    symbol: str = Field(..., description=\"The stock symbol to retrieve data for.\")\n    method: YahooFinanceMethod = Field(YahooFinanceMethod.GET_INFO, description=\"The type of data to retrieve.\")\n    num_news: int | None = Field(5, description=\"The number of news articles to retrieve.\")\n\n\nclass YfinanceToolComponent(LCToolComponent):\n    display_name = \"Yahoo Finance\"\n    description = \"\"\"Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) \\\nto access financial data and market information from Yahoo Finance.\"\"\"\n    icon = \"trending-up\"\n    name = \"YahooFinanceTool\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"symbol\",\n            display_name=\"Stock Symbol\",\n            info=\"The stock symbol to retrieve data for (e.g., AAPL, GOOG).\",\n        ),\n        DropdownInput(\n            name=\"method\",\n            display_name=\"Data Method\",\n            info=\"The type of data to retrieve.\",\n            options=list(YahooFinanceMethod),\n            value=\"get_news\",\n        ),\n        IntInput(\n            name=\"num_news\",\n            display_name=\"Number of News\",\n            info=\"The number of news articles to retrieve (only applicable for get_news).\",\n            value=5,\n        ),\n    ]\n\n    def run_model(self) -> list[Data]:\n        return self._yahoo_finance_tool(\n            self.symbol,\n            self.method,\n            self.num_news,\n        )\n\n    def build_tool(self) -> Tool:\n        return StructuredTool.from_function(\n            name=\"yahoo_finance\",\n            description=\"Access financial data and market information from Yahoo Finance.\",\n            func=self._yahoo_finance_tool,\n            args_schema=YahooFinanceSchema,\n        )\n\n    def _yahoo_finance_tool(\n        self,\n        symbol: str,\n        method: YahooFinanceMethod,\n        num_news: int | None = 5,\n    ) -> list[Data]:\n        ticker = yf.Ticker(symbol)\n\n        try:\n            if method == YahooFinanceMethod.GET_INFO:\n                result = ticker.info\n            elif method == YahooFinanceMethod.GET_NEWS:\n                result = ticker.news[:num_news]\n            else:\n                result = getattr(ticker, method.value)()\n\n            result = pprint.pformat(result)\n\n            if method == YahooFinanceMethod.GET_NEWS:\n                data_list = [Data(data=article) for article in ast.literal_eval(result)]\n            else:\n                data_list = [Data(data={\"result\": result})]\n\n        except Exception as e:\n            error_message = f\"Error retrieving data: {e}\"\n            logger.debug(error_message)\n            self.status = error_message\n            raise ToolException(error_message) from e\n\n        return data_list\n"
               },
               "method": {
                 "_input_type": "DropdownInput",
@@ -839,9 +781,7 @@
                 "display_name": "Stock Symbol",
                 "dynamic": false,
                 "info": "The stock symbol to retrieve data for (e.g., AAPL, GOOG).",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "symbol",
@@ -879,9 +819,7 @@
         "data": {
           "id": "ChatInput-dBek4",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -913,9 +851,7 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -928,9 +864,7 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "background_color",
@@ -950,9 +884,7 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "chat_icon",
@@ -1032,9 +964,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as input.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1057,10 +987,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1076,9 +1003,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -1098,9 +1023,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -1136,9 +1059,7 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "text_color",
@@ -1178,9 +1099,7 @@
           "display_name": "Chat Output",
           "id": "ChatOutput-ULcvr",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1211,9 +1130,7 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1226,9 +1143,7 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "background_color",
@@ -1248,9 +1163,7 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "chat_icon",
@@ -1288,9 +1201,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -1310,9 +1221,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -1333,10 +1242,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1352,9 +1258,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -1374,9 +1278,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -1412,9 +1314,7 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "text_color",
@@ -1490,11 +1390,9 @@
   "endpoint_name": null,
   "icon": "Bot",
   "id": "a774332d-6fb5-43b6-96a4-d3eb8e62ddc0",
+  "gradient": "5",
   "is_component": false,
   "last_tested_version": "1.0.19.post2",
   "name": "Simple Agent",
-  "tags": [
-    "assistants",
-    "agents"
-  ]
+  "tags": ["assistants", "agents"]
 }
