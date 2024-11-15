@@ -1,5 +1,5 @@
 from langflow.custom import Component
-from langflow.helpers.data import data_to_text
+from langflow.helpers.data import data_to_text, data_to_text_list
 from langflow.io import DataInput, MultilineInput, Output, StrInput
 from langflow.schema import Data
 from langflow.schema.message import Message
@@ -32,26 +32,28 @@ class ParseDataComponent(Component):
         ),
         Output(
             display_name="Data List",
-            name="data_out",
+            name="data_list",
             info="Data as a list of new Data, each having `text` formatted by Template",
             method="parse_data_as_list",
         ),
     ]
 
-    def _parse(self, sep: str):
+    def _clean_args(self) -> tuple[list[Data], str, str]:
         data = self.data if isinstance(self.data, list) else [self.data]
         template = self.template
-        result = data_to_text(template, data, sep=sep)
-        return result, data
+        sep = self.sep
+        return data, template, sep
 
     def parse_data(self) -> Message:
-        result_string, _ = self._parse(self.sep)
+        data, template, sep = self._clean_args()
+        result_string = data_to_text(template, data, sep)
         self.status = result_string
         return Message(text=result_string)
 
     def parse_data_as_list(self) -> list[Data]:
-        text_list, data_list = self._parse(None)
-        result_data = [Data(data={**item.data, "text": text}) for item, text in zip(data_list, text_list, strict=False)]
-
-        self.status = result_data
-        return result_data
+        data, template, _ = self._clean_args()
+        text_list, data_list = data_to_text_list(template, data)
+        for item, text in zip(data_list, text_list, strict=True):
+            item.set_text(text)
+        self.status = data_list
+        return data_list

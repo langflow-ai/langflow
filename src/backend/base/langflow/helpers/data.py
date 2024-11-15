@@ -16,18 +16,25 @@ def docs_to_data(documents: list[Document]) -> list[Data]:
     return [Data.from_document(document) for document in documents]
 
 
-def data_to_text(template: str, data: Data | list[Data], sep: str = "\n") -> str | list[str]:
-    """Converts a list of Data to a list of texts.
+def data_to_text_list(template: str, data: Data | list[Data]) -> tuple[list[str], list[Data]]:
+    """
+    Converts a Data object or a list of Data objects into a tuple containing a list of formatted strings
+    and a list of Data objects based on a given template.
 
     Args:
-        template (str): The template for formatting each Data item.
-        data (Data | list[Data]): Data object(s) to convert.
-        sep (str): The separator to join the texts if specified.
+        template (str): The format string template to be used for formatting the data.
+        data (Data | list[Data]): A single Data object or a list of Data objects to be formatted.
 
     Returns:
-        str | list[str]: A single formatted text if `sep` is not None,
-                         or a list of individual formatted texts it is None.
+        tuple[list[str], list[Data]]: A tuple containing a list of formatted strings based on the 
+                                      provided template and data, and a list of Data objects.
     """
+    if data is None:
+        return [], []
+
+    if template is None or not isinstance(template, str):
+        raise ValueError("The template must be a string.")
+
     if isinstance(data, (Data)):
         data = [data]
     # Check if there are any format strings in the template
@@ -37,9 +44,24 @@ def data_to_text(template: str, data: Data | list[Data], sep: str = "\n") -> str
         for value in data
     ]
 
-    formated_data = [template.format(data=value.data, **value.data) for value in _data]
-    return formated_data if sep is None else sep.join(formated_data)
+    formatted_text = [template.format(data=value.data, **value.data) for value in _data]
+    return formatted_text, _data
 
+def data_to_text(template: str, data: Data | list[Data], sep: str = "\n") -> str:
+    """
+    Converts data into a formatted text string based on a given template.
+
+    Args:
+        template (str): The template string used to format each data item.
+        data (Data | list[Data]): A single data item or a list of data items to be formatted.
+        sep (str, optional): The separator to use between formatted data items. Defaults to "\n".
+
+    Returns:
+        str: A string containing the formatted data items separated by the specified separator.
+    """
+    formatted_text, _ = data_to_text_list(template, data)
+    sep = "\n" if sep is None else sep
+    return sep.join(formatted_text)
 
 def messages_to_text(template: str, messages: Message | list[Message]) -> str:
     """Converts a list of Messages to a list of texts.
