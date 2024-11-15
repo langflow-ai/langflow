@@ -12,10 +12,7 @@ def get_filtered_inputs(component_class):
     base_input_names = {field.name for field in LCModelComponent._base_inputs}
     component_instance = component_class()
 
-    return [
-        process_inputs(input_) for input_ in component_instance.inputs
-        if input_.name not in base_input_names
-    ]
+    return [process_inputs(input_) for input_ in component_instance.inputs if input_.name not in base_input_names]
 
 
 def process_inputs(component_data):
