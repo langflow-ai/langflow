@@ -1,6 +1,7 @@
 from langflow.custom import Component
-from langflow.io import StrInput, HandleInput, Output, NestedDictInput
+from langflow.io import HandleInput, NestedDictInput, Output, StrInput
 from langflow.schema import Data
+
 
 class AddMetadataComponent(Component):
     display_name = "Add Metadata"
@@ -18,10 +19,10 @@ class AddMetadataComponent(Component):
             is_list=True,
         ),
         StrInput(
-            name="text_in", 
-            display_name="User Text", 
+            name="text_in",
+            display_name="User Text",
             info="Text input; value will be in 'text' attribute of Data object. Empty text entries are ignored.",
-            required=False
+            required=False,
         ),
         NestedDictInput(
             name="metadata",
@@ -31,16 +32,16 @@ class AddMetadataComponent(Component):
             required=True,
         ),
     ]
-    
+
     outputs = [
         Output(
-            name="data", 
-            display_name="Data", 
+            name="data",
+            display_name="Data",
             info="List of Input objects each with added Metadata",
-            method="process_output"
+            method="process_output",
         ),
     ]
-    
+
     def _as_clean_dict(self, obj):
         """Convert a Data object or a standard dictionary to a standard dictionary."""
         if isinstance(obj, dict):
@@ -49,9 +50,8 @@ class AddMetadataComponent(Component):
             as_dict = obj.data
         else:
             raise TypeError("Expected a Data object or a dictionary.")
-            
-        return {k: v for k, v in (as_dict or {}).items() if k and k.strip()}
 
+        return {k: v for k, v in (as_dict or {}).items() if k and k.strip()}
 
     def process_output(self) -> list[Data]:
         # Ensure metadata is a dictionary, filtering out any empty keys
