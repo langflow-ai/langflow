@@ -6,16 +6,12 @@ import { PanelLeft } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "../../utils/utils";
+import ShadTooltip from "../shadTooltipComponent";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Separator } from "./separator";
 import { Skeleton } from "./skeleton";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "./tooltip";
+import { TooltipProvider } from "./tooltip";
 
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
@@ -28,6 +24,7 @@ type SidebarContext = {
   open: boolean;
   setOpen: (open: boolean) => void;
   toggleSidebar: () => void;
+  defaultOpen: boolean;
 };
 
 const SidebarContext = React.createContext<SidebarContext | null>(null);
@@ -114,8 +111,9 @@ const SidebarProvider = React.forwardRef<
         open,
         setOpen,
         toggleSidebar,
+        defaultOpen,
       }),
-      [state, open, setOpen, toggleSidebar],
+      [state, open, setOpen, toggleSidebar, defaultOpen],
     );
 
     return (
@@ -164,29 +162,30 @@ const Sidebar = React.forwardRef<
     },
     ref,
   ) => {
-    const { state, setOpen } = useSidebar();
+    const { state, setOpen, defaultOpen } = useSidebar();
 
     React.useEffect(() => {
       if (collapsible === "none") {
-        console.log("collapsible === none");
         setOpen(true);
+      } else {
+        setOpen(defaultOpen);
       }
     }, [collapsible]);
 
     if (collapsible === "none") {
       return (
         <div
-          className={cn(
-            "group flex h-full w-[--sidebar-width] flex-col bg-background text-foreground",
-            className,
-          )}
+          className={cn("group flex h-full flex-col")}
           data-side={side}
           ref={ref}
           {...props}
         >
           <div
             data-sidebar="sidebar"
-            className="flex h-full w-full flex-col group-data-[side=left]:border-r group-data-[side=right]:border-l"
+            className={cn(
+              "group flex h-full w-[--sidebar-width] flex-col bg-background text-foreground group-data-[side=left]:border-r group-data-[side=right]:border-l",
+              className,
+            )}
           >
             {children}
           </div>
@@ -442,7 +441,7 @@ const SidebarGroupLabel = React.forwardRef<
       data-sidebar="group-label"
       className={cn(
         "flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-semibold text-foreground/70 outline-none ring-ring transition-[margin,opa] duration-200 ease-linear focus-visible:ring-1 [&>svg]:size-4 [&>svg]:shrink-0",
-        "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
+        "group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
         className,
       )}
       {...props}
@@ -542,7 +541,7 @@ const SidebarMenuButton = React.forwardRef<
   React.ComponentProps<"button"> & {
     asChild?: boolean;
     isActive?: boolean;
-    tooltip?: string | React.ComponentProps<typeof TooltipContent>;
+    tooltip?: string | React.ReactNode;
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
   (
@@ -575,22 +574,13 @@ const SidebarMenuButton = React.forwardRef<
       return button;
     }
 
-    if (typeof tooltip === "string") {
-      tooltip = {
-        children: tooltip,
-      };
-    }
-
     return (
-      <Tooltip>
-        <TooltipTrigger asChild>{button}</TooltipTrigger>
-        <TooltipContent
-          side="right"
-          align="center"
-          hidden={state !== "collapsed"}
-          {...tooltip}
-        />
-      </Tooltip>
+      <ShadTooltip
+        side="right"
+        content={state == "collapsed" ? tooltip : undefined}
+      >
+        {button}
+      </ShadTooltip>
     );
   },
 );

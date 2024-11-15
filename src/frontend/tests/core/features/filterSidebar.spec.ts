@@ -84,7 +84,7 @@ test("user must see on handle click the possibility connections - LLMChain", asy
   await expect(page.getByTestId("outputsChat Output")).toBeVisible();
   await expect(page.getByTestId("promptsPrompt")).toBeVisible();
   await expect(page.getByTestId("modelsAmazon Bedrock")).toBeVisible();
-  await expect(page.getByTestId("memoriesChat Memory")).toBeVisible();
+  await expect(page.getByTestId("helpersMessage History")).toBeVisible();
   await expect(page.getByTestId("langchain_utilitiesCSVAgent")).toBeVisible();
   await expect(
     page.getByTestId("langchain_utilitiesConversationChain"),
@@ -106,7 +106,7 @@ test("user must see on handle click the possibility connections - LLMChain", asy
   await expect(page.getByTestId("outputsChat Output")).not.toBeVisible();
   await expect(page.getByTestId("promptsPrompt")).not.toBeVisible();
   await expect(page.getByTestId("modelsAmazon Bedrock")).not.toBeVisible();
-  await expect(page.getByTestId("memoriesChat Memory")).not.toBeVisible();
+  await expect(page.getByTestId("helpersMessage History")).not.toBeVisible();
   await expect(page.getByTestId("agentsTool Calling Agent")).not.toBeVisible();
   await expect(
     page.getByTestId("langchain_utilitiesConversationChain"),
@@ -123,7 +123,7 @@ test("user must see on handle click the possibility connections - LLMChain", asy
   await expect(page.getByTestId("disclosure-tools")).toBeVisible();
 
   await expect(page.getByTestId("dataAPI Request")).toBeVisible();
-  await expect(page.getByTestId("memoriesChat Memory")).toBeVisible();
+  await expect(page.getByTestId("helpersMessage History")).toBeVisible();
   await expect(page.getByTestId("vectorstoresAstra DB")).toBeVisible();
   await expect(page.getByTestId("toolsSearch API")).toBeVisible();
   await expect(page.getByTestId("logicSub Flow")).not.toBeVisible();
@@ -136,17 +136,17 @@ test("user must see on handle click the possibility connections - LLMChain", asy
 
   await expect(page.getByTestId("logicSub Flow")).toBeVisible();
 
-  await expect(page.getByTestId("helpersSplit Text")).toBeVisible();
+  await expect(page.getByTestId("processingSplit Text")).toBeVisible();
   await expect(page.getByTestId("toolsSearch API")).toBeVisible();
 
   await page.getByTestId("icon-X").first().click();
 
   await expect(page.getByTestId("dataAPI Request")).not.toBeVisible();
-  await expect(page.getByTestId("memoriesChat Memory")).not.toBeVisible();
+  await expect(page.getByTestId("helpersMessage History")).not.toBeVisible();
   await expect(page.getByTestId("vectorstoresAstra DB")).not.toBeVisible();
   await expect(page.getByTestId("toolsSearch API")).not.toBeVisible();
   await expect(page.getByTestId("logicSub Flow")).not.toBeVisible();
 
-  await expect(page.getByTestId("helpersSplit Text")).not.toBeVisible();
+  await expect(page.getByTestId("processingSplit Text")).not.toBeVisible();
   await expect(page.getByTestId("toolsSearch API")).not.toBeVisible();
 });

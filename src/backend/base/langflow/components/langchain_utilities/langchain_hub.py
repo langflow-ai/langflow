@@ -9,7 +9,7 @@ from langflow.schema.message import Message
 
 
 class LangChainHubPromptComponent(Component):
-    display_name: str = "LangChain Hub"
+    display_name: str = "Prompt Hub"
     description: str = "Prompt Component that uses LangChain Hub prompts"
     beta = True
     icon = "LangChain"
@@ -99,9 +99,11 @@ class LangChainHubPromptComponent(Component):
         template = self._fetch_langchain_hub_template()
 
         # Get the parameters from the attributes
-        original_params = {k.removeprefix("param_"): v for k, v in self._attributes.items()}
+        params_dict = {param: getattr(self, "param_" + param, f"{{{param}}}") for param in template.input_variables}
+        original_params = {k: v.text if hasattr(v, "text") else v for k, v in params_dict.items() if v is not None}
         prompt_value = template.invoke(original_params)
 
+        # Update the template with the new value
         original_params["template"] = prompt_value.to_string()
 
         # Now pass the filtered attributes to the function

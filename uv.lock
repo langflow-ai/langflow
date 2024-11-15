@@ -1759,7 +1759,7 @@ wheels = [
 
 [[package]]
 name = "firecrawl-py"
-version = "1.3.0"
+version = "1.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "nest-asyncio" },
@@ -1767,9 +1767,9 @@ dependencies = [
     { name = "requests" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/37/35/5aff1320056add9e14e986aa2996d5151ec2e1d1bb6e57f3c7856f15cf1e/firecrawl_py-1.3.0.tar.gz", hash = "sha256:dc9c8f95e4c14bdc65f380599ebabdab6d7b3ab38cc3e4678dda47d3fe2f5f33", size = 16143 }
+sdist = { url = "https://files.pythonhosted.org/packages/0f/d2/806cf45c5bd17d978eec19f5449ea5d0be59ddbe7edbb18d4a9f77c7da96/firecrawl_py-1.5.0.tar.gz", hash = "sha256:b313743c463e6a7a92982053b0b9e1ef1763e4c0945e579e999cf10e387f1889", size = 17418 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4f/99/50587bbbe0fe3f2d43729b936a8634ee7df75d45cfcb6e092b487ac7a089/firecrawl_py-1.3.0-py3-none-any.whl", hash = "sha256:47f6489ba308ffefbe6e2ed7d679cc894b40e4e5ae49b21073253bb8df7c3d80", size = 15301 },
+    { url = "https://files.pythonhosted.org/packages/a1/17/d3bb4536858c286166de9b0f3d6d7ac72c6199fd1a01cff9f138433eb909/firecrawl_py-1.5.0-py3-none-any.whl", hash = "sha256:1787d0ff69aa808498243571d40fa5732b9fb393880d99ea1952dd2aa4dc5679", size = 16429 },
 ]
 
 [[package]]
@@ -3163,16 +3163,16 @@ wheels = [
 
 [[package]]
 name = "langchain-astradb"
-version = "0.5.1"
+version = "0.5.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "astrapy" },
     { name = "langchain-community" },
     { name = "numpy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2b/ca/a8fc3d2635fb98724c6886676f1128ba676ba75114f14f0218024615a358/langchain_astradb-0.5.1.tar.gz", hash = "sha256:7517c6edb75eaa33b53d5ea616716dfe08aff278c11cfe30690f102b2bdf5078", size = 45868 }
+sdist = { url = "https://files.pythonhosted.org/packages/fe/0d/fbb4e5d04d6da0327781de39c6409f32b1c2c1eb9004dac9c638753f3d6d/langchain_astradb-0.5.2.tar.gz", hash = "sha256:ff70c70ec72d6bce7f0fdad5ac561d1c6d1372100fc1e62f135010418ff9a203", size = 50321 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2b/e3/6f8bd87e5382fa65220036058f8a753a37ba23fcde14e53aa176033409f7/langchain_astradb-0.5.1-py3-none-any.whl", hash = "sha256:1dcb52da7edb0376a8478d0a4744f05490baf035d8f60739d1c13e1036e9be72", size = 53395 },
+    { url = "https://files.pythonhosted.org/packages/78/4e/6a92293669504831a34661aeb897ac5475af1320a39019c9a76ed1215436/langchain_astradb-0.5.2-py3-none-any.whl", hash = "sha256:da1d58f82825bc9505fce300fa6acac59abffd41b4ff435523c81d8dda049e9f", size = 56711 },
 ]
 
 [[package]]
@@ -3506,7 +3506,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.0.19.post2"
+version = "1.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "assemblyai" },
@@ -3671,7 +3671,7 @@ requires-dist = [
     { name = "faiss-cpu", specifier = ">=1.8.0" },
     { name = "fake-useragent", specifier = ">=1.5.0" },
     { name = "fastavro", specifier = ">=1.8.0" },
-    { name = "firecrawl-py", specifier = ">=0.0.16" },
+    { name = "firecrawl-py", specifier = "==1.5.0" },
     { name = "flower", marker = "extra == 'deploy'", specifier = ">=2.0.0" },
     { name = "gitpython", specifier = ">=3.1.43" },
     { name = "google-api-python-client", specifier = ">=2.130.0" },
@@ -3682,7 +3682,7 @@ requires-dist = [
     { name = "kubernetes", specifier = ">=30.1.0" },
     { name = "langchain", specifier = "~=0.3.3" },
     { name = "langchain-anthropic", specifier = ">=0.1.23" },
-    { name = "langchain-astradb", specifier = "~=0.5.1" },
+    { name = "langchain-astradb", specifier = "~=0.5.2" },
     { name = "langchain-aws", specifier = ">=0.1.16" },
     { name = "langchain-chroma", specifier = ">=0.1.1" },
     { name = "langchain-cohere", specifier = ">=0.1.5" },
@@ -3782,7 +3782,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.0.97"
+version = "0.1.0"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofiles" },
@@ -3989,7 +3989,7 @@ requires-dist = [
     { name = "setuptools", specifier = ">=70" },
     { name = "spider-client", specifier = ">=0.0.27" },
     { name = "sqlmodel", specifier = "==0.0.18" },
-    { name = "typer", specifier = ">=0.12.0" },
+    { name = "typer", specifier = ">=0.13.0" },
     { name = "types-google-cloud-ndb", marker = "extra == 'dev'", specifier = ">=2.2.0.0" },
     { name = "types-markdown", marker = "extra == 'dev'", specifier = ">=3.7.0.20240822" },
     { name = "types-passlib", marker = "extra == 'dev'", specifier = ">=1.7.7.13" },
@@ -7733,7 +7733,7 @@ wheels = [
 
 [[package]]
 name = "typer"
-version = "0.12.5"
+version = "0.13.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -7741,9 +7741,9 @@ dependencies = [
     { name = "shellingham" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c5/58/a79003b91ac2c6890fc5d90145c662fd5771c6f11447f116b63300436bc9/typer-0.12.5.tar.gz", hash = "sha256:f592f089bedcc8ec1b974125d64851029c3b1af145f04aca64d69410f0c9b722", size = 98953 }
+sdist = { url = "https://files.pythonhosted.org/packages/e7/87/9eb07fdfa14e22ec7658b5b1147836d22df3848a22c85a4e18ed272303a5/typer-0.13.0.tar.gz", hash = "sha256:f1c7198347939361eec90139ffa0fd8b3df3a2259d5852a0f7400e476d95985c", size = 97572 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a8/2b/886d13e742e514f704c33c4caa7df0f3b89e5a25ef8db02aa9ca3d9535d5/typer-0.12.5-py3-none-any.whl", hash = "sha256:62fe4e471711b147e3365034133904df3e235698399bc4de2b36c8579298d52b", size = 47288 },
+    { url = "https://files.pythonhosted.org/packages/18/7e/c8bfa8cbcd3ea1d25d2beb359b5c5a3f4339a7e2e5d9e3ef3e29ba3ab3b9/typer-0.13.0-py3-none-any.whl", hash = "sha256:d85fe0b777b2517cc99c8055ed735452f2659cd45e451507c76f48ce5c1d00e2", size = 44194 },
 ]
 
 [[package]]

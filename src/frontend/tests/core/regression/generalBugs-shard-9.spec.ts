@@ -39,7 +39,7 @@ test("memory should work as expect", async ({ page }) => {
   await page.getByTestId("fit_view").click();
 
   await page.getByTestId("sidebar-search-input").click();
-  await page.getByTestId("sidebar-search-input").fill("chat memory");
+  await page.getByTestId("sidebar-search-input").fill("message history");
 
   await page.getByTestId("sidebar-options-trigger").click();
   await page.getByTestId("sidebar-legacy-switch").isVisible({ timeout: 5000 });
@@ -76,7 +76,7 @@ test("memory should work as expect", async ({ page }) => {
   await page.mouse.up();
 
   await page
-    .getByTestId("memoriesChat Memory")
+    .getByTestId("helpersMessage History")
     .first()
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 

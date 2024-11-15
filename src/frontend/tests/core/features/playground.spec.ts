@@ -269,7 +269,7 @@ test("fresh start playground", async ({ page }) => {
   await page.getByTestId("input-chat-playground").click();
   await page.getByTestId("input-chat-playground").fill("second session");
   await page.keyboard.press("Enter");
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(5000);
 
   await page.getByTestId("chat-message-User-second session").click();
   await page
