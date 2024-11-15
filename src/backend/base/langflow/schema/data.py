@@ -55,9 +55,12 @@ class Data(BaseModel):
         return self.data.get(self.text_key, self.default_value)
 
     def set_text(self, text: str | None) -> str:
-        """Sets the text value in the data dictionary.
+        r"""Sets the text value in the data dictionary.
+
+        The object's `text` value is set to `text parameter as given, with the following modifications:
+        
          - `text` value of `None` is converted to an empty string.
-         - `text` value is converted to `str`
+         - `text` value is converted to `str` type.
 
         Args:
             text (str): The text to be set in the data dictionary.

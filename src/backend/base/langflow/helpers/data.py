@@ -17,7 +17,9 @@ def docs_to_data(documents: list[Document]) -> list[Data]:
 
 
 def data_to_text_list(template: str, data: Data | list[Data]) -> tuple[list[str], list[Data]]:
-    """Converts a Data object or a list of Data objects into a tuple containing a list of formatted strings
+    """Formats `text` within Data objects based on a given template.
+    
+    Converts a Data object or a list of Data objects into a tuple containing a list of formatted strings
     and a list of Data objects based on a given template.
 
     Args:
@@ -31,8 +33,13 @@ def data_to_text_list(template: str, data: Data | list[Data]) -> tuple[list[str]
     if data is None:
         return [], []
 
-    if template is None or not isinstance(template, str):
-        raise ValueError("The template must be a string.")
+    if template is None:
+        msg = "Template must be a string, but got None."
+        raise ValueError(msg)
+    
+    if not isinstance(template, str):        
+        msg = f"Template must be a string, but got {type(template)}"
+        raise TypeError(msg)
 
     if isinstance(data, (Data)):
         data = [data]
