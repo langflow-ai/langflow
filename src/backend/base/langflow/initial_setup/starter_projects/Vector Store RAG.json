@@ -1025,39 +1025,39 @@
         "type": "noteNode",
         "width": 324
     },
-      {
-        "data": {
-          "id": "note-9DvF2",
+    {
+      "data": {
+          "id": "note-39jdn",
           "node": {
-            "description": "## 📖 README\n\nLoad your data into a vector database with the 📚 **Load Data** flow, and then use your data as chat context with the 🐕 **Retriever** flow.\n\n**🚨 Add your OpenAI API key as a global variable to easily add it to all of the OpenAI components in this flow.** \n\n**Quick start**:\n1. Run the 📚 **Load Data** flow.\n2. Run the 🐕 **Retriever** flow.\n\n**Next steps** \n\n- Experiment by changing the prompt and the loaded data to see how the bot's responses change. \n\nFor more info, see the [Langflow docs](https://docs.langflow.org/starter-projects-vector-store-rag).",
-            "display_name": "Read Me",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "neutral"
-            }
+              "description": "## 📖 README\n\nLoad your data into a vector database with the 📚 **Load Data** flow, and then use your data as chat context with the 🐕 **Retriever** flow.\n\n**🚨 Add your OpenAI API key as a global variable to easily add it to all of the OpenAI components in this flow.** \n\n**Quick start**:\n1. Run the 📚 **Load Data** flow.\n2. Run the 🐕 **Retriever** flow.\n\n**Next steps** \n\n- Experiment by changing the prompt and the loaded data to see how the bot's responses change. \n\nFor more info, see the [Langflow docs](https://docs.langflow.org/starter-projects-vector-store-rag).",
+              "display_name": "Read Me",
+              "documentation": "",
+              "template": {
+                  "backgroundColor": "neutral"
+              }
           },
           "type": "note"
-        },
-        "dragging": false,
-        "height": 798,
-        "id": "note-9DvF2",
-        "position": {
-          "x": 134.64227176140844,
-          "y": 307.10406179806375
-        },
-        "positionAbsolute": {
-          "x": 134.64227176140844,
-          "y": 307.10406179806375
-        },
-        "resizing": false,
-        "selected": false,
-        "style": {
+      },
+      "dragging": false,
+      "height": 798,
+      "id": "note-39jdn",
+      "position": {
+          "x": 94.28986613312418,
+          "y": 907.6428043837066
+      },
+      "positionAbsolute": {
+          "x": 94.28986613312418,
+          "y": 907.6428043837066
+      },
+      "resizing": false,
+      "selected": false,
+      "style": {
           "height": 798,
           "width": 600
-        },
-        "type": "noteNode",
-        "width": 600
       },
+      "type": "noteNode",
+      "width": 600
+  },
       {
         "data": {
           "id": "OpenAIModel-H0ANr",
@@ -3240,14 +3240,14 @@
         "width": 320
       },
       {
-        "id": "note-OmnIn",
+        "id": "note-igpjN",
         "type": "noteNode",
         "position": {
-            "x": 1244.2436940032012,
-            "y": 1543.8570649359772
+            "x": 955.3277857006676,
+            "y": 1552.171191793604
         },
         "data": {
-            "id": "note-OmnIn",
+            "id": "note-igpjN",
             "node": {
                 "description": "## 🐕 2. Retriever Flow\n\nDescription\n\nOpen the **Playground** and ask, ```What is the document is about?```\n",
                 "display_name": "",
@@ -3262,8 +3262,8 @@
         "width": 325,
         "height": 325,
         "positionAbsolute": {
-            "x": 1244.2436940032012,
-            "y": 1543.8570649359772
+            "x": 955.3277857006676,
+            "y": 1552.171191793604
         },
         "dragging": false
     },
