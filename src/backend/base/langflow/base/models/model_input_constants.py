@@ -10,9 +10,10 @@ from langflow.inputs.inputs import SecretStrInput
 
 def get_filtered_inputs(component_class):
     base_input_names = {field.name for field in LCModelComponent._base_inputs}
+    component_instance = component_class()
 
     return [
-        process_inputs(input_) for input_ in component_class().inputs
+        process_inputs(input_) for input_ in component_instance.inputs
         if input_.name not in base_input_names
     ]
 
@@ -21,7 +22,7 @@ def process_inputs(component_data):
     if isinstance(component_data, SecretStrInput):
         component_data.value = ""
         component_data.load_from_db = False
-    if component_data.name == "temperature":
+    elif component_data.name == "temperature":
         component_data = set_advanced_true(component_data)
     return component_data
 
