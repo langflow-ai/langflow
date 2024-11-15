@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 from typing import Any
 
+from composio.client.collections import AppAuthScheme
 from composio.client.exceptions import NoItemsFound
 from composio_langchain import Action, App, ComposioToolSet
 from langchain_core.tools import Tool
@@ -35,12 +36,31 @@ class ComposioAPIComponent(LCToolComponent):
             info="The app name to use. Please refresh after selecting app name",
             refresh_button=True,
         ),
+        # Initially hidden fields for different auth types
+        SecretStrInput(
+            name="app_credentials",
+            display_name="App Credentials",
+            required=False,
+            dynamic=True,
+            show=False,
+            info="Credentials for app authentication (API Key, Password, etc)",
+        ),
+        MessageTextInput(
+            name="username",
+            display_name="Username",
+            required=False,
+            dynamic=True,
+            show=False,
+            info="Username for Basic authentication",
+        ),
         LinkInput(
             name="auth_link",
             display_name="Authentication Link",
             value="",
-            info="Click to authenticate with the selected app",
+            info="Click to authenticate with OAuth2",
             dynamic=True,
+            show=False,
+            placeholder="Click to authenticate",
         ),
         StrInput(
             name="auth_status",
@@ -48,6 +68,7 @@ class ComposioAPIComponent(LCToolComponent):
             value="Not Connected",
             info="Current authentication status",
             dynamic=True,
+            show=False,
         ),
         MultiselectInput(
             name="action_names",
@@ -57,6 +78,7 @@ class ComposioAPIComponent(LCToolComponent):
             value=[],
             info="The actions to pass to agent to execute",
             dynamic=True,
+            show=False,
         ),
     ]
 
@@ -67,65 +89,110 @@ class ComposioAPIComponent(LCToolComponent):
             app (str): The app name to check authorization for.
 
         Returns:
-            str: The authorization status.
+            str: The authorization status or URL.
         """
         toolset = self._build_wrapper()
         entity = toolset.client.get_entity(id=self.entity_id)
         try:
+            # Check if user is already connected
             entity.get_connection(app=app)
-        except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Authorization error")
-            return self._handle_authorization_failure(toolset, entity, app)
-
-        return f"{app} CONNECTED"
-
-    def _handle_authorization_failure(self, toolset: ComposioToolSet, entity: Any, app: str) -> str:
-        """Handles the authorization failure by attempting to process API key auth or initiate default connection.
-
-        Args:
-            toolset (ComposioToolSet): The toolset instance.
-            entity (Any): The entity instance.
-            app (str): The app name.
-
-        Returns:
-            str: The result of the authorization failure message.
-        """
-        try:
-            auth_schemes = toolset.client.apps.get(app).auth_schemes
-            if auth_schemes[0].auth_mode == "API_KEY":
-                return self._process_api_key_auth(entity, app)
-            return self._initiate_default_connection(entity, app)
+        except NoItemsFound:
+            # Get auth scheme for the app
+            auth_scheme = self._get_auth_scheme(app)
+            return self._handle_auth_by_scheme(entity, app, auth_scheme)
         except Exception:  # noqa: BLE001
             logger.exception("Authorization error")
-            return "Error"
+            return "Error checking authorization"
+        else:
+            return f"{app} CONNECTED"
 
-    def _process_api_key_auth(self, entity: Any, app: str) -> str:
-        """Processes the API key authentication.
+    def _get_auth_scheme(self, app_name: str) -> AppAuthScheme:
+        """Get the primary auth scheme for an app.
+
+        Args:
+            app_name (str): The name of the app to get auth scheme for.
+
+        Returns:
+            AppAuthScheme: The auth scheme details.
+        """
+        toolset = self._build_wrapper()
+        try:
+            return toolset.get_auth_scheme_for_app(app=app_name.lower())
+        except Exception:  # noqa: BLE001
+            logger.exception(f"Error getting auth scheme for {app_name}")
+            return None
+
+    def _handle_auth_by_scheme(self, entity: Any, app: str, auth_scheme: AppAuthScheme) -> str:
+        """Handle authentication based on the auth scheme.
 
         Args:
             entity (Any): The entity instance.
             app (str): The app name.
+            auth_scheme (AppAuthScheme): The auth scheme details.
 
         Returns:
-            str: The status of the API key authentication.
+            str: The authentication status or URL.
         """
-        auth_status_config = self.auth_status_config
-        is_url = "http" in auth_status_config or "https" in auth_status_config
-        is_different_app = "CONNECTED" in auth_status_config and app not in auth_status_config
-        is_default_api_key_message = "API Key" in auth_status_config
+        auth_mode = auth_scheme.auth_mode
 
-        if is_different_app or is_url or is_default_api_key_message:
-            return "Enter API Key"
-        if not is_default_api_key_message:
-            entity.initiate_connection(
-                app_name=app,
-                auth_mode="API_KEY",
-                auth_config={"api_key": self.auth_status_config},
-                use_composio_auth=False,
-                force_new_integration=True,
-            )
+        try:
+            # First check if already connected
+            entity.get_connection(app=app)
+        except NoItemsFound:
+            # If not connected, handle new connection based on auth mode
+            if auth_mode == "API_KEY":
+                if hasattr(self, "app_credentials") and self.app_credentials:
+                    try:
+                        entity.initiate_connection(
+                            app_name=app,
+                            auth_mode="API_KEY",
+                            auth_config={"api_key": self.app_credentials},
+                            use_composio_auth=False,
+                            force_new_integration=True,
+                        )
+                    except Exception as e:  # noqa: BLE001
+                        logger.error(f"Error connecting with API Key: {e}")
+                        return "Invalid API Key"
+                    else:
+                        return f"{app} CONNECTED"
+                return "Enter API Key"
+
+            if (
+                auth_mode == "BASIC"
+                and hasattr(self, "username")
+                and hasattr(self, "app_credentials")
+                and self.username
+                and self.app_credentials
+            ):
+                try:
+                    entity.initiate_connection(
+                        app_name=app,
+                        auth_mode="BASIC",
+                        auth_config={"username": self.username, "password": self.app_credentials},
+                        use_composio_auth=False,
+                        force_new_integration=True,
+                    )
+                except Exception as e:  # noqa: BLE001
+                    logger.error(f"Error connecting with Basic Auth: {e}")
+                    return "Invalid credentials"
+                else:
+                    return f"{app} CONNECTED"
+            elif auth_mode == "BASIC":
+                return "Enter Username and Password"
+
+            if auth_mode == "OAUTH2":
+                try:
+                    return self._initiate_default_connection(entity, app)
+                except Exception as e:  # noqa: BLE001
+                    logger.error(f"Error initiating OAuth2: {e}")
+                    return "OAuth2 initialization failed"
+
+            return "Unsupported auth mode"
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Error checking connection status: {e}")
+            return f"Error: {e!s}"
+        else:
             return f"{app} CONNECTED"
-        return "Enter API Key"
 
     def _initiate_default_connection(self, entity: Any, app: str) -> str:
         connection = entity.initiate_connection(app_name=app, use_composio_auth=True, force_new_integration=True)
@@ -154,47 +221,85 @@ class ComposioAPIComponent(LCToolComponent):
 
     @override
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
+        # First, ensure all dynamic fields are hidden by default
+        dynamic_fields = ["app_credentials", "username", "auth_link", "auth_status", "action_names"]
+        for field in dynamic_fields:
+            if field in build_config:
+                build_config[field]["show"] = False
+                build_config[field]["advanced"] = True  # Hide from main view
+
         if field_name == "api_key":
             if hasattr(self, "api_key") and self.api_key != "":
                 build_config = self._update_app_names_with_connected_status(build_config)
+                # Show app_names when API key is provided
+                build_config["app_names"]["show"] = True
+                build_config["app_names"]["advanced"] = False
             return build_config
 
         if field_name in {"app_names"} and hasattr(self, "api_key") and self.api_key != "":
             app_name = self._get_normalized_app_name()
 
-            # Check auth status
             try:
                 toolset = self._build_wrapper()
                 entity = toolset.client.get_entity(id=self.entity_id)
+
+                # Always show auth_status when app is selected
+                build_config["auth_status"]["show"] = True
+                build_config["auth_status"]["advanced"] = False
+
                 try:
+                    # Check if already connected
                     entity.get_connection(app=app_name)
                     build_config["auth_status"]["value"] = f"{app_name} CONNECTED"
-                    build_config["auth_link"]["value"] = ""  # Clear auth link when connected
+
+                    # Show action selection for connected apps
+                    build_config["action_names"]["show"] = True
+                    build_config["action_names"]["advanced"] = False
+
                 except NoItemsFound:
-                    # Check if app uses API key auth
-                    auth_schemes = toolset.client.apps.get(app_name).auth_schemes
-                    if auth_schemes[0].auth_mode == "API_KEY":
+                    # Get auth scheme and show relevant fields
+                    auth_scheme = self._get_auth_scheme(app_name)
+                    auth_mode = auth_scheme.auth_mode
+                    logger.info(f"Auth mode for {app_name}: {auth_mode}")
+
+                    if auth_mode == "API_KEY":
+                        build_config["app_credentials"]["show"] = True
+                        build_config["app_credentials"]["advanced"] = False
+                        build_config["app_credentials"]["display_name"] = "API Key"
                         build_config["auth_status"]["value"] = "Enter API Key"
-                        build_config["auth_link"]["value"] = ""  # No link needed for API key auth
-                    else:
-                        # Generate OAuth auth URL
+
+                    elif auth_mode == "BASIC":
+                        build_config["username"]["show"] = True
+                        build_config["username"]["advanced"] = False
+                        build_config["app_credentials"]["show"] = True
+                        build_config["app_credentials"]["advanced"] = False
+                        build_config["app_credentials"]["display_name"] = "Password"
+                        build_config["auth_status"]["value"] = "Enter Username and Password"
+
+                    elif auth_mode == "OAUTH2":
+                        build_config["auth_link"]["show"] = True
+                        build_config["auth_link"]["advanced"] = False
                         auth_url = self._initiate_default_connection(entity, app_name)
                         build_config["auth_link"]["value"] = auth_url
                         build_config["auth_status"]["value"] = "Click link to authenticate"
-            except Exception as e:  # noqa: BLE001
-                logger.error(f"Error checking auth status: {e}")
-                build_config["auth_link"]["value"] = ""
-                build_config["auth_status"]["value"] = f"Error: {e!s}"
 
-            # Update action names
-            all_action_names = list(Action.__annotations__)
-            app_action_names = [
-                action_name
-                for action_name in all_action_names
-                if action_name.lower().startswith(app_name.lower() + "_")
-            ]
-            build_config["action_names"]["options"] = app_action_names
-            build_config["action_names"]["value"] = [app_action_names[0]] if app_action_names else [""]
+                    else:
+                        build_config["auth_status"]["value"] = "Unsupported auth mode"
+
+                # Update action names if connected
+                if build_config["auth_status"]["value"] == f"{app_name} CONNECTED":
+                    all_action_names = list(Action.__annotations__)
+                    app_action_names = [
+                        action_name
+                        for action_name in all_action_names
+                        if action_name.lower().startswith(app_name.lower() + "_")
+                    ]
+                    build_config["action_names"]["options"] = app_action_names
+                    build_config["action_names"]["value"] = [app_action_names[0]] if app_action_names else [""]
+
+            except Exception as e:  # noqa: BLE001
+                logger.error(f"Error checking auth status: {e}, app: {app_name}")
+                build_config["auth_status"]["value"] = f"Error: {e!s}"
 
         return build_config
 
@@ -203,4 +308,20 @@ class ComposioAPIComponent(LCToolComponent):
         return composio_toolset.get_tools(actions=self.action_names)
 
     def _build_wrapper(self) -> ComposioToolSet:
-        return ComposioToolSet(api_key=self.api_key)
+        """Build the Composio toolset wrapper.
+
+        Returns:
+            ComposioToolSet: The initialized toolset.
+
+        Raises:
+            ValueError: If the API key is not found or invalid.
+        """
+        try:
+            if not self.api_key:
+                msg = "Composio API Key is required"
+                raise ValueError(msg)
+            return ComposioToolSet(api_key=self.api_key)
+        except ValueError as e:
+            logger.error(f"Error building Composio wrapper: {e}")
+            msg = "Please provide a valid Composio API Key in the component settings"
+            raise ValueError(msg) from e
