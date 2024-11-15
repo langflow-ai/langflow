@@ -124,6 +124,9 @@ const config = {
         "chat-bot-icon": "var(--chat-bot-icon)",
         "chat-user-icon": "var(--chat-user-icon)",
         "code-background": "hsl(var(--code-background))",
+        "code-description-background":
+          "hsl(var(--code-description-background))",
+        "code-foreground": "hsl(var(--code-foreground))",
         canvas: {
           DEFAULT: "hsl(var(--canvas))",
           dot: "hsl(var(--canvas-dot))",
@@ -272,12 +275,12 @@ const config = {
         xs: "2px",
       },
       zIndex: {
-        '60': '60',
-        '70': '70',
-        '80': '80',
-        '90': '90',
-        '100': '100',
-        '999': '999',
+        60: "60",
+        70: "70",
+        80: "80",
+        90: "90",
+        100: "100",
+        999: "999",
       },
     },
   },
