@@ -47,7 +47,9 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
   await page.locator('input[name="password"]').fill(randomPassword);
   await page.locator('input[name="confirmpassword"]').fill(randomPassword);
 
-  await page.waitForTimeout(1000);
+  await page.waitForSelector("#is_active", {
+    timeout: 1500,
+  });
 
   await page.locator("#is_active").click();
 
@@ -55,22 +57,19 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
 
   await page.waitForSelector("text=new user added", { timeout: 30000 });
 
-  await page.waitForTimeout(1000);
-
-  expect(await page.getByText(randomName, { exact: true }).isVisible()).toBe(
-    true,
-  );
+  await expect(page.getByText(randomName, { exact: true })).toBeVisible({
+    timeout: 2000,
+  });
 
   await page.getByTestId("icon-Trash2").last().click();
   await page.getByText("Delete", { exact: true }).last().click();
 
   await page.waitForSelector("text=user deleted", { timeout: 30000 });
 
-  await page.waitForTimeout(1000);
-
-  expect(await page.getByText(randomName, { exact: true }).isVisible()).toBe(
-    false,
-  );
+  await expect(page.getByText(randomName, { exact: true })).toBeVisible({
+    timeout: 2000,
+    visible: false,
+  });
 
   await page.getByText("New User", { exact: true }).click();
 
@@ -78,7 +77,9 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
   await page.locator('input[name="password"]').fill(randomPassword);
   await page.locator('input[name="confirmpassword"]').fill(randomPassword);
 
-  await page.waitForTimeout(1000);
+  await page.waitForSelector("#is_active", {
+    timeout: 1500,
+  });
 
   await page.locator("#is_active").click();
 
@@ -96,11 +97,9 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
 
   await page.waitForSelector("text=user edited", { timeout: 30000 });
 
-  await page.waitForTimeout(1000);
-
-  expect(
-    await page.getByText(secondRandomName, { exact: true }).isVisible(),
-  ).toBe(true);
+  await expect(page.getByText(secondRandomName, { exact: true })).toBeVisible({
+    timeout: 2000,
+  });
 
   //user must see just your own flows
   await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
@@ -125,7 +124,9 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 30000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
@@ -151,7 +152,9 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
     state: "visible",
   });
 
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    timeout: 1500,
+  });
 
   await page.getByTestId("icon-ChevronLeft").first().click();
 
@@ -160,13 +163,13 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
     state: "visible",
   });
 
-  await page.waitForTimeout(2000);
+  await expect(page.getByText(randomFlowName, { exact: true })).toBeVisible({
+    timeout: 2000,
+  });
 
-  expect(
-    await page.getByText(randomFlowName, { exact: true }).last().isVisible(),
-  ).toBe(true);
-
-  await page.waitForTimeout(500);
+  await page.waitForSelector("[data-testid='user-profile-settings']", {
+    timeout: 1500,
+  });
 
   await page.getByTestId("user-profile-settings").click();
 
@@ -176,7 +179,10 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
 
   await page.getByPlaceholder("Username").fill(secondRandomName);
   await page.getByPlaceholder("Password").fill(randomPassword);
-  await page.waitForTimeout(1000);
+
+  await page.waitForSelector("text=Sign in", {
+    timeout: 1500,
+  });
 
   await page.getByRole("button", { name: "Sign In" }).click();
 
@@ -197,7 +203,9 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 30000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
@@ -234,17 +242,16 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
     timeout: 30000,
   });
 
-  await page.waitForTimeout(1000);
+  await expect(
+    page.getByText(secondRandomFlowName, { exact: true }),
+  ).toBeVisible({
+    timeout: 2000,
+  });
 
-  expect(
-    await page.getByText(secondRandomFlowName, { exact: true }).isVisible(),
-  ).toBe(true);
-
-  await page.waitForTimeout(500);
-
-  expect(
-    await page.getByText(randomFlowName, { exact: true }).isVisible(),
-  ).toBe(false);
+  await expect(page.getByText(randomFlowName, { exact: true })).toBeVisible({
+    timeout: 2000,
+    visible: false,
+  });
 
   await page.getByTestId("user-profile-settings").click();
 
@@ -268,9 +275,8 @@ test("when auto_login is false, admin can CRUD user's and should see just your o
   expect(
     await page.getByText(secondRandomFlowName, { exact: true }).isVisible(),
   ).toBe(false);
-  await page.waitForTimeout(500);
 
-  expect(
-    await page.getByText(randomFlowName, { exact: true }).isVisible(),
-  ).toBe(true);
+  await expect(page.getByText(randomFlowName, { exact: true })).toBeVisible({
+    timeout: 2000,
+  });
 });

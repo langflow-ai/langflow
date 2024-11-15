@@ -8,7 +8,8 @@ const { remarkCodeHike } = require("@code-hike/mdx");
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: "Langflow Documentation",
-  tagline: "Langflow is a low-code app builder for RAG and multi-agent AI applications.",
+  tagline:
+    "Langflow is a low-code app builder for RAG and multi-agent AI applications.",
   favicon: "img/favicon.ico",
   url: "https://docs.langflow.org",
   baseUrl: "/",
@@ -49,7 +50,7 @@ const config = {
         sitemap: {
           // https://docusaurus.io/docs/api/plugins/@docusaurus/plugin-sitemap
           // https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap
-          lastmod: 'datetime',
+          lastmod: "datetime",
           changefreq: null,
           priority: null,
         },
@@ -79,28 +80,36 @@ const config = {
     ["docusaurus-node-polyfills", { excludeAliases: ["console"] }],
     "docusaurus-plugin-image-zoom",
     [
-      '@docusaurus/plugin-client-redirects',
+      "@docusaurus/plugin-client-redirects",
       {
         redirects: [
           {
-            to: '/',
-            from: ['/whats-new-a-new-chapter-langflow', '/👋 Welcome-to-Langflow'],
+            to: "/",
+            from: [
+              "/whats-new-a-new-chapter-langflow",
+              "/👋 Welcome-to-Langflow",
+            ],
           },
           {
-            to: '/getting-started-installation',
-            from: '/getting-started-common-installation-issues',
+            to: "/getting-started-installation",
+            from: "/getting-started-common-installation-issues",
           },
           {
-            to: '/workspace-overview',
-            from: ['/365085a8-a90a-43f9-a779-f8769ec7eca1', '/My-Collection', '/workspace', '/settings-project-general-settings'],
+            to: "/workspace-overview",
+            from: [
+              "/365085a8-a90a-43f9-a779-f8769ec7eca1",
+              "/My-Collection",
+              "/workspace",
+              "/settings-project-general-settings",
+            ],
           },
           {
-            to: '/components-overview',
-            from: '/components',
+            to: "/components-overview",
+            from: "/components",
           },
           {
-            to: '/configuration-global-variables',
-            from: '/settings-global-variables',
+            to: "/configuration-global-variables",
+            from: "/settings-global-variables",
           },
           // add more redirects like this
           // {
@@ -128,10 +137,10 @@ const config = {
     ({
       navbar: {
         hideOnScroll: true,
-        title: "Langflow",
         logo: {
           alt: "Langflow",
-          src: "img/chain.png",
+          src: "img/langflow-logo-black.svg",
+          srcDark: "img/langflow-logo-white.svg",
         },
         items: [
           // right

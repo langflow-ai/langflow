@@ -14,7 +14,7 @@ Langflow empowers developers to rapidly prototype and build AI applications with
 
 Langflow is an intuitive visual flow builder. This drag-and-drop interface allows developers to create complex AI workflows without writing extensive code. You can easily connect different components, such as prompts, language models, and data sources, to build sophisticated AI applications.
 
-![Langflow in action](./1160086633.gif)
+![Langflow in action](/img/playground-response.png)
 
 ## Use cases
 
