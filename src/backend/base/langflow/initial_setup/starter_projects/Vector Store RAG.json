@@ -3923,6 +3923,90 @@
         "type": "genericNode",
         "width": 320
       }
+      {
+        "id": "note-O3TZQ",
+        "type": "noteNode",
+        "position": {
+          "x": 1692.2322233423606,
+          "y": 1821.9077961087607
+        },
+        "data": {
+          "id": "note-O3TZQ",
+          "node": {
+            "description": "### 💡 Add your OpenAI API key here 👇",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "transparent"
+            }
+          },
+          "type": "note"
+        },
+        "selected": false,
+        "width": 324,
+        "height": 324,
+        "dragging": false,
+        "positionAbsolute": {
+          "x": 1692.2322233423606,
+          "y": 1821.9077961087607
+        }
+      },
+      {
+        "id": "note-M7loH",
+        "type": "noteNode",
+        "position": {
+          "x": 824.1003268813427,
+          "y": 698.6951695764802
+        },
+        "data": {
+          "id": "note-M7loH",
+          "node": {
+            "description": "### 💡 Add your OpenAI API key here 👇",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "transparent"
+            }
+          },
+          "type": "note"
+        },
+        "selected": false,
+        "width": 324,
+        "height": 324,
+        "dragging": false,
+        "positionAbsolute": {
+          "x": 824.1003268813427,
+          "y": 698.6951695764802
+        }
+      },
+      {
+        "id": "note-26oaj",
+        "type": "noteNode",
+        "position": {
+          "x": 2350.297636215281,
+          "y": 525.0687902842766
+        },
+        "data": {
+          "id": "note-26oaj",
+          "node": {
+            "description": "### 💡 Add your OpenAI API key here 👇",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "transparent"
+            }
+          },
+          "type": "note"
+        },
+        "selected": true,
+        "width": 324,
+        "height": 324,
+        "dragging": false,
+        "positionAbsolute": {
+          "x": 2350.297636215281,
+          "y": 525.0687902842766
+        }
+      }
     ],
     "viewport": {
       "x": -298.6563130974548,
