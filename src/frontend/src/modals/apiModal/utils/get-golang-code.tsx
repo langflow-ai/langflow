@@ -14,8 +14,16 @@ export default function getGolangCode({
 }: GetCodeType): string {
   // Format tweaks for Go syntax
   let tweaksString = "langflowclient.Options{}";
-  if (activeTweaks && tweaksBuildedObject && Object.keys(tweaksBuildedObject).length > 0) {
-    tweaksString = `langflowclient.Options${JSON.stringify(tweaksBuildedObject, null, 2)
+  if (
+    activeTweaks &&
+    tweaksBuildedObject &&
+    Object.keys(tweaksBuildedObject).length > 0
+  ) {
+    tweaksString = `langflowclient.Options${JSON.stringify(
+      tweaksBuildedObject,
+      null,
+      2,
+    )
       .replace(/"([^"]+)":/g, "$1:") // Remove quotes from keys
       .replace(/"/g, `'`) // Convert double quotes to single quotes
       .replace(/,/g, ",\n")}`; // Format commas
