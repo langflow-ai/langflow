@@ -58,7 +58,7 @@ class Data(BaseModel):
         r"""Sets the text value in the data dictionary.
 
         The object's `text` value is set to `text parameter as given, with the following modifications:
-        
+
          - `text` value of `None` is converted to an empty string.
          - `text` value is converted to `str` type.
 
