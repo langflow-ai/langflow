@@ -5,6 +5,7 @@ import {
 import getJsApiCode from "@/modals/apiModal/utils/get-js-api-code";
 import getPythonApiCode from "@/modals/apiModal/utils/get-python-api-code";
 import getPythonCode from "@/modals/apiModal/utils/get-python-code";
+import getGolangCode from "@/modals/apiModal/utils/get-golang-code";
 import getWidgetCode from "@/modals/apiModal/utils/get-widget-code";
 
 export function useCustomAPICode() {
@@ -14,6 +15,7 @@ export function useCustomAPICode() {
     getJsApiCode,
     getPythonApiCode,
     getPythonCode,
+    getGolangCode,
     getWidgetCode,
   };
 }

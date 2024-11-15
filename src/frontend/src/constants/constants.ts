@@ -900,6 +900,7 @@ export const TABS_ORDER = [
   "js api",
   "python code",
   "chat widget html",
+  "golang code"
 ];
 
 export const LANGFLOW_ACCESS_TOKEN = "access_token_lf";

@@ -117,6 +117,9 @@ export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
       if (getCodes.getPythonCode) {
         codesObj["pythonCode"] = getCodes.getPythonCode(props);
       }
+      if (getCodes.getGolangCode) {
+        codesObj["golangCode"] = getCodes.getGolangCode(props);
+      }
       if (getCodes.getWidgetCode) {
         codesObj["widgetCode"] = getCodes.getWidgetCode(props);
       }
