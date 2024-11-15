@@ -1060,39 +1060,6 @@
       },
       {
         "data": {
-          "id": "note-RC6pg",
-          "node": {
-            "description": "## Astra DB Setup\n\n**Important Setup Information:**\n\nTo use the Astra DB component in this workflow, you'll need to obtain an Astra DB key. Follow these steps to set up your access:\n\n1. **Create an Account**: Visit [DataStax Accounts](https://accounts.datastax.com) and create an account if you don't already have one.\n2. **Generate a Key**: Once logged in, navigate to the \"Astra DB\" section to create a new application token. This token will serve as your authentication key for API access.\n3. **Configure Endpoint**: Note the API endpoint URL provided by Astra DB. This is essential for connecting your vector database to the workflow.\n4. **Input Token**: Enter the generated token and API endpoint URL in the appropriate fields in the Astra DB component within the workflow.\n\n",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "blue"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 358,
-        "id": "note-RC6pg",
-        "position": {
-          "x": 1180.1117634200216,
-          "y": -2.4324300661269547
-        },
-        "positionAbsolute": {
-          "x": 1180.1117634200216,
-          "y": -2.4324300661269547
-        },
-        "resizing": false,
-        "selected": false,
-        "style": {
-          "height": 358,
-          "width": 412
-        },
-        "type": "noteNode",
-        "width": 412
-      },
-      {
-        "data": {
           "id": "OpenAIModel-H0ANr",
           "node": {
             "base_classes": [
