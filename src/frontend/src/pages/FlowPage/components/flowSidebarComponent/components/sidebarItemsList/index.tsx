@@ -10,7 +10,6 @@ const SidebarItemsList = ({
   onDragStart,
   sensitiveSort,
 }) => {
-  console.log(dataFilter);
   return (
     <div className="flex flex-col gap-1 py-2">
       {Object.keys(dataFilter[item.name])
