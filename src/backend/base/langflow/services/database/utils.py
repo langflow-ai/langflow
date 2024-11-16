@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from alembic.util.exc import CommandError
 from loguru import logger
 from sqlmodel import Session, text
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService
@@ -68,6 +69,19 @@ def session_getter(db_service: DatabaseService):
         raise
     finally:
         session.close()
+
+
+@asynccontextmanager
+async def async_session_getter(db_service: DatabaseService):
+    try:
+        session = AsyncSession(db_service.async_engine)
+        yield session
+    except Exception:
+        logger.exception("Session rollback because of exception")
+        await session.rollback()
+        raise
+    finally:
+        await session.close()
 
 
 @dataclass

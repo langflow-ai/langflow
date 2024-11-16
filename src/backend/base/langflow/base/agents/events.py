@@ -1,4 +1,5 @@
 # Add helper functions for each event type
+import asyncio
 from collections.abc import AsyncIterator
 from time import perf_counter
 from typing import Any, Protocol
@@ -249,7 +250,7 @@ async def process_agent_events(
         agent_message.properties.icon = "Bot"
         agent_message.properties.state = "partial"
     # Store the initial message
-    agent_message = send_message_method(message=agent_message)
+    agent_message = await asyncio.to_thread(send_message_method, message=agent_message)
     try:
         # Create a mapping of run_ids to tool contents
         tool_blocks_map: dict[str, ToolContent] = {}

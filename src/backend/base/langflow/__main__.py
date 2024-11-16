@@ -26,7 +26,7 @@ from sqlmodel import select
 from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
 from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
-from langflow.services.database.utils import session_getter
+from langflow.services.database.utils import async_session_getter
 from langflow.services.deps import async_session_scope, get_db_service, get_settings_service
 from langflow.services.settings.constants import DEFAULT_SUPERUSER
 from langflow.services.utils import initialize_services
@@ -419,30 +419,35 @@ def superuser(
 ) -> None:
     """Create a superuser."""
     configure(log_level=log_level)
-    initialize_services()
     db_service = get_db_service()
-    with session_getter(db_service) as session:
-        from langflow.services.auth.utils import create_super_user
 
-        if create_super_user(db=session, username=username, password=password):
-            # Verify that the superuser was created
-            from langflow.services.database.models.user.model import User
+    async def _create_superuser():
+        await initialize_services()
+        async with async_session_getter(db_service) as session:
+            from langflow.services.auth.utils import create_super_user
 
-            user: User = session.exec(select(User).where(User.username == username)).first()
-            if user is None or not user.is_superuser:
-                typer.echo("Superuser creation failed.")
-                return
-            # Now create the first folder for the user
-            result = create_default_folder_if_it_doesnt_exist(session, user.id)
-            if result:
-                typer.echo("Default folder created successfully.")
+            if await create_super_user(db=session, username=username, password=password):
+                # Verify that the superuser was created
+                from langflow.services.database.models.user.model import User
+
+                stmt = select(User).where(User.username == username)
+                user: User = (await session.exec(stmt)).first()
+                if user is None or not user.is_superuser:
+                    typer.echo("Superuser creation failed.")
+                    return
+                # Now create the first folder for the user
+                result = await create_default_folder_if_it_doesnt_exist(session, user.id)
+                if result:
+                    typer.echo("Default folder created successfully.")
+                else:
+                    msg = "Could not create default folder."
+                    raise RuntimeError(msg)
+                typer.echo("Superuser created successfully.")
+
             else:
-                msg = "Could not create default folder."
-                raise RuntimeError(msg)
-            typer.echo("Superuser created successfully.")
+                typer.echo("Superuser creation failed.")
 
-        else:
-            typer.echo("Superuser creation failed.")
+    asyncio.run(_create_superuser())
 
 
 # command to copy the langflow database from the cache to the current directory
@@ -494,7 +499,7 @@ def migration(
     ):
         raise typer.Abort
 
-    initialize_services(fix_migration=fix)
+    asyncio.run(initialize_services(fix_migration=fix))
     db_service = get_db_service()
     if not test:
         db_service.run_migrations()
@@ -515,18 +520,20 @@ def api_key(
         None
     """
     configure(log_level=log_level)
-    initialize_services()
-    settings_service = get_settings_service()
-    auth_settings = settings_service.auth_settings
-    if not auth_settings.AUTO_LOGIN:
-        typer.echo("Auto login is disabled. API keys cannot be created through the CLI.")
-        return
 
     async def aapi_key():
+        await initialize_services()
+        settings_service = get_settings_service()
+        auth_settings = settings_service.auth_settings
+        if not auth_settings.AUTO_LOGIN:
+            typer.echo("Auto login is disabled. API keys cannot be created through the CLI.")
+            return None
+
         async with async_session_scope() as session:
             from langflow.services.database.models.user.model import User
 
-            superuser = (await session.exec(select(User).where(User.username == DEFAULT_SUPERUSER))).first()
+            stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
+            superuser = (await session.exec(stmt)).first()
             if not superuser:
                 typer.echo(
                     "Default superuser not found. This command requires a superuser and AUTO_LOGIN to be enabled."
@@ -535,7 +542,8 @@ def api_key(
             from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate
             from langflow.services.database.models.api_key.crud import create_api_key, delete_api_key
 
-            api_key = (await session.exec(select(ApiKey).where(ApiKey.user_id == superuser.id))).first()
+            stmt = select(ApiKey).where(ApiKey.user_id == superuser.id)
+            api_key = (await session.exec(stmt)).first()
             if api_key:
                 await delete_api_key(session, api_key.id)
 

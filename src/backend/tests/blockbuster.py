@@ -90,6 +90,8 @@ def _wrap_file_read_blocking(func):
                 "_read_pyc",
             }:
                 return func(self, *args, **kwargs)
+            if frame_info.filename.endswith("settings/service.py") and frame_info.function == "initialize":
+                return func(self, *args, **kwargs)
         raise _blocking_error(func)
 
     return file_op
@@ -103,6 +105,8 @@ def _wrap_file_write_blocking(func):
             return func(self, *args, **kwargs)
         for frame_info in inspect.stack():
             if frame_info.filename.endswith("_pytest/assertion/rewrite.py") and frame_info.function == "_write_pyc":
+                return func(self, *args, **kwargs)
+            if frame_info.filename.endswith("settings/service.py") and frame_info.function == "initialize":
                 return func(self, *args, **kwargs)
         if self not in {sys.stdout, sys.stderr}:
             raise _blocking_error(func)

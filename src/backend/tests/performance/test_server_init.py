@@ -24,7 +24,7 @@ async def test_initialize_services():
     """Benchmark the initialization of services."""
     from langflow.services.utils import initialize_services
 
-    await asyncio.to_thread(initialize_services, fix_migration=False)
+    await initialize_services(fix_migration=False)
     settings_service = await asyncio.to_thread(get_settings_service)
     assert "test_performance.db" in settings_service.settings.database_url
 
@@ -45,8 +45,8 @@ async def test_initialize_super_user():
     from langflow.initial_setup.setup import initialize_super_user_if_needed
     from langflow.services.utils import initialize_services
 
-    await asyncio.to_thread(initialize_services, fix_migration=False)
-    await asyncio.to_thread(initialize_super_user_if_needed)
+    await initialize_services(fix_migration=False)
+    await initialize_super_user_if_needed()
     settings_service = await asyncio.to_thread(get_settings_service)
     assert "test_performance.db" in settings_service.settings.database_url
 
@@ -69,7 +69,7 @@ async def test_create_starter_projects():
     from langflow.interface.types import get_and_cache_all_types_dict
     from langflow.services.utils import initialize_services
 
-    await asyncio.to_thread(initialize_services, fix_migration=False)
+    await initialize_services(fix_migration=False)
     settings_service = await asyncio.to_thread(get_settings_service)
     types_dict = await get_and_cache_all_types_dict(settings_service)
     await asyncio.to_thread(create_or_update_starter_projects, types_dict)
@@ -81,6 +81,6 @@ async def test_load_flows():
     """Benchmark loading flows from directory."""
     from langflow.initial_setup.setup import load_flows_from_directory
 
-    await asyncio.to_thread(load_flows_from_directory)
+    await load_flows_from_directory()
     settings_service = await asyncio.to_thread(get_settings_service)
     assert "test_performance.db" in settings_service.settings.database_url
