@@ -103,9 +103,9 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
             is_list=True,
         ),
         StrInput(
-            name="namespace",
-            display_name="Namespace",
-            info="Optional namespace within Astra DB to use for the collection.",
+            name="keyspace",
+            display_name="Keyspace",
+            info="Optional keyspace within Astra DB to use for the collection.",
             advanced=True,
         ),
         DropdownInput(
@@ -487,7 +487,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 collection_name=self.collection_name,
                 token=self.token,
                 api_endpoint=self.api_endpoint,
-                namespace=self.namespace or None,
+                namespace=self.keyspace or None,
                 environment=parse_api_endpoint(self.api_endpoint).environment if self.api_endpoint else None,
                 metric=self.metric or None,
                 batch_size=self.batch_size or None,
