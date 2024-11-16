@@ -142,28 +142,29 @@ class DatabaseService(Service):
 
     @asynccontextmanager
     async def with_async_session(self):
-        async with AsyncSession(self.async_engine) as session:
+        async with AsyncSession(self.async_engine, expire_on_commit=False) as session:
             yield session
 
-    def migrate_flows_if_auto_login(self) -> None:
+    async def migrate_flows_if_auto_login(self) -> None:
         # if auto_login is enabled, we need to migrate the flows
         # to the default superuser if they don't have a user id
         # associated with them
         settings_service = get_settings_service()
         if settings_service.auth_settings.AUTO_LOGIN:
-            with self.with_session() as session:
-                flows = session.exec(select(models.Flow).where(models.Flow.user_id is None)).all()
+            async with self.with_async_session() as session:
+                stmt = select(models.Flow).where(models.Flow.user_id is None)
+                flows = (await session.exec(stmt)).all()
                 if flows:
                     logger.debug("Migrating flows to default superuser")
                     username = settings_service.auth_settings.SUPERUSER
-                    user = get_user_by_username(session, username)
+                    user = await get_user_by_username(session, username)
                     if not user:
                         logger.error("Default superuser not found")
                         msg = "Default superuser not found"
                         raise RuntimeError(msg)
                     for flow in flows:
                         flow.user_id = user.id
-                    session.commit()
+                    await session.commit()
                     logger.debug("Flows migrated successfully")
 
     def check_schema_health(self) -> bool:
@@ -346,20 +347,15 @@ class DatabaseService(Service):
 
         logger.debug("Database and tables created successfully")
 
-    def _teardown(self) -> None:
+    async def teardown(self) -> None:
         logger.debug("Tearing down database")
         try:
             settings_service = get_settings_service()
             # remove the default superuser if auto_login is enabled
             # using the SUPERUSER to get the user
-            with self.with_session() as session:
-                teardown_superuser(settings_service, session)
-
+            async with self.with_async_session() as session:
+                await teardown_superuser(settings_service, session)
         except Exception:  # noqa: BLE001
             logger.exception("Error tearing down database")
-
-        self.engine.dispose()
-
-    async def teardown(self) -> None:
-        await asyncio.to_thread(self._teardown)
         await self.async_engine.dispose()
+        await asyncio.to_thread(self.engine.dispose)
