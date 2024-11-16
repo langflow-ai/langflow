@@ -11,7 +11,7 @@ from langflow.graph.graph.base import Graph
 from langflow.graph.utils import log_vertex_build
 from langflow.graph.vertex.base import Vertex
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.deps import get_session, get_async_session
+from langflow.services.deps import get_async_session
 
 
 def set_socketio_server(socketio_server) -> None:
