@@ -11,7 +11,7 @@ from langflow.graph.graph.base import Graph
 from langflow.graph.utils import log_vertex_build
 from langflow.graph.vertex.base import Vertex
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.deps import get_session
+from langflow.services.deps import get_session, get_async_session
 
 
 def set_socketio_server(socketio_server) -> None:
@@ -23,8 +23,9 @@ def set_socketio_server(socketio_server) -> None:
 
 async def get_vertices(sio, sid, flow_id, chat_service) -> None:
     try:
-        session = next(get_session())
-        flow: Flow = session.exec(select(Flow).where(Flow.id == flow_id)).first()
+        session = await anext(get_async_session())
+        stmt = select(Flow).where(Flow.id == flow_id)
+        flow: Flow = (await session.exec(stmt)).first()
         if not flow or not flow.data:
             await sio.emit("error", data="Invalid flow ID", to=sid)
             return
