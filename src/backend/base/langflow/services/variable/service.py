@@ -82,6 +82,10 @@ class DatabaseVariableService(VariableService, Service):
         stmt = select(Variable).where(Variable.user_id == user_id)
         return list((await session.exec(stmt)).all())
 
+    def list_variables_sync(self, user_id: UUID | str, session: Session) -> list[str | None]:
+        variables = session.exec(select(Variable).where(Variable.user_id == user_id)).all()
+        return [variable.name for variable in variables if variable]
+
     async def list_variables(self, user_id: UUID | str, session: AsyncSession) -> list[str | None]:
         variables = await self.get_all(user_id=user_id, session=session)
         return [variable.name for variable in variables if variable]

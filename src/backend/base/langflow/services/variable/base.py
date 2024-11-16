@@ -37,6 +37,18 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
+    def list_variables_sync(self, user_id: UUID | str, session: Session) -> list[str | None]:
+        """List all variables.
+
+        Args:
+            user_id: The user ID.
+            session: The database session.
+
+        Returns:
+            A list of variable names.
+        """
+
+    @abc.abstractmethod
     async def list_variables(self, user_id: UUID | str, session: AsyncSession) -> list[str | None]:
         """List all variables.
 

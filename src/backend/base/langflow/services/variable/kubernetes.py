@@ -97,12 +97,12 @@ class KubernetesSecretService(VariableService, Service):
         return value
 
     @override
-    async def list_variables(
+    def list_variables_sync(
         self,
         user_id: UUID | str,
-        session: AsyncSession,
+        session: Session,
     ) -> list[str | None]:
-        variables = await asyncio.to_thread(self.kubernetes_secrets.get_secret, name=encode_user_id(user_id))
+        variables = self.kubernetes_secrets.get_secret(name=encode_user_id(user_id))
         if not variables:
             return []
 
@@ -113,6 +113,14 @@ class KubernetesSecretService(VariableService, Service):
             else:
                 names.append(key)
         return names
+
+    @override
+    async def list_variables(
+        self,
+        user_id: UUID | str,
+        session: AsyncSession,
+    ) -> list[str | None]:
+        return await asyncio.to_thread(self.list_variables_sync, user_id, session.sync_session)
 
     def _update_variable(
         self,
