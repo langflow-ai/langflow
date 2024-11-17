@@ -32,6 +32,7 @@ def log_vertex_build(db: Session, vertex_build: VertexBuildBase) -> VertexBuildT
     return table
 
 
-def delete_vertex_builds_by_flow_id(db: Session, flow_id: UUID) -> None:
-    db.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id))
-    db.commit()
+async def delete_vertex_builds_by_flow_id(db: AsyncSession, flow_id: UUID) -> None:
+    stmt = delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id)
+    await db.exec(stmt)
+    await db.commit()
