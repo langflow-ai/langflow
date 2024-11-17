@@ -4,11 +4,15 @@ import requests
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from pydantic.v1 import SecretStr
 
-from langflow.base.models.model import LCModelComponent
+from langflow.base.models.chat_result import get_chat_result
+from langflow.base.models.model_utils import get_model_name
+from langflow.custom.custom_component.component import Component
 from langflow.io import (
     BoolInput,
     DropdownInput,
-    MultiselectInput,
+    HandleInput,
+    MessageInput,
+    MessageTextInput,
     Output,
     SecretStrInput,
     StrInput,
@@ -19,18 +23,26 @@ ND_MODEL_MAPPING = {
     "gpt-4o": {"provider": "openai", "model": "gpt-4o"},
     "gpt-4o-mini": {"provider": "openai", "model": "gpt-4o-mini"},
     "gpt-4-turbo": {"provider": "openai", "model": "gpt-4-turbo-2024-04-09"},
-    "claude-3-5-haiku": {"provider": "anthropic", "model": "claude-3-5-haiku-20241022"},
-    "claude-3.5-sonnet V2": {"provider": "anthropic", "model": "claude-3-5-sonnet-20241022"},
+    "claude-3-5-haiku-20241022": {"provider": "anthropic", "model": "claude-3-5-haiku-20241022"},
+    "claude-3-5-sonnet-20241022": {"provider": "anthropic", "model": "claude-3-5-sonnet-20241022"},
+    "anthropic.claude-3-5-sonnet-20241022-v2:0": {"provider": "anthropic", "model": "claude-3-5-sonnet-20241022"},
+    "anthropic.claude-3-5-haiku-20241022-v1:0": {"provider": "anthropic", "model": "claude-3-5-haiku-20241022"},
     "gemini-1.5-pro": {"provider": "google", "model": "gemini-1.5-pro-latest"},
     "gemini-1.5-flash": {"provider": "google", "model": "gemini-1.5-flash-latest"},
-    "llama-3.1-70B": {"provider": "togetherai", "model": "Meta-Llama-3.1-70B-Instruct-Turbo"},
-    "llama-3.1-405B": {"provider": "togetherai", "model": "Meta-Llama-3.1-405B-Instruct-Turbo"},
-    "perplexity": {"provider": "perplexity", "model": "llama-3.1-sonar-large-128k-online"},
-    "mistral-large-2": {"provider": "mistral", "model": "mistral-large-2407"},
+    "llama-3.1-sonar-large-128k-online": {"provider": "perplexity", "model": "llama-3.1-sonar-large-128k-online"},
+    "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo": {
+        "provider": "togetherai",
+        "model": "Meta-Llama-3.1-70B-Instruct-Turbo",
+    },
+    "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo": {
+        "provider": "togetherai",
+        "model": "Meta-Llama-3.1-405B-Instruct-Turbo",
+    },
+    "mistral-large-latest": {"provider": "mistral", "model": "mistral-large-2407"},
 }
 
 
-class NotDiamondComponent(LCModelComponent):
+class NotDiamondComponent(Component):
     display_name = "Not Diamond Router"
     description = "Call the right model at the right time with the world's most powerful AI model router."
     icon = "split"
@@ -40,21 +52,27 @@ class NotDiamondComponent(LCModelComponent):
         super().__init__(*args, **kwargs)
 
     inputs = [
-        *LCModelComponent._base_inputs,
+        MessageInput(name="input_value", display_name="Input"),
+        MessageTextInput(
+            name="system_message",
+            display_name="System Message",
+            info="System message to pass to the model.",
+            advanced=False,
+        ),
+        HandleInput(
+            name="models",
+            display_name="Language Models",
+            input_types=["LanguageModel"],
+            required=True,
+            is_list=True,
+            info="Link the models you want to route between.",
+        ),
         SecretStrInput(
             name="api_key",
             display_name="Not Diamond API Key",
             info="The Not Diamond API Key to use for routing.",
             advanced=False,
             value="NOTDIAMOND_API_KEY",
-        ),
-        MultiselectInput(
-            name="models",
-            display_name="Models",
-            info="Select the models between which you want to route.",
-            advanced=False,
-            options=ND_MODEL_MAPPING.keys(),
-            value=["gpt-4o"],
         ),
         StrInput(
             name="preference_id",
@@ -79,21 +97,26 @@ class NotDiamondComponent(LCModelComponent):
         ),
     ]
 
-    outputs = [Output(display_name="Model", name="model_selected", method="model_select")]
+    outputs = [Output(display_name="Output", name="output", method="model_select")]
 
-    def model_select(self) -> str:
+    def model_select(self) -> dict:
         api_key = SecretStr(self.api_key).get_secret_value() if self.api_key else None
         input_value = self.input_value
         system_message = self.system_message
         messages = self._format_input(input_value, system_message)
-        selected_models = []
 
-        if self.models:
-            selected_models = list(filter(None, [ND_MODEL_MAPPING.get(model) for model in self.models]))
+        selected_models = []
+        mapped_selected_models = []
+        for model in self.models:
+            model_name = get_model_name(model)
+
+            if model_name in ND_MODEL_MAPPING:
+                selected_models.append(model)
+                mapped_selected_models.append(ND_MODEL_MAPPING[model_name])
 
         payload = {
             "messages": messages,
-            "llm_providers": selected_models,
+            "llm_providers": mapped_selected_models,
             "hash_content": self.hash_content,
         }
 
@@ -124,19 +147,26 @@ class NotDiamondComponent(LCModelComponent):
         providers = result["providers"]
 
         if len(providers) == 0:
-            return "No providers returned from NotDiamond API."
+            return {"chosen_model": None, "text": "No providers returned from NotDiamond API."}
 
-        chosen_provider = providers[0]
-        chosen_model = [
-            k
-            for k, v in ND_MODEL_MAPPING.items()
-            if v["provider"] == chosen_provider["provider"] and v["model"] == chosen_provider["model"]
-        ]
+        nd_result = providers[0]
 
-        if len(chosen_model) == 0:
-            return "No model found by NotDiamond API."
+        chosen_model = None
+        for nd_model, selected_model in zip(mapped_selected_models, selected_models, strict=False):
+            if nd_model["provider"] == nd_result["provider"] and nd_model["model"] == nd_result["model"]:
+                chosen_model = selected_model
+                break
 
-        return chosen_model[0]
+        if chosen_model is None:
+            return {"chosen_model": None, "text": "No model found by NotDiamond API."}
+
+        result = get_chat_result(
+            runnable=chosen_model,
+            input_value=input_value,
+            system_message=system_message,
+        )
+
+        return {"chosen_model": get_model_name(chosen_model), "text": result}
 
     def _format_input(
         self,
