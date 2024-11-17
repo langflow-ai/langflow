@@ -1,9 +1,12 @@
 from typing import cast
+
 from langchain_community.retrievers.needle import NeedleRetriever
+
 from langflow.custom import Component
-from langflow.inputs import StrInput, IntInput, SecretStrInput
-from langflow.template import Output
 from langflow.field_typing import Retriever
+from langflow.inputs import IntInput, SecretStrInput, StrInput
+from langflow.template import Output
+
 
 class NeedleComponent(Component):
     display_name = "Needle Retriever"
@@ -36,8 +39,7 @@ class NeedleComponent(Component):
     ]
 
     def build_retriever(self, needle_api_key: str, collection_id: str, top_k: int = 10) -> Retriever:
-        """
-        Build and return the NeedleRetriever using the provided inputs.
+        """Build and return the NeedleRetriever using the provided inputs.
 
         Args:
             needle_api_key (str): API key for the Needle API.
@@ -54,6 +56,6 @@ class NeedleComponent(Component):
                 top_k=top_k,
             )
         except Exception as e:
-            raise ValueError(f"Error initializing NeedleRetriever: {str(e)}")
+            raise ValueError(f"Error initializing NeedleRetriever: {e!s}")
 
         return cast(Retriever, retriever)

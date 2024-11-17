@@ -1,5 +1,7 @@
 from typing import cast
+
 from langchain_community.retrievers.needle import NeedleRetriever
+
 from langflow.custom import CustomComponent
 from langflow.field_typing import Retriever
 
@@ -12,9 +14,7 @@ class NeedleRetrieverComponent(CustomComponent):
     legacy: bool = True
 
     def build_config(self):
-        """
-        Defines the configuration options for the NeedleRetriever component.
-        """
+        """Defines the configuration options for the NeedleRetriever component."""
         return {
             "needle_api_key": {
                 "display_name": "Needle API Key",
@@ -35,8 +35,7 @@ class NeedleRetrieverComponent(CustomComponent):
         collection_id: str,
         top_k: int = 10,
     ) -> Retriever:  # type: ignore[type-var]
-        """
-        Build the NeedleRetriever using the provided configuration.
+        """Build the NeedleRetriever using the provided configuration.
 
         Args:
             needle_api_key (str): The API key for Needle.
