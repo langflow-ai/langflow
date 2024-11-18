@@ -1,59 +1,63 @@
 import { expect, test } from "@playwright/test";
 
-test("curl_api_generation", async ({ page, context }) => {
-  await page.goto("/");
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
+test(
+  "curl_api_generation",
+  { tag: ["@release", "@workspace", "@api"] },
+  async ({ page, context }) => {
+    await page.goto("/");
+    let modalCount = 0;
+    try {
+      const modalTitleElement = await page?.getByTestId("modal-title");
+      if (modalTitleElement) {
+        modalCount = await modalTitleElement.count();
+      }
+    } catch (error) {
+      modalCount = 0;
     }
-  } catch (error) {
-    modalCount = 0;
-  }
 
-  while (modalCount === 0) {
-    await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
+    while (modalCount === 0) {
+      await page.getByText("New Flow", { exact: true }).click();
+      await page.waitForTimeout(3000);
+      modalCount = await page.getByTestId("modal-title")?.count();
+    }
 
-  await page.getByTestId("side_nav_options_all-templates").click();
-  await page.getByRole("heading", { name: "Basic Prompting" }).click();
-  await page.waitForTimeout(1000);
-  await page.getByText("API", { exact: true }).click();
-  await page.getByRole("tab", { name: "cURL" }).click();
-  await page.getByTestId("icon-Copy").click();
-  const handle = await page.evaluateHandle(() =>
-    navigator.clipboard.readText(),
-  );
-  const clipboardContent = await handle.jsonValue();
-  const oldValue = clipboardContent;
-  expect(clipboardContent.length).toBeGreaterThan(0);
-  await page.getByRole("tab", { name: "Tweaks" }).click();
-  await page
-    .getByRole("heading", { name: "OpenAi" })
-    .locator("div")
-    .first()
-    .click();
+    await page.getByTestId("side_nav_options_all-templates").click();
+    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.waitForTimeout(1000);
+    await page.getByText("API", { exact: true }).click();
+    await page.getByRole("tab", { name: "cURL" }).click();
+    await page.getByTestId("icon-Copy").click();
+    const handle = await page.evaluateHandle(() =>
+      navigator.clipboard.readText(),
+    );
+    const clipboardContent = await handle.jsonValue();
+    const oldValue = clipboardContent;
+    expect(clipboardContent.length).toBeGreaterThan(0);
+    await page.getByRole("tab", { name: "Tweaks" }).click();
+    await page
+      .getByRole("heading", { name: "OpenAi" })
+      .locator("div")
+      .first()
+      .click();
 
-  await page.waitForTimeout(1000);
+    await page.waitForTimeout(1000);
 
-  await page
-    .getByTestId("popover-anchor-input-openai_api_base-edit")
-    .first()
-    .fill("teste");
+    await page
+      .getByTestId("popover-anchor-input-openai_api_base-edit")
+      .first()
+      .fill("teste");
 
-  await page.getByRole("tab", { name: "cURL" }).click();
-  await page.getByTestId("icon-Copy").click();
-  const handle2 = await page.evaluateHandle(() =>
-    navigator.clipboard.readText(),
-  );
-  const clipboardContent2 = await handle2.jsonValue();
-  const newValue = clipboardContent2;
-  expect(oldValue).not.toBe(newValue);
-  expect(clipboardContent2.length).toBeGreaterThan(clipboardContent.length);
-});
+    await page.getByRole("tab", { name: "cURL" }).click();
+    await page.getByTestId("icon-Copy").click();
+    const handle2 = await page.evaluateHandle(() =>
+      navigator.clipboard.readText(),
+    );
+    const clipboardContent2 = await handle2.jsonValue();
+    const newValue = clipboardContent2;
+    expect(oldValue).not.toBe(newValue);
+    expect(clipboardContent2.length).toBeGreaterThan(clipboardContent.length);
+  },
+);
 
 test("check if tweaks are updating when someothing on the flow changes", async ({
   page,

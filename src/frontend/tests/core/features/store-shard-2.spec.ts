@@ -2,65 +2,69 @@ import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
-test.skip("should filter by tag", async ({ page }) => {
-  test.skip(
-    !process?.env?.STORE_API_KEY,
-    "STORE_API_KEY required to run this test",
-  );
+test(
+  "should filter by tag",
+  { tag: ["@release", "@workspace", "@api"] },
+  async ({ page }) => {
+    test.skip(
+      !process?.env?.STORE_API_KEY,
+      "STORE_API_KEY required to run this test",
+    );
 
-  if (!process.env.CI) {
-    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-  }
+    if (!process.env.CI) {
+      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+    }
 
-  await page.goto("/");
-  await page.waitForTimeout(1000);
+    await page.goto("/");
+    await page.waitForTimeout(1000);
 
-  await page.getByTestId("button-store").click();
-  await page.waitForTimeout(1000);
+    await page.getByTestId("button-store").click();
+    await page.waitForTimeout(1000);
 
-  await page.getByTestId("api-key-button-store").click();
+    await page.getByTestId("api-key-button-store").click();
 
-  await page
-    .getByPlaceholder("Insert your API Key")
-    .fill(process.env.STORE_API_KEY ?? "");
+    await page
+      .getByPlaceholder("Insert your API Key")
+      .fill(process.env.STORE_API_KEY ?? "");
 
-  await page.getByTestId("api-key-save-button-store").click();
+    await page.getByTestId("api-key-save-button-store").click();
 
-  await page.waitForTimeout(1000);
-  await page.getByText("Success! Your API Key has been saved.").isVisible();
+    await page.waitForTimeout(1000);
+    await page.getByText("Success! Your API Key has been saved.").isVisible();
 
-  await page.getByTestId("button-store").click();
-  await page.waitForTimeout(1000);
+    await page.getByTestId("button-store").click();
+    await page.waitForTimeout(1000);
 
-  async function safeClick(selector: string) {
-    await page.getByTestId(selector).waitFor({ state: "visible" });
-    await page.getByTestId(selector).click();
-    await page.waitForTimeout(500); // Wait for UI updates
-  }
+    async function safeClick(selector: string) {
+      await page.getByTestId(selector).waitFor({ state: "visible" });
+      await page.getByTestId(selector).click();
+      await page.waitForTimeout(500); // Wait for UI updates
+    }
 
-  // Agent section
-  await safeClick("tag-selector-Agent");
-  await page.getByText("File Loader").waitFor({ state: "visible" });
-  await safeClick("tag-selector-Agent");
-  await page.getByText("Website Content").waitFor({ state: "visible" });
+    // Agent section
+    await safeClick("tag-selector-Agent");
+    await page.getByText("File Loader").waitFor({ state: "visible" });
+    await safeClick("tag-selector-Agent");
+    await page.getByText("Website Content").waitFor({ state: "visible" });
 
-  // Memory section
-  await safeClick("tag-selector-Memory");
-  await page.getByText("MP3 QA12").waitFor({ state: "visible" });
+    // Memory section
+    await safeClick("tag-selector-Memory");
+    await page.getByText("MP3 QA12").waitFor({ state: "visible" });
 
-  // Chain section
-  await safeClick("tag-selector-Chain");
-  await page.getByText("ChatOllama").waitFor({ state: "visible" });
-  await safeClick("tag-selector-Chain");
+    // Chain section
+    await safeClick("tag-selector-Chain");
+    await page.getByText("ChatOllama").waitFor({ state: "visible" });
+    await safeClick("tag-selector-Chain");
 
-  // Vector Store section
-  await safeClick("tag-selector-Vector Store");
-  await page.getByText("MP3 QA12").waitFor({ state: "visible" });
-  await safeClick("tag-selector-Vector Store");
-  await safeClick("tag-selector-Memory");
+    // Vector Store section
+    await safeClick("tag-selector-Vector Store");
+    await page.getByText("MP3 QA12").waitFor({ state: "visible" });
+    await safeClick("tag-selector-Vector Store");
+    await safeClick("tag-selector-Memory");
 
-  await page.getByText("Basic RAG").isVisible();
-});
+    await page.getByText("Basic RAG").isVisible();
+  },
+);
 
 test("should share component with share button", async ({ page }) => {
   test.skip(

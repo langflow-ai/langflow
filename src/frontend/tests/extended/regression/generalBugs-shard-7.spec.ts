@@ -2,96 +2,101 @@ import { expect, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 
 // TODO: This test might not be needed anymore
-test("should be able to select all with ctrl + A on advanced modal", async ({
-  page,
-}) => {
-  await page.goto("/");
+test(
+  "should be able to select all with ctrl + A on advanced modal",
+  { tag: ["@release", "@workspace"] },
+  async ({ page }) => {
+    await page.goto("/");
 
-  let modalCount = 0;
+    let modalCount = 0;
 
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
+    try {
+      const modalTitleElement = await page?.getByTestId("modal-title");
+      if (modalTitleElement) {
+        modalCount = await modalTitleElement.count();
+      }
+    } catch (error) {
+      modalCount = 0;
     }
-  } catch (error) {
-    modalCount = 0;
-  }
 
-  while (modalCount === 0) {
-    await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
+    while (modalCount === 0) {
+      await page.getByText("New Flow", { exact: true }).click();
+      await page.waitForTimeout(3000);
+      modalCount = await page.getByTestId("modal-title")?.count();
+    }
 
-  await page.waitForSelector('[data-testid="blank-flow"]', {
-    timeout: 30000,
-  });
+    await page.waitForSelector('[data-testid="blank-flow"]', {
+      timeout: 30000,
+    });
 
-  await page.getByTestId("blank-flow").click();
+    await page.getByTestId("blank-flow").click();
 
-  await page.getByTestId("sidebar-search-input").click();
-  await page.getByTestId("sidebar-search-input").fill("ollama");
-  await page.waitForTimeout(1000);
+    await page.getByTestId("sidebar-search-input").click();
+    await page.getByTestId("sidebar-search-input").fill("ollama");
+    await page.waitForTimeout(1000);
 
-  await page
-    .getByTestId("embeddingsOllama Embeddings")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
+    await page
+      .getByTestId("embeddingsOllama Embeddings")
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-  await page.getByTestId("fit_view").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
+    await page.getByTestId("fit_view").click();
+    await page.getByTestId("zoom_out").click();
+    await page.getByTestId("zoom_out").click();
 
-  const getUA = await page.evaluate(() => navigator.userAgent);
-  const userAgentInfo = uaParser(getUA);
+    const getUA = await page.evaluate(() => navigator.userAgent);
+    const userAgentInfo = uaParser(getUA);
 
-  await page.getByTestId("div-generic-node").click();
+    await page.getByTestId("div-generic-node").click();
 
-  await page.keyboard.press(`ControlOrMeta+Shift+A`);
+    await page.keyboard.press(`ControlOrMeta+Shift+A`);
 
-  await page.waitForTimeout(1000);
+    await page.waitForTimeout(1000);
 
-  await page
-    .getByPlaceholder("Type something...")
-    .nth(2)
-    .fill("ollama_test_ctrl_a_first_input");
-  let value = await page
-    .getByPlaceholder("Type something...")
-    .nth(2)
-    .inputValue();
-  expect(value).toBe("ollama_test_ctrl_a_first_input");
+    await page
+      .getByPlaceholder("Type something...")
+      .nth(2)
+      .fill("ollama_test_ctrl_a_first_input");
+    let value = await page
+      .getByPlaceholder("Type something...")
+      .nth(2)
+      .inputValue();
+    expect(value).toBe("ollama_test_ctrl_a_first_input");
 
-  await page
-    .getByPlaceholder("Type something...")
-    .last()
-    .fill("ollama_test_ctrl_a_second_input");
-  let secondValue = await page
-    .getByPlaceholder("Type something...")
-    .last()
-    .inputValue();
-  expect(secondValue).toBe("ollama_test_ctrl_a_second_input");
+    await page
+      .getByPlaceholder("Type something...")
+      .last()
+      .fill("ollama_test_ctrl_a_second_input");
+    let secondValue = await page
+      .getByPlaceholder("Type something...")
+      .last()
+      .inputValue();
+    expect(secondValue).toBe("ollama_test_ctrl_a_second_input");
 
-  await page.getByPlaceholder("Type something...").last().click();
-  await page.waitForTimeout(1000);
+    await page.getByPlaceholder("Type something...").last().click();
+    await page.waitForTimeout(1000);
 
-  await page.keyboard.press("ControlOrMeta+a");
+    await page.keyboard.press("ControlOrMeta+a");
 
-  await page.waitForTimeout(1000);
+    await page.waitForTimeout(1000);
 
-  await page.keyboard.press("ControlOrMeta+c");
+    await page.keyboard.press("ControlOrMeta+c");
 
-  await page.waitForTimeout(1000);
+    await page.waitForTimeout(1000);
 
-  await page.getByPlaceholder("Type something...").nth(2).click();
+    await page.getByPlaceholder("Type something...").nth(2).click();
 
-  await page.waitForTimeout(1000);
+    await page.waitForTimeout(1000);
 
-  await page.keyboard.press("ControlOrMeta+a");
+    await page.keyboard.press("ControlOrMeta+a");
 
-  await page.waitForTimeout(1000);
+    await page.waitForTimeout(1000);
 
-  await page.keyboard.press("ControlOrMeta+v");
+    await page.keyboard.press("ControlOrMeta+v");
 
-  value = await page.getByPlaceholder("Type something...").nth(2).inputValue();
-  expect(value).toBe("ollama_test_ctrl_a_second_input");
-});
+    value = await page
+      .getByPlaceholder("Type something...")
+      .nth(2)
+      .inputValue();
+    expect(value).toBe("ollama_test_ctrl_a_second_input");
+  },
+);
