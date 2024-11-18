@@ -1039,7 +1039,7 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 798,
+        "height": 400,
         "id": "note-39jdn",
         "position": {
           "x": 94.28986613312418,
@@ -3260,7 +3260,7 @@
         },
         "selected": false,
         "width": 325,
-        "height": 150,
+        "height": 100,
         "positionAbsolute": {
           "x": 955.3277857006676,
           "y": 1552.171191793604
