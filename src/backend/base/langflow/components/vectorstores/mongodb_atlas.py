@@ -74,11 +74,16 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
                 raise ValueError(msg) from e
 
         try:
-            mongo_client: MongoClient = MongoClient(
-                self.mongodb_atlas_cluster_uri,
-                tls=True,
-                tlsCertificateKeyFile=client_cert_path,
-                tlsCAFile=certifi.where())  if self.enable_mtls else MongoClient(self.mongodb_atlas_cluster_uri)
+            mongo_client: MongoClient = (
+                MongoClient(
+                    self.mongodb_atlas_cluster_uri,
+                    tls=True,
+                    tlsCertificateKeyFile=client_cert_path,
+                    tlsCAFile=certifi.where(),
+                )
+                if self.enable_mtls
+                else MongoClient(self.mongodb_atlas_cluster_uri)
+            )
 
             collection = mongo_client[self.db_name][self.collection_name]
             collection.drop()  # Drop collection to override the vector store
