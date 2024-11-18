@@ -3249,7 +3249,7 @@
         "data": {
           "id": "note-igpjN",
           "node": {
-            "description": "## 🐕 2. Retriever Flow\n\nDescription\n\nOpen the **Playground** and ask, ```What is the document is about?```\n",
+            "description": "## 🐕 2. Retriever Flow\n\nThis flow answers your questions with contextual data retrieved from your vector database.\n\nOpen the **Playground** and ask, ```What is this document about?```\n",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -3260,7 +3260,7 @@
         },
         "selected": false,
         "width": 325,
-        "height": 325,
+        "height": 150,
         "positionAbsolute": {
           "x": 955.3277857006676,
           "y": 1552.171191793604
