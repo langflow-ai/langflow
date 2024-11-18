@@ -160,7 +160,7 @@ async function moveElementByX(
 
 test(
   "should create a flow with decision",
-  { tag: "@component" },
+  { tag: ["@release", "@component"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,

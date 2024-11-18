@@ -4,7 +4,7 @@ import path from "path";
 
 test(
   "Basic Prompting (Hello, World)",
-  { tag: "@starter-project" },
+  { tag: ["@release", "@starter-project"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
