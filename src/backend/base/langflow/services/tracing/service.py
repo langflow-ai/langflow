@@ -112,7 +112,7 @@ class TracingService(Service):
             await asyncio.to_thread(self._initialize_langwatch_tracer)
             await asyncio.to_thread(self._initialize_langfuse_tracer)
         except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error initializing tracers")
+            logger.debug("Error initializing tracers")
 
     def _initialize_langsmith_tracer(self) -> None:
         project_name = os.getenv("LANGCHAIN_PROJECT", "Langflow")
