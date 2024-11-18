@@ -11,7 +11,7 @@ import {
 } from "@/controllers/API/queries/api-keys";
 import { SelectionChangedEvent } from "ag-grid-community";
 import { useContext, useEffect, useRef, useState } from "react";
-import TableComponent from "../../../../components/tableComponent";
+import TableComponent from "../../../../components/core/parameterRenderComponent/components/tableComponent";
 import { AuthContext } from "../../../../contexts/authContext";
 import useAlertStore from "../../../../stores/alertStore";
 import ApiKeyHeaderComponent from "./components/ApiKeyHeader";

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import ForwardedIconComponent from "../../../../../../../components/genericIconComponent";
+import ForwardedIconComponent from "../../../../../../../components/common/genericIconComponent";
 import FileCard from "../../../fileComponent";
 import formatFileName from "../../../filePreviewChat/utils/format-file-name";
 

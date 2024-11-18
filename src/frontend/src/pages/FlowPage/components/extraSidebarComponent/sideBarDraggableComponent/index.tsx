@@ -1,6 +1,6 @@
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import { DragEventHandler, forwardRef, useRef, useState } from "react";
-import IconComponent from "../../../../../components/genericIconComponent";
+import IconComponent from "../../../../../components/common/genericIconComponent";
 import {
   Select,
   SelectContent,

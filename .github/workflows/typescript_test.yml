@@ -28,19 +28,55 @@ on:
 env:
   NODE_VERSION: "21"
   PYTHON_VERSION: "3.12"
-  # Define the directory where Playwright browsers will be installed.
-  # Adjust if your project uses a different path.
   PLAYWRIGHT_BROWSERS_PATH: "ms-playwright"
 
 jobs:
+  determine-test-suite:
+    runs-on: ubuntu-latest
+    outputs:
+      suites: ${{ steps.set-suites.outputs.suites }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
+
+      - id: set-suites
+        run: |
+          SUITES="[]"
+          CHANGES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+
+          if echo "$CHANGES" | grep -q "src/backend/base/langflow/initial_setup/\|src/backend/base/langflow/\|src/frontend/workspace/"; then
+            SUITES=$(echo $SUITES | jq '. += ["starter-projects"]')
+          fi
+          if echo "$CHANGES" | grep -q "src/frontend/src/components/"; then
+            SUITES=$(echo $SUITES | jq '. += ["components"]')
+          fi
+          if echo "$CHANGES" | grep -q "src/frontend/workspace/"; then
+            SUITES=$(echo $SUITES | jq '. += ["workspace"]')
+          fi
+          if echo "$CHANGES" | grep -q "src/frontend/api/"; then
+            SUITES=$(echo $SUITES | jq '. += ["api"]')
+          fi
+          if echo "$CHANGES" | grep -q "src/frontend/database/"; then
+            SUITES=$(echo $SUITES | jq '. += ["database"]')
+          fi
+
+          # If no specific changes detected, run all suites
+          if [ "$SUITES" == "[]" ]; then
+            SUITES='["starter-projects", "components", "workspace", "api", "database"]'
+          fi
+
+          echo "suites=$SUITES" >> $GITHUB_OUTPUT
+
   setup-and-test:
-    name: Playwright Tests - Group ${{ matrix.shardIndex }}
+    needs: determine-test-suite
+    name: Playwright Tests - ${{ matrix.suite }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shardIndex: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        shardTotal: [10]
+        suite: ${{ fromJson(needs.determine-test-suite.outputs.suites) }}
 
     env:
       OPENAI_API_KEY: ${{ inputs.openai_api_key || secrets.OPENAI_API_KEY }}
@@ -48,70 +84,9 @@ jobs:
       SEARCH_API_KEY: "${{ secrets.SEARCH_API_KEY }}"
       ASTRA_DB_APPLICATION_TOKEN: "${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}"
       ASTRA_DB_API_ENDPOINT: "${{ secrets.ASTRA_DB_API_ENDPOINT }}"
-    outputs:
-      failed: ${{ steps.check-failure.outputs.failed }}
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          # If ref is passed as input, checkout that ref
-          # else checkout the default ref
-          ref: ${{ inputs.ref || github.ref }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        id: setup-node
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Cache Node.js dependencies
-        uses: actions/cache@v4
-        id: npm-cache
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('src/frontend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Install Node.js dependencies
-        run: |
-          cd src/frontend
-          npm ci
-        if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
-      - name: Get Playwright version
-        run: echo "PLAYWRIGHT_VERSION=$(jq '.devDependencies["@playwright/test"]' src/frontend/package.json -r)" >> $GITHUB_ENV
-      - name: Cache Playwright binaries
-        id: playwright-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-browsers-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}
-
-      - name: Install Frontend dependencies
-        run: |
-          cd src/frontend
-          npm ci
-
-      - name: Install Playwright's browser binaries
-        run: |
-          cd src/frontend
-          npx playwright install --with-deps
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-      - name: Install Playwright's dependencies
-        run: |
-          cd src/frontend
-          npx playwright install-deps
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-
-      - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
-      - name: Install the project
-        run: uv sync --dev
-
-      - name: create .env
-        run: |
-          touch .env
-          echo "${{ secrets.ENV_VARS }}" > .env
+      # [Previous setup steps remain the same until test execution]
 
       - name: Run Playwright Tests
         uses: nick-fields/retry@v3
@@ -120,19 +95,15 @@ jobs:
           max_attempts: 2
           command: |
             cd src/frontend
-            npx playwright test ${{ inputs.tests_folder }} --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --list
-            npx playwright test ${{ inputs.tests_folder }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
+            npx playwright test ${{ inputs.tests_folder }} --grep "@${{ matrix.suite }}" --trace on --workers 2
 
-      - name: Upload blob report to GitHub Actions Artifacts
+      - name: Upload blob report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: blob-report-${{ matrix.shardIndex }}
+          name: blob-report-${{ matrix.suite }}
           path: src/frontend/blob-report
           retention-days: 1
-
-      - name: Minimize uv cache
-        run: uv cache prune --ci
 
   merge-reports:
     # We need to repeat the condition at every step

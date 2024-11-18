@@ -1,7 +1,7 @@
 import { useState } from "react";
 import IconComponent, {
   ForwardedIconComponent,
-} from "../../../../../components/genericIconComponent";
+} from "../../../../../components/common/genericIconComponent";
 import { Skeleton } from "../../../../../components/ui/skeleton";
 import formatFileName from "./utils/format-file-name";
 

@@ -1,5 +1,5 @@
 import { APIClassType } from "@/types/api";
-import IconComponent from "../../../../../components/genericIconComponent";
+import IconComponent from "../../../../../components/common/genericIconComponent";
 export default function NoteDraggableComponent() {
   function onDragStart(event: React.DragEvent<any>): void {
     const noteNode: APIClassType = {

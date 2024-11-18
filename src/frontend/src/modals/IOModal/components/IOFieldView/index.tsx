@@ -2,11 +2,11 @@ import useHandleNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import { NodeType } from "@/types/flow";
 import { cloneDeep } from "lodash";
 import { useState } from "react";
-import ImageViewer from "../../../../components/ImageViewer";
-import CsvOutputComponent from "../../../../components/csvOutputComponent";
-import DataOutputComponent from "../../../../components/dataOutputComponent";
-import InputListComponent from "../../../../components/parameterRenderComponent/components/inputListComponent";
-import PdfViewer from "../../../../components/pdfViewer";
+import ImageViewer from "../../../../components/common/ImageViewer";
+import CsvOutputComponent from "../../../../components/core/csvOutputComponent";
+import DataOutputComponent from "../../../../components/core/dataOutputComponent";
+import InputListComponent from "../../../../components/core/parameterRenderComponent/components/inputListComponent";
+import PdfViewer from "../../../../components/core/pdfViewer";
 import { Textarea } from "../../../../components/ui/textarea";
 import { PDFViewConstant } from "../../../../constants/constants";
 import {

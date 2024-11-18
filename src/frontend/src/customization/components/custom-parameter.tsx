@@ -1,4 +1,4 @@
-import { ParameterRenderComponent } from "@/components/parameterRenderComponent";
+import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { cn } from "@/utils/utils";

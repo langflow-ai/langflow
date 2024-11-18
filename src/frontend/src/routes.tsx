@@ -5,11 +5,11 @@ import {
   Outlet,
   Route,
 } from "react-router-dom";
-import { ProtectedAdminRoute } from "./components/authAdminGuard";
-import { ProtectedRoute } from "./components/authGuard";
-import { ProtectedLoginRoute } from "./components/authLoginGuard";
-import { AuthSettingsGuard } from "./components/authSettingsGuard";
-import { StoreGuard } from "./components/storeGuard";
+import { ProtectedAdminRoute } from "./components/authorization/authAdminGuard";
+import { ProtectedRoute } from "./components/authorization/authGuard";
+import { ProtectedLoginRoute } from "./components/authorization/authLoginGuard";
+import { AuthSettingsGuard } from "./components/authorization/authSettingsGuard";
+import { StoreGuard } from "./components/authorization/storeGuard";
 import ContextWrapper from "./contexts";
 import { CustomNavigate } from "./customization/components/custom-navigate";
 import { BASENAME } from "./customization/config-constants";

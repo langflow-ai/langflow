@@ -1,5 +1,5 @@
 import AlertDisplayArea from "@/alerts/displayArea";
-import CrashErrorComponent from "@/components/crashErrorComponent";
+import CrashErrorComponent from "@/components/common/crashErrorComponent";
 import { ErrorBoundary } from "react-error-boundary";
 import { Outlet } from "react-router-dom";
 import { GenericErrorComponent } from "./components/GenericErrorComponent";

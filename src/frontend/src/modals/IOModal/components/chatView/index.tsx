@@ -6,7 +6,7 @@ import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useEffect, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
-import IconComponent from "../../../../components/genericIconComponent";
+import IconComponent from "../../../../components/common/genericIconComponent";
 import {
   ALLOWED_IMAGE_INPUT_EXTENSIONS,
   CHAT_FIRST_INITIAL_TEXT,

@@ -10,7 +10,7 @@ import emojiRegex from "emoji-regex";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { checkLucideIcons } from "@/CustomNodes/helpers/check-lucide-icons";
 import { cn } from "@/utils/utils";
-import IconComponent from "../../../../components/genericIconComponent";
+import IconComponent from "../../../../components/common/genericIconComponent";
 
 export function NodeIcon({
   icon,

@@ -5,8 +5,8 @@ import { useAddComponent } from "@/hooks/useAddComponent";
 import { DragEventHandler, forwardRef, useRef, useState } from "react";
 import IconComponent, {
   ForwardedIconComponent,
-} from "../../../../../../components/genericIconComponent";
-import ShadTooltip from "../../../../../../components/shadTooltipComponent";
+} from "../../../../../../components/common/genericIconComponent";
+import ShadTooltip from "../../../../../../components/common/shadTooltipComponent";
 import {
   Select,
   SelectContent,

@@ -1,5 +1,5 @@
 import useFlowStore from "@/stores/flowStore";
-import IconComponent from "../../../../../../../components/genericIconComponent";
+import IconComponent from "../../../../../../../components/common/genericIconComponent";
 import { Button } from "../../../../../../../components/ui/button";
 import { Case } from "../../../../../../../shared/components/caseComponent";
 import { FilePreviewType } from "../../../../../../../types/components";

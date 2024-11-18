@@ -2,8 +2,8 @@ import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/us
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
-import { ForwardedIconComponent } from "../../components/genericIconComponent";
-import ShadTooltip from "../../components/shadTooltipComponent";
+import { ForwardedIconComponent } from "../../components/common/genericIconComponent";
+import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
 import {
   TOOLTIP_HIDDEN_OUTPUTS,

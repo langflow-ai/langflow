@@ -5,7 +5,7 @@ import {
 import * as Form from "@radix-ui/react-form";
 import { cloneDeep } from "lodash";
 import { useContext, useState } from "react";
-import IconComponent from "../../components/genericIconComponent";
+import IconComponent from "../../components/common/genericIconComponent";
 import Header from "../../components/headerComponent";
 import InputComponent from "../../components/inputComponent";
 import { Button } from "../../components/ui/button";

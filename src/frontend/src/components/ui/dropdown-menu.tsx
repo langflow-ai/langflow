@@ -3,7 +3,7 @@
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import * as React from "react";
 import { cn } from "../../utils/utils";
-import IconComponent from "../genericIconComponent";
+import IconComponent from "../common/genericIconComponent";
 
 const DropdownMenu = DropdownMenuPrimitive.Root;
 

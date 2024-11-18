@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { useRef } from "react";
-import IconComponent from "../../../../../../components/genericIconComponent";
+import IconComponent from "../../../../../../components/common/genericIconComponent";
 import { Input } from "../../../../../../components/ui/input";
 import { classNames } from "../../../../../../utils/utils";
 
