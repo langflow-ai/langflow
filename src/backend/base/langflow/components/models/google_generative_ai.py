@@ -1,5 +1,6 @@
 from pydantic.v1 import SecretStr
 
+from langflow.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs import DropdownInput, FloatInput, IntInput, SecretStrInput
@@ -21,7 +22,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             name="model",
             display_name="Model",
             info="The name of the model to use.",
-            options=["gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.0-pro", "gemini-1.0-pro-vision"],
+            options=GOOGLE_GENERATIVE_AI_MODELS,
             value="gemini-1.5-pro",
         ),
         SecretStrInput(
