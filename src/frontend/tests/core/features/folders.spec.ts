@@ -111,6 +111,7 @@ test("add a flow into a folder by drag and drop", async ({ page }) => {
   await page.getByTestId("sidebar-nav-My Projects").dispatchEvent("drop", {
     dataTransfer,
   });
+  // wait for the file to be uploaded failed with waitforselector
 
   await page.waitForTimeout(1000);
 
