@@ -86,8 +86,6 @@ jobs:
       ASTRA_DB_API_ENDPOINT: "${{ secrets.ASTRA_DB_API_ENDPOINT }}"
 
     steps:
-      # [Previous setup steps remain the same until test execution]
-
       - name: Run Playwright Tests
         uses: nick-fields/retry@v3
         with:
