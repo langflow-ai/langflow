@@ -1,9 +1,7 @@
-import os
-
 from crewai import Crew, Process
 
 from langflow.base.agents.crewai.crew import BaseCrewComponent
-from langflow.io import HandleInput, SecretStrInput
+from langflow.io import HandleInput
 
 
 class HierarchicalCrewComponent(BaseCrewComponent):
@@ -20,20 +18,11 @@ class HierarchicalCrewComponent(BaseCrewComponent):
         HandleInput(name="tasks", display_name="Tasks", input_types=["HierarchicalTask"], is_list=True),
         HandleInput(name="manager_llm", display_name="Manager LLM", input_types=["LanguageModel"], required=False),
         HandleInput(name="manager_agent", display_name="Manager Agent", input_types=["Agent"], required=False),
-        SecretStrInput(
-            name="openai_api_key",
-            display_name="OpenAI API Key",
-            info="The OpenAI API Key to use for the OpenAI model.",
-            value="OPENAI_API_KEY",
-        ),
     ]
 
     def build_crew(self) -> Crew:
         tasks, agents = self.get_tasks_and_agents()
-
-        # Set the OpenAI API Key
-        if self.openai_api_key:
-            os.environ["OPENAI_API_KEY"] = self.openai_api_key
+        manager_llm = self.get_manager_llm()
 
         return Crew(
             agents=agents,
@@ -46,7 +35,7 @@ class HierarchicalCrewComponent(BaseCrewComponent):
             share_crew=self.share_crew,
             function_calling_llm=self.function_calling_llm,
             manager_agent=self.manager_agent,
-            manager_llm=self.manager_llm,
+            manager_llm=manager_llm,
             step_callback=self.get_step_callback(),
             task_callback=self.get_task_callback(),
         )
