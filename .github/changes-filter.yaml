@@ -16,3 +16,33 @@ frontend:
   - "**/typescript_test.yml"
 docs:
   - "docs/**"
+# Test categories and their associated paths
+components:
+  - "src/frontend/src/components/**"
+  - "!src/frontend/src/components/starterProjects/**"
+
+starter-projects:
+  - "src/frontend/src/components/starterProjects/**"
+  - "src/backend/base/langflow/initial_setup/**"
+  - "src/frontend/workspace/starterProjects/**"
+
+workspace:
+  - "src/frontend/workspace/**"
+  - "src/frontend/src/pages/workspace/**"
+  - "src/frontend/src/components/workspace/**"
+  - "src/frontend/src/components/ui/renderInputParameter/**"
+  - "src/frontend/src/components/outputInspection/**"
+  - "src/frontend/src/components/playground/**"
+
+api:
+  - "src/backend/base/langflow/api/**"
+  - "src/frontend/src/api/**"
+
+database:
+  - "src/backend/base/langflow/services/database/**"
+  - "src/backend/base/langflow/alembic/**"
+  - "src/frontend/src/services/database/**"
+
+release:
+  - "src/frontend"
+  - "src/backend"
