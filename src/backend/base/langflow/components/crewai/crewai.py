@@ -8,7 +8,7 @@ from langflow.io import BoolInput, DictInput, HandleInput, MultilineInput, Outpu
 class CrewAIAgentComponent(Component):
     """Component for creating a CrewAI agent.
 
-    This component allows you to create a CrewAI agent with the specified role, goal, backstory, tools, 
+    This component allows you to create a CrewAI agent with the specified role, goal, backstory, tools,
     and language model.
 
     Args:
@@ -17,6 +17,7 @@ class CrewAIAgentComponent(Component):
     Returns:
         Agent: CrewAI agent.
     """
+
     display_name = "CrewAI Agent"
     description = "Represents an agent of CrewAI."
     documentation: str = "https://docs.crewai.com/how-to/LLM-Connections/"

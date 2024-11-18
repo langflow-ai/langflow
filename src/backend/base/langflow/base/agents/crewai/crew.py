@@ -44,7 +44,7 @@ def _find_api_key(model):
     return None
 
 
-def convert_llm(llm: Any, excluded_keys = None) -> LLM:
+def convert_llm(llm: Any, excluded_keys=None) -> LLM:
     """Converts a LangChain LLM object to a CrewAI-compatible LLM object.
 
     Args:
@@ -74,6 +74,7 @@ def convert_llm(llm: Any, excluded_keys = None) -> LLM:
         api_key=api_key,
         **{k: v for k, v in llm.dict().items() if k not in excluded_keys},
     )
+
 
 def convert_tools(tools):
     """Converts LangChain tools to CrewAI-compatible tools.
