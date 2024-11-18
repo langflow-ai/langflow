@@ -1,4 +1,4 @@
-import { getIconName } from "@/components/inputComponent/components/helpers/get-icon-name";
+import { getIconName } from "@/components/parameterRenderComponent/inputComponent/components/helpers/get-icon-name";
 import { GRADIENT_CLASS } from "@/constants/constants";
 import ComponentTextModal from "@/modals/textAreaModal";
 import { useRef, useState } from "react";

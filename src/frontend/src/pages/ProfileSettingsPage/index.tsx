@@ -7,7 +7,7 @@ import { cloneDeep } from "lodash";
 import { useContext, useState } from "react";
 import IconComponent from "../../components/genericIconComponent";
 import Header from "../../components/headerComponent";
-import InputComponent from "../../components/inputComponent";
+import InputComponent from "../../components/parameterRenderComponent/inputComponent";
 import { Button } from "../../components/ui/button";
 import {
   EDIT_PASSWORD_ALERT_LIST,

@@ -1,4 +1,4 @@
-import TableAutoCellRender from "../tableComponent/components/tableAutoCellRender";
+import TableAutoCellRender from "../parameterRenderComponent/tableComponent/components/tableAutoCellRender";
 
 export default function ArrayReader({ array }: { array: any[] }): JSX.Element {
   //TODO check array type

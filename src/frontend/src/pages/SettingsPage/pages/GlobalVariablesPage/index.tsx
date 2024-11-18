@@ -1,7 +1,7 @@
 import IconComponent from "../../../../components/genericIconComponent";
 import { Button } from "../../../../components/ui/button";
 
-import TableAutoCellRender from "@/components/tableComponent/components/tableAutoCellRender";
+import TableAutoCellRender from "@/components/parameterRenderComponent/tableComponent/components/tableAutoCellRender";
 import {
   useDeleteGlobalVariables,
   useGetGlobalVariables,
@@ -19,7 +19,7 @@ import { useEffect, useRef, useState } from "react";
 import GlobalVariableModal from "../../../../components/GlobalVariableModal/GlobalVariableModal";
 import Dropdown from "../../../../components/dropdownComponent";
 import ForwardedIconComponent from "../../../../components/genericIconComponent";
-import TableComponent from "../../../../components/tableComponent";
+import TableComponent from "../../../../components/parameterRenderComponent/tableComponent";
 import { Badge } from "../../../../components/ui/badge";
 import useAlertStore from "../../../../stores/alertStore";
 

@@ -10,7 +10,7 @@ import { useDarkStore } from "../../stores/darkStore";
 import { VertexBuildTypeAPI } from "../../types/api";
 import { NodeType } from "../../types/flow";
 import ForwardedIconComponent from "../genericIconComponent";
-import TableComponent from "../tableComponent";
+import TableComponent from "../parameterRenderComponent/tableComponent";
 import Loading from "../ui/loading";
 import { convertCSVToData } from "./helpers/convert-data-function";
 

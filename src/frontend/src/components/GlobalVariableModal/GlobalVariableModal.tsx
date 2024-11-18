@@ -11,7 +11,7 @@ import useAlertStore from "../../stores/alertStore";
 import { useTypesStore } from "../../stores/typesStore";
 import { ResponseErrorDetailAPI } from "../../types/api";
 import ForwardedIconComponent from "../genericIconComponent";
-import InputComponent from "../inputComponent";
+import InputComponent from "../parameterRenderComponent/inputComponent";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";

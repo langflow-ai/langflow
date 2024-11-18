@@ -1,7 +1,7 @@
 import ForwardedIconComponent from "@/components/genericIconComponent";
 import TableComponent, {
   TableComponentProps,
-} from "@/components/tableComponent";
+} from "@/components/parameterRenderComponent/tableComponent";
 import { Button } from "@/components/ui/button";
 import { DialogClose } from "@radix-ui/react-dialog";
 import { ElementRef, forwardRef, useState } from "react";

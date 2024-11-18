@@ -6,11 +6,11 @@ import { useEffect } from "react";
 import DeleteConfirmationModal from "../../../../modals/deleteConfirmationModal";
 import useAlertStore from "../../../../stores/alertStore";
 import { cn } from "../../../../utils/utils";
-import GlobalVariableModal from "../../../GlobalVariableModal/GlobalVariableModal";
 import ForwardedIconComponent from "../../../genericIconComponent";
-import InputComponent from "../../../inputComponent";
+import GlobalVariableModal from "../../../GlobalVariableModal/GlobalVariableModal";
 import { CommandItem } from "../../../ui/command";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
+import InputComponent from "../../inputComponent";
 import { InputGlobalComponentType, InputProps } from "../../types";
 
 export default function InputGlobalComponent({

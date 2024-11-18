@@ -2,7 +2,6 @@ import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { useMemo } from "react";
-import SliderComponent from "../sliderComponent";
 import TableNodeComponent from "./components/TableNodeComponent";
 import CodeAreaComponent from "./components/codeAreaComponent";
 import DictComponent from "./components/dictComponent";
@@ -18,6 +17,7 @@ import PromptAreaComponent from "./components/promptComponent";
 import { RefreshParameterComponent } from "./components/refreshParameterComponent";
 import { StrRenderComponent } from "./components/strRenderComponent";
 import ToggleShadComponent from "./components/toggleShadComponent";
+import SliderComponent from "./sliderComponent";
 import { InputProps } from "./types";
 
 export function ParameterRenderComponent({
