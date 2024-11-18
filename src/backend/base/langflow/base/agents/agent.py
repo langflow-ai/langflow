@@ -133,7 +133,7 @@ class LCAgentComponent(Component):
                 max_iterations=self.max_iterations,
             )
         input_dict: dict[str, str | list[BaseMessage]] = {"input": self.input_value}
-        if self.chat_history:
+        if hasattr(self, "chat_history") and self.chat_history:
             input_dict["chat_history"] = data_to_messages(self.chat_history)
 
         if hasattr(self, "graph"):
