@@ -1094,7 +1094,7 @@ toml = [
 
 [[package]]
 name = "crewai"
-version = "0.74.2"
+version = "0.80.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "appdirs" },
@@ -1115,17 +1115,18 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "pyvis" },
     { name = "regex" },
+    { name = "tomli" },
     { name = "tomli-w" },
     { name = "uv" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/27/7f/998b084d1ebfca9739f7e26e0c97eab6e4f35391689a2836c04497430dd8/crewai-0.74.2.tar.gz", hash = "sha256:de8c70bda1862ee52f52202d0f2afb53cae3e5849ecaee3c6bdcb774bac2358f", size = 5812388 }
+sdist = { url = "https://files.pythonhosted.org/packages/f7/38/584389ffb7ca7bc4719438a932d99993b8e24781e81dec33908c8bdb8954/crewai-0.80.0.tar.gz", hash = "sha256:8fc10f8a0344349f5fcc431fcdd03dcb033704d402d67f9b145a6d9d099d8e42", size = 5842314 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a3/ef/5fae2f28d634c146cd06da118b50f3b9c7213ef9649e20f4ba1e7b6d2f06/crewai-0.74.2-py3-none-any.whl", hash = "sha256:4f0acd839ac604da1ad8efea67394166700e02ae643ee829b0f8eb22f2129ef2", size = 187638 },
+    { url = "https://files.pythonhosted.org/packages/13/55/8caa2264c59be4c11266be1aae2b57610dcd30cd1c6f0752416589126f3b/crewai-0.80.0-py3-none-any.whl", hash = "sha256:74eb67b6de2688871c831bc617de0a839667c643c8b6b3757b3c1e849bea3ea0", size = 197680 },
 ]
 
 [[package]]
 name = "crewai-tools"
-version = "0.13.2"
+version = "0.14.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "beautifulsoup4" },
@@ -1143,9 +1144,9 @@ dependencies = [
     { name = "requests" },
     { name = "selenium" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/96/02/136f42ed8a7bd706a85663714c615bdcb684e43e95e4719c892aa0ce3d53/crewai_tools-0.13.2.tar.gz", hash = "sha256:c6782f2e868c0e96b25891f1b40fb8c90c01e920bab2fd1388f89ef1d7a4b99b", size = 816250 }
+sdist = { url = "https://files.pythonhosted.org/packages/9b/6d/4fa91b481b120f83bb58f365203d8aa8564e8ced1035d79f8aedb7d71e2f/crewai_tools-0.14.0.tar.gz", hash = "sha256:510f3a194bcda4fdae4314bd775521964b5f229ddbe451e5d9e0216cae57f4e3", size = 815892 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/28/30/df215173b6193b2cfb1902a339443be73056eae89579805b853c6f359761/crewai_tools-0.13.2-py3-none-any.whl", hash = "sha256:8c7583c9559fb625f594349c6553a5251ebd7b21918735ad6fbe8bab7ec3db50", size = 463444 },
+    { url = "https://files.pythonhosted.org/packages/c8/ed/9f4e64e1507062957b0118085332d38b621c1000874baef2d1c4069bfd97/crewai_tools-0.14.0-py3-none-any.whl", hash = "sha256:0a804a828c29869c3af3253f4fc4c3967a3f80f06dab22e9bbe9526608a31564", size = 462980 },
 ]
 
 [[package]]
@@ -3518,6 +3519,7 @@ dependencies = [
     { name = "chromadb" },
     { name = "cohere" },
     { name = "composio-langchain" },
+    { name = "crewai" },
     { name = "dspy-ai" },
     { name = "duckduckgo-search" },
     { name = "elasticsearch" },
@@ -3664,6 +3666,7 @@ requires-dist = [
     { name = "cohere", specifier = ">=5.5.3" },
     { name = "composio-langchain", specifier = "==0.5.9" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
+    { name = "crewai", specifier = "~=0.80.0" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
     { name = "dspy-ai", specifier = ">=2.4.0" },
     { name = "duckduckgo-search", specifier = ">=6.3.4" },
@@ -3914,7 +3917,7 @@ requires-dist = [
     { name = "celery", marker = "extra == 'deploy'", specifier = ">=5.3.1" },
     { name = "chardet", specifier = ">=5.2.0" },
     { name = "clickhouse-connect", specifier = "==0.7.19" },
-    { name = "crewai", specifier = ">=0.74.2" },
+    { name = "crewai", specifier = "~=0.80.0" },
     { name = "cryptography", specifier = ">=42.0.5,<44.0.0" },
     { name = "ctransformers", marker = "extra == 'all'", specifier = ">=0.2" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2" },
