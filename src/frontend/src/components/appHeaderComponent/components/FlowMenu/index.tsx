@@ -148,7 +148,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               />
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-44 bg-white dark:bg-black">
+          <DropdownMenuContent className="w-44 bg-white dark:bg-background">
             <DropdownMenuLabel>Options</DropdownMenuLabel>
             <DropdownMenuItem
               onClick={() => {
