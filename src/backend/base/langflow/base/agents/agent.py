@@ -122,18 +122,21 @@ class LCAgentComponent(Component):
         if isinstance(agent, AgentExecutor):
             runnable = agent
         else:
-            if not self.tools:
+            if not hasattr(self, "tools") or not self.tools:
                 msg = "Tools are required to run the agent."
                 raise ValueError(msg)
+            handle_parsing_errors = hasattr(self, "handle_parsing_errors") and self.handle_parsing_errors
+            verbose = hasattr(self, "verbose") and self.verbose
+            max_iterations = hasattr(self, "max_iterations") and self.max_iterations
             runnable = AgentExecutor.from_agent_and_tools(
                 agent=agent,
                 tools=self.tools,
-                handle_parsing_errors=self.handle_parsing_errors,
-                verbose=self.verbose,
-                max_iterations=self.max_iterations,
+                handle_parsing_errors=handle_parsing_errors,
+                verbose=verbose,
+                max_iterations=max_iterations,
             )
         input_dict: dict[str, str | list[BaseMessage]] = {"input": self.input_value}
-        if self.chat_history:
+        if hasattr(self, "chat_history") and self.chat_history:
             input_dict["chat_history"] = data_to_messages(self.chat_history)
 
         if hasattr(self, "graph"):
