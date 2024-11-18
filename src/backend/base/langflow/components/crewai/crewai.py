@@ -1,11 +1,22 @@
-from crewai import LLM, Agent
-from crewai.tools.base_tool import Tool
+from crewai import Agent
 
+from langflow.base.agents.crewai.crew import convert_llm, convert_tools
 from langflow.custom import Component
 from langflow.io import BoolInput, DictInput, HandleInput, MultilineInput, Output
 
 
 class CrewAIAgentComponent(Component):
+    """Component for creating a CrewAI agent.
+
+    This component allows you to create a CrewAI agent with the specified role, goal, backstory, tools, 
+    and language model.
+
+    Args:
+        Component (Component): Base class for all components.
+
+    Returns:
+        Agent: CrewAI agent.
+    """
     display_name = "CrewAI Agent"
     description = "Represents an agent of CrewAI."
     documentation: str = "https://docs.crewai.com/how-to/LLM-Connections/"
@@ -68,41 +79,18 @@ class CrewAIAgentComponent(Component):
         Output(display_name="Agent", name="output", method="build_output"),
     ]
 
-    def _convert_tools(self):
-        if not self.tools:
-            return []
-
-        return [Tool.from_langchain(tool) for tool in self.tools]
-
     def build_output(self) -> Agent:
         kwargs = self.kwargs or {}
-
-        # Convert to CrewAI Compatible Tools
-        crewai_tools = self._convert_tools()
-
-        # Retrieve the API Key from the LLM
-        # TODO: Handle the general case?
-        api_key = getattr(self.llm, "openai_api_key", None) or getattr(self.llm, "api_key", None)
-        if api_key:
-            api_key = api_key.get_secret_value()
-
-        # Convert to CrewAI-compatible LLM object
-        excluded_keys = {"model", "model_name", "_type", "api_key"}
-        crewai_llm = LLM(
-            model=self.llm.model_name,
-            api_key=api_key,
-            **{k: v for k, v in self.llm.dict().items() if k not in excluded_keys},
-        )
 
         # Define the Agent
         agent = Agent(
             role=self.role,
             goal=self.goal,
             backstory=self.backstory,
-            llm=crewai_llm,
+            llm=convert_llm(self.llm),
             verbose=self.verbose,
             memory=self.memory,
-            tools=crewai_tools,
+            tools=convert_tools(self.tools),
             allow_delegation=self.allow_delegation,
             allow_code_execution=self.allow_code_execution,
             **kwargs,

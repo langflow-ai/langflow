@@ -17,10 +17,11 @@ class SequentialCrewComponent(BaseCrewComponent):
     ]
 
     def get_tasks_and_agents(self) -> tuple[list[Task], list[Agent]]:
-        return self.tasks, [task.agent for task in self.tasks]
+        return super().get_tasks_and_agents(agents_list=[task.agent for task in self.tasks])
 
     def build_crew(self) -> Message:
         tasks, agents = self.get_tasks_and_agents()
+
         return Crew(
             agents=agents,
             tasks=tasks,

@@ -22,6 +22,8 @@ class HierarchicalCrewComponent(BaseCrewComponent):
 
     def build_crew(self) -> Crew:
         tasks, agents = self.get_tasks_and_agents()
+        manager_llm = self.get_manager_llm()
+
         return Crew(
             agents=agents,
             tasks=tasks,
@@ -33,7 +35,7 @@ class HierarchicalCrewComponent(BaseCrewComponent):
             share_crew=self.share_crew,
             function_calling_llm=self.function_calling_llm,
             manager_agent=self.manager_agent,
-            manager_llm=self.manager_llm,
+            manager_llm=manager_llm,
             step_callback=self.get_step_callback(),
             task_callback=self.get_task_callback(),
         )
