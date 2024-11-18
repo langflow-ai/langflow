@@ -8,6 +8,16 @@ on:
       STORE_API_KEY:
         required: true
     inputs:
+      suites:
+        description: "Test suites to run (JSON array)"
+        required: false
+        type: string
+        default: '["starter-projects", "components", "workspace", "api", "database"]'
+      release:
+        description: "Whether this is a release build"
+        required: false
+        type: boolean
+        default: false
       tests_folder:
         description: "(Optional) Tests to run"
         required: false
@@ -19,6 +29,16 @@ on:
         type: string
   workflow_dispatch:
     inputs:
+      suites:
+        description: "Test suites to run (JSON array)"
+        required: false
+        type: string
+        default: '["starter-projects", "components", "workspace", "api", "database"]'
+      release:
+        description: "Whether this is a release build"
+        required: false
+        type: boolean
+        default: false
       tests_folder:
         description: "(Optional) Tests to run"
         required: false
@@ -53,40 +73,42 @@ jobs:
 
       - name: Set Matrix
         id: set-matrix
-      run: |
-        SUITES="[]"
+        run: |
+          # Start with input suites if provided, otherwise empty array
+          SUITES="${{ inputs.suites || '[]' }}"
 
-        # Check components changes (excluding starter projects)
-        if [[ "${{ steps.filter.outputs.components }}" == "true" ]]; then
-          SUITES=$(echo $SUITES | jq '. += ["components"]')
-        fi
+          RELEASE="${{ inputs.release || 'false' }}"
 
-        # Check starter-projects changes (including components in starter projects)
-        if [[ "${{ steps.filter.outputs.starter-projects }}" == "true" ]]; then
-          SUITES=$(echo $SUITES | jq '. += ["starter-projects"]')
-        fi
+          if [[ "$RELEASE" == "true" ]]; then
+            SUITES='["release"]'
+          else
+            # If input suites were not provided, determine based on changes
+            if [[ "$SUITES" == "[]" ]]; then
+              # Add suites based on changed files
+              if [[ "${{ steps.filter.outputs.components }}" == "true" ]]; then
+                SUITES=$(echo $SUITES | jq '. += ["components"]')
+              fi
+              if [[ "${{ steps.filter.outputs.starter-projects }}" == "true" ]]; then
+                SUITES=$(echo $SUITES | jq '. += ["starter-projects"]')
+              fi
+              if [[ "${{ steps.filter.outputs.workspace }}" == "true" ]]; then
+                SUITES=$(echo $SUITES | jq '. += ["workspace"]')
+              fi
+              if [[ "${{ steps.filter.outputs.api }}" == "true" ]]; then
+                SUITES=$(echo $SUITES | jq '. += ["api"]')
+              fi
+              if [[ "${{ steps.filter.outputs.database }}" == "true" ]]; then
+                SUITES=$(echo $SUITES | jq '. += ["database"]')
+              fi
 
-        # Check workspace changes
-        if [[ "${{ steps.filter.outputs.workspace }}" == "true" ]]; then
-          SUITES=$(echo $SUITES | jq '. += ["workspace"]')
-        fi
+              # If release changes or no specific changes detected, use all suites
+              if [[ "${{ steps.filter.outputs.release }}" == "true" || "$SUITES" == "[]" ]]; then
+                SUITES='["starter-projects", "components", "workspace", "api", "database"]'
+              fi
+            fi
+          fi
 
-        # Check API changes
-        if [[ "${{ steps.filter.outputs.api }}" == "true" ]]; then
-          SUITES=$(echo $SUITES | jq '. += ["api"]')
-        fi
-
-        # Check database changes
-        if [[ "${{ steps.filter.outputs.database }}" == "true" ]]; then
-          SUITES=$(echo $SUITES | jq '. += ["database"]')
-        fi
-
-        # If release changes or no specific changes detected, run all suites
-        if [[ "${{ steps.filter.outputs.release }}" == "true" || "$SUITES" == "[]" ]]; then
-          SUITES='["starter-projects", "components", "workspace", "api", "database"]'
-        fi
-
-        echo "suites=$SUITES" >> $GITHUB_OUTPUT
+          echo "matrix=$SUITES" >> $GITHUB_OUTPUT
 
   setup-and-test:
     name: Playwright Tests - Group ${{ matrix.shardIndex }}

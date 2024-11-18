@@ -52,7 +52,3 @@ database:
   - "src/backend/base/langflow/services/database/**"
   - "src/backend/base/langflow/alembic/**"
   - "src/frontend/src/controllers/**"
-
-release:
-  - "src/frontend"
-  - "src/backend"
