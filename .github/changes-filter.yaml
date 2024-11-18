@@ -16,32 +16,42 @@ frontend:
   - "**/typescript_test.yml"
 docs:
   - "docs/**"
+
 # Test categories and their associated paths
+starter-projects:
+  - "src/backend/base/langflow/initial_setup/**"
+  - "src/frontend/src/pages/MainPage/**"
+  - "src/frontend/src/utils/reactflowUtils.ts"
+
 components:
   - "src/frontend/src/components/**"
-  - "!src/frontend/src/components/starterProjects/**"
-
-starter-projects:
-  - "src/frontend/src/components/starterProjects/**"
-  - "src/backend/base/langflow/initial_setup/**"
-  - "src/frontend/workspace/starterProjects/**"
+  - "src/frontend/src/modals/**"
+  - "src/frontend/src/pages/FlowPage/**"
+  - "src/frontend/src/shared/**"
+  - "src/frontend/src/hooks/**"
+  - "src/frontend/src/CustomNodes/**"
+  - "src/frontend/src/style/**"
+  - "src/frontend/src/utils/styleUtils.ts"
+  - "src/frontend/src/utils/reactflowUtils.ts"
+  - "src/frontend/src/utils/buildUtils.ts"
+  - "src/backend/base/langflow/components/**"
 
 workspace:
-  - "src/frontend/workspace/**"
-  - "src/frontend/src/pages/workspace/**"
-  - "src/frontend/src/components/workspace/**"
-  - "src/frontend/src/components/ui/renderInputParameter/**"
-  - "src/frontend/src/components/outputInspection/**"
-  - "src/frontend/src/components/playground/**"
+  - "src/backend/base/langflow/inputs/**"
+  - "src/frontend/src/components/core/parameterRenderComponent/**"
+  - "src/frontend/src/CustomNodes/**"
+  - "src/frontend/src/modals/**"
+  - "src/frontend/src/style/**"
+  - "src/frontend/src/CustomEdges/**"
 
 api:
   - "src/backend/base/langflow/api/**"
-  - "src/frontend/src/api/**"
+  - "src/frontend/src/controllers/**"
 
 database:
   - "src/backend/base/langflow/services/database/**"
   - "src/backend/base/langflow/alembic/**"
-  - "src/frontend/src/services/database/**"
+  - "src/frontend/src/controllers/**"
 
 release:
   - "src/frontend"

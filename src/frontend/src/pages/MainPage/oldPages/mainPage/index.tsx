@@ -7,8 +7,8 @@ import useAlertStore from "@/stores/alertStore";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
+import PageLayout from "../../../../components/common/pageLayout";
 import DropdownButton from "../../../../components/core/dropdownButtonComponent";
-import PageLayout from "../../../../components/core/pageLayout";
 import {
   MY_COLLECTION_DESC,
   USER_PROJECTS_HEADER,

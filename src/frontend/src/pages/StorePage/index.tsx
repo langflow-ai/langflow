@@ -1,9 +1,9 @@
 import { uniqueId } from "lodash";
 import { useContext, useEffect, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
+import PageLayout from "../../components/common/pageLayout";
 import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { SkeletonCardComponent } from "../../components/common/skeletonCardComponent";
-import PageLayout from "../../components/core/pageLayout";
 import { Button } from "../../components/ui/button";
 
 import StoreCardComponent from "@/components/common/storeCardComponent";

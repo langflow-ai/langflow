@@ -1,8 +1,8 @@
 import { CustomBanner } from "@/customization/components/custom-banner";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
-import ForwardedIconComponent from "../../common/genericIconComponent";
 import { Button } from "../../ui/button";
 import { Separator } from "../../ui/separator";
+import ForwardedIconComponent from "../genericIconComponent";
 
 export default function PageLayout({
   title,

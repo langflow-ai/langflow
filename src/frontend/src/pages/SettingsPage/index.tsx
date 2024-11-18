@@ -5,7 +5,7 @@ import useAuthStore from "@/stores/authStore";
 import { useStoreStore } from "@/stores/storeStore";
 import { Outlet } from "react-router-dom";
 import ForwardedIconComponent from "../../components/common/genericIconComponent";
-import PageLayout from "../../components/core/pageLayout";
+import PageLayout from "../../components/common/pageLayout";
 
 export default function SettingsPage(): JSX.Element {
   const autoLogin = useAuthStore((state) => state.autoLogin);
