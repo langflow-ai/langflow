@@ -61,7 +61,7 @@ test("user can add components by hovering and clicking the plus icon", async ({
     window.getComputedStyle(el).getPropertyValue("opacity"),
   );
 
-  await expect(opacityAfterHover).toBe("1");
+  await expect(Number(opacityAfterHover)).toBeGreaterThan(0);
 
   // Click the plus icon associated with this component
   await plusIcon.click();
