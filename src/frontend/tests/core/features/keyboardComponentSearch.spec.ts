@@ -21,25 +21,33 @@ test("user can search and add components using keyboard shortcuts", async ({
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 3000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
   // Start with blank flow
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="sidebar-search-input"]', {
+    timeout: 1000,
+  });
 
   // Press "/" to activate search
   await page.keyboard.press("/");
-  await page.waitForTimeout(500);
 
   // Verify search is focused and disclosures are closed when search is empty
-  await expect(page.getByTestId("sidebar-search-input")).toBeFocused();
+  await expect(page.getByTestId("sidebar-search-input")).toBeFocused({
+    timeout: 1000,
+  });
   await expect(page.getByTestId("inputsChat Input")).not.toBeVisible();
 
   // Type "chat" to search for chat components
   await page.keyboard.type("chat");
-  await page.waitForTimeout(500);
+
+  await expect(page.getByTestId("inputsChat Input")).toBeVisible({
+    timeout: 1000,
+  });
 
   // Verify disclosures open when search has content
   await expect(page.getByTestId("inputsChat Input")).toBeVisible();
@@ -54,7 +62,6 @@ test("user can search and add components using keyboard shortcuts", async ({
 
   // Press Space to select the component
   await page.keyboard.press("Space");
-  await page.waitForTimeout(500);
 
   // Verify component was added to flow
   const addedComponent = await page.locator(".react-flow__node").first();
@@ -62,13 +69,11 @@ test("user can search and add components using keyboard shortcuts", async ({
 
   // Clear search input and verify disclosures are closed
   await page.getByTestId("sidebar-search-input").clear();
-  await page.waitForTimeout(500);
   await expect(page.getByTestId("inputsChat Input")).not.toBeVisible();
 
   // Test Enter key selection
   await page.keyboard.press("/");
   await page.keyboard.type("prompt");
-  await page.waitForTimeout(500);
 
   // Verify disclosures open with new search
   await expect(page.getByTestId("promptsPrompt")).toBeVisible();
@@ -76,7 +81,6 @@ test("user can search and add components using keyboard shortcuts", async ({
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
   await page.keyboard.press("Enter");
-  await page.waitForTimeout(500);
 
   // Verify second component was added
   const nodeCount = await page.locator(".react-flow__node").count();
@@ -85,7 +89,6 @@ test("user can search and add components using keyboard shortcuts", async ({
   // Verify search is cleared and disclosures are closed after adding component
   await page.keyboard.press("/");
   await page.getByTestId("sidebar-search-input").clear();
-  await page.waitForTimeout(500);
   await expect(page.getByTestId("sidebar-search-input")).toHaveValue("");
   await expect(page.getByTestId("inputsChat Input")).not.toBeVisible();
 
