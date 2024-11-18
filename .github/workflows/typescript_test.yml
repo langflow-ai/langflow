@@ -49,7 +49,7 @@ jobs:
           if echo "$CHANGES" | grep -q "src/backend/base/langflow/initial_setup/\|src/backend/base/langflow/\|src/frontend/workspace/"; then
             SUITES=$(echo $SUITES | jq '. += ["starter-projects"]')
           fi
-          if echo "$CHANGES" | grep -q "src/frontend/components/"; then
+          if echo "$CHANGES" | grep -q "src/frontend/src/components/"; then
             SUITES=$(echo $SUITES | jq '. += ["components"]')
           fi
           if echo "$CHANGES" | grep -q "src/frontend/workspace/"; then
