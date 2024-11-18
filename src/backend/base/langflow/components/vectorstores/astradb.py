@@ -283,7 +283,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
                 vectorize_providers_mapping[display_name] = [provider_key, models]
 
             # Sort the resulting dictionary
-            return dict(sorted(vectorize_providers_mapping.items()))
+            return defaultdict(list, dict(sorted(vectorize_providers_mapping.items())))
         except Exception as e:  # noqa: BLE001
             self.log(f"Error fetching Vectorize providers: {e}")
 
