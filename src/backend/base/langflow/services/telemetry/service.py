@@ -41,7 +41,7 @@ class TelemetryService(Service):
 
         self.ot = OpenTelemetry(prometheus_enabled=settings_service.settings.prometheus_enabled)
         self.architecture: str | None = None
-
+        self.worker_task: asyncio.Task | None = None
         # Check for do-not-track settings
         self.do_not_track = (
             os.getenv("DO_NOT_TRACK", "False").lower() == "true" or settings_service.settings.do_not_track
