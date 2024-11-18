@@ -31,7 +31,7 @@ def ingestion_graph():
     )
     vector_store = AstraVectorStoreComponent(_id="vector-store-123")
     vector_store.set(
-        embedding=openai_embeddings.build_embeddings,
+        embedding_model=openai_embeddings.build_embeddings,
         ingest_data=text_splitter.split_text,
         api_endpoint="https://astra.example.com",
         token="token",  # noqa: S106
@@ -53,7 +53,7 @@ def rag_graph():
         search_input=chat_input.message_response,
         api_endpoint="https://astra.example.com",
         token="token",  # noqa: S106
-        embedding=openai_embeddings.build_embeddings,
+        embedding_model=openai_embeddings.build_embeddings,
     )
     # Mock search_documents
     rag_vector_store.set_on_output(

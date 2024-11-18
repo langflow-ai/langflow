@@ -48,7 +48,7 @@ async def test_base(astradb_client: AstraDB):
             "token": application_token,
             "api_endpoint": api_endpoint,
             "collection_name": BASIC_COLLECTION,
-            "embedding": ComponentInputHandle(
+            "embedding_model": ComponentInputHandle(
                 clazz=OpenAIEmbeddingsComponent,
                 inputs={"openai_api_key": get_openai_api_key()},
                 output_name="embeddings",
@@ -79,7 +79,7 @@ async def test_astra_embeds_and_search():
             "ingest_data": ComponentInputHandle(
                 clazz=TextToData, inputs={"text_data": ["test1", "test2"]}, output_name="from_text"
             ),
-            "embedding": ComponentInputHandle(
+            "embedding_model": ComponentInputHandle(
                 clazz=OpenAIEmbeddingsComponent,
                 inputs={"openai_api_key": get_openai_api_key()},
                 output_name="embeddings",
