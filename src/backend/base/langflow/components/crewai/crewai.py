@@ -91,7 +91,7 @@ class CrewAIAgentComponent(Component):
         crewai_llm = LLM(
             model=self.llm.model_name,
             api_key=api_key,
-            **{k: v for k, v in self.llm.dict().items() if k not in excluded_keys}
+            **{k: v for k, v in self.llm.dict().items() if k not in excluded_keys},
         )
 
         # Define the Agent
