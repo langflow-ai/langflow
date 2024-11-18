@@ -803,7 +803,9 @@ class Component(CustomComponent):
         }
         # Dynamic inputs
         dynamic_inputs = {key: value for key, value in self._attributes.items() if key not in predefined_inputs}
-        return {**predefined_inputs, **dynamic_inputs}
+        # Runtime inputs
+        runtime_inputs = {name: input_.value for name, input_ in self._inputs.items() if hasattr(input_, "value")}
+        return {**predefined_inputs, **dynamic_inputs, **runtime_inputs}
 
     def get_trace_as_metadata(self):
         return {
