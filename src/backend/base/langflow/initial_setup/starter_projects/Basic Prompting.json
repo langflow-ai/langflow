@@ -404,7 +404,7 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "type": "prompt",
-                "value": "Answer the user as if you were a pirate."
+                "value": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh."
               }
             },
             "tool_mode": false
@@ -439,7 +439,7 @@
           }
         },
         "dragging": false,
-        "height": 561,
+        "height": 250,
         "id": "undefined-emdQy",
         "position": {
           "x": 66.38770028934243,
