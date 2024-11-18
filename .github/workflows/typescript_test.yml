@@ -100,11 +100,6 @@ jobs:
               if [[ "${{ steps.filter.outputs.database }}" == "true" ]]; then
                 SUITES=$(echo $SUITES | jq '. += ["database"]')
               fi
-
-              # If release changes or no specific changes detected, use all suites
-              if [[ "${{ steps.filter.outputs.release }}" == "true" || "$SUITES" == "[]" ]]; then
-                SUITES='["starter-projects", "components", "workspace", "api", "database"]'
-              fi
             fi
           fi
 

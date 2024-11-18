@@ -32,8 +32,6 @@ components:
   - "src/frontend/src/CustomNodes/**"
   - "src/frontend/src/style/**"
   - "src/frontend/src/utils/styleUtils.ts"
-  - "src/frontend/src/utils/reactflowUtils.ts"
-  - "src/frontend/src/utils/buildUtils.ts"
   - "src/backend/base/langflow/components/**"
 
 workspace:
@@ -43,6 +41,8 @@ workspace:
   - "src/frontend/src/modals/**"
   - "src/frontend/src/style/**"
   - "src/frontend/src/CustomEdges/**"
+  - "src/frontend/src/utils/reactflowUtils.ts"
+  - "src/frontend/src/utils/buildUtils.ts"
 
 api:
   - "src/backend/base/langflow/api/**"
