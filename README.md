@@ -1,6 +1,6 @@
 <!-- markdownlint-disable MD030 -->
 
-# [![Langflow](./docs/static/img/hero.png)](https://www.langflow.org)
+![Langflow](https://github.com/user-attachments/assets/ba8ab0c6-7fbf-4631-be0e-22b19cfd22f6)
 
 <p align="center" style="font-size: 12px;">
     Langflow is a low-code app builder for RAG and multi-agent AI applications. It’s Python-based and agnostic to any model, API, or database.
@@ -35,8 +35,7 @@
 9. **Customize workflows** or create flows entirely just using Python.
 10. **Ecosystem integrations** as reusable components for any model, API or database.
 
-![Integrations](https://github.com/user-attachments/assets/e9c96dc4-47bf-48ab-ad58-e01e038f25e8)
-
+![Integrations](https://github.com/user-attachments/assets/5f63e6d0-dfd5-4c9c-9cfa-a5021619db2d)
 
 ## 📦 Quickstart
 
