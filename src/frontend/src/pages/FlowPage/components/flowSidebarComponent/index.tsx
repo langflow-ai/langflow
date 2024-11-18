@@ -2,8 +2,8 @@ import Fuse from "fuse.js";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook"; // Import useHotkeys
 
-import ForwardedIconComponent from "@/components/genericIconComponent";
-import ShadTooltip from "@/components/shadTooltipComponent";
+import ShadTooltip from "@/components/core/shadTooltipComponent";
+import ForwardedIconComponent from "@/components/extension/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
   Disclosure,

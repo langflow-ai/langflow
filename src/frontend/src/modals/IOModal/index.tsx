@@ -6,9 +6,9 @@ import { useUtilityStore } from "@/stores/utilityStore";
 import { someFlowTemplateFields } from "@/utils/reactflowUtils";
 import { useEffect, useState } from "react";
 import ShortUniqueId from "short-unique-id";
-import AccordionComponent from "../../components/accordionComponent";
-import IconComponent from "../../components/genericIconComponent";
-import ShadTooltip from "../../components/shadTooltipComponent";
+import AccordionComponent from "../../components/core/accordionComponent";
+import ShadTooltip from "../../components/core/shadTooltipComponent";
+import IconComponent from "../../components/extension/genericIconComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import {

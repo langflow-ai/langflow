@@ -1,4 +1,4 @@
-import ShadTooltip from "../../../../components/shadTooltipComponent";
+import ShadTooltip from "../../../../components/core/shadTooltipComponent";
 import { outputComponentType } from "../../../../types/components";
 import { cn } from "../../../../utils/utils";
 

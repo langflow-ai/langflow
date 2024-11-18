@@ -1,7 +1,7 @@
-import TableAdvancedToggleCellRender from "@/components/parameterRenderComponent/tableComponent/components/tableAdvancedToggleCellRender";
+import TableAdvancedToggleCellRender from "@/components/core/parameterRenderComponent/tableComponent/components/tableAdvancedToggleCellRender";
 import { ColDef, ValueGetterParams } from "ag-grid-community";
 import { useMemo } from "react";
-import TableNodeCellRender from "../../../components/parameterRenderComponent/tableComponent/components/tableNodeCellRender";
+import TableNodeCellRender from "../../../components/core/parameterRenderComponent/tableComponent/components/tableNodeCellRender";
 
 const useColumnDefs = (
   nodeId: string,

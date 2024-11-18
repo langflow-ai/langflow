@@ -1,8 +1,8 @@
 import { usePostValidatePrompt } from "@/controllers/API/queries/nodes/use-post-validate-prompt";
 import React, { useEffect, useRef, useState } from "react";
-import IconComponent from "../../components/genericIconComponent";
-import SanitizedHTMLWrapper from "../../components/sanitizedHTMLWrapper";
-import ShadTooltip from "../../components/shadTooltipComponent";
+import SanitizedHTMLWrapper from "../../components/core/sanitizedHTMLWrapper";
+import ShadTooltip from "../../components/core/shadTooltipComponent";
+import IconComponent from "../../components/extension/genericIconComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";

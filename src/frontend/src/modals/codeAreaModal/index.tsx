@@ -9,7 +9,7 @@ import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/us
 import { useEffect, useRef, useState } from "react";
 import AceEditor from "react-ace";
 import ReactAce from "react-ace/lib/ace";
-import IconComponent from "../../components/genericIconComponent";
+import IconComponent from "../../components/extension/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import {

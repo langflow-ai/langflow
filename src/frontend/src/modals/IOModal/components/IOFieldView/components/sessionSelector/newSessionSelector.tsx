@@ -1,5 +1,5 @@
-import IconComponent from "@/components/genericIconComponent";
-import ShadTooltip from "@/components/shadTooltipComponent";
+import ShadTooltip from "@/components/core/shadTooltipComponent";
+import IconComponent from "@/components/extension/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {

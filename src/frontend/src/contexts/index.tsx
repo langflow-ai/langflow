@@ -1,4 +1,4 @@
-import { GradientWrapper } from "@/components/GradientWrapper";
+import { GradientWrapper } from "@/components/core/GradientWrapper";
 import { CustomWrapper } from "@/customization/custom-wrapper";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactNode } from "react";

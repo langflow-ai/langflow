@@ -3,10 +3,10 @@ import { Button } from "@/components/ui/button";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import { useAddComponent } from "@/hooks/useAddComponent";
 import { DragEventHandler, forwardRef, useRef, useState } from "react";
+import ShadTooltip from "../../../../../../components/core/shadTooltipComponent";
 import IconComponent, {
   ForwardedIconComponent,
-} from "../../../../../../components/genericIconComponent";
-import ShadTooltip from "../../../../../../components/shadTooltipComponent";
+} from "../../../../../../components/extension/genericIconComponent";
 import {
   Select,
   SelectContent,

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { NodeToolbar } from "reactflow";
-import ShadTooltip from "../../../../components/shadTooltipComponent";
+import ShadTooltip from "../../../../components/core/shadTooltipComponent";
 import { Button } from "../../../../components/ui/button";
 import { GradientGroup } from "../../../../icons/GradientSparkles";
 import useFlowStore from "../../../../stores/flowStore";

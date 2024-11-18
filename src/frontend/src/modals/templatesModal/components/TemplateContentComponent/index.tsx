@@ -5,7 +5,7 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import Fuse from "fuse.js";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { ForwardedIconComponent } from "../../../../components/genericIconComponent";
+import { ForwardedIconComponent } from "../../../../components/extension/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { TemplateContentProps } from "../../../../types/templates/types";

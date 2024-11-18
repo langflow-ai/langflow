@@ -1,5 +1,5 @@
-import IconComponent from "../../../../components/genericIconComponent";
-import ShadTooltip from "../../../../components/shadTooltipComponent";
+import ShadTooltip from "../../../../components/core/shadTooltipComponent";
+import IconComponent from "../../../../components/extension/genericIconComponent";
 import { Button } from "../../../../components/ui/button";
 import { Checkbox } from "../../../../components/ui/checkbox";
 import { cn } from "../../../../utils/utils";

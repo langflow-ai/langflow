@@ -1,4 +1,4 @@
-import ForwardedIconComponent from "../../../../../../components/genericIconComponent";
+import ForwardedIconComponent from "../../../../../../components/extension/genericIconComponent";
 
 const GeneralPageHeaderComponent = () => {
   return (

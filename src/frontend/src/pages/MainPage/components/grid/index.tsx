@@ -1,5 +1,5 @@
-import useDragStart from "@/components/cardComponent/hooks/use-on-drag-start";
-import ForwardedIconComponent from "@/components/genericIconComponent";
+import useDragStart from "@/components/core/cardComponent/hooks/use-on-drag-start";
+import ForwardedIconComponent from "@/components/extension/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {

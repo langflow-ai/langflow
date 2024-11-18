@@ -1,4 +1,4 @@
-import ShadTooltip from "@/components/shadTooltipComponent";
+import ShadTooltip from "@/components/core/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -20,7 +20,7 @@ import { useShortcutsStore } from "@/stores/shortcuts";
 import { noteDataType } from "@/types/flow";
 import { classNames, cn, openInNewTab } from "@/utils/utils";
 import { cloneDeep } from "lodash";
-import IconComponent from "../../../components/genericIconComponent";
+import IconComponent from "../../../components/extension/genericIconComponent";
 
 export default function NoteToolbarComponent({
   data,

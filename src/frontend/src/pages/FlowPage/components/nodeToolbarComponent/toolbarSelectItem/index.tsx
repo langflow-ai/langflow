@@ -1,5 +1,5 @@
-import ForwardedIconComponent from "../../../../../components/genericIconComponent";
-import RenderIcons from "../../../../../components/renderIconComponent";
+import ForwardedIconComponent from "../../../../../components/extension/genericIconComponent";
+import RenderIcons from "../../../../../components/extension/renderIconComponent";
 import { IS_MAC } from "../../../../../constants/constants";
 import { toolbarSelectItemProps } from "../../../../../types/components";
 

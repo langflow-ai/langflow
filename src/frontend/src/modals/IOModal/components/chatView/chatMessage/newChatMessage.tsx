@@ -1,5 +1,5 @@
-import { ProfileIcon } from "@/components/appHeaderComponent/components/ProfileIcon";
-import { ContentBlockDisplay } from "@/components/chatComponents/ContentBlockDisplay";
+import { ProfileIcon } from "@/components/core/appHeaderComponent/components/ProfileIcon";
+import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
 import { TextShimmer } from "@/components/ui/TextShimmer";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -12,11 +12,11 @@ import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
 import Robot from "../../../../../assets/robot.png";
-import CodeTabsComponent from "../../../../../components/codeTabsComponent/ChatCodeTabComponent";
+import CodeTabsComponent from "../../../../../components/core/codeTabsComponent/ChatCodeTabComponent";
+import SanitizedHTMLWrapper from "../../../../../components/core/sanitizedHTMLWrapper";
 import IconComponent, {
   ForwardedIconComponent,
-} from "../../../../../components/genericIconComponent";
-import SanitizedHTMLWrapper from "../../../../../components/sanitizedHTMLWrapper";
+} from "../../../../../components/extension/genericIconComponent";
 import {
   EMPTY_INPUT_SEND_MESSAGE,
   EMPTY_OUTPUT_SEND_MESSAGE,

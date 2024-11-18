@@ -1,4 +1,4 @@
-import RenderIcons from "@/components/renderIconComponent";
+import RenderIcons from "@/components/extension/renderIconComponent";
 import { cn } from "@/utils/utils";
 
 export default function ShortcutDisplay({

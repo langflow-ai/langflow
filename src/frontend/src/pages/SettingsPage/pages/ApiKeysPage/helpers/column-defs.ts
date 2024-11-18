@@ -1,4 +1,4 @@
-import TableAutoCellRender from "../../../../../components/parameterRenderComponent/tableComponent/components/tableAutoCellRender";
+import TableAutoCellRender from "../../../../../components/core/parameterRenderComponent/tableComponent/components/tableAutoCellRender";
 
 export const getColumnDefs = () => {
   return [

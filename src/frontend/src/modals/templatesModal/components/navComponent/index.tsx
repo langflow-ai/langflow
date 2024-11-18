@@ -1,5 +1,5 @@
-import ForwardedIconComponent from "@/components/genericIconComponent";
-import { convertTestName } from "@/components/storeCardComponent/utils/convert-test-name";
+import { convertTestName } from "@/components/core/storeCardComponent/utils/convert-test-name";
+import ForwardedIconComponent from "@/components/extension/genericIconComponent";
 import {
   Sidebar,
   SidebarContent,

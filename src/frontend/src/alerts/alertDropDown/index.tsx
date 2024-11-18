@@ -1,6 +1,6 @@
 import { Cross2Icon } from "@radix-ui/react-icons";
 import { useEffect, useState } from "react";
-import IconComponent from "../../components/genericIconComponent";
+import IconComponent from "../../components/extension/genericIconComponent";
 import {
   Popover,
   PopoverContent,

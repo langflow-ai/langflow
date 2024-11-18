@@ -1,7 +1,7 @@
-import IconComponent from "../../../../components/genericIconComponent";
+import IconComponent from "../../../../components/extension/genericIconComponent";
 import { Button } from "../../../../components/ui/button";
 
-import TableAutoCellRender from "@/components/parameterRenderComponent/tableComponent/components/tableAutoCellRender";
+import TableAutoCellRender from "@/components/core/parameterRenderComponent/tableComponent/components/tableAutoCellRender";
 import {
   useDeleteGlobalVariables,
   useGetGlobalVariables,
@@ -16,10 +16,10 @@ import {
   SelectionChangedEvent,
 } from "ag-grid-community";
 import { useEffect, useRef, useState } from "react";
-import GlobalVariableModal from "../../../../components/GlobalVariableModal/GlobalVariableModal";
-import Dropdown from "../../../../components/dropdownComponent";
-import ForwardedIconComponent from "../../../../components/genericIconComponent";
-import TableComponent from "../../../../components/parameterRenderComponent/tableComponent";
+import GlobalVariableModal from "../../../../components/core/GlobalVariableModal/GlobalVariableModal";
+import Dropdown from "../../../../components/core/parameterRenderComponent/dropdownComponent";
+import TableComponent from "../../../../components/core/parameterRenderComponent/tableComponent";
+import ForwardedIconComponent from "../../../../components/extension/genericIconComponent";
 import { Badge } from "../../../../components/ui/badge";
 import useAlertStore from "../../../../stores/alertStore";
 

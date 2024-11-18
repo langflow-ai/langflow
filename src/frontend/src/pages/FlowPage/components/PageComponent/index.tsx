@@ -2,10 +2,10 @@ import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
 import CanvasControls, {
   CustomControlButton,
-} from "@/components/canvasControlsComponent";
-import FlowToolbar from "@/components/flowToolbarComponent";
-import ForwardedIconComponent from "@/components/genericIconComponent";
-import LoadingComponent from "@/components/loadingComponent";
+} from "@/components/core/canvasControlsComponent";
+import FlowToolbar from "@/components/core/flowToolbarComponent";
+import ForwardedIconComponent from "@/components/extension/genericIconComponent";
+import LoadingComponent from "@/components/extension/loadingComponent";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import {
   COLOR_OPTIONS,

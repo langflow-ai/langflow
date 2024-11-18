@@ -1,4 +1,4 @@
-import { convertTestName } from "@/components/storeCardComponent/utils/convert-test-name";
+import { convertTestName } from "@/components/core/storeCardComponent/utils/convert-test-name";
 import { Badge } from "@/components/ui/badge";
 
 export default function HandleTooltipComponent({

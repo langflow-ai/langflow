@@ -5,9 +5,9 @@ import {
 import * as Form from "@radix-ui/react-form";
 import { cloneDeep } from "lodash";
 import { useContext, useState } from "react";
-import IconComponent from "../../components/genericIconComponent";
+import InputComponent from "../../components/core/parameterRenderComponent/inputComponent";
+import IconComponent from "../../components/extension/genericIconComponent";
 import Header from "../../components/headerComponent";
-import InputComponent from "../../components/parameterRenderComponent/inputComponent";
 import { Button } from "../../components/ui/button";
 import {
   EDIT_PASSWORD_ALERT_LIST,

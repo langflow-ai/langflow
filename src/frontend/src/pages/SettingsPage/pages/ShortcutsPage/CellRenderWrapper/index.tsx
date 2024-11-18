@@ -1,4 +1,4 @@
-import RenderIcons from "@/components/renderIconComponent";
+import RenderIcons from "@/components/extension/renderIconComponent";
 import { CustomCellRendererProps } from "ag-grid-react";
 
 export default function CellRenderShortcuts(params: CustomCellRendererProps) {

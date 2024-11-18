@@ -6,7 +6,7 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import * as Form from "@radix-ui/react-form";
 import { FormEvent, useEffect, useState } from "react";
-import InputComponent from "../../components/parameterRenderComponent/inputComponent";
+import InputComponent from "../../components/core/parameterRenderComponent/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { SIGNUP_ERROR_ALERT } from "../../constants/alerts_constants";

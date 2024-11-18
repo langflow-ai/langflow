@@ -6,7 +6,7 @@ import { PanelLeft } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "../../utils/utils";
-import ShadTooltip from "../shadTooltipComponent";
+import ShadTooltip from "../core/shadTooltipComponent";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Separator } from "./separator";

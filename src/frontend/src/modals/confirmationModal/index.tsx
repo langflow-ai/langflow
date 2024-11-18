@@ -1,7 +1,7 @@
-import GenericIconComponent from "@/components/genericIconComponent";
+import GenericIconComponent from "@/components/extension/genericIconComponent";
 import { DialogClose } from "@radix-ui/react-dialog";
 import React, { useEffect, useState } from "react";
-import ShadTooltip from "../../components/shadTooltipComponent";
+import ShadTooltip from "../../components/core/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
 import {
   ConfirmationModalType,

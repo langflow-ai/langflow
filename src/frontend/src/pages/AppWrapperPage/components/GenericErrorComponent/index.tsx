@@ -1,5 +1,5 @@
-import FetchErrorComponent from "@/components/fetchErrorComponent";
-import TimeoutErrorComponent from "@/components/timeoutErrorComponent";
+import FetchErrorComponent from "@/components/extension/fetchErrorComponent";
+import TimeoutErrorComponent from "@/components/extension/timeoutErrorComponent";
 import {
   FETCH_ERROR_DESCRIPION,
   FETCH_ERROR_MESSAGE,

@@ -1,19 +1,19 @@
+import PageLayout from "@/components/core/pageLayout";
+import { SkeletonCardComponent } from "@/components/extension/skeletonCardComponent";
+import { Button } from "@/components/ui/button";
 import { uniqueId } from "lodash";
 import { useContext, useEffect, useState } from "react";
-import IconComponent from "../../components/genericIconComponent";
-import PageLayout from "../../components/pageLayout";
-import ShadTooltip from "../../components/shadTooltipComponent";
-import { SkeletonCardComponent } from "../../components/skeletonCardComponent";
-import { Button } from "../../components/ui/button";
+import ShadTooltip from "../../components/core/shadTooltipComponent";
+import IconComponent from "../../components/extension/genericIconComponent";
 
-import StoreCardComponent from "@/components/storeCardComponent";
+import StoreCardComponent from "@/components/core/storeCardComponent";
+import { TagsSelector } from "@/components/core/tagsSelectorComponent";
+import { Badge } from "@/components/ui/badge";
 import { CustomLink } from "@/customization/components/custom-link";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useParams } from "react-router-dom";
-import PaginatorComponent from "../../components/paginatorComponent";
-import { TagsSelector } from "../../components/tagsSelectorComponent";
-import { Badge } from "../../components/ui/badge";
+import PaginatorComponent from "../../components/core/paginatorComponent";
 import {
   Select,
   SelectContent,
