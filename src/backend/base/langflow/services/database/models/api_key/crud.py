@@ -1,13 +1,17 @@
+import asyncio
 import datetime
 import secrets
-import threading
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlmodel import Session, select
+from sqlalchemy.orm import selectinload
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from langflow.services.database.models import User
 from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
+from langflow.services.database.utils import async_session_getter
+from langflow.services.deps import get_db_service
 
 if TYPE_CHECKING:
     from sqlmodel.sql.expression import SelectOfScalar
@@ -47,33 +51,29 @@ async def delete_api_key(session: AsyncSession, api_key_id: UUID) -> None:
     await session.commit()
 
 
-def check_key(session: Session, api_key: str) -> ApiKey | None:
+update_total_uses_tasks: set[asyncio.Task] = set()
+
+
+async def check_key(session: AsyncSession, api_key: str) -> User | None:
     """Check if the API key is valid."""
-    query: SelectOfScalar = select(ApiKey).where(ApiKey.api_key == api_key)
-    api_key_object: ApiKey | None = session.exec(query).first()
+    query: SelectOfScalar = select(ApiKey).options(selectinload(ApiKey.user)).where(ApiKey.api_key == api_key)
+    api_key_object: ApiKey | None = (await session.exec(query)).first()
     if api_key_object is not None:
-        threading.Thread(
-            target=update_total_uses,
-            args=(
-                session,
-                api_key_object,
-            ),
-        ).start()
-    return api_key_object
+        task = asyncio.create_task(update_total_uses(api_key_object.id))
+        task.add_done_callback(update_total_uses_tasks.discard)
+        update_total_uses_tasks.add(task)
+        return api_key_object.user
+    return None
 
 
-def update_total_uses(session, api_key: ApiKey):
+async def update_total_uses(api_key_id: UUID):
     """Update the total uses and last used at."""
-    # This is running in a separate thread to avoid slowing down the request
-    # but session is not thread safe so we need to create a new session
-
-    with Session(session.get_bind()) as new_session:
-        new_api_key = new_session.get(ApiKey, api_key.id)
+    async with async_session_getter(get_db_service()) as session:
+        new_api_key = await session.get(ApiKey, api_key_id)
         if new_api_key is None:
             msg = "API Key not found"
             raise ValueError(msg)
         new_api_key.total_uses += 1
         new_api_key.last_used_at = datetime.datetime.now(datetime.timezone.utc)
-        new_session.add(new_api_key)
-        new_session.commit()
-    return new_api_key
+        session.add(new_api_key)
+        await session.commit()
