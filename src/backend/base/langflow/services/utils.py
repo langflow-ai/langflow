@@ -1,7 +1,8 @@
 import asyncio
 
 from loguru import logger
-from sqlmodel import Session, select
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.auth.utils import create_super_user, verify_password
 from langflow.services.cache.factory import CacheServiceFactory
@@ -9,13 +10,14 @@ from langflow.services.database.utils import initialize_database
 from langflow.services.schema import ServiceType
 from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 
-from .deps import get_db_service, get_service, get_session, get_settings_service
+from .deps import get_db_service, get_service, get_settings_service
 
 
-def get_or_create_super_user(session: Session, username, password, is_default):
+async def get_or_create_super_user(session: AsyncSession, username, password, is_default):
     from langflow.services.database.models.user.model import User
 
-    user = session.exec(select(User).where(User.username == username)).first()
+    stmt = select(User).where(User.username == username)
+    user = (await session.exec(stmt)).first()
 
     if user and user.is_superuser:
         return None  # Superuser already exists
@@ -51,7 +53,7 @@ def get_or_create_super_user(session: Session, username, password, is_default):
     else:
         logger.debug("Creating superuser.")
     try:
-        return create_super_user(username, password, db=session)
+        return await create_super_user(username, password, db=session)
     except Exception as exc:  # noqa: BLE001
         if "UNIQUE constraint failed: user.username" in str(exc):
             # This is to deal with workers running this
@@ -62,12 +64,12 @@ def get_or_create_super_user(session: Session, username, password, is_default):
         logger.opt(exception=True).debug("Error creating superuser.")
 
 
-def setup_superuser(settings_service, session: Session) -> None:
+async def setup_superuser(settings_service, session: AsyncSession) -> None:
     if settings_service.auth_settings.AUTO_LOGIN:
         logger.debug("AUTO_LOGIN is set to True. Creating default superuser.")
     else:
         # Remove the default superuser if it exists
-        teardown_superuser(settings_service, session)
+        await teardown_superuser(settings_service, session)
 
     username = settings_service.auth_settings.SUPERUSER
     password = settings_service.auth_settings.SUPERUSER_PASSWORD
@@ -75,7 +77,9 @@ def setup_superuser(settings_service, session: Session) -> None:
     is_default = (username == DEFAULT_SUPERUSER) and (password == DEFAULT_SUPERUSER_PASSWORD)
 
     try:
-        user = get_or_create_super_user(session=session, username=username, password=password, is_default=is_default)
+        user = await get_or_create_super_user(
+            session=session, username=username, password=password, is_default=is_default
+        )
         if user is not None:
             logger.debug("Superuser created successfully.")
     except Exception as exc:
@@ -86,7 +90,7 @@ def setup_superuser(settings_service, session: Session) -> None:
         settings_service.auth_settings.reset_credentials()
 
 
-def teardown_superuser(settings_service, session) -> None:
+async def teardown_superuser(settings_service, session: AsyncSession) -> None:
     """Teardown the superuser."""
     # If AUTO_LOGIN is True, we will remove the default superuser
     # from the database.
@@ -97,30 +101,27 @@ def teardown_superuser(settings_service, session) -> None:
             username = DEFAULT_SUPERUSER
             from langflow.services.database.models.user.model import User
 
-            user = session.exec(select(User).where(User.username == username)).first()
+            stmt = select(User).where(User.username == username)
+            user = (await session.exec(stmt)).first()
             # Check if super was ever logged in, if not delete it
             # if it has logged in, it means the user is using it to login
             if user and user.is_superuser is True and not user.last_login_at:
-                session.delete(user)
-                session.commit()
+                await session.delete(user)
+                await session.commit()
                 logger.debug("Default superuser removed successfully.")
 
         except Exception as exc:
             logger.exception(exc)
-            session.rollback()
+            await session.rollback()
             msg = "Could not remove default superuser."
             raise RuntimeError(msg) from exc
-
-
-def _teardown_superuser():
-    with get_db_service().with_session() as session:
-        teardown_superuser(get_settings_service(), session)
 
 
 async def teardown_services() -> None:
     """Teardown all the services."""
     try:
-        await asyncio.to_thread(_teardown_superuser)
+        async with get_db_service().with_async_session() as session:
+            await teardown_superuser(get_settings_service(), session)
     except Exception as exc:  # noqa: BLE001
         logger.exception(exc)
     try:
@@ -156,15 +157,16 @@ def initialize_session_service() -> None:
     )
 
 
-def initialize_services(*, fix_migration: bool = False) -> None:
+async def initialize_services(*, fix_migration: bool = False) -> None:
     """Initialize all the services needed."""
     # Test cache connection
     get_service(ServiceType.CACHE_SERVICE, default=CacheServiceFactory())
     # Setup the superuser
-    initialize_database(fix_migration=fix_migration)
-    setup_superuser(get_service(ServiceType.SETTINGS_SERVICE), next(get_session()))
+    await asyncio.to_thread(initialize_database, fix_migration=fix_migration)
+    async with get_db_service().with_async_session() as session:
+        await setup_superuser(get_service(ServiceType.SETTINGS_SERVICE), session)
     try:
-        get_db_service().migrate_flows_if_auto_login()
+        await get_db_service().migrate_flows_if_auto_login()
     except Exception as exc:
         msg = "Error migrating flows"
         logger.exception(msg)

@@ -448,7 +448,7 @@ class CustomComponent(BaseComponent):
         variable_service = get_variable_service()
 
         with session_scope() as session:
-            return variable_service.list_variables(user_id=self.user_id, session=session)
+            return variable_service.list_variables_sync(user_id=self.user_id, session=session)
 
     def index(self, value: int = 0):
         """Returns a function that returns the value at the given index in the iterable.
