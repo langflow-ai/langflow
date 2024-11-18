@@ -2,7 +2,7 @@ import { test } from "@playwright/test";
 
 test(
   "should see general profile gradient",
-  { tag: ["@release", "@api", "@workspace"] },
+  { tag: ["@release"] },
   async ({ page }) => {
     await page.goto("/");
     await page.waitForSelector('[data-testid="mainpage_title"]', {
@@ -25,7 +25,7 @@ test(
 
 test(
   "should interact with global variables",
-  { tag: ["@release", "@workspace"] },
+  { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
     const randomName = Math.random().toString(36).substring(2);
     const randomName2 = Math.random().toString(36).substring(2);
@@ -138,52 +138,48 @@ test(
   },
 );
 
-test(
-  "should see shortcuts",
-  { tag: ["@release", "@workspace"] },
-  async ({ page }) => {
-    await page.goto("/");
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
+test("should see shortcuts", { tag: ["@release"] }, async ({ page }) => {
+  await page.goto("/");
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
 
-    await page.waitForSelector('[id="new-project-btn"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("user-profile-settings").click();
-    await page.waitForTimeout(1000);
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
+  await page.getByTestId("user-profile-settings").click();
+  await page.waitForTimeout(1000);
 
-    await page.getByText("Settings").click();
-    await page.waitForTimeout(3000);
+  await page.getByText("Settings").click();
+  await page.waitForTimeout(3000);
 
-    await page.getByText("General").nth(2).isVisible();
-    await page.getByText("Shortcuts").nth(0).click();
-    await page.getByText("Shortcuts", { exact: true }).nth(1).isVisible();
-    await page
-      .getByText("Advanced Settings Component", { exact: true })
-      .isVisible();
-    await page.getByText("Minimize Component", { exact: true }).isVisible();
-    await page.getByText("Code Component", { exact: true }).isVisible();
-    await page.getByText("Copy Component", { exact: true }).isVisible();
-    await page.getByText("Duplicate Component", { exact: true }).isVisible();
-    await page.getByText("Share Component", { exact: true }).isVisible();
-    await page.getByText("Docs Component", { exact: true }).isVisible();
-    await page.getByText("Save Component", { exact: true }).isVisible();
-    await page.getByText("Delete Component", { exact: true }).isVisible();
-    await page.getByText("Open Playground", { exact: true }).isVisible();
-    await page.getByText("Undo", { exact: true }).isVisible();
+  await page.getByText("General").nth(2).isVisible();
+  await page.getByText("Shortcuts").nth(0).click();
+  await page.getByText("Shortcuts", { exact: true }).nth(1).isVisible();
+  await page
+    .getByText("Advanced Settings Component", { exact: true })
+    .isVisible();
+  await page.getByText("Minimize Component", { exact: true }).isVisible();
+  await page.getByText("Code Component", { exact: true }).isVisible();
+  await page.getByText("Copy Component", { exact: true }).isVisible();
+  await page.getByText("Duplicate Component", { exact: true }).isVisible();
+  await page.getByText("Share Component", { exact: true }).isVisible();
+  await page.getByText("Docs Component", { exact: true }).isVisible();
+  await page.getByText("Save Component", { exact: true }).isVisible();
+  await page.getByText("Delete Component", { exact: true }).isVisible();
+  await page.getByText("Open Playground", { exact: true }).isVisible();
+  await page.getByText("Undo", { exact: true }).isVisible();
 
-    await page.mouse.wheel(0, 10000);
+  await page.mouse.wheel(0, 10000);
 
-    await page.getByText("Redo", { exact: true }).last().isVisible();
+  await page.getByText("Redo", { exact: true }).last().isVisible();
 
-    await page.getByText("Reset Columns").last().isVisible();
-  },
-);
+  await page.getByText("Reset Columns").last().isVisible();
+});
 
 test(
   "should interact with API Keys",
-  { tag: ["@release", "@workspace"] },
+  { tag: ["@release", "@api"] },
   async ({ page }) => {
     await page.goto("/");
     await page.waitForTimeout(1000);

@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test(
   "should be able to see error when something goes wrong on Code Modal",
-  { tag: ["@release", "@workspace"] },
+  { tag: ["@release"] },
   async ({ page }) => {
     await page.goto("/");
 

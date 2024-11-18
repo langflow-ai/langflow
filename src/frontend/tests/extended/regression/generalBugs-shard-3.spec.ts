@@ -5,7 +5,7 @@ import path from "path";
 test(
   "should copy code from playground modal",
   {
-    tag: ["@release", "@workspace"],
+    tag: ["@release"],
   },
   async ({ page }) => {
     test.skip(

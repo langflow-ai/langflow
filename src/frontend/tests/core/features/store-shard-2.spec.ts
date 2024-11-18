@@ -4,7 +4,7 @@ import path from "path";
 
 test(
   "should filter by tag",
-  { tag: ["@release", "@workspace", "@api"] },
+  { tag: ["@release", "@api"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.STORE_API_KEY,

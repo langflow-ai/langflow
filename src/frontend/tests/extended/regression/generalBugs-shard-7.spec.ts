@@ -4,7 +4,7 @@ import uaParser from "ua-parser-js";
 // TODO: This test might not be needed anymore
 test(
   "should be able to select all with ctrl + A on advanced modal",
-  { tag: ["@release", "@workspace"] },
+  { tag: ["@release"] },
   async ({ page }) => {
     await page.goto("/");
 

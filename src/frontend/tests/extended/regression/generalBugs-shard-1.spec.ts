@@ -4,7 +4,7 @@ import path from "path";
 
 test(
   "should delete rows from table message",
-  { tag: ["@release", "@workspace"] },
+  { tag: ["@release"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,

@@ -4,7 +4,7 @@ import path from "path";
 
 test.skip(
   "should like and add components and flows",
-  { tag: ["@release", "@api"] },
+  { tag: ["@release"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.STORE_API_KEY,
@@ -96,7 +96,7 @@ test.skip(
 
 test.skip(
   "should find a searched Component on Store",
-  { tag: ["@release", "@api", "@components"] },
+  { tag: ["@release"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.STORE_API_KEY,

@@ -4,7 +4,7 @@ import path from "path";
 
 test(
   "should delete a flow",
-  { tag: ["@release", "@api", "@workspace"] },
+  { tag: ["@release", "@api"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.STORE_API_KEY,

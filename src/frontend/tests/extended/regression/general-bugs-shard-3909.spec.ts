@@ -4,7 +4,7 @@ import path from "path";
 
 test(
   "user must be able to create a new flow clicking on New Flow button",
-  { tag: ["@release", "@workspace"] },
+  { tag: ["@release"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,

@@ -2,7 +2,7 @@ import { test } from "@playwright/test";
 
 test(
   "select and delete a flow",
-  { tag: ["@release", "@api", "@database"] },
+  { tag: ["@release", "@api"] },
   async ({ page }) => {
     await page.goto("/");
     await page.waitForSelector('[data-testid="mainpage_title"]', {
@@ -60,7 +60,7 @@ test(
   },
 );
 
-test("search flows", async ({ page }) => {
+test("search flows", { tag: ["@release"] }, async ({ page }) => {
   await page.goto("/");
   await page.waitForSelector('[data-testid="mainpage_title"]', {
     timeout: 30000,
@@ -121,94 +121,90 @@ test("search flows", async ({ page }) => {
   await page.getByText("Basic Prompting", { exact: true }).isHidden();
 });
 
-test(
-  "search components",
-  { tag: ["@release", "@api", "@components"] },
-  async ({ page }) => {
-    await page.goto("/");
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
+test("search components", { tag: ["@release"] }, async ({ page }) => {
+  await page.goto("/");
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
 
-    await page.waitForSelector('[id="new-project-btn"]', {
-      timeout: 30000,
-    });
+  await page.waitForSelector('[id="new-project-btn"]', {
+    timeout: 30000,
+  });
 
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
+  let modalCount = 0;
+  try {
+    const modalTitleElement = await page?.getByTestId("modal-title");
+    if (modalTitleElement) {
+      modalCount = await modalTitleElement.count();
     }
+  } catch (error) {
+    modalCount = 0;
+  }
 
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForSelector('[data-testid="modal-title"]', {
-        timeout: 3000,
-      });
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
-
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 100000,
+  while (modalCount === 0) {
+    await page.getByText("New Flow", { exact: true }).click();
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 3000,
     });
+    modalCount = await page.getByTestId("modal-title")?.count();
+  }
+  await page.getByTestId("side_nav_options_all-templates").click();
+  await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
+  await page.waitForSelector('[data-testid="fit_view"]', {
+    timeout: 100000,
+  });
 
-    await page.getByText("Chat Input").first().click();
-    await page.waitForSelector('[data-testid="more-options-modal"]', {
-      timeout: 1000,
-    });
-    await page.getByTestId("more-options-modal").click();
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
-    await page.getByTestId("icon-SaveAll").first().click();
-    await page.keyboard.press("Escape");
-    await page
-      .getByText("Prompt", {
-        exact: true,
-      })
-      .first()
-      .click();
-    await page.getByTestId("more-options-modal").click();
+  await page.getByText("Chat Input").first().click();
+  await page.waitForSelector('[data-testid="more-options-modal"]', {
+    timeout: 1000,
+  });
+  await page.getByTestId("more-options-modal").click();
 
-    await page.getByTestId("icon-SaveAll").first().click();
-    await page.keyboard.press("Escape");
+  await page.getByTestId("icon-SaveAll").first().click();
+  await page.keyboard.press("Escape");
+  await page
+    .getByText("Prompt", {
+      exact: true,
+    })
+    .first()
+    .click();
+  await page.getByTestId("more-options-modal").click();
 
-    await page
-      .getByText("OpenAI", {
-        exact: true,
-      })
-      .first()
-      .click();
-    await page.getByTestId("more-options-modal").click();
+  await page.getByTestId("icon-SaveAll").first().click();
+  await page.keyboard.press("Escape");
 
-    await page.getByTestId("icon-SaveAll").first().click();
-    await page.keyboard.press("Escape");
+  await page
+    .getByText("OpenAI", {
+      exact: true,
+    })
+    .first()
+    .click();
+  await page.getByTestId("more-options-modal").click();
 
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
-      timeout: 100000,
-    });
+  await page.getByTestId("icon-SaveAll").first().click();
+  await page.keyboard.press("Escape");
 
-    await page.getByTestId("icon-ChevronLeft").first().click();
+  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    timeout: 100000,
+  });
 
-    const exitButton = await page.getByText("Exit", { exact: true }).count();
+  await page.getByTestId("icon-ChevronLeft").first().click();
 
-    if (exitButton > 0) {
-      await page.getByText("Exit", { exact: true }).click();
-    }
+  const exitButton = await page.getByText("Exit", { exact: true }).count();
 
-    await page.getByTestId("components-btn").click();
+  if (exitButton > 0) {
+    await page.getByText("Exit", { exact: true }).click();
+  }
 
-    await page.getByPlaceholder("Search components").fill("Chat Input");
-    await page.getByText("Chat Input", { exact: true }).isVisible();
-    await page.getByText("Prompt", { exact: true }).isHidden();
-    await page.getByText("OpenAI", { exact: true }).isHidden();
-  },
-);
+  await page.getByTestId("components-btn").click();
+
+  await page.getByPlaceholder("Search components").fill("Chat Input");
+  await page.getByText("Chat Input", { exact: true }).isVisible();
+  await page.getByText("Prompt", { exact: true }).isHidden();
+  await page.getByText("OpenAI", { exact: true }).isHidden();
+});

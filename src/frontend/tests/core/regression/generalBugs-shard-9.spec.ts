@@ -4,7 +4,7 @@ import path from "path";
 
 test(
   "memory should work as expect",
-  { tag: ["@release", "@workspace", "@api"] },
+  { tag: ["@release"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,

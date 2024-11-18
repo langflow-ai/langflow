@@ -4,7 +4,7 @@ import path from "path";
 
 test(
   "should be able to share a component on the store by clicking on the share button on the canvas",
-  { tag: ["@release", "@api", "@workspace"] },
+  { tag: ["@release"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.STORE_API_KEY,

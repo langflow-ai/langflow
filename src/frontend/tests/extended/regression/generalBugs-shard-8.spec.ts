@@ -2,7 +2,7 @@ import { test } from "@playwright/test";
 
 test(
   "should interact with api request",
-  { tag: ["@release", "@workspace"] },
+  { tag: ["@release"] },
   async ({ page }) => {
     await page.goto("/");
     await page.waitForSelector('[data-testid="mainpage_title"]', {

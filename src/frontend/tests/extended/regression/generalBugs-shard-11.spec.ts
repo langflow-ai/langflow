@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test(
   "user should be able to use ComposIO without getting api_key error",
-  { tag: ["@release", "@api", "@components"] },
+  { tag: ["@release"] },
   async ({ page }) => {
     await page.goto("/");
     await page.waitForSelector('[data-testid="mainpage_title"]', {

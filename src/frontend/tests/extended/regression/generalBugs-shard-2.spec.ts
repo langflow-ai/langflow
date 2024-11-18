@@ -5,7 +5,7 @@ import path from "path";
 test(
   "should use webhook component on API",
   {
-    tag: ["@release", "@api"],
+    tag: ["@release"],
   },
   async ({ page }) => {
     test.skip(

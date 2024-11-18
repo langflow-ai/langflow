@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test(
   "should be able to move flow from folder, rename it and be displayed on correct folder",
-  { tag: ["@release", "@workspace", "@components"] },
+  { tag: ["@release"] },
   async ({ page }) => {
     test.skip(
       true,
