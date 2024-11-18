@@ -5,15 +5,23 @@ from langflow.components.models.azure_openai import AzureChatOpenAIComponent
 from langflow.components.models.groq import GroqModel
 from langflow.components.models.nvidia import NVIDIAModelComponent
 from langflow.components.models.openai import OpenAIModelComponent
+from langflow.inputs.inputs import SecretStrInput
 
 
 def get_filtered_inputs(component_class):
     base_input_names = {field.name for field in LCModelComponent._base_inputs}
-    return [
-        set_advanced_true(input_) if input_.name == "temperature" else input_
-        for input_ in component_class().inputs
-        if input_.name not in base_input_names
-    ]
+    component_instance = component_class()
+
+    return [process_inputs(input_) for input_ in component_instance.inputs if input_.name not in base_input_names]
+
+
+def process_inputs(component_data):
+    if isinstance(component_data, SecretStrInput):
+        component_data.value = ""
+        component_data.load_from_db = False
+    elif component_data.name == "temperature":
+        component_data = set_advanced_true(component_data)
+    return component_data
 
 
 def set_advanced_true(component_input):
