@@ -3842,6 +3842,7 @@ dependencies = [
     { name = "typer" },
     { name = "uncurl" },
     { name = "uvicorn" },
+    { name = "validators" },
 ]
 
 [package.optional-dependencies]
@@ -4002,6 +4003,7 @@ requires-dist = [
     { name = "types-requests", marker = "extra == 'dev'", specifier = ">=2.32.0" },
     { name = "uncurl", specifier = ">=0.0.11" },
     { name = "uvicorn", specifier = ">=0.30.0" },
+    { name = "validators", specifier = ">=0.34.0" },
     { name = "vulture", marker = "extra == 'dev'", specifier = ">=2.11" },
 ]
 
