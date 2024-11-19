@@ -135,7 +135,7 @@
         "source": "OpenAIEmbeddings-CeoV9",
         "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-CeoV9œ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
         "target": "AstraDB-3buPx",
-        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œAstraDB-3buPxœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-3buPxœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -244,7 +244,7 @@
         "source": "OpenAIEmbeddings-ANgku",
         "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-ANgkuœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
         "target": "AstraDB-laybz",
-        "targetHandle": "{œfieldNameœ: œembeddingœ, œidœ: œAstraDB-laybzœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-laybzœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
@@ -1956,7 +1956,9 @@
                 "display_name": "Embedding Model",
                 "dynamic": false,
                 "info": "Allows an embedding model configuration.",
-                "input_types": ["Embeddings"],
+                "input_types": [
+                  "Embeddings"
+                ],
                 "list": false,
                 "name": "embedding_model",
                 "placeholder": "",
@@ -2998,7 +3000,9 @@
                 "display_name": "Embedding Model",
                 "dynamic": false,
                 "info": "Allows an embedding model configuration.",
-                "input_types": ["Embeddings"],
+                "input_types": [
+                  "Embeddings"
+                ],
                 "list": false,
                 "name": "embedding_model",
                 "placeholder": "",

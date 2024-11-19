@@ -1,4 +1,3 @@
-from typing import TYPE_CHECKING
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -11,9 +10,6 @@ from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.api_key.crud import create_api_key, delete_api_key, get_api_keys
 from langflow.services.database.models.api_key.model import ApiKeyCreate, UnmaskedApiKeyRead
 from langflow.services.deps import get_settings_service
-
-if TYPE_CHECKING:
-    pass
 
 router = APIRouter(tags=["APIKey"], prefix="/api_key")
 

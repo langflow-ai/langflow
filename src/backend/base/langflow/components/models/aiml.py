@@ -1,7 +1,6 @@
-from typing import override
-
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
+from typing_extensions import override
 
 from langflow.base.models.aiml_constants import AimlModels
 from langflow.base.models.model import LCModelComponent
