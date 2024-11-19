@@ -135,7 +135,7 @@ export default function ChatView({
       onDrop={onDrop}
     >
       <div ref={messagesRef} className="chat-message-div">
-        {chatHistory?.length > 0 ? (
+        {lockChat || chatHistory?.length > 0 ? (
           chatHistory.map((chat, index) => (
             <ChatMessage
               setLockChat={setLockChat}
@@ -181,7 +181,6 @@ export default function ChatView({
           ref={ref}
         >
           {lockChat &&
-            chatHistory.length > 0 &&
             !(chatHistory[chatHistory.length - 1]?.category === "error") &&
             flowRunningSkeletonMemo}
         </div>
