@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
@@ -15,107 +15,87 @@ test(
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
 
-    await page.goto("/");
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
+  while (modalCount === 0) {
+    await page.getByText("New Flow", { exact: true }).click();
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 3000,
     });
+    modalCount = await page.getByTestId("modal-title")?.count();
+  }
 
-    await page.waitForSelector('[id="new-project-btn"]', {
-      timeout: 30000,
-    });
+  await page.getByTestId("side_nav_options_all-templates").click();
+  await page.getByRole("heading", { name: "Basic Prompting" }).click();
+  await expect(page.getByTestId(/.*rf__node.*/).first()).toBeVisible({
+    timeout: 1000,
+  });
+  let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
 
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
+  while (outdatedComponents > 0) {
+    await page.getByTestId("icon-AlertTriangle").first().click();
+    outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+  }
 
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
+  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  while (filledApiKey > 0) {
+    await page.getByTestId("remove-icon-badge").first().click();
+    filledApiKey = await page.getByTestId("remove-icon-badge").count();
+  }
 
-      await page.waitForTimeout(3000);
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
+  await page.getByTestId("icon-ChevronDown").click();
+  await page.getByText("Logs").click();
+  await page.getByText("No Data Available", { exact: true }).isVisible();
+  await page.keyboard.press("Escape");
 
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.waitForTimeout(1000);
+  const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
+  const isApiKeyInputVisible = await apiKeyInput.isVisible();
 
-    let outdatedComponents = await page
-      .getByTestId("icon-AlertTriangle")
-      .count();
+  if (isApiKeyInputVisible) {
+    await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+  }
 
-    while (outdatedComponents > 0) {
-      await page.getByTestId("icon-AlertTriangle").first().click();
-      await page.waitForTimeout(1000);
-      outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
-    }
+  await page.getByTestId("dropdown_str_model_name").click();
+  await page.getByTestId("gpt-4o-1-option").click();
 
-    let filledApiKey = await page.getByTestId("remove-icon-badge").count();
-    while (filledApiKey > 0) {
-      await page.getByTestId("remove-icon-badge").first().click();
-      await page.waitForTimeout(1000);
-      filledApiKey = await page.getByTestId("remove-icon-badge").count();
-    }
+  await page.waitForSelector('[data-testid="button_run_chat output"]', {
+    timeout: 1000,
+  });
+  await page.getByTestId("button_run_chat output").first().click();
 
-    await page.getByTestId("icon-ChevronDown").click();
-    await page.getByText("Logs").click();
-    await page.getByText("No Data Available", { exact: true }).isVisible();
-    await page.keyboard.press("Escape");
+  await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
-    const isApiKeyInputVisible = await apiKeyInput.isVisible();
+  await page.getByText("built successfully").last().click({
+    timeout: 15000,
+  });
 
-    if (isApiKeyInputVisible) {
-      await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
-    }
+  await page
+    .getByText("Chat Output built successfully", { exact: true })
+    .isVisible();
+  await page.getByTestId("icon-ChevronDown").click();
+  await page.getByText("Logs").click();
 
-    await page.getByTestId("dropdown_str_model_name").click();
-    await page.getByTestId("gpt-4o-1-option").click();
+  await page.getByText("timestamp").first().isVisible();
+  await page.getByText("flow_id").first().isVisible();
+  await page.getByText("source").first().isVisible();
+  await page.getByText("target", { exact: true }).first().isVisible();
+  await page.getByText("target_args", { exact: true }).first().isVisible();
+  await page.getByRole("gridcell").first().isVisible();
 
-    await page.waitForTimeout(1000);
-    await page.getByTestId("button_run_chat output").first().click();
+  await page.keyboard.press("Escape");
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+  await page.getByTestId("user-profile-settings").first().click();
+  await page.getByText("Settings", { exact: true }).click();
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
+  await page.getByText("Messages", { exact: true }).click();
+  await page.getByText("index", { exact: true }).last().isVisible();
+  await page.getByText("timestamp", { exact: true }).isVisible();
+  await page.getByText("flow_id", { exact: true }).isVisible();
+  await page.getByText("source", { exact: true }).isVisible();
+  await page.getByText("target", { exact: true }).isVisible();
+  await page.getByText("vertex_id", { exact: true }).isVisible();
+  await page.getByText("status", { exact: true }).isVisible();
+  await page.getByText("error", { exact: true }).isVisible();
+  await page.getByText("outputs", { exact: true }).isVisible();
+  await page.getByText("inputs", { exact: true }).isVisible();
 
-    await page
-      .getByText("Chat Output built successfully", { exact: true })
-      .isVisible();
-    await page.getByTestId("icon-ChevronDown").click();
-    await page.getByText("Logs").click();
-
-    await page.getByText("timestamp").first().isVisible();
-    await page.getByText("flow_id").first().isVisible();
-    await page.getByText("source").first().isVisible();
-    await page.getByText("target", { exact: true }).first().isVisible();
-    await page.getByText("target_args", { exact: true }).first().isVisible();
-    await page.getByRole("gridcell").first().isVisible();
-
-    await page.keyboard.press("Escape");
-
-    await page.getByTestId("user-profile-settings").first().click();
-    await page.getByText("Settings", { exact: true }).click();
-
-    await page.getByText("Messages", { exact: true }).click();
-    await page.getByText("index", { exact: true }).last().isVisible();
-    await page.getByText("timestamp", { exact: true }).isVisible();
-    await page.getByText("flow_id", { exact: true }).isVisible();
-    await page.getByText("source", { exact: true }).isVisible();
-    await page.getByText("target", { exact: true }).isVisible();
-    await page.getByText("vertex_id", { exact: true }).isVisible();
-    await page.getByText("status", { exact: true }).isVisible();
-    await page.getByText("error", { exact: true }).isVisible();
-    await page.getByText("outputs", { exact: true }).isVisible();
-    await page.getByText("inputs", { exact: true }).isVisible();
-
-    await page.getByRole("gridcell").first().isVisible();
-  },
-);
+  await page.getByRole("gridcell").first().isVisible();
+});
