@@ -156,18 +156,10 @@ export default function ContentDisplay({
                   return <>{props.children}</>;
                 },
                 ol({ node, ...props }) {
-                  return (
-                    <ol className="max-w-full">
-                      {props.children}
-                    </ol>
-                  );
+                  return <ol className="max-w-full">{props.children}</ol>;
                 },
                 ul({ node, ...props }) {
-                  return (
-                    <ul className="max-w-full">
-                      {props.children}
-                    </ul>
-                  );
+                  return <ul className="max-w-full">{props.children}</ul>;
                 },
                 code: ({ node, inline, className, children, ...props }) => {
                   const match = /language-(\w+)/.exec(className || "");
