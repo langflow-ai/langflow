@@ -25,6 +25,7 @@ services:
         value: 6p^m8jh5Z-Zjfu           
       - key: LANGFLOW_LOG_LEVEL
         value: DEBUG   
+      # Added but then rmeoevd again because it didn't solve the issue
       #- key: POSTGRES_USER
       #  value: langflow_poc_vcal_user
       #- key: POSTGRES_PASSWORD
