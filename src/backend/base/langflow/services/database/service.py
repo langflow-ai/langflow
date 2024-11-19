@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import command, util
 from alembic.config import Config
 from loguru import logger
-from sqlalchemy import event, inspect
+from sqlalchemy import event, inspect 
 from sqlalchemy.dialects import sqlite as dialect_sqlite
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
@@ -152,7 +152,7 @@ class DatabaseService(Service):
         settings_service = get_settings_service()
         if settings_service.auth_settings.AUTO_LOGIN:
             async with self.with_async_session() as session:
-                stmt = select(models.Flow).where(models.Flow.user_id.is_(None))
+                stmt = select(models.Flow).where(models.Flow.user_id == None)
                 flows = (await session.exec(stmt)).all()
                 if flows:
                     logger.debug("Migrating flows to default superuser")
