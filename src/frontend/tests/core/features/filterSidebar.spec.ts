@@ -24,18 +24,26 @@ test("user must see on handle click the possibility connections - LLMChain", asy
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 3000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="blank-flow"]', {
+    timeout: 3000,
+  });
 
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(3000);
+  await page.waitForSelector('[data-testid="sidebar-search-input"]', {
+    timeout: 3000,
+  });
 
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("api request");
 
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="dataAPI Request"]', {
+    timeout: 3000,
+  });
   await page
     .getByTestId("dataAPI Request")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
@@ -45,8 +53,12 @@ test("user must see on handle click the possibility connections - LLMChain", asy
   await page.getByTestId("zoom_out").click();
   await page.getByTestId("zoom_out").click();
   await page.getByTestId("zoom_out").click();
-  await page.waitForTimeout(500);
-
+  await page.waitForSelector(
+    '[data-testid="handle-apirequest-shownode-urls-left"]',
+    {
+      timeout: 3000,
+    },
+  );
   await page.getByTestId("handle-apirequest-shownode-urls-left").click();
 
   await page.waitForTimeout(500);
