@@ -336,5 +336,5 @@ test("user must be able to freeze a component", async ({ page }) => {
   expect(firstRunWithoutFreezing).not.toBe(firstTextFreezed);
   expect(firstRunWithoutFreezing).not.toBe(secondRunWithoutFreezing);
   expect(firstRunWithoutFreezing).not.toBe(firstTextFreezed);
-  expect(thirdTextWithoutFreezing).not.toBe(firstTextFreezed);
+  expect(thirdTextWithoutFreezing).not.toBe(secondRunWithoutFreezing);
 });
