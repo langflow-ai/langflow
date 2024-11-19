@@ -21,6 +21,7 @@ from langflow.schema.schema import InputType, OutputType, OutputValue
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.user import UserRead
 from langflow.services.settings.feature_flags import FeatureFlags
 from langflow.services.tracing.schema import Log
@@ -161,8 +162,8 @@ class FlowListRead(BaseModel):
 
 
 class FlowListReadWithFolderName(BaseModel):
-    flows: list[FlowRead]
-    name: str
+    flows: list[Flow]
+    folder_name: str
     description: str
 
 
