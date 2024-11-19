@@ -783,7 +783,10 @@ export default function NodeToolbarComponent({
                 open={openModal}
                 setOpen={setOpenModal}
                 dynamic={true}
-                setNodeClass={handleNodeClass}
+                setNodeClass={(apiClassType, type) => {
+                  handleNodeClass(apiClassType, type);
+                  setToolMode(false);
+                }}
                 nodeClass={data.node}
                 value={data.node?.template[name].value ?? ""}
               >
