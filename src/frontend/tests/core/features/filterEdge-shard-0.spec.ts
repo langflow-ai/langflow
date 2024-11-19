@@ -34,7 +34,7 @@ test("user must see on handle hover a tooltip with possibility connections", asy
 
   await page.waitForTimeout(1000);
   await page
-    .getByTestId("chainsRetrieval QA")
+    .getByTestId("langchain_utilitiesRetrieval QA")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await page.mouse.up();
   await page.mouse.down();

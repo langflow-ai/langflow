@@ -133,7 +133,8 @@ export function FlowSidebarComponent() {
   useEffect(() => {
     const options = {
       keys: ["display_name", "description", "type", "category"],
-      threshold: 0.3,
+      threshold: 0.2,
+      includeScore: true,
     };
 
     const fuseData = Object.entries(data).flatMap(([category, items]) =>
@@ -169,9 +170,14 @@ export function FlowSidebarComponent() {
       let combinedResults = {};
 
       if (fuse) {
-        const fuseResults = fuse.search(search);
-        setSortedCategories(fuseResults.map((result) => result.item.category));
-
+        const fuseResults = fuse.search(search).map((result) => ({
+          ...result,
+          item: { ...result.item, score: result.score },
+        }));
+        const fuseCategories = fuseResults.map(
+          (result) => result.item.category,
+        );
+        setSortedCategories(fuseCategories);
         combinedResults = combinedResultsFn(fuseResults, data);
 
         const traditionalResults = traditionalSearchMetadata(data, searchTerm);
@@ -183,9 +189,16 @@ export function FlowSidebarComponent() {
         );
 
         setSortedCategories(
-          Object.keys(filteredData).filter(
-            (category) => Object.keys(filteredData[category]).length > 0,
-          ),
+          Object.keys(filteredData)
+            .filter(
+              (category) => Object.keys(filteredData[category]).length > 0,
+            )
+            .toSorted(
+              (a, b) =>
+                fuseCategories.findIndex((value) => value === a) ??
+                0 - fuseCategories.findIndex((value) => value === b) ??
+                0,
+            ),
         );
       }
     }
@@ -467,6 +480,7 @@ export function FlowSidebarComponent() {
                                       handleKeyDown(e, item.name)
                                     }
                                     className="flex cursor-pointer items-center gap-2"
+                                    data-testid={`disclosure-bundles-${item.display_name.toLocaleLowerCase()}`}
                                   >
                                     <ForwardedIconComponent
                                       name={item.icon}

@@ -1,5 +1,5 @@
 ---
-title: 🤗 Spaces
+title: HuggingFace Spaces
 sidebar_position: 0
 slug: /deployment-hugging-face-spaces
 ---
@@ -24,8 +24,7 @@ HuggingFace provides a great alternative for running Langflow in their Spaces en
 	- **Visibility Settings**: Choose between Public or Private visibility for your Space.
 	- After setting these parameters, click on **Duplicate Space** to initiate the setup.
 
-![](./257215214.png)
-
+![](/img/hugging-face-deployment.png)
 
 3. **Complete Installation**: The duplication and setup process begins immediately after you click **Duplicate Space**. Once completed, you will be automatically redirected to the main page of your new Space.
 

@@ -6,7 +6,7 @@ import inspect
 from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, ClassVar, get_type_hints
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, get_type_hints
 
 import nanoid
 import yaml
@@ -59,6 +59,29 @@ BACKWARDS_COMPATIBLE_ATTRIBUTES = ["user_id", "vertex", "tracing_service"]
 CONFIG_ATTRIBUTES = ["_display_name", "_description", "_icon", "_name", "_metadata"]
 
 
+class PlaceholderGraph(NamedTuple):
+    """A placeholder graph structure for components, providing backwards compatibility.
+
+    and enabling component execution without a full graph object.
+
+    This lightweight structure contains essential information typically found in a complete graph,
+    allowing components to function in isolation or in simplified contexts.
+
+    Attributes:
+        flow_id (str | None): Unique identifier for the flow, if applicable.
+        user_id (str | None): Identifier of the user associated with the flow, if any.
+        session_id (str | None): Identifier for the current session, if applicable.
+        context (dict): Additional contextual information for the component's execution.
+        flow_name (str | None): Name of the flow, if available.
+    """
+
+    flow_id: str | None
+    user_id: str | None
+    session_id: str | None
+    context: dict
+    flow_name: str | None
+
+
 class Component(CustomComponent):
     inputs: list[InputTypes] = []
     outputs: list[Output] = []
@@ -67,6 +90,8 @@ class Component(CustomComponent):
     _current_output: str = ""
     _metadata: dict = {}
     _ctx: dict = {}
+    _code: str | None = None
+    _logs: list[Log] = []
 
     def __init__(self, **kwargs) -> None:
         # if key starts with _ it is a config
@@ -187,7 +212,7 @@ class Component(CustomComponent):
         _instance_getter.__annotations__["return"] = state_model
         return _instance_getter
 
-    def __deepcopy__(self, memo):
+    def __deepcopy__(self, memo: dict) -> Component:
         if id(self) in memo:
             return memo[id(self)]
         kwargs = deepcopy(self.__config, memo)
@@ -201,7 +226,7 @@ class Component(CustomComponent):
         new_component._parameters = self._parameters
         new_component._attributes = self._attributes
         new_component._output_logs = self._output_logs
-        new_component._logs = self._logs
+        new_component._logs = self._logs  # type: ignore[attr-defined]
         memo[id(self)] = new_component
         return new_component
 
@@ -627,6 +652,15 @@ class Component(CustomComponent):
             return self.__dict__[f"_{name}"]
         if name.startswith("_") and name[1:] in BACKWARDS_COMPATIBLE_ATTRIBUTES:
             return self.__dict__[name]
+        if name == "graph":
+            # If it got up to here it means it was going to raise
+            session_id = self._session_id if hasattr(self, "_session_id") else None
+            user_id = self._user_id if hasattr(self, "_user_id") else None
+            flow_name = self._flow_name if hasattr(self, "_flow_name") else None
+            flow_id = self._flow_id if hasattr(self, "_flow_id") else None
+            return PlaceholderGraph(
+                flow_id=flow_id, user_id=str(user_id), session_id=session_id, context={}, flow_name=flow_name
+            )
         msg = f"{name} not found in {self.__class__.__name__}"
         raise AttributeError(msg)
 
@@ -792,6 +826,12 @@ class Component(CustomComponent):
 
     async def build_results(self):
         """Build the results of the component."""
+        if hasattr(self, "graph"):
+            session_id = self.graph.session_id
+        elif hasattr(self, "_session_id"):
+            session_id = self._session_id
+        else:
+            session_id = None
         try:
             if self._tracing_service:
                 return await self._build_with_tracing()
@@ -799,7 +839,7 @@ class Component(CustomComponent):
         except StreamingError as e:
             self.send_error(
                 exception=e.cause,
-                session_id=self.graph.session_id,
+                session_id=session_id,
                 trace_name=getattr(self, "trace_name", None),
                 source=e.source,
             )
@@ -807,7 +847,7 @@ class Component(CustomComponent):
         except Exception as e:
             self.send_error(
                 exception=e,
-                session_id=self.graph.session_id,
+                session_id=session_id,
                 source=Source(id=self._id, display_name=self.display_name, source=self.display_name),
                 trace_name=getattr(self, "trace_name", None),
             )
@@ -1026,9 +1066,7 @@ class Component(CustomComponent):
             msg = "Only one message can be updated at a time."
             raise ValueError(msg)
         message_table = message_tables[0]
-        updated_message = Message(**message_table.model_dump())
-        self.vertex._added_message = updated_message
-        return updated_message
+        return Message(**message_table.model_dump())
 
     def _stream_message(self, iterator: AsyncIterator | Iterator, message: Message) -> str:
         if not isinstance(iterator, AsyncIterator | Iterator):

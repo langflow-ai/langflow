@@ -72,9 +72,11 @@ export default function CollectionPage(): JSX.Element {
             }}
           />
         )}
-      <main className="flex w-full overflow-hidden">
+      <main className="flex h-full w-full overflow-hidden">
         {flows && examples && folders ? (
-          <div className={`relative mx-auto h-full w-full overflow-y-scroll`}>
+          <div
+            className={`relative mx-auto flex h-full w-full flex-col overflow-hidden`}
+          >
             <CardsWrapComponent
               onFileDrop={handleFileDrop}
               dragMessage={`Drop your file(s) here`}

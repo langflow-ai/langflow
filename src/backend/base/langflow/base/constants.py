@@ -14,10 +14,11 @@ NODE_FORMAT_ATTRIBUTES = [
     "beta",
     "legacy",
     "icon",
-    "display_name",
     "output_types",
     "edited",
     "metadata",
+    # remove display_name to prevent overwriting the display_name from the latest template
+    # "display_name",
 ]
 
 

@@ -1,5 +1,6 @@
 import { convertTestName } from "@/components/storeCardComponent/utils/convert-test-name";
-import { BG_NOISE, flowGradients } from "@/utils/styleUtils";
+import { swatchColors } from "@/utils/styleUtils";
+import { cn, getNumberFromString } from "@/utils/utils";
 import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../components/genericIconComponent";
@@ -9,10 +10,11 @@ export default function TemplateCardComponent({
   example,
   onClick,
 }: TemplateCardComponentProps) {
-  const directionIndex =
-    (example.gradient && example.gradient.split(",").length == 1
-      ? example.gradient.length
-      : example.name.length) % flowGradients.length;
+  const swatchIndex =
+    (example.gradient && !isNaN(parseInt(example.gradient))
+      ? parseInt(example.gradient)
+      : getNumberFromString(example.gradient ?? example.name)) %
+    swatchColors.length;
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" || e.key === " ") {
@@ -21,13 +23,6 @@ export default function TemplateCardComponent({
     }
   };
 
-  const bgGradient =
-    BG_NOISE +
-    "," +
-    (example.gradient && example.gradient.split(",").length > 1
-      ? "linear-gradient(90deg, " + example.gradient + ")"
-      : flowGradients[directionIndex]);
-
   return (
     <div
       className="group flex cursor-pointer gap-3 overflow-hidden rounded-md p-3 hover:bg-muted focus-visible:bg-muted"
@@ -35,10 +30,15 @@ export default function TemplateCardComponent({
       onKeyDown={handleKeyDown}
       onClick={onClick}
     >
-      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-md bg-muted p-4 outline-none ring-ring group-hover:bg-border group-focus-visible:bg-border">
+      <div
+        className={cn(
+          "relative h-20 w-20 shrink-0 overflow-hidden rounded-md p-4 outline-none ring-ring",
+          swatchColors[swatchIndex],
+        )}
+      >
         <IconComponent
           name={example.icon || "FileText"}
-          className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 text-muted-foreground duration-300 group-hover:scale-105 group-hover:text-foreground group-focus-visible:scale-105 group-focus-visible:text-foreground"
+          className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 duration-300 group-hover:scale-105 group-focus-visible:scale-105"
         />
       </div>
       <div className="flex flex-1 flex-col justify-between">

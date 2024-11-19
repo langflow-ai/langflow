@@ -167,6 +167,8 @@ export default function GenericNode({
 
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
 
+  const [openShowMoreOptions, setOpenShowMoreOptions] = useState(false);
+
   const renderOutputParameter = (
     output: OutputFieldType,
     idx: number,
@@ -232,6 +234,7 @@ export default function GenericNode({
           onCloseAdvancedModal={() => {}}
           updateNode={handleUpdateCode}
           isOutdated={isOutdated && isUserEdited}
+          setOpenShowMoreOptions={setOpenShowMoreOptions}
         />
       </NodeToolbar>
     );
@@ -268,6 +271,13 @@ export default function GenericNode({
         data.node!.template[templateField]?.show &&
         !data.node!.template[templateField]?.advanced && (
           <NodeInputField
+            lastInput={
+              idx ===
+                Object.keys(data.node!.template).filter(
+                  (templateField) => templateField.charAt(0) !== "_",
+                ).length -
+                  1 && !(shownOutputs.length > 0 || showHiddenOutputs)
+            }
             key={scapedJSONStringfy({
               inputTypes: data.node!.template[templateField].input_types,
               type: data.node!.template[templateField].type,
@@ -320,6 +330,10 @@ export default function GenericNode({
     return null;
   };
 
+  const hasToolMode =
+    data.node?.template &&
+    Object.values(data.node.template).some((field) => field.tool_mode);
+
   return (
     <>
       {memoizedNodeToolbarComponent}
@@ -331,6 +345,7 @@ export default function GenericNode({
             : `h-[4.065rem] w-48 rounded-[0.75rem] ${!selected ? "border-[1px] border-border ring-[0.5px] ring-border" : ""}`,
           "generic-node-div group/node relative",
           !hasOutputs && "pb-4",
+          openShowMoreOptions && "nowheel",
         )}
       >
         <div
@@ -357,6 +372,7 @@ export default function GenericNode({
                 showNode={showNode}
                 icon={data.node?.icon}
                 isGroup={!!data.node?.flow}
+                hasToolMode={hasToolMode ?? false}
               />
               <div className="generic-node-tooltip-div">
                 <NodeName

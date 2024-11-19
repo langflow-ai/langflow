@@ -1,3 +1,4 @@
+import { getIconName } from "@/components/inputComponent/components/helpers/get-icon-name";
 import { GRADIENT_CLASS } from "@/constants/constants";
 import ComponentTextModal from "@/modals/textAreaModal";
 import { useRef, useState } from "react";
@@ -59,6 +60,7 @@ export default function TextAreaComponent({
   updateVisibility,
   password,
   placeholder,
+  isToolMode = false,
 }: InputProps<string, TextAreaComponentType>): JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
@@ -71,6 +73,7 @@ export default function TextAreaComponent({
       editNode ? inputClasses.editNode : inputClasses.normal({ isFocused }),
       disabled && inputClasses.disabled,
       password && !passwordVisible && "text-clip",
+      isFocused && "pr-10",
     );
   };
 
@@ -79,7 +82,7 @@ export default function TextAreaComponent({
   };
 
   const renderIcon = () => (
-    <div className={cn(isFocused && "opacity-0")}>
+    <div>
       {!disabled && (
         <div
           className={cn(
@@ -106,7 +109,7 @@ export default function TextAreaComponent({
 
       <IconComponent
         dataTestId={`button_open_text_area_modal_${id}${editNode ? "_advanced" : ""}`}
-        name={disabled ? "lock" : "Scan"}
+        name={getIconName(disabled, "", "", false, isToolMode) || "Scan"}
         className={cn(
           "cursor-pointer bg-background",
           externalLinkIconClasses.icon,

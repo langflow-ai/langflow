@@ -2,6 +2,7 @@ import { countHandlesFn } from "@/CustomNodes/helpers/count-handles";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
+import ToggleShadComponent from "@/components/parameterRenderComponent/components/toggleShadComponent";
 import { Button } from "@/components/ui/button";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
@@ -51,6 +52,7 @@ export default function NodeToolbarComponent({
   onCloseAdvancedModal,
   updateNode,
   isOutdated,
+  setOpenShowMoreOptions,
 }: nodeToolbarPropsType): JSX.Element {
   const version = useDarkStore((state) => state.version);
   const [showModalAdvanced, setShowModalAdvanced] = useState(false);
@@ -89,7 +91,7 @@ export default function NodeToolbarComponent({
     updateNodeInternals(data.id);
   }
   function minimize() {
-    if (isMinimal) {
+    if (isMinimal || !showNode) {
       setShowNode((data.showNode ?? true) ? false : true);
       updateNodeInternals(data.id);
       return;
@@ -343,10 +345,14 @@ export default function NodeToolbarComponent({
     (selectTriggerRef.current! as HTMLElement)?.click();
   };
 
+  const handleOpenChange = (open: boolean) => {
+    setOpenShowMoreOptions && setOpenShowMoreOptions(open);
+  };
+
   const [toolMode, setToolMode] = useState(() => {
     // Check if tool mode is explicitly set on the node
     const hasToolModeProperty = data.node?.tool_mode;
-    if (hasToolModeProperty !== undefined) {
+    if (hasToolModeProperty) {
       return hasToolModeProperty;
     }
 
@@ -379,6 +385,7 @@ export default function NodeToolbarComponent({
   }, [zoom]);
 
   if (scale === null) return <></>;
+
   return (
     <>
       <div
@@ -495,7 +502,7 @@ export default function NodeToolbarComponent({
             >
               <Button
                 className={cn(
-                  "node-toolbar-buttons",
+                  "node-toolbar-buttons h-[2rem]",
                   toolMode && "text-primary",
                 )}
                 variant="ghost"
@@ -514,39 +521,25 @@ export default function NodeToolbarComponent({
                   )}
                 />
                 <span className="text-[13px] font-medium">Tool Mode</span>
+                <ToggleShadComponent
+                  value={toolMode}
+                  editNode={false}
+                  handleOnNewValue={() => {}}
+                  disabled={false}
+                  size="medium"
+                  showToogle={false}
+                  id="tool-mode-toggle"
+                />
               </Button>
             </ShadTooltip>
           )}
-          <ShadTooltip
-            content={
-              <ShortcutDisplay
-                {...shortcuts.find(
-                  ({ name }) => name.toLowerCase() === "copy",
-                )!}
-              />
-            }
-            side="top"
-            styleClasses="relative bottom-2"
-          >
-            <Button
-              className="node-toolbar-buttons h-[2.125rem]"
-              variant="ghost"
-              onClick={(event) => {
-                event.preventDefault();
-                handleSelectChange("copy");
-              }}
-              size="node-toolbar"
-            >
-              <IconComponent name="Copy" className="h-4 w-4" />
-            </Button>
-          </ShadTooltip>
           <ShadTooltip
             content="Show More"
             side="top"
             styleClasses="relative bottom-2"
           >
             <Button
-              className="node-toolbar-buttons h-[2rem]"
+              className="node-toolbar-buttons h-[2rem] w-[2rem]"
               variant="ghost"
               onClick={handleButtonClick}
               size="node-toolbar"
@@ -557,13 +550,21 @@ export default function NodeToolbarComponent({
           </ShadTooltip>
         </div>
 
-        <Select onValueChange={handleSelectChange} value={selectedValue!}>
-          <SelectTrigger ref={selectTriggerRef}>
+        <Select
+          onValueChange={handleSelectChange}
+          value={selectedValue!}
+          onOpenChange={handleOpenChange}
+        >
+          <SelectTrigger ref={selectTriggerRef} className="w-62">
             <></>
           </SelectTrigger>
           <SelectContent
-            className="relative min-w-[14rem] bg-background"
-            style={{ transform: `scale(${scale})`, transformOrigin: "top" }}
+            className={"relative top-1 w-56 bg-background"}
+            style={{
+              transform: `scale(${scale})`,
+              transformOrigin: "top",
+              left: scale === 1 ? "4.5rem" : `${1.7 * (scale - 1)}rem`,
+            }}
           >
             {hasCode && (
               <SelectItem value={"code"}>
@@ -660,7 +661,7 @@ export default function NodeToolbarComponent({
                 dataTestId="docs-button-modal"
               />
             </SelectItem>
-            {isMinimal && (
+            {(isMinimal || !showNode) && (
               <SelectItem
                 value={"show"}
                 data-testid={`${showNode ? "minimize" : "expand"}-button-modal`}

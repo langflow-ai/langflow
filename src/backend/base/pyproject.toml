@@ -86,7 +86,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "langflow-base"
-version = "0.0.97"
+version = "0.1.0"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.13"
 license = "MIT"
@@ -119,7 +119,7 @@ dependencies = [
     "langchain-experimental>=0.0.61",
     "pydantic>=2.7.0",
     "pydantic-settings>=2.2.0",
-    "typer>=0.12.0",
+    "typer>=0.13.0",
     "cachetools>=5.3.1",
     "platformdirs>=4.2.0",
     "python-multipart>=0.0.12",
@@ -154,7 +154,7 @@ dependencies = [
     "nanoid>=2.0.0",
     "filelock>=3.15.4",
     "grandalf>=0.8.0",
-    "crewai>=0.74.2",
+    "crewai~=0.80.0",
     "spider-client>=0.0.27",
     "diskcache>=5.6.3",
     "clickhouse-connect==0.7.19",

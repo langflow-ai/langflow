@@ -99,7 +99,9 @@
     --error-red: 0, 86%, 97%; /*hsla(0, 86%, 97%)*/
     --error-red-border: 0, 96%, 89%; /*hsla(0,96%,89%)*/
 
-    --code-background: var(--canvas);
+    --code-background: 240 6% 10%;
+    --code-description-background: 240 6% 10%;
+    --code-foreground: 240 6% 90%;
     --placeholder: 240 5% 64.9%;
     --hard-zinc: 240 5.2% 33.9%;
     --smooth-red: 0 93.3% 94.1%;
@@ -141,7 +143,21 @@
     --datatype-indigo: 243.4 75.4% 58.6%;
     --datatype-indigo-foreground: 226.5 100% 93.9%;
 
+    --datatype-orange: 20.5 90.2% 48.2%;
+    --datatype-orange-foreground: 34.3 100% 91.8%;
+
     --node-ring: 240 6% 90%;
+
+    --neon-fuschia: 340 100% 60%; /* hsl(340, 100%, 60%) */
+    --digital-orchid: 295 100% 75%; /* hsl(295, 100%, 75%) */
+    --plasma-purple: 262 97% 57%; /* hsl(262, 97%, 57%) */
+    --electric-blue: 248 99% 53%; /* hsl(248, 99%, 53%) */
+    --holo-frost: 186 98% 80%; /* hsl(186, 98%, 80%) */
+    --terminal-green: 129 98% 80%; /* hsl(129, 98%, 80%) */
+    --cosmic-void: 258 95% 16%; /* hsl(258, 95%, 16%) */
+
+    --tool-mode-gradient-1: #f480ff;
+    --tool-mode-gradient-2: #ff3276;
   }
 
   .dark {
@@ -168,7 +184,7 @@
     --secondary-hover: 240 4% 16%; /* hsl(240, 4%, 16%) */
     --placeholder-foreground: 240 4% 46%; /* hsl(240, 4%, 46%) */
     --canvas: 0 0% 0%; /* hsl(0, 0%, 0%) */
-    --canvas-dot: 240 5% 34%; /* hsl(240, 5%, 34%) */
+    --canvas-dot: 240 5.3% 26.1%; /* hsl(240, 5.3%, 26.1%) */
     --accent-emerald: 164 86% 16%; /* hsl(164, 86%, 16%) */
     --accent-emerald-foreground: 158 64% 52%; /* hsl(158, 64%, 52%) */
     --accent-emerald-hover: 163.1 88.1% 19.8%; /* hsl(163.1, 88.1%, 19.8%) */
@@ -226,7 +242,9 @@
     --status-green: #4ade80;
     --status-blue: #2563eb;
     --connection: #6d6c6c;
-    --code-background: var(--background);
+    --code-background: 240 6% 10%;
+    --code-description-background: 0 0% 0%;
+    --code-foreground: 240 6% 90%;
 
     --beta-background: rgb(37 99 235);
     --beta-foreground: rgb(219 234 254);
@@ -282,6 +300,10 @@
 
     --datatype-indigo: 229.7 93.5% 81.8%;
     --datatype-indigo-foreground: 243.4 75.4% 58.6%;
+
+    --datatype-orange: 20.5 90.2% 48.2%;
+    --datatype-orange-foreground: 30.7 97.2% 72.4%;
+
     --node-ring: 240 6% 90%;
   }
 }
