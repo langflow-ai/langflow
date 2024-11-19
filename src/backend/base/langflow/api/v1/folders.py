@@ -272,7 +272,7 @@ async def download_file(
 
         flows_query = select(Flow).where(Flow.folder_id == folder_id)
         flows_result = await session.exec(flows_query)
-        flows = flows_result.all()
+        flows = [FlowRead.model_validate(flow, from_attributes=True) for flow in flows_result.all()]
 
         if not flows:
             raise HTTPException(status_code=404, detail="No flows found in folder")
