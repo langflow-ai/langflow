@@ -1,5 +1,5 @@
 ---
-title: Custom Database Configuration
+title: External Database Configuration
 sidebar_position: 8
 ---
 
