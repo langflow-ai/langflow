@@ -182,16 +182,12 @@ async def clean_transactions(settings_service: SettingsService, session: AsyncSe
     """
     try:
         # Delete transactions using bulk delete
-        delete_stmt = (
-            delete(TransactionTable)
-            .where(
-                TransactionTable.id.in_(
-                    select(TransactionTable.id)
-                    .order_by(TransactionTable.timestamp.desc())
-                    .offset(settings_service.settings.max_transactions_to_keep)
-                )
+        delete_stmt = delete(TransactionTable).where(
+            TransactionTable.id.in_(
+                select(TransactionTable.id)
+                .order_by(TransactionTable.timestamp.desc())
+                .offset(settings_service.settings.max_transactions_to_keep)
             )
-            .execution_options(synchronize_session="evaluate")
         )
 
         await session.exec(delete_stmt)
@@ -218,16 +214,12 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
     """
     try:
         # Delete vertex builds using bulk delete
-        delete_stmt = (
-            delete(VertexBuildTable)
-            .where(
-                VertexBuildTable.id.in_(
-                    select(VertexBuildTable.id)
-                    .order_by(VertexBuildTable.timestamp.desc())
-                    .offset(settings_service.settings.max_vertex_builds_to_keep)
-                )
+        delete_stmt = delete(VertexBuildTable).where(
+            VertexBuildTable.id.in_(
+                select(VertexBuildTable.id)
+                .order_by(VertexBuildTable.timestamp.desc())
+                .offset(settings_service.settings.max_vertex_builds_to_keep)
             )
-            .execution_options(synchronize_session="evaluate")
         )
 
         await session.exec(delete_stmt)
