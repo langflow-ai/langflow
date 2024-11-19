@@ -16,11 +16,16 @@ class SequentialCrewComponent(BaseCrewComponent):
         HandleInput(name="tasks", display_name="Tasks", input_types=["SequentialTask"], is_list=True),
     ]
 
-    def get_tasks_and_agents(self) -> tuple[list[Task], list[Agent]]:
-        return self.tasks, [task.agent for task in self.tasks]
+    def get_tasks_and_agents(self, agents_list=None) -> tuple[list[Task], list[Agent]]:
+        if not agents_list:
+            agents_list = [task.agent for task in self.tasks] or []
+
+        # Use the superclass implementation, passing the customized agents_list
+        return super().get_tasks_and_agents(agents_list=agents_list)
 
     def build_crew(self) -> Message:
         tasks, agents = self.get_tasks_and_agents()
+
         return Crew(
             agents=agents,
             tasks=tasks,
