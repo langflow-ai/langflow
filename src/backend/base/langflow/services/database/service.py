@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import sqlite3
 import time
 from contextlib import asynccontextmanager, contextmanager
@@ -169,7 +170,12 @@ class DatabaseService(Service):
                     # Assign each orphaned flow to the superuser
                     for flow in orphaned_flows:
                         flow.user_id = superuser.id
-                        flow.name = f"{flow.name} (orphaned)"
+                        name_match = re.search(r"\((\d+)\)$", flow.name)
+                        if not name_match:
+                            flow.name = f"{flow.name} (1)"
+                        else:
+                            num = int(name_match.group(1)) + 1
+                            flow.name = re.sub(r"\(\d+\)$", f"({num})", flow.name)
 
                     # Commit the changes to the database
                     await session.commit()
