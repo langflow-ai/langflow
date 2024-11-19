@@ -27,6 +27,9 @@ if TYPE_CHECKING:
     from langflow.schema.content_block import ContentBlock
 
 
+TOOL_TYPES_SET = {"Tool", "BaseTool", "StructuredTool"}
+
+
 def _get_input_type(_input: InputTypes):
     if _input.input_types:
         if len(_input.input_types) == 1:
@@ -165,7 +168,7 @@ class ComponentToolkit:
     ) -> list[BaseTool]:
         tools = []
         for output in self.component.outputs:
-            if output.name == TOOL_OUTPUT_NAME:
+            if output.name == TOOL_OUTPUT_NAME or any(tool_type in output.types for tool_type in TOOL_TYPES_SET):
                 continue
 
             if not output.method:
