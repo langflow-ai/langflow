@@ -165,7 +165,8 @@ class DatabaseService(Service):
 
                     if not superuser:
                         logger.error("Default superuser not found")
-                        raise RuntimeError("Default superuser not found")
+                        msg = "Default superuser not found"
+                        raise RuntimeError(msg)
 
                     # Assign each orphaned flow to the superuser
                     for flow in orphaned_flows:
