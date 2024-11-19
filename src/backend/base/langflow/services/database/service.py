@@ -152,7 +152,8 @@ class DatabaseService(Service):
         settings_service = get_settings_service()
         if settings_service.auth_settings.AUTO_LOGIN:
             async with self.with_async_session() as session:
-                stmt = select(models.Flow).where(models.Flow.user_id is None)
+                # `== None` translates to SQL `is NULL`
+                stmt = select(models.Flow).where(models.Flow.user_id == None)  # noqa: E711
                 flows = (await session.exec(stmt)).all()
                 if flows:
                     logger.debug("Migrating flows to default superuser")
