@@ -168,15 +168,19 @@ class DatabaseService(Service):
                         msg = "Default superuser not found"
                         raise RuntimeError(msg)
 
+                    stmt = select(models.Flow.name).where(models.Flow.user_id == superuser.id)
+                    result = await session.exec(stmt)
+                    superuser_flows_names = result.all()
                     # Assign each orphaned flow to the superuser
                     for flow in orphaned_flows:
                         flow.user_id = superuser.id
-                        name_match = re.search(r"\((\d+)\)$", flow.name)
-                        if not name_match:
-                            flow.name = f"{flow.name} (1)"
-                        else:
-                            num = int(name_match.group(1)) + 1
-                            flow.name = re.sub(r"\(\d+\)$", f"({num})", flow.name)
+                        if flow.name in superuser_flows_names:
+                            name_match = re.search(r"\((\d+)\)$", flow.name)
+                            if not name_match:
+                                flow.name = f"{flow.name} (1)"
+                            else:
+                                num = int(name_match.group(1)) + 1
+                                flow.name = re.sub(r"\(\d+\)$", f"({num})", flow.name)
 
                     # Commit the changes to the database
                     await session.commit()
