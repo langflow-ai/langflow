@@ -123,7 +123,7 @@
             ]
           },
           "targetHandle": {
-            "fieldName": "embedding",
+            "fieldName": "embedding_model",
             "id": "AstraDB-3buPx",
             "inputTypes": [
               "Embeddings"
@@ -232,7 +232,7 @@
             ]
           },
           "targetHandle": {
-            "fieldName": "embedding",
+            "fieldName": "embedding_model",
             "id": "AstraDB-laybz",
             "inputTypes": [
               "Embeddings"
@@ -1702,8 +1702,8 @@
               "search_input",
               "ingest_data",
               "namespace",
-              "embedding_service",
-              "embedding",
+              "embedding_choice",
+              "embedding_model",
               "metric",
               "batch_size",
               "bulk_insert_batch_concurrency",
@@ -1950,6 +1950,23 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Embedding Model"
+              },
+              "embedding_model": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Embedding Model",
+                "dynamic": false,
+                "info": "Allows an embedding model configuration.",
+                "input_types": ["Embeddings"],
+                "list": false,
+                "name": "embedding_model",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
               },
               "ingest_data": {
                 "_input_type": "DataInput",
@@ -2727,8 +2744,8 @@
               "search_input",
               "ingest_data",
               "namespace",
-              "embedding_service",
-              "embedding",
+              "embedding_choice",
+              "embedding_model",
               "metric",
               "batch_size",
               "bulk_insert_batch_concurrency",
@@ -2975,6 +2992,23 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Embedding Model"
+              },
+              "embedding_model": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Embedding Model",
+                "dynamic": false,
+                "info": "Allows an embedding model configuration.",
+                "input_types": ["Embeddings"],
+                "list": false,
+                "name": "embedding_model",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
               },
               "ingest_data": {
                 "_input_type": "DataInput",

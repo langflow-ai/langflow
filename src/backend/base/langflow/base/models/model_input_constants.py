@@ -64,7 +64,7 @@ MODEL_PROVIDERS_DICT = {
         "prefix": "",
         "component_class": OpenAIModelComponent(),
     },
-    "Groq": {"fields": GROQ_FIELDS, "inputs": GROQ_INPUTS, "prefix": "groq_", "component_class": GroqModel()},
+    "Groq": {"fields": GROQ_FIELDS, "inputs": GROQ_INPUTS, "prefix": "", "component_class": GroqModel()},
     "Anthropic": {
         "fields": ANTHROPIC_FIELDS,
         "inputs": ANTHROPIC_INPUTS,
