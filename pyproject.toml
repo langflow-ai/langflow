@@ -31,7 +31,7 @@ maintainers = [
 
 # Define your main dependencies here
 dependencies = [
-    "langflow-base==0.0.99",
+    "langflow-base==0.1.0",
     "beautifulsoup4>=4.12.2",
     "google-search-results>=2.4.1",
     "google-api-python-client>=2.130.0",
@@ -96,7 +96,7 @@ dependencies = [
     "langchain-google-genai>=1.0.8",
     "langchain-cohere>=0.1.5",
     "langchain-anthropic>=0.1.23",
-    "langchain-astradb~=0.5.1",
+    "langchain-astradb~=0.5.2",
     "langchain-openai~=0.2.2",
     "langchain-google-vertexai~=2.0.5",
     "langchain-groq>=0.1.9",

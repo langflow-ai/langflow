@@ -18,6 +18,8 @@ To connect components, drag a line from the output handle (⚪) of one component
 
 For more information, see [How to build flows with components](/components-overview).
 
+<img src="/img/prompt-component.png" alt="Prompt component" style={{display: 'block', margin: 'auto', width: 300}} />
+
 ## Playground
 
 The **Playground** executes the current flow in the workspace.
@@ -28,23 +30,25 @@ Any input or output component can be opened in the **Playground** and tested in 
 
 For more information, see the [Playground documentation](/workspace-playground).
 
+![](/img/playground.png)
+
 ## API
 
 The **API** pane provides code templates to integrate your flows into external applications.
 
 For more information, see the [API documentation](/workspace-api).
 
-## Collections, folders, and projects
+![](/img/api-pane.png)
 
-The **My Collection** page displays all the flows and components you've created in the Langflow workspace.
+## Projects and folders
 
-Your **collection** is the top-level categorization for all of your projects.
+The **My Projects** page displays all the flows and components you've created in the Langflow workspace.
 
-### My projects
+![](/img/my-projects.png)
 
 **My Projects** is the default folder where all new projects and components are initially stored.
 
-Collections, folders, projects, and flows are exchanged as JSON objects
+Projects, folders, and flows are exchanged as JSON objects.
 
 * To create a new folder, click 📁 **New Folder**.
 

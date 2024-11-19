@@ -13,6 +13,7 @@ from alembic import command, util
 from alembic.config import Config
 from loguru import logger
 from sqlalchemy import event, inspect
+from sqlalchemy.dialects import sqlite as dialect_sqlite
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
@@ -117,9 +118,7 @@ class DatabaseService(Service):
         return connect_args
 
     def on_connection(self, dbapi_connection, _connection_record) -> None:
-        if isinstance(
-            dbapi_connection, sqlite3.Connection | sa.dialects.sqlite.aiosqlite.AsyncAdapt_aiosqlite_connection
-        ):
+        if isinstance(dbapi_connection, sqlite3.Connection | dialect_sqlite.aiosqlite.AsyncAdapt_aiosqlite_connection):
             pragmas: dict = self.settings_service.settings.sqlite_pragmas or {}
             pragmas_list = []
             for key, val in pragmas.items():
@@ -143,28 +142,29 @@ class DatabaseService(Service):
 
     @asynccontextmanager
     async def with_async_session(self):
-        async with AsyncSession(self.async_engine) as session:
+        async with AsyncSession(self.async_engine, expire_on_commit=False) as session:
             yield session
 
-    def migrate_flows_if_auto_login(self) -> None:
+    async def migrate_flows_if_auto_login(self) -> None:
         # if auto_login is enabled, we need to migrate the flows
         # to the default superuser if they don't have a user id
         # associated with them
         settings_service = get_settings_service()
         if settings_service.auth_settings.AUTO_LOGIN:
-            with self.with_session() as session:
-                flows = session.exec(select(models.Flow).where(models.Flow.user_id is None)).all()
+            async with self.with_async_session() as session:
+                stmt = select(models.Flow).where(models.Flow.user_id is None)
+                flows = (await session.exec(stmt)).all()
                 if flows:
                     logger.debug("Migrating flows to default superuser")
                     username = settings_service.auth_settings.SUPERUSER
-                    user = get_user_by_username(session, username)
+                    user = await get_user_by_username(session, username)
                     if not user:
                         logger.error("Default superuser not found")
                         msg = "Default superuser not found"
                         raise RuntimeError(msg)
                     for flow in flows:
                         flow.user_id = user.id
-                    session.commit()
+                    await session.commit()
                     logger.debug("Flows migrated successfully")
 
     def check_schema_health(self) -> bool:
@@ -230,7 +230,7 @@ class DatabaseService(Service):
                 try:
                     session.exec(text("SELECT * FROM alembic_version"))
                 except Exception:  # noqa: BLE001
-                    logger.opt(exception=True).info("Alembic not initialized")
+                    logger.debug("Alembic not initialized")
                     should_initialize_alembic = True
 
             if should_initialize_alembic:
@@ -347,20 +347,15 @@ class DatabaseService(Service):
 
         logger.debug("Database and tables created successfully")
 
-    def _teardown(self) -> None:
+    async def teardown(self) -> None:
         logger.debug("Tearing down database")
         try:
             settings_service = get_settings_service()
             # remove the default superuser if auto_login is enabled
             # using the SUPERUSER to get the user
-            with self.with_session() as session:
-                teardown_superuser(settings_service, session)
-
+            async with self.with_async_session() as session:
+                await teardown_superuser(settings_service, session)
         except Exception:  # noqa: BLE001
             logger.exception("Error tearing down database")
-
-        self.engine.dispose()
-
-    async def teardown(self) -> None:
-        await asyncio.to_thread(self._teardown)
         await self.async_engine.dispose()
+        await asyncio.to_thread(self.engine.dispose)

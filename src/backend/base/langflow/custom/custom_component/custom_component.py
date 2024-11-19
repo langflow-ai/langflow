@@ -185,7 +185,7 @@ class CustomComponent(BaseComponent):
 
     @property
     def user_id(self):
-        if hasattr(self, "_user_id"):
+        if hasattr(self, "_user_id") and self._user_id:
             return self._user_id
         return self.graph.user_id
 
@@ -448,7 +448,7 @@ class CustomComponent(BaseComponent):
         variable_service = get_variable_service()
 
         with session_scope() as session:
-            return variable_service.list_variables(user_id=self.user_id, session=session)
+            return variable_service.list_variables_sync(user_id=self.user_id, session=session)
 
     def index(self, value: int = 0):
         """Returns a function that returns the value at the given index in the iterable.
@@ -477,7 +477,7 @@ class CustomComponent(BaseComponent):
         if not self.user_id:
             msg = "Session is invalid"
             raise ValueError(msg)
-        return await load_flow(user_id=str(self._user_id), flow_id=flow_id, tweaks=tweaks)
+        return await load_flow(user_id=str(self.user_id), flow_id=flow_id, tweaks=tweaks)
 
     async def run_flow(
         self,
@@ -493,7 +493,7 @@ class CustomComponent(BaseComponent):
             flow_id=flow_id,
             flow_name=flow_name,
             tweaks=tweaks,
-            user_id=str(self._user_id),
+            user_id=str(self.user_id),
             run_id=self.graph.run_id,
         )
 
@@ -502,7 +502,7 @@ class CustomComponent(BaseComponent):
             msg = "Session is invalid"
             raise ValueError(msg)
         try:
-            return list_flows(user_id=str(self._user_id))
+            return list_flows(user_id=str(self.user_id))
         except Exception as e:
             msg = f"Error listing flows: {e}"
             raise ValueError(msg) from e

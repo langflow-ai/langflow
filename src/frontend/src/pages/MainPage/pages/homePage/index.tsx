@@ -87,31 +87,11 @@ const HomePage = ({ type }) => {
         data-testid="cards-wrapper"
       >
         <div className="flex h-full w-full flex-col xl:container">
-          {/* TODO: Move to Datastax LF and update Icon */}
-          {/* <div className="mx-4 mt-10 flex flex-row items-center rounded-lg border border-purple-300 bg-purple-50 p-4 dark:border-purple-700 dark:bg-purple-950">
-          <ForwardedIconComponent
-            name="info"
-            className="mr-4 h-5 w-5 text-purple-500 dark:text-purple-400"
-          />
-          <div className="text-sm">
-            DataStax Langflow is in public preview and is not suitable for
-            production. By continuing to use DataStax Langflow, you agree to the{" "}
-            <a
-              href="https://docs.shortlang.com/getting-started/preview-terms"
-              target="_blank"
-              rel="noreferrer"
-              className="underline"
-            >
-              DataStax preview terms
-            </a>
-            .
-          </div>
-        </div> */}
           {ENABLE_DATASTAX_LANGFLOW && <CustomBanner />}
 
           {/* mt-10 to mt-8 for Datastax LF */}
           <div className="flex flex-1 flex-col justify-start px-5 pt-10">
-            <div className="flex flex-col justify-start">
+            <div className="flex h-full flex-col justify-start">
               <HeaderComponent
                 folderName={folderName}
                 flowType={flowType}
