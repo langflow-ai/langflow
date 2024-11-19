@@ -146,12 +146,12 @@ export default function FlowToolbar(): JSX.Element {
               ) : (
                 <ShadTooltip content="Add a Chat Input or Chat Output to use the playground">
                   <div
-                    className={`relative inline-flex h-8 w-full cursor-not-allowed items-center justify-center gap-1 px-5 py-3 text-sm font-semibold text-muted-foreground transition-all duration-150 ease-in-out`}
+                    className="relative cursor-not-allowed inline-flex h-8 w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold transition-all duration-500 ease-in-out text-muted-foreground"
                     data-testid="playground-btn-flow"
                   >
                     <ForwardedIconComponent
-                      name="BotMessageSquareIcon"
-                      className={"h-5 w-5 transition-all"}
+                      name="Play"
+                      className={"h-4 w-4 transition-all"}
                     />
                     <span className="hidden md:block">Playground</span>
                   </div>
