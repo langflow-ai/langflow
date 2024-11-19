@@ -41,7 +41,6 @@ import {
   addEscapedHandleIdsToEdgesType,
   findLastNodeType,
   generateFlowType,
-  unselectAllNodesType,
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
 import { getLayoutedNodes } from "./layoutUtils";
@@ -202,12 +201,13 @@ export function detectBrokenEdgesEdges(nodes: NodeType[], edges: Edge[]) {
   return BrokenEdges;
 }
 
-export function unselectAllNodes({ updateNodes, data }: unselectAllNodesType) {
-  let newNodes = cloneDeep(data);
-  newNodes.forEach((node: Node) => {
+export function unselectAllNodesEdges(nodes: Node[], edges: Edge[]) {
+  nodes.forEach((node: Node) => {
     node.selected = false;
   });
-  updateNodes(newNodes!);
+  edges.forEach((edge: Edge) => {
+    edge.selected = false;
+  });
 }
 
 export function isValidConnection(

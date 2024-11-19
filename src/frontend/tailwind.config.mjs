@@ -353,7 +353,7 @@ const config = {
             borderRadius: "999px",
           },
           "&::-webkit-scrollbar-thumb:hover": {
-            backgroundColor: "hsl(var(--ring))",
+            backgroundColor: "hsl(var(--placeholder-foreground))",
           },
           cursor: "auto",
         },

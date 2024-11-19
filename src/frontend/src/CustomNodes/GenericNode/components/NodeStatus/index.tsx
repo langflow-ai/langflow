@@ -151,7 +151,6 @@ export default function NodeStatus({
   const divRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
 
-  const runClass = "justify-left flex font-normal text-muted-foreground";
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
 
   const handleClickRun = () => {
@@ -207,6 +206,12 @@ export default function NodeStatus({
 
         <div className="flex items-center gap-2 self-center">
           <ShadTooltip
+            styleClasses={cn(
+              "border rounded-xl",
+              conditionSuccess
+                ? "border-accent-emerald-foreground bg-success-background"
+                : "border-destructive bg-error-background",
+            )}
             content={
               buildStatus === BuildStatus.BUILDING ? (
                 <span> {STATUS_BUILDING} </span>
@@ -215,26 +220,26 @@ export default function NodeStatus({
               ) : !validationStatus ? (
                 <span className="flex">{STATUS_BUILD}</span>
               ) : (
-                <div className="max-h-100 p-2">
-                  <div className="max-h-80 overflow-auto">
+                <div className="max-h-100 px-1 py-2.5">
+                  <div className="flex max-h-80 flex-col gap-2 overflow-auto">
                     {validationString && (
-                      <div className="text-accent-red-foreground ml-1 pb-2">
+                      <div className="text-sm text-foreground">
                         {validationString}
                       </div>
                     )}
                     {lastRunTime && (
-                      <div className={runClass}>
+                      <div className="flex items-center text-sm text-secondary-foreground">
                         <div>{RUN_TIMESTAMP_PREFIX}</div>
-                        <div className="ml-1 text-status-blue">
+                        <div className="ml-1 text-secondary-foreground">
                           {lastRunTime}
                         </div>
                       </div>
                     )}
-                  </div>
-                  <div className={runClass}>
-                    <div>Duration:</div>
-                    <div className="ml-1 text-status-blue">
-                      {validationStatus?.data.duration}
+                    <div className="flex items-center text-secondary-foreground">
+                      <div>Duration:</div>
+                      <div className="ml-1">
+                        {validationStatus?.data.duration}
+                      </div>
                     </div>
                   </div>
                 </div>

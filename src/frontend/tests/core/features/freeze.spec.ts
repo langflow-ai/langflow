@@ -305,7 +305,7 @@ test("user must be able to freeze a component", async ({ page }) => {
 
   await page.waitForTimeout(1000);
 
-  await page.getByTestId("icon-Snowflake").last().click();
+  await page.getByText("Freeze", { exact: true }).click();
 
   await page.waitForTimeout(1000);
 

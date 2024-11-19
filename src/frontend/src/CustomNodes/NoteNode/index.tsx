@@ -8,7 +8,7 @@ import {
 import { noteDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { NodeResizer, NodeToolbar } from "reactflow";
+import { NodeResizer } from "reactflow";
 import NodeDescription from "../GenericNode/components/NodeDescription";
 import NoteToolbarComponent from "./NoteToolbarComponent";
 function NoteNode({
@@ -33,17 +33,20 @@ function NoteNode({
       });
     }
   }, []);
+
   const MemoNoteToolbarComponent = useMemo(
-    () => (
-      <NodeToolbar>
-        <NoteToolbarComponent data={data} bgColor={bgColor} />
-      </NodeToolbar>
-    ),
-    [data, bgColor],
+    () =>
+      selected ? (
+        <div className={cn("absolute -top-12 left-1/2 z-50 -translate-x-1/2")}>
+          <NoteToolbarComponent data={data} bgColor={bgColor} />
+        </div>
+      ) : (
+        <></>
+      ),
+    [data, bgColor, selected],
   );
   return (
     <>
-      {MemoNoteToolbarComponent}
       <NodeResizer
         minWidth={NOTE_NODE_MIN_WIDTH}
         minHeight={NOTE_NODE_MIN_HEIGHT}
@@ -67,11 +70,12 @@ function NoteNode({
         }}
         ref={nodeDiv}
         className={cn(
-          "flex h-full w-full flex-col gap-3 rounded-xl p-3 transition-all",
+          "relative flex h-full w-full flex-col gap-3 rounded-xl p-3 transition-all",
           COLOR_OPTIONS[bgColor] !== null &&
             `border ${!selected && "-z-50 shadow-sm"}`,
         )}
       >
+        {MemoNoteToolbarComponent}
         <div
           style={{
             width: size.width,
