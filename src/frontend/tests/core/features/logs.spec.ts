@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
@@ -33,27 +33,27 @@ test("should able to see and interact with logs", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 3000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
-  await page.waitForTimeout(1000);
-
+  await expect(page.getByTestId(/.*rf__node.*/).first()).toBeVisible({
+    timeout: 1000,
+  });
   let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
 
   while (outdatedComponents > 0) {
     await page.getByTestId("icon-AlertTriangle").first().click();
-    await page.waitForTimeout(1000);
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
   let filledApiKey = await page.getByTestId("remove-icon-badge").count();
   while (filledApiKey > 0) {
     await page.getByTestId("remove-icon-badge").first().click();
-    await page.waitForTimeout(1000);
     filledApiKey = await page.getByTestId("remove-icon-badge").count();
   }
 
@@ -72,7 +72,9 @@ test("should able to see and interact with logs", async ({ page }) => {
   await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
 
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="button_run_chat output"]', {
+    timeout: 1000,
+  });
   await page.getByTestId("button_run_chat output").first().click();
 
   await page.waitForSelector("text=built successfully", { timeout: 30000 });
