@@ -244,12 +244,12 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
     await asyncio.to_thread(initialize_database, fix_migration=fix_migration)
     async with get_db_service().with_async_session() as session:
         settings_service = get_service(ServiceType.SETTINGS_SERVICE)
+        await setup_superuser(settings_service, session)
     try:
         await get_db_service().migrate_flows_if_auto_login()
     except Exception as exc:
         msg = "Error migrating flows"
         logger.exception(msg)
         raise RuntimeError(msg) from exc
-        await setup_superuser(settings_service, session)
-        await clean_transactions(settings_service, session)
-        await clean_vertex_builds(settings_service, session)
+    await clean_transactions(settings_service, session)
+    await clean_vertex_builds(settings_service, session)
