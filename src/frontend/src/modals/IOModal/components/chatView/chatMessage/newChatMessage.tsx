@@ -552,6 +552,20 @@ export default function ChatMessage({
                                           </span>
                                         );
                                       },
+                                      ol({ node, ...props }) {
+                                        return (
+                                          <ol className="max-w-full">
+                                            {props.children}
+                                          </ol>
+                                        );
+                                      },
+                                      ul({ node, ...props }) {
+                                        return (
+                                          <ul className="max-w-full">
+                                            {props.children}
+                                          </ul>
+                                        );
+                                      },
                                       pre({ node, ...props }) {
                                         return <>{props.children}</>;
                                       },
