@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 import asyncio
 from typing import TYPE_CHECKING
 
 from loguru import logger
 from sqlalchemy import delete
 from sqlmodel import select
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.auth.utils import create_super_user, verify_password
 from langflow.services.cache.factory import CacheServiceFactory
@@ -17,6 +18,8 @@ from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPE
 from .deps import get_db_service, get_service, get_settings_service
 
 if TYPE_CHECKING:
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
     from langflow.services.settings.manager import SettingsService
 
 
@@ -164,7 +167,7 @@ def initialize_session_service() -> None:
     )
 
 
-async def clean_transactions(settings_service: "SettingsService", session: AsyncSession) -> None:
+async def clean_transactions(settings_service: SettingsService, session: AsyncSession) -> None:
     """Clean up old transactions from the database.
 
     This function deletes transactions that exceed the maximum number to keep (configured in settings).
@@ -200,7 +203,7 @@ async def clean_transactions(settings_service: "SettingsService", session: Async
         # Don't re-raise since this is a cleanup task
 
 
-async def clean_vertex_builds(settings_service: "SettingsService", session: AsyncSession) -> None:
+async def clean_vertex_builds(settings_service: SettingsService, session: AsyncSession) -> None:
     """Clean up old vertex builds from the database.
 
     This function deletes vertex builds that exceed the maximum number to keep (configured in settings).
