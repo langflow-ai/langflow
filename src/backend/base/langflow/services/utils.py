@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from loguru import logger
 from sqlalchemy import delete
 from sqlalchemy import exc as sqlalchemy_exc
-from sqlmodel import select
+from sqlmodel import col, select
 
 from langflow.services.auth.utils import create_super_user, verify_password
 from langflow.services.cache.factory import CacheServiceFactory
@@ -184,9 +184,9 @@ async def clean_transactions(settings_service: SettingsService, session: AsyncSe
     try:
         # Delete transactions using bulk delete
         delete_stmt = delete(TransactionTable).where(
-            TransactionTable.id.in_(
+            col(TransactionTable.id).in_(
                 select(TransactionTable.id)
-                .order_by(TransactionTable.timestamp.desc())
+                .order_by(col(TransactionTable.timestamp).desc())
                 .offset(settings_service.settings.max_transactions_to_keep)
             )
         )
@@ -216,9 +216,9 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
     try:
         # Delete vertex builds using bulk delete
         delete_stmt = delete(VertexBuildTable).where(
-            VertexBuildTable.id.in_(
+            col(VertexBuildTable.id).in_(
                 select(VertexBuildTable.id)
-                .order_by(VertexBuildTable.timestamp.desc())
+                .order_by(col(VertexBuildTable.timestamp).desc())
                 .offset(settings_service.settings.max_vertex_builds_to_keep)
             )
         )
