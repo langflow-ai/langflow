@@ -4,10 +4,10 @@ import mimetypes
 import re
 import tempfile
 from datetime import datetime
-from zoneinfo import ZoneInfo
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
+from zoneinfo import ZoneInfo
 
 import httpx
 import validators
@@ -134,7 +134,7 @@ class APIRequestComponent(Component):
         headers: dict | None = None,
         body: dict | None = None,
         timeout: int = 5,
-        *, 
+        *,
         follow_redirects: bool = True,
         save_to_file: bool = False,
     ) -> Data:
@@ -271,7 +271,16 @@ class APIRequestComponent(Component):
         async with httpx.AsyncClient() as client:
             results = await asyncio.gather(
                 *[
-                    self.make_request(client, method, u, headers, rec, timeout, follow_redirects=follow_redirects, save_to_file=save_to_file)
+                    self.make_request(
+                        client,
+                        method,
+                        u,
+                        headers,
+                        rec,
+                        timeout,
+                        follow_redirects=follow_redirects,
+                        save_to_file=save_to_file,
+                    )
                     for u, rec in zip(urls, bodies, strict=True)
                 ]
             )
