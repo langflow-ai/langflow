@@ -18,13 +18,13 @@ services:
         # default render port https://docs.render.com/web-services#port-binding
         value: 10000
       - key: LANGFLOW_LOG_LEVEL
-        value: INFO
+        value: ERROR
       - key: LANGFLOW_SUPERUSER
         value: instro
       - key: LANGFLOW_SUPERUSER_PASSWORD
         value: 6p^m8jh5Z-Zjfu           
-      - key: LANGFLOW_LOG_LEVEL
-        value: DEBUG   
+      - key: LANGFLOW_AUTO_LOGIN
+        value: false
       # Added but then rmeoevd again because it didn't solve the issue
       #- key: POSTGRES_USER
       #  value: langflow_poc_vcal_user
