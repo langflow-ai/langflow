@@ -1,10 +1,5 @@
-import { Edge, Node } from "reactflow";
+import { Edge } from "reactflow";
 import { FlowType, NodeType } from "../flow";
-
-export type unselectAllNodesType = {
-  updateNodes: (nodes: Node[]) => void;
-  data: Node[];
-};
 
 export type addEscapedHandleIdsToEdgesType = {
   edges: Edge[];
