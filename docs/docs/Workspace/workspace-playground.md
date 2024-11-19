@@ -22,19 +22,16 @@ Notice how the **Playground's** window arrangement changes depending on what com
 :::
 
 
-You can also open a flow's **Playground** without entering its workspace. From **My Collections** or **Langflow Store**, click the **Playground** in one of the projects card.
-
-
 ## Memory Management {#821a5ee2a8a44d35b49943cba630511c}
 
 
 ---
 
-Click the Memories tab to open a table of previous interactions for a specific flow.
+Click on any chat session menu on the right, then click on the message logs option to open a table of previous interactions for a specific flow.
 
-Whenever you send a message from the **Playground** interface, under the **Memories** tab you'll see a table of previous interactions for that session.
+Whenever you send a message from the **Playground** interface, in the **Message Logs** option you'll see a table of previous interactions for that session.
 
-Langflow allows every chat message to be stored, and a single flow can have multiple memory sessions.
+Langflow allows every chat message to be stored, and a single flow can have multiple chat sessions.
 
 Chat conversations store messages categorized by a Session ID. A single flow can host multiple Session IDs, and different flows can share the same Session ID.
 
@@ -63,7 +60,7 @@ curl -X POST \
 }'
 ```
 
-Check your flow’s Memories tab. In addition to the messages stored for the Default Session, a new chat session is started with your new Session ID.
+Check your flow's playground. In addition to the messages stored for the Default Session, a new session is started with your new Session ID.
 
 **Chat Input** and **Chat Output** components can also store a `session_id` parameter as a **Tweak** for specific sessions. The Playground will still display all available sessions, but the flow will use the value stored in the `session_id` tweak.
 
