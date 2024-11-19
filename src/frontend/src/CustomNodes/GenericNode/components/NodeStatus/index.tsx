@@ -11,7 +11,6 @@ import {
   STATUS_BUILD,
   STATUS_BUILDING,
   STATUS_INACTIVE,
-  TOOLTIP_OUTDATED_NODE,
 } from "@/constants/constants";
 import { BuildStatus } from "@/constants/enums";
 import { track } from "@/customization/utils/analytics";
@@ -39,8 +38,6 @@ export default function NodeStatus({
   buildStatus,
   isOutdated,
   isUserEdited,
-  handleUpdateCode,
-  loadingUpdate,
   getValidationStatus,
 }: {
   nodeId: string;
@@ -53,8 +50,6 @@ export default function NodeStatus({
   buildStatus: BuildStatus;
   isOutdated: boolean;
   isUserEdited: boolean;
-  handleUpdateCode: () => void;
-  loadingUpdate: boolean;
   getValidationStatus: (data) => VertexBuildTypeAPI | null;
 }) {
   const nodeId_ = data.node?.flow?.data
@@ -102,7 +97,13 @@ export default function NodeStatus({
         ? " border ring-[0.75px] ring-muted-foreground border-muted-foreground hover:shadow-node"
         : "border ring-[0.5px] hover:shadow-node ring-border";
     let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
-    return frozen ? frozenClass : className;
+    let updateClass =
+      isOutdated && !isUserEdited ? "border-warning border-2" : "";
+    return isOutdated && !isUserEdited
+      ? updateClass
+      : frozen
+        ? frozenClass
+        : className;
   };
   const getNodeBorderClassName = (
     selected: boolean,
@@ -125,7 +126,15 @@ export default function NodeStatus({
     setBorderColor(
       getNodeBorderClassName(selected, showNode, buildStatus, validationStatus),
     );
-  }, [selected, showNode, buildStatus, validationStatus, frozen]);
+  }, [
+    selected,
+    showNode,
+    buildStatus,
+    validationStatus,
+    isOutdated,
+    isUserEdited,
+    frozen,
+  ]);
 
   useEffect(() => {
     if (buildStatus === BuildStatus.BUILT && !isBuilding) {
@@ -189,22 +198,6 @@ export default function NodeStatus({
   return (
     <>
       <div className="flex flex-shrink-0 items-center">
-        {isOutdated && !isUserEdited && (
-          <ShadTooltip content={TOOLTIP_OUTDATED_NODE}>
-            <Button
-              onClick={handleUpdateCode}
-              unstyled
-              className={"hit-area-icon button-run-bg group p-1"}
-              loading={loadingUpdate}
-            >
-              <IconComponent
-                name="AlertTriangle"
-                className="icon-size text-placeholder-foreground group-hover:text-foreground"
-              />
-            </Button>
-          </ShadTooltip>
-        )}
-
         <div className="flex items-center gap-2 self-center">
           <ShadTooltip
             content={
@@ -267,7 +260,6 @@ export default function NodeStatus({
             </Badge>
           )}
         </div>
-
         <ShadTooltip content={getTooltipContent()}>
           <div
             ref={divRef}
