@@ -278,6 +278,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       });
 
       if (callback) {
+        // Defer the callback execution to ensure it runs after state updates are fully applied.
         queueMicrotask(callback);
       }
 
