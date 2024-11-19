@@ -26,7 +26,7 @@ The **Playground** executes the current flow in the workspace.
 
 Chat with your flow, view inputs and outputs, and modify your AI's memories to tune your responses in real time.
 
-Any input or output component can be opened in the **Playground** and tested in real time.
+Either the chat input or output component can be opened in the **Playground** and tested in real time.
 
 For more information, see the [Playground documentation](/workspace-playground).
 
