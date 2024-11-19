@@ -563,12 +563,7 @@ export default function NodeToolbarComponent({
             style={{
               transform: `scale(${scale})`,
               transformOrigin: "top",
-              left:
-                scale === 1
-                  ? hasToolMode
-                    ? "7.5rem"
-                    : "4.5rem"
-                  : `${1.7 * (scale - 1)}rem`,
+              left: scale === 1 ? "4.5rem" : `${1.7 * (scale - 1)}rem`,
             }}
           >
             {hasCode && (
