@@ -1,3 +1,3 @@
-repo: https://github.com/InstroAISolutions/langflow
+FROM langflowai/langflow:latest
 
 ENTRYPOINT ["python", "-m", "langflow", "run"]
