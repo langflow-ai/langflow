@@ -162,6 +162,7 @@ dependencies = [
     "fastapi-pagination>=0.12.29",
     "defusedxml>=0.7.1",
     "pypdf~=5.1.0",
+    "validators>=0.34.0",
 ]
 
 [project.urls]
