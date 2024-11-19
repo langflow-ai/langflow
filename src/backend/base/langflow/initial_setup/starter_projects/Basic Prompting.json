@@ -404,7 +404,7 @@
                 "tool_mode": false,
                 "trace_as_input": true,
                 "type": "prompt",
-                "value": "Answer the user as if you were a pirate."
+                "value": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh."
               }
             },
             "tool_mode": false
@@ -430,16 +430,16 @@
         "data": {
           "id": "undefined-emdQy",
           "node": {
-            "description": "### ✅ Basic System Prompting README\n\nExperiment with AI behavior control using system prompts. \n\n#### Component Overview\n- **Chat Input:** User message entry point\n- **System Message:** Sets AI personality/behavior\n- **OpenAI Model:** Processes both prompts and generates responses\n- **Chat Output:** Displays the AI response in the Playground\n\n#### Quick Start\n- Add your **OpenAI API key** to the **OpenAI Model**\n- Modify the **System Prompt** template to change AI behavior\n- Use the **Playground** to start chatting\n\nThe default prompt makes the AI respond like a pirate! Try changing it to create different AI personalities.\n\nFor more details, check the [system prompting guide](https://docs.langflow.org/guides/system-prompting).",
+            "description": "## 📖 README\n\nPerform basic prompting with an OpenAI model.\n\n#### Quick Start\n- Add your **OpenAI API key** to the **OpenAI Model**\n- Open the **Playground** to chat with your bot.\n\n#### Next steps:\n Experiment by changing the prompt and the OpenAI model temperature to see how the bot's responses change.",
             "display_name": "Read Me",
             "documentation": "",
             "template": {
-              "backgroundColor": "blue"
+              "backgroundColor": "neutral"
             }
           }
         },
         "dragging": false,
-        "height": 561,
+        "height": 250,
         "id": "undefined-emdQy",
         "position": {
           "x": 66.38770028934243,
@@ -450,14 +450,47 @@
           "y": 749.744424427066
         },
         "resizing": false,
-        "selected": true,
+        "selected": false,
         "style": {
-          "height": 561,
+          "height": 250,
           "width": 600
         },
         "type": "noteNode",
         "width": 600
       },
+      {
+        "data": {
+        "id": "note-e6K1n",
+        "node": {
+        "description": "### 💡 Add your OpenAI API key here 👇",
+        "display_name": "",
+        "documentation": "",
+        "template": {
+        "backgroundColor": "transparent"
+        }
+        },
+        "type": "note"
+        },
+        "dragging": false,
+        "height": 324,
+        "id": "note-e6K1n",
+        "position": {
+        "x": 1075.829573520873,
+        "y": 657.2057655038416
+        },
+        "positionAbsolute": {
+        "x": 1075.829573520873,
+        "y": 657.2057655038416
+        },
+        "resizing": false,
+        "selected": false,
+        "style": {
+        "height": 324,
+        "width": 324
+        },
+        "type": "noteNode",
+        "width": 324
+        },
       {
         "data": {
           "description": "Generates text using OpenAI LLMs.",
