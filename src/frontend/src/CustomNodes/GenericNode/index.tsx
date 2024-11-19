@@ -348,6 +348,27 @@ export default function GenericNode({
           openShowMoreOptions && "nowheel",
         )}
       >
+        {isOutdated && !isUserEdited && (
+          <div className="bg-warning text-warning-foreground -mt-px flex h-10 w-full items-center gap-4 rounded-t-lg p-2 px-4">
+            <ForwardedIconComponent
+              name="AlertTriangle"
+              strokeWidth={1.5}
+              className="h-[18px] w-[18px] shrink-0"
+            />
+            <span className="flex-1 truncate text-sm font-medium">
+              Update Ready
+            </span>
+            <Button
+              variant="warning"
+              size="iconMd"
+              className="shrink-0 px-2.5 text-xs"
+              onClick={handleUpdateCode}
+              loading={loadingUpdate}
+            >
+              Update
+            </Button>
+          </div>
+        )}
         <div
           data-testid={`${data.id}-main-node`}
           className={cn(
@@ -414,8 +435,6 @@ export default function GenericNode({
                 buildStatus={buildStatus}
                 isOutdated={isOutdated}
                 isUserEdited={isUserEdited}
-                handleUpdateCode={handleUpdateCode}
-                loadingUpdate={loadingUpdate}
                 getValidationStatus={getValidationStatus}
               />
             )}
@@ -431,7 +450,6 @@ export default function GenericNode({
             </div>
           )}
         </div>
-
         {showNode && (
           <div className="relative">
             {/* increase height!! */}
