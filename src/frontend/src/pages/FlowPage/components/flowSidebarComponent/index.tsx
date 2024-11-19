@@ -331,7 +331,6 @@ export function FlowSidebarComponent() {
             className="absolute inset-y-0 left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-primary"
           />
           <Input
-            autoComplete="off"
             ref={searchInputRef}
             type="search"
             data-testid="sidebar-search-input"

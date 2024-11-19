@@ -59,7 +59,6 @@ export default function InputComponent({
       {isForm ? (
         <Form.Control asChild>
           <Input
-            autoComplete="off"
             name={name}
             id={"form-" + id}
             ref={refInput}
