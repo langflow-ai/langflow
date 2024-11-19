@@ -40,6 +40,7 @@ from langflow.schema.dotdict import dotdict
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.deps import get_chat_service, get_tracing_service
+from langflow.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import InputValueRequest
@@ -1345,9 +1346,18 @@ class Graph:
         files: list[str] | None = None,
         user_id: str | None = None,
     ):
-        # Call astep but synchronously
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self.astep(inputs, files, user_id))
+        """Runs the next vertex in the graph.
+
+        Note:
+            This function is a synchronous wrapper around `astep`.
+            It creates an event loop if one does not exist.
+
+        Args:
+            inputs: The inputs for the vertex. Defaults to None.
+            files: The files for the vertex. Defaults to None.
+            user_id: The user ID. Defaults to None.
+        """
+        return run_until_complete(self.astep(inputs, files, user_id))
 
     async def build_vertex(
         self,

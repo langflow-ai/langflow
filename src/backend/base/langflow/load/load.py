@@ -9,6 +9,7 @@ from langflow.graph import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.logging.logger import configure
 from langflow.processing.process import process_tweaks, run_graph
+from langflow.utils.async_helpers import run_until_complete
 from langflow.utils.util import update_settings
 
 
@@ -149,25 +150,45 @@ def run_flow_from_json(
     disable_logs: bool | None = True,
     fallback_to_env_vars: bool = False,
 ) -> list[RunOutputs]:
-    coro = arun_flow_from_json(
-        flow,
-        input_value,
-        session_id=session_id,
-        tweaks=tweaks,
-        input_type=input_type,
-        output_type=output_type,
-        output_component=output_component,
-        log_level=log_level,
-        log_file=log_file,
-        env_file=env_file,
-        cache=cache,
-        disable_logs=disable_logs,
-        fallback_to_env_vars=fallback_to_env_vars,
+    """Run a flow from a JSON file or dictionary.
+
+    Note:
+        This function is a synchronous wrapper around `arun_flow_from_json`.
+        It creates an event loop if one does not exist and runs the flow.
+
+    Args:
+        flow (Union[Path, str, dict]): The path to the JSON file or the JSON dictionary representing the flow.
+        input_value (str): The input value to be processed by the flow.
+        session_id (str | None, optional): The session ID to be used for the flow. Defaults to None.
+        tweaks (Optional[dict], optional): Optional tweaks to be applied to the flow. Defaults to None.
+        input_type (str, optional): The type of the input value. Defaults to "chat".
+        output_type (str, optional): The type of the output value. Defaults to "chat".
+        output_component (Optional[str], optional): The specific component to output. Defaults to None.
+        log_level (Optional[str], optional): The log level to use. Defaults to None.
+        log_file (Optional[str], optional): The log file to write logs to. Defaults to None.
+        env_file (Optional[str], optional): The environment file to load. Defaults to None.
+        cache (Optional[str], optional): The cache directory to use. Defaults to None.
+        disable_logs (Optional[bool], optional): Whether to disable logs. Defaults to True.
+        fallback_to_env_vars (bool, optional): Whether Global Variables should fallback to environment variables if
+            not found. Defaults to False.
+
+    Returns:
+        List[RunOutputs]: A list of RunOutputs objects representing the results of running the flow.
+    """
+    return run_until_complete(
+        arun_flow_from_json(
+            flow,
+            input_value,
+            session_id=session_id,
+            tweaks=tweaks,
+            input_type=input_type,
+            output_type=output_type,
+            output_component=output_component,
+            log_level=log_level,
+            log_file=log_file,
+            env_file=env_file,
+            cache=cache,
+            disable_logs=disable_logs,
+            fallback_to_env_vars=fallback_to_env_vars,
+        )
     )
-
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        return asyncio.run(coro)
-
-    return loop.run_until_complete(coro)
