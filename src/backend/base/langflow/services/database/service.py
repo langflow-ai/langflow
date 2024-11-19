@@ -145,28 +145,35 @@ class DatabaseService(Service):
         async with AsyncSession(self.async_engine, expire_on_commit=False) as session:
             yield session
 
-    async def migrate_flows_if_auto_login(self) -> None:
-        # if auto_login is enabled, we need to migrate the flows
-        # to the default superuser if they don't have a user id
-        # associated with them
+    async def assign_orphaned_flows_to_superuser(self) -> None:
+        """Assign flows without a user ID to the default superuser if auto_login is enabled."""
+        # Get the settings service to check if auto_login is enabled
         settings_service = get_settings_service()
         if settings_service.auth_settings.AUTO_LOGIN:
             async with self.with_async_session() as session:
-                # `== None` translates to SQL `is NULL`
+                # Select flows where user_id is NULL (orphaned flows)
                 stmt = select(models.Flow).where(models.Flow.user_id == None)  # noqa: E711
-                flows = (await session.exec(stmt)).all()
-                if flows:
-                    logger.debug("Migrating flows to default superuser")
-                    username = settings_service.auth_settings.SUPERUSER
-                    user = await get_user_by_username(session, username)
-                    if not user:
+                orphaned_flows = (await session.exec(stmt)).all()
+
+                if orphaned_flows:
+                    logger.debug("Assigning orphaned flows to the default superuser")
+
+                    # Get the default superuser
+                    superuser_username = settings_service.auth_settings.SUPERUSER
+                    superuser = await get_user_by_username(session, superuser_username)
+
+                    if not superuser:
                         logger.error("Default superuser not found")
-                        msg = "Default superuser not found"
-                        raise RuntimeError(msg)
-                    for flow in flows:
-                        flow.user_id = user.id
+                        raise RuntimeError("Default superuser not found")
+
+                    # Assign each orphaned flow to the superuser
+                    for flow in orphaned_flows:
+                        flow.user_id = superuser.id
+                        flow.name = f"{flow.name} (orphaned)"
+
+                    # Commit the changes to the database
                     await session.commit()
-                    logger.debug("Flows migrated successfully")
+                    logger.debug("Successfully assigned orphaned flows to the default superuser")
 
     def check_schema_health(self) -> bool:
         inspector = inspect(self.engine)
