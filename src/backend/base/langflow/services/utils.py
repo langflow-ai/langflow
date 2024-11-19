@@ -177,21 +177,27 @@ async def clean_transactions(settings_service: "SettingsService", session: Async
     Returns:
         None
     """
-    # Delete transactions using bulk delete
-    delete_stmt = (
-        delete(TransactionTable)
-        .where(
-            TransactionTable.id.in_(
-                select(TransactionTable.id)
-                .order_by(TransactionTable.timestamp.desc())
-                .offset(settings_service.settings.max_transactions_to_keep)
+    try:
+        # Delete transactions using bulk delete
+        delete_stmt = (
+            delete(TransactionTable)
+            .where(
+                TransactionTable.id.in_(
+                    select(TransactionTable.id)
+                    .order_by(TransactionTable.timestamp.desc())
+                    .offset(settings_service.settings.max_transactions_to_keep)
+                )
             )
+            .execution_options(synchronize_session="evaluate")
         )
-        .execution_options(synchronize_session="evaluate")
-    )
 
-    await session.exec(delete_stmt)
-    await session.commit()
+        await session.exec(delete_stmt)
+        await session.commit()
+        logger.debug("Successfully cleaned up old transactions")
+    except Exception as exc:  # noqa: BLE001
+        logger.error(f"Error cleaning up transactions: {exc!s}")
+        await session.rollback()
+        # Don't re-raise since this is a cleanup task
 
 
 async def clean_vertex_builds(settings_service: "SettingsService", session: AsyncSession) -> None:
@@ -207,21 +213,27 @@ async def clean_vertex_builds(settings_service: "SettingsService", session: Asyn
     Returns:
         None
     """
-    # Delete vertex builds using bulk delete
-    delete_stmt = (
-        delete(VertexBuildTable)
-        .where(
-            VertexBuildTable.id.in_(
-                select(VertexBuildTable.id)
-                .order_by(VertexBuildTable.timestamp.desc())
-                .offset(settings_service.settings.max_vertex_builds_to_keep)
+    try:
+        # Delete vertex builds using bulk delete
+        delete_stmt = (
+            delete(VertexBuildTable)
+            .where(
+                VertexBuildTable.id.in_(
+                    select(VertexBuildTable.id)
+                    .order_by(VertexBuildTable.timestamp.desc())
+                    .offset(settings_service.settings.max_vertex_builds_to_keep)
+                )
             )
+            .execution_options(synchronize_session="evaluate")
         )
-        .execution_options(synchronize_session="evaluate")
-    )
 
-    await session.exec(delete_stmt)
-    await session.commit()
+        await session.exec(delete_stmt)
+        await session.commit()
+        logger.debug("Successfully cleaned up old vertex builds")
+    except Exception as exc:  # noqa: BLE001
+        logger.error(f"Error cleaning up vertex builds: {exc!s}")
+        await session.rollback()
+        # Don't re-raise since this is a cleanup task
 
 
 async def initialize_services(*, fix_migration: bool = False) -> None:
@@ -232,12 +244,12 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
     await asyncio.to_thread(initialize_database, fix_migration=fix_migration)
     async with get_db_service().with_async_session() as session:
         settings_service = get_service(ServiceType.SETTINGS_SERVICE)
-        await setup_superuser(settings_service, session)
-        await clean_transactions(settings_service, session)
-        await clean_vertex_builds(settings_service, session)
     try:
         await get_db_service().migrate_flows_if_auto_login()
     except Exception as exc:
         msg = "Error migrating flows"
         logger.exception(msg)
         raise RuntimeError(msg) from exc
+        await setup_superuser(settings_service, session)
+        await clean_transactions(settings_service, session)
+        await clean_vertex_builds(settings_service, session)
