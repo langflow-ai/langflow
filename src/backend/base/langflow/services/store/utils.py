@@ -44,7 +44,7 @@ async def update_components_with_user_data(
 async def get_lf_version_from_pypi():
     try:
         async with httpx.AsyncClient() as client:
-            response = client.get("https://pypi.org/pypi/langflow/json")
+            response = await client.get("https://pypi.org/pypi/langflow/json")
         if response.status_code != httpx.codes.OK:
             return None
         return response.json()["info"]["version"]
