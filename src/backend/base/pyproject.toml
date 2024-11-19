@@ -154,7 +154,7 @@ dependencies = [
     "nanoid>=2.0.0",
     "filelock>=3.15.4",
     "grandalf>=0.8.0",
-    "crewai>=0.74.2",
+    "crewai~=0.80.0",
     "spider-client>=0.0.27",
     "diskcache>=5.6.3",
     "clickhouse-connect==0.7.19",
