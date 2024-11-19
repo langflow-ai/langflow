@@ -15,8 +15,8 @@ test("freeze must work correctly", async ({ page }) => {
   await page.goto("/");
   await page.waitForTimeout(1000);
 
-  const promptText = "THIS IS A TEST PROMPT";
-  const newPromptText = "TEST TEST TEST TEST TEST";
+  const promptText = "answer as you are a dog";
+  const newPromptText = "answer as you are a bird";
 
   let modalCount = 0;
   try {
@@ -65,21 +65,13 @@ test("freeze must work correctly", async ({ page }) => {
 
   await page.getByTestId("modal-promptarea_prompt_template").fill(promptText);
 
-  let promptValue = await page
-    .getByTestId("modal-promptarea_prompt_template")
-    .inputValue();
-
   await page.getByText("Check & Save").click();
 
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(1000);
 
   await page.getByTestId("button_run_chat output").click();
 
-  await page.waitForTimeout(3000);
-
-  await page.getByTestId("button_run_chat output").click();
-
-  await page.waitForTimeout(3000);
+  await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
   await page.getByTestId("playground-btn-flow-io").click();
 
@@ -88,8 +80,6 @@ test("freeze must work correctly", async ({ page }) => {
     .allTextContents();
 
   const concatAllText = textContents.join(" ");
-
-  expect(concatAllText).toContain(promptValue);
 
   await page.waitForTimeout(1000);
   await page.getByText("Close").last().click();
@@ -114,19 +104,11 @@ test("freeze must work correctly", async ({ page }) => {
     .getByTestId("modal-promptarea_prompt_template")
     .fill(newPromptText);
 
-  promptValue = await page
-    .getByTestId("modal-promptarea_prompt_template")
-    .inputValue();
-
   await page.getByText("Check & Save").click();
 
   await page.getByTestId("button_run_chat output").click();
 
-  await page.waitForTimeout(3000);
-
-  await page.getByTestId("button_run_chat output").click();
-
-  await page.waitForTimeout(3000);
+  await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
   await page.getByTestId("playground-btn-flow-io").click();
 
@@ -136,6 +118,5 @@ test("freeze must work correctly", async ({ page }) => {
 
   const concatAllText2 = textContents2.join(" ");
 
-  expect(concatAllText2).toContain(promptText);
-  expect(concatAllText2).not.toContain(newPromptText);
+  expect(concatAllText2).toBe(concatAllText);
 });

@@ -22,9 +22,9 @@ export default function PageLayout({
   const navigate = useCustomNavigate();
 
   return (
-    <div className="flex h-full w-full flex-col justify-between overflow-auto bg-background px-6 pt-10">
-      <div className="mx-auto h-full w-full max-w-[1440px]">
-        <div className="flex flex-col gap-4">
+    <div className="flex w-full flex-1 flex-col justify-between overflow-auto overflow-x-hidden bg-background">
+      <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col">
+        <div className="flex flex-col gap-4 p-6 pt-10">
           <CustomBanner />
           <div className="flex w-full items-center justify-between gap-4 space-y-0.5 py-2">
             <div className="flex w-full flex-col">
@@ -55,8 +55,10 @@ export default function PageLayout({
             <div className="flex-shrink-0">{button && button}</div>
           </div>
         </div>
-        <Separator className="my-6 flex" />
-        {children}
+        <div className="flex shrink-0 px-6">
+          <Separator className="flex" />
+        </div>
+        <div className="flex flex-1 p-6 pt-7">{children}</div>
       </div>
     </div>
   );

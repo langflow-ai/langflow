@@ -12,7 +12,7 @@ from langflow.schema import Data
 
 
 class AstraDBCQLToolComponent(LCToolComponent):
-    display_name: str = "Astra DB CQL Tool"
+    display_name: str = "Astra DB CQL"
     description: str = "Create a tool to get data from DataStax Astra DB CQL Table"
     documentation: str = "https://astra.datastax.com"
     icon: str = "AstraDB"

@@ -1,97 +1,115 @@
 ---
-title: 📦 Installation
+title: Install Langflow
 sidebar_position: 1
 slug: /getting-started-installation
 ---
 
+You can deploy Langflow either locally or as a hosted service with [**Datastax Langflow**](#datastax-langflow).
 
+## Install Langflow locally
 
-## **DataStax Langflow** {#a3b4bd8dec5a49ebbfca4828492133e9}
+Install Langflow locally with [pip](https://pypi.org/project/pip/) or [pipx](https://pipx.pypa.io/stable/installation/).
 
+### Prerequisites
 
----
+* [Python 3.10 to 3.12](https://www.python.org/downloads/release/python-3100/) installed
+* [pip](https://pypi.org/project/pip/) or [pipx](https://pipx.pypa.io/stable/installation/) installed
+* Before installing Langflow, we recommend creating a virtual environment to isolate your Python dependencies with [venv](https://docs.python.org/3/library/venv.html) or [conda](https://anaconda.org/anaconda/conda)
 
-
-The easiest way to get started with Langflow is through the DataStax Cloud Service!
-
-
-
-**DataStax Langflow** is a hosted version of Langflow integrated with [Astra DB](https://www.datastax.com/products/datastax-astra). Be up and running in minutes with no installation or setup required. [Sign up for free](https://astra.datastax.com/signup?type=langflow).
-
-
-![](./602374500.png)
-
-
-## **Install Langflow Locally** {#ef364ee864c545649d248113ad7d3038}
-
-
----
-
-
-:::caution
-
-Langflow **requires** Python version 3.10 or greater and [pip](https://pypi.org/project/pip/) or [pipx](https://pipx.pypa.io/stable/installation/) to be installed on your system.
-
-:::
-
-
-
+### Install Langflow with pip or pipx
 
 Install Langflow with pip:
 
-
 ```bash
-python -m pip install langflow -U
+python -m pip install langflow
 ```
 
-
-Install Langflow with pipx:
-
+Install Langflow with pipx using the Python 3.10 executable:
 
 ```bash
-pipx install langflow --python python3.10 --fetch-missing-python
+pipx install langflow --python python3.10
 ```
 
-
-Pipx can fetch the missing Python version for you with `--fetch-missing-python`, but you can also install the Python version manually. Use `--force-reinstall` to ensure you have the latest version of Langflow and its dependencies.
-
-
-## Having a problem? {#86a16dad1d6e481cafb90efea2b9ff93}
-
-
----
-
-
-If you encounter a problem, see [Common Installation Issues](/getting-started-common-installation-issues).
-
-
-To get help in the Langflow CLI:
-
-
-```bash
-python -m langflow --help
-```
-
-
-## ⛓️ Run Langflow {#d318c4d486b74f5383c45b4f6859dcaa}
-
-
----
-
+## Run Langflow
 
 1. To run Langflow, enter the following command.
-
 
 ```bash
 python -m langflow run
 ```
 
-
 2. Confirm that a local Langflow instance starts by visiting `http://127.0.0.1:7860` in a Chromium-based browser.
 
+Now that Langflow is running, follow the [Quickstart](/getting-started-quickstart) to create your first flow.
 
-![](./221680153.png)
+## Manage Langflow versions
+
+To upgrade Langflow to the latest version, use the pip upgrade command.
+
+```bash
+python -m pip install langflow -U
+```
+
+To install a specific verison of the Langflow package, add the required version to the command.
+
+```bash
+python -m pip install langflow==1.1
+```
+
+To reinstall Langflow and all of its dependencies, add the `--force-reinstall` flag to the command.
+
+```bash
+python -m pip install langflow --force-reinstall
+```
+
+## DataStax Langflow {#datastax-langflow}
+
+**DataStax Langflow** is a hosted version of Langflow integrated with [Astra DB](https://www.datastax.com/products/datastax-astra). Be up and running in minutes with no installation or setup required. [Sign up for free](https://astra.datastax.com/signup?type=langflow).
+
+## Common installation issues
+
+This is a list of possible issues that you may encounter when installing and running Langflow.
+
+### No `langflow.__main__` module
+
+When you try to run Langflow with the command `langflow run`, you encounter the following error:
+```bash
+> No module named 'langflow.__main__'
+```
+1. Run `python -m langflow run` instead of `langflow run`.
+2. If that doesn't work, reinstall the latest Langflow version with `python -m pip install langflow -U`.
+3. If that doesn't work, reinstall Langflow and its dependencies with `python -m pip install langflow --pre -U --force-reinstall`.
+
+### Langflow runTraceback
+
+When you try to run Langflow using the command `langflow run`, you encounter the following error:
+
+```bash
+> langflow runTraceback (most recent call last): File ".../langflow", line 5, in <module>  from langflow.__main__ import mainModuleNotFoundError: No module named 'langflow.__main__'
+```
+
+There are two possible reasons for this error:
+
+1. You've installed Langflow using `pip install langflow` but you already had a previous version of Langflow installed in your system. In this case, you might be running the wrong executable. To solve this issue, run the correct executable by running `python -m langflow run` instead of `langflow run`. If that doesn't work, try uninstalling and reinstalling Langflow with `python -m pip install langflow --pre -U`.
+2. Some version conflicts might have occurred during the installation process. Run `python -m pip install langflow --pre -U --force-reinstall` to reinstall Langflow and its dependencies.
+
+### Something went wrong running migrations
+
+```bash
+> Something went wrong running migrations. Please, run 'langflow migration --fix'
+```
+
+Clear the cache by deleting the contents of the cache folder.
+
+This folder can be found at:
+
+- **Linux or WSL2 on Windows**: `home/<username>/.cache/langflow/`
+- **MacOS**: `/Users/<username>/Library/Caches/langflow/`
+
+This error can occur during Langflow upgrades when the new version can't override `langflow-pre.db` in `.cache/langflow/`. Clearing the cache removes this file but also erases your settings.
+
+If you wish to retain your files, back them up before clearing the folder.
 
 
-3. Continue on to the [Quickstart](/getting-started-quickstart).
+
 

@@ -5,8 +5,11 @@ python:
   - "pyproject.toml"
   - "poetry.lock"
   - "**/python_test.yml"
-tests:
-  - "tests/**"
+components-changes:
+  - "src/backend/base/langflow/components/**"
+starter-projects-changes:
+  - "src/backend/base/langflow/initial_setup/**"
+frontend-tests:
   - "src/frontend/tests/**"
 frontend:
   - "src/frontend/**"

@@ -34,9 +34,9 @@ test("user must be able to interact with starter projects", async ({
     page.getByTestId("template_basic-prompting-(hello,-world)"),
   ).not.toBeVisible();
 
-  expect(page.getByTestId("template_document-qa").first()).toBeVisible();
+  expect(page.getByTestId("template_document-q&a").first()).toBeVisible();
   expect(
-    page.getByTestId(`template_sequential-tasks-agent`).first(),
+    page.getByTestId(`template_sequential-tasks-agents`).first(),
   ).toBeVisible();
 
   expect(page.getByTestId("template_vector-store")).not.toBeVisible();
@@ -107,9 +107,12 @@ async function waitForTemplateVisibility(page: Page, templateIds: string[]) {
 
 // Your test code
 const templateIds = [
+  "template_instagram-copywriter",
+  "template_saas-pricing",
   "template_travel-planning-agents",
-  "template_sequential-tasks-agent",
-  "template_dynamic-agent",
-  "template_hierarchical-tasks-agent",
+  "template_research-agent",
   "template_simple-agent",
+  "template_youtube-transcript-q&a",
+  "template_sequential-tasks-agents",
+  "template_market-research",
 ];

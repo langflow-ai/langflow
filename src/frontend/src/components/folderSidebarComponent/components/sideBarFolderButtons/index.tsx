@@ -27,6 +27,7 @@ import { track } from "@/customization/utils/analytics";
 import { createFileUpload } from "@/helpers/create-file-upload";
 import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
@@ -69,8 +70,6 @@ const SideBarFoldersButtonsComponent = ({
   const urlWithoutPath =
     pathname.split("/").length < (ENABLE_CUSTOM_PARAM ? 5 : 4);
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
-  const folderIdDragging = useFolderStore((state) => state.folderIdDragging);
-
   const checkPathName = (itemId: string) => {
     if (urlWithoutPath && itemId === myCollectionId) {
       return true;
@@ -401,8 +400,13 @@ const SideBarFoldersButtonsComponent = ({
     }
   };
 
+  const isMobile = useIsMobile({ maxWidth: 1024 });
+
   return (
-    <Sidebar collapsible="offcanvas" data-testid="folder-sidebar">
+    <Sidebar
+      collapsible={isMobile ? "offcanvas" : "none"}
+      data-testid="folder-sidebar"
+    >
       <SidebarHeader className="p-4">
         <HeaderButtons />
       </SidebarHeader>
@@ -470,7 +474,7 @@ const SideBarFoldersButtonsComponent = ({
                                 data-testid={`input-folder`}
                               />
                             ) : (
-                              <span className="block w-full grow truncate text-[13px] opacity-100">
+                              <span className="block w-0 grow truncate text-[13px] opacity-100">
                                 {item.name}
                               </span>
                             )}

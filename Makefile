@@ -19,6 +19,8 @@ open_browser ?= true
 path = src/backend/base/langflow/frontend
 workers ?= 1
 async ?= true
+lf ?= false
+ff ?= true
 all: help
 
 ######################
@@ -37,14 +39,8 @@ patch: ## bump the version in langflow and langflow-base
 check_tools:
 	@command -v uv >/dev/null 2>&1 || { echo >&2 "$(RED)uv is not installed. Aborting.$(NC)"; exit 1; }
 	@command -v npm >/dev/null 2>&1 || { echo >&2 "$(RED)NPM is not installed. Aborting.$(NC)"; exit 1; }
-	@command -v pipx >/dev/null 2>&1 || { echo >&2 "$(RED)pipx is not installed. Aborting.$(NC)"; exit 1; }
-	@$(MAKE) check_env
 	@echo "$(GREEN)All required tools are installed.$(NC)"
 
-# check if Python version is compatible
-check_env: ## check if Python version is compatible
-	@chmod +x scripts/setup/check_env.sh
-	@scripts/setup/check_env.sh "$(PYTHON_REQUIRED)"
 
 help: ## show this help message
 	@echo '----'
@@ -130,26 +126,20 @@ endif
 coverage: ## run the tests and generate a coverage report
 	@uv run coverage run
 	@uv run coverage erase
-	#@poetry run coverage run
-	#@poetry run coverage erase
 
 unit_tests: ## run unit tests
 	@uv sync --extra dev --frozen
-ifeq ($(async), true)
-	uv run pytest src/backend/tests \
-		--ignore=src/backend/tests/integration \
-		--instafail -n auto -ra -m "not api_key_required" \
-		--durations-path src/backend/tests/.test_durations \
-		--splitting-algorithm least_duration \
-		$(args)
-else
-	uv run pytest src/backend/tests \
-		--ignore=src/backend/tests/integration \
-		--instafail -ra -m "not api_key_required" \
-		--durations-path src/backend/tests/.test_durations \
-		--splitting-algorithm least_duration \
-		$(args)
-endif
+	@EXTRA_ARGS=""
+	@if [ "$(async)" = "true" ]; then \
+		EXTRA_ARGS="$$EXTRA_ARGS --instafail -n auto"; \
+	fi; \
+	if [ "$(lf)" = "true" ]; then \
+		EXTRA_ARGS="$$EXTRA_ARGS --lf"; \
+	fi; \
+	if [ "$(ff)" = "true" ]; then \
+		EXTRA_ARGS="$$EXTRA_ARGS --ff"; \
+	fi; \
+	uv run pytest src/backend/tests --ignore=src/backend/tests/integration $$EXTRA_ARGS --instafail -ra -m 'not api_key_required' --durations-path src/backend/tests/.test_durations --splitting-algorithm least_duration $(args)
 
 unit_tests_looponfail:
 	@make unit_tests args="-f"
@@ -219,11 +209,13 @@ endif
 
 run_cli: install_frontend install_backend build_frontend ## run the CLI
 	@echo 'Running the CLI'
-ifdef env
-	@make start env=$(env) host=$(host) port=$(port) log_level=$(log_level)
-else
-	@make start host=$(host) port=$(port) log_level=$(log_level)
-endif
+	@uv run langflow run \
+		--frontend-path $(path) \
+		--log-level $(log_level) \
+		--host $(host) \
+		--port $(port) \
+		$(if $(env),--env-file $(env),) \
+		$(if $(filter false,$(open_browser)),--no-open-browser)
 
 run_cli_debug:
 	@echo 'Running the CLI in debug mode'
@@ -238,25 +230,6 @@ else
 	@make start host=$(host) port=$(port) log_level=debug
 endif
 
-start:
-	@echo 'Running the CLI'
-
-ifeq ($(open_browser),false)
-	@make install_backend && uv run langflow run \
-		--frontend-path $(path) \
-		--log-level $(log_level) \
-		--host $(host) \
-		--port $(port) \
-		--env-file $(env) \
-		--no-open-browser
-else
-	@make install_backend && uv run langflow run \
-		--frontend-path $(path) \
-		--log-level $(log_level) \
-		--host $(host) \
-		--port $(port) \
-		--env-file $(env)
-endif
 
 setup_devcontainer: ## set up the development container
 	make install_backend

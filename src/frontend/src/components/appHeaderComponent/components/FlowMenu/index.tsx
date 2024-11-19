@@ -127,7 +127,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
         /
       </div>
 
-      <div className="w-fit overflow-hidden truncate text-sm sm:whitespace-normal">
+      <div className="w-fit overflow-hidden truncate text-sm sm:whitespace-normal lg:flex-shrink-0">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="header-menu-bar-display-2 group truncate">
@@ -148,7 +148,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               />
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-44 bg-white dark:bg-black">
+          <DropdownMenuContent className="w-44 bg-white dark:bg-background">
             <DropdownMenuLabel>Options</DropdownMenuLabel>
             <DropdownMenuItem
               onClick={() => {
@@ -276,12 +276,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
         ></FlowSettingsModal>
         <FlowLogsModal open={openLogs} setOpen={setOpenLogs}></FlowLogsModal>
       </div>
-      <div
-        className={cn(
-          "hidden shrink-0 items-center sm:flex",
-          isBuilding ? "w-30" : "w-[3.2rem]",
-        )}
-      >
+      <div className={"hidden w-28 shrink-0 items-center sm:flex"}>
         {!autoSaving && (
           <Button
             variant="primary"

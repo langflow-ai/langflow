@@ -54,14 +54,15 @@ jobs:
   path-filter:
     needs: set-ci-condition
     if: ${{ needs.set-ci-condition.outputs.should-run-ci == 'true' }}
-
     name: Filter Paths
     runs-on: ubuntu-latest
     outputs:
       python: ${{ steps.filter.outputs.python }}
       frontend: ${{ steps.filter.outputs.frontend }}
       docs: ${{ steps.filter.outputs.docs }}
-      tests: ${{ steps.filter.outputs.tests }}
+      frontend-tests: ${{ steps.filter.outputs.frontend-tests }}
+      components-changes: ${{ steps.filter.outputs.components-changes }}
+      starter-projects-changes: ${{ steps.filter.outputs.starter-projects-changes }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -76,7 +77,7 @@ jobs:
   test-backend:
     needs: path-filter
     name: Run Backend Tests
-    if: ${{ needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.tests == 'true' }}
+    if: ${{ needs.path-filter.outputs.python == 'true'}}
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: ${{ inputs.python-versions || '["3.10"]' }}
@@ -84,7 +85,7 @@ jobs:
   test-frontend:
     needs: path-filter
     name: Run Frontend Tests
-    if: ${{ needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.tests == 'true' }}
+    if: ${{ needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.frontend-tests == 'true' || needs.path-filter.outputs.components-changes == 'true' || needs.path-filter.outputs.starter-projects-changes == 'true' }}
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: ${{ inputs.frontend-tests-folder }}
@@ -94,10 +95,9 @@ jobs:
 
   lint-backend:
     needs: path-filter
-    if: ${{ needs.path-filter.outputs.python == 'true' || needs.path-filter.outputs.tests == 'true' }}
+    if: ${{ needs.path-filter.outputs.python == 'true'}}
     name: Lint Backend
     uses: ./.github/workflows/lint-py.yml
-    # Run only if there are python files changed
 
   test-docs-build:
     needs: path-filter
