@@ -166,8 +166,8 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
     async with get_db_service().with_async_session() as session:
         await setup_superuser(get_service(ServiceType.SETTINGS_SERVICE), session)
     try:
-        await get_db_service().migrate_flows_if_auto_login()
+        await get_db_service().assign_orphaned_flows_to_superuser()
     except Exception as exc:
-        msg = "Error migrating flows"
+        msg = "Error assigning orphaned flows to the superuser"
         logger.exception(msg)
         raise RuntimeError(msg) from exc
