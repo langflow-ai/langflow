@@ -553,7 +553,6 @@ async def create_upload_file(
     """Upload a file for a specific flow (Deprecated).
     
     This endpoint is deprecated and will be removed in a future version.
-    Please use the /files/upload/{flow_id} endpoint instead.
     """
     try:
         flow_id_str = str(flow_id)
