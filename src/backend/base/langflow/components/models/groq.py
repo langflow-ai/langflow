@@ -81,7 +81,6 @@ class GroqModel(LCModelComponent):
     @override
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         if field_name in {"groq_api_key", "groq_api_base", "model_name"}:
-            print("Updating build config in Groq")
             models = self.get_models()
             build_config["model_name"]["options"] = models
         return build_config
@@ -104,5 +103,3 @@ class GroqModel(LCModelComponent):
             api_key=SecretStr(groq_api_key).get_secret_value(),
             streaming=stream,
         )
-
-
