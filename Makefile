@@ -181,7 +181,7 @@ fix_codespell: ## run codespell to fix spelling errors
 
 format: ## run code formatters
 	@uv run ruff check . --fix
-	@uv run ruff format .
+	@uv run ruff format . --config pyproject.toml
 	@cd src/frontend && npm run format
 
 unsafe_fix:
