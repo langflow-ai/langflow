@@ -9,7 +9,7 @@ By default, Langflow uses SQLite as its database. However, you can configure Lan
 
 ## Configure PostgreSQL
 
-1. Set the `LANGFLOW_DATABASE_URL` environment variable with your PostgreSQL connection string:
+Set the `LANGFLOW_DATABASE_URL` environment variable with your PostgreSQL connection string:
 
 ```bash
 export LANGFLOW_DATABASE_URL="postgresql://user:password@localhost:5432/dbname"
@@ -19,6 +19,12 @@ Or add it to your `.env` file:
 
 ```plaintext
 LANGFLOW_DATABASE_URL="postgresql://user:password@localhost:5432/dbname"
+```
+
+When running Langflow make sure to pass the `.env` file in the commmand:
+
+```bash
+langflow run --env-file .env
 ```
 
 ## Connection String Format
