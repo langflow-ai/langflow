@@ -24,7 +24,7 @@ services:
       - key: LANGFLOW_SUPERUSER_PASSWORD
         value: 6p^m8jh5Z-Zjfu           
       - key: LANGFLOW_AUTO_LOGIN
-        value: FALSE
+        value: false
       # Added but then rmeoevd again because it didn't solve the issue
       #- key: POSTGRES_USER
       #  value: langflow_poc_vcal_user
