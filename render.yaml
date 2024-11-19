@@ -22,7 +22,9 @@ services:
       - key: LANGFLOW_SUPERUSER
         value: instro
       - key: LANGFLOW_SUPERUSER_PASSWORD
-        value: 6p^m8jh5Z-Zjfu              
+        value: 6p^m8jh5Z-Zjfu           
+      - key: LANGFLOW_LOG_LEVEL
+        value: DEBUG   
       #- key: POSTGRES_USER
       #  value: langflow_poc_vcal_user
       #- key: POSTGRES_PASSWORD
