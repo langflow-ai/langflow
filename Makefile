@@ -180,8 +180,8 @@ fix_codespell: ## run codespell to fix spelling errors
 	poetry run codespell --toml pyproject.toml --write
 
 format: ## run code formatters
-	@uv run ruff check . --fix
-	@uv run ruff format .
+	@uv run ruff check . --fix --config pyproject.toml
+	@uv run ruff format . --config pyproject.toml
 	@cd src/frontend && npm run format
 
 unsafe_fix:
