@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from loguru import logger
 from sqlalchemy import delete
+from sqlalchemy import exc as sqlalchemy_exc
 from sqlmodel import select
 
 from langflow.services.auth.utils import create_super_user, verify_password
@@ -193,7 +194,7 @@ async def clean_transactions(settings_service: SettingsService, session: AsyncSe
         await session.exec(delete_stmt)
         await session.commit()
         logger.debug("Successfully cleaned up old transactions")
-    except Exception as exc:  # noqa: BLE001
+    except (sqlalchemy_exc.SQLAlchemyError, asyncio.TimeoutError) as exc:
         logger.error(f"Error cleaning up transactions: {exc!s}")
         await session.rollback()
         # Don't re-raise since this is a cleanup task
@@ -225,7 +226,7 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
         await session.exec(delete_stmt)
         await session.commit()
         logger.debug("Successfully cleaned up old vertex builds")
-    except Exception as exc:  # noqa: BLE001
+    except (sqlalchemy_exc.SQLAlchemyError, asyncio.TimeoutError) as exc:
         logger.error(f"Error cleaning up vertex builds: {exc!s}")
         await session.rollback()
         # Don't re-raise since this is a cleanup task
