@@ -421,6 +421,7 @@ class Component(CustomComponent):
                 msg = f"Invalid output type: {type(output)}"
                 raise TypeError(msg)
             frontend_node["outputs"][index] = _output_dict
+        print("front end node field order in _validate_frontend_node", frontend_node["field_order"])
         return frontend_node
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:  # noqa: ARG002

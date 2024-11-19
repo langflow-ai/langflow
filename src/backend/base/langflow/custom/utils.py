@@ -55,10 +55,13 @@ def add_output_types(frontend_node: CustomComponentFrontendNode, return_types: l
         frontend_node.add_output_type(_return_type)
 
 
-def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: list[str]) -> None:
+def reorder_fields(
+    frontend_node: CustomComponentFrontendNode, field_order: list[str], return_frontend_node: bool | None = None
+) -> None:
     """Reorder fields in the frontend node based on the specified field_order."""
     if not field_order:
-        return
+        print("field order is empty")
+        return None
 
     # Create a dictionary for O(1) lookup time.
     field_dict = {field.name: field for field in frontend_node.template.fields}
@@ -67,6 +70,15 @@ def reorder_fields(frontend_node: CustomComponentFrontendNode, field_order: list
     reordered_fields.extend(field for field in frontend_node.template.fields if field.name not in field_order)
     frontend_node.template.fields = reordered_fields
     frontend_node.field_order = field_order
+
+    if return_frontend_node:
+        return frontend_node
+    else:
+        if "field_order" in frontend_node:
+            print("reorder outside component", frontend_node["field_order"])
+        else:
+            print("field order not in frontend node")
+    return None
 
 
 def add_base_classes(frontend_node: CustomComponentFrontendNode, return_types: list[str]) -> None:

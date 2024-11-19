@@ -1,3 +1,5 @@
+from typing import Any
+
 from langchain_core.tools import StructuredTool
 
 from langflow.base.agents.agent import LCToolsAgentComponent
@@ -6,6 +8,7 @@ from langflow.base.models.model_utils import get_model_name
 from langflow.components.helpers import CurrentDateComponent
 from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
+from langflow.custom.utils import reorder_fields
 from langflow.io import BoolInput, DropdownInput, MultilineInput, Output
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
@@ -22,6 +25,31 @@ class AgentComponent(ToolCallingAgentComponent):
     icon = "bot"
     beta = False
     name = "Agent"
+    # field_order = [
+    #     "agent_llm",
+    #     "max_tokens",
+    #     "model_kwargs",
+    #     "json_mode",
+    #     "output_schema",
+    #     "model_name",
+    #     "openai_api_base",
+    #     "api_key",
+    #     "temperature",
+    #     "seed",
+    #     "output_parser",
+    #     "system_prompt",
+    #     "memory",
+    #     "sender",
+    #     "sender_name",
+    #     "n_messages",
+    #     "session_id",
+    #     "order",
+    #     "template",
+    #     "add_current_date_tool",
+    #     "agent_description",
+    #     "verbose",
+    #     "max_iterations",
+    # ] + ["tools", "input_value", "agent_instructions"]
 
     memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]
 
@@ -211,3 +239,29 @@ class AgentComponent(ToolCallingAgentComponent):
                     build_config = component_class.update_build_config(build_config, field_value, field_name)
 
         return build_config
+
+    def update_field_order(self, field_order):
+        # Fields to move to the end
+        fields_to_move = ["system_prompt", "tools", "input_value"]
+
+        # Remove fields if they exist
+        field_order = [field for field in field_order if field not in fields_to_move]
+
+        # Append fields to the end
+        field_order.extend(fields_to_move)
+
+        return field_order
+
+    def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any):
+        if "field_order" in frontend_node:
+            print("Class Field Order and details_________")
+            print(self.field_order or list(self.field_config.keys()))
+            print("updating field order", field_value)
+            updated_field_order = self.update_field_order(frontend_node["field_order"])
+            if updated_field_order:
+                frontend_node["field_order"] = updated_field_order
+            print("frontend_node updated by Agent Component____________________", frontend_node["field_order"])
+            frontend_node = reorder_fields(
+                dotdict(frontend_node), frontend_node["field_order"], return_frontend_node=True
+            )
+        return frontend_node

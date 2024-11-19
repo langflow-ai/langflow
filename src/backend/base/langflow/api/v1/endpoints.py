@@ -639,6 +639,7 @@ async def custom_component_update(
                 field_name=code_request.field,
                 field_value=code_request.field_value,
             )
+            print("field Order in component Node", component_node["field_order"])
 
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
