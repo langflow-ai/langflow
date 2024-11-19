@@ -1,5 +1,7 @@
+import requests
 from langchain_groq import ChatGroq
 from pydantic.v1 import SecretStr
+from typing_extensions import override
 
 from langflow.base.models.groq_constants import GROQ_MODELS
 from langflow.base.models.model import LCModelComponent
@@ -49,6 +51,7 @@ class GroqModel(LCModelComponent):
             info="The name of the model to use.",
             options=GROQ_MODELS,
             value="llama-3.1-8b-instant",
+            refresh_button=True,
         ),
         HandleInput(
             name="output_parser",
@@ -58,6 +61,30 @@ class GroqModel(LCModelComponent):
             input_types=["OutputParser"],
         ),
     ]
+
+    def get_models(self) -> list[str]:
+        api_key = self.groq_api_key
+        base_url = self.groq_api_base or "https://api.groq.com"
+        url = f"{base_url}/openai/v1/models"
+
+        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+            model_list = response.json()
+            return [model["id"] for model in model_list.get("data", [])]
+        except requests.RequestException as e:
+            self.status = f"Error fetching models: {e}"
+            return GROQ_MODELS
+
+    @override
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
+        if field_name in {"groq_api_key", "groq_api_base", "model_name"}:
+            print("Updating build config in Groq")
+            models = self.get_models()
+            build_config["model_name"]["options"] = models
+        return build_config
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         groq_api_key = self.groq_api_key
@@ -77,3 +104,5 @@ class GroqModel(LCModelComponent):
             api_key=SecretStr(groq_api_key).get_secret_value(),
             streaming=stream,
         )
+
+
