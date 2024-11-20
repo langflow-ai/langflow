@@ -1,13 +1,14 @@
-from abc import abstractmethod, ABC
+import shutil
+import tarfile
+from abc import ABC, abstractmethod
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from zipfile import ZipFile, is_zipfile
-import tarfile
-import shutil
 
 from langflow.custom import Component
 from langflow.io import BoolInput, FileInput, HandleInput, Output
 from langflow.schema import Data
+
 
 class BaseFileComponent(Component, ABC):
     """Base class for handling file processing components.
@@ -28,27 +29,27 @@ class BaseFileComponent(Component, ABC):
         super().__init__(*args, **kwargs)
         # Dynamically update FileInput to include valid extensions and bundles
         self._base_inputs[0].file_types = [*self.valid_extensions, *self.SUPPORTED_BUNDLE_EXTENSIONS]
-        
+
         file_types = ", ".join(self.valid_extensions)
         bundles = ", ".join(self.SUPPORTED_BUNDLE_EXTENSIONS)
-        self._base_inputs[0].info = (
-            f"Supported file extensions: {file_types}; optionally bundled in file extensions: {bundles}"
-        )
+        self._base_inputs[
+            0
+        ].info = f"Supported file extensions: {file_types}; optionally bundled in file extensions: {bundles}"
 
     _base_inputs = [
         FileInput(
             name="path",
             display_name="Path",
             file_types=[],  # Dynamically set in __init__
-            info="",        # Dynamically set in __init__
+            info="",  # Dynamically set in __init__
             required=False,
         ),
         HandleInput(
             name="file_path",
             display_name="Server File Path",
             info=(
-                  f"Data object with a '{SERVER_FILE_PATH_FIELDNAME}' property pointing to server file. "
-                  "Supercedes 'Path'. "
+                f"Data object with a '{SERVER_FILE_PATH_FIELDNAME}' property pointing to server file. "
+                "Supercedes 'Path'. "
             ),
             required=False,
             input_types=["Data"],
@@ -75,9 +76,7 @@ class BaseFileComponent(Component, ABC):
         ),
     ]
 
-    _base_outputs = [
-        Output(display_name="Data", name="data", method="load_files")
-    ]
+    _base_outputs = [Output(display_name="Data", name="data", method="load_files")]
 
     @abstractmethod
     def process_files(self, file_list: list[Path]) -> list[Data]:
@@ -89,7 +88,6 @@ class BaseFileComponent(Component, ABC):
         Returns:
             list[Data]: A list of parsed data objects from the processed files.
         """
-        pass
 
     def load_files(self) -> list[Data]:
         """Loads and parses file(s), including unpacked file bundles.
@@ -184,7 +182,7 @@ class BaseFileComponent(Component, ABC):
                     raise ValueError(msg)
             resolved_paths.append((resolved_path, delete_after_processing))
 
-        if self.path and not self.file_path: # Only process self.path if file_path is not provided
+        if self.path and not self.file_path:  # Only process self.path if file_path is not provided
             add_path(self.path, delete_after_processing=False)  # Files from self.path are never deleted
         elif self.file_path:
             if isinstance(self.file_path, Data):
@@ -223,7 +221,7 @@ class BaseFileComponent(Component, ABC):
         for path, delete_after_processing in paths_with_flags:
             if path.is_dir():
                 # Recurse into directories
-                for sub_path in path.rglob('*'):  # Use rglob to recursively find all files and directories
+                for sub_path in path.rglob("*"):  # Use rglob to recursively find all files and directories
                     if sub_path.is_file():  # Only add files
                         collected_files_with_flags.append((sub_path, delete_after_processing))
             elif path.suffix[1:] in self.SUPPORTED_BUNDLE_EXTENSIONS:
@@ -244,7 +242,10 @@ class BaseFileComponent(Component, ABC):
                 collected_files_with_flags.append((path, delete_after_processing))
 
         # Recurse again if any directories or bundles are left in the list
-        if any(file.is_dir() or file.suffix[1:] in self.SUPPORTED_BUNDLE_EXTENSIONS for file, _ in collected_files_with_flags):
+        if any(
+            file.is_dir() or file.suffix[1:] in self.SUPPORTED_BUNDLE_EXTENSIONS
+            for file, _ in collected_files_with_flags
+        ):
             return self._unpack_and_collect_files(collected_files_with_flags)
 
         return collected_files_with_flags
@@ -295,11 +296,10 @@ class BaseFileComponent(Component, ABC):
                 if self.ignore_unsupported_extensions:
                     ignored_files.append(file.name)
                     continue
-                else:
-                    msg = f"Unsupported file extension: {file.suffix}"
-                    self.log(msg)
-                    if not self.silent_errors:
-                        raise ValueError(msg)
+                msg = f"Unsupported file extension: {file.suffix}"
+                self.log(msg)
+                if not self.silent_errors:
+                    raise ValueError(msg)
 
             final_files_with_flags.append((file, delete_after_processing))
 

@@ -9,9 +9,10 @@ from langflow.schema import Data
 class FileComponent(BaseFileComponent):
     """Handles loading and processing of individual or zipped text files.
 
-    This component supports processing multiple valid files within a zip archive, 
+    This component supports processing multiple valid files within a zip archive,
     resolving paths, validating file types, and optionally using multithreading for processing.
     """
+
     display_name = "File"
     description = "Load a file to be used in your project."
     icon = "file-text"
@@ -53,6 +54,7 @@ class FileComponent(BaseFileComponent):
         Returns:
             list[Data]: A list of parsed data objects from the processed files.
         """
+
         def process_file(file_path: Path, *, silent_errors: bool = False) -> Data:
             try:
                 return parse_text_file_to_data(str(file_path), silent_errors=silent_errors)
@@ -68,12 +70,12 @@ class FileComponent(BaseFileComponent):
                 if not silent_errors:
                     raise e
                 return None
-            
+
         concurrency = 1 if not self.use_multithreading else max(1, self.concurrency_multithreading)
         file_count = len(file_list)
 
         if concurrency < 2 or file_count < 2:
-            if file_count > 1: 
+            if file_count > 1:
                 self.log(f"Processing {file_count} files sequentially.")
             processed_data = [process_file(file) for file in file_list if file]
         else:
@@ -87,4 +89,3 @@ class FileComponent(BaseFileComponent):
 
         # Filter out empty results and return
         return [data for data in processed_data if data]
-
