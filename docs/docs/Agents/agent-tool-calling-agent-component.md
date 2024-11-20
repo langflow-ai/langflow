@@ -177,12 +177,12 @@ inputs = [
 
 ## Add flows as tools
 
-An agent can use flows that are saved in your workspace as tools with the [flow as tool](/components-logic#flow-as-tool) component.
+An agent can use flows that are saved in your workspace as tools with the [Flow as Tool](/components-logic#flow-as-tool) component.
 
-1. To add a **Flow as tool** component, click and drag a **Flow as tool** component to your workspace.
+1. To add a **Flow as Tool** component, click and drag a **Flow as Tool** component to your workspace.
 2. Select the flow you want the agent to use as a tool.
 3. Connect the tool output to the agent's tools input.
 4. Ask the agent, `What tools are you using to answer my questions?`
-Your **Flow as tool** flow should be visible in the response.
+Your **Flow as Tool** flow should be visible in the response.
 
 
