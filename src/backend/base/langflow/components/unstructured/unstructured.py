@@ -10,9 +10,13 @@ from langflow.schema import Data
 class UnstructuredComponent(BaseFileComponent):
     display_name = "Unstructured API"
     description = (
-        "Uses Unstructured.io API to extract clean text from raw source documents. Supports a wide range of file types."
+        "Uses Unstructured.io API to extract clean text from raw source documents. "
+        "Supports a wide range of file types."
     )
-    documentation = "https://python.langchain.com/api_reference/unstructured/document_loaders/langchain_unstructured.document_loaders.UnstructuredLoader.html"
+    documentation = (
+        "https://python.langchain.com/api_reference/unstructured/document_loaders/"
+        "langchain_unstructured.document_loaders.UnstructuredLoader.html"
+    )
     trace_type = "tool"
     icon = "Unstructured"
     name = "Unstructured"
