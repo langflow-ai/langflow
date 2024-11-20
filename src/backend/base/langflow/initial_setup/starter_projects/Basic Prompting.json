@@ -1082,7 +1082,7 @@
       "zoom": 0.7749929474098888
     }
   },
-  "description": "Get started with a simple prompt engineering flow. Customize AI responses by adjusting the system prompt template to create varied personalities.",
+  "description": "Perform basic prompting with an OpenAI model.",
   "endpoint_name": null,
   "icon": "Braces",
   "id": "1511c230-d446-43a7-bfc3-539e69ce05b8",
