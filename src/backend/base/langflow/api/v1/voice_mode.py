@@ -1,22 +1,20 @@
 import asyncio
-import os
 import json
-from typing import Annotated
+import os
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, BackgroundTasks, Depends
 import websockets
-from starlette.websockets import WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, BackgroundTasks
 from loguru import logger
+from sqlalchemy import select
+from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.chat import build_flow
 from langflow.api.v1.schemas import InputValueRequest
-from langflow.services.auth.utils import get_current_user_for_websocket, get_current_user_by_jwt
-from langflow.services.database.models import User
+from langflow.services.auth.utils import get_current_user_by_jwt
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import async_session_scope
-from sqlalchemy import select
 
 router = APIRouter(prefix="/voice", tags=["Voice"])
 
@@ -95,14 +93,14 @@ async def handle_function_call(
         await openai_ws.send(json.dumps({"type": "response.create"}))
 
     except Exception as e:
-        logger.error(f"Error executing flow: {str(e)}")
+        logger.error(f"Error executing flow: {e!s}")
         # Send error back to OpenAI with correct format
         function_output = {
             "type": "conversation.item.create",
             "item": {
                 "type": "function_call_output",
                 "call_id": function_call.get("call_id"),
-                "output": f"Error executing flow: {str(e)}",
+                "output": f"Error executing flow: {e!s}",
             },
         }
         await openai_ws.send(json.dumps(function_output))
@@ -137,7 +135,7 @@ async def websocket_endpoint(
         }
         # }
     except Exception as e:
-        await websocket.send_json({"error": f"Failed to load flow: {str(e)}"})
+        await websocket.send_json({"error": f"Failed to load flow: {e!s}"})
         logger.error(e)
         return
 
