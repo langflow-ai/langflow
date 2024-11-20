@@ -74,8 +74,8 @@ class FileComponent(BaseFileComponent):
         concurrency = 1 if not self.use_multithreading else max(1, self.concurrency_multithreading)
         file_count = len(file_list)
 
-        PARALLEL_PROCESSING_THRESHOLD = 2
-        if concurrency < PARALLEL_PROCESSING_THRESHOLD or file_count < PARALLEL_PROCESSING_THRESHOLD:
+        parallel_processing_threshold = 2
+        if concurrency < parallel_processing_threshold or file_count < parallel_processing_threshold:
             if file_count > 1:
                 self.log(f"Processing {file_count} files sequentially.")
             processed_data = [process_file(file) for file in file_list if file]

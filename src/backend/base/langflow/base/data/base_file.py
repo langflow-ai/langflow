@@ -271,12 +271,11 @@ class BaseFileComponent(Component, ABC):
         Raises:
             ValueError: If an attempted path traversal is detected.
         """
-        path = str(output_dir)
         for member in members:
-            member_path = os.path.join(path, member)
-            if not os.path.commonpath([path, member_path]).startswith(path):
+            member_path = output_dir / member
+            if not member_path.resolve().is_relative_to(output_dir.resolve()):
                 raise ValueError(f"Attempted Path Traversal in {archive_type} File: {member}")
-        extract_func(output_dir)
+            extract_func(output_dir, member)
 
     def _unpack_bundle(self, bundle_path: Path, output_dir: Path):
         """Unpack a bundle into a temporary directory.
@@ -291,7 +290,7 @@ class BaseFileComponent(Component, ABC):
         if is_zipfile(bundle_path):
             with ZipFile(bundle_path, "r") as bundle:
                 self._safe_extract(
-                    bundle.extractall,
+                    lambda output_dir, member: bundle.extract(member, path=output_dir),
                     bundle.namelist(),
                     output_dir,
                     "ZIP",
@@ -299,7 +298,7 @@ class BaseFileComponent(Component, ABC):
         elif tarfile.is_tarfile(bundle_path):
             with tarfile.open(bundle_path, "r:*") as bundle:
                 self._safe_extract(
-                    lambda output_dir: bundle.extractall(output_dir),
+                    lambda output_dir, member: bundle.extract(member, path=output_dir),
                     [member.name for member in bundle.getmembers()],
                     output_dir,
                     "TAR",
