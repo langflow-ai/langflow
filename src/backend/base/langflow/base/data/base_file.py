@@ -273,7 +273,8 @@ class BaseFileComponent(Component, ABC):
         for member in members:
             member_path = output_dir / member
             if not member_path.resolve().is_relative_to(output_dir.resolve()):
-                raise ValueError(f"Attempted Path Traversal in {archive_type} File: {member}")
+                msg = f"Attempted Path Traversal in {archive_type} File: {member}"
+                raise ValueError(msg)
             extract_func(output_dir, member)
 
     def _unpack_bundle(self, bundle_path: Path, output_dir: Path):
