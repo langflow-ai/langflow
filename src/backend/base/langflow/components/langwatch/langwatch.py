@@ -1,3 +1,4 @@
+import os
 import httpx
 import logging
 from typing import Any, Dict, List
@@ -80,7 +81,7 @@ class LangWatchComponent(Component):
     ]
 
     def __init__(self, **data):
-        super().__init__()
+        super().__init__(**data)
         self.evaluators = self.get_evaluators()
         self.dynamic_inputs = {}
         self._code = data.get('_code', '')
@@ -89,7 +90,7 @@ class LangWatchComponent(Component):
             self.current_evaluator = list(self.evaluators.keys())[0]
 
     def get_evaluators(self) -> Dict[str, Any]:
-        url = "https://app.langwatch.ai/api/evaluations/list"
+        url = f"{os.getenv('LANGWATCH_ENDPOINT', 'https://app.langwatch.ai')}/api/evaluations/list"
         try:
             response = httpx.get(url, timeout=10)
             response.raise_for_status()
@@ -236,8 +237,8 @@ class LangWatchComponent(Component):
             logger.info(f"Evaluating with evaluator: {evaluator_name}")
 
             endpoint = f"/api/evaluations/{evaluator_name}/evaluate"
-            url = f"https://app.langwatch.ai{endpoint}"
-            
+            url = f"{os.getenv('LANGWATCH_ENDPOINT', 'https://app.langwatch.ai')}{endpoint}"
+
             headers = {
                 "Content-Type": "application/json",
                 "X-Auth-Token": self.api_key
@@ -252,6 +253,9 @@ class LangWatchComponent(Component):
                 },
                 "settings": {}
             }
+
+            if self._tracing_service and self._tracing_service._tracers and "langwatch" in self._tracing_service._tracers:
+                payload["trace_id"] = str(self._tracing_service._tracers["langwatch"].trace_id)
 
             for setting_name in self.dynamic_inputs.keys():
                 payload["settings"][setting_name] = getattr(self, setting_name, None)
