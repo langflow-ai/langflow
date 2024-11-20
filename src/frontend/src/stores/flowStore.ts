@@ -58,20 +58,22 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     }
   },
   autoSaveFlow: undefined,
-  componentsToUpdate: false,
+  componentsToUpdate: [],
   updateComponentsToUpdate: (nodes) => {
-    let outdatedNodes = false;
+    let outdatedNodes: string[] = [];
     const templates = useTypesStore.getState().templates;
     for (let i = 0; i < nodes.length; i++) {
       const currentCode = templates[nodes[i].data?.type]?.template?.code?.value;
       const thisNodesCode = nodes[i].data?.node!.template?.code?.value;
-      outdatedNodes =
+      if (
         currentCode &&
         thisNodesCode &&
         currentCode !== thisNodesCode &&
         !nodes[i].data?.node?.edited &&
-        !componentsToIgnoreUpdate.includes(nodes[i].data?.type);
-      if (outdatedNodes) break;
+        !componentsToIgnoreUpdate.includes(nodes[i].data?.type)
+      ) {
+        outdatedNodes.push(nodes[i].id);
+      }
     }
     set({ componentsToUpdate: outdatedNodes });
   },
@@ -707,7 +709,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             ?.map((element) => element.id)
             .filter(Boolean) as string[]) ?? get().nodes.map((n) => n.id);
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.ERROR);
-        if (get().componentsToUpdate)
+        if (get().componentsToUpdate.length > 0)
           setErrorData({
             title:
               "There are outdated components in the flow. The error could be related to them.",
