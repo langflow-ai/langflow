@@ -3,6 +3,7 @@ from langchain_groq import ChatGroq
 from pydantic.v1 import SecretStr
 from typing_extensions import override
 
+from langflow.base.models.groq_constants import GROQ_MODELS
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs.inputs import HandleInput
@@ -48,7 +49,8 @@ class GroqModel(LCModelComponent):
             name="model_name",
             display_name="Model",
             info="The name of the model to use.",
-            options=[],
+            options=GROQ_MODELS,
+            value="llama-3.1-8b-instant",
             refresh_button=True,
         ),
         HandleInput(
@@ -74,7 +76,7 @@ class GroqModel(LCModelComponent):
             return [model["id"] for model in model_list.get("data", [])]
         except requests.RequestException as e:
             self.status = f"Error fetching models: {e}"
-            return []
+            return GROQ_MODELS
 
     @override
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
