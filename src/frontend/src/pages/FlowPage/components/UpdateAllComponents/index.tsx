@@ -2,23 +2,35 @@ import { ForwardedIconComponent } from "@/components/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { processNodeAdvancedFields } from "@/CustomNodes/helpers/process-node-advanced-fields";
+import useUpdateAllNodes, {
+  UpdateNodesType,
+} from "@/CustomNodes/hooks/use-update-all-nodes";
 import useAlertStore from "@/stores/alertStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { cn } from "@/utils/utils";
 import { useState } from "react";
+import { useUpdateNodeInternals } from "reactflow";
 
 export default function UpdateAllComponents() {
-  const { componentsToUpdate, nodes, edges, setNode } = useFlowStore();
+  const { componentsToUpdate, nodes, edges, setNodes } = useFlowStore();
+  const updateNodeInternals = useUpdateNodeInternals();
   const templates = useTypesStore((state) => state.templates);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [loadingUpdate, setLoadingUpdate] = useState(false);
 
-  const { mutate: validateComponentCode } = usePostValidateComponentCode();
+  const { mutateAsync: validateComponentCode } = usePostValidateComponentCode();
+  const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
+
+  const updateAllNodes = useUpdateAllNodes(setNodes, updateNodeInternals);
 
   const handleUpdateAllComponents = () => {
     setLoadingUpdate(true);
+    takeSnapshot();
+
     let updatedCount = 0;
+    const updates: UpdateNodesType[] = [];
 
     const updatePromises = componentsToUpdate.map((nodeId) => {
       const node = nodes.find((n) => n.id === nodeId);
@@ -30,39 +42,39 @@ export default function UpdateAllComponents() {
       const currentCode = thisNodeTemplate.code.value;
 
       return new Promise((resolve) => {
-        validateComponentCode(
-          { code: currentCode, frontend_node: node.data.node },
-          {
-            onSuccess: ({ data: resData, type }) => {
-              if (resData && type) {
-                const newNode = processNodeAdvancedFields(
-                  resData,
-                  edges,
-                  nodeId,
-                );
-                setNode(nodeId, (oldNode) => ({
-                  ...oldNode,
-                  data: {
-                    ...oldNode.data,
-                    node: newNode,
-                  },
-                }));
-                updatedCount++;
-              }
-              resolve(null);
-            },
-            onError: (error) => {
-              console.error(error);
-              resolve(null);
-            },
-          },
-        );
+        validateComponentCode({
+          code: currentCode,
+          frontend_node: node.data.node,
+        })
+          .then(({ data: resData, type }) => {
+            if (resData && type) {
+              const newNode = processNodeAdvancedFields(resData, edges, nodeId);
+
+              updates.push({
+                nodeId,
+                newNode,
+                code: currentCode,
+                name: "code",
+                type,
+              });
+
+              updatedCount++;
+            }
+            resolve(null);
+          })
+          .catch((error) => {
+            console.error(error);
+            resolve(null);
+          });
       });
     });
 
     Promise.all(updatePromises)
       .then(() => {
         if (updatedCount > 0) {
+          // Batch update all nodes at once
+          updateAllNodes(updates);
+
           useAlertStore.getState().setSuccessData({
             title: `Successfully updated ${updatedCount} component${
               updatedCount > 1 ? "s" : ""
@@ -90,27 +102,39 @@ export default function UpdateAllComponents() {
   return (
     <div
       className={cn(
-        "text-warning-foreground bg-warning absolute bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-md",
+        "text-warning-foreground bg-warning absolute bottom-2 left-1/2 z-50 flex w-[500px] -translate-x-1/2 items-center gap-8 rounded-lg px-4 py-2 text-sm font-medium shadow-md",
       )}
     >
-      <ForwardedIconComponent
-        name="AlertTriangle"
-        className="h-4 w-4"
-        strokeWidth={1.5}
-      />
-      <span>
-        {componentsToUpdate.length} component
-        {componentsToUpdate.length > 1 ? "s" : ""} can be updated
-      </span>
-      <Button
-        variant="warning"
-        size="sm"
-        className="ml-2 h-7 px-2 text-xs"
-        onClick={handleUpdateAllComponents}
-        loading={loadingUpdate}
-      >
-        Update All
-      </Button>
+      <div className="flex items-center gap-3">
+        <ForwardedIconComponent
+          name="AlertTriangle"
+          className="!h-[18px] !w-[18px] shrink-0"
+          strokeWidth={1.5}
+        />
+        <span>
+          {componentsToUpdate.length} component
+          {componentsToUpdate.length > 1 ? "s" : ""} are ready to update
+        </span>
+      </div>
+      <div className="flex items-center gap-4">
+        <Button
+          variant="link"
+          size="icon"
+          className="text-warning-foreground shrink-0 text-sm"
+          onClick={() => {}}
+        >
+          Dismiss
+        </Button>
+        <Button
+          variant="warning"
+          size="sm"
+          className="shrink-0"
+          onClick={handleUpdateAllComponents}
+          loading={loadingUpdate}
+        >
+          Update All
+        </Button>
+      </div>
     </div>
   );
 }
