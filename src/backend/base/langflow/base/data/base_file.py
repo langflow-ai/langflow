@@ -1,4 +1,3 @@
-import os
 import shutil
 import tarfile
 from abc import ABC, abstractmethod
