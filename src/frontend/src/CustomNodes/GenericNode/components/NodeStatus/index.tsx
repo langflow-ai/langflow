@@ -98,12 +98,8 @@ export default function NodeStatus({
         : "border ring-[0.5px] hover:shadow-node ring-border";
     let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
     let updateClass =
-      isOutdated && !isUserEdited ? "border-warning border-2" : "";
-    return isOutdated && !isUserEdited
-      ? updateClass
-      : frozen
-        ? frozenClass
-        : className;
+      isOutdated && !isUserEdited ? "border-warning ring-2 ring-warning" : "";
+    return cn(frozen ? frozenClass : className, updateClass);
   };
   const getNodeBorderClassName = (
     selected: boolean,
