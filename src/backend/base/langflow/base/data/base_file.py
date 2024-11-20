@@ -2,9 +2,9 @@ import os
 import shutil
 import tarfile
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Callable
 from zipfile import ZipFile, is_zipfile
 
 from langflow.custom import Component
@@ -216,7 +216,7 @@ class BaseFileComponent(Component, ABC):
             paths_with_flags (list[tuple[Path, bool]]): List of input paths and their delete-after-processing flags.
 
         Returns:
-            list[tuple[Path, bool]]: 
+            list[tuple[Path, bool]]:
                 List of all files after unpacking bundles, along with their delete-after-processing flags.
         """
         collected_files_with_flags = []
