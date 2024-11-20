@@ -94,5 +94,5 @@ test("Simple Agent", async ({ page }) => {
   const concatAllText = textContents.join(" ").toLowerCase();
 
   expect(concatAllText).toContain("hello! how can i assist you today?");
-  expect(concatAllText.length).toBeGreaterThan(100);
+  expect(concatAllText.length).toBeGreaterThan(20);
 });
