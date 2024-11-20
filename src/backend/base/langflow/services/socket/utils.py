@@ -88,7 +88,7 @@ async def build_vertex(
             result_dict = ResultDataResponse(results={})
             artifacts = {}
         await set_cache(flow_id, graph)
-        log_vertex_build(
+        await log_vertex_build(
             flow_id=flow_id,
             vertex_id=vertex_id,
             valid=valid,
