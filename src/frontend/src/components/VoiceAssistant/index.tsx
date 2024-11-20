@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "../ui/button";
-import { Mic, MicOff } from "lucide-react";
+import { AudioLines } from "lucide-react";
 import { workletCode } from "./streamProcessor";
 import { base64ToFloat32Array } from "./utils";
 import useFlowStore from "@/stores/flowStore";
@@ -28,6 +28,12 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
   // Initialize audio context and websocket
   const initializeAudio = async () => {
     try {
+      // Close existing context if it exists
+      if (audioContextRef.current?.state === 'closed') {
+        audioContextRef.current = null;
+      }
+
+      // Create new context if needed
       if (!audioContextRef.current) {
         audioContextRef.current = new (window.AudioContext ||
           (window as any).webkitAudioContext)({
@@ -35,7 +41,11 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
         });
       }
 
-      await audioContextRef.current.resume();
+      // Only resume if context is in suspended state
+      if (audioContextRef.current.state === 'suspended') {
+        await audioContextRef.current.resume();
+      }
+
       startConversation();
     } catch (error) {
       console.error('Failed to initialize audio:', error);
@@ -98,6 +108,14 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
     if (microphoneRef.current) {
       microphoneRef.current.disconnect();
       microphoneRef.current = null;
+    }
+    if (processorRef.current) {
+      processorRef.current.disconnect();
+      processorRef.current = null;
+    }
+    if (analyserRef.current) {
+      analyserRef.current.disconnect();
+      analyserRef.current = null;
     }
     if (wsRef.current) {
       wsRef.current.close();
@@ -228,14 +246,14 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
       );
 
       wsRef.current.onopen = () => {
-        setStatus('Connected');
+        //setStatus('Connected');
         startRecording();
       };
 
       wsRef.current.onmessage = handleWebSocketMessage;
 
       wsRef.current.onclose = (event) => {
-        setStatus(`Disconnected (${event.code})`);
+        //setStatus(`Disconnected (${event.code})`);
         stopRecording();
       };
 
@@ -262,11 +280,10 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
+      stopRecording();
       if (audioContextRef.current) {
         audioContextRef.current.close();
+        audioContextRef.current = null;
       }
     };
   }, []);
@@ -278,8 +295,7 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
         onClick={toggleRecording}
         className="gap-2"
       >
-        {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
-        {isRecording ? "Stop" : "Start"} Voice Assistant
+        {isRecording ? <AudioLines size={16} /> : <AudioLines size={16} />}
       </Button>
       {status && <div className="text-sm text-gray-600">{status}</div>}
       {message && <div className="text-sm">{message}</div>}

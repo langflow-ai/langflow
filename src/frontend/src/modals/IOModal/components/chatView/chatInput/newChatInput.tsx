@@ -250,10 +250,8 @@ export default function ChatInput({
               handleButtonClick={handleButtonClick}
             />
           </div>
-          <div className="">
+          <div className="flex items-center gap-2">
             <VoiceAssistant flowId={currentFlowId} />
-          </div>
-          <div className="">
             <ButtonSendWrapper
               send={send}
               lockChat={lockChat}
