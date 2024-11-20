@@ -67,4 +67,4 @@ export const workletCode = `
     }
   }
   registerProcessor('stream_processor', StreamProcessor);
-`; 
+`;

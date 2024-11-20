@@ -5,7 +5,7 @@ export function base64ToFloat32Array(base64String: string): Float32Array {
   for (let i = 0; i < binaryString.length; i += 2) {
     const lsb = binaryString.charCodeAt(i);
     const msb = binaryString.charCodeAt(i + 1);
-    pcmData[i/2] = (msb << 8) | lsb;
+    pcmData[i / 2] = (msb << 8) | lsb;
   }
 
   const float32Data = new Float32Array(pcmData.length);
@@ -14,4 +14,4 @@ export function base64ToFloat32Array(base64String: string): Float32Array {
   }
 
   return float32Data;
-} 
+}
