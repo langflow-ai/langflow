@@ -1621,5 +1621,9 @@
   "id": "263070d6-3560-4f4d-a6c4-003f4a586e6e",
   "is_component": false,
   "last_tested_version": "1.1.0",
-  "name": "Simple Agent"
+  "name": "Simple Agent",
+  "tags": [
+    "assistants",
+    "agents"
+  ]
 }
