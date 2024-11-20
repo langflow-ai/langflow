@@ -93,7 +93,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--ring)) !important;
+  background-color: hsl(var(--placeholder-foreground)) !important;
 }
 
 .jv-indent::-webkit-scrollbar-track {
@@ -107,7 +107,7 @@ body {
 }
 
 .jv-indent::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--ring)) !important;
+  background-color: hsl(var(--placeholder-foreground)) !important;
 }
 
 .custom-hover {
@@ -170,7 +170,7 @@ body {
   height: 0.75rem !important;
   background-color: white !important;
   border-color: var(--border) !important;
-  z-index: 1000 !important;
+  z-index: 50 !important;
   border-radius: 20% !important;
 }
 
