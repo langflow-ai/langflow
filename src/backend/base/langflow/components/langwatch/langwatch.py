@@ -6,6 +6,7 @@ from typing import Any
 import httpx
 
 from langflow.custom import Component
+from langflow.inputs.inputs import MultilineInput
 from langflow.io import (
     BoolInput,
     DropdownInput,
@@ -106,8 +107,7 @@ class LangWatchComponent(Component):
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         try:
-            logger.info("Updating build config. Field name: %s, Field value: %s",
-                        field_name, field_value)
+            logger.info("Updating build config. Field name: %s, Field value: %s", field_name, field_value)
 
             if field_name is None or field_name == "evaluator_name":
                 self.evaluators = self.get_evaluators()
@@ -121,9 +121,7 @@ class LangWatchComponent(Component):
                 # Define default keys that should always be present
                 default_keys = ["code", "_type", "evaluator_name", "api_key", "input", "output", "timeout"]
 
-                if (field_value and
-                    field_value in self.evaluators and
-                    self.current_evaluator != field_value):
+                if field_value and field_value in self.evaluators and self.current_evaluator != field_value:
                     self.current_evaluator = field_value
                     evaluator = self.evaluators[field_value]
 
@@ -176,9 +174,26 @@ class LangWatchComponent(Component):
 
     def get_dynamic_inputs(self, evaluator: dict[str, Any]):
         try:
-            settings = evaluator.get("settings", {})
             dynamic_inputs = {}
 
+            input_fields = [
+                field
+                for field in evaluator.get("requiredFields", []) + evaluator.get("optionalFields", [])
+                if field not in ["input", "output"]
+            ]
+
+            for field in input_fields:
+                input_params = {
+                    "name": field,
+                    "display_name": field.replace("_", " ").title(),
+                    "required": field in evaluator.get("requiredFields", []),
+                }
+                if field == "contexts":
+                    dynamic_inputs[field] = MultilineInput(**input_params, multiline=True)
+                else:
+                    dynamic_inputs[field] = MessageTextInput(**input_params)
+
+            settings = evaluator.get("settings", {})
             for setting_name, setting_config in settings.items():
                 schema = evaluator.get("settings_json_schema", {}).get("properties", {}).get(setting_name, {})
 
