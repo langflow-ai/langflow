@@ -65,6 +65,7 @@ import {
 } from "../../../../utils/reactflowUtils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
+import UpdateAllComponents from "../UpdateAllComponents";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
 
@@ -525,6 +526,8 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     };
   }, [isAddingNote, shadowBoxWidth, shadowBoxHeight]);
 
+  const componentsToUpdate = useFlowStore((state) => state.componentsToUpdate);
+
   return (
     <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
       {showCanvas ? (
@@ -605,6 +608,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
                 Components
               </SidebarTrigger>
             </Panel>
+            {componentsToUpdate.length > 0 && <UpdateAllComponents />}
             <SelectionMenu
               lastSelection={lastSelection}
               isVisible={selectionMenuVisible}
