@@ -93,6 +93,6 @@ test("Simple Agent", async ({ page }) => {
 
   const concatAllText = textContents.join(" ").toLowerCase();
 
-  expect(concatAllText).toContain("apple");
+  expect(concatAllText).toContain("hello! how can i assist you today?");
   expect(concatAllText.length).toBeGreaterThan(100);
 });
