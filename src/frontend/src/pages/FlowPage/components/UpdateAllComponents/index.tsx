@@ -25,6 +25,8 @@ export default function UpdateAllComponents() {
 
   const updateAllNodes = useUpdateAllNodes(setNodes, updateNodeInternals);
 
+  const [dismissed, setDismissed] = useState(false);
+
   const handleUpdateAllComponents = () => {
     setLoadingUpdate(true);
     takeSnapshot();
@@ -102,7 +104,8 @@ export default function UpdateAllComponents() {
   return (
     <div
       className={cn(
-        "text-warning-foreground bg-warning absolute bottom-2 left-1/2 z-50 flex w-[500px] -translate-x-1/2 items-center gap-8 rounded-lg px-4 py-2 text-sm font-medium shadow-md",
+        "text-warning-foreground bg-warning absolute bottom-2 left-1/2 z-50 flex w-[500px] -translate-x-1/2 items-center gap-8 rounded-lg px-4 py-2 text-sm font-medium shadow-md transition-all ease-in",
+        dismissed && "translate-y-[120%]",
       )}
     >
       <div className="flex items-center gap-3">
@@ -121,7 +124,9 @@ export default function UpdateAllComponents() {
           variant="link"
           size="icon"
           className="text-warning-foreground shrink-0 text-sm"
-          onClick={() => {}}
+          onClick={() => {
+            setDismissed(true);
+          }}
         >
           Dismiss
         </Button>
