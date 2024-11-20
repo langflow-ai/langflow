@@ -45,8 +45,16 @@ export const useTypesStore = create<TypesStoreType>((set, get) => ({
         });
     });
   },
-  setTypes: (newState: {}) => {
-    set({ types: newState });
+  setTypes: (data: APIDataType) => {
+    set((old) => ({
+      types: typesGenerator(data),
+      data: { ...old.data, ...data },
+      ComponentFields: extractFieldsFromComponenents({
+        ...old.data,
+        ...data,
+      }),
+      templates: templatesGenerator(data),
+    }));
   },
   setTemplates: (newState: {}) => {
     set({ templates: newState });
