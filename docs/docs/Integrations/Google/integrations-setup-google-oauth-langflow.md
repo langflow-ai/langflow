@@ -19,7 +19,7 @@ Learn how to create an OAuth app in Google Cloud, obtain the necessary credentia
 
 ![OAuth Client ID and Secret](/img/google/create-a-google-cloud-project.gif)
 
-3. To enable APIs for the project, select **APIs & Services** and click **Library**. Enable the APIs you need for your project. For example, if your flow uses the Google Drive component, enable the Google Drive API.
+3. To enable APIs for the project, select **APIs & Services**, and then click **Library**. Enable the APIs you need for your project. For example, if your flow uses the Google Drive component, enable the Google Drive API.
 4. To navigate to the OAuth consent screen, click **APIs & Services**, and then click **OAuth consent screen**.
 5. Populate your OAuth consent screen with the application name, user support email, required [scopes](https://developers.google.com/identity/protocols/oauth2/scopes), and authorized domains.
 6. To create an **OAuth Client ID**, navigate to **Clients**, and then click **Create Client**.
@@ -37,7 +37,7 @@ With your OAuth application configured and your credentials JSON file created, f
 1. Create a new project in Langflow.
 2. Add a **Google OAuth Token** component to your flow.
 3. In the **Credentials File** field of the Google OAuth Token component, enter the path to your **Credentials File**, the JSON file containing the Client ID credentials you downloaded from Google in the previous steps.
-4. To authenticate your application, in the **Google OAuth Token** component, click the **Play** button.
+4. To authenticate your application, in the **Google OAuth Token** component, click **Play**.
 A new tab opens in the browser to authenticate your application using your Google Cloud account. You must authenticate the application with the same Google account that created the OAuth credentials.
 
 :::info
@@ -65,5 +65,5 @@ The file ID is located between `/d/` and `/edit` in a Google Drive document's UR
 For example, in the URL `https://drive.google.com/file/d/1a2b3c4D5E6F7gHI8J9klmnopQ/edit`, the File ID is `1a2b3c4D5E6F7gHI8J9klmnopQ`.
 :::
 6. In the Google Drive loader component, in the **Document ID** field, paste the document URL.
-7. Click the **Chat output** component, click the **Play** button.
+7. Click the **Chat output** component, and then click **Play**.
 The chat output should display a translated document.
