@@ -337,7 +337,7 @@ export default function GenericNode({
     Object.values(data.node.template).some((field) => field.tool_mode);
 
   return (
-    <>
+    <div className={cn(isOutdated && !isUserEdited ? "relative -mt-10" : "")}>
       <div
         className={cn(
           borderColor,
@@ -350,7 +350,7 @@ export default function GenericNode({
       >
         {memoizedNodeToolbarComponent}
         {isOutdated && !isUserEdited && (
-          <div className="bg-warning text-warning-foreground -mt-px flex h-10 w-full items-center gap-4 rounded-t-lg p-2 px-4">
+          <div className="text-warning-foreground bg-warning flex h-10 w-full items-center gap-4 rounded-t-lg p-2 px-4">
             <ForwardedIconComponent
               name="AlertTriangle"
               strokeWidth={1.5}
@@ -527,6 +527,6 @@ export default function GenericNode({
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }
