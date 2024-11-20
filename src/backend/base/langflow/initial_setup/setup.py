@@ -28,6 +28,7 @@ from langflow.services.database.models.folder.utils import (
 )
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.deps import (
+    async_session_scope,
     get_settings_service,
     get_storage_service,
     get_variable_service,
@@ -45,19 +46,28 @@ STARTER_FOLDER_DESCRIPTION = "Starter projects to help you get started in Langfl
 
 
 def update_projects_components_with_latest_component_versions(project_data, all_types_dict):
-    # project data has a nodes key, which is a list of nodes
-    # we want to run through each node and see if it exists in the all_types_dict
-    # if so, we go into  the template key and also get the template from all_types_dict
-    # and update it all
+    # Flatten the all_types_dict for easy access
     all_types_dict_flat = {}
     for category in all_types_dict.values():
         for key, component in category.items():
             all_types_dict_flat[key] = component  # noqa: PERF403
+
     node_changes_log = defaultdict(list)
     project_data_copy = deepcopy(project_data)
+
     for node in project_data_copy.get("nodes", []):
         node_data = node.get("data").get("node")
         node_type = node.get("data").get("type")
+
+        # Skip updating if tool_mode is True
+        if node_data.get("tool_mode", False):
+            continue
+
+        # Skip nodes with outputs of the specified format
+        # NOTE: to account for the fact that the Simple Agent has dynamic outputs
+        if any(output.get("types") == ["Tool"] for output in node_data.get("outputs", [])):
+            continue
+
         if node_type in all_types_dict_flat:
             latest_node = all_types_dict_flat.get(node_type)
             latest_template = latest_node.get("template")
@@ -519,7 +529,7 @@ def _is_valid_uuid(val):
     return str(uuid_obj) == val
 
 
-def load_flows_from_directory() -> None:
+async def load_flows_from_directory() -> None:
     """On langflow startup, this loads all flows from the directory specified in the settings.
 
     All flows are uploaded into the default folder for the superuser.
@@ -533,8 +543,8 @@ def load_flows_from_directory() -> None:
         logger.warning("AUTO_LOGIN is disabled, not loading flows from directory")
         return
 
-    with session_scope() as session:
-        user = get_user_by_username(session, settings_service.auth_settings.SUPERUSER)
+    async with async_session_scope() as session:
+        user = await get_user_by_username(session, settings_service.auth_settings.SUPERUSER)
         if user is None:
             msg = "Superuser not found in the database"
             raise NoResultFound(msg)
@@ -553,7 +563,7 @@ def load_flows_from_directory() -> None:
                 flow["id"] = no_json_name
             flow_id = flow.get("id")
 
-            existing = find_existing_flow(session, flow_id, flow_endpoint_name)
+            existing = await find_existing_flow(session, flow_id, flow_endpoint_name)
             if existing:
                 logger.debug(f"Found existing flow: {existing.name}")
                 logger.info(f"Updating existing flow: {flow_id} with endpoint name {flow_endpoint_name}")
@@ -585,15 +595,15 @@ def load_flows_from_directory() -> None:
                 session.add(flow)
 
 
-def find_existing_flow(session, flow_id, flow_endpoint_name):
+async def find_existing_flow(session, flow_id, flow_endpoint_name):
     if flow_endpoint_name:
         logger.debug(f"flow_endpoint_name: {flow_endpoint_name}")
         stmt = select(Flow).where(Flow.endpoint_name == flow_endpoint_name)
-        if existing := session.exec(stmt).first():
+        if existing := (await session.exec(stmt)).first():
             logger.debug(f"Found existing flow by endpoint name: {existing.name}")
             return existing
     stmt = select(Flow).where(Flow.id == flow_id)
-    if existing := session.exec(stmt).first():
+    if existing := (await session.exec(stmt)).first():
         logger.debug(f"Found existing flow by id: {flow_id}")
         return existing
     return None
@@ -645,7 +655,7 @@ def create_or_update_starter_projects(all_types_dict: dict) -> None:
                 )
 
 
-def initialize_super_user_if_needed() -> None:
+async def initialize_super_user_if_needed() -> None:
     settings_service = get_settings_service()
     if not settings_service.auth_settings.AUTO_LOGIN:
         return
@@ -655,8 +665,8 @@ def initialize_super_user_if_needed() -> None:
         msg = "SUPERUSER and SUPERUSER_PASSWORD must be set in the settings if AUTO_LOGIN is true."
         raise ValueError(msg)
 
-    with session_scope() as session:
-        super_user = create_super_user(db=session, username=username, password=password)
-        get_variable_service().initialize_user_variables(super_user.id, session)
-        create_default_folder_if_it_doesnt_exist(session, super_user.id)
-        logger.info("Super user initialized")
+    async with async_session_scope() as async_session:
+        super_user = await create_super_user(db=async_session, username=username, password=password)
+        await get_variable_service().initialize_user_variables(super_user.id, async_session)
+        await create_default_folder_if_it_doesnt_exist(async_session, super_user.id)
+    logger.info("Super user initialized")
