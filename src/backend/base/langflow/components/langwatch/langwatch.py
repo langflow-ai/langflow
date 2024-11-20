@@ -21,11 +21,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class LangWatchComponent(Component):
-    display_name: str = "Langwatch Evaluator"
-    description: str = "Evaluates various aspects of language models using Langwatch's evaluation endpoints."
+    display_name: str = "LangWatch Evaluator"
+    description: str = "Evaluates various aspects of language models using LangWatch's evaluation endpoints."
     documentation: str = "https://docs.langwatch.ai/langevals/documentation/introduction"
     icon: str = "Langwatch"
-    name: str = "LangwatchEvaluator"
+    name: str = "LangWatchEvaluator"
 
     inputs = [
         DropdownInput(
@@ -41,7 +41,7 @@ class LangWatchComponent(Component):
             name="api_key",
             display_name="API Key",
             required=True,
-            info="Enter your Langwatch API key.",
+            info="Enter your LangWatch API key.",
         ),
         MessageTextInput(
             name="input",
