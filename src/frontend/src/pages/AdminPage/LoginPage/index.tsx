@@ -1,4 +1,4 @@
-import LangflowLogo from "@/assets/LangflowLogo.svg?react";
+import InstroLogo from "@/assets/Instro_Brandmark_Coral.svg?react";
 import { useLoginUser } from "@/controllers/API/queries/auth";
 import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
 import { useContext, useState } from "react";
@@ -52,10 +52,10 @@ export default function LoginAdminPage() {
     <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
       <div className="flex w-72 flex-col items-center justify-center gap-2">
         {ENABLE_NEW_LOGO ? (
-          <LangflowLogo
-            title="Langflow logo"
-            className="h-10 w-10 scale-[1.5]"
-          />
+          <InstroLogo
+          title="Instro logo"
+          className="mb-4 h-10 w-10 scale-[1.5]"
+        />
         ) : (
           <span className="mb-4 text-5xl">⛓️</span>
         )}
