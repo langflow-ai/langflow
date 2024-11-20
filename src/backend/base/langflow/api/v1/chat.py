@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Annotated
 from fastapi import APIRouter, BackgroundTasks, Body, HTTPException
 from fastapi.responses import StreamingResponse
 from loguru import logger
+from sqlmodel import select
 from starlette.background import BackgroundTask
 from starlette.responses import ContentStream
 from starlette.types import Receive
@@ -42,6 +43,7 @@ from langflow.graph.utils import log_vertex_build
 from langflow.schema.schema import OutputValue
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.chat.service import ChatService
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_async_session, get_chat_service, get_telemetry_service
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
@@ -166,7 +168,10 @@ async def build_flow(
             if not data:
                 graph = await build_graph_from_db_no_cache(flow_id=flow_id_str, session=session)
             else:
-                graph = await build_graph_from_data(flow_id_str, data.model_dump(), user_id=str(current_user.id))
+                flow_name = session.exec(select(Flow.name).where(Flow.id == flow_id_str)).first()
+                graph = await build_graph_from_data(
+                    flow_id_str, data.model_dump(), user_id=str(current_user.id), flow_name=flow_name
+                )
             graph.validate_stream()
             if stop_component_id or start_component_id:
                 try:
