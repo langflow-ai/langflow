@@ -1,9 +1,9 @@
 from abc import abstractmethod, ABC
 from pathlib import Path
-from tempfile import NamedTemporaryFile
-from typing import Callable
+from tempfile import TemporaryDirectory
 from zipfile import ZipFile, is_zipfile
 import tarfile
+import shutil
 
 from langflow.custom import Component
 from langflow.io import BoolInput, FileInput, HandleInput, Output
@@ -46,7 +46,10 @@ class BaseFileComponent(Component, ABC):
         HandleInput(
             name="file_path",
             display_name="Server File Path",
-            info=f"Data object with a '{SERVER_FILE_PATH_FIELDNAME}' property pointing to server file.",
+            info=(
+                  f"Data object with a '{SERVER_FILE_PATH_FIELDNAME}' property pointing to server file. "
+                  "Supercedes 'Path'. "
+            ),
             required=False,
             input_types=["Data"],
         ),
@@ -62,6 +65,13 @@ class BaseFileComponent(Component, ABC):
             advanced=True,
             value=True,
             info="If true, the Server File Path will be deleted after processing.",
+        ),
+        BoolInput(
+            name="ignore_unsupported_extensions",
+            display_name="Ignore Unsupported Extensions",
+            advanced=True,
+            value=True,
+            info="If true, files with unsupported extensions will not be processed.",
         ),
     ]
 
@@ -93,20 +103,45 @@ class BaseFileComponent(Component, ABC):
         Raises:
             ValueError: If no valid file is provided or file extensions are unsupported.
         """
-        resolved_paths = self._resolve_paths()
-
-        valid_file_paths = [
-            path for path, _ in resolved_paths if path.suffix[1:] in self.valid_extensions
-        ]
-
-        processed_data = self.process_files(valid_file_paths)
-
+        # List to keep track of temporary directories
+        self._temp_dirs = []
+        final_files_with_flags = []
         try:
+            # Step 1: Validate the provided paths
+            paths_with_flags = self._validate_and_resolve_paths()
+
+            # self.log(f"paths_with_flags: {paths_with_flags}")
+
+            # Step 2: Handle bundles recursively
+            all_files_with_flags = self._unpack_and_collect_files(paths_with_flags)
+
+            # self.log(f"all_files_with_flags: {all_files_with_flags}")
+
+            # Step 3: Final validation of file types and remove-after-processing markers
+            final_files_with_flags = self._filter_and_mark_files(all_files_with_flags)
+
+            # self.log(f"final_files_with_flags: {final_files_with_flags}")
+
+            # Extract just the paths for processing
+            valid_file_paths = [path for path, _ in final_files_with_flags]
+
+            # self.log(f"valid_file_paths: {valid_file_paths}")
+
+            processed_data = self.process_files(valid_file_paths)
+
             return [data for data in processed_data if data]
         finally:
-            for path, delete_after_processing in resolved_paths:
+            # Delete temporary directories
+            for temp_dir in self._temp_dirs:
+                temp_dir.cleanup()
+
+            # Delete files marked for deletion
+            for path, delete_after_processing in final_files_with_flags:
                 if delete_after_processing and path.exists():
-                    path.unlink()
+                    if path.is_dir():
+                        shutil.rmtree(path)
+                    else:
+                        path.unlink()
 
     @property
     def valid_extensions(self) -> list[str]:
@@ -129,127 +164,146 @@ class BaseFileComponent(Component, ABC):
         """
         return self.IGNORE_STARTS_WITH
 
-    def _resolve_paths(self) -> list[tuple[Path, bool]]:
-        """Resolves file paths and validates extensions.
+    def _validate_and_resolve_paths(self) -> list[tuple[Path, bool]]:
+        """Validate that all input paths exist and are valid.
 
         Returns:
-            list[tuple[Path, bool]]: Resolved paths and whether they should be removed after processing.
+            list[tuple[Path, bool]]: A list of valid paths and whether they should be deleted after processing.
 
         Raises:
-            ValueError: If paths contain unsupported file extensions.
+            ValueError: If any path does not exist.
         """
         resolved_paths = []
 
-        def add_path(path: str, to_remove: bool):
+        def add_path(path: str, *, delete_after_processing: bool):
             resolved_path = Path(self.resolve_path(path))
-            if resolved_path.suffix[1:] not in self.valid_extensions + self.SUPPORTED_BUNDLE_EXTENSIONS:
-                msg = f"Unsupported file type: {resolved_path.suffix}"
+            if not resolved_path.exists():
+                msg = f"File or directory not found: {path}"
                 self.log(msg)
                 if not self.silent_errors:
                     raise ValueError(msg)
-            else:
-                resolved_paths.append((resolved_path, to_remove))
+            resolved_paths.append((resolved_path, delete_after_processing))
 
-        # Add self.path if provided
-        if self.path:
-            add_path(self.path, False)
-
-        # Add paths from file_path if provided
-        if self.file_path:
+        if self.path and not self.file_path: # Only process self.path if file_path is not provided
+            add_path(self.path, delete_after_processing=False)  # Files from self.path are never deleted
+        elif self.file_path:
             if isinstance(self.file_path, Data):
                 self.file_path = [self.file_path]
 
-            if isinstance(self.file_path, list):
-                for obj in self.file_path:
-                    if not isinstance(obj, Data):
-                        msg = f"Unexpected type in file_path. Expected Data, got {type(obj)}."
-                        self.log(msg)
-                        if not self.silent_errors:
-                            raise ValueError(msg)
-                        continue
+            for obj in self.file_path:
+                if not isinstance(obj, Data):
+                    msg = f"Expected Data object in file_path but got {type(obj)}."
+                    self.log(msg)
+                    if not self.silent_errors:
+                        raise ValueError(msg)
+                    continue
 
-                    server_file_path = obj.data.get(self.SERVER_FILE_PATH_FIELDNAME)
-                    if server_file_path:
-                        add_path(server_file_path, self.delete_server_file_after_processing)
-                    else:
-                        msg = f"One of the Data objects is missing the `{self.SERVER_FILE_PATH_FIELDNAME}` property."
-                        self.log(msg)
-                        if not self.silent_errors:
-                            raise ValueError(msg)
-            else:
-                msg = f"Unexpected type in file_path. Expected list, got {type(self.file_path)}."
-                self.log(msg)
-                if not self.silent_errors:
-                    raise ValueError(msg)
+                server_file_path = obj.data.get(self.SERVER_FILE_PATH_FIELDNAME)
+                if server_file_path:
+                    add_path(server_file_path, delete_after_processing=self.delete_server_file_after_processing)
+                else:
+                    msg = f"Data object missing '{self.SERVER_FILE_PATH_FIELDNAME}' property."
+                    self.log(msg)
+                    if not self.silent_errors:
+                        raise ValueError(msg)
 
-        # Unpack file bundles
-        final_paths = []
-        for path, to_remove in resolved_paths:
-            final_paths.append((path, to_remove))
-            if path.suffix[1:] in self.SUPPORTED_BUNDLE_EXTENSIONS:
-                self.log(f"Unpacking file bundle: {path.name}.")
-                final_paths.extend((p, True) for p in self._unpack_file_bundle(path))
+        return resolved_paths
 
-        return final_paths
-
-    def _unpack_file_bundle(self, bundle_path: Path) -> list[Path]:
-        """Unpacks a file bundle (zip, tar, tgz, etc.) and returns extracted file paths.
+    def _unpack_and_collect_files(self, paths_with_flags: list[tuple[Path, bool]]) -> list[tuple[Path, bool]]:
+        """Recursively unpack bundles and collect files.
 
         Args:
-            bundle_path (Path): Path to the file bundle.
+            paths_with_flags (list[tuple[Path, bool]]): List of input paths and their delete-after-processing flags.
 
         Returns:
-            list[Path]: Paths to the extracted files.
+            list[tuple[Path, bool]]: List of all files after unpacking bundles, along with their delete-after-processing flags.
+        """
+        collected_files_with_flags = []
+
+        for path, delete_after_processing in paths_with_flags:
+            if path.is_dir():
+                # Recurse into directories
+                for sub_path in path.rglob('*'):  # Use rglob to recursively find all files and directories
+                    if sub_path.is_file():  # Only add files
+                        collected_files_with_flags.append((sub_path, delete_after_processing))
+            elif path.suffix[1:] in self.SUPPORTED_BUNDLE_EXTENSIONS:
+                # Unpack supported bundles
+                temp_dir = TemporaryDirectory()
+                self._temp_dirs.append(temp_dir)
+                temp_dir_path = Path(temp_dir.name)
+                self._unpack_bundle(path, temp_dir_path)
+                subpaths = list(temp_dir_path.iterdir())
+                self.log(f"Unpacked bundle {path.name} into {subpaths}")
+                for sub_path in subpaths:
+                    if sub_path.is_dir():
+                        # Add directory to process its contents later
+                        collected_files_with_flags.append((sub_path, delete_after_processing))
+                    else:
+                        collected_files_with_flags.append((sub_path, delete_after_processing))
+            else:
+                collected_files_with_flags.append((path, delete_after_processing))
+
+        # Recurse again if any directories or bundles are left in the list
+        if any(file.is_dir() or file.suffix[1:] in self.SUPPORTED_BUNDLE_EXTENSIONS for file, _ in collected_files_with_flags):
+            return self._unpack_and_collect_files(collected_files_with_flags)
+
+        return collected_files_with_flags
+
+    def _unpack_bundle(self, bundle_path: Path, output_dir: Path):
+        """Unpack a bundle into a temporary directory.
+
+        Args:
+            bundle_path (Path): Path to the bundle.
+            output_dir (Path): Directory where files will be extracted.
 
         Raises:
-            ValueError: If the bundle contains no valid files or cannot be read.
+            ValueError: If the bundle format is unsupported or cannot be read.
         """
-        unpacked_files = []
-
-        def extract_files(list_files_callable: Callable, extract_file_callable: Callable):
-            """Helper to validate and extract files from the bundle."""
-            valid_files = [
-                file for file in list_files_callable()
-                if (
-                    any(file.endswith(f".{ext}") for ext in self.valid_extensions)
-                    and not file.startswith(tuple(self.IGNORE_STARTS_WITH))
-                )
-            ]
-
-            if not valid_files:
-                msg = f"No valid files in the bundle: {bundle_path.name}."
-                self.log(msg)
-                if not self.silent_errors:
-                    raise ValueError(msg)
-
-            for file in valid_files:
-                with NamedTemporaryFile(delete=False) as temp_file:
-                    temp_path = Path(temp_file.name).with_name(file)
-                    file_content = extract_file_callable(file)
-                    if file_content:
-                        temp_path.write_bytes(file_content.read())
-                    unpacked_files.append(temp_path)
-
         if is_zipfile(bundle_path):
             with ZipFile(bundle_path, "r") as bundle:
-                extract_files(
-                    list_files_callable=bundle.namelist,
-                    extract_file_callable=bundle.open,
-                )
+                bundle.extractall(output_dir)
         elif tarfile.is_tarfile(bundle_path):
             with tarfile.open(bundle_path, "r:*") as bundle:
-                extract_files(
-                    list_files_callable=lambda: [
-                        member.name for member in bundle.getmembers() if member.isfile()
-                    ],
-                    extract_file_callable=lambda member_name: bundle.extractfile(
-                        next(m for m in bundle.getmembers() if m.name == member_name)
-                    ),
-                )
+                bundle.extractall(output_dir)
         else:
             msg = f"Unsupported bundle format: {bundle_path.suffix}"
             self.log(msg)
             if not self.silent_errors:
                 raise ValueError(msg)
 
-        return unpacked_files
+    def _filter_and_mark_files(self, files_with_flags: list[tuple[Path, bool]]) -> list[tuple[Path, bool]]:
+        """Validate file types and mark files for removal.
+
+        Args:
+            files_with_flags (list[tuple[Path, bool]]): List of files and their delete-after-processing flags.
+
+        Returns:
+            list[tuple[Path, bool]]: Validated files with their remove-after-processing markers.
+
+        Raises:
+            ValueError: If unsupported files are encountered and `ignore_unsupported_extensions` is False.
+        """
+        final_files_with_flags = []
+        ignored_files = []
+
+        for file, delete_after_processing in files_with_flags:
+            if not file.is_file():
+                self.log(f"Not a file: {file.name}")
+                continue
+
+            if file.suffix[1:] not in self.valid_extensions:
+                if self.ignore_unsupported_extensions:
+                    ignored_files.append(file.name)
+                    continue
+                else:
+                    msg = f"Unsupported file extension: {file.suffix}"
+                    self.log(msg)
+                    if not self.silent_errors:
+                        raise ValueError(msg)
+
+            final_files_with_flags.append((file, delete_after_processing))
+
+        if ignored_files:
+            self.log(f"Ignored files: {ignored_files}")
+
+        return final_files_with_flags
