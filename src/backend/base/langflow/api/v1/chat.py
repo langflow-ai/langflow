@@ -168,7 +168,7 @@ async def build_flow(
             if not data:
                 graph = await build_graph_from_db_no_cache(flow_id=flow_id_str, session=session)
             else:
-                flow_name = session.exec(select(Flow.name).where(Flow.id == flow_id_str)).first()
+                flow_name = await session.exec(select(Flow.name).where(Flow.id == flow_id_str)).first()
                 graph = await build_graph_from_data(
                     flow_id_str, data.model_dump(), user_id=str(current_user.id), flow_name=flow_name
                 )
