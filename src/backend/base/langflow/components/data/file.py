@@ -62,19 +62,20 @@ class FileComponent(BaseFileComponent):
                 msg = f"File not found: {file_path.name}. Error: {e}"
                 self.log(msg)
                 if not silent_errors:
-                    raise e
+                    raise
                 return None
             except Exception as e:
                 msg = f"Unexpected error processing {file_path.name}: {e}"
                 self.log(msg)
                 if not silent_errors:
-                    raise e
+                    raise
                 return None
 
         concurrency = 1 if not self.use_multithreading else max(1, self.concurrency_multithreading)
         file_count = len(file_list)
 
-        if concurrency < 2 or file_count < 2:
+        PARALLEL_PROCESSING_THRESHOLD = 2
+        if concurrency < PARALLEL_PROCESSING_THRESHOLD or file_count < PARALLEL_PROCESSING_THRESHOLD:
             if file_count > 1:
                 self.log(f"Processing {file_count} files sequentially.")
             processed_data = [process_file(file) for file in file_list if file]

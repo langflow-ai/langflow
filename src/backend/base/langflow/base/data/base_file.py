@@ -1,8 +1,10 @@
+import os
 import shutil
 import tarfile
 from abc import ABC, abstractmethod
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Callable
 from zipfile import ZipFile, is_zipfile
 
 from langflow.custom import Component
@@ -214,16 +216,17 @@ class BaseFileComponent(Component, ABC):
             paths_with_flags (list[tuple[Path, bool]]): List of input paths and their delete-after-processing flags.
 
         Returns:
-            list[tuple[Path, bool]]: List of all files after unpacking bundles, along with their delete-after-processing flags.
+            list[tuple[Path, bool]]: 
+                List of all files after unpacking bundles, along with their delete-after-processing flags.
         """
         collected_files_with_flags = []
 
         for path, delete_after_processing in paths_with_flags:
             if path.is_dir():
                 # Recurse into directories
-                for sub_path in path.rglob("*"):  # Use rglob to recursively find all files and directories
-                    if sub_path.is_file():  # Only add files
-                        collected_files_with_flags.append((sub_path, delete_after_processing))
+                collected_files_with_flags.extend(
+                    [(sub_path, delete_after_processing) for sub_path in path.rglob("*") if sub_path.is_file()]
+                )
             elif path.suffix[1:] in self.SUPPORTED_BUNDLE_EXTENSIONS:
                 # Unpack supported bundles
                 temp_dir = TemporaryDirectory()
@@ -250,6 +253,31 @@ class BaseFileComponent(Component, ABC):
 
         return collected_files_with_flags
 
+    def _safe_extract(
+        self,
+        extract_func: Callable[[Path], None],
+        members: list[str],
+        output_dir: Path,
+        archive_type: str,
+    ):
+        """Safely extract files from an archive, ensuring no path traversal.
+
+        Args:
+            extract_func (Callable): Function to perform the extraction.
+            members (list[str]): List of members (file paths) to extract.
+            output_dir (Path): Directory where files will be extracted.
+            archive_type (str): Type of archive (ZIP or TAR) for logging.
+
+        Raises:
+            ValueError: If an attempted path traversal is detected.
+        """
+        path = str(output_dir)
+        for member in members:
+            member_path = os.path.join(path, member)
+            if not os.path.commonpath([path, member_path]).startswith(path):
+                raise ValueError(f"Attempted Path Traversal in {archive_type} File: {member}")
+        extract_func(output_dir)
+
     def _unpack_bundle(self, bundle_path: Path, output_dir: Path):
         """Unpack a bundle into a temporary directory.
 
@@ -262,10 +290,20 @@ class BaseFileComponent(Component, ABC):
         """
         if is_zipfile(bundle_path):
             with ZipFile(bundle_path, "r") as bundle:
-                bundle.extractall(output_dir)
+                self._safe_extract(
+                    bundle.extractall,
+                    bundle.namelist(),
+                    output_dir,
+                    "ZIP",
+                )
         elif tarfile.is_tarfile(bundle_path):
             with tarfile.open(bundle_path, "r:*") as bundle:
-                bundle.extractall(output_dir)
+                self._safe_extract(
+                    lambda output_dir: bundle.extractall(output_dir),
+                    [member.name for member in bundle.getmembers()],
+                    output_dir,
+                    "TAR",
+                )
         else:
             msg = f"Unsupported bundle format: {bundle_path.suffix}"
             self.log(msg)
