@@ -75,6 +75,15 @@ const config = {
         },
       }),
     ],
+    [
+      "docusaurus-preset-openapi",
+      {
+        api: {
+          path: "openapi.json",
+          routeBasePath: "api",
+        },
+      },
+    ],
   ],
   plugins: [
     ["docusaurus-node-polyfills", { excludeAliases: ["console"] }],
