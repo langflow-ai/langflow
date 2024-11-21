@@ -39,6 +39,7 @@ import {
   getNodeId,
   scapeJSONParse,
   scapedJSONStringfy,
+  unselectAllNodesEdges,
   updateGroupRecursion,
   validateNodes,
 } from "../utils/reactflowUtils";
@@ -186,6 +187,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     let newEdges = cleanEdges(nodes, edges);
     const { inputs, outputs } = getInputsAndOutputs(nodes);
     get().updateComponentsToUpdate(nodes);
+    unselectAllNodesEdges(nodes, edges);
     set({
       nodes,
       edges: newEdges,
@@ -212,7 +214,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   setReactFlowInstance: (newState) => {
     set({ reactFlowInstance: newState });
-    get().reactFlowInstance?.fitView();
   },
   onNodesChange: (changes: NodeChange[]) => {
     set({
@@ -257,13 +258,15 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     id: string,
     change: Node | ((oldState: Node) => Node),
     isUserChange: boolean = true,
+    callback?: () => void,
   ) => {
     let newChange =
       typeof change === "function"
         ? change(get().nodes.find((node) => node.id === id)!)
         : change;
-    get().setNodes((oldNodes) =>
-      oldNodes.map((node) => {
+
+    set((state) => {
+      const newNodes = state.nodes.map((node) => {
         if (node.id === id) {
           if (isUserChange) {
             if ((node.data as NodeDataType).node?.frozen) {
@@ -273,8 +276,18 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           return newChange;
         }
         return node;
-      }),
-    );
+      });
+
+      if (callback) {
+        // Defer the callback execution to ensure it runs after state updates are fully applied.
+        queueMicrotask(callback);
+      }
+
+      return {
+        ...state,
+        nodes: newNodes,
+      };
+    });
   },
   getNode: (id: string) => {
     return get().nodes.find((node) => node.id === id);

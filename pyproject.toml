@@ -224,7 +224,7 @@ directory = "coverage"
 
 
 [tool.ruff]
-exclude = ["src/backend/langflow/alembic/*"]
+exclude = ["src/backend/base/langflow/alembic/*"]
 line-length = 120
 
 [tool.ruff.lint]
