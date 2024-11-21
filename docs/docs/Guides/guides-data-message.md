@@ -72,7 +72,7 @@ To receive `Data` objects in a component input, you can use the `DataInput` inpu
 The `Message` object extends the functionality of `Data` and includes additional attributes and methods for chat interactions.
 
 
-- **Basic Information:**
+- **Core message data:**
   - `text`: The main text content of the message
   - `sender`: Identifier for the sender (e.g., "User" or "AI")
   - `sender_name`: Name of the sender
