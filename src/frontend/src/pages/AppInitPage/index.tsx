@@ -26,8 +26,10 @@ export function AppInitPage() {
   useGetGlobalVariables({ enabled: isFetched });
   useGetBasicExamplesQuery({ enabled: isFetched });
   useGetTagsQuery({ enabled: isFetched });
+  const { refetch: refetchFolders } = useGetFoldersQuery({
+    enabled: isFetched,
+  });
 
-  const { refetch: refetchFolders } = useGetFoldersQuery();
   useEffect(() => {
     if (isFetched) {
       refreshStars();
