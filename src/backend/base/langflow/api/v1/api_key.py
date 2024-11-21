@@ -1,9 +1,8 @@
-from typing import TYPE_CHECKING
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 
-from langflow.api.utils import AsyncDbSession, CurrentActiveUser, DbSession
+from langflow.api.utils import AsyncDbSession, CurrentActiveUser
 from langflow.api.v1.schemas import ApiKeyCreateRequest, ApiKeysResponse
 from langflow.services.auth import utils as auth_utils
 
@@ -11,9 +10,6 @@ from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.api_key.crud import create_api_key, delete_api_key, get_api_keys
 from langflow.services.database.models.api_key.model import ApiKeyCreate, UnmaskedApiKeyRead
 from langflow.services.deps import get_settings_service
-
-if TYPE_CHECKING:
-    pass
 
 router = APIRouter(tags=["APIKey"], prefix="/api_key")
 
@@ -62,7 +58,7 @@ async def save_store_api_key(
     api_key_request: ApiKeyCreateRequest,
     response: Response,
     current_user: CurrentActiveUser,
-    db: DbSession,
+    db: AsyncDbSession,
 ):
     settings_service = get_settings_service()
     auth_settings = settings_service.auth_settings
@@ -74,7 +70,7 @@ async def save_store_api_key(
         encrypted = auth_utils.encrypt_api_key(api_key, settings_service=settings_service)
         current_user.store_api_key = encrypted
         db.add(current_user)
-        db.commit()
+        await db.commit()
 
         response.set_cookie(
             "apikey_tkn_lflw",

@@ -100,7 +100,7 @@ def get_is_component_from_data(data: dict):
     return data.get("is_component")
 
 
-def check_langflow_version(component: StoreComponentCreate) -> None:
+async def check_langflow_version(component: StoreComponentCreate) -> None:
     from langflow.utils.version import get_version_info
 
     __version__ = get_version_info()["version"]
@@ -108,7 +108,7 @@ def check_langflow_version(component: StoreComponentCreate) -> None:
     if not component.last_tested_version:
         component.last_tested_version = __version__
 
-    langflow_version = get_lf_version_from_pypi()
+    langflow_version = await get_lf_version_from_pypi()
     if langflow_version is None:
         raise HTTPException(status_code=500, detail="Unable to verify the latest version of Langflow")
     if langflow_version != component.last_tested_version:
@@ -160,16 +160,16 @@ async def build_graph_from_data(flow_id: str, payload: dict, **kwargs):
     return graph
 
 
-async def build_graph_from_db_no_cache(flow_id: str, session: Session):
+async def build_graph_from_db_no_cache(flow_id: str, session: AsyncSession):
     """Build and cache the graph."""
-    flow: Flow | None = session.get(Flow, flow_id)
+    flow: Flow | None = await session.get(Flow, flow_id)
     if not flow or not flow.data:
         msg = "Invalid flow ID"
         raise ValueError(msg)
     return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, user_id=str(flow.user_id))
 
 
-async def build_graph_from_db(flow_id: str, session: Session, chat_service: ChatService):
+async def build_graph_from_db(flow_id: str, session: AsyncSession, chat_service: ChatService):
     graph = await build_graph_from_db_no_cache(flow_id, session)
     await chat_service.set_cache(flow_id, graph)
     return graph
