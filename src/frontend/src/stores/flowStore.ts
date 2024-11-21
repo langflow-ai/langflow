@@ -39,6 +39,7 @@ import {
   getNodeId,
   scapeJSONParse,
   scapedJSONStringfy,
+  unselectAllNodesEdges,
   updateGroupRecursion,
   validateNodes,
 } from "../utils/reactflowUtils";
@@ -186,6 +187,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     let newEdges = cleanEdges(nodes, edges);
     const { inputs, outputs } = getInputsAndOutputs(nodes);
     get().updateComponentsToUpdate(nodes);
+    unselectAllNodesEdges(nodes, edges);
     set({
       nodes,
       edges: newEdges,
@@ -212,7 +214,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   setReactFlowInstance: (newState) => {
     set({ reactFlowInstance: newState });
-    get().reactFlowInstance?.fitView();
   },
   onNodesChange: (changes: NodeChange[]) => {
     set({
