@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://www.googletagmanager.com">
 <script>window.dataLayer=window.dataLayer||[]</script>
 <script>!function(e,t,a,n){e[n]=e[n]||[],e[n].push({"gtm.start":(new Date).getTime(),event:"gtm.js"});var g=t.getElementsByTagName(a)[0],m=t.createElement(a);m.async=!0,m.src="https://www.googletagmanager.com/gtm.js?id=GTM-NK5M4ZT8",g.parentNode.insertBefore(m,g)}(window,document,"script","dataLayer")</script><link rel="stylesheet" href="/assets/css/styles.1917eb9a.css">
-<script src="/assets/js/runtime~main.77159e8c.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.90766109.js" defer="defer"></script>
 <script src="/assets/js/main.f8a0481b.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -37,25 +37,41 @@
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span># Creating a Data object with a specific text_key and default_value</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>data = Data(data={&quot;title&quot;: &quot;Hello, World!&quot;}, text_key=&quot;content&quot;, default_value=&quot;No content available&quot;)</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span></span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span># Accessing the primary text using text_key and default_value</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>print(data.get_text())  # Outputs: &quot;No content available&quot; because &quot;content&quot; key is not in the data dictionary</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span></span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span># Accessing data keys by calling the attribute directly</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>print(data.title)  # Outputs: &quot;Hello, World!&quot; because &quot;title&quot; key is in the data dictionary</span></div></div><br></code></div></div>
 <p>The <code>Data</code> object is also convenient for visualization of outputs, since the output preview has visual elements to inspect data as a table and its cells as pop ups for basic types. The idea is to create a unified way to work and visualize complex information in Langflow.</p>
 <p>To receive <code>Data</code> objects in a component input, you can use the <code>DataInput</code> input type.</p>
-<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="f4f17cad02a545068f407d515cbc2902">The Message Object<a href="#f4f17cad02a545068f407d515cbc2902" class="hash-link" aria-label="Direct link to The Message Object" title="Direct link to The Message Object">​</a></h2>
+<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="f4f17cad02a545068f407d515cbc2902">Message object attributes<a href="#f4f17cad02a545068f407d515cbc2902" class="hash-link" aria-label="Direct link to Message object attributes" title="Direct link to Message object attributes">​</a></h2>
 <hr>
 <p>The <code>Message</code> object extends the functionality of <code>Data</code> and includes additional attributes and methods for chat interactions.</p>
 <ul>
-<li><strong>Main Attributes:</strong>
+<li>
+<p><strong>Core message data:</strong></p>
 <ul>
-<li><code>text_key</code>: Key to retrieve the primary text data.</li>
-<li><code>text</code>: The main text content of the message.</li>
-<li><code>sender</code>: Identifier for the sender (e.g., &quot;User&quot; or &quot;AI&quot;).</li>
-<li><code>sender_name</code>: Name of the sender.</li>
-<li><code>files</code>: List of files associated with the message.</li>
-<li><code>session_id</code>: Identifier for the chat session.</li>
-<li><code>timestamp</code>: Timestamp when the message was created.</li>
-<li><code>flow_id</code>: Identifier for the flow.</li>
+<li><code>text</code>: The main text content of the message</li>
+<li><code>sender</code>: Identifier for the sender (e.g., &quot;User&quot; or &quot;AI&quot;)</li>
+<li><code>sender_name</code>: Name of the sender</li>
+<li><code>session_id</code>: Identifier for the chat session</li>
+<li><code>timestamp</code>: Timestamp when the message was created (UTC)</li>
+<li><code>flow_id</code>: Identifier for the flow</li>
+<li><code>id</code>: Unique identifier for the message</li>
+</ul>
+</li>
+<li>
+<p><strong>Content and files:</strong></p>
+<ul>
+<li><code>files</code>: List of files or images associated with the message</li>
+<li><code>content_blocks</code>: List of structured content blocks</li>
+<li><code>properties</code>: Additional properties including visual styling and source information</li>
+</ul>
+</li>
+<li>
+<p><strong>Message state:</strong></p>
+<ul>
+<li><code>error</code>: Boolean indicating if there was an error</li>
+<li><code>edit</code>: Boolean indicating if the message was edited</li>
+<li><code>category</code>: Message category (&quot;message&quot;, &quot;error&quot;, &quot;warning&quot;, &quot;info&quot;)</li>
 </ul>
 </li>
 </ul>
-<p>The <code>Message</code> object can be used to send, store and manipulate chat messages within Langflow. You can create a <code>Message</code> object by directly assigning key-value pairs to it. For example:</p>
+<p>The <code>Message</code> object can be used to send, store, and manipulate chat messages within Langflow. You can create a <code>Message</code> object by directly assigning key-value pairs to it. For example:</p>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>from langflow.schema.message import Message</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span></span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>message = Message(text=&quot;Hello, AI!&quot;, sender=&quot;User&quot;, sender_name=&quot;John Doe&quot;)</span></div></div><br></code></div></div>
-<p>To receive <code>Message</code> objects in a component input, you can use the <code>MessageInput</code> input type or <code>MessageTextInput</code> when the goal is to extract just the <code>text</code> field of the <code>Message</code> object.</p></div></article><nav class="pagination-nav docusaurus-mt-lg" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/guides-chat-memory"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Chat Memory</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/workspace-overview"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Workspace concepts</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#e0d56e463d2f483bb1b5df09d88bf309" class="table-of-contents__link toc-highlight">The Data Object</a><ul><li><a href="#3540b7e651f74b558febebbe43380660" class="table-of-contents__link toc-highlight">Creating a Data Object</a></li></ul></li><li><a href="#f4f17cad02a545068f407d515cbc2902" class="table-of-contents__link toc-highlight">The Message Object</a></li></ul></div></div></div></div></main></div></div></div><div id="ms-floating-button" class="ms-fixed ms-bottom-4 ms-right-8 ms-z-[100] ms-flex ms-flex-col ms-items-end hover:ms-cursor-pointer"><div class="ms-relative ms-mb-4"><div style="background-color:#f6f6f6" class="ms-absolute -ms-bottom-1 ms-right-6 -ms-z-10 ms-h-4 ms-w-4 ms-rotate-45"></div><div style="background-color:#f6f6f6" class="ms-z-10 ms-flex ms-items-center ms-justify-center ms-rounded-lg ms-px-3 ms-py-2"><p style="color:#000000;margin:0" class="ms-text-sm">Hi, how can I help you?</p></div></div><div style="background-color:#f6f6f6" class="ms-flex ms-h-16 ms-w-16 ms-flex-col ms-items-center ms-justify-center ms-self-end ms-rounded-full ms-p-2 ms-transition"><div class="ms-rotate-0 ms-flex ms-h-full ms-w-full ms-transform ms-cursor-pointer ms-items-center ms-justify-center ms-rounded-full ms-transition-all ms-delay-75 ms-duration-100 ms-ease-in-out"><div style="color:#000000;font-size:22px;width:48px;height:48px;margin:0px;padding:0px;display:flex;align-items:center;justify-content:center;text-align:center"><img src="/img/langflow-icon-black-transparent.svg" srcdark="" style="width:40px"></div></div></div><div></div></div></div>
+<p>To receive <code>Message</code> objects in a component input, you can use the <code>MessageInput</code> input type or <code>MessageTextInput</code> when the goal is to extract just the <code>text</code> field of the <code>Message</code> object.</p></div></article><nav class="pagination-nav docusaurus-mt-lg" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/guides-chat-memory"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Chat Memory</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/workspace-overview"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Workspace concepts</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#e0d56e463d2f483bb1b5df09d88bf309" class="table-of-contents__link toc-highlight">The Data Object</a><ul><li><a href="#3540b7e651f74b558febebbe43380660" class="table-of-contents__link toc-highlight">Creating a Data Object</a></li></ul></li><li><a href="#f4f17cad02a545068f407d515cbc2902" class="table-of-contents__link toc-highlight">Message object attributes</a></li></ul></div></div></div></div></main></div></div></div><div id="ms-floating-button" class="ms-fixed ms-bottom-4 ms-right-8 ms-z-[100] ms-flex ms-flex-col ms-items-end hover:ms-cursor-pointer"><div class="ms-relative ms-mb-4"><div style="background-color:#f6f6f6" class="ms-absolute -ms-bottom-1 ms-right-6 -ms-z-10 ms-h-4 ms-w-4 ms-rotate-45"></div><div style="background-color:#f6f6f6" class="ms-z-10 ms-flex ms-items-center ms-justify-center ms-rounded-lg ms-px-3 ms-py-2"><p style="color:#000000;margin:0" class="ms-text-sm">Hi, how can I help you?</p></div></div><div style="background-color:#f6f6f6" class="ms-flex ms-h-16 ms-w-16 ms-flex-col ms-items-center ms-justify-center ms-self-end ms-rounded-full ms-p-2 ms-transition"><div class="ms-rotate-0 ms-flex ms-h-full ms-w-full ms-transform ms-cursor-pointer ms-items-center ms-justify-center ms-rounded-full ms-transition-all ms-delay-75 ms-duration-100 ms-ease-in-out"><div style="color:#000000;font-size:22px;width:48px;height:48px;margin:0px;padding:0px;display:flex;align-items:center;justify-content:center;text-align:center"><img src="/img/langflow-icon-black-transparent.svg" srcdark="" style="width:40px"></div></div></div><div></div></div></div>
 </body>
 </html>
