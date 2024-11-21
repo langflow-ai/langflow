@@ -184,7 +184,9 @@ test("should create a flow with decision", async ({ page }) => {
   }
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 3000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
   await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -199,14 +201,18 @@ test("should create a flow with decision", async ({ page }) => {
   //---------------------------------- CHAT INPUT
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("chat input");
-  await page.waitForTimeout(500);
+  await page.waitForSelector('[data-testid="inputsChat Input"]', {
+    timeout: 500,
+  });
   await page
     .getByTestId("inputsChat Input")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   //---------------------------------- CREATE LIST
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("list");
-  await page.waitForTimeout(500);
+  await page.waitForSelector('[data-testid="helpersCreate List"]', {
+    timeout: 500,
+  });
   await page
     .getByTestId("helpersCreate List")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
@@ -237,7 +243,9 @@ test("should create a flow with decision", async ({ page }) => {
   //---------------------------------- PARSE DATA
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("parse data");
-  await page.waitForTimeout(500);
+  await page.waitForSelector('[data-testid="processingParse Data"]', {
+    timeout: 500,
+  });
   await page
     .getByTestId("processingParse Data")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
@@ -247,47 +255,63 @@ test("should create a flow with decision", async ({ page }) => {
   //---------------------------------- PASS
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("pass");
-  await page.waitForTimeout(500);
+  await page.waitForSelector('[data-testid="logicPass"]', {
+    timeout: 500,
+  });
   await page
     .getByTestId("logicPass")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.waitForTimeout(500);
+    await page.waitForSelector('[data-testid="logicPass"]', {
+      timeout: 500,
+  });
   await page
     .getByTestId("logicPass")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.waitForTimeout(500);
+    await page.waitForSelector('[data-testid="logicPass"]', {
+      timeout: 500,
+  });
   await page
     .getByTestId("logicPass")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   //---------------------------------- PROMPT
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("prompt");
-  await page.waitForTimeout(500);
+  await page.waitForSelector('[data-testid="promptsPrompt"]', {
+    timeout: 500,
+  });
   await page
     .getByTestId("promptsPrompt")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   //---------------------------------- OPENAI
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("openai");
-  await page.waitForTimeout(500);
+  await page.waitForSelector('[data-testid="modelsOpenAI"]', {
+    timeout: 500,
+  });
   await page
     .getByTestId("modelsOpenAI")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   //---------------------------------- CONDITIONAL ROUTER
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("if else");
-  await page.waitForTimeout(500);
+  await page.waitForSelector('[data-testid="logicIf-Else"]', {
+    timeout: 500,
+  });
   await page
     .getByTestId("logicIf-Else")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   //---------------------------------- CHAT OUTPUT
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("chat output");
-  await page.waitForTimeout(500);
+  await page.waitForSelector('[data-testid="outputsChat Output"]', {
+    timeout: 500,
+  });
   await page
     .getByTestId("outputsChat Output")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.waitForTimeout(500);
+  await page.waitForSelector('[data-testid="outputsChat Output"]', {
+    timeout: 500,
+  });
   await page
     .getByTestId("outputsChat Output")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
