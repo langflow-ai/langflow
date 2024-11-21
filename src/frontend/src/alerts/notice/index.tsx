@@ -11,7 +11,7 @@ export default function NoticeAlert({
   removeAlert,
 }: NoticeAlertType): JSX.Element {
   const [show, setShow] = useState(true);
-  
+
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       setShow(false);
