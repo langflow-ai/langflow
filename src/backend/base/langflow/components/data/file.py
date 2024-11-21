@@ -41,7 +41,6 @@ class FileComponent(BaseFileComponent):
     ]
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
-
         def process_file(file_path: str, *, silent_errors: bool = False) -> Data | None:
             """Processes a single file and returns its Data object."""
             try:
@@ -82,7 +81,7 @@ class FileComponent(BaseFileComponent):
                 load_function=process_file,
                 max_concurrency=concurrency,
             )
-            processed_files = zip(file_list, processed_data)
+            processed_files = zip(file_list, processed_data, strict=False)
 
         for file, parsed_data in processed_files:
             file.merge_data(parsed_data)

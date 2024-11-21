@@ -19,8 +19,9 @@ class BaseFileComponent(Component, ABC):
     and implement the `process_files` method.
     """
 
-    class BaseFile():
+    class BaseFile:
         """Internal class to represent a file with additional metadata."""
+
         def __init__(self, data: Data, path: Path, *, delete_after_processing: bool = False):
             self.data = data
             self.path = path
@@ -37,7 +38,7 @@ class BaseFileComponent(Component, ABC):
             """
             if new_data is not None:
                 self.data = Data(data={**self.data.data, **new_data.data})
-            return self.data        
+            return self.data
 
         def __str__(self):
             max_text_length = 50
@@ -197,7 +198,9 @@ class BaseFileComponent(Component, ABC):
                 self.log(msg)
                 if not self.silent_errors:
                     raise ValueError(msg)
-            resolved_files.append(BaseFileComponent.BaseFile(data, resolved_path, delete_after_processing=delete_after_processing))
+            resolved_files.append(
+                BaseFileComponent.BaseFile(data, resolved_path, delete_after_processing=delete_after_processing)
+            )
 
         if self.path and not self.file_path:  # Only process self.path if file_path is not provided
             # Wrap self.path into a Data object
@@ -270,14 +273,15 @@ class BaseFileComponent(Component, ABC):
                 subpaths = list(temp_dir_path.iterdir())
                 self.log(f"Unpacked bundle {path.name} into {subpaths}")
                 for sub_path in subpaths:
-                    collected_files.append(BaseFileComponent.BaseFile(data, sub_path, delete_after_processing=delete_after_processing))
+                    collected_files.append(
+                        BaseFileComponent.BaseFile(data, sub_path, delete_after_processing=delete_after_processing)
+                    )
             else:
                 collected_files.append(file)
 
         # Recurse again if any directories or bundles are left in the list
         if any(
-            file.path.is_dir() or file.path.suffix[1:] in self.SUPPORTED_BUNDLE_EXTENSIONS
-            for file in collected_files
+            file.path.is_dir() or file.path.suffix[1:] in self.SUPPORTED_BUNDLE_EXTENSIONS for file in collected_files
         ):
             return self._unpack_and_collect_files(collected_files)
 
