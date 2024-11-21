@@ -91,7 +91,7 @@ The `Message` object extends the functionality of `Data` and includes additi
   - `edit`: Boolean indicating if the message was edited
   - `category`: Message category ("message", "error", "warning", "info")
 
-The `Message` object can be used to send, store and manipulate chat messages within Langflow. You can create a `Message` object by directly assigning key-value pairs to it. For example:
+The `Message` object can be used to send, store, and manipulate chat messages within Langflow. You can create a `Message` object by directly assigning key-value pairs to it. For example:
 
 
 ```python
