@@ -29,7 +29,7 @@ Notice how the **Playground's** window arrangement changes depending on what com
 
 Click on any chat session menu on the right, then click on the message logs option to open a table of previous interactions for a specific flow.
 
-Whenever you send a message from the **Playground** interface, in the **Message Logs** option you'll see a table of previous interactions for that session.
+When you send a message from the **Playground** interface, the interactions for that session are stored in the **Message Logs**.
 
 Langflow allows every chat message to be stored, and a single flow can have multiple chat sessions.
 
