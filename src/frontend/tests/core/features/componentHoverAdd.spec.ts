@@ -54,7 +54,6 @@ test("user can add components by hovering and clicking the plus icon", async ({
 
   expect(opacity).toBe("0");
 
-
   await componentLocator.hover();
   // Hover over the component
   await expect(plusIcon).toBeVisible();
