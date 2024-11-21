@@ -142,11 +142,12 @@ def format_elapsed_time(elapsed_time: float) -> str:
     return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
-async def _get_flow_name(flow_id: str, session: AsyncSession) -> str:
-    flow = await session.get(Flow, flow_id)
-    if flow is None:
-        msg = f"Flow {flow_id} not found"
-        raise ValueError(msg)
+async def _get_flow_name(flow_id: str) -> str:
+    async with async_session_scope() as session:
+        flow = await session.get(Flow, flow_id)
+        if flow is None:
+            msg = f"Flow {flow_id} not found"
+            raise ValueError(msg)
     return flow.name
 
 
@@ -154,9 +155,8 @@ async def build_graph_from_data(flow_id: str, payload: dict, **kwargs):
     """Build and cache the graph."""
     # Get flow name
     if "flow_name" not in kwargs:
-        async with async_session_scope() as session:
-            flow_name = await _get_flow_name(flow_id, session)
-            kwargs["flow_name"] = flow_name
+        flow_name = await _get_flow_name(flow_id)
+        kwargs["flow_name"] = flow_name
     graph = Graph.from_payload(payload, flow_id, **kwargs)
     for vertex_id in graph.has_session_id_vertices:
         vertex = graph.get_vertex(vertex_id)
