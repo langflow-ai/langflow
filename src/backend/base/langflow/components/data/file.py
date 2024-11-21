@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from langflow.base.data import BaseFileComponent
 from langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data
 from langflow.io import BoolInput, IntInput
@@ -42,34 +40,28 @@ class FileComponent(BaseFileComponent):
         *BaseFileComponent._base_outputs,
     ]
 
-    def process_files(self, file_list: list[Path]) -> list[Data]:
-        """Processes a list of individual files and returns parsed data.
+    def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
 
-        This method supports optional multithreading for improved performance
-        when processing multiple files.
-
-        Args:
-            file_list (list[Path]): A list of file paths to be processed.
-
-        Returns:
-            list[Data]: A list of parsed data objects from the processed files.
-        """
-
-        def process_file(file_path: Path, *, silent_errors: bool = False) -> Data:
+        def process_file(file_path: str, *, silent_errors: bool = False) -> Data | None:
+            """Processes a single file and returns its Data object."""
             try:
-                return parse_text_file_to_data(str(file_path), silent_errors=silent_errors)
+                return parse_text_file_to_data(file_path, silent_errors=silent_errors)
             except FileNotFoundError as e:
-                msg = f"File not found: {file_path.name}. Error: {e}"
+                msg = f"File not found: {file_path}. Error: {e}"
                 self.log(msg)
                 if not silent_errors:
                     raise
                 return None
             except Exception as e:
-                msg = f"Unexpected error processing {file_path.name}: {e}"
+                msg = f"Unexpected error processing {file_path}: {e}"
                 self.log(msg)
                 if not silent_errors:
                     raise
                 return None
+
+        if not file_list:
+            self.log("No files to process.")
+            return file_list
 
         concurrency = 1 if not self.use_multithreading else max(1, self.concurrency_multithreading)
         file_count = len(file_list)
@@ -78,15 +70,21 @@ class FileComponent(BaseFileComponent):
         if concurrency < parallel_processing_threshold or file_count < parallel_processing_threshold:
             if file_count > 1:
                 self.log(f"Processing {file_count} files sequentially.")
-            processed_data = [process_file(file) for file in file_list if file]
+            processed_files = [
+                (file, process_file(str(file.path), silent_errors=self.silent_errors)) for file in file_list if file
+            ]
         else:
             self.log(f"Starting parallel processing of {file_count} files with concurrency: {concurrency}.")
+            file_paths = [str(file.path) for file in file_list if file]
             processed_data = parallel_load_data(
-                file_list,
+                file_paths,
                 silent_errors=self.silent_errors,
                 load_function=process_file,
                 max_concurrency=concurrency,
             )
+            processed_files = zip(file_list, processed_data)
 
-        # Filter out empty results and return
-        return [data for data in processed_data if data]
+        for file, parsed_data in processed_files:
+            file.merge_data(parsed_data)
+
+        return file_list

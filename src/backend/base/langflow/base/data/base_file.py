@@ -19,6 +19,37 @@ class BaseFileComponent(Component, ABC):
     and implement the `process_files` method.
     """
 
+    class BaseFile():
+        """Internal class to represent a file with additional metadata."""
+        def __init__(self, data: Data, path: Path, *, delete_after_processing: bool = False):
+            self.data = data
+            self.path = path
+            self.delete_after_processing = delete_after_processing
+
+        def merge_data(self, new_data: Data | None) -> Data:
+            """Merges new data into the existing data object, handling None safely.
+
+            Args:
+                new_data (Data | None): The new Data object to merge. If None, no changes are made.
+
+            Returns:
+                Data: The merged data object.
+            """
+            if new_data is not None:
+                self.data = Data(data={**self.data.data, **new_data.data})
+            return self.data        
+
+        def __str__(self):
+            max_text_length = 50
+            text_preview = self.data.get_text()[:max_text_length]
+            if len(self.data.get_text()) > max_text_length:
+                text_preview += "..."
+            return (
+                f"BaseFile(path={self.path}, "
+                f"delete_after_processing={self.delete_after_processing}, "
+                f"text_preview='{text_preview}')"
+            )
+
     # Subclasses can override these class variables
     VALID_EXTENSIONS = []  # To be overridden by child classes
     IGNORE_STARTS_WITH = [".", "__MACOSX"]
@@ -80,67 +111,52 @@ class BaseFileComponent(Component, ABC):
     _base_outputs = [Output(display_name="Data", name="data", method="load_files")]
 
     @abstractmethod
-    def process_files(self, file_list: list[Path]) -> list[Data]:
-        """Processes a list of files and returns parsed data.
+    def process_files(self, file_list: list[BaseFile]) -> list[BaseFile]:
+        """Processes a list of files.
 
         Args:
-            file_list (list[Path]): A list of file paths to be processed.
+            file_list (list[BaseFile]): A list of file objects.
 
         Returns:
-            list[Data]: A list of parsed data objects from the processed files.
+            list[BaseFile]: A list of BaseFile objects with updated `data`.
         """
 
     def load_files(self) -> list[Data]:
         """Loads and parses file(s), including unpacked file bundles.
 
-        This method resolves file paths, validates extensions, and delegates
-        file processing to the `process_files` method.
-
         Returns:
             list[Data]: Parsed data from the processed files.
-
-        Raises:
-            ValueError: If no valid file is provided or file extensions are unsupported.
         """
-        # List to keep track of temporary directories
         self._temp_dirs = []
-        final_files_with_flags = []
         try:
             # Step 1: Validate the provided paths
-            paths_with_flags = self._validate_and_resolve_paths()
-
-            # self.log(f"paths_with_flags: {paths_with_flags}")
+            files = self._validate_and_resolve_paths()
 
             # Step 2: Handle bundles recursively
-            all_files_with_flags = self._unpack_and_collect_files(paths_with_flags)
+            all_files = self._unpack_and_collect_files(files)
 
-            # self.log(f"all_files_with_flags: {all_files_with_flags}")
+            # Step 3: Final validation of file types
+            final_files = self._filter_and_mark_files(all_files)
 
-            # Step 3: Final validation of file types and remove-after-processing markers
-            final_files_with_flags = self._filter_and_mark_files(all_files_with_flags)
+            # Step 4: Process files
+            processed_files = self.process_files(final_files)
 
-            # self.log(f"final_files_with_flags: {final_files_with_flags}")
+            # Extract Data objects to return
+            processed_data = [file.data for file in processed_files if file.data]
 
-            # Extract just the paths for processing
-            valid_file_paths = [path for path, _ in final_files_with_flags]
-
-            # self.log(f"valid_file_paths: {valid_file_paths}")
-
-            processed_data = self.process_files(valid_file_paths)
-
-            return [data for data in processed_data if data]
+            return processed_data
         finally:
             # Delete temporary directories
             for temp_dir in self._temp_dirs:
                 temp_dir.cleanup()
 
             # Delete files marked for deletion
-            for path, delete_after_processing in final_files_with_flags:
-                if delete_after_processing and path.exists():
-                    if path.is_dir():
-                        shutil.rmtree(path)
+            for file in final_files:
+                if file.delete_after_processing and file.path.exists():
+                    if file.path.is_dir():
+                        shutil.rmtree(file.path)
                     else:
-                        path.unlink()
+                        file.path.unlink()
 
     @property
     def valid_extensions(self) -> list[str]:
@@ -163,31 +179,39 @@ class BaseFileComponent(Component, ABC):
         """
         return self.IGNORE_STARTS_WITH
 
-    def _validate_and_resolve_paths(self) -> list[tuple[Path, bool]]:
-        """Validate that all input paths exist and are valid.
+    def _validate_and_resolve_paths(self) -> list[BaseFile]:
+        """Validate that all input paths exist and are valid, and create BaseFile instances.
 
         Returns:
-            list[tuple[Path, bool]]: A list of valid paths and whether they should be deleted after processing.
+            list[BaseFile]: A list of valid BaseFile instances.
 
         Raises:
             ValueError: If any path does not exist.
         """
-        resolved_paths = []
+        resolved_files = []
 
-        def add_path(path: str, *, delete_after_processing: bool):
+        def add_file(data: Data, path: str | Path, *, delete_after_processing: bool):
             resolved_path = Path(self.resolve_path(path))
             if not resolved_path.exists():
                 msg = f"File or directory not found: {path}"
                 self.log(msg)
                 if not self.silent_errors:
                     raise ValueError(msg)
-            resolved_paths.append((resolved_path, delete_after_processing))
+            resolved_files.append(BaseFileComponent.BaseFile(data, resolved_path, delete_after_processing=delete_after_processing))
 
         if self.path and not self.file_path:  # Only process self.path if file_path is not provided
-            add_path(self.path, delete_after_processing=False)  # Files from self.path are never deleted
+            # Wrap self.path into a Data object
+            data_obj = Data(file_path=self.path)
+            add_file(data=data_obj, path=self.path, delete_after_processing=False)
         elif self.file_path:
             if isinstance(self.file_path, Data):
                 self.file_path = [self.file_path]
+            elif not isinstance(self.file_path, list):
+                msg = f"Expected list of Data objects in file_path but got {type(self.file_path)}."
+                self.log(msg)
+                if not self.silent_errors:
+                    raise ValueError(msg)
+                return []
 
             for obj in self.file_path:
                 if not isinstance(obj, Data):
@@ -199,32 +223,43 @@ class BaseFileComponent(Component, ABC):
 
                 server_file_path = obj.data.get(self.SERVER_FILE_PATH_FIELDNAME)
                 if server_file_path:
-                    add_path(server_file_path, delete_after_processing=self.delete_server_file_after_processing)
+                    add_file(
+                        data=obj,
+                        path=server_file_path,
+                        delete_after_processing=self.delete_server_file_after_processing,
+                    )
                 else:
                     msg = f"Data object missing '{self.SERVER_FILE_PATH_FIELDNAME}' property."
                     self.log(msg)
                     if not self.silent_errors:
                         raise ValueError(msg)
 
-        return resolved_paths
+        return resolved_files
 
-    def _unpack_and_collect_files(self, paths_with_flags: list[tuple[Path, bool]]) -> list[tuple[Path, bool]]:
-        """Recursively unpack bundles and collect files.
+    def _unpack_and_collect_files(self, files: list[BaseFile]) -> list[BaseFile]:
+        """Recursively unpack bundles and collect files into BaseFile instances.
 
         Args:
-            paths_with_flags (list[tuple[Path, bool]]): List of input paths and their delete-after-processing flags.
+            files (list[BaseFile]): List of BaseFile instances to process.
 
         Returns:
-            list[tuple[Path, bool]]:
-                List of all files after unpacking bundles, along with their delete-after-processing flags.
+            list[BaseFile]: Updated list of BaseFile instances.
         """
-        collected_files_with_flags = []
+        collected_files = []
 
-        for path, delete_after_processing in paths_with_flags:
+        for file in files:
+            path = file.path
+            delete_after_processing = file.delete_after_processing
+            data = file.data
+
             if path.is_dir():
                 # Recurse into directories
-                collected_files_with_flags.extend(
-                    [(sub_path, delete_after_processing) for sub_path in path.rglob("*") if sub_path.is_file()]
+                collected_files.extend(
+                    [
+                        BaseFileComponent.BaseFile(data, sub_path, delete_after_processing=delete_after_processing)
+                        for sub_path in path.rglob("*")
+                        if sub_path.is_file()
+                    ]
                 )
             elif path.suffix[1:] in self.SUPPORTED_BUNDLE_EXTENSIONS:
                 # Unpack supported bundles
@@ -235,22 +270,18 @@ class BaseFileComponent(Component, ABC):
                 subpaths = list(temp_dir_path.iterdir())
                 self.log(f"Unpacked bundle {path.name} into {subpaths}")
                 for sub_path in subpaths:
-                    if sub_path.is_dir():
-                        # Add directory to process its contents later
-                        collected_files_with_flags.append((sub_path, delete_after_processing))
-                    else:
-                        collected_files_with_flags.append((sub_path, delete_after_processing))
+                    collected_files.append(BaseFileComponent.BaseFile(data, sub_path, delete_after_processing=delete_after_processing))
             else:
-                collected_files_with_flags.append((path, delete_after_processing))
+                collected_files.append(file)
 
         # Recurse again if any directories or bundles are left in the list
         if any(
-            file.is_dir() or file.suffix[1:] in self.SUPPORTED_BUNDLE_EXTENSIONS
-            for file, _ in collected_files_with_flags
+            file.path.is_dir() or file.path.suffix[1:] in self.SUPPORTED_BUNDLE_EXTENSIONS
+            for file in collected_files
         ):
-            return self._unpack_and_collect_files(collected_files_with_flags)
+            return self._unpack_and_collect_files(collected_files)
 
-        return collected_files_with_flags
+        return collected_files
 
     def _safe_extract(
         self,
@@ -309,38 +340,38 @@ class BaseFileComponent(Component, ABC):
             if not self.silent_errors:
                 raise ValueError(msg)
 
-    def _filter_and_mark_files(self, files_with_flags: list[tuple[Path, bool]]) -> list[tuple[Path, bool]]:
+    def _filter_and_mark_files(self, files: list[BaseFile]) -> list[BaseFile]:
         """Validate file types and mark files for removal.
 
         Args:
-            files_with_flags (list[tuple[Path, bool]]): List of files and their delete-after-processing flags.
+            files (list[BaseFile]): List of BaseFile instances.
 
         Returns:
-            list[tuple[Path, bool]]: Validated files with their remove-after-processing markers.
+            list[BaseFile]: Validated BaseFile instances.
 
         Raises:
             ValueError: If unsupported files are encountered and `ignore_unsupported_extensions` is False.
         """
-        final_files_with_flags = []
+        final_files = []
         ignored_files = []
 
-        for file, delete_after_processing in files_with_flags:
-            if not file.is_file():
-                self.log(f"Not a file: {file.name}")
+        for file in files:
+            if not file.path.is_file():
+                self.log(f"Not a file: {file.path.name}")
                 continue
 
-            if file.suffix[1:] not in self.valid_extensions:
+            if file.path.suffix[1:] not in self.valid_extensions:
                 if self.ignore_unsupported_extensions:
-                    ignored_files.append(file.name)
+                    ignored_files.append(file.path.name)
                     continue
-                msg = f"Unsupported file extension: {file.suffix}"
+                msg = f"Unsupported file extension: {file.path.suffix}"
                 self.log(msg)
                 if not self.silent_errors:
                     raise ValueError(msg)
 
-            final_files_with_flags.append((file, delete_after_processing))
+            final_files.append(file)
 
         if ignored_files:
             self.log(f"Ignored files: {ignored_files}")
 
-        return final_files_with_flags
+        return final_files
