@@ -145,13 +145,17 @@ jobs:
         if: steps.check-version.outputs.skipped == 'false'
         run: |
           make build main=true
-      - name: Install wheel and Test CLI
+      - name: Install wheel
         if: steps.check-version.outputs.skipped == 'false'
         run: |
           uv venv new-venv
           source new-venv/bin/activate
           uv pip install dist/*.whl
-          python langflow run --host 127.0.0.1 --port 7860 --backend-only &
+      - name: Test CLI
+        if: steps.check-version.outputs.skipped == 'false'
+        run: |
+          source new-venv/bin/activate
+          python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
           timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/api/v1/auto_login; do sleep 5; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
