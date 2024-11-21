@@ -1562,11 +1562,15 @@ export function downloadFlow(
   removeFileNameFromComponents(clonedFlow);
   // create a data URI with the current flow data
   const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
-    JSON.stringify({
-      ...clonedFlow,
-      name: flowName,
-      description: flowDescription,
-    }),
+    JSON.stringify(
+      {
+        ...clonedFlow,
+        name: flowName,
+        description: flowDescription,
+      },
+      null,
+      2,
+    ),
   )}`;
 
   // create a link element and set its properties
