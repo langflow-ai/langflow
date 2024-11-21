@@ -22,33 +22,73 @@ class BaseFileComponent(Component, ABC):
     class BaseFile:
         """Internal class to represent a file with additional metadata."""
 
-        def __init__(self, data: Data, path: Path, *, delete_after_processing: bool = False):
+        def __init__(self, data: Data | list[Data], path: Path, *, delete_after_processing: bool = False):
             self.data = data
             self.path = path
             self.delete_after_processing = delete_after_processing
 
-        def merge_data(self, new_data: Data | None) -> Data:
-            """Merges new data into the existing data object, handling None safely.
+        @property
+        def data(self) -> list[Data]:
+            return self._data or []
+
+        @data.setter
+        def data(self, value: Data | list[Data]):
+            if isinstance(value, Data):
+                self._data = [value]
+            elif isinstance(value, list) and all(isinstance(item, Data) for item in value):
+                self._data = value
+            else:
+                msg = f"data must be a Data object or a list of Data objects. Got: {type(value)}"
+                self.log(msg)
+                if not self.silent_errors:
+                    raise ValueError(msg)
+
+        def merge_data(self, new_data: Data | list[Data] | None) -> list[Data]:
+            r"""Generate a new list of Data objects by merging `new_data` into the current `data`.
 
             Args:
-                new_data (Data | None): The new Data object to merge. If None, no changes are made.
+                new_data (Data | list[Data] | None): The new Data object(s) to merge into each existing Data object.
+                    If None, the current `data` is returned unchanged.
 
             Returns:
-                Data: The merged data object.
+                list[Data]: A new list of Data objects with `new_data` merged.
             """
-            if new_data is not None:
-                self.data = Data(data={**self.data.data, **new_data.data})
-            return self.data
+            if new_data is None:
+                return self.data
+
+            if isinstance(new_data, Data):
+                new_data_list = [new_data]
+            elif isinstance(new_data, list) and all(isinstance(item, Data) for item in new_data):
+                new_data_list = new_data
+            else:
+                msg = "new_data must be a Data object, a list of Data objects, or None."
+                self.log(msg)
+                if not self.silent_errors:
+                    raise ValueError(msg)
+                return self.data
+
+            merged_data = []
+            for data in self.data:
+                for new_data_item in new_data_list:
+                    merged_data.append(Data(data={**data.data, **new_data_item.data}))
+
+            return merged_data
 
         def __str__(self):
-            max_text_length = 50
-            text_preview = self.data.get_text()[:max_text_length]
-            if len(self.data.get_text()) > max_text_length:
-                text_preview += "..."
+            if len(self.data) == 0:
+                text_preview = ""
+            elif len(self.data) == 1:
+                max_text_length = 50
+                text_preview = self.data.get_text()[:max_text_length]
+                if len(self.data.get_text()) > max_text_length:
+                    text_preview += "..."
+                text_preview = f"text_preview='{text_preview}'"
+            else:
+                text_preview = f"{len(self.data)} data objects"
             return (
-                f"BaseFile(path={self.path}, "
-                f"delete_after_processing={self.delete_after_processing}, "
-                f"text_preview='{text_preview}')"
+                f"BaseFile(path={self.path}"
+                f", delete_after_processing={self.delete_after_processing}"
+                f", {text_preview}"
             )
 
     # Subclasses can override these class variables
@@ -142,8 +182,8 @@ class BaseFileComponent(Component, ABC):
             # Step 4: Process files
             processed_files = self.process_files(final_files)
 
-            # Extract Data objects to return
-            processed_data = [file.data for file in processed_files if file.data]
+            # Extract and flatten Data objects to return
+            processed_data = [data for file in processed_files for data in file.data if file.data]
 
             return processed_data
         finally:
@@ -179,6 +219,57 @@ class BaseFileComponent(Component, ABC):
             list[str]: A list of prefixes to ignore when unpacking file bundles.
         """
         return self.IGNORE_STARTS_WITH
+
+    def rollup_data(
+        self,
+        base_files: list[BaseFile],
+        data_list: list[Data | None],
+        path_field: str = SERVER_FILE_PATH_FIELDNAME,
+    ) -> list[BaseFile]:
+        """Rolls up Data objects into corresponding BaseFile objects, preserving the order of the 
+           original BaseFile list.
+
+        Args:
+            base_files (list[BaseFile]): The original BaseFile objects.
+            data_list (list[Data | None]): The list of data to be aggregated into the BaseFile objects.
+            path_field (str): The field name on the data_list objects that holds the file path as a string.
+
+        Returns:
+            list[BaseFile]: A new list of BaseFile objects with merged `data` attributes.
+        """
+        def _build_data_dict(data_list: list[Data | None], data_list_field: str) -> dict[str, list[Data]]:
+            """Builds a dictionary grouping Data objects by a specified field."""
+            data_dict = {}
+            for data in data_list:
+                if data is None:
+                    continue
+                key = data.data.get(data_list_field)
+                if key is None:
+                    msg = f"Data object missing required field '{data_list_field}': {data}"
+                    self.log(msg)
+                    if not self.silent_errors:
+                        raise ValueError(f"Data object missing required field '{data_list_field}': {data}")
+                    continue
+                data_dict.setdefault(key, []).append(data)
+            return data_dict
+
+        # Build the data dictionary from the provided data_list
+        data_dict = _build_data_dict(data_list, path_field)
+
+        # Generate the updated list of BaseFile objects, preserving the order of base_files
+        updated_base_files = []
+        for base_file in base_files:
+            new_data_list = data_dict.get(str(base_file.path), [])
+            merged_data_list = base_file.merge_data(new_data_list)
+            updated_base_files.append(
+                BaseFileComponent.BaseFile(
+                    data=merged_data_list,
+                    path=base_file.path,
+                    delete_after_processing=base_file.delete_after_processing,
+                )
+            )
+
+        return updated_base_files
 
     def _validate_and_resolve_paths(self) -> list[BaseFile]:
         """Validate that all input paths exist and are valid, and create BaseFile instances.
