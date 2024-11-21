@@ -68,9 +68,7 @@ class BaseFileComponent(Component, ABC):
                 return self.data
 
             return [
-                Data(data={**data.data, **new_data_item.data})
-                for data in self.data
-                for new_data_item in new_data_list
+                Data(data={**data.data, **new_data_item.data}) for data in self.data for new_data_item in new_data_list
             ]
 
         def __str__(self):
