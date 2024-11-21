@@ -21,13 +21,11 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlmodel import Session, SQLModel, create_engine, select, text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.base import Service
 from langflow.services.database import models
 from langflow.services.database.models.user.crud import get_user_by_username
-from langflow.services.database.utils import (
-    Result,
-    TableResults,
-)
+from langflow.services.database.utils import Result, TableResults
 from langflow.services.deps import get_settings_service
 from langflow.services.utils import teardown_superuser
 
@@ -155,7 +153,14 @@ class DatabaseService(Service):
 
         async with self.with_async_session() as session:
             # Fetch orphaned flows
-            stmt = select(models.Flow).where(models.Flow.user_id == None)  # noqa: E711
+            stmt = (
+                select(models.Flow)
+                .join(models.Folder)
+                .where(
+                    models.Flow.user_id == None,  # noqa: E711
+                    models.Folder.name != STARTER_FOLDER_NAME,
+                )
+            )
             orphaned_flows = (await session.exec(stmt)).all()
 
             if not orphaned_flows:
