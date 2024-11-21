@@ -90,6 +90,4 @@ class FileComponent(BaseFileComponent):
             )
 
         # Use rollup_basefile_data to merge processed data with BaseFile objects
-        updated_files = self.rollup_data(file_list, processed_data)
-
-        return updated_files
+        return self.rollup_data(file_list, processed_data)

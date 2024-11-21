@@ -67,12 +67,11 @@ class BaseFileComponent(Component, ABC):
                     raise ValueError(msg)
                 return self.data
 
-            merged_data = []
-            for data in self.data:
-                for new_data_item in new_data_list:
-                    merged_data.append(Data(data={**data.data, **new_data_item.data}))
-
-            return merged_data
+            return [
+                Data(data={**data.data, **new_data_item.data})
+                for data in self.data
+                for new_data_item in new_data_list
+            ]
 
         def __str__(self):
             if len(self.data) == 0:
@@ -183,9 +182,8 @@ class BaseFileComponent(Component, ABC):
             processed_files = self.process_files(final_files)
 
             # Extract and flatten Data objects to return
-            processed_data = [data for file in processed_files for data in file.data if file.data]
+            return [data for file in processed_files for data in file.data if file.data]
 
-            return processed_data
         finally:
             # Delete temporary directories
             for temp_dir in self._temp_dirs:
@@ -226,8 +224,7 @@ class BaseFileComponent(Component, ABC):
         data_list: list[Data | None],
         path_field: str = SERVER_FILE_PATH_FIELDNAME,
     ) -> list[BaseFile]:
-        """Rolls up Data objects into corresponding BaseFile objects, preserving the order of the
-           original BaseFile list.
+        r"""Rolls up Data objects into corresponding BaseFile objects in order given by `base_files`.
 
         Args:
             base_files (list[BaseFile]): The original BaseFile objects.
@@ -249,7 +246,9 @@ class BaseFileComponent(Component, ABC):
                     msg = f"Data object missing required field '{data_list_field}': {data}"
                     self.log(msg)
                     if not self.silent_errors:
-                        raise ValueError(f"Data object missing required field '{data_list_field}': {data}")
+                        msg = f"Data object missing required field '{data_list_field}': {data}"
+                        self.log(msg)
+                        raise ValueError(msg)
                     continue
                 data_dict.setdefault(key, []).append(data)
             return data_dict
@@ -364,10 +363,12 @@ class BaseFileComponent(Component, ABC):
                 self._unpack_bundle(path, temp_dir_path)
                 subpaths = list(temp_dir_path.iterdir())
                 self.log(f"Unpacked bundle {path.name} into {subpaths}")
-                for sub_path in subpaths:
-                    collected_files.append(
+                collected_files.extend(
+                    [
                         BaseFileComponent.BaseFile(data, sub_path, delete_after_processing=delete_after_processing)
-                    )
+                        for sub_path in subpaths
+                    ]
+                )
             else:
                 collected_files.append(file)
 
