@@ -165,22 +165,39 @@ class DatabaseService(Service):
 
                     if not superuser:
                         logger.error("Default superuser not found")
-                        msg = "Default superuser not found"
-                        raise RuntimeError(msg)
+                        raise RuntimeError("Default superuser not found")
 
+                    # Fetch all current flow names for the superuser
                     stmt = select(models.Flow.name).where(models.Flow.user_id == superuser.id)
                     result = await session.exec(stmt)
-                    superuser_flows_names = result.all()
-                    # Assign each orphaned flow to the superuser
+                    existing_names = set(result.all())
+
                     for flow in orphaned_flows:
                         flow.user_id = superuser.id
-                        if flow.name in superuser_flows_names:
-                            name_match = re.search(r"\((\d+)\)$", flow.name)
-                            if not name_match:
-                                flow.name = f"{flow.name} (1)"
+                        original_name = flow.name
+
+                        if original_name in existing_names:
+                            # Handle naming conflict
+                            match = re.search(r"^(.*) \((\d+)\)$", original_name)
+                            if match:
+                                # Name already has a suffix, increment it
+                                base_name, current_number = match.groups()
+                                new_name = f"{base_name} ({int(current_number) + 1})"
                             else:
-                                num = int(name_match.group(1)) + 1
-                                flow.name = re.sub(r"\(\d+\)$", f"({num})", flow.name)
+                                # Add the initial suffix
+                                new_name = f"{original_name} (1)"
+
+                            # Ensure the new name is unique
+                            while new_name in existing_names:
+                                match = re.search(r"^(.*) \((\d+)\)$", new_name)
+                                base_name, current_number = match.groups()
+                                new_name = f"{base_name} ({int(current_number) + 1})"
+
+                            flow.name = new_name
+                            existing_names.add(new_name)
+                        else:
+                            # No conflict, preserve the original name
+                            existing_names.add(original_name)
 
                     # Commit the changes to the database
                     await session.commit()
