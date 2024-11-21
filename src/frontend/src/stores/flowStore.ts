@@ -59,6 +59,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   autoSaveFlow: undefined,
   componentsToUpdate: [],
+  setComponentsToUpdate: (change) => {
+    let newChange =
+      typeof change === "function" ? change(get().componentsToUpdate) : change;
+    set({ componentsToUpdate: newChange });
+  },
   updateComponentsToUpdate: (nodes) => {
     let outdatedNodes: string[] = [];
     const templates = useTypesStore.getState().templates;
