@@ -26,7 +26,7 @@ Memories can be visualized and managed directly from the **Playground**. You can
 
 Modifying these memories will influence the behavior of the chatbot responses, as long as an agent uses them. Here you have the ability to remove or edit previous messages, allowing them to manipulate and explore how these changes affect model responses.
 
-To modify chat memories, open the playground, click on the menu of any session on the right, and then click on the **Message Logs** option.
+To modify chat memories, from the playground, click the **Options** menu of any session, and then select **Message Logs**.
 
 
 ![](/img/logs.png)
