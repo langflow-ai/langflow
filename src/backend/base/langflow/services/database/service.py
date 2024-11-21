@@ -147,61 +147,45 @@ class DatabaseService(Service):
             yield session
 
     async def assign_orphaned_flows_to_superuser(self) -> None:
-        """Assign flows without a user ID to the default superuser if auto_login is enabled."""
-        # Get the settings service to check if auto_login is enabled
+        """Assign orphaned flows to the default superuser when auto login is enabled."""
         settings_service = get_settings_service()
-        if settings_service.auth_settings.AUTO_LOGIN:
-            async with self.with_async_session() as session:
-                # Select flows where user_id is NULL (orphaned flows)
-                stmt = select(models.Flow).where(models.Flow.user_id == None)  # noqa: E711
-                orphaned_flows = (await session.exec(stmt)).all()
 
-                if orphaned_flows:
-                    logger.debug("Assigning orphaned flows to the default superuser")
+        if not settings_service.auth_settings.AUTO_LOGIN:
+            return
 
-                    # Get the default superuser
-                    superuser_username = settings_service.auth_settings.SUPERUSER
-                    superuser = await get_user_by_username(session, superuser_username)
+        async with self.with_async_session() as session:
+            # Fetch orphaned flows
+            stmt = select(models.Flow).where(models.Flow.user_id == None)  # noqa: E711
+            orphaned_flows = (await session.exec(stmt)).all()
 
-                    if not superuser:
-                        logger.error("Default superuser not found")
-                        raise RuntimeError("Default superuser not found")
+            if not orphaned_flows:
+                return
 
-                    # Fetch all current flow names for the superuser
-                    stmt = select(models.Flow.name).where(models.Flow.user_id == superuser.id)
-                    result = await session.exec(stmt)
-                    existing_names = set(result.all())
+            logger.debug("Assigning orphaned flows to the default superuser")
 
-                    for flow in orphaned_flows:
-                        flow.user_id = superuser.id
-                        original_name = flow.name
+            # Retrieve superuser
+            superuser_username = settings_service.auth_settings.SUPERUSER
+            superuser = await get_user_by_username(session, superuser_username)
 
-                        if original_name in existing_names:
-                            # Handle naming conflict
-                            match = re.search(r"^(.*) \((\d+)\)$", original_name)
-                            if match:
-                                # Name already has a suffix, increment it
-                                base_name, current_number = match.groups()
-                                new_name = f"{base_name} ({int(current_number) + 1})"
-                            else:
-                                # Add the initial suffix
-                                new_name = f"{original_name} (1)"
+            if not superuser:
+                error_message = "Default superuser not found"
+                logger.error(error_message)
+                raise RuntimeError(error_message)
 
-                            # Ensure the new name is unique
-                            while new_name in existing_names:
-                                match = re.search(r"^(.*) \((\d+)\)$", new_name)
-                                base_name, current_number = match.groups()
-                                new_name = f"{base_name} ({int(current_number) + 1})"
+            # Get existing flow names for the superuser
+            existing_names: set[str] = set(
+                (await session.exec(select(models.Flow.name).where(models.Flow.user_id == superuser.id))).all()
+            )
 
-                            flow.name = new_name
-                            existing_names.add(new_name)
-                        else:
-                            # No conflict, preserve the original name
-                            existing_names.add(original_name)
+            # Process orphaned flows
+            for flow in orphaned_flows:
+                flow.user_id = superuser.id
+                flow.name = self._generate_unique_flow_name(flow.name, existing_names)
+                existing_names.add(flow.name)
 
-                    # Commit the changes to the database
-                    await session.commit()
-                    logger.debug("Successfully assigned orphaned flows to the default superuser")
+            # Commit changes
+            await session.commit()
+            logger.debug("Successfully assigned orphaned flows to the default superuser")
 
     def _generate_unique_flow_name(self, original_name: str, existing_names: set[str]) -> str:
         """Generate a unique flow name by adding or incrementing a suffix."""
