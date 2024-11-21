@@ -86,7 +86,7 @@ The `Message` object extends the functionality of `Data` and includes additi
   - `content_blocks`: List of structured content blocks
   - `properties`: Additional properties including visual styling and source information
 
-- **Message State:**
+- **Message state:**
   - `error`: Boolean indicating if there was an error
   - `edit`: Boolean indicating if the message was edited
   - `category`: Message category ("message", "error", "warning", "info")
