@@ -145,7 +145,7 @@ jobs:
         if: steps.check-version.outputs.skipped == 'false'
         run: |
           make build main=true
-      - name: Install wheel
+      - name: Install wheel and Test CLI
         if: steps.check-version.outputs.skipped == 'false'
         run: |
           uv venv new-venv
