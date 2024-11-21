@@ -100,18 +100,6 @@ test("should interact with global variables", async ({ page }) => {
 
   await page.waitForTimeout(2000);
 
-  // const focusElementsOnBoard = async ({ page }) => {
-  //   await page.waitForSelector(
-  //     '[aria-label="Press Space to toggle all rows selection (unchecked)"]',
-  //     { timeout: 30000, state: "visible" },
-  //   );
-  //   const focusElements = await page
-  //     .getByLabel("Press Space to toggle all rows selection (unchecked)")
-  //     .first();
-  //   await focusElements.click();
-  // };
-  // await focusElementsOnBoard({ page });
-
   await page.locator(".ag-checkbox-input").first().click();
   await page.getByTestId("icon-Trash2").click();
   await page.getByText("No data available").isVisible();
