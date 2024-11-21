@@ -27,13 +27,13 @@ Notice how the **Playground's** window arrangement changes depending on what com
 
 ---
 
-Click on any chat session menu on the right, then click on the message logs option to open a table of previous interactions for a specific flow.
-
 When you send a message from the **Playground** interface, the interactions for that session are stored in the **Message Logs**.
 
 Langflow allows every chat message to be stored, and a single flow can have multiple chat sessions.
 
 Chat conversations store messages categorized by a Session ID. A single flow can host multiple Session IDs, and different flows can share the same Session ID.
+
+To view messages by session ID, from the Playground, click the Options menu of any session, and then select Message Logs.
 
 Individual messages in chat memory can be edited or deleted. Modifying these memories will influence the behavior of the chatbot responses.
 
