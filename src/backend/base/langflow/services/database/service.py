@@ -203,6 +203,31 @@ class DatabaseService(Service):
                     await session.commit()
                     logger.debug("Successfully assigned orphaned flows to the default superuser")
 
+    def _generate_unique_flow_name(self, original_name: str, existing_names: set[str]) -> str:
+        """Generate a unique flow name by adding or incrementing a suffix."""
+        if original_name not in existing_names:
+            return original_name
+
+        match = re.search(r"^(.*) \((\d+)\)$", original_name)
+        if match:
+            base_name, current_number = match.groups()
+            new_name = f"{base_name} ({int(current_number) + 1})"
+        else:
+            new_name = f"{original_name} (1)"
+
+        # Ensure unique name by incrementing suffix
+        while new_name in existing_names:
+            match = re.match(r"^(.*) \((\d+)\)$", new_name)
+            if match is not None:
+                base_name, current_number = match.groups()
+            else:
+                error_message = "Invalid format: match is None"
+                raise ValueError(error_message)
+
+            new_name = f"{base_name} ({int(current_number) + 1})"
+
+        return new_name
+
     def check_schema_health(self) -> bool:
         inspector = inspect(self.engine)
 
