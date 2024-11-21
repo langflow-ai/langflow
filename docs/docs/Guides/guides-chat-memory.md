@@ -45,7 +45,7 @@ The **Chat Memory** component also retrieves message histories by `Session ID`, 
 
 ![](/img/chat-input-controls-pane.png)
 
-By default, if the `Session ID`  value is empty, it is set to match the the same value as the `Flow ID`.
+By default, if the `Session ID` value is empty, it is set to the same value as `Flow ID`.
 
 You can also display all messages stored across every flow and session by going to **Settings** &gt; **Messages**.
 
