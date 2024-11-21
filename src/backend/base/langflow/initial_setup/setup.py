@@ -14,11 +14,8 @@ from loguru import logger
 from sqlalchemy.exc import NoResultFound
 from sqlmodel import select
 
-from langflow.base.constants import (
-    FIELD_FORMAT_ATTRIBUTES,
-    NODE_FORMAT_ATTRIBUTES,
-    ORJSON_OPTIONS,
-)
+from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBUTES, ORJSON_OPTIONS
+from langflow.initial_setup.constants import STARTER_FOLDER_DESCRIPTION, STARTER_FOLDER_NAME
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.model import Folder, FolderCreate
@@ -36,9 +33,6 @@ from langflow.services.deps import (
 )
 from langflow.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
 from langflow.utils.util import escape_json_dump
-
-STARTER_FOLDER_NAME = "Starter Projects"
-STARTER_FOLDER_DESCRIPTION = "Starter projects to help you get started in Langflow."
 
 # In the folder ./starter_projects we have a few JSON files that represent
 # starter projects. We want to load these into the database so that users
