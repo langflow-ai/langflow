@@ -63,7 +63,7 @@ The `Data` object is also convenient for visualization of outputs, since the out
 To receive `Data` objects in a component input, you can use the `DataInput` input type.
 
 
-## The Message Object {#f4f17cad02a545068f407d515cbc2902}
+## Message object attributes {#f4f17cad02a545068f407d515cbc2902}
 
 
 ---
