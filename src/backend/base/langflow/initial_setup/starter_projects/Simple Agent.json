@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-B1nYa",
+            "id": "ChatInput-sTYr3",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-EGSx3",
+            "id": "Agent-yGhD2",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-B1nYa{œdataTypeœ:œChatInputœ,œidœ:œChatInput-B1nYaœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-EGSx3{œfieldNameœ:œinput_valueœ,œidœ:œAgent-EGSx3œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-sTYr3{œdataTypeœ:œChatInputœ,œidœ:œChatInput-sTYr3œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-yGhD2{œfieldNameœ:œinput_valueœ,œidœ:œAgent-yGhD2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-B1nYa",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-B1nYaœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-EGSx3",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-EGSx3œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-sTYr3",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-sTYr3œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-yGhD2",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-yGhD2œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-EGSx3",
+            "id": "Agent-yGhD2",
             "name": "response",
             "output_types": [
               "Message"
@@ -43,34 +43,35 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-zUzVK",
+            "id": "ChatOutput-Tkzec",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-EGSx3{œdataTypeœ:œAgentœ,œidœ:œAgent-EGSx3œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-zUzVK{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-zUzVKœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Agent-EGSx3",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-EGSx3œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-zUzVK",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-zUzVKœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Agent-yGhD2{œdataTypeœ:œAgentœ,œidœ:œAgent-yGhD2œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Tkzec{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Tkzecœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Agent-yGhD2",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-yGhD2œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-Tkzec",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Tkzecœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "YouTubeTranscriptsComponent",
-            "id": "YouTubeTranscriptsComponent-n8Z9Y",
-            "name": "transcripts_tool",
+            "dataType": "CalculatorTool",
+            "id": "CalculatorTool-IfWT1",
+            "name": "api_build_tool",
             "output_types": [
               "Tool"
             ]
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-EGSx3",
+            "id": "Agent-yGhD2",
             "inputTypes": [
               "Tool",
               "BaseTool",
@@ -79,11 +80,42 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-YouTubeTranscriptsComponent-n8Z9Y{œdataTypeœ:œYouTubeTranscriptsComponentœ,œidœ:œYouTubeTranscriptsComponent-n8Z9Yœ,œnameœ:œtranscripts_toolœ,œoutput_typesœ:[œToolœ]}-Agent-EGSx3{œfieldNameœ:œtoolsœ,œidœ:œAgent-EGSx3œ,œinputTypesœ:[œToolœ,œBaseToolœ,œStructuredToolœ],œtypeœ:œotherœ}",
-        "source": "YouTubeTranscriptsComponent-n8Z9Y",
-        "sourceHandle": "{œdataTypeœ: œYouTubeTranscriptsComponentœ, œidœ: œYouTubeTranscriptsComponent-n8Z9Yœ, œnameœ: œtranscripts_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-EGSx3",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-EGSx3œ, œinputTypesœ: [œToolœ, œBaseToolœ, œStructuredToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-CalculatorTool-IfWT1{œdataTypeœ:œCalculatorToolœ,œidœ:œCalculatorTool-IfWT1œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-Agent-yGhD2{œfieldNameœ:œtoolsœ,œidœ:œAgent-yGhD2œ,œinputTypesœ:[œToolœ,œBaseToolœ,œStructuredToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "CalculatorTool-IfWT1",
+        "sourceHandle": "{œdataTypeœ: œCalculatorToolœ, œidœ: œCalculatorTool-IfWT1œ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-yGhD2",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-yGhD2œ, œinputTypesœ: [œToolœ, œBaseToolœ, œStructuredToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "URL",
+            "id": "URL-FOPyh",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-yGhD2",
+            "inputTypes": [
+              "Tool",
+              "BaseTool",
+              "StructuredTool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-URL-FOPyh{œdataTypeœ:œURLœ,œidœ:œURL-FOPyhœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-yGhD2{œfieldNameœ:œtoolsœ,œidœ:œAgent-yGhD2œ,œinputTypesœ:[œToolœ,œBaseToolœ,œStructuredToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "URL-FOPyh",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-FOPyhœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-yGhD2",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-yGhD2œ, œinputTypesœ: [œToolœ, œBaseToolœ, œStructuredToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -91,7 +123,7 @@
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Agent",
-          "id": "Agent-EGSx3",
+          "id": "Agent-yGhD2",
           "node": {
             "base_classes": [
               "Message"
@@ -134,7 +166,7 @@
             "frozen": false,
             "icon": "bot",
             "legacy": false,
-            "lf_version": "1.0.19.post2",
+            "lf_version": "1.1.0.dev4",
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -237,7 +269,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -602,7 +634,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "You are an AI assistant capable of fetching and analyzing YouTube video transcripts to answer user questions. You have access to a YouTube Transcripts tool that can extract spoken content from YouTube videos.\n\n\n1. First, attempt to fetch the transcript using the following settings:\n   <function_call>\n   YouTube_Transcripts(\n     url=\"{{VIDEO_URL}}\",\n     transcript_format=\"text\",\n     language=\"\",\n     translation=\"\"\n   )\n   </function_call>\n\n2. If you receive an error indicating that only a specific language is available (e.g., \"only pt is available\"), retry the function call with the correct language setting:\n   <function_call>\n   YouTube_Transcripts(\n     url=\"{{VIDEO_URL}}\",\n     transcript_format=\"text\",\n     language=\"[specified_language_code]\",\n     translation=\"\"\n   )\n   </function_call>\n\n3. Once you have successfully retrieved the transcript, analyze its content to answer the user's question.\n\n4. If you need to refer to specific parts of the video, you can make an additional call to get chunked transcripts:\n   <function_call>\n   YouTube_Transcripts(\n     url=\"{{VIDEO_URL}}\",\n     transcript_format=\"chunks\",\n     chunk_size_seconds=60,\n     language=\"[language_used_in_successful_call]\",\n     translation=\"\"\n   )\n   </function_call>\n\nWhen answering the user's question:\n- Provide a clear and concise answer based on the information in the transcript.\n- If the question cannot be answered using the transcript alone, state this clearly and explain why.\n- If you need to quote the transcript, use quotation marks and provide context.\n- If referring to specific timestamps, mention them in your answer (only if you've retrieved chunked transcripts).\n\nRemember, your primary goal is to accurately answer the user's question using the information available in the video transcript. If you encounter any issues or if the question cannot be answered based on the transcript, explain this clearly in your response."
+                "value": "You are a helpful assistant that can use tools to answer questions and perform tasks.\nUse markdown to format your answer, properly embedding images and urls."
               },
               "temperature": {
                 "_input_type": "FloatInput",
@@ -686,23 +718,23 @@
           "type": "Agent"
         },
         "dragging": false,
-        "height": 650,
-        "id": "Agent-EGSx3",
+        "height": 648,
+        "id": "Agent-yGhD2",
         "position": {
-          "x": -631.1849833420482,
-          "y": -1088.2379740335518
+          "x": 2306.5155821255557,
+          "y": 332.5289520982579
         },
         "positionAbsolute": {
-          "x": -631.1849833420482,
-          "y": -1088.2379740335518
+          "x": 2306.5155821255557,
+          "y": 332.5289520982579
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode",
         "width": 320
       },
       {
         "data": {
-          "id": "ChatInput-B1nYa",
+          "id": "ChatInput-sTYr3",
           "node": {
             "base_classes": [
               "Message"
@@ -728,7 +760,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.0.19.post2",
+            "lf_version": "1.1.0.dev4",
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -872,7 +904,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "can you see the transcript from this video and tell me what this is about? https://www.youtube.com/watch?v=UkV79sJAvz8"
+                "value": ""
               },
               "sender": {
                 "_input_type": "DropdownInput",
@@ -984,14 +1016,14 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-B1nYa",
+        "id": "ChatInput-sTYr3",
         "position": {
-          "x": -996.5201766752447,
-          "y": -667.1593168473087
+          "x": 1939.9269765193949,
+          "y": 965.3667152408464
         },
         "positionAbsolute": {
-          "x": -996.5201766752447,
-          "y": -667.1593168473087
+          "x": 1939.9269765193949,
+          "y": 965.3667152408464
         },
         "selected": false,
         "type": "genericNode",
@@ -1001,7 +1033,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-zUzVK",
+          "id": "ChatOutput-Tkzec",
           "node": {
             "base_classes": [
               "Message"
@@ -1027,7 +1059,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.0.19.post2",
+            "lf_version": "1.1.0.dev4",
             "metadata": {},
             "output_types": [],
             "outputs": [
@@ -1261,14 +1293,14 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-zUzVK",
+        "id": "ChatOutput-Tkzec",
         "position": {
-          "x": -261.7796479132812,
-          "y": -677.0769470644535
+          "x": 2683.9938458383212,
+          "y": 556.5828467235146
         },
         "positionAbsolute": {
-          "x": -261.7796479132812,
-          "y": -677.0769470644535
+          "x": 2683.9938458383212,
+          "y": 556.5828467235146
         },
         "selected": false,
         "type": "genericNode",
@@ -1276,82 +1308,37 @@
       },
       {
         "data": {
-          "id": "note-f5vkx",
-          "node": {
-            "description": "# YouTube Transcript Q&A\nA quick way to ask questions about YouTube video content through transcript analysis!\n\n## Instructions\n1. **Input Your Query**\n   - Paste YouTube video URL\n   - Add your question about the content\n   - Format: \"What is this video about? [URL]\"\n\n2. **Get Analysis**\n   - System extracts video transcript\n   - AI processes your question\n   - Provides detailed answer from content\n\n3. **Additional Features**\n   - Handles multiple languages\n   - Can reference specific timestamps\n   - Supports follow-up questions\n\n4. **Best Practices**\n   - Ensure video has captions/subtitles\n   - Ask specific questions\n   - For timing details, mention timestamps\n\n5. **Common Uses**\n   - Content summaries\n   - Finding specific information\n   - Understanding key points\n   - Fact checking video claims\n\nRemember: Quality depends on available transcripts! 🎥💬",
-            "display_name": "",
-            "documentation": "",
-            "template": {}
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 800,
-        "id": "note-f5vkx",
-        "position": {
-          "x": -1627.783352547462,
-          "y": -1212.3239149398214
-        },
-        "positionAbsolute": {
-          "x": -1627.783352547462,
-          "y": -1212.3239149398214
-        },
-        "resizing": false,
-        "selected": false,
-        "style": {
-          "height": 800,
-          "width": 600
-        },
-        "type": "noteNode",
-        "width": 600
-      },
-      {
-        "data": {
-          "id": "YouTubeTranscriptsComponent-n8Z9Y",
+          "id": "URL-FOPyh",
           "node": {
             "base_classes": [
               "Data",
-              "Tool"
+              "Message"
             ],
             "beta": false,
-            "category": "tools",
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Extracts spoken content from YouTube videos as transcripts.",
-            "display_name": "YouTube Transcripts",
+            "description": "Fetch content from one or more URLs.",
+            "display_name": "URL",
             "documentation": "",
             "edited": false,
             "field_order": [
-              "url",
-              "transcript_format",
-              "chunk_size_seconds",
-              "language",
-              "translation"
+              "urls",
+              "format"
             ],
             "frozen": false,
-            "icon": "YouTube",
-            "key": "YouTubeTranscriptsComponent",
+            "icon": "layout-template",
             "legacy": false,
-            "lf_version": "1.0.19.post2",
+            "lf_version": "1.1.0.dev4",
             "metadata": {},
             "output_types": [],
             "outputs": [
               {
                 "cache": true,
-                "display_name": "Data",
-                "method": "build_youtube_transcripts",
-                "name": "transcripts",
-                "selected": "Data",
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "cache": true,
-                "display_name": "Tool",
-                "method": "build_youtube_tool",
-                "name": "transcripts_tool",
+                "display_name": "Toolset",
+                "hidden": null,
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "required_inputs": null,
                 "selected": "Tool",
                 "types": [
                   "Tool"
@@ -1362,22 +1349,6 @@
             "pinned": false,
             "template": {
               "_type": "Component",
-              "chunk_size_seconds": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Chunk Size (seconds)",
-                "dynamic": false,
-                "info": "The size of each transcript chunk in seconds. Only applicable when 'Transcript Format' is set to 'chunks'.",
-                "list": false,
-                "name": "chunk_size_seconds",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 60
-              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -1394,42 +1365,19 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain.tools import StructuredTool\nfrom langchain_community.document_loaders import YoutubeLoader\nfrom langchain_community.document_loaders.youtube import TranscriptFormat\nfrom langchain_core.tools import ToolException\nfrom pydantic import BaseModel, Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import DropdownInput, IntInput, MultilineInput\nfrom langflow.schema import Data\nfrom langflow.template import Output\n\n\nclass YoutubeApiSchema(BaseModel):\n    \"\"\"Schema to define the input structure for the tool.\"\"\"\n\n    url: str = Field(..., description=\"The YouTube URL to get transcripts from.\")\n    transcript_format: TranscriptFormat = Field(\n        TranscriptFormat.TEXT,\n        description=\"The format of the transcripts. Either 'text' for a single \"\n        \"text output or 'chunks' for timestamped chunks.\",\n    )\n    chunk_size_seconds: int = Field(\n        120,\n        description=\"The size of each transcript chunk in seconds. Only \"\n        \"applicable when 'Transcript Format' is set to 'chunks'.\",\n    )\n    language: str = Field(\n        \"\",\n        description=\"A comma-separated list of language codes in descending \" \"priority. Leave empty for default.\",\n    )\n    translation: str = Field(\n        \"\", description=\"Translate the transcripts to the specified language. \" \"Leave empty for no translation.\"\n    )\n\n\nclass YouTubeTranscriptsComponent(LCToolComponent):\n    \"\"\"A component that extracts spoken content from YouTube videos as transcripts.\"\"\"\n\n    display_name: str = \"YouTube Transcripts\"\n    description: str = \"Extracts spoken content from YouTube videos as transcripts.\"\n    icon: str = \"YouTube\"\n\n    inputs = [\n        MultilineInput(\n            name=\"url\", display_name=\"Video URL\", info=\"Enter the YouTube video URL to get transcripts from.\"\n        ),\n        DropdownInput(\n            name=\"transcript_format\",\n            display_name=\"Transcript Format\",\n            options=[\"text\", \"chunks\"],\n            value=\"text\",\n            info=\"The format of the transcripts. Either 'text' for a single output \"\n            \"or 'chunks' for timestamped chunks.\",\n        ),\n        IntInput(\n            name=\"chunk_size_seconds\",\n            display_name=\"Chunk Size (seconds)\",\n            value=60,\n            advanced=True,\n            info=\"The size of each transcript chunk in seconds. Only applicable when \"\n            \"'Transcript Format' is set to 'chunks'.\",\n        ),\n        MultilineInput(\n            name=\"language\",\n            display_name=\"Language\",\n            info=\"A comma-separated list of language codes in descending priority. \" \"Leave empty for default.\",\n        ),\n        DropdownInput(\n            name=\"translation\",\n            display_name=\"Translation Language\",\n            advanced=True,\n            options=[\"\", \"en\", \"es\", \"fr\", \"de\", \"it\", \"pt\", \"ru\", \"ja\", \"ko\", \"hi\", \"ar\", \"id\"],\n            info=\"Translate the transcripts to the specified language. \" \"Leave empty for no translation.\",\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"transcripts\", display_name=\"Data\", method=\"build_youtube_transcripts\"),\n        Output(name=\"transcripts_tool\", display_name=\"Tool\", method=\"build_youtube_tool\"),\n    ]\n\n    def build_youtube_transcripts(self) -> Data | list[Data]:\n        \"\"\"Method to build transcripts from the provided YouTube URL.\n\n        Returns:\n            Data | list[Data]: The transcripts of the video, either as a single\n            Data object or a list of Data objects.\n        \"\"\"\n        try:\n            loader = YoutubeLoader.from_youtube_url(\n                self.url,\n                transcript_format=TranscriptFormat.TEXT\n                if self.transcript_format == \"text\"\n                else TranscriptFormat.CHUNKS,\n                chunk_size_seconds=self.chunk_size_seconds,\n                language=self.language.split(\",\") if self.language else [\"en\"],\n                translation=self.translation if self.translation else None,\n            )\n\n            transcripts = loader.load()\n\n            if self.transcript_format == \"text\":\n                # Extract only the page_content from the Document\n                return Data(data={\"transcripts\": transcripts[0].page_content})\n            # For chunks, extract page_content and metadata separately\n            return [Data(data={\"content\": doc.page_content, \"metadata\": doc.metadata}) for doc in transcripts]\n\n        except Exception as exc:  # noqa: BLE001\n            # Using a specific error type for the return value\n            return Data(data={\"error\": f\"Failed to get YouTube transcripts: {exc!s}\"})\n\n    def youtube_transcripts(\n        self,\n        url: str = \"\",\n        transcript_format: TranscriptFormat = TranscriptFormat.TEXT,\n        chunk_size_seconds: int = 120,\n        language: str = \"\",\n        translation: str = \"\",\n    ) -> Data | list[Data]:\n        \"\"\"Helper method to handle transcripts outside of component calls.\n\n        Args:\n            url: The YouTube URL to get transcripts from.\n            transcript_format: Format of transcripts ('text' or 'chunks').\n            chunk_size_seconds: Size of each transcript chunk in seconds.\n            language: Comma-separated list of language codes.\n            translation: Target language for translation.\n\n        Returns:\n            Data | list[Data]: Video transcripts as single Data or list of Data.\n        \"\"\"\n        try:\n            if isinstance(transcript_format, str):\n                transcript_format = TranscriptFormat(transcript_format)\n            loader = YoutubeLoader.from_youtube_url(\n                url,\n                transcript_format=TranscriptFormat.TEXT\n                if transcript_format == TranscriptFormat.TEXT\n                else TranscriptFormat.CHUNKS,\n                chunk_size_seconds=chunk_size_seconds,\n                language=language.split(\",\") if language else [\"en\"],\n                translation=translation if translation else None,\n            )\n\n            transcripts = loader.load()\n            if transcript_format == TranscriptFormat.TEXT and len(transcripts) > 0:\n                return Data(data={\"transcript\": transcripts[0].page_content})\n            return [Data(data={\"content\": doc.page_content, \"metadata\": doc.metadata}) for doc in transcripts]\n        except Exception as exc:\n            msg = f\"Failed to get YouTube transcripts: {exc!s}\"\n            raise ToolException(msg) from exc\n\n    def build_youtube_tool(self) -> Tool:\n        \"\"\"Method to build the transcripts tool.\n\n        Returns:\n            Tool: A structured tool that uses the transcripts method.\n\n        Raises:\n            RuntimeError: If tool creation fails.\n        \"\"\"\n        try:\n            return StructuredTool.from_function(\n                name=\"youtube_transcripts\",\n                description=\"Get transcripts from YouTube videos.\",\n                func=self.youtube_transcripts,\n                args_schema=YoutubeApiSchema,\n            )\n\n        except Exception as exc:\n            msg = f\"Failed to build the YouTube transcripts tool: {exc!s}\"\n            raise RuntimeError(msg) from exc\n"
+                "value": "import re\n\nfrom langchain_community.document_loaders import AsyncHtmlLoader, WebBaseLoader\n\nfrom langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass URLComponent(Component):\n    display_name = \"URL\"\n    description = \"Fetch content from one or more URLs.\"\n    icon = \"layout-template\"\n    name = \"URL\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"urls\",\n            display_name=\"URLs\",\n            info=\"Enter one or more URLs, by clicking the '+' button.\",\n            is_list=True,\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"format\",\n            display_name=\"Output Format\",\n            info=\"Output Format. Use 'Text' to extract the text from the HTML or 'Raw HTML' for the raw HTML content.\",\n            options=[\"Text\", \"Raw HTML\"],\n            value=\"Text\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"fetch_content_text\"),\n    ]\n\n    def ensure_url(self, string: str) -> str:\n        \"\"\"Ensures the given string is a URL by adding 'http://' if it doesn't start with 'http://' or 'https://'.\n\n        Raises an error if the string is not a valid URL.\n\n        Parameters:\n            string (str): The string to be checked and possibly modified.\n\n        Returns:\n            str: The modified string that is ensured to be a URL.\n\n        Raises:\n            ValueError: If the string is not a valid URL.\n        \"\"\"\n        if not string.startswith((\"http://\", \"https://\")):\n            string = \"http://\" + string\n\n        # Basic URL validation regex\n        url_regex = re.compile(\n            r\"^(https?:\\/\\/)?\"  # optional protocol\n            r\"(www\\.)?\"  # optional www\n            r\"([a-zA-Z0-9.-]+)\"  # domain\n            r\"(\\.[a-zA-Z]{2,})?\"  # top-level domain\n            r\"(:\\d+)?\"  # optional port\n            r\"(\\/[^\\s]*)?$\",  # optional path\n            re.IGNORECASE,\n        )\n\n        if not url_regex.match(string):\n            msg = f\"Invalid URL: {string}\"\n            raise ValueError(msg)\n\n        return string\n\n    def fetch_content(self) -> list[Data]:\n        urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]\n        if self.format == \"Raw HTML\":\n            loader = AsyncHtmlLoader(web_path=urls, encoding=\"utf-8\")\n        else:\n            loader = WebBaseLoader(web_paths=urls, encoding=\"utf-8\")\n        docs = loader.load()\n        data = [Data(text=doc.page_content, **doc.metadata) for doc in docs]\n        self.status = data\n        return data\n\n    def fetch_content_text(self) -> Message:\n        data = self.fetch_content()\n\n        result_string = data_to_text(\"{text}\", data)\n        self.status = result_string\n        return Message(text=result_string)\n"
               },
-              "language": {
-                "_input_type": "MultilineInput",
-                "advanced": false,
-                "display_name": "Language",
-                "dynamic": false,
-                "info": "A comma-separated list of language codes in descending priority. Leave empty for default.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "language",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "transcript_format": {
+              "format": {
                 "_input_type": "DropdownInput",
                 "advanced": false,
                 "combobox": false,
-                "display_name": "Transcript Format",
+                "display_name": "Output Format",
                 "dynamic": false,
-                "info": "The format of the transcripts. Either 'text' for a single output or 'chunks' for timestamped chunks.",
-                "name": "transcript_format",
+                "info": "Output Format. Use 'Text' to extract the text from the HTML or 'Raw HTML' for the raw HTML content.",
+                "name": "format",
                 "options": [
-                  "text",
-                  "chunks"
+                  "Text",
+                  "Raw HTML"
                 ],
                 "placeholder": "",
                 "required": false,
@@ -1438,58 +1386,25 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "chunks"
+                "value": "Text"
               },
-              "translation": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "display_name": "Translation Language",
-                "dynamic": false,
-                "info": "Translate the transcripts to the specified language. Leave empty for no translation.",
-                "name": "translation",
-                "options": [
-                  "",
-                  "en",
-                  "es",
-                  "fr",
-                  "de",
-                  "it",
-                  "pt",
-                  "ru",
-                  "ja",
-                  "ko",
-                  "hi",
-                  "ar",
-                  "id"
-                ],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "url": {
-                "_input_type": "MultilineInput",
+              "urls": {
+                "_input_type": "MessageTextInput",
                 "advanced": false,
-                "display_name": "Video URL",
+                "display_name": "URLs",
                 "dynamic": false,
-                "info": "Enter the YouTube video URL to get transcripts from.",
+                "info": "Enter one or more URLs, by clicking the '+' button.",
                 "input_types": [
                   "Message"
                 ],
-                "list": false,
+                "list": true,
                 "load_from_db": false,
-                "multiline": true,
-                "name": "url",
+                "name": "urls",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "tool_mode": false,
+                "tool_mode": true,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1498,42 +1413,217 @@
             },
             "tool_mode": false
           },
-          "type": "YouTubeTranscriptsComponent"
+          "type": "URL"
         },
         "dragging": false,
-        "height": 475,
-        "id": "YouTubeTranscriptsComponent-n8Z9Y",
+        "height": 320,
+        "id": "URL-FOPyh",
         "position": {
-          "x": -996.7508450845454,
-          "y": -1169.8625689107164
+          "x": 1942.4405475324484,
+          "y": 274.6204436838327
         },
         "positionAbsolute": {
-          "x": -996.7508450845454,
-          "y": -1169.8625689107164
+          "x": 1942.4405475324484,
+          "y": 274.6204436838327
         },
         "selected": false,
         "type": "genericNode",
         "width": 320
+      },
+      {
+        "data": {
+          "id": "CalculatorTool-IfWT1",
+          "node": {
+            "base_classes": [
+              "Data",
+              "Tool"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Perform basic arithmetic operations on a given expression.",
+            "display_name": "Calculator",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "expression"
+            ],
+            "frozen": false,
+            "icon": "calculator",
+            "legacy": false,
+            "lf_version": "1.1.0.dev4",
+            "metadata": {},
+            "output_types": [],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Data",
+                "method": "run_model",
+                "name": "api_run_model",
+                "required_inputs": [],
+                "selected": "Data",
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "cache": true,
+                "display_name": "Tool",
+                "method": "build_tool",
+                "name": "api_build_tool",
+                "required_inputs": [],
+                "selected": "Tool",
+                "types": [
+                  "Tool"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "import ast\nimport operator\n\nfrom langchain.tools import StructuredTool\nfrom langchain_core.tools import ToolException\nfrom loguru import logger\nfrom pydantic import BaseModel, Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import MessageTextInput\nfrom langflow.schema import Data\n\n\nclass CalculatorToolComponent(LCToolComponent):\n    display_name = \"Calculator\"\n    description = \"Perform basic arithmetic operations on a given expression.\"\n    icon = \"calculator\"\n    name = \"CalculatorTool\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"expression\",\n            display_name=\"Expression\",\n            info=\"The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').\",\n        ),\n    ]\n\n    class CalculatorToolSchema(BaseModel):\n        expression: str = Field(..., description=\"The arithmetic expression to evaluate.\")\n\n    def run_model(self) -> list[Data]:\n        return self._evaluate_expression(self.expression)\n\n    def build_tool(self) -> Tool:\n        return StructuredTool.from_function(\n            name=\"calculator\",\n            description=\"Evaluate basic arithmetic expressions. Input should be a string containing the expression.\",\n            func=self._eval_expr_with_error,\n            args_schema=self.CalculatorToolSchema,\n        )\n\n    def _eval_expr(self, node):\n        # Define the allowed operators\n        operators = {\n            ast.Add: operator.add,\n            ast.Sub: operator.sub,\n            ast.Mult: operator.mul,\n            ast.Div: operator.truediv,\n            ast.Pow: operator.pow,\n        }\n        if isinstance(node, ast.Num):\n            return node.n\n        if isinstance(node, ast.BinOp):\n            return operators[type(node.op)](self._eval_expr(node.left), self._eval_expr(node.right))\n        if isinstance(node, ast.UnaryOp):\n            return operators[type(node.op)](self._eval_expr(node.operand))\n        if isinstance(node, ast.Call):\n            msg = (\n                \"Function calls like sqrt(), sin(), cos() etc. are not supported. \"\n                \"Only basic arithmetic operations (+, -, *, /, **) are allowed.\"\n            )\n            raise TypeError(msg)\n        msg = f\"Unsupported operation or expression type: {type(node).__name__}\"\n        raise TypeError(msg)\n\n    def _eval_expr_with_error(self, expression: str) -> list[Data]:\n        try:\n            return self._evaluate_expression(expression)\n        except Exception as e:\n            raise ToolException(str(e)) from e\n\n    def _evaluate_expression(self, expression: str) -> list[Data]:\n        try:\n            # Parse the expression and evaluate it\n            tree = ast.parse(expression, mode=\"eval\")\n            result = self._eval_expr(tree.body)\n\n            # Format the result to a reasonable number of decimal places\n            formatted_result = f\"{result:.6f}\".rstrip(\"0\").rstrip(\".\")\n\n            self.status = formatted_result\n            return [Data(data={\"result\": formatted_result})]\n\n        except (SyntaxError, TypeError, KeyError) as e:\n            error_message = f\"Invalid expression: {e}\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n        except ZeroDivisionError:\n            error_message = \"Error: Division by zero\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n        except Exception as e:  # noqa: BLE001\n            logger.opt(exception=True).debug(\"Error evaluating expression\")\n            error_message = f\"Error: {e}\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n"
+              },
+              "expression": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Expression",
+                "dynamic": false,
+                "info": "The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "expression",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "type": "CalculatorTool"
+        },
+        "dragging": false,
+        "height": 302,
+        "id": "CalculatorTool-IfWT1",
+        "position": {
+          "x": 1938.2271796804105,
+          "y": 629.2915039696703
+        },
+        "positionAbsolute": {
+          "x": 1938.2271796804105,
+          "y": 629.2915039696703
+        },
+        "selected": false,
+        "type": "genericNode",
+        "width": 320
+      },
+      {
+        "data": {
+          "id": "note-QuJAF",
+          "node": {
+            "description": "# 📖 README\nRun an Agent with URL and Calculator tools available for its use. \nThe Agent decides which tool to use to solve a problem.\n## Quick start\n\n1. Add your OpenAI API key to the Agent.\n2. Open the Playground and chat with the Agent. Request some information about a recipe, and then ask to add two numbers together. In the responses, the Agent will use different tools to solve different problems.\n\n## Next steps\nConnect more tools to the Agent to create your perfect assistant.\n\nFor more, see the [Langflow docs](https://docs.langflow.org/agents-tool-calling-agent-component).",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "neutral"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 571,
+        "id": "note-QuJAF",
+        "position": {
+          "x": 1314.267618793912,
+          "y": 323.12512509078374
+        },
+        "positionAbsolute": {
+          "x": 1314.267618793912,
+          "y": 323.12512509078374
+        },
+        "resizing": false,
+        "selected": false,
+        "style": {
+          "height": 571,
+          "width": 600
+        },
+        "type": "noteNode",
+        "width": 600
+      },
+      {
+        "data": {
+          "id": "note-uxxuk",
+          "node": {
+            "description": "### 💡 Add your OpenAI API key here👇",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "transparent"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 324,
+        "id": "note-uxxuk",
+        "position": {
+          "x": 2302.9552933034743,
+          "y": 288.4851054994825
+        },
+        "positionAbsolute": {
+          "x": 2302.9552933034743,
+          "y": 288.4851054994825
+        },
+        "resizing": false,
+        "selected": false,
+        "style": {
+          "height": 324,
+          "width": 330
+        },
+        "type": "noteNode",
+        "width": 330
       }
     ],
     "viewport": {
-      "x": 1337.7257173603357,
-      "y": 1096.2297230048744,
-      "zoom": 0.7807596345995297
+      "x": -813.150138361608,
+      "y": -64.1501688971494,
+      "zoom": 0.6612152367588026
     }
   },
-  "description": "Quickly get detailed answers to questions about YouTube videos by analyzing their transcripts.",
+  "description": "A simple but powerful starter agent.",
   "endpoint_name": null,
-  "gradient": "3",
-  "icon": "Youtube",
-  "id": "3b33c431-9b8b-4ba1-9372-04b785e590d3",
+  "id": "263070d6-3560-4f4d-a6c4-003f4a586e6e",
   "is_component": false,
-  "last_tested_version": "1.0.19.post2",
-  "name": "YouTube Transcript Q&A",
+  "last_tested_version": "1.1.0",
+  "name": "Simple Agent",
   "tags": [
-    "agents",
-    "content-generation",
-    "rag",
-    "q-a"
+    "assistants",
+    "agents"
   ]
 }
