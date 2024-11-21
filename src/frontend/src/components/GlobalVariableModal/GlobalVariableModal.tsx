@@ -169,7 +169,10 @@ export default function GlobalVariableModal({
             value={type}
             defaultValue={type}
           >
-            <SelectTrigger className="h-full w-full">
+            <SelectTrigger
+              className="h-full w-full"
+              data-testid="select-type-global-variables"
+            >
               <SelectValue placeholder="Choose a type for the variable..." />
             </SelectTrigger>
             <SelectContent id="type-global-variables">

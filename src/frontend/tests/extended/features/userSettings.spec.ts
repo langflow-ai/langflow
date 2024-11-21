@@ -35,15 +35,7 @@ test("should interact with global variables", async ({ page }) => {
   await page
     .getByPlaceholder("Insert a name for the variable...")
     .fill(randomName);
-  await page.getByTestId("anchor-popover-anchor-type-global-variables").click();
-  await page.getByPlaceholder("Search options...").fill("Generic");
-  await page.waitForTimeout(1000);
-  await page.getByText("Generic", { exact: true }).last().isVisible();
-  await page.getByText("Generic", { exact: true }).last().click();
-
-  await page.getByTestId("popover-anchor-type-global-variables").click();
-  await page.waitForTimeout(1000);
-  await page.getByPlaceholder("Search options...").fill("Generic");
+  await page.getByTestId("select-type-global-variables").first().click();
   await page.getByText("Generic", { exact: true }).last().isVisible();
   await page.getByText("Generic", { exact: true }).last().click();
 
