@@ -33,55 +33,140 @@ def create_input_fields_dict(inputs, prefix):
     return {f"{prefix}{input_.name}": input_ for input_ in inputs}
 
 
-OPENAI_INPUTS = get_filtered_inputs(OpenAIModelComponent)
-AZURE_INPUTS = get_filtered_inputs(AzureChatOpenAIComponent)
-GROQ_INPUTS = get_filtered_inputs(GroqModel)
-ANTHROPIC_INPUTS = get_filtered_inputs(AnthropicModelComponent)
-NVIDIA_INPUTS = get_filtered_inputs(NVIDIAModelComponent)
-AMAZON_BEDROCK_INPUTS = get_filtered_inputs(AmazonBedrockComponent)
+def _get_openai_inputs_and_fields():
+    try:
+        from langflow.components.models.openai import OpenAIModelComponent
 
-OPENAI_FIELDS = {input_.name: input_ for input_ in OPENAI_INPUTS}
+        openai_inputs = get_filtered_inputs(OpenAIModelComponent)
+    except ImportError as e:
+        msg = "OpenAI is not installed. Please install it with `pip install langchain-openai`."
+        raise ImportError(msg) from e
+    return openai_inputs, {input_.name: input_ for input_ in openai_inputs}
 
 
-AZURE_FIELDS = create_input_fields_dict(AZURE_INPUTS, "")
-GROQ_FIELDS = create_input_fields_dict(GROQ_INPUTS, "")
-ANTHROPIC_FIELDS = create_input_fields_dict(ANTHROPIC_INPUTS, "")
-NVIDIA_FIELDS = create_input_fields_dict(NVIDIA_INPUTS, "")
-AMAZON_BEDROCK_FIELDS = create_input_fields_dict(AMAZON_BEDROCK_INPUTS, "")
+def _get_azure_inputs_and_fields():
+    try:
+        from langflow.components.models.azure_openai import AzureChatOpenAIComponent
 
-MODEL_PROVIDERS = ["Azure OpenAI", "OpenAI", "Groq", "Anthropic", "NVIDIA", "Amazon Bedrock"]
+        azure_inputs = get_filtered_inputs(AzureChatOpenAIComponent)
+    except ImportError as e:
+        msg = "Azure OpenAI is not installed. Please install it with `pip install langchain-azure-openai`."
+        raise ImportError(msg) from e
+    return azure_inputs, create_input_fields_dict(azure_inputs, "")
 
-MODEL_PROVIDERS_DICT = {
-    "Azure OpenAI": {
-        "fields": AZURE_FIELDS,
-        "inputs": AZURE_INPUTS,
-        "prefix": "",
-        "component_class": AzureChatOpenAIComponent(),
-    },
-    "OpenAI": {
-        "fields": OPENAI_FIELDS,
-        "inputs": OPENAI_INPUTS,
+
+def _get_groq_inputs_and_fields():
+    try:
+        from langflow.components.models.groq import GroqModel
+
+        groq_inputs = get_filtered_inputs(GroqModel)
+    except ImportError as e:
+        msg = "Groq is not installed. Please install it with `pip install langchain-groq`."
+        raise ImportError(msg) from e
+    return groq_inputs, create_input_fields_dict(groq_inputs, "")
+
+
+def _get_anthropic_inputs_and_fields():
+    try:
+        from langflow.components.models.anthropic import AnthropicModelComponent
+
+        anthropic_inputs = get_filtered_inputs(AnthropicModelComponent)
+    except ImportError as e:
+        msg = "Anthropic is not installed. Please install it with `pip install langchain-anthropic`."
+        raise ImportError(msg) from e
+    return anthropic_inputs, create_input_fields_dict(anthropic_inputs, "")
+
+
+def _get_nvidia_inputs_and_fields():
+    try:
+        from langflow.components.models.nvidia import NVIDIAModelComponent
+
+        nvidia_inputs = get_filtered_inputs(NVIDIAModelComponent)
+    except ImportError as e:
+        msg = "NVIDIA is not installed. Please install it with `pip install langchain-nvidia`."
+        raise ImportError(msg) from e
+    return nvidia_inputs, create_input_fields_dict(nvidia_inputs, "")
+
+
+def _get_amazon_bedrock_inputs_and_fields():
+    try:
+        from langflow.components.models.amazon_bedrock import AmazonBedrockComponent
+
+        amazon_bedrock_inputs = get_filtered_inputs(AmazonBedrockComponent)
+    except ImportError as e:
+        msg = "Amazon Bedrock is not installed. Please install it with `pip install langchain-amazon-bedrock`."
+        raise ImportError(msg) from e
+    return amazon_bedrock_inputs, create_input_fields_dict(amazon_bedrock_inputs, "")
+
+
+MODEL_PROVIDERS_DICT = {}
+
+# Try to add each provider
+try:
+    openai_inputs, openai_fields = _get_openai_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["OpenAI"] = {
+        "fields": openai_fields,
+        "inputs": openai_inputs,
         "prefix": "",
         "component_class": OpenAIModelComponent(),
-    },
-    "Groq": {"fields": GROQ_FIELDS, "inputs": GROQ_INPUTS, "prefix": "", "component_class": GroqModel()},
-    "Anthropic": {
-        "fields": ANTHROPIC_FIELDS,
-        "inputs": ANTHROPIC_INPUTS,
+    }
+except ImportError:
+    pass
+
+try:
+    azure_inputs, azure_fields = _get_azure_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["Azure OpenAI"] = {
+        "fields": azure_fields,
+        "inputs": azure_inputs,
+        "prefix": "",
+        "component_class": AzureChatOpenAIComponent(),
+    }
+except ImportError:
+    pass
+
+try:
+    groq_inputs, groq_fields = _get_groq_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["Groq"] = {
+        "fields": groq_fields,
+        "inputs": groq_inputs,
+        "prefix": "",
+        "component_class": GroqModel(),
+    }
+except ImportError:
+    pass
+
+try:
+    anthropic_inputs, anthropic_fields = _get_anthropic_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["Anthropic"] = {
+        "fields": anthropic_fields,
+        "inputs": anthropic_inputs,
         "prefix": "",
         "component_class": AnthropicModelComponent(),
-    },
-    "NVIDIA": {
-        "fields": NVIDIA_FIELDS,
-        "inputs": NVIDIA_INPUTS,
+    }
+except ImportError:
+    pass
+
+try:
+    nvidia_inputs, nvidia_fields = _get_nvidia_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["NVIDIA"] = {
+        "fields": nvidia_fields,
+        "inputs": nvidia_inputs,
         "prefix": "",
         "component_class": NVIDIAModelComponent(),
-    },
-    "Amazon Bedrock": {
-        "fields": AMAZON_BEDROCK_FIELDS,
-        "inputs": AMAZON_BEDROCK_INPUTS,
+    }
+except ImportError:
+    pass
+
+try:
+    bedrock_inputs, bedrock_fields = _get_amazon_bedrock_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["Amazon Bedrock"] = {
+        "fields": bedrock_fields,
+        "inputs": bedrock_inputs,
         "prefix": "",
         "component_class": AmazonBedrockComponent(),
-    },
-}
+    }
+except ImportError:
+    pass
+
+MODEL_PROVIDERS = list(MODEL_PROVIDERS_DICT.keys())
 ALL_PROVIDER_FIELDS: list[str] = [field for provider in MODEL_PROVIDERS_DICT.values() for field in provider["fields"]]

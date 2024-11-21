@@ -3910,7 +3910,7 @@ requires-dist = [
     { name = "assemblyai", specifier = ">=0.33.0" },
     { name = "asyncer", specifier = ">=0.0.5" },
     { name = "bcrypt", specifier = "==4.0.1" },
-    { name = "cachetools", specifier = ">=5.3.1" },
+    { name = "cachetools", specifier = ">=5.5.0" },
     { name = "celery", marker = "extra == 'all'", specifier = ">=5.3.1" },
     { name = "celery", marker = "extra == 'deploy'", specifier = ">=5.3.1" },
     { name = "chardet", specifier = ">=5.2.0" },
