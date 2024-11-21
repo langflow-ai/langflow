@@ -38,11 +38,7 @@ class TestEventManager:
 
     # Sending an event with valid event_type and data using pytest-asyncio plugin
     async def test_sending_event_with_valid_type_and_data_asyncio_plugin(self):
-        async def mock_queue_put_nowait(item):
-            await queue.put(item)
-
         queue = asyncio.Queue()
-        queue.put_nowait = mock_queue_put_nowait
         manager = EventManager(queue)
         manager.register_event("on_test_event", "test_type", manager.noop)
         event_type = "test_type"
@@ -70,7 +66,7 @@ class TestEventManager:
 
     # Handling a large number of events in the queue
     def test_handling_large_number_of_events(self):
-        async def mock_queue_put_nowait(item):
+        def mock_queue_put_nowait(item):
             pass
 
         queue = asyncio.Queue()
@@ -96,7 +92,11 @@ class TestEventManager:
 
     # Sending an event with complex data and verifying successful event transmission
     async def test_sending_event_with_complex_data(self):
+        def mock_queue_put_nowait(item):
+            pass
+
         queue = asyncio.Queue()
+        queue.put_nowait = mock_queue_put_nowait
         manager = EventManager(queue)
         manager.register_event("on_test_event", "test_type", manager.noop)
         data = {"key": "value", "nested": [1, 2, 3]}
@@ -134,7 +134,7 @@ class TestEventManager:
 
     # Checking the performance impact of frequent event registrations
     def test_performance_impact_frequent_registrations(self):
-        async def mock_callback(event_type: str, data: LoggableType):
+        def mock_callback(event_type: str, data: LoggableType):
             pass
 
         queue = asyncio.Queue()
