@@ -81,7 +81,7 @@ The `Message` object extends the functionality of `Data` and includes additi
   - `flow_id`: Identifier for the flow
   - `id`: Unique identifier for the message
 
-- **Content and Files:**
+- **Content and files:**
   - `files`: List of files or images associated with the message
   - `content_blocks`: List of structured content blocks
   - `properties`: Additional properties including visual styling and source information
