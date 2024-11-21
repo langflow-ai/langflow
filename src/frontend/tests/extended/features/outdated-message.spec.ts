@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { test } from "@playwright/test";
 import { readFileSync } from "fs";
 
 test("user must be able outdated message on error", async ({ page }) => {
@@ -23,10 +23,7 @@ test("user must be able outdated message on error", async ({ page }) => {
 
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
   // Read your file into a buffer.
-  const jsonContent = readFileSync(
-    "src/frontend/tests/assets/outdated_flow.json",
-    "utf-8",
-  );
+  const jsonContent = readFileSync("tests/assets/outdated_flow.json", "utf-8");
 
   // Create the DataTransfer and File
   const dataTransfer = await page.evaluateHandle((data) => {
