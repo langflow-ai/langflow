@@ -26,6 +26,7 @@ pre {
 }
 
 .react-flow__pane {
+  pointer-events: all;
   cursor: default;
 }
 
@@ -147,7 +148,7 @@ textarea[class^="ag-"]:focus {
 }
 
 .ace_scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--ring));
+  background-color: hsl(var(--placeholder-foreground));
   border-radius: 999px;
 }
 
@@ -249,11 +250,16 @@ pre code {
   width: 100%;
   /* Background color */
   background-color: hsl(var(--code-background)) !important;
+  color: hsl(var(--code-foreground)) !important;
 }
 
 pre {
   /* Background color */
   background-color: hsl(var(--code-background)) !important;
+}
+
+.prose li::marker {
+  color: inherit !important;
 }
 
 [type="search"]:not(:placeholder-shown)::-webkit-search-cancel-button {

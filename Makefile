@@ -39,14 +39,8 @@ patch: ## bump the version in langflow and langflow-base
 check_tools:
 	@command -v uv >/dev/null 2>&1 || { echo >&2 "$(RED)uv is not installed. Aborting.$(NC)"; exit 1; }
 	@command -v npm >/dev/null 2>&1 || { echo >&2 "$(RED)NPM is not installed. Aborting.$(NC)"; exit 1; }
-	@command -v pipx >/dev/null 2>&1 || { echo >&2 "$(RED)pipx is not installed. Aborting.$(NC)"; exit 1; }
-	@$(MAKE) check_env
 	@echo "$(GREEN)All required tools are installed.$(NC)"
 
-# check if Python version is compatible
-check_env: ## check if Python version is compatible
-	@chmod +x scripts/setup/check_env.sh
-	@scripts/setup/check_env.sh "$(PYTHON_REQUIRED)"
 
 help: ## show this help message
 	@echo '----'
@@ -187,7 +181,7 @@ fix_codespell: ## run codespell to fix spelling errors
 
 format: ## run code formatters
 	@uv run ruff check . --fix
-	@uv run ruff format .
+	@uv run ruff format . --config pyproject.toml
 	@cd src/frontend && npm run format
 
 unsafe_fix:
@@ -215,11 +209,13 @@ endif
 
 run_cli: install_frontend install_backend build_frontend ## run the CLI
 	@echo 'Running the CLI'
-ifdef env
-	@make start env=$(env) host=$(host) port=$(port) log_level=$(log_level)
-else
-	@make start host=$(host) port=$(port) log_level=$(log_level)
-endif
+	@uv run langflow run \
+		--frontend-path $(path) \
+		--log-level $(log_level) \
+		--host $(host) \
+		--port $(port) \
+		$(if $(env),--env-file $(env),) \
+		$(if $(filter false,$(open_browser)),--no-open-browser)
 
 run_cli_debug:
 	@echo 'Running the CLI in debug mode'
@@ -234,25 +230,6 @@ else
 	@make start host=$(host) port=$(port) log_level=debug
 endif
 
-start:
-	@echo 'Running the CLI'
-
-ifeq ($(open_browser),false)
-	@make install_backend && uv run langflow run \
-		--frontend-path $(path) \
-		--log-level $(log_level) \
-		--host $(host) \
-		--port $(port) \
-		--env-file $(env) \
-		--no-open-browser
-else
-	@make install_backend && uv run langflow run \
-		--frontend-path $(path) \
-		--log-level $(log_level) \
-		--host $(host) \
-		--port $(port) \
-		--env-file $(env)
-endif
 
 setup_devcontainer: ## set up the development container
 	make install_backend

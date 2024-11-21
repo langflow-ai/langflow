@@ -55,12 +55,6 @@ class AstraGraphVectorStoreComponent(LCVectorStoreComponent):
             info="Metadata key used for incoming links.",
             advanced=True,
         ),
-        StrInput(
-            name="namespace",
-            display_name="Namespace",
-            info="Optional namespace within Astra DB to use for the collection.",
-            advanced=True,
-        ),
         MultilineInput(
             name="search_input",
             display_name="Search Input",
@@ -71,9 +65,9 @@ class AstraGraphVectorStoreComponent(LCVectorStoreComponent):
             is_list=True,
         ),
         StrInput(
-            name="namespace",
-            display_name="Namespace",
-            info="Optional namespace within Astra DB to use for the collection.",
+            name="keyspace",
+            display_name="Keyspace",
+            info="Optional keyspace within Astra DB to use for the collection.",
             advanced=True,
         ),
         HandleInput(
@@ -211,7 +205,7 @@ class AstraGraphVectorStoreComponent(LCVectorStoreComponent):
                 metadata_incoming_links_key=self.metadata_incoming_links_key or "incoming_links",
                 token=self.token,
                 api_endpoint=self.api_endpoint,
-                namespace=self.namespace or None,
+                namespace=self.keyspace or None,
                 environment=parse_api_endpoint(self.api_endpoint).environment if self.api_endpoint else None,
                 metric=self.metric or None,
                 batch_size=self.batch_size or None,
