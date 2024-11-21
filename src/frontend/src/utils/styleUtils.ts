@@ -88,6 +88,7 @@ import {
   FolderIcon,
   FolderPlus,
   FolderPlusIcon,
+  FolderSync,
   FolderUp,
   FormInput,
   Forward,
@@ -897,4 +898,5 @@ export const nodeIconsLucide: iconsType = {
   DatabaseZap,
   Cog,
   ArrowRightLeft,
+  FolderSync
 };
