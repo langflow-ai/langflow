@@ -350,7 +350,7 @@ export default function GenericNode({
       >
         {memoizedNodeToolbarComponent}
         {isOutdated && !isUserEdited && (
-          <div className="text-warning-foreground bg-warning flex h-10 w-full items-center gap-4 rounded-t-[0.69rem] p-2 px-4">
+          <div className="flex h-10 w-full items-center gap-4 rounded-t-[0.69rem] bg-warning p-2 px-4 text-warning-foreground">
             <ForwardedIconComponent
               name="AlertTriangle"
               strokeWidth={1.5}
