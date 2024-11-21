@@ -226,7 +226,7 @@ class BaseFileComponent(Component, ABC):
         data_list: list[Data | None],
         path_field: str = SERVER_FILE_PATH_FIELDNAME,
     ) -> list[BaseFile]:
-        """Rolls up Data objects into corresponding BaseFile objects, preserving the order of the 
+        """Rolls up Data objects into corresponding BaseFile objects, preserving the order of the
            original BaseFile list.
 
         Args:
@@ -237,6 +237,7 @@ class BaseFileComponent(Component, ABC):
         Returns:
             list[BaseFile]: A new list of BaseFile objects with merged `data` attributes.
         """
+
         def _build_data_dict(data_list: list[Data | None], data_list_field: str) -> dict[str, list[Data]]:
             """Builds a dictionary grouping Data objects by a specified field."""
             data_dict = {}

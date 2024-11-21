@@ -49,6 +49,7 @@ class FileComponent(BaseFileComponent):
         Returns:
             list[BaseFileComponent.BaseFile]: Updated list of files with merged data.
         """
+
         def process_file(file_path: str, *, silent_errors: bool = False) -> Data | None:
             """Processes a single file and returns its Data object."""
             try:
@@ -77,9 +78,7 @@ class FileComponent(BaseFileComponent):
         if concurrency < parallel_processing_threshold or file_count < parallel_processing_threshold:
             if file_count > 1:
                 self.log(f"Processing {file_count} files sequentially.")
-            processed_data = [
-                process_file(str(file.path), silent_errors=self.silent_errors) for file in file_list
-            ]
+            processed_data = [process_file(str(file.path), silent_errors=self.silent_errors) for file in file_list]
         else:
             self.log(f"Starting parallel processing of {file_count} files with concurrency: {concurrency}.")
             file_paths = [str(file.path) for file in file_list]
