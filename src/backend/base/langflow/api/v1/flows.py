@@ -25,7 +25,7 @@ from langflow.api.utils import (
     validate_is_component,
 )
 from langflow.api.v1.schemas import FlowListCreate
-from langflow.initial_setup.setup import STARTER_FOLDER_NAME
+from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
 from langflow.services.database.models.flow.model import FlowHeader
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
