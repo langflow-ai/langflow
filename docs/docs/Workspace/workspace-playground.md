@@ -60,7 +60,7 @@ curl -X POST \
 }'
 ```
 
-Check your flow's playground. In addition to the messages stored for the Default Session, a new session is started with your new Session ID.
+Check your flow's **Playground**. In addition to the messages stored for the Default Session, a new session is started with your new Session ID.
 
 **Chat Input** and **Chat Output** components can also store a `session_id` parameter as a **Tweak** for specific sessions. The Playground will still display all available sessions, but the flow will use the value stored in the `session_id` tweak.
 
