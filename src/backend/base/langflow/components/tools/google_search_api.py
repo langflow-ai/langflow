@@ -9,7 +9,7 @@ class GoogleSearchAPIComponent(LCToolComponent):
     display_name = "Google Search API"
     description = "Call Google Search API."
     name = "GoogleSearchAPI"
-
+    icon = "Google"
     inputs = [
         SecretStrInput(name="google_api_key", display_name="Google API Key", required=True),
         SecretStrInput(name="google_cse_id", display_name="Google CSE ID", required=True),
