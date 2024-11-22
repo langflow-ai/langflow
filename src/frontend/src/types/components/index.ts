@@ -253,6 +253,7 @@ export type ShadToolTipType = {
   children?: ReactElement;
   delayDuration?: number;
   styleClasses?: string;
+  avoidCollisions?: boolean;
 };
 
 export type TextHighlightType = {

@@ -13,6 +13,7 @@ const ShadTooltip: React.FC<ShadToolTipType> = ({
   open,
   align,
   setOpen,
+  avoidCollisions = false,
 }) => {
   if (!content) {
     return <>{children}</>;
@@ -32,7 +33,7 @@ const ShadTooltip: React.FC<ShadToolTipType> = ({
           styleClasses,
         )}
         side={side}
-        avoidCollisions={false}
+        avoidCollisions={avoidCollisions}
         align={align}
         sticky="always"
       >
