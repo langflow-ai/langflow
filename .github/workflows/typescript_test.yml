@@ -222,17 +222,12 @@ jobs:
           cd src/frontend
           npm ci
 
-      - name: Install Playwright with dependencies
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: |
-          cd src/frontend
-          npx playwright install --with-deps
-
-      - name: Install Playwright dependencies only
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: |
-          cd src/frontend
-          npx playwright install-deps
+      - name: Install Playwright
+        id: install-playwright
+        uses: ./.github/actions/install-playwright
+        with:
+          working-directory: ./src/frontend
+          browsers: chromium
 
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
