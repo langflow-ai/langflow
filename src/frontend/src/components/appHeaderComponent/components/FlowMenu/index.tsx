@@ -28,8 +28,8 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
-import { useTypesStore } from "@/stores/typesStore";
 import { cn } from "@/utils/utils";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const MenuBar = ({}: {}): JSX.Element => {
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
@@ -44,8 +44,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const uploadFlow = useUploadFlow();
   const navigate = useCustomNavigate();
   const isBuilding = useFlowStore((state) => state.isBuilding);
-  const getTypes = useTypesStore((state) => state.getTypes);
   const saveFlow = useSaveFlow();
+  const queryClient = useQueryClient();
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
@@ -75,7 +75,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
   }
 
   function handleReloadComponents() {
-    getTypes(true).then(() => {
+    queryClient.prefetchQuery({ queryKey: ["useGetTypes"] }).then(() => {
       setSuccessData({ title: "Components reloaded successfully" });
     });
   }
