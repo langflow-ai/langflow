@@ -1,6 +1,6 @@
 from langflow.custom import Component
-from langflow.io import HandleInput, NestedDictInput, Output, StrInput
 from langflow.inputs import MessageTextInput
+from langflow.io import HandleInput, NestedDictInput, Output, StrInput
 from langflow.schema import Data
 
 
@@ -38,7 +38,7 @@ class AlterMetadataComponent(Component):
             info="Metadata Fields to Remove",
             required=False,
             is_list=True,
-        ),        
+        ),
     ]
 
     outputs = [
@@ -80,7 +80,7 @@ class AlterMetadataComponent(Component):
         # Handle removal of fields specified in remove_fields
         if self.remove_fields:
             fields_to_remove = {field.strip() for field in self.remove_fields if field.strip()}
-            
+
             # Remove specified fields from each Data object's metadata
             for data in data_objects:
                 data.data = {k: v for k, v in data.data.items() if k not in fields_to_remove}
