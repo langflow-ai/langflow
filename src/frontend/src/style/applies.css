@@ -1268,6 +1268,10 @@
   .toolbar-wrapper {
     @apply flex h-10 items-center gap-1 rounded-xl border border-border bg-background p-1 shadow-sm;
   }
+
+  .playground-btn-flow-toolbar {
+    @apply relative inline-flex h-8 w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold transition-all duration-500 ease-in-out;
+  }
 }
 
 /* Gradient background */
