@@ -166,6 +166,7 @@ class BaseFileComponent(Component, ABC):
             list[Data]: Parsed data from the processed files.
         """
         self._temp_dirs = []
+        final_files = []  # Initialize to avoid UnboundLocalError
         try:
             # Step 1: Validate the provided paths
             files = self._validate_and_resolve_paths()
