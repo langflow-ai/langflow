@@ -146,9 +146,10 @@ def update_messages(messages: Message | list[Message]) -> list[Message]:
     with session_scope() as session:
         updated_messages: list[MessageTable] = []
         for message in messages:
-            msg = session.get(MessageTable, message.id)
+            message_id = UUID(message.id) if isinstance(message.id, str) else message.id
+            msg = session.get(MessageTable, message_id)
             if msg:
-                msg.sqlmodel_update(message.model_dump(exclude_unset=True, exclude_none=True))
+                msg = msg.sqlmodel_update(message.model_dump(exclude_unset=True, exclude_none=True))
                 session.add(msg)
                 session.commit()
                 session.refresh(msg)
