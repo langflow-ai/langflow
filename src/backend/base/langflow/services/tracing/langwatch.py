@@ -41,6 +41,7 @@ class LangWatchTracer(BaseTracer):
             self.spans: dict[str, ContextSpan] = {}
 
             name_without_id = " - ".join(trace_name.split(" - ")[0:-1])
+            name_without_id = project_name if name_without_id == "None" else name_without_id
             self.trace.root_span.update(
                 # nanoid to make the span_id globally unique, which is required for LangWatch for now
                 span_id=f"{self.flow_id}-{nanoid.generate(size=6)}",
