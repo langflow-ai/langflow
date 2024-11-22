@@ -5,7 +5,7 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-interface IPatchUpdateFlow {
+export interface IPatchUpdateFlow {
   id: string;
   name: string;
   data: ReactFlowJsonObject;

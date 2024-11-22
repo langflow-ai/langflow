@@ -4,8 +4,10 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 // import "ace-builds/webpack-resolver";
+import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import { usePostValidateCode } from "@/controllers/API/queries/nodes/use-post-validate-code";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
+import useFlowStore from "@/stores/flowStore";
 import { useEffect, useRef, useState } from "react";
 import AceEditor from "react-ace";
 import ReactAce from "react-ace/lib/ace";
@@ -29,6 +31,7 @@ import { CodeErrorDataTypeAPI } from "../../types/api";
 import { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 import ConfirmationModal from "../confirmationModal";
+import { useFlowUpdate } from "./hooks/use-update-node-code";
 
 export default function CodeAreaModal({
   value,
@@ -40,6 +43,7 @@ export default function CodeAreaModal({
   readonly = false,
   open: myOpen,
   setOpen: mySetOpen,
+  componentId,
 }: codeAreaModalPropsType): JSX.Element {
   const [code, setCode] = useState(value);
   const [open, setOpen] =
@@ -58,6 +62,10 @@ export default function CodeAreaModal({
   } | null>(null);
 
   const { mutate: validateComponentCode } = usePostValidateComponentCode();
+  const { mutate: patchUpdateFlow } = usePatchUpdateFlow();
+  const currentFlow = useFlowStore((state) => state.currentFlow);
+
+  const { updateNodeInFlow } = useFlowUpdate({ patchUpdateFlow, currentFlow });
 
   useEffect(() => {
     // if nodeClass.template has more fields other than code and dynamic is true
@@ -120,6 +128,8 @@ export default function CodeAreaModal({
           if (data && type) {
             setValue(code);
             setNodeClass(data, type);
+            updateNodeInFlow(componentId!, data);
+
             setError({ detail: { error: undefined, traceback: undefined } });
             setOpen(false);
           }
