@@ -2,9 +2,8 @@ import { Page, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
-
-async function zoomOut(page:Page, times:number=4){
-  for(let i=0;i<times;i++){
+async function zoomOut(page: Page, times: number = 4) {
+  for (let i = 0; i < times; i++) {
     await page.getByTestId("zoom_out").click();
   }
 }
@@ -58,7 +57,7 @@ test("should create a flow with decision", async ({ page }) => {
   await page
     .getByTestId("inputsChat Input")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await zoomOut(page);
+  await zoomOut(page);
 
   //---------------------------------- CREATE LIST
   await page.getByTestId("sidebar-search-input").click();
@@ -68,7 +67,9 @@ test("should create a flow with decision", async ({ page }) => {
   });
   await page
     .getByTestId("helpersCreate List")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'),{targetPosition:{x:100,y:100}});
+    .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+      targetPosition: { x: 100, y: 100 },
+    });
 
   await page.getByTestId("input-list-plus-btn_texts-0").first().click();
   await page.getByTestId("input-list-plus-btn_texts-0").first().click();
@@ -84,7 +85,9 @@ test("should create a flow with decision", async ({ page }) => {
   await page.getByTestId("inputlist_str_texts_2").first().fill("love you babe");
   await page
     .getByTestId("helpersCreate List")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'),{targetPosition:{x:300,y:300}});
+    .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+      targetPosition: { x: 300, y: 300 },
+    });
   await page.getByTestId("input-list-plus-btn_texts-0").last().click();
   await page.getByTestId("input-list-plus-btn_texts-0").last().click();
   await page.getByTestId("input-list-plus-btn_texts-0").last().click();
@@ -102,12 +105,16 @@ test("should create a flow with decision", async ({ page }) => {
   });
   await page
     .getByTestId("processingParse Data")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'),{targetPosition:{x:350,y:100}});
-    await zoomOut(page,1);
-    await page
+    .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+      targetPosition: { x: 350, y: 100 },
+    });
+  await zoomOut(page, 1);
+  await page
     .getByTestId("processingParse Data")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'),{targetPosition:{x:50,y:300}});
-    await zoomOut(page,2);
+    .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+      targetPosition: { x: 50, y: 300 },
+    });
+  await zoomOut(page, 2);
 
   //---------------------------------- PASS
   await page.getByTestId("sidebar-search-input").click();
@@ -117,21 +124,11 @@ test("should create a flow with decision", async ({ page }) => {
   });
   await page
     .getByTestId("logicPass")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'),{targetPosition:{x:400,y:100}});
-    await page.waitForSelector('[data-testid="logicPass"]', {
-      timeout: 500,
+    .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+      targetPosition: { x: 400, y: 100 },
     });
-  //---------------------------------- PASS
-  await page.getByTestId("sidebar-search-input").click();
-  await page.getByTestId("sidebar-search-input").fill("pass");
   await page.waitForSelector('[data-testid="logicPass"]', {
     timeout: 500,
-  });
-  await page
-    .getByTestId("logicPass")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'),{targetPosition:{x:600,y:200}});
-    await page.waitForSelector('[data-testid="logicPass"]', {
-      timeout: 500,
   });
   //---------------------------------- PASS
   await page.getByTestId("sidebar-search-input").click();
@@ -141,11 +138,27 @@ test("should create a flow with decision", async ({ page }) => {
   });
   await page
     .getByTestId("logicPass")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'),{targetPosition:{x:650,y:350}});
-    await page.waitForSelector('[data-testid="logicPass"]', {
-      timeout: 500,
+    .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+      targetPosition: { x: 600, y: 200 },
+    });
+  await page.waitForSelector('[data-testid="logicPass"]', {
+    timeout: 500,
   });
-  zoomOut(page,2)
+  //---------------------------------- PASS
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("pass");
+  await page.waitForSelector('[data-testid="logicPass"]', {
+    timeout: 500,
+  });
+  await page
+    .getByTestId("logicPass")
+    .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+      targetPosition: { x: 650, y: 350 },
+    });
+  await page.waitForSelector('[data-testid="logicPass"]', {
+    timeout: 500,
+  });
+  zoomOut(page, 2);
   //---------------------------------- PROMPT
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("prompt");
@@ -154,9 +167,11 @@ test("should create a flow with decision", async ({ page }) => {
   });
   await page
     .getByTestId("promptsPrompt")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'),{targetPosition:{x:50,y:150}});
+    .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+      targetPosition: { x: 50, y: 150 },
+    });
 
-    //---------------------------------- OPENAI
+  //---------------------------------- OPENAI
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("openai");
   await page.waitForSelector('[data-testid="modelsOpenAI"]', {
@@ -164,7 +179,9 @@ test("should create a flow with decision", async ({ page }) => {
   });
   await page
     .getByTestId("modelsOpenAI")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'),{targetPosition:{x:50,y:300}});
+    .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+      targetPosition: { x: 50, y: 300 },
+    });
 
   //---------------------------------- CONDITIONAL ROUTER
   await page.getByTestId("sidebar-search-input").click();
@@ -174,7 +191,9 @@ test("should create a flow with decision", async ({ page }) => {
   });
   await page
     .getByTestId("logicIf-Else")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'),{targetPosition:{x:750,y:150}});
+    .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+      targetPosition: { x: 750, y: 150 },
+    });
   //---------------------------------- CHAT OUTPUT
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("chat output");
@@ -183,7 +202,9 @@ test("should create a flow with decision", async ({ page }) => {
   });
   await page
     .getByTestId("outputsChat Output")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'),{targetPosition:{x:100,y:75}});
+    .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+      targetPosition: { x: 100, y: 75 },
+    });
   await page.waitForSelector('[data-testid="outputsChat Output"]', {
     timeout: 500,
   });
@@ -195,7 +216,9 @@ test("should create a flow with decision", async ({ page }) => {
   });
   await page
     .getByTestId("outputsChat Output")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'),{targetPosition:{x:250,y:75}});
+    .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+      targetPosition: { x: 250, y: 75 },
+    });
   await page.waitForSelector('[data-testid="outputsChat Output"]', {
     timeout: 500,
   });
