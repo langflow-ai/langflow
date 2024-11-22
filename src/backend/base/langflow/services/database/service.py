@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import sqlite3
 import time
 from contextlib import asynccontextmanager, contextmanager
@@ -20,13 +21,11 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlmodel import Session, SQLModel, create_engine, select, text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.base import Service
 from langflow.services.database import models
 from langflow.services.database.models.user.crud import get_user_by_username
-from langflow.services.database.utils import (
-    Result,
-    TableResults,
-)
+from langflow.services.database.utils import Result, TableResults
 from langflow.services.deps import get_settings_service
 from langflow.services.utils import teardown_superuser
 
@@ -145,28 +144,78 @@ class DatabaseService(Service):
         async with AsyncSession(self.async_engine, expire_on_commit=False) as session:
             yield session
 
-    async def migrate_flows_if_auto_login(self) -> None:
-        # if auto_login is enabled, we need to migrate the flows
-        # to the default superuser if they don't have a user id
-        # associated with them
+    async def assign_orphaned_flows_to_superuser(self) -> None:
+        """Assign orphaned flows to the default superuser when auto login is enabled."""
         settings_service = get_settings_service()
-        if settings_service.auth_settings.AUTO_LOGIN:
-            async with self.with_async_session() as session:
-                # `== None` translates to SQL `is NULL`
-                stmt = select(models.Flow).where(models.Flow.user_id == None)  # noqa: E711
-                flows = (await session.exec(stmt)).all()
-                if flows:
-                    logger.debug("Migrating flows to default superuser")
-                    username = settings_service.auth_settings.SUPERUSER
-                    user = await get_user_by_username(session, username)
-                    if not user:
-                        logger.error("Default superuser not found")
-                        msg = "Default superuser not found"
-                        raise RuntimeError(msg)
-                    for flow in flows:
-                        flow.user_id = user.id
-                    await session.commit()
-                    logger.debug("Flows migrated successfully")
+
+        if not settings_service.auth_settings.AUTO_LOGIN:
+            return
+
+        async with self.with_async_session() as session:
+            # Fetch orphaned flows
+            stmt = (
+                select(models.Flow)
+                .join(models.Folder)
+                .where(
+                    models.Flow.user_id == None,  # noqa: E711
+                    models.Folder.name != STARTER_FOLDER_NAME,
+                )
+            )
+            orphaned_flows = (await session.exec(stmt)).all()
+
+            if not orphaned_flows:
+                return
+
+            logger.debug("Assigning orphaned flows to the default superuser")
+
+            # Retrieve superuser
+            superuser_username = settings_service.auth_settings.SUPERUSER
+            superuser = await get_user_by_username(session, superuser_username)
+
+            if not superuser:
+                error_message = "Default superuser not found"
+                logger.error(error_message)
+                raise RuntimeError(error_message)
+
+            # Get existing flow names for the superuser
+            existing_names: set[str] = set(
+                (await session.exec(select(models.Flow.name).where(models.Flow.user_id == superuser.id))).all()
+            )
+
+            # Process orphaned flows
+            for flow in orphaned_flows:
+                flow.user_id = superuser.id
+                flow.name = self._generate_unique_flow_name(flow.name, existing_names)
+                existing_names.add(flow.name)
+
+            # Commit changes
+            await session.commit()
+            logger.debug("Successfully assigned orphaned flows to the default superuser")
+
+    def _generate_unique_flow_name(self, original_name: str, existing_names: set[str]) -> str:
+        """Generate a unique flow name by adding or incrementing a suffix."""
+        if original_name not in existing_names:
+            return original_name
+
+        match = re.search(r"^(.*) \((\d+)\)$", original_name)
+        if match:
+            base_name, current_number = match.groups()
+            new_name = f"{base_name} ({int(current_number) + 1})"
+        else:
+            new_name = f"{original_name} (1)"
+
+        # Ensure unique name by incrementing suffix
+        while new_name in existing_names:
+            match = re.match(r"^(.*) \((\d+)\)$", new_name)
+            if match is not None:
+                base_name, current_number = match.groups()
+            else:
+                error_message = "Invalid format: match is None"
+                raise ValueError(error_message)
+
+            new_name = f"{base_name} ({int(current_number) + 1})"
+
+        return new_name
 
     def check_schema_health(self) -> bool:
         inspector = inspect(self.engine)

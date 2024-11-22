@@ -1,7 +1,7 @@
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
+import { useUpdateNodeInternals } from "reactflow";
 import { ForwardedIconComponent } from "../../components/genericIconComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
@@ -214,8 +214,8 @@ export default function GenericNode({
   }, [hiddenOutputs]);
 
   const memoizedNodeToolbarComponent = useMemo(() => {
-    return (
-      <NodeToolbar>
+    return selected ? (
+      <div className={cn("absolute -top-12 left-1/2 z-50 -translate-x-1/2")}>
         <NodeToolbarComponent
           data={data}
           deleteNode={(id) => {
@@ -236,7 +236,9 @@ export default function GenericNode({
           isOutdated={isOutdated && isUserEdited}
           setOpenShowMoreOptions={setOpenShowMoreOptions}
         />
-      </NodeToolbar>
+      </div>
+    ) : (
+      <></>
     );
   }, [
     data,
@@ -335,8 +337,7 @@ export default function GenericNode({
     Object.values(data.node.template).some((field) => field.tool_mode);
 
   return (
-    <>
-      {memoizedNodeToolbarComponent}
+    <div className={cn(isOutdated && !isUserEdited ? "relative -mt-10" : "")}>
       <div
         className={cn(
           borderColor,
@@ -345,9 +346,30 @@ export default function GenericNode({
             : `h-[4.065rem] w-48 rounded-[0.75rem] ${!selected ? "border-[1px] border-border ring-[0.5px] ring-border" : ""}`,
           "generic-node-div group/node relative",
           !hasOutputs && "pb-4",
-          openShowMoreOptions && "nowheel",
         )}
       >
+        {memoizedNodeToolbarComponent}
+        {isOutdated && !isUserEdited && (
+          <div className="flex h-10 w-full items-center gap-4 rounded-t-[0.69rem] bg-warning p-2 px-4 text-warning-foreground">
+            <ForwardedIconComponent
+              name="AlertTriangle"
+              strokeWidth={1.5}
+              className="h-[18px] w-[18px] shrink-0"
+            />
+            <span className="flex-1 truncate text-sm font-medium">
+              Update Ready
+            </span>
+            <Button
+              variant="warning"
+              size="iconMd"
+              className="shrink-0 px-2.5 text-xs"
+              onClick={handleUpdateCode}
+              loading={loadingUpdate}
+            >
+              Update
+            </Button>
+          </div>
+        )}
         <div
           data-testid={`${data.id}-main-node`}
           className={cn(
@@ -414,8 +436,6 @@ export default function GenericNode({
                 buildStatus={buildStatus}
                 isOutdated={isOutdated}
                 isUserEdited={isUserEdited}
-                handleUpdateCode={handleUpdateCode}
-                loadingUpdate={loadingUpdate}
                 getValidationStatus={getValidationStatus}
               />
             )}
@@ -431,7 +451,6 @@ export default function GenericNode({
             </div>
           )}
         </div>
-
         {showNode && (
           <div className="relative">
             {/* increase height!! */}
@@ -508,6 +527,6 @@ export default function GenericNode({
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }

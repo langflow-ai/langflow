@@ -1,6 +1,7 @@
 from .character import CharacterTextSplitterComponent
 from .conversation import ConversationChainComponent
 from .csv import CSVAgentComponent
+from .fake_embeddings import FakeEmbeddingsComponent
 from .html_link_extractor import HtmlLinkExtractorComponent
 from .json import JsonAgentComponent
 from .json_document_builder import JSONDocumentBuilder
@@ -30,6 +31,7 @@ __all__ = [
     "CharacterTextSplitterComponent",
     "ConversationChainComponent",
     "CSVAgentComponent",
+    "FakeEmbeddingsComponent",
     "HtmlLinkExtractorComponent",
     "JSONDocumentBuilder",
     "JsonAgentComponent",
