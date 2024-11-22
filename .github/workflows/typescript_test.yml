@@ -68,39 +68,48 @@ jobs:
         uses: dorny/paths-filter@v3
         with:
           filters: .github/changes-filter.yaml
-
       - name: Set Matrix
         id: set-matrix
         run: |
           # Start with input suites if provided, otherwise empty array
           SUITES="${{ inputs.suites || '[]' }}"
+          echo "Initial suites: $SUITES"
 
           RELEASE="${{ inputs.release || 'false' }}"
+          echo "Release build: $RELEASE"
 
           if [[ "$RELEASE" == "true" ]]; then
             SUITES='["release"]'
+            echo "Release build detected - setting suites to: $SUITES"
           else
             # If input suites were not provided, determine based on changes
             if [[ "$SUITES" == "[]" ]]; then
+              echo "No input suites provided - determining from changes"
               # Add suites based on changed files
               if [[ "${{ steps.filter.outputs.components }}" == "true" ]]; then
                 SUITES=$(echo $SUITES | jq '. += ["components"]')
+                echo "Added components suite"
               fi
               if [[ "${{ steps.filter.outputs.starter-projects }}" == "true" ]]; then
                 SUITES=$(echo $SUITES | jq '. += ["starter-projects"]')
+                echo "Added starter-projects suite"
               fi
               if [[ "${{ steps.filter.outputs.workspace }}" == "true" ]]; then
                 SUITES=$(echo $SUITES | jq '. += ["workspace"]')
+                echo "Added workspace suite"
               fi
               if [[ "${{ steps.filter.outputs.api }}" == "true" ]]; then
                 SUITES=$(echo $SUITES | jq '. += ["api"]')
+                echo "Added api suite"
               fi
               if [[ "${{ steps.filter.outputs.database }}" == "true" ]]; then
                 SUITES=$(echo $SUITES | jq '. += ["database"]')
+                echo "Added database suite"
               fi
             fi
           fi
 
+          echo "Final test suites to run: $SUITES"
           echo "matrix=$SUITES" >> $GITHUB_OUTPUT
 
   setup-and-test:
