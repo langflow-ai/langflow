@@ -8,6 +8,7 @@ import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-up
 import { usePostValidateCode } from "@/controllers/API/queries/nodes/use-post-validate-code";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import useFlowStore from "@/stores/flowStore";
+import { cloneDeep } from "lodash";
 import { useEffect, useRef, useState } from "react";
 import AceEditor from "react-ace";
 import ReactAce from "react-ace/lib/ace";
@@ -31,7 +32,6 @@ import { CodeErrorDataTypeAPI } from "../../types/api";
 import { codeAreaModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 import ConfirmationModal from "../confirmationModal";
-import { useFlowUpdate } from "./hooks/use-update-node-code";
 
 export default function CodeAreaModal({
   value,
@@ -64,8 +64,8 @@ export default function CodeAreaModal({
   const { mutate: validateComponentCode } = usePostValidateComponentCode();
   const { mutate: patchUpdateFlow } = usePatchUpdateFlow();
   const currentFlow = useFlowStore((state) => state.currentFlow);
-
-  const { updateNodeInFlow } = useFlowUpdate({ patchUpdateFlow, currentFlow });
+  const nodes = useFlowStore((state) => state.nodes);
+  const setNodes = useFlowStore((state) => state.setNodes);
 
   useEffect(() => {
     // if nodeClass.template has more fields other than code and dynamic is true
@@ -128,7 +128,16 @@ export default function CodeAreaModal({
           if (data && type) {
             setValue(code);
             setNodeClass(data, type);
-            updateNodeInFlow(componentId!, data);
+            const currentNode = nodes.find((node) => node.id === componentId);
+            const currentNodeIndex = nodes.findIndex(
+              (node) => node.id === componentId,
+            );
+            const currentNodes = cloneDeep(nodes);
+
+            if (currentNode) {
+              currentNodes[currentNodeIndex].data.node = data;
+            }
+            setNodes(currentNodes);
 
             setError({ detail: { error: undefined, traceback: undefined } });
             setOpen(false);
