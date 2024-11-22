@@ -172,6 +172,7 @@ jobs:
       SEARCH_API_KEY: "${{ secrets.SEARCH_API_KEY }}"
       ASTRA_DB_APPLICATION_TOKEN: "${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}"
       ASTRA_DB_API_ENDPOINT: "${{ secrets.ASTRA_DB_API_ENDPOINT }}"
+      UV_CACHE_DIR: /tmp/.uv-cache
     outputs:
       failed: ${{ steps.check-failure.outputs.failed }}
     steps:
