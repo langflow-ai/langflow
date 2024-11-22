@@ -4,11 +4,7 @@ from requests.auth import HTTPBasicAuth
 from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
 from langflow.custom import Component
 from langflow.inputs import (
-    BoolInput,
-    DictInput,
     DropdownInput,
-    FloatInput,
-    IntInput,
     SecretStrInput,
     StrInput,
 )
@@ -70,9 +66,7 @@ class CombinatorialReasonerComponent(Component):
         }
 
         creds = HTTPBasicAuth(self.username, password=self.password)
-        response = requests.post(
-            "https://cr-api.icosacomputing.com/cr/langflow", json=params, auth=creds
-        )
+        response = requests.post("https://cr-api.icosacomputing.com/cr/langflow", json=params, auth=creds)
         response.raise_for_status()
 
         prompt = response.json()["prompt"]
