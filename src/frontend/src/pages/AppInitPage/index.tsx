@@ -30,6 +30,7 @@ export function AppInitPage() {
   useGetTagsQuery({ enabled: typesLoaded });
 
   useGetFoldersQuery({ enabled: typesLoaded });
+
   useEffect(() => {
     if (isFetched) {
       refreshStars();
