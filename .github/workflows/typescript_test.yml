@@ -65,11 +65,9 @@ jobs:
 
       - name: Paths Filter
         id: filter
-        uses: dorny/paths-filter@v2
+        uses: dorny/paths-filter@v3
         with:
-          filters: .github/filters.yml
-          base: ${{ github.event.before }}
-          head: ${{ github.sha }}
+          filters: .github/changes-filter.yaml
 
       - name: Set Matrix
         id: set-matrix
