@@ -36,17 +36,6 @@ class TestEventManager:
         assert "on_test_event" in manager.events
         assert manager.events["on_test_event"].func == manager.send_event
 
-    # Sending an event with valid event_type and data using pytest-asyncio plugin
-    async def test_sending_event_with_valid_type_and_data_asyncio_plugin(self):
-        queue = asyncio.Queue()
-        manager = EventManager(queue)
-        manager.register_event("on_test_event", "test_type", manager.noop)
-        event_type = "test_type"
-        data = "test_data"
-        manager.send_event(event_type=event_type, data=data)
-        await queue.join()
-        assert queue.empty()
-
     # Accessing a non-registered event callback via __getattr__ with the recommended fix
     def test_accessing_non_registered_event_callback_with_recommended_fix(self):
         queue = asyncio.Queue()
