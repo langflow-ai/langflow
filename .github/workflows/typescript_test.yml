@@ -182,26 +182,17 @@ jobs:
           # else checkout the default ref
           ref: ${{ inputs.ref || github.ref }}
 
-      - name: Setup Node.js
+      - name: Setup Node ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v4
         id: setup-node
         with:
           node-version: ${{ env.NODE_VERSION }}
-
-      - name: Cache Node.js dependencies
-        uses: actions/cache@v4
-        id: npm-cache
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('src/frontend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+          cache: "npm"
+          cache-dependency-path: ./src/frontend/package-lock.json
 
       - name: Install Node.js dependencies
-        run: |
-          cd src/frontend
-          npm ci
-        if: ${{ steps.npm-cache.outputs.cache-hit != 'true' }}
+        run: npm ci
+        working-directory: ./src/frontend
 
       - name: Install Playwright
         id: install-playwright
