@@ -4,7 +4,6 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 // import "ace-builds/webpack-resolver";
-import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import { usePostValidateCode } from "@/controllers/API/queries/nodes/use-post-validate-code";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import useFlowStore from "@/stores/flowStore";
@@ -62,7 +61,6 @@ export default function CodeAreaModal({
   } | null>(null);
 
   const { mutate: validateComponentCode } = usePostValidateComponentCode();
-  const { mutate: patchUpdateFlow } = usePatchUpdateFlow();
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const nodes = useFlowStore((state) => state.nodes);
   const setNodes = useFlowStore((state) => state.setNodes);
