@@ -100,6 +100,7 @@ class GleanSearchAPIComponent(LCToolComponent):
     display_name = "Glean Search API"
     description = "Call Glean Search API"
     name = "GleanAPI"
+    icon = "Glean"
 
     inputs = [
         StrInput(
