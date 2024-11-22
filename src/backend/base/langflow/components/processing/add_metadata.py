@@ -1,13 +1,14 @@
 from langflow.custom import Component
 from langflow.io import HandleInput, NestedDictInput, Output, StrInput
+from langflow.inputs import MessageTextInput
 from langflow.schema import Data
 
 
-class AddMetadataComponent(Component):
-    display_name = "Add Metadata"
-    description = "Adds Metadata Dictionary to inputs"
+class AlterMetadataComponent(Component):
+    display_name = "Alter Metadata"
+    description = "Adds/Removes Metadata Dictionary on inputs"
     icon = "merge"
-    name = "AddMetadata"
+    name = "AlterMetadata"
 
     inputs = [
         HandleInput(
@@ -31,6 +32,13 @@ class AddMetadataComponent(Component):
             input_types=["Data"],
             required=True,
         ),
+        MessageTextInput(
+            name="remove_fields",
+            display_name="Fields to Remove",
+            info="Metadata Fields to Remove",
+            required=False,
+            is_list=True,
+        ),        
     ]
 
     outputs = [
@@ -68,6 +76,14 @@ class AddMetadataComponent(Component):
         # Update each Data object with the new metadata, preserving existing fields
         for data in data_objects:
             data.data.update(metadata)
+
+        # Handle removal of fields specified in remove_fields
+        if self.remove_fields:
+            fields_to_remove = {field.strip() for field in self.remove_fields if field.strip()}
+            
+            # Remove specified fields from each Data object's metadata
+            for data in data_objects:
+                data.data = {k: v for k, v in data.data.items() if k not in fields_to_remove}
 
         # Set the status for tracking/debugging purposes
         self.status = data_objects
