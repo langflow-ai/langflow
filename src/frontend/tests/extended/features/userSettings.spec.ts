@@ -35,15 +35,7 @@ test("should interact with global variables", async ({ page }) => {
   await page
     .getByPlaceholder("Insert a name for the variable...")
     .fill(randomName);
-  await page.getByTestId("anchor-popover-anchor-type-global-variables").click();
-  await page.getByPlaceholder("Search options...").fill("Generic");
-  await page.waitForTimeout(1000);
-  await page.getByText("Generic", { exact: true }).last().isVisible();
-  await page.getByText("Generic", { exact: true }).last().click();
-
-  await page.getByTestId("popover-anchor-type-global-variables").click();
-  await page.waitForTimeout(1000);
-  await page.getByPlaceholder("Search options...").fill("Generic");
+  await page.getByTestId("select-type-global-variables").first().click();
   await page.getByText("Generic", { exact: true }).last().isVisible();
   await page.getByText("Generic", { exact: true }).last().click();
 
@@ -107,18 +99,6 @@ test("should interact with global variables", async ({ page }) => {
   await page.getByText(randomName3).last().isVisible();
 
   await page.waitForTimeout(2000);
-
-  // const focusElementsOnBoard = async ({ page }) => {
-  //   await page.waitForSelector(
-  //     '[aria-label="Press Space to toggle all rows selection (unchecked)"]',
-  //     { timeout: 30000, state: "visible" },
-  //   );
-  //   const focusElements = await page
-  //     .getByLabel("Press Space to toggle all rows selection (unchecked)")
-  //     .first();
-  //   await focusElements.click();
-  // };
-  // await focusElementsOnBoard({ page });
 
   await page.locator(".ag-checkbox-input").first().click();
   await page.getByTestId("icon-Trash2").click();
