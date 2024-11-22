@@ -1,5 +1,5 @@
 const SvgWikipedia = (props) => (
-<svg
+  <svg
     xmlns="http://www.w3.org/2000/svg"
     width="103"
     height="94"

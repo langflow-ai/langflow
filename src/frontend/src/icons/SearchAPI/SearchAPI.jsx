@@ -1,5 +1,5 @@
 const SvgSearchApi = (props) => (
-    <svg
+  <svg
     xmlns="http://www.w3.org/2000/svg"
     xmlnsXlink="http://www.w3.org/1999/xlink"
     version="1"
@@ -24,7 +24,5 @@ const SvgSearchApi = (props) => (
       transform="scale(3.58407)"
     ></image>
   </svg>
-
-
 );
 export default SvgSearchApi;
