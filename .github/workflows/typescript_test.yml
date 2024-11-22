@@ -166,7 +166,8 @@ jobs:
       matrix:
         shardIndex: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         shardTotal: [10]
-
+    container:
+      image: mcr.microsoft.com/playwright:v1.49.0-noble
     env:
       OPENAI_API_KEY: ${{ inputs.openai_api_key || secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ inputs.store_api_key || secrets.STORE_API_KEY }}
@@ -204,29 +205,36 @@ jobs:
           npm ci
         if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
       - name: Get Playwright version
-        run: echo "PLAYWRIGHT_VERSION=$(jq '.devDependencies["@playwright/test"]' src/frontend/package.json -r)" >> $GITHUB_ENV
+        run: |
+          cd src/frontend
+          echo "PLAYWRIGHT_VERSION=$(npm ls @playwright/test | grep @playwright | sed 's/.*@//')" >> $GITHUB_ENV
+
       - name: Cache Playwright binaries
         id: playwright-cache
         uses: actions/cache@v4
         with:
-          path: ~/.cache/ms-playwright
-          key: playwright-browsers-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}
+          path: |
+            ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
 
       - name: Install Frontend dependencies
         run: |
           cd src/frontend
           npm ci
 
-      - name: Install Playwright's browser binaries
+      - name: Install Playwright with dependencies
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: |
           cd src/frontend
           npx playwright install --with-deps
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-      - name: Install Playwright's dependencies
+
+      - name: Install Playwright dependencies only
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: |
           cd src/frontend
           npx playwright install-deps
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
 
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
