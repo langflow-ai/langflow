@@ -1,11 +1,15 @@
 import { AIMLIcon } from "@/icons/AIML";
 import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
 import { ExaIcon } from "@/icons/Exa";
+import { GleanIcon } from "@/icons/Glean";
 import { LangwatchIcon } from "@/icons/Langwatch";
 import { MilvusIcon } from "@/icons/Milvus";
 import Perplexity from "@/icons/Perplexity/Perplexity";
+import { SearchAPIIcon } from "@/icons/SearchAPI";
+import { SerpSearchIcon } from "@/icons/SerpSearch";
 import { TavilyIcon } from "@/icons/Tavily";
 import { UnstructuredIcon } from "@/icons/Unstructured";
+import { WikipediaIcon } from "@/icons/Wikipedia";
 import YouTubeIcon from "@/icons/Youtube/youtube";
 import { ZepMemoryIcon } from "@/icons/ZepMemory";
 import { AthenaIcon } from "@/icons/athena/index";
@@ -603,6 +607,7 @@ export const nodeIconsLucide: iconsType = {
   AstraDB: AstraDBIcon,
   BingSearchAPIWrapper: BingIcon,
   BingSearchRun: BingIcon,
+  Bing: BingIcon,
   Cohere: CohereIcon,
   ChevronsUpDownIcon,
   CohereEmbeddings: CohereIcon,
@@ -684,6 +689,11 @@ export const nodeIconsLucide: iconsType = {
   ZepMemory: ZepMemoryIcon,
   Langwatch: LangwatchIcon,
   Mem0,
+  Glean: GleanIcon,
+  GleanAPI: GleanIcon,
+  SerpSearch: SerpSearchIcon,
+  SearchAPI: SearchAPIIcon,
+  Wikipedia: WikipediaIcon,
 
   //Node Icons
   model_specs: FileSliders,
