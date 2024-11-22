@@ -45,7 +45,8 @@ ND_MODEL_MAPPING = {
 class NotDiamondComponent(Component):
     display_name = "Not Diamond Router"
     description = "Call the right model at the right time with the world's most powerful AI model router."
-    icon = "split"
+    documentation: str = "https://docs.notdiamond.ai/"
+    icon = "NotDiamond"
     name = "NotDiamond"
 
     def __init__(self, *args, **kwargs):
@@ -142,12 +143,14 @@ class NotDiamondComponent(Component):
         result = response.json()
 
         if "providers" not in result:
-            return result
+            # No provider returned by NotDiamond API, likely failed. Fallback to first model.
+            return self._call_get_chat_result(self.models[0], input_value, system_message)
 
         providers = result["providers"]
 
         if len(providers) == 0:
-            return {"chosen_model": None, "text": "No providers returned from NotDiamond API."}
+            # No provider returned by NotDiamond API, likely failed. Fallback to first model.
+            return self._call_get_chat_result(self.models[0], input_value, system_message)
 
         nd_result = providers[0]
 
@@ -158,14 +161,17 @@ class NotDiamondComponent(Component):
                 break
 
         if chosen_model is None:
-            return {"chosen_model": None, "text": "No model found by NotDiamond API."}
+            # No provider returned by NotDiamond API, likely failed. Fallback to first model.
+            return self._call_get_chat_result(self.models[0], input_value, system_message)
 
+        return self._call_get_chat_result(chosen_model, input_value, system_message)
+
+    def _call_get_chat_result(self, chosen_model, input_value, system_message):
         result = get_chat_result(
             runnable=chosen_model,
             input_value=input_value,
             system_message=system_message,
         )
-
         return {"chosen_model": get_model_name(chosen_model), "text": result}
 
     def _format_input(
