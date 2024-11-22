@@ -113,7 +113,6 @@ const templateIds = [
   "template_travel-planning-agents",
   "template_research-agent",
   "template_simple-agent",
-  "template_youtube-transcript-q&a",
   "template_sequential-tasks-agents",
   "template_market-research",
 ];

@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 test(
   "user must be able to freeze a component",
   { tag: ["@release", "@workspace", "@components"] },
+
   async ({ page }) => {
     await page.goto("/");
     await page.waitForSelector('[data-testid="mainpage_title"]', {
@@ -25,7 +26,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
@@ -35,7 +38,9 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text input");
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="inputsText Input"]', {
+      timeout: 1000,
+    });
 
     await page
       .getByTestId("inputsText Input")
@@ -56,7 +61,9 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("url");
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="dataURL"]', {
+      timeout: 1000,
+    });
 
     await page
       .getByTestId("dataURL")
@@ -77,7 +84,9 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("split text");
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="processingSplit Text"]', {
+      timeout: 1000,
+    });
 
     await page
       .getByTestId("processingSplit Text")
@@ -98,7 +107,9 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("parse data");
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="processingParse Data"]', {
+      timeout: 1000,
+    });
 
     await page
       .getByTestId("processingParse Data")
@@ -119,7 +130,9 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="outputsChat Output"]', {
+      timeout: 1000,
+    });
 
     await page
       .getByTestId("outputsChat Output")
@@ -142,14 +155,15 @@ test(
 
     while (outdatedComponents > 0) {
       await page.getByTestId("icon-AlertTriangle").first().click();
-      await page.waitForTimeout(1000);
+      await page.waitForSelector('[data-testid="icon-AlertTriangle"]', {
+        timeout: 1000,
+      });
       outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
     }
 
     let filledApiKey = await page.getByTestId("remove-icon-badge").count();
     while (filledApiKey > 0) {
       await page.getByTestId("remove-icon-badge").first().click();
-      await page.waitForTimeout(1000);
       filledApiKey = await page.getByTestId("remove-icon-badge").count();
     }
 
@@ -224,7 +238,9 @@ test(
       timeout: 15000,
     });
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="output-inspection-message"]', {
+      timeout: 1000,
+    });
 
     await page.getByTestId("output-inspection-message").first().click();
 
@@ -247,7 +263,9 @@ test(
       timeout: 15000,
     });
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="output-inspection-message"]', {
+      timeout: 1000,
+    });
 
     await page.getByTestId("output-inspection-message").first().click();
 
@@ -262,15 +280,17 @@ test(
 
     await page.getByText("Split Text", { exact: true }).last().click();
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="more-options-modal"]', {
+      timeout: 1000,
+    });
 
     await page.getByTestId("more-options-modal").click();
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="icon-Snowflake"]', {
+      timeout: 1000,
+    });
 
     await page.getByTestId("icon-Snowflake").click();
-
-    await page.waitForTimeout(1000);
 
     await page.keyboard.press("Escape");
 
@@ -281,7 +301,9 @@ test(
       .first()
       .fill("lorem ipsum");
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="button_run_chat output"]', {
+      timeout: 1000,
+    });
 
     await page.getByTestId("button_run_chat output").click();
 
@@ -291,7 +313,9 @@ test(
       timeout: 15000,
     });
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="output-inspection-message"]', {
+      timeout: 1000,
+    });
 
     await page.getByTestId("output-inspection-message").first().click();
 
@@ -304,15 +328,17 @@ test(
 
     await page.getByText("Split Text", { exact: true }).click();
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="more-options-modal"]', {
+      timeout: 1000,
+    });
 
     await page.getByTestId("more-options-modal").click();
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="icon-Snowflake"]', {
+      timeout: 1000,
+    });
 
-    await page.getByTestId("icon-Snowflake").last().click();
-
-    await page.waitForTimeout(1000);
+    await page.getByText("Freeze", { exact: true }).click();
 
     await page.keyboard.press("Escape");
 
@@ -326,7 +352,9 @@ test(
       timeout: 15000,
     });
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="output-inspection-message"]', {
+      timeout: 1000,
+    });
 
     await page.getByTestId("output-inspection-message").first().click();
 

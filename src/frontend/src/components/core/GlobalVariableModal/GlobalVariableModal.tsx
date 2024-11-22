@@ -6,16 +6,18 @@ import {
 import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
 import { GlobalVariable } from "@/types/global_variables";
 import { useEffect, useState } from "react";
-import BaseModal from "../../../modals/baseModal";
-import useAlertStore from "../../../stores/alertStore";
-import { useTypesStore } from "../../../stores/typesStore";
-import { ResponseErrorDetailAPI } from "../../../types/api";
-import ForwardedIconComponent from "../../common/genericIconComponent";
-import { Input } from "../../ui/input";
-import { Label } from "../../ui/label";
-import { Textarea } from "../../ui/textarea";
-import InputComponent from "../parameterRenderComponent/components/inputComponent";
+
 import sortByName from "./utils/sort-by-name";
+import useAlertStore from "@/stores/alertStore";
+import { useTypesStore } from "@/stores/typesStore";
+import { ResponseErrorDetailAPI } from "@/types/api";
+import BaseModal from "@/modals/baseModal";
+import { Label } from "@/components/ui/label";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import InputComponent from "../parameterRenderComponent/components/inputComponent";
+import { Textarea } from "@/components/ui/textarea";
 
 //TODO IMPLEMENT FORM LOGIC
 
@@ -155,17 +157,28 @@ export default function GlobalVariableModal({
             placeholder="Insert a name for the variable..."
           ></Input>
           <Label>Type (optional)</Label>
-          <InputComponent
-            disabled={initialData?.type !== undefined}
-            setSelectedOption={(e) => {
-              setType(e);
-            }}
-            selectedOption={type}
-            password={false}
-            options={["Generic", "Credential"]}
-            placeholder="Choose a type for the variable..."
-            id={"type-global-variables"}
-          ></InputComponent>
+
+          <Select
+            disabled={disabled}
+            onValueChange={setType}
+            value={type}
+            defaultValue={type}
+          >
+            <SelectTrigger
+              className="h-full w-full"
+              data-testid="select-type-global-variables"
+            >
+              <SelectValue placeholder="Choose a type for the variable..." />
+            </SelectTrigger>
+            <SelectContent id="type-global-variables">
+              {["Generic", "Credential"].map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Label>Value</Label>
           {type === "Credential" ? (
             <InputComponent

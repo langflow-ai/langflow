@@ -83,7 +83,7 @@ export default function AppHeader(): JSX.Element {
           <>
             <Button
               unstyled
-              className="hidden items-center whitespace-nowrap 2xl:inline"
+              className="hidden items-center whitespace-nowrap pr-2 2xl:inline"
               onClick={() =>
                 window.open("https://github.com/langflow-ai/langflow", "_blank")
               }

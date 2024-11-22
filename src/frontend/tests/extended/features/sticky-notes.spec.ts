@@ -4,6 +4,7 @@ import uaParser from "ua-parser-js";
 test(
   "user should be able to interact with sticky notes",
   { tag: ["@release", "@workspace"] },
+
   async ({ page }) => {
     await page.goto("/");
     await page.waitForSelector('[data-testid="mainpage_title"]', {
@@ -165,7 +166,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
     await page.getByTestId("note_node").nth(0).focus();
     await page.getByTestId("more-options-modal").click();
-    await page.getByText("Delete").last().click();
+    await page.getByText("Delete").first().click();
 
     await page.waitForTimeout(1000);
 

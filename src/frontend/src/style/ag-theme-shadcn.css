@@ -68,7 +68,7 @@
 
 .ag-body-horizontal-scroll-viewport::-webkit-scrollbar-thumb:hover,
 .ag-body-vertical-scroll-viewport::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--ring));
+  background-color: hsl(var(--placeholder-foreground));
 }
 
 .ag-paging-page-size {

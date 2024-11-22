@@ -25,7 +25,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
     await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -35,7 +37,9 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai");
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="modelsOpenAI"]', {
+      timeout: 1000,
+    });
 
     await page
       .getByTestId("modelsOpenAI")
@@ -60,7 +64,7 @@ test(
     await page
       .getByPlaceholder("Insert a name for the variable...")
       .fill(genericName);
-    await page.getByText("Generic", { exact: true }).isVisible();
+    await page.getByText("Generic", { exact: true }).first().isVisible();
     await page
       .getByPlaceholder("Insert a value for the variable...")
       .fill("This is a test of generic variable value");
@@ -72,18 +76,14 @@ test(
     await page
       .getByPlaceholder("Insert a name for the variable...")
       .fill(credentialName);
-    await page
-      .getByTestId("popover-anchor-type-global-variables")
-      .first()
-      .click();
-    await page.getByText("Credential", { exact: true }).click();
+    await page.getByTestId("select-type-global-variables").first().click();
+    await page.getByText("Credential", { exact: true }).last().click();
     await page
       .getByPlaceholder("Insert a value for the variable...")
       .fill("This is a test of credential variable value");
     await page.getByText("Save Variable", { exact: true }).click();
     expect(page.getByText(credentialName, { exact: true })).not.toBeNull();
     await page.getByText(credentialName, { exact: true }).isVisible();
-    await page.waitForTimeout(1000);
 
     await page
       .getByText(credentialName, { exact: true })

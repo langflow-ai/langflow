@@ -3,6 +3,7 @@ import { test } from "@playwright/test";
 test(
   "should see general profile gradient",
   { tag: ["@release"] },
+
   async ({ page }) => {
     await page.goto("/");
     await page.waitForSelector('[data-testid="mainpage_title"]', {
@@ -26,6 +27,7 @@ test(
 test(
   "should interact with global variables",
   { tag: ["@release", "@workspace", "@api"] },
+
   async ({ page }) => {
     const randomName = Math.random().toString(36).substring(2);
     const randomName2 = Math.random().toString(36).substring(2);
@@ -45,17 +47,7 @@ test(
     await page
       .getByPlaceholder("Insert a name for the variable...")
       .fill(randomName);
-    await page
-      .getByTestId("anchor-popover-anchor-type-global-variables")
-      .click();
-    await page.getByPlaceholder("Search options...").fill("Generic");
-    await page.waitForTimeout(1000);
-    await page.getByText("Generic", { exact: true }).last().isVisible();
-    await page.getByText("Generic", { exact: true }).last().click();
-
-    await page.getByTestId("popover-anchor-type-global-variables").click();
-    await page.waitForTimeout(1000);
-    await page.getByPlaceholder("Search options...").fill("Generic");
+    await page.getByTestId("select-type-global-variables").first().click();
     await page.getByText("Generic", { exact: true }).last().isVisible();
     await page.getByText("Generic", { exact: true }).last().click();
 
@@ -120,18 +112,6 @@ test(
 
     await page.waitForTimeout(2000);
 
-    // const focusElementsOnBoard = async ({ page }) => {
-    //   await page.waitForSelector(
-    //     '[aria-label="Press Space to toggle all rows selection (unchecked)"]',
-    //     { timeout: 30000, state: "visible" },
-    //   );
-    //   const focusElements = await page
-    //     .getByLabel("Press Space to toggle all rows selection (unchecked)")
-    //     .first();
-    //   await focusElements.click();
-    // };
-    // await focusElementsOnBoard({ page });
-
     await page.locator(".ag-checkbox-input").first().click();
     await page.getByTestId("icon-Trash2").click();
     await page.getByText("No data available").isVisible();
@@ -180,6 +160,7 @@ test("should see shortcuts", { tag: ["@release"] }, async ({ page }) => {
 test(
   "should interact with API Keys",
   { tag: ["@release", "@api"] },
+
   async ({ page }) => {
     await page.goto("/");
     await page.waitForTimeout(1000);

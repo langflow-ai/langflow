@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 test(
   "curl_api_generation",
   { tag: ["@release", "@workspace", "@api"] },
+
   async ({ page, context }) => {
     await page.goto("/");
     let modalCount = 0;
@@ -17,13 +18,14 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.waitForTimeout(1000);
     await page.getByText("API", { exact: true }).click();
     await page.getByRole("tab", { name: "cURL" }).click();
     await page.getByTestId("icon-Copy").click();
@@ -40,7 +42,12 @@ test(
       .first()
       .click();
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector(
+      '[data-testid="popover-anchor-input-openai_api_base-edit"]',
+      {
+        timeout: 1000,
+      },
+    );
 
     await page
       .getByTestId("popover-anchor-input-openai_api_base-edit")
@@ -83,7 +90,9 @@ test("check if tweaks are updating when someothing on the flow changes", async (
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 3000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
@@ -95,7 +104,9 @@ test("check if tweaks are updating when someothing on the flow changes", async (
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("Chroma");
 
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="vectorstoresChroma DB"]', {
+    timeout: 1000,
+  });
 
   await page
     .getByTestId("vectorstoresChroma DB")
