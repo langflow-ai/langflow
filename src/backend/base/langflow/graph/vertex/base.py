@@ -490,7 +490,8 @@ class Vertex:
             )
         else:
             custom_component = self.custom_component
-            self.custom_component.set_event_manager(event_manager)
+            if hasattr(self.custom_component, "set_event_manager"):
+                self.custom_component.set_event_manager(event_manager)
             custom_params = initialize.loading.get_params(self.params)
 
         await self._build_results(
@@ -871,4 +872,4 @@ class Vertex:
         if not self.custom_component or not self.custom_component.outputs:
             return
         # Apply the function to each output
-        [func(output) for output in self.custom_component.outputs]
+        [func(output) for output in self.custom_component._outputs_map.values()]

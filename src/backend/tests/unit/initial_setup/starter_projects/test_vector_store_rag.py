@@ -5,10 +5,11 @@ from textwrap import dedent
 import pytest
 from langflow.components.data import FileComponent
 from langflow.components.embeddings import OpenAIEmbeddingsComponent
-from langflow.components.helpers import ParseDataComponent, SplitTextComponent
 from langflow.components.inputs import ChatInput
 from langflow.components.models import OpenAIModelComponent
 from langflow.components.outputs import ChatOutput
+from langflow.components.processing import ParseDataComponent
+from langflow.components.processing.split_text import SplitTextComponent
 from langflow.components.prompts import PromptComponent
 from langflow.components.vectorstores import AstraVectorStoreComponent
 from langflow.graph import Graph
@@ -30,12 +31,11 @@ def ingestion_graph():
     )
     vector_store = AstraVectorStoreComponent(_id="vector-store-123")
     vector_store.set(
-        embedding=openai_embeddings.build_embeddings,
+        embedding_model=openai_embeddings.build_embeddings,
         ingest_data=text_splitter.split_text,
         api_endpoint="https://astra.example.com",
         token="token",  # noqa: S106
     )
-    vector_store.set_on_output(name="vector_store", value="mock_vector_store", cache=True)
     vector_store.set_on_output(name="base_retriever", value="mock_retriever", cache=True)
     vector_store.set_on_output(name="search_results", value=[Data(text="This is a test file.")], cache=True)
 
@@ -53,7 +53,7 @@ def rag_graph():
         search_input=chat_input.message_response,
         api_endpoint="https://astra.example.com",
         token="token",  # noqa: S106
-        embedding=openai_embeddings.build_embeddings,
+        embedding_model=openai_embeddings.build_embeddings,
     )
     # Mock search_documents
     rag_vector_store.set_on_output(
@@ -64,7 +64,6 @@ def rag_graph():
         ],
         cache=True,
     )
-    rag_vector_store.set_on_output(name="vector_store", value="mock_vector_store", cache=True)
     rag_vector_store.set_on_output(name="base_retriever", value="mock_retriever", cache=True)
     parse_data = ParseDataComponent(_id="parse-data-123")
     parse_data.set(data=rag_vector_store.search_documents)

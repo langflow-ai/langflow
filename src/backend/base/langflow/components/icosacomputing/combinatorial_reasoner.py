@@ -3,15 +3,7 @@ from requests.auth import HTTPBasicAuth
 
 from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
 from langflow.custom import Component
-from langflow.inputs import (
-    BoolInput,
-    DictInput,
-    DropdownInput,
-    FloatInput,
-    IntInput,
-    SecretStrInput,
-    StrInput,
-)
+from langflow.inputs import DropdownInput, SecretStrInput, StrInput
 from langflow.io import MessageTextInput, Output
 from langflow.schema import Data
 from langflow.schema.message import Message

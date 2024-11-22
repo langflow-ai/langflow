@@ -42,7 +42,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const { mutateAsync: refreshFlows } = useGetRefreshFlows();
   const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
-  const getTypes = useTypesStore((state) => state.getTypes);
   const types = useTypesStore((state) => state.types);
 
   const updatedAt = currentSavedFlow?.updated_at;
@@ -118,7 +117,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       } else if (!flows) {
         setIsLoading(true);
         await refreshFlows({ get_all: true, header_flows: true });
-        if (!types || Object.keys(types).length === 0) await getTypes();
         setIsLoading(false);
       }
     };
@@ -169,7 +167,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
           <div className="flex h-full overflow-hidden">
             <SidebarProvider width="17.5rem" defaultOpen={!isMobile}>
               {!view && <FlowSidebarComponent />}
-              <main className="flex flex-1">
+              <main className="flex w-full overflow-hidden">
                 <div className="h-full w-full">
                   <Page />
                 </div>

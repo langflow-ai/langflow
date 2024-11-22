@@ -2,11 +2,12 @@ from collections import defaultdict
 
 
 class RunnableVerticesManager:
-    def __init__(self) -> None:
+    def __init__(self):
         self.run_map: dict[str, list[str]] = defaultdict(list)  # Tracks successors of each vertex
         self.run_predecessors: dict[str, set[str]] = defaultdict(set)  # Tracks predecessors for each vertex
         self.vertices_to_run: set[str] = set()  # Set of vertices that are ready to run
         self.vertices_being_run: set[str] = set()  # Set of vertices that are currently running
+        self.cycle_vertices: set[str] = set()  # Set of vertices that are in a cycle
 
     def to_dict(self) -> dict:
         return {
@@ -55,7 +56,7 @@ class RunnableVerticesManager:
             return False
         if vertex_id not in self.vertices_to_run:
             return False
-        return self.are_all_predecessors_fulfilled(vertex_id)
+        return self.are_all_predecessors_fulfilled(vertex_id) or vertex_id in self.cycle_vertices
 
     def are_all_predecessors_fulfilled(self, vertex_id: str) -> bool:
         return not any(self.run_predecessors.get(vertex_id, []))
@@ -89,3 +90,6 @@ class RunnableVerticesManager:
 
     def add_to_vertices_being_run(self, v_id) -> None:
         self.vertices_being_run.add(v_id)
+
+    def add_to_cycle_vertices(self, v_id):
+        self.cycle_vertices.add(v_id)

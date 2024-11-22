@@ -40,6 +40,7 @@ export type InputComponentType = {
   isObjectOption?: boolean;
   onChangeFolderName?: (e: any) => void;
   nodeStyle?: boolean;
+  isToolMode?: boolean;
 };
 export type DropDownComponent = {
   disabled?: boolean;
@@ -103,6 +104,7 @@ export type NodeInputFieldComponentType = {
   name: string;
   required: boolean;
   optionalHandle: Array<String> | undefined | null;
+  lastInput?: boolean;
   info: string;
   proxy: { field: string; id: string } | undefined;
   showNode: boolean;
@@ -251,6 +253,7 @@ export type ShadToolTipType = {
   children?: ReactElement;
   delayDuration?: number;
   styleClasses?: string;
+  avoidCollisions?: boolean;
 };
 
 export type TextHighlightType = {
@@ -336,8 +339,8 @@ export type PaginatorComponentType = {
   rowsCount?: number[];
   totalRowsCount: number;
   paginate: (pageIndex: number, pageSize: number) => void;
-  storeComponent?: boolean;
   pages?: number;
+  isComponent?: boolean;
 };
 
 export type ConfirmationModalType = {
@@ -544,6 +547,7 @@ export type nodeToolbarPropsType = {
   isOutdated: boolean;
   updateNode: () => void;
   closeToolbar?: () => void;
+  setOpenShowMoreOptions?: (open: boolean) => void;
 };
 
 export type parsedDataType = {

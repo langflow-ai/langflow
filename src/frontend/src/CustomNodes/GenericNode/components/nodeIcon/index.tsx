@@ -1,5 +1,10 @@
 import { useTypesStore } from "@/stores/typesStore";
-import { nodeColors, nodeIconsLucide } from "@/utils/styleUtils";
+import {
+  BG_NOISE,
+  nodeColors,
+  nodeIconsLucide,
+  toolModeGradient,
+} from "@/utils/styleUtils";
 import emojiRegex from "emoji-regex";
 
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
@@ -12,11 +17,13 @@ export function NodeIcon({
   dataType,
   showNode,
   isGroup,
+  hasToolMode,
 }: {
   icon?: string;
   dataType: string;
   showNode: boolean;
   isGroup?: boolean;
+  hasToolMode: boolean;
 }) {
   const types = useTypesStore((state) => state.types);
   const name = nodeIconsLucide[dataType] ? dataType : types[dataType];
@@ -28,9 +35,10 @@ export function NodeIcon({
 
   const iconClassName = cn(
     "generic-node-icon",
-    !showNode ? " show-node-icon " : "",
     isLucideIcon ? "lucide-icon" : "integration-icon",
   );
+
+  const bgToolMode = BG_NOISE + "," + toolModeGradient;
 
   const renderIcon = () => {
     if (icon && isEmoji) {
@@ -41,28 +49,31 @@ export function NodeIcon({
       return (
         <div
           className={cn(
-            "bg-lucide-icon text-foreground",
-            !showNode && "min-h-8 min-w-8",
+            hasToolMode ? "text-white" : "text-foreground",
+            !showNode && "flex min-h-8 min-w-8 items-center justify-center",
+            "bg-lucide-icon",
           )}
+          style={{
+            backgroundImage: hasToolMode ? bgToolMode : "",
+          }}
         >
           <IconComponent
             strokeWidth={ICON_STROKE_WIDTH}
             name={iconName}
-            className={cn(
-              iconClassName,
-              !showNode && "absolute -translate-x-0.5",
-            )}
+            className={cn(iconClassName)}
           />
         </div>
       );
     }
 
     return (
-      <IconComponent
-        name={iconName}
-        className={iconClassName}
-        iconColor={iconColor}
-      />
+      <div className={cn(!showNode && "min-h-8 min-w-8")}>
+        <IconComponent
+          name={iconName}
+          className={iconClassName}
+          iconColor={iconColor}
+        />
+      </div>
     );
   };
 

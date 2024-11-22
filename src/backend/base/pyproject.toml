@@ -86,7 +86,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "langflow-base"
-version = "0.0.97"
+version = "0.1.0"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.13"
 license = "MIT"
@@ -111,16 +111,16 @@ dependencies = [
     "uvicorn>=0.30.0",
     "gunicorn>=22.0.0",
     "langchain~=0.3.3",
-    "langchain-core~=0.3.10",
+    "langchain-core~=0.3.15",
     "langchainhub~=0.1.15",
     "sqlmodel==0.0.18",
     "loguru>=0.7.1",
     "rich>=13.7.0",
     "langchain-experimental>=0.0.61",
-    "pydantic>=2.7.0",
+    "pydantic~=2.7.0",
     "pydantic-settings>=2.2.0",
-    "typer>=0.12.0",
-    "cachetools>=5.3.1",
+    "typer>=0.13.0",
+    "cachetools>=5.5.0",
     "platformdirs>=4.2.0",
     "python-multipart>=0.0.12",
     "orjson==3.10.0",
@@ -135,7 +135,6 @@ dependencies = [
     "duckdb>=1.0.0",
     "python-docx>=1.1.0",
     "jq>=1.7.0; sys_platform != 'win32'",
-    "pypdf>=4.2.0",
     "nest-asyncio>=1.6.0",
     "emoji>=2.12.0",
     "cryptography>=42.0.5,<44.0.0",
@@ -155,13 +154,14 @@ dependencies = [
     "nanoid>=2.0.0",
     "filelock>=3.15.4",
     "grandalf>=0.8.0",
-    "crewai>=0.74.2",
+    "crewai~=0.80.0",
     "spider-client>=0.0.27",
     "diskcache>=5.6.3",
     "clickhouse-connect==0.7.19",
     "assemblyai>=0.33.0",
     "fastapi-pagination>=0.12.29",
     "defusedxml>=0.7.1",
+    "pypdf~=5.1.0",
 ]
 
 [project.urls]

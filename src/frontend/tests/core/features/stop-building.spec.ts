@@ -25,11 +25,6 @@ test("user must be able to stop a building", async ({ page }) => {
 
   const getUA = await page.evaluate(() => navigator.userAgent);
   const userAgentInfo = uaParser(getUA);
-  let control = "Control";
-
-  if (userAgentInfo.os.name.includes("Mac")) {
-    control = "Meta";
-  }
 
   await page.getByTestId("blank-flow").click();
 
@@ -82,7 +77,7 @@ test("user must be able to stop a building", async ({ page }) => {
   // await page.waitForTimeout(1000);
 
   await page
-    .getByTestId("helpersSplit Text")
+    .getByTestId("processingSplit Text")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
   await page.getByTestId("zoom_out").click();
@@ -103,7 +98,7 @@ test("user must be able to stop a building", async ({ page }) => {
   // await page.waitForTimeout(1000);
 
   await page
-    .getByTestId("helpersParse Data")
+    .getByTestId("processingParse Data")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
   await page.getByTestId("zoom_out").click();
@@ -255,7 +250,7 @@ class CustomComponent(Component):
   await page.getByTestId("code-button-modal").click();
   await page.waitForTimeout(500);
 
-  await page.locator("textarea").last().press(`${control}+a`);
+  await page.locator("textarea").last().press(`ControlOrMeta+a`);
   await page.keyboard.press("Backspace");
   await page.locator("textarea").last().fill(timerCode);
   await page.locator('//*[@id="checkAndSaveBtn"]').click();
