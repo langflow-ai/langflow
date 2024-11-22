@@ -100,6 +100,7 @@ dependencies = [
     "langchain-openai~=0.2.2",
     "langchain-google-vertexai~=2.0.5",
     "langchain-groq>=0.1.9",
+    "langchain-huggingface>=0.1.2",
     "langchain-pinecone~=0.2.0",
     "langchain-mistralai~=0.2.0",
     "langchain-chroma>=0.1.1",
