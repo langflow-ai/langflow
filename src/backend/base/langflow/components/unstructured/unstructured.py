@@ -1,7 +1,7 @@
 from langchain_unstructured import UnstructuredLoader
 
 from langflow.base.data import BaseFileComponent
-from langflow.inputs import MessageTextInput, NestedDictInput, SecretStrInput
+from langflow.inputs import MessageTextInput, NestedDictInput, SecretStrInput, DropdownInput
 from langflow.schema import Data
 
 
@@ -64,6 +64,14 @@ class UnstructuredComponent(BaseFileComponent):
             required=False,
             info="Unstructured API URL.",
         ),
+        DropdownInput(
+            name="chunking_strategy",
+            display_name="Chunking Strategy",
+            info="Chunking strategy to use, see https://docs.unstructured.io/api-reference/api-services/chunking",
+            options=["", "basic", "by_title", "by_page", "by_similarity"],
+            real_time_refresh=False,
+            value="",
+        ),
         NestedDictInput(
             name="unstructured_args",
             display_name="Additional Arguments",
@@ -89,6 +97,9 @@ class UnstructuredComponent(BaseFileComponent):
         # https://docs.unstructured.io/api-reference/api-services/api-parameters
         args = self.unstructured_args or {}
 
+        if self.chunking_strategy:
+            args["chunking_strategy"] = self.chunking_strategy
+
         args["api_key"] = self.api_key
         args["partition_via_api"] = True
         if self.api_url:
@@ -103,9 +114,9 @@ class UnstructuredComponent(BaseFileComponent):
 
         processed_data = [Data.from_document(doc) for doc in documents]  # Using the from_document method of Data
 
-        # Rename the `source` field to `self.SERVER_FILE_PATH_FIELDNAME`
+        # Rename the `source` field to `self.SERVER_FILE_PATH_FIELDNAME`, to avoid conflicts with the `source` field
         for data in processed_data:
             if "source" in data.data:
                 data.data[self.SERVER_FILE_PATH_FIELDNAME] = data.data.pop("source")
 
-        return self.rollup_data(file_list, processed_data, path_field="source")
+        return self.rollup_data(file_list, processed_data)
