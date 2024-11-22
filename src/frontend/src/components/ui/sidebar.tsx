@@ -131,6 +131,7 @@ const SidebarProvider = React.forwardRef<
               "group/sidebar-wrapper flex h-full w-full text-foreground has-[[data-variant=inset]]:bg-background",
               className,
             )}
+            data-open={open}
             ref={ref}
             {...props}
           >
