@@ -26,6 +26,7 @@ export const useGetBasicExamplesQuery: useQueryFunctionType<
 
   const queryResult = query(["useGetBasicExamplesQuery"], responseFn, {
     ...options,
+    retry: 3,
   });
 
   return queryResult;
