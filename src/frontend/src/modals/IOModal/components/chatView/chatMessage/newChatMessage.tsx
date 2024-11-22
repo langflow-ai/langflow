@@ -264,7 +264,7 @@ export default function ChatMessage({
                                   <span
                                     className={cn(
                                       closeChat
-                                        ? "cursor-pointer hover:underline"
+                                        ? "cursor-pointer underline"
                                         : "",
                                     )}
                                     onClick={() => {
