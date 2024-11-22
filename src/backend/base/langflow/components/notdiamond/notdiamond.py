@@ -172,7 +172,7 @@ class NotDiamondComponent(Component):
             input_value=input_value,
             system_message=system_message,
         )
-        return {"chosen_model": get_model_name(chosen_model), "text": result}
+        return result
 
     def _format_input(
         self,
