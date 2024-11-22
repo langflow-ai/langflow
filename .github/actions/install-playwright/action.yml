@@ -27,18 +27,29 @@ runs:
       id: version
       with:
         script: |
-          // https://github.com/actions/toolkit/issues/1624
-          // const workingDirectory = core.getInput("working-directory");
+          const fs = require('fs');
+          const path = require('path');
+
+          // Get working directory
           const workingDirectory = "${{ inputs.working-directory }}";
           console.debug("Specified working directory:", workingDirectory);
           if (workingDirectory) process.chdir(workingDirectory);
           console.debug("Actual working directory:", process.cwd());
+
+          // Read package.json
           let version = "";
           try {
-            version = require("@playwright/test/package.json").version;
+            const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            version = (
+              packageJson.devDependencies?.['@playwright/test'] ||
+              packageJson.dependencies?.['@playwright/test'] ||
+              packageJson.dependencies?.['playwright'] ||
+              packageJson.devDependencies?.['playwright']
+            )?.replace(/[\^~]/g, '');
           } catch (error) {
             console.log(error.message);
           }
+
           console.debug("Version:", version);
           if (version) {
             core.exportVariable("PLAYWRIGHT_VERSION", version);
