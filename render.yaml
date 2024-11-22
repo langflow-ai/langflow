@@ -2,16 +2,19 @@ services:
   # A Docker web service
   - type: web
     name: langflow
+    plan: pro
     runtime: docker
     dockerfilePath: ./docker/render.Dockerfile
-    repo: https://github.com/langflow-ai/langflow
+    repo: https://github.com/headlinevc/langflow
     branch: main
-    plan: standard
-    healthCheckPath: /health_check
+    healthCheckPath: /health
+    numInstances: 3
     autoDeploy: false
     envVars:
       - key: LANGFLOW_DATABASE_URL
-        value: sqlite:////app/data/.cache/langflow/langflow.db
+        fromDatabase:
+          name: langflow-db
+          property: connectionString
       - key: LANGFLOW_HOST
         value: 0.0.0.0
       - key: LANGFLOW_PORT
@@ -19,6 +22,11 @@ services:
         value: 10000
       - key: LANGFLOW_LOG_LEVEL
         value: INFO
-    disk:
-      name: langflow-data
-      mountPath: /app/data
+
+databases:
+  - name: langflow-db
+    plan: basic-1gb
+    previewPlan: basic-256mb
+    databaseName: langflow_db_production
+    user: langflow
+    diskSizeGB: 10
