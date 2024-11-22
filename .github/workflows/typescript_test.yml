@@ -201,26 +201,7 @@ jobs:
         run: |
           cd src/frontend
           npm ci
-        if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
-      - name: Get Playwright version
-        run: |
-          cd src/frontend
-          echo "PLAYWRIGHT_VERSION=$(npm ls @playwright/test | grep @playwright | sed 's/.*@//')" >> $GITHUB_ENV
-
-      - name: Cache Playwright binaries
-        id: playwright-cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-
-      - name: Install Frontend dependencies
-        run: |
-          cd src/frontend
-          npm ci
+        if: ${{ steps.npm-cache.outputs.cache-hit != 'true' }}
 
       - name: Install Playwright
         id: install-playwright
