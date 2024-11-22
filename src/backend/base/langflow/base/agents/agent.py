@@ -1,4 +1,5 @@
 import asyncio
+import re
 from abc import abstractmethod
 from typing import TYPE_CHECKING, cast
 
@@ -178,6 +179,18 @@ class LCAgentComponent(Component):
     def create_agent_runnable(self) -> Runnable:
         """Create the agent."""
 
+    def validate_tool_names(self) -> None:
+        """Validate tool names to ensure they match the required pattern."""
+        pattern = re.compile(r"^[a-zA-Z0-9_-]+$")
+        if hasattr(self, "tools") and self.tools:
+            for tool in self.tools:
+                if not pattern.match(tool.name):
+                    msg = (
+                        f"Invalid tool name '{tool.name}': must only contain letters, numbers, underscores, dashes,"
+                        " and cannot contain spaces."
+                    )
+                    raise ValueError(msg)
+
 
 class LCToolsAgentComponent(LCAgentComponent):
     _base_inputs = [
@@ -193,6 +206,7 @@ class LCToolsAgentComponent(LCAgentComponent):
     ]
 
     def build_agent(self) -> AgentExecutor:
+        self.validate_tool_names()
         agent = self.create_agent_runnable()
         return AgentExecutor.from_agent_and_tools(
             agent=RunnableAgent(runnable=agent, input_keys_arg=["input"], return_keys_arg=["output"]),
