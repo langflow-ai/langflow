@@ -228,8 +228,8 @@ import {
 import { GroqIcon } from "../icons/Groq";
 import { HCDIcon } from "../icons/HCD";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
-import { IcosaIcon } from "../icons/Icosa";
 import { IFixIcon } from "../icons/IFixIt";
+import { IcosaIcon } from "../icons/Icosa";
 import { LMStudioIcon } from "../icons/LMStudio";
 import { LangChainIcon } from "../icons/LangChain";
 import { MaritalkIcon } from "../icons/Maritalk";
@@ -459,6 +459,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Notion", name: "Notion", icon: "Notion" },
   { display_name: "NVIDIA", name: "nvidia", icon: "NVIDIA" },
   { display_name: "Vectara", name: "vectara", icon: "Vectara" },
+  { display_name: "Icosa Computing", name: "icosacomputing", icon: "Icosa" },
 ];
 
 export const categoryIcons = {

@@ -71,7 +71,10 @@ class CombinatorialReasonerComponent(Component):
 
         creds = HTTPBasicAuth(self.username, password=self.password)
         response = requests.post(
-            "https://cr-api.icosacomputing.com/cr/langflow", json=params, auth=creds
+            "https://cr-api.icosacomputing.com/cr/langflow",
+            json=params,
+            auth=creds,
+            timeout=100,
         )
         response.raise_for_status()
 
@@ -82,5 +85,5 @@ class CombinatorialReasonerComponent(Component):
 
     def build_reasons(self) -> Data:
         # list of selected reasons
-        finalReasons = [reason[0] for reason in self.reasons]
-        return Data(value=finalReasons)
+        final_reasons = [reason[0] for reason in self.reasons]
+        return Data(value=final_reasons)
