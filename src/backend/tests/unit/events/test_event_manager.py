@@ -81,11 +81,8 @@ class TestEventManager:
 
     # Sending an event with complex data and verifying successful event transmission
     async def test_sending_event_with_complex_data(self):
-        def mock_queue_put_nowait(item):
-            pass
-
         queue = asyncio.Queue()
-        queue.put_nowait = mock_queue_put_nowait
+
         manager = EventManager(queue)
         manager.register_event("on_test_event", "test_type", manager.noop)
         data = {"key": "value", "nested": [1, 2, 3]}
