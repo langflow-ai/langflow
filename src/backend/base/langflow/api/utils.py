@@ -140,7 +140,7 @@ def format_elapsed_time(elapsed_time: float) -> str:
     return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
-async def _get_flow_name(flow_id: str) -> str:
+async def _get_flow_name(flow_id: uuid.UUID) -> str:
     async with async_session_scope() as session:
         flow = await session.get(Flow, flow_id)
         if flow is None:
@@ -149,7 +149,7 @@ async def _get_flow_name(flow_id: str) -> str:
     return flow.name
 
 
-async def build_graph_from_data(flow_id: str, payload: dict, **kwargs):
+async def build_graph_from_data(flow_id: uuid.UUID, payload: dict, **kwargs):
     """Build and cache the graph."""
     # Get flow name
     if "flow_name" not in kwargs:
@@ -171,7 +171,7 @@ async def build_graph_from_data(flow_id: str, payload: dict, **kwargs):
     return graph
 
 
-async def build_graph_from_db_no_cache(flow_id: str, session: AsyncSession):
+async def build_graph_from_db_no_cache(flow_id: uuid.UUID, session: AsyncSession):
     """Build and cache the graph."""
     flow: Flow | None = await session.get(Flow, flow_id)
     if not flow or not flow.data:
@@ -180,7 +180,7 @@ async def build_graph_from_db_no_cache(flow_id: str, session: AsyncSession):
     return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, user_id=str(flow.user_id))
 
 
-async def build_graph_from_db(flow_id: str, session: AsyncSession, chat_service: ChatService):
+async def build_graph_from_db(flow_id: uuid.UUID, session: AsyncSession, chat_service: ChatService):
     graph = await build_graph_from_db_no_cache(flow_id, session)
     await chat_service.set_cache(flow_id, graph)
     return graph
