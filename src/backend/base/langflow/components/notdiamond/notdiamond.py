@@ -100,7 +100,7 @@ class NotDiamondComponent(Component):
 
     outputs = [Output(display_name="Output", name="output", method="model_select")]
 
-    def model_select(self) -> dict:
+    def model_select(self) -> Message:
         api_key = SecretStr(self.api_key).get_secret_value() if self.api_key else None
         input_value = self.input_value
         system_message = self.system_message
