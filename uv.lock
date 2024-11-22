@@ -4048,7 +4048,7 @@ requires-dist = [
     { name = "sentry-sdk", extras = ["fastapi", "loguru"], specifier = ">=2.5.1,<3.0.0" },
     { name = "setuptools", specifier = ">=70,<76.0.0" },
     { name = "spider-client", specifier = ">=0.0.27,<1.0.0" },
-    { name = "sqlmodel", specifier = "==0.0.18" },
+    { name = "sqlmodel", specifier = "==0.0.20" },
     { name = "typer", specifier = ">=0.13.0,<1.0.0" },
     { name = "types-google-cloud-ndb", marker = "extra == 'dev'", specifier = ">=2.2.0.0" },
     { name = "types-markdown", marker = "extra == 'dev'", specifier = ">=3.7.0.20240822" },
@@ -7421,15 +7421,15 @@ postgresql-psycopgbinary = [
 
 [[package]]
 name = "sqlmodel"
-version = "0.0.18"
+version = "0.0.20"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "sqlalchemy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/32/19/d0b363befa90c168941f4f7826f6a9d7211f4aa2b99660ac0410bf5803f8/sqlmodel-0.0.18.tar.gz", hash = "sha256:2e520efe03810ef2c268a1004cfc5ef8f8a936312232f38d6c8e62c11af2cac3", size = 109419 }
+sdist = { url = "https://files.pythonhosted.org/packages/e8/31/8893ad2092c5edac215c19c663836b3c7c355cfe192d54e03819e6ff23ef/sqlmodel-0.0.20.tar.gz", hash = "sha256:94dd1f63e4ceb0ab405e304e1ad3e8b8c8800b47c3ca5f68736807be8e5b9314", size = 110569 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cc/5f/8838e6b1b6673709e93386d6d42d28030883079b5ebcbdc7a37f2953e993/sqlmodel-0.0.18-py3-none-any.whl", hash = "sha256:d70fdf8fe595e30a918660cf4537b9c5fc2fffdbfcba851a0135de73c3ebcbb7", size = 26507 },
+    { url = "https://files.pythonhosted.org/packages/d1/a0/1e7b801e6ebd0ded4f98a7fb148fe518b8d4a01fa35b6700971391d59d76/sqlmodel-0.0.20-py3-none-any.whl", hash = "sha256:744756c49e24095808984754cc4d3a32c2d8361fef803c4914fadcb912239bc9", size = 27703 },
 ]
 
 [[package]]
