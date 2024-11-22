@@ -243,9 +243,7 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
         await setup_superuser(settings_service, session)
     try:
         await get_db_service().assign_orphaned_flows_to_superuser()
-    except Exception as exc:
-        msg = "Error assigning orphaned flows to the superuser"
-        logger.exception(msg)
-        raise RuntimeError(msg) from exc
+    except sqlalchemy_exc.IntegrityError as exc:
+        logger.warning(f"Error assigning orphaned flows to the superuser: {exc!s}")
     await clean_transactions(settings_service, session)
     await clean_vertex_builds(settings_service, session)
