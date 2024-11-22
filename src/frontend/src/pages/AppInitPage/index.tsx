@@ -1,6 +1,7 @@
 import { useGetAutoLogin } from "@/controllers/API/queries/auth";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { useGetBasicExamplesQuery } from "@/controllers/API/queries/flows/use-get-basic-examples";
+import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
 import { useGetTagsQuery } from "@/controllers/API/queries/store";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
@@ -23,15 +24,19 @@ export function AppInitPage() {
   const { isFetched } = useGetAutoLogin({ enabled: isLoaded });
   useGetVersionQuery({ enabled: isFetched });
   useGetConfig({ enabled: isFetched });
-  useGetGlobalVariables({ enabled: isFetched });
-  useGetBasicExamplesQuery({ enabled: isFetched });
-  useGetTagsQuery({ enabled: isFetched });
+  const { isFetched: typesLoaded } = useGetTypes({ enabled: isFetched });
+  useGetGlobalVariables({ enabled: typesLoaded });
+  useGetTagsQuery({ enabled: typesLoaded });
+  useGetFoldersQuery({
+    enabled: typesLoaded,
+  });
+  const { isFetched: isExamplesFetched } = useGetBasicExamplesQuery({
+    enabled: typesLoaded,
+  });
 
-  const { refetch: refetchFolders } = useGetFoldersQuery();
   useEffect(() => {
     if (isFetched) {
       refreshStars();
-      refetchFolders();
     }
   }, [isFetched]);
 
@@ -47,11 +52,13 @@ export function AppInitPage() {
     //need parent component with width and height
     <>
       {isLoaded ? (
-        (isLoading || !isFetched) && <LoadingPage overlay />
+        (isLoading || !isFetched || !isExamplesFetched || !typesLoaded) && (
+          <LoadingPage overlay />
+        )
       ) : (
         <CustomLoadingPage />
       )}
-      {isFetched && <Outlet />}
+      {isFetched && isExamplesFetched && typesLoaded && <Outlet />}
     </>
   );
 }
