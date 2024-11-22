@@ -11,8 +11,8 @@ from langflow.schema import Data
 
 class AstraDBToolComponent(LCToolComponent):
     display_name: str = "Astra DB"
-    description: str = "Create a tool to get data from DataStax Astra DB Collection"
-    documentation: str = "https://astra.datastax.com"
+    description: str = "Create a tool to get transactional data from DataStax Astra DB Collection"
+    documentation: str = "https://docs.langflow.org/Components/components-tools#astra-db-tool"
     icon: str = "AstraDB"
 
     inputs = [
@@ -73,6 +73,7 @@ class AstraDBToolComponent(LCToolComponent):
             name="static_filters",
             info="Attributes to filter and correspoding value",
             display_name="Static filters",
+            advanced=True,
             is_list=True,
         ),
         IntInput(
