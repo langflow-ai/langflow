@@ -20,7 +20,7 @@ def ingestion_graph():
     openai_embeddings = OpenAIEmbeddingsComponent()
     vector_store = AstraVectorStoreComponent()
     vector_store.set(
-        embedding=openai_embeddings.build_embeddings,
+        embedding_model=openai_embeddings.build_embeddings,
         ingest_data=text_splitter.split_text,
     )
 
@@ -34,7 +34,7 @@ def rag_graph():
     rag_vector_store = AstraVectorStoreComponent()
     rag_vector_store.set(
         search_input=chat_input.message_response,
-        embedding=openai_embeddings.build_embeddings,
+        embedding_model=openai_embeddings.build_embeddings,
     )
 
     parse_data = ParseDataComponent()

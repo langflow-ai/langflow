@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import delete
 from sqlmodel import col, select
 
-from langflow.api.utils import AsyncDbSession, DbSession
+from langflow.api.utils import AsyncDbSession
 from langflow.schema.message import MessageResponse
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.message.model import MessageRead, MessageTable, MessageUpdate
@@ -30,9 +30,9 @@ async def get_vertex_builds(flow_id: Annotated[UUID, Query()], session: AsyncDbS
 
 
 @router.delete("/builds", status_code=204)
-def delete_vertex_builds(flow_id: Annotated[UUID, Query()], session: DbSession) -> None:
+async def delete_vertex_builds(flow_id: Annotated[UUID, Query()], session: AsyncDbSession) -> None:
     try:
-        delete_vertex_builds_by_flow_id(session, flow_id)
+        await delete_vertex_builds_by_flow_id(session, flow_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

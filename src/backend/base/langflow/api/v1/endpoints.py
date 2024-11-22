@@ -544,11 +544,16 @@ async def get_task_status(task_id: str) -> TaskStatusResponse:
 @router.post(
     "/upload/{flow_id}",
     status_code=HTTPStatus.CREATED,
+    deprecated=True,
 )
 async def create_upload_file(
     file: UploadFile,
     flow_id: UUID,
 ) -> UploadFileResponse:
+    """Upload a file for a specific flow (Deprecated).
+
+    This endpoint is deprecated and will be removed in a future version.
+    """
     try:
         flow_id_str = str(flow_id)
         file_path = save_uploaded_file(file, folder_name=flow_id_str)
