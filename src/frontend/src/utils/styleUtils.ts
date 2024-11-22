@@ -228,6 +228,7 @@ import {
 import { GroqIcon } from "../icons/Groq";
 import { HCDIcon } from "../icons/HCD";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
+import { IcosaIcon } from "../icons/Icosa";
 import { IFixIcon } from "../icons/IFixIt";
 import { LMStudioIcon } from "../icons/LMStudio";
 import { LangChainIcon } from "../icons/LangChain";
@@ -572,6 +573,7 @@ export const nodeIconsLucide: iconsType = {
   HuggingFaceHub: HuggingFaceIcon,
   HuggingFace: HuggingFaceIcon,
   HuggingFaceEmbeddings: HuggingFaceIcon,
+  Icosa: IcosaIcon,
   IFixitLoader: IFixIcon,
   CrewAI: CrewAiIcon,
   Composio: ComposioIcon,

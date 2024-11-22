@@ -4,6 +4,7 @@ from langchain_core._api.deprecation import LangChainDeprecationWarning
 
 from .bing_search_api import BingSearchAPIComponent
 from .calculator import CalculatorToolComponent
+from .combinatorial_reasoner import CombinatorialReasonerComponent
 from .duck_duck_go_search_run import DuckDuckGoSearchComponent
 from .glean_search_api import GleanSearchAPIComponent
 from .google_search_api import GoogleSearchAPIComponent
@@ -29,6 +30,7 @@ __all__ = [
     "AstraDBToolComponent",
     "BingSearchAPIComponent",
     "CalculatorToolComponent",
+    "CombinatorialReasonerComponent",
     "DuckDuckGoSearchComponent",
     "GleanSearchAPIComponent",
     "GoogleSearchAPIComponent",
