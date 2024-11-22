@@ -52,7 +52,7 @@ class CSVAgentComponent(LCAgentComponent):
     ]
 
     def _path(self) -> str:
-        if isinstance(self.path, Message):
+        if isinstance(self.path, Message) and isinstance(self.path.text, str):
             return self.path.text
         return self.path
 
