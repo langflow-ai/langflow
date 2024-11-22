@@ -7,17 +7,23 @@ import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavai
 import { GlobalVariable } from "@/types/global_variables";
 import { useEffect, useState } from "react";
 
-import sortByName from "./utils/sort-by-name";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import BaseModal from "@/modals/baseModal";
 import useAlertStore from "@/stores/alertStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { ResponseErrorDetailAPI } from "@/types/api";
-import BaseModal from "@/modals/baseModal";
-import { Label } from "@/components/ui/label";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import InputComponent from "../parameterRenderComponent/components/inputComponent";
-import { Textarea } from "@/components/ui/textarea";
+import sortByName from "./utils/sort-by-name";
 
 //TODO IMPLEMENT FORM LOGIC
 
