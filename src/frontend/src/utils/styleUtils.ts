@@ -613,6 +613,8 @@ export const nodeIconsLucide: iconsType = {
   GoogleSearchAPIWrapper: GoogleIcon,
   GoogleSearchResults: GoogleIcon,
   GoogleSearchRun: GoogleIcon,
+  GoogleSearchAPI: GoogleIcon,
+  GoogleSerperAPI: GoogleIcon,
   Google: GoogleIcon,
   GoogleGenerativeAI: GoogleGenerativeAIIcon,
   Groq: GroqIcon,
