@@ -19,6 +19,7 @@ class UpdateDataComponent(Component):
     description: str = "Dynamically update or append data with the specified fields."
     name: str = "UpdateData"
     MAX_FIELDS = 15  # Define a constant for maximum number of fields
+    icon = "FolderSync"
 
     inputs = [
         DataInput(
