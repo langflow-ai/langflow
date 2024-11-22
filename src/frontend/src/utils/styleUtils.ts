@@ -898,5 +898,5 @@ export const nodeIconsLucide: iconsType = {
   DatabaseZap,
   Cog,
   ArrowRightLeft,
-  FolderSync
+  FolderSync,
 };
