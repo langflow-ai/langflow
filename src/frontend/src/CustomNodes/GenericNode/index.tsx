@@ -337,7 +337,7 @@ export default function GenericNode({
     Object.values(data.node.template).some((field) => field.tool_mode);
 
   return (
-    <>
+    <div className={cn(isOutdated && !isUserEdited ? "relative -mt-10" : "")}>
       <div
         className={cn(
           borderColor,
@@ -349,6 +349,27 @@ export default function GenericNode({
         )}
       >
         {memoizedNodeToolbarComponent}
+        {isOutdated && !isUserEdited && (
+          <div className="flex h-10 w-full items-center gap-4 rounded-t-[0.69rem] bg-warning p-2 px-4 text-warning-foreground">
+            <ForwardedIconComponent
+              name="AlertTriangle"
+              strokeWidth={1.5}
+              className="h-[18px] w-[18px] shrink-0"
+            />
+            <span className="flex-1 truncate text-sm font-medium">
+              Update Ready
+            </span>
+            <Button
+              variant="warning"
+              size="iconMd"
+              className="shrink-0 px-2.5 text-xs"
+              onClick={handleUpdateCode}
+              loading={loadingUpdate}
+            >
+              Update
+            </Button>
+          </div>
+        )}
         <div
           data-testid={`${data.id}-main-node`}
           className={cn(
@@ -415,8 +436,6 @@ export default function GenericNode({
                 buildStatus={buildStatus}
                 isOutdated={isOutdated}
                 isUserEdited={isUserEdited}
-                handleUpdateCode={handleUpdateCode}
-                loadingUpdate={loadingUpdate}
                 getValidationStatus={getValidationStatus}
               />
             )}
@@ -432,7 +451,6 @@ export default function GenericNode({
             </div>
           )}
         </div>
-
         {showNode && (
           <div className="relative">
             {/* increase height!! */}
@@ -509,6 +527,6 @@ export default function GenericNode({
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }

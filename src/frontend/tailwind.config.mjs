@@ -108,6 +108,11 @@ const config = {
         "status-red": "var(--status-red)",
         "status-yellow": "var(--status-yellow)",
         "status-gray": "var(--status-gray)",
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+          text: "hsl(var(--warning-text))",
+        },
         "success-background": "var(--success-background)",
         "success-foreground": "var(--success-foreground)",
         "accent-pink": "hsl(var(--accent-pink))",
