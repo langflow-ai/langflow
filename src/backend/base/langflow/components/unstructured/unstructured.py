@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from langchain_unstructured import UnstructuredLoader
 
 from langflow.base.data import BaseFileComponent
@@ -81,7 +79,13 @@ class UnstructuredComponent(BaseFileComponent):
         *BaseFileComponent._base_outputs,
     ]
 
-    def process_files(self, file_list: list[Path]) -> list[Data]:
+    def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
+        file_paths = [str(file.path) for file in file_list if file.path]
+
+        if not file_paths:
+            self.log("No files to process.")
+            return file_list
+
         # https://docs.unstructured.io/api-reference/api-services/api-parameters
         args = self.unstructured_args or {}
 
@@ -91,16 +95,17 @@ class UnstructuredComponent(BaseFileComponent):
             args["url"] = self.api_url
 
         loader = UnstructuredLoader(
-            file_list,
+            file_paths,
             **args,
         )
 
-        self.log(f"file_list: {file_list}")
-
         documents = loader.load()
 
-        data = [Data.from_document(doc) for doc in documents]  # Using the from_document method of Data
+        processed_data = [Data.from_document(doc) for doc in documents]  # Using the from_document method of Data
 
-        self.status = data
+        # Rename the `source` field to `self.SERVER_FILE_PATH_FIELDNAME`
+        for data in processed_data:
+            if "source" in data.data:
+                data.data[self.SERVER_FILE_PATH_FIELDNAME] = data.data.pop("source")
 
-        return data
+        return self.rollup_data(file_list, processed_data, path_field="source")
