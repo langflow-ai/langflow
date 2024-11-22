@@ -19,6 +19,8 @@ topics, delivering structured responses."""
         SecretStrInput(name="app_id", display_name="App ID", required=True),
     ]
 
+    icon = "WolframAlphaAPI"
+
     def run_model(self) -> list[Data]:
         wrapper = self._build_wrapper()
         result_str = wrapper.run(self.input_value)
