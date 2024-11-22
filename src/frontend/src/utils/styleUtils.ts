@@ -663,7 +663,6 @@ export const nodeIconsLucide: iconsType = {
   Discord: FaDiscord,
   MistralAI: MistralIcon,
   Upstash: UpstashSvgIcon,
-  PGVector: CpuIcon,
   Confluence: ConfluenceIcon,
   AIML: AIMLIcon,
   "AI/ML": AIMLIcon,

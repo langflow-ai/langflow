@@ -56,17 +56,17 @@ class SerpAPIComponent(LCToolComponent):
         return SerpAPIWrapper(serpapi_api_key=self.serpapi_api_key)
 
     def build_tool(self) -> Tool:
-        wrapper = self._build_wrapper(self.search_params)  # noqa: F841
+        wrapper = self._build_wrapper(self.search_params)
 
         def search_func(
             query: str, params: dict[str, Any] | None = None, max_results: int = 5, max_snippet_length: int = 100
         ) -> list[dict[str, Any]]:
             try:
-                # rebuild the wrapper if params are provided
+                local_wrapper = wrapper
                 if params:
-                    wrapper = self._build_wrapper(params)
+                    local_wrapper = self._build_wrapper(params)
 
-                full_results = wrapper.results(query)
+                full_results = local_wrapper.results(query)
                 organic_results = full_results.get("organic_results", [])[:max_results]
 
                 limited_results = []
