@@ -17,14 +17,15 @@ test.describe("save component tests", () => {
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
     await page.waitForSelector('[data-testid="blank-flow"]', {
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
-    await page.waitForTimeout(1000);
 
     // Read your file into a buffer.
     const jsonContent = readFileSync(
@@ -42,8 +43,6 @@ test.describe("save component tests", () => {
       dt.items.add(file);
       return dt;
     }, jsonContent);
-
-    page.waitForTimeout(1000);
 
     // Now dispatch
     await page.dispatchEvent(
@@ -95,7 +94,7 @@ test.describe("save component tests", () => {
     await page.getByTestId("more-options-modal").click();
 
     await page.getByTestId("icon-SaveAll").click();
-
+    // timeout to handle case where there is already a saved component with the same name
     await page.waitForTimeout(1000);
 
     const replaceButton = await page.getByTestId("replace-button").isVisible();
@@ -105,7 +104,6 @@ test.describe("save component tests", () => {
     }
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("group");
-    await page.waitForTimeout(1000);
 
     await page
       .getByText("Group")
