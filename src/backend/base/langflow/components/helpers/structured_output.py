@@ -16,6 +16,8 @@ class StructuredOutputComponent(Component):
         "Transforms LLM responses into **structured data formats**. Ideal for extracting specific information "
         "or creating consistent outputs."
     )
+    icon = "braces"
+
     inputs = [
         HandleInput(
             name="llm",

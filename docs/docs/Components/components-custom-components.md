@@ -90,8 +90,6 @@ class CustomComponent(Component):
 8. Click **Check & Save** to confirm your component works.
 You now have an operational custom component.
 
-![](./238089171.png)
-
 
 ## Add inputs and modify output methods
 
@@ -160,8 +158,6 @@ class MyCustomComponent(Component):
 Since the component outputs a `Message`, you can wire it into a chat and pass messages to yourself.
 
 Your Custom Component accepts the Chat Input message through `MessageTextInput`, fills in the variables with the `process_inputs` method, and finally passes the message `User Username (Age: 49, Gender: Male) sent the following special message: Hello!` to Chat Output.
-
-![](./custom-component-chat.png)
 
 By defining inputs this way, Langflow can automatically handle the validation and display of these fields in the user interface, making it easier to create robust and user-friendly custom components.
 
@@ -426,8 +422,6 @@ In this custom component:
 The component performs basic text analysis, including character count and sentence count (based on punctuation marks). If word count is enabled, it splits the text and counts the words. If sentiment analysis is enabled, it performs a simple keyword-based sentiment classification (positive, negative, or neutral).
 
 Since the component inputs and outputs a `Message`, you can wire the component into a chat and see how the basic custom component logic interacts with your input.
-
-![](./custom-component-inputs-chat.png)
 
 ## Create a Custom Component with Multiple Outputs {#6f225be8a142450aa19ee8e46a3b3c8c}
 

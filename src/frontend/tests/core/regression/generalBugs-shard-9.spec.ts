@@ -39,7 +39,11 @@ test("memory should work as expect", async ({ page }) => {
   await page.getByTestId("fit_view").click();
 
   await page.getByTestId("sidebar-search-input").click();
-  await page.getByTestId("sidebar-search-input").fill("chat memory");
+  await page.getByTestId("sidebar-search-input").fill("message history");
+
+  await page.getByTestId("sidebar-options-trigger").click();
+  await page.getByTestId("sidebar-legacy-switch").isVisible({ timeout: 5000 });
+  await page.getByTestId("sidebar-legacy-switch").click();
 
   // Locate the canvas element
   const canvas = page.locator("#react-flow-id"); // Update the selector if needed
@@ -54,8 +58,8 @@ test("memory should work as expect", async ({ page }) => {
   const startX = canvasBox.x + canvasBox.width / 2;
   const startY = canvasBox.y + canvasBox.height / 2;
 
-  // End point (move 300 pixels to the right)
-  const endX = startX + 300;
+  // End point (move 600 pixels to the right)
+  const endX = startX + 600;
   const endY = startY;
 
   // Hover over the canvas to focus it
@@ -72,7 +76,7 @@ test("memory should work as expect", async ({ page }) => {
   await page.mouse.up();
 
   await page
-    .getByTestId("helpersChat Memory")
+    .getByTestId("helpersMessage History")
     .first()
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
@@ -123,9 +127,12 @@ AI:
   await page.getByText("Edit Prompt", { exact: true }).click();
   await page.getByText("Check & Save").last().click();
 
+  await page.getByTestId("fit_view").click();
+  await page.getByTestId("fit_view").click();
+
   //connection 1
   const elementChatMemoryOutput = await page
-    .getByTestId("handle-memory-shownode-messages (text)-right")
+    .getByTestId("handle-memory-shownode-text-right")
     .first();
   await elementChatMemoryOutput.hover();
   await page.mouse.down();

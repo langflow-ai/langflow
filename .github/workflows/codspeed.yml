@@ -11,7 +11,12 @@ on:
     paths:
       - "src/backend/base/**"
       - "src/backend/tests/performance/**"
+      - "!src/backend/base/langflow/components/**"
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   codspeed:

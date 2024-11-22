@@ -36,6 +36,10 @@ const config = {
       },
     },
     extend: {
+      screens: {
+        xl: "1200px",
+        "2xl": "1400px",
+      },
       keyframes: {
         wiggle: {
           "0%, 100%": { transform: "scale(100%)" },
@@ -104,6 +108,11 @@ const config = {
         "status-red": "var(--status-red)",
         "status-yellow": "var(--status-yellow)",
         "status-gray": "var(--status-gray)",
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+          text: "hsl(var(--warning-text))",
+        },
         "success-background": "var(--success-background)",
         "success-foreground": "var(--success-foreground)",
         "accent-pink": "hsl(var(--accent-pink))",
@@ -120,6 +129,9 @@ const config = {
         "chat-bot-icon": "var(--chat-bot-icon)",
         "chat-user-icon": "var(--chat-user-icon)",
         "code-background": "hsl(var(--code-background))",
+        "code-description-background":
+          "hsl(var(--code-description-background))",
+        "code-foreground": "hsl(var(--code-foreground))",
         canvas: {
           DEFAULT: "hsl(var(--canvas))",
           dot: "hsl(var(--canvas-dot))",
@@ -135,10 +147,6 @@ const config = {
         "node-selected": "hsl(var(--node-selected))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
-        "accent-emerald": {
-          DEFAULT: "hsl(var(--accent-emerald))",
-          foreground: "hsl(var(--accent-emerald-foreground))",
-        },
         "emerald-smooth": "hsl(var(--emaral-smooth))",
         "emerald-hard": "hsl(var(--emeral-hard))",
         placeholder: "hsl(var(--placeholder))",
@@ -196,51 +204,58 @@ const config = {
           DEFAULT: "#18181B",
           muted: "#27272A",
         },
-        "accent-yellow": {
-          DEFAULT: "hsl(var(--accent-yellow))",
-          foreground: "hsl(var(--accent-yellow-foreground))",
+        "datatype-yellow": {
+          DEFAULT: "hsl(var(--datatype-yellow))",
+          foreground: "hsl(var(--datatype-yellow-foreground))",
         },
-        "accent-blue": {
-          DEFAULT: "hsl(var(--accent-blue))",
-          foreground: "hsl(var(--accent-blue-foreground))",
+        "datatype-blue": {
+          DEFAULT: "hsl(var(--datatype-blue))",
+          foreground: "hsl(var(--datatype-blue-foreground))",
         },
-        "accent-gray": {
-          DEFAULT: "hsl(var(--accent-gray))",
-          foreground: "hsl(var(--accent-gray-foreground))",
+        "datatype-gray": {
+          DEFAULT: "hsl(var(--datatype-gray))",
+          foreground: "hsl(var(--datatype-gray-foreground))",
         },
-        "accent-lime": {
-          DEFAULT: "hsl(var(--accent-lime))",
-          foreground: "hsl(var(--accent-lime-foreground))",
+        "datatype-lime": {
+          DEFAULT: "hsl(var(--datatype-lime))",
+          foreground: "hsl(var(--datatype-lime-foreground))",
         },
-        "accent-red": {
-          DEFAULT: "hsl(var(--accent-red))",
-          foreground: "hsl(var(--accent-red-foreground))",
+        "datatype-red": {
+          DEFAULT: "hsl(var(--datatype-red))",
+          foreground: "hsl(var(--datatype-red-foreground))",
         },
-        "accent-violet": {
-          DEFAULT: "hsl(var(--accent-violet))",
-          foreground: "hsl(var(--accent-violet-foreground))",
+        "datatype-violet": {
+          DEFAULT: "hsl(var(--datatype-violet))",
+          foreground: "hsl(var(--datatype-violet-foreground))",
         },
-        "accent-emerald": {
-          DEFAULT: "hsl(var(--accent-emerald))",
-          foreground: "hsl(var(--accent-emerald-foreground))",
+        "datatype-emerald": {
+          DEFAULT: "hsl(var(--datatype-emerald))",
+          foreground: "hsl(var(--datatype-emerald-foreground))",
         },
-        "accent-fuchsia": {
-          DEFAULT: "hsl(var(--accent-fuchsia))",
-          foreground: "hsl(var(--accent-fuchsia-foreground))",
+        "datatype-fuchsia": {
+          DEFAULT: "hsl(var(--datatype-fuchsia))",
+          foreground: "hsl(var(--datatype-fuchsia-foreground))",
         },
-        "accent-purple": {
-          DEFAULT: "hsl(var(--accent-purple))",
-          foreground: "hsl(var(--accent-purple-foreground))",
+        "datatype-purple": {
+          DEFAULT: "hsl(var(--datatype-purple))",
+          foreground: "hsl(var(--datatype-purple-foreground))",
         },
-        "accent-cyan": {
-          DEFAULT: "hsl(var(--accent-cyan))",
-          foreground: "hsl(var(--accent-cyan-foreground))",
+        "datatype-cyan": {
+          DEFAULT: "hsl(var(--datatype-cyan))",
+          foreground: "hsl(var(--datatype-cyan-foreground))",
         },
-        "accent-indigo": {
-          DEFAULT: "hsl(var(--accent-indigo))",
-          foreground: "hsl(var(--accent-indigo-foreground))",
+        "datatype-indigo": {
+          DEFAULT: "hsl(var(--datatype-indigo))",
+          foreground: "hsl(var(--datatype-indigo-foreground))",
         },
         "node-ring": "hsl(var(--node-ring))",
+        "neon-fuschia": "hsl(var(--neon-fuschia))",
+        "digital-orchid": "hsl(var(--digital-orchid))",
+        "plasma-purple": "hsl(var(--plasma-purple))",
+        "electric-blue": "hsl(var(--electric-blue))",
+        "holo-frost": "hsl(var(--holo-frost))",
+        "terminal-green": "hsl(var(--terminal-green))",
+        "cosmic-void": "hsl(var(--cosmic-void))",
       },
       borderRadius: {
         lg: `var(--radius)`,
@@ -254,6 +269,7 @@ const config = {
       fontFamily: {
         sans: ["var(--font-sans)", ...fontFamily.sans],
         mono: ["var(--font-mono)", ...fontFamily.mono],
+        chivo: ["var(--font-chivo)", ...fontFamily.sans],
       },
       boxShadow: {
         "frozen-ring": "0 0 10px 2px rgba(128, 190, 230, 0.5)",
@@ -262,6 +278,14 @@ const config = {
       },
       backdropBlur: {
         xs: "2px",
+      },
+      zIndex: {
+        60: "60",
+        70: "70",
+        80: "80",
+        90: "90",
+        100: "100",
+        999: "999",
       },
     },
   },
@@ -303,7 +327,7 @@ const config = {
           wordBreak: "break-word",
         },
         ".arrow-hide": {
-          "&::-webkit-inner-spin-button": {
+          "&::-webkit-datatype-spin-button": {
             "-webkit-appearance": "none",
             margin: 0,
           },
@@ -334,7 +358,7 @@ const config = {
             borderRadius: "999px",
           },
           "&::-webkit-scrollbar-thumb:hover": {
-            backgroundColor: "hsl(var(--ring))",
+            backgroundColor: "hsl(var(--placeholder-foreground))",
           },
           cursor: "auto",
         },

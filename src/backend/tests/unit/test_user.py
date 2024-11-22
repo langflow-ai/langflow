@@ -5,18 +5,18 @@ from httpx import AsyncClient
 from langflow.services.auth.utils import create_super_user, get_password_hash
 from langflow.services.database.models.user import UserUpdate
 from langflow.services.database.models.user.model import User
-from langflow.services.database.utils import session_getter
+from langflow.services.database.utils import async_session_getter, session_getter
 from langflow.services.deps import get_db_service, get_settings_service
 from sqlmodel import select
 
 
 @pytest.fixture
-def super_user(client):  # noqa: ARG001
+async def super_user(client):  # noqa: ARG001
     settings_manager = get_settings_service()
     auth_settings = settings_manager.auth_settings
-    with session_getter(get_db_service()) as session:
-        return create_super_user(
-            db=session,
+    async with async_session_getter(get_db_service()) as db:
+        return await create_super_user(
+            db=db,
             username=auth_settings.SUPERUSER,
             password=auth_settings.SUPERUSER_PASSWORD,
         )

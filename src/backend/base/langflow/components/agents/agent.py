@@ -2,9 +2,10 @@ from langchain_core.tools import StructuredTool
 
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.base.models.model_input_constants import ALL_PROVIDER_FIELDS, MODEL_PROVIDERS_DICT
-from langflow.components.agents.tool_calling import ToolCallingAgentComponent
+from langflow.base.models.model_utils import get_model_name
 from langflow.components.helpers import CurrentDateComponent
 from langflow.components.helpers.memory import MemoryComponent
+from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from langflow.io import BoolInput, DropdownInput, MultilineInput, Output
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
@@ -19,7 +20,7 @@ class AgentComponent(ToolCallingAgentComponent):
     display_name: str = "Agent"
     description: str = "Define the agent's instructions, then enter a task to complete using tools."
     icon = "bot"
-    beta = True
+    beta = False
     name = "Agent"
 
     memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]
@@ -28,17 +29,17 @@ class AgentComponent(ToolCallingAgentComponent):
         DropdownInput(
             name="agent_llm",
             display_name="Model Provider",
+            info="The provider of the language model that the agent will use to generate responses.",
             options=[*sorted(MODEL_PROVIDERS_DICT.keys()), "Custom"],
             value="OpenAI",
             real_time_refresh=True,
-            refresh_button=True,
             input_types=[],
         ),
         *MODEL_PROVIDERS_DICT["OpenAI"]["inputs"],
         MultilineInput(
             name="system_prompt",
             display_name="Agent Instructions",
-            info="Initial instructions and context provided to guide the agent's behavior.",
+            info="System Prompt: Initial instructions and context provided to guide the agent's behavior.",
             value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
             advanced=False,
         ),
@@ -55,7 +56,8 @@ class AgentComponent(ToolCallingAgentComponent):
     outputs = [Output(name="response", display_name="Response", method="message_response")]
 
     async def message_response(self) -> Message:
-        llm_model = self.get_llm()
+        llm_model, display_name = self.get_llm()
+        self.model_name = get_model_name(llm_model, display_name=display_name)
         if llm_model is None:
             msg = "No language model selected"
             raise ValueError(msg)
@@ -98,13 +100,14 @@ class AgentComponent(ToolCallingAgentComponent):
                 provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)
                 if provider_info:
                     component_class = provider_info.get("component_class")
+                    display_name = component_class.display_name
                     inputs = provider_info.get("inputs")
                     prefix = provider_info.get("prefix", "")
-                    return self._build_llm_model(component_class, inputs, prefix)
+                    return self._build_llm_model(component_class, inputs, prefix), display_name
             except Exception as e:
                 msg = f"Error building {self.agent_llm} language model"
                 raise ValueError(msg) from e
-        return self.agent_llm
+        return self.agent_llm, None
 
     def _build_llm_model(self, component, inputs, prefix=""):
         model_kwargs = {input_.name: getattr(self, f"{prefix}{input_.name}") for input_ in inputs}
@@ -126,8 +129,16 @@ class AgentComponent(ToolCallingAgentComponent):
         return build_config
 
     def update_build_config(self, build_config: dotdict, field_value: str, field_name: str | None = None) -> dotdict:
+        # Iterate over all providers in the MODEL_PROVIDERS_DICT
+        # Existing logic for updating build_config
         if field_name == "agent_llm":
-            # Define provider configurations as (fields_to_add, fields_to_delete)
+            provider_info = MODEL_PROVIDERS_DICT.get(field_value)
+            if provider_info:
+                component_class = provider_info.get("component_class")
+                if component_class and hasattr(component_class, "update_build_config"):
+                    # Call the component class's update_build_config method
+                    build_config = component_class.update_build_config(build_config, field_value, field_name)
+
             provider_configs: dict[str, tuple[dict, list[dict]]] = {
                 provider: (
                     MODEL_PROVIDERS_DICT[provider]["fields"],
@@ -139,7 +150,6 @@ class AgentComponent(ToolCallingAgentComponent):
                 )
                 for provider in MODEL_PROVIDERS_DICT
             }
-
             if field_value in provider_configs:
                 fields_to_add, fields_to_delete = provider_configs[field_value]
 
@@ -167,7 +177,6 @@ class AgentComponent(ToolCallingAgentComponent):
                     input_types=["LanguageModel"],
                 )
                 build_config.update({"agent_llm": custom_component.to_dict()})
-
             # Update input types for all fields
             build_config = self.update_input_types(build_config)
 
@@ -189,5 +198,16 @@ class AgentComponent(ToolCallingAgentComponent):
             if missing_keys:
                 msg = f"Missing required keys in build_config: {missing_keys}"
                 raise ValueError(msg)
+        if isinstance(self.agent_llm, str) and self.agent_llm in MODEL_PROVIDERS_DICT:
+            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)
+            if provider_info:
+                component_class = provider_info.get("component_class")
+                prefix = provider_info.get("prefix")
+                if component_class and hasattr(component_class, "update_build_config"):
+                    # Call each component class's update_build_config method
+                    # remove the prefix from the field_name
+                    if isinstance(field_name, str) and isinstance(prefix, str):
+                        field_name = field_name.replace(prefix, "")
+                    build_config = component_class.update_build_config(build_config, field_value, field_name)
 
         return build_config

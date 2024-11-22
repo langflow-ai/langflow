@@ -11,7 +11,6 @@ import {
   STATUS_BUILD,
   STATUS_BUILDING,
   STATUS_INACTIVE,
-  TOOLTIP_OUTDATED_NODE,
 } from "@/constants/constants";
 import { BuildStatus } from "@/constants/enums";
 import { track } from "@/customization/utils/analytics";
@@ -39,8 +38,6 @@ export default function NodeStatus({
   buildStatus,
   isOutdated,
   isUserEdited,
-  handleUpdateCode,
-  loadingUpdate,
   getValidationStatus,
 }: {
   nodeId: string;
@@ -53,8 +50,6 @@ export default function NodeStatus({
   buildStatus: BuildStatus;
   isOutdated: boolean;
   isUserEdited: boolean;
-  handleUpdateCode: () => void;
-  loadingUpdate: boolean;
   getValidationStatus: (data) => VertexBuildTypeAPI | null;
 }) {
   const nodeId_ = data.node?.flow?.data
@@ -102,7 +97,9 @@ export default function NodeStatus({
         ? " border ring-[0.75px] ring-muted-foreground border-muted-foreground hover:shadow-node"
         : "border ring-[0.5px] hover:shadow-node ring-border";
     let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
-    return frozen ? frozenClass : className;
+    let updateClass =
+      isOutdated && !isUserEdited ? "border-warning ring-2 ring-warning" : "";
+    return cn(frozen ? frozenClass : className, updateClass);
   };
   const getNodeBorderClassName = (
     selected: boolean,
@@ -125,7 +122,15 @@ export default function NodeStatus({
     setBorderColor(
       getNodeBorderClassName(selected, showNode, buildStatus, validationStatus),
     );
-  }, [selected, showNode, buildStatus, validationStatus, frozen]);
+  }, [
+    selected,
+    showNode,
+    buildStatus,
+    validationStatus,
+    isOutdated,
+    isUserEdited,
+    frozen,
+  ]);
 
   useEffect(() => {
     if (buildStatus === BuildStatus.BUILT && !isBuilding) {
@@ -151,7 +156,6 @@ export default function NodeStatus({
   const divRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
 
-  const runClass = "justify-left flex font-normal text-muted-foreground";
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
 
   const handleClickRun = () => {
@@ -189,24 +193,14 @@ export default function NodeStatus({
   return (
     <>
       <div className="flex flex-shrink-0 items-center">
-        {isOutdated && !isUserEdited && (
-          <ShadTooltip content={TOOLTIP_OUTDATED_NODE}>
-            <Button
-              onClick={handleUpdateCode}
-              unstyled
-              className={"hit-area-icon button-run-bg group p-1"}
-              loading={loadingUpdate}
-            >
-              <IconComponent
-                name="AlertTriangle"
-                className="icon-size text-placeholder-foreground group-hover:text-foreground"
-              />
-            </Button>
-          </ShadTooltip>
-        )}
-
         <div className="flex items-center gap-2 self-center">
           <ShadTooltip
+            styleClasses={cn(
+              "border rounded-xl",
+              conditionSuccess
+                ? "border-accent-emerald-foreground bg-success-background"
+                : "border-destructive bg-error-background",
+            )}
             content={
               buildStatus === BuildStatus.BUILDING ? (
                 <span> {STATUS_BUILDING} </span>
@@ -215,26 +209,26 @@ export default function NodeStatus({
               ) : !validationStatus ? (
                 <span className="flex">{STATUS_BUILD}</span>
               ) : (
-                <div className="max-h-100 p-2">
-                  <div className="max-h-80 overflow-auto">
+                <div className="max-h-100 px-1 py-2.5">
+                  <div className="flex max-h-80 flex-col gap-2 overflow-auto">
                     {validationString && (
-                      <div className="ml-1 pb-2 text-accent-red-foreground">
+                      <div className="text-sm text-foreground">
                         {validationString}
                       </div>
                     )}
                     {lastRunTime && (
-                      <div className={runClass}>
+                      <div className="flex items-center text-sm text-secondary-foreground">
                         <div>{RUN_TIMESTAMP_PREFIX}</div>
-                        <div className="ml-1 text-status-blue">
+                        <div className="ml-1 text-secondary-foreground">
                           {lastRunTime}
                         </div>
                       </div>
                     )}
-                  </div>
-                  <div className={runClass}>
-                    <div>Duration:</div>
-                    <div className="ml-1 text-status-blue">
-                      {validationStatus?.data.duration}
+                    <div className="flex items-center text-secondary-foreground">
+                      <div>Duration:</div>
+                      <div className="ml-1">
+                        {validationStatus?.data.duration}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -267,7 +261,6 @@ export default function NodeStatus({
             </Badge>
           )}
         </div>
-
         <ShadTooltip content={getTooltipContent()}>
           <div
             ref={divRef}

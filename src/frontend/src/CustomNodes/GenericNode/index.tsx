@@ -1,7 +1,7 @@
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { NodeToolbar, useUpdateNodeInternals } from "reactflow";
+import { useUpdateNodeInternals } from "reactflow";
 import { ForwardedIconComponent } from "../../components/genericIconComponent";
 import ShadTooltip from "../../components/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
@@ -167,6 +167,8 @@ export default function GenericNode({
 
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
 
+  const [openShowMoreOptions, setOpenShowMoreOptions] = useState(false);
+
   const renderOutputParameter = (
     output: OutputFieldType,
     idx: number,
@@ -212,8 +214,8 @@ export default function GenericNode({
   }, [hiddenOutputs]);
 
   const memoizedNodeToolbarComponent = useMemo(() => {
-    return (
-      <NodeToolbar>
+    return selected ? (
+      <div className={cn("absolute -top-12 left-1/2 z-50 -translate-x-1/2")}>
         <NodeToolbarComponent
           data={data}
           deleteNode={(id) => {
@@ -232,8 +234,11 @@ export default function GenericNode({
           onCloseAdvancedModal={() => {}}
           updateNode={handleUpdateCode}
           isOutdated={isOutdated && isUserEdited}
+          setOpenShowMoreOptions={setOpenShowMoreOptions}
         />
-      </NodeToolbar>
+      </div>
+    ) : (
+      <></>
     );
   }, [
     data,
@@ -268,6 +273,13 @@ export default function GenericNode({
         data.node!.template[templateField]?.show &&
         !data.node!.template[templateField]?.advanced && (
           <NodeInputField
+            lastInput={
+              idx ===
+                Object.keys(data.node!.template).filter(
+                  (templateField) => templateField.charAt(0) !== "_",
+                ).length -
+                  1 && !(shownOutputs.length > 0 || showHiddenOutputs)
+            }
             key={scapedJSONStringfy({
               inputTypes: data.node!.template[templateField].input_types,
               type: data.node!.template[templateField].type,
@@ -320,9 +332,12 @@ export default function GenericNode({
     return null;
   };
 
+  const hasToolMode =
+    data.node?.template &&
+    Object.values(data.node.template).some((field) => field.tool_mode);
+
   return (
-    <>
-      {memoizedNodeToolbarComponent}
+    <div className={cn(isOutdated && !isUserEdited ? "relative -mt-10" : "")}>
       <div
         className={cn(
           borderColor,
@@ -333,6 +348,28 @@ export default function GenericNode({
           !hasOutputs && "pb-4",
         )}
       >
+        {memoizedNodeToolbarComponent}
+        {isOutdated && !isUserEdited && (
+          <div className="flex h-10 w-full items-center gap-4 rounded-t-[0.69rem] bg-warning p-2 px-4 text-warning-foreground">
+            <ForwardedIconComponent
+              name="AlertTriangle"
+              strokeWidth={1.5}
+              className="h-[18px] w-[18px] shrink-0"
+            />
+            <span className="flex-1 truncate text-sm font-medium">
+              Update Ready
+            </span>
+            <Button
+              variant="warning"
+              size="iconMd"
+              className="shrink-0 px-2.5 text-xs"
+              onClick={handleUpdateCode}
+              loading={loadingUpdate}
+            >
+              Update
+            </Button>
+          </div>
+        )}
         <div
           data-testid={`${data.id}-main-node`}
           className={cn(
@@ -357,6 +394,7 @@ export default function GenericNode({
                 showNode={showNode}
                 icon={data.node?.icon}
                 isGroup={!!data.node?.flow}
+                hasToolMode={hasToolMode ?? false}
               />
               <div className="generic-node-tooltip-div">
                 <NodeName
@@ -398,8 +436,6 @@ export default function GenericNode({
                 buildStatus={buildStatus}
                 isOutdated={isOutdated}
                 isUserEdited={isUserEdited}
-                handleUpdateCode={handleUpdateCode}
-                loadingUpdate={loadingUpdate}
                 getValidationStatus={getValidationStatus}
               />
             )}
@@ -415,7 +451,6 @@ export default function GenericNode({
             </div>
           )}
         </div>
-
         {showNode && (
           <div className="relative">
             {/* increase height!! */}
@@ -492,6 +527,6 @@ export default function GenericNode({
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }

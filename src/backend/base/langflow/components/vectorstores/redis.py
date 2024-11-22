@@ -16,6 +16,7 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
     description: str = "Implementation of Vector Store using Redis"
     documentation = "https://python.langchain.com/docs/integrations/vectorstores/redis"
     name = "Redis"
+    icon = "Redis"
 
     inputs = [
         SecretStrInput(name="redis_server_url", display_name="Redis Server Connection String", required=True),

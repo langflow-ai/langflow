@@ -9,7 +9,7 @@ test("user must be able to check similarity between embedding texts", async ({
   );
 
   await page.goto("/");
-  // await page.waitForTimeout(2000);
+  await page.waitForTimeout(500);
 
   let modalCount = 0;
   try {
@@ -30,13 +30,12 @@ test("user must be able to check similarity between embedding texts", async ({
   await page.getByTestId("blank-flow").click();
 
   //first component
-
   await page.getByTestId("sidebar-search-input").click();
-  await page.getByTestId("sidebar-search-input").fill("openai");
-  // await page.waitForTimeout(1000);
+  await page.getByTestId("sidebar-search-input").fill("openai embedding");
+  await page.waitForTimeout(500);
 
   await page
-    .getByTestId("embeddingsOpenAI Embeddings")
+    .getByText("OpenAI Embeddings", { exact: true })
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
   await page.getByTestId("zoom_out").click();
@@ -50,28 +49,11 @@ test("user must be able to check similarity between embedding texts", async ({
 
   await page.mouse.up();
 
-  //second component
-
-  await page
-    .getByTestId("embeddingsOpenAI Embeddings")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-  await page.getByTestId("zoom_out").click();
-  await page
-    .locator('//*[@id="react-flow-id"]')
-    .hover()
-    .then(async () => {
-      await page.mouse.down();
-      await page.mouse.move(-50, 50);
-    });
-
-  await page.mouse.up();
-
-  //third component
+  await page.waitForTimeout(1000);
 
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("text embedder");
-  // await page.waitForTimeout(1000);
+  await page.waitForTimeout(500);
 
   await page
     .getByTestId("embeddingsText Embedder")
@@ -109,7 +91,7 @@ test("user must be able to check similarity between embedding texts", async ({
 
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("embedding similarity");
-  // await page.waitForTimeout(1000);
+  await page.waitForTimeout(500);
 
   await page
     .getByTestId("embeddingsEmbedding Similarity")
@@ -130,10 +112,10 @@ test("user must be able to check similarity between embedding texts", async ({
 
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("parse data");
-  // await page.waitForTimeout(1000);
+  await page.waitForTimeout(500);
 
   await page
-    .getByTestId("helpersParse Data")
+    .getByTestId("processingParse Data")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
   await page.getByTestId("zoom_out").click();
@@ -151,7 +133,7 @@ test("user must be able to check similarity between embedding texts", async ({
 
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("text output");
-  // await page.waitForTimeout(1000);
+  await page.waitForTimeout(500);
 
   await page
     .getByTestId("outputsText Output")
@@ -170,10 +152,10 @@ test("user must be able to check similarity between embedding texts", async ({
 
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("filter data");
-  // await page.waitForTimeout(1000);
+  await page.waitForTimeout(500);
 
   await page
-    .getByTestId("helpersFilter Data")
+    .getByTestId("processingFilter Data")
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
   await page.getByTestId("zoom_out").click();
@@ -246,10 +228,12 @@ test("user must be able to check similarity between embedding texts", async ({
 
   await page.locator(".react-flow__pane").click();
 
+  await page.getByTestId("fit_view").click();
+
   //connection 1
   const openAiEmbeddingOutput_0 = await page
     .getByTestId("handle-openaiembeddings-shownode-embeddings-right")
-    .nth(2);
+    .nth(0);
   await openAiEmbeddingOutput_0.hover();
   await page.mouse.down();
 

@@ -23,7 +23,9 @@ test("CRUD folders", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 3000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
   await page.getByTestId("side_nav_options_all-templates").click();
@@ -41,9 +43,17 @@ test("CRUD folders", async ({ page }) => {
   await page.getByText("Select All").first().isVisible();
 
   await page.getByTestId("add-folder-button").click();
-  await page.getByText("New Folder").last().isVisible();
-  await page.waitForTimeout(1000);
-  await page.getByText("New Folder").last().dblclick();
+  await page
+    .locator("[data-testid='folder-sidebar']")
+    .getByText("New Folder")
+    .last()
+    .isVisible();
+
+  await page
+    .locator("[data-testid='folder-sidebar']")
+    .getByText("New Folder")
+    .last()
+    .dblclick();
 
   const element = await page.getByTestId("input-folder");
   await element.fill("new folder test name");
@@ -67,8 +77,9 @@ test("CRUD folders", async ({ page }) => {
 
   await page.getByTestId("btn-delete-folder").click();
   await page.getByText("Delete").last().click();
-  await page.waitForTimeout(1000);
-  await page.getByText("Folder deleted successfully").isVisible();
+  await expect(page.getByText("Folder deleted successfully")).toBeVisible({
+    timeout: 3000,
+  });
 });
 
 test("add a flow into a folder by drag and drop", async ({ page }) => {
@@ -100,8 +111,9 @@ test("add a flow into a folder by drag and drop", async ({ page }) => {
   await page.getByTestId("sidebar-nav-My Projects").dispatchEvent("drop", {
     dataTransfer,
   });
+  // wait for the file to be uploaded failed with waitforselector
 
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(1000);
 
   const genericNode = page.getByTestId("div-generic-node");
   const elementCount = await genericNode?.count();
@@ -110,8 +122,6 @@ test("add a flow into a folder by drag and drop", async ({ page }) => {
   }
 
   await page.getByTestId("sidebar-nav-My Projects").click();
-
-  await page.waitForTimeout(3000);
 
   await page.waitForSelector("text=Getting Started:", {
     timeout: 100000,
@@ -153,7 +163,9 @@ test("change flow folder", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 3000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
   await page.getByTestId("side_nav_options_all-templates").click();
@@ -172,9 +184,16 @@ test("change flow folder", async ({ page }) => {
   await page.getByText("Select All").first().isVisible();
 
   await page.getByTestId("add-folder-button").click();
-  await page.getByText("New Folder").last().isVisible();
-  await page.waitForTimeout(1000);
-  await page.getByText("New Folder").last().dblclick();
+  await page
+    .locator("[data-testid='folder-sidebar']")
+    .getByText("New Folder")
+    .last()
+    .isVisible();
+  await page
+    .locator("[data-testid='folder-sidebar']")
+    .getByText("New Folder")
+    .last()
+    .dblclick();
   await page.getByTestId("input-folder").fill("new folder test name");
   await page.keyboard.press("Enter");
   await page.getByText("new folder test name").last().isVisible();

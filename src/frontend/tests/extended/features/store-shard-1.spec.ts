@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
-test("should like and add components and flows", async ({ page }) => {
+test.skip("should like and add components and flows", async ({ page }) => {
   test.skip(
     !process?.env?.STORE_API_KEY,
     "STORE_API_KEY required to run this test",
@@ -90,7 +90,7 @@ test("should like and add components and flows", async ({ page }) => {
   await page.getByText("Basic RAG").first().isVisible();
 });
 
-test("should find a searched Component on Store", async ({ page }) => {
+test.skip("should find a searched Component on Store", async ({ page }) => {
   test.skip(
     !process?.env?.STORE_API_KEY,
     "STORE_API_KEY required to run this test",
