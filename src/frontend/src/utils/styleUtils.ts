@@ -88,6 +88,7 @@ import {
   FolderIcon,
   FolderPlus,
   FolderPlusIcon,
+  FolderSync,
   FolderUp,
   FormInput,
   Forward,
@@ -615,6 +616,8 @@ export const nodeIconsLucide: iconsType = {
   GoogleSearchAPIWrapper: GoogleIcon,
   GoogleSearchResults: GoogleIcon,
   GoogleSearchRun: GoogleIcon,
+  GoogleSearchAPI: GoogleIcon,
+  GoogleSerperAPI: GoogleIcon,
   Google: GoogleIcon,
   GoogleGenerativeAI: GoogleGenerativeAIIcon,
   Groq: GroqIcon,
@@ -898,4 +901,5 @@ export const nodeIconsLucide: iconsType = {
   DatabaseZap,
   Cog,
   ArrowRightLeft,
+  FolderSync,
 };
