@@ -55,7 +55,7 @@ The Langflow project includes a [`docker-compose.yml`](https://github.com/langfl
 
 This configuration launches Langflow and PostgreSQL containers, with Langflow pre-configured to use the PostgreSQL database. Customize the database credentials as needed.
 
-To start the services, navigate to the `/docker_example` directory and run `docker-compose up`.
+To start the services, navigate to the `/docker_example` directory, and then run `docker-compose up`.
 
 ```yaml
 services:
