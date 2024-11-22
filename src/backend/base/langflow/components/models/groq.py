@@ -1,5 +1,4 @@
 import requests
-from langchain_groq import ChatGroq
 from pydantic.v1 import SecretStr
 from typing_extensions import override
 
@@ -86,6 +85,12 @@ class GroqModel(LCModelComponent):
         return build_config
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
+        try:
+            from langchain_groq import ChatGroq
+        except ImportError as e:
+            msg = "langchain-groq is not installed. Please install it with `pip install langchain-groq`."
+            raise ImportError(msg) from e
+
         groq_api_key = self.groq_api_key
         model_name = self.model_name
         max_tokens = self.max_tokens
