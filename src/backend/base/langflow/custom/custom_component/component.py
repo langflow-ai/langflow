@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, get_type_hints
+from uuid import UUID
 
 import nanoid
 import yaml
@@ -1006,7 +1007,10 @@ class Component(CustomComponent):
 
     async def send_message(self, message: Message, id_: str | None = None):
         if (hasattr(self, "graph") and self.graph.session_id) and (message is not None and not message.session_id):
-            message.session_id = self.graph.session_id
+            if isinstance(self.graph.session_id, str):
+                message.session_id = UUID(self.graph.session_id)
+            else:
+                message.session_id = self.graph.session_id
         stored_message = await self._store_message(message)
 
         self._stored_message_id = stored_message.id
@@ -1032,6 +1036,8 @@ class Component(CustomComponent):
 
     async def _store_message(self, message: Message) -> Message:
         flow_id = self.graph.flow_id if hasattr(self, "graph") else None
+        if isinstance(flow_id, str):
+            flow_id = UUID(flow_id)
         messages = await astore_message(message, flow_id=flow_id)
         if len(messages) != 1:
             msg = "Only one message can be stored at a time."

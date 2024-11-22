@@ -100,13 +100,12 @@ async def retrieve_vertices_order(
     start_time = time.perf_counter()
     components_count = None
     try:
-        flow_id_str = str(flow_id)
         # First, we need to check if the flow_id is in the cache
         if not data:
-            graph = await build_graph_from_db(flow_id=flow_id_str, session=session, chat_service=chat_service)
+            graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
         else:
             graph = await build_and_cache_graph_from_data(
-                flow_id=flow_id_str, graph_data=data.model_dump(), chat_service=chat_service
+                flow_id=flow_id, graph_data=data.model_dump(), chat_service=chat_service
             )
         graph = graph.prepare(stop_component_id, start_component_id)
 

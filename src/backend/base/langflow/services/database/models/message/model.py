@@ -76,6 +76,9 @@ class MessageBase(SQLModel):
             content = content_block.model_dump_json() if hasattr(content_block, "model_dump_json") else content_block
             content_blocks.append(content)
 
+        if isinstance(flow_id, str):
+            flow_id = UUID(flow_id)
+
         return cls(
             sender=message.sender,
             sender_name=message.sender_name,
