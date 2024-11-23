@@ -119,7 +119,7 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/langflow-ai/langflow"
+Repository = "https://github.com/InstroAISolutions/langflow"
 Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]

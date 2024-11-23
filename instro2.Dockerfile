@@ -73,14 +73,23 @@ ENV PATH="/app/.venv/bin:$PATH"
 LABEL org.opencontainers.image.title=langflow
 LABEL org.opencontainers.image.authors=['Langflow']
 LABEL org.opencontainers.image.licenses=MIT
-LABEL org.opencontainers.image.url=https://github.com/langflow-ai/langflow
-LABEL org.opencontainers.image.source=https://github.com/langflow-ai/langflow
+LABEL org.opencontainers.image.url=https://github.com/InstroAISolutions/langflow
+LABEL org.opencontainers.image.source=https://github.com/InstroAISolutions/langflow
 
 USER user
 WORKDIR /app
 
 ENV LANGFLOW_HOST=0.0.0.0
 ENV LANGFLOW_PORT=7860
+
+# Expose the port Langflow runs on
+EXPOSE 7860
+
+# Set environment variables
+ENV LANGFLOW_LOG_LEVEL=ERROR
+ENV LANGFLOW_SUPERUSER=instro
+ENV LANGFLOW_SUPERUSER_PASSWORD=6p^m8jh5Z-Zjfu
+ENV LANGFLOW_AUTO_LOGIN=false
 
 
 CMD ["langflow", "run"]
