@@ -167,12 +167,11 @@ class NotDiamondComponent(Component):
         return self._call_get_chat_result(chosen_model, input_value, system_message)
 
     def _call_get_chat_result(self, chosen_model, input_value, system_message):
-        result = get_chat_result(
+        return get_chat_result(
             runnable=chosen_model,
             input_value=input_value,
             system_message=system_message,
         )
-        return result
 
     def _format_input(
         self,
