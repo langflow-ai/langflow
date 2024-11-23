@@ -6,7 +6,7 @@ import CanvasControls, {
 import FlowToolbar from "@/components/flowToolbarComponent";
 import ForwardedIconComponent from "@/components/genericIconComponent";
 import LoadingComponent from "@/components/loadingComponent";
-import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   COLOR_OPTIONS,
   NOTE_NODE_MIN_HEIGHT,
@@ -54,7 +54,6 @@ import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
 import { NodeType } from "../../../../types/flow";
 import {
-  checkOldComponents,
   generateFlow,
   generateNodeFromFlow,
   getNodeId,
@@ -91,6 +90,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   );
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
+  const isEmptyFlow = useRef(nodes.length === 0);
   const onNodesChange = useFlowStore((state) => state.onNodesChange);
   const onEdgesChange = useFlowStore((state) => state.onEdgesChange);
   const setNodes = useFlowStore((state) => state.setNodes);
@@ -179,15 +179,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     Object.keys(templates).length > 0 &&
     Object.keys(types).length > 0 &&
     !isFetching;
-
-  useEffect(() => {
-    if (checkOldComponents({ nodes })) {
-      setNoticeData({
-        title:
-          "Components created before Langflow 1.0 may be unstable. Ensure components are up to date.",
-      });
-    }
-  }, [currentFlowId]);
 
   useEffect(() => {
     useFlowStore.setState({ autoSaveFlow });
@@ -503,8 +494,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     reactFlowWrapper.current?.style.setProperty("--selected", accentColor);
   };
 
-  const { open } = useSidebar();
-
   useEffect(() => {
     const handleGlobalMouseMove = (event) => {
       if (isAddingNote) {
@@ -552,6 +541,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             onDrop={onDrop}
             onSelectionChange={onSelectionChange}
             deleteKeyCode={[]}
+            fitView={isEmptyFlow.current ? false : true}
             className="theme-attribution"
             minZoom={0.01}
             maxZoom={8}
@@ -589,9 +579,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             <Panel
               className={cn(
                 "react-flow__controls !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
-                open
-                  ? "pointer-events-none -translate-x-full opacity-0"
-                  : "pointer-events-auto opacity-100",
+                "pointer-events-auto opacity-100 group-data-[open=true]/sidebar-wrapper:pointer-events-none group-data-[open=true]/sidebar-wrapper:-translate-x-full group-data-[open=true]/sidebar-wrapper:opacity-0",
               )}
               position="top-left"
             >
@@ -600,7 +588,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
                   name="PanelRightClose"
                   className="h-4 w-4"
                 />
-                Components
+                <span className="text-foreground">Components</span>
               </SidebarTrigger>
             </Panel>
             <SelectionMenu

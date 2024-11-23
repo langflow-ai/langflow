@@ -93,7 +93,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--ring)) !important;
+  background-color: hsl(var(--placeholder-foreground)) !important;
 }
 
 .jv-indent::-webkit-scrollbar-track {
@@ -107,7 +107,7 @@ body {
 }
 
 .jv-indent::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--ring)) !important;
+  background-color: hsl(var(--placeholder-foreground)) !important;
 }
 
 .custom-hover {
@@ -144,6 +144,12 @@ body {
   transition-duration: 150ms;
   stroke-width: 2px !important;
 }
+.react-flow__connection path {
+  transition: color;
+  stroke: var(--connection) !important;
+  transition-duration: 150ms;
+  stroke-width: 2px !important;
+}
 
 .react-flow__edge.running .react-flow__edge-path {
   stroke: hsl(var(--foreground)) !important;
@@ -170,7 +176,7 @@ body {
   height: 0.75rem !important;
   background-color: white !important;
   border-color: var(--border) !important;
-  z-index: 1000 !important;
+  z-index: 50 !important;
   border-radius: 20% !important;
 }
 

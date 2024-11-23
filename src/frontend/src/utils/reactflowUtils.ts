@@ -41,7 +41,6 @@ import {
   addEscapedHandleIdsToEdgesType,
   findLastNodeType,
   generateFlowType,
-  unselectAllNodesType,
   updateEdgesHandleIdsType,
 } from "../types/utils/reactflowUtils";
 import { getLayoutedNodes } from "./layoutUtils";
@@ -202,12 +201,13 @@ export function detectBrokenEdgesEdges(nodes: NodeType[], edges: Edge[]) {
   return BrokenEdges;
 }
 
-export function unselectAllNodes({ updateNodes, data }: unselectAllNodesType) {
-  let newNodes = cloneDeep(data);
-  newNodes.forEach((node: Node) => {
+export function unselectAllNodesEdges(nodes: Node[], edges: Edge[]) {
+  nodes.forEach((node: Node) => {
     node.selected = false;
   });
-  updateNodes(newNodes!);
+  edges.forEach((edge: Edge) => {
+    edge.selected = false;
+  });
 }
 
 export function isValidConnection(
@@ -1562,11 +1562,15 @@ export function downloadFlow(
   removeFileNameFromComponents(clonedFlow);
   // create a data URI with the current flow data
   const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
-    JSON.stringify({
-      ...clonedFlow,
-      name: flowName,
-      description: flowDescription,
-    }),
+    JSON.stringify(
+      {
+        ...clonedFlow,
+        name: flowName,
+        description: flowDescription,
+      },
+      null,
+      2,
+    ),
   )}`;
 
   // create a link element and set its properties

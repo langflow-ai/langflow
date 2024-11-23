@@ -13,6 +13,7 @@ class WikipediaAPIComponent(LCToolComponent):
     display_name = "Wikipedia API"
     description = "Call Wikipedia API."
     name = "WikipediaAPI"
+    icon = "Wikipedia"
 
     inputs = [
         MultilineInput(

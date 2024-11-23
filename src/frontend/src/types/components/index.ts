@@ -253,6 +253,7 @@ export type ShadToolTipType = {
   children?: ReactElement;
   delayDuration?: number;
   styleClasses?: string;
+  avoidCollisions?: boolean;
 };
 
 export type TextHighlightType = {
@@ -581,6 +582,7 @@ export type codeAreaModalPropsType = {
   readonly?: boolean;
   open?: boolean;
   setOpen?: (open: boolean) => void;
+  componentId?: string;
 };
 
 export type chatMessagePropsType = {
