@@ -582,6 +582,7 @@ export type codeAreaModalPropsType = {
   readonly?: boolean;
   open?: boolean;
   setOpen?: (open: boolean) => void;
+  componentId?: string;
 };
 
 export type chatMessagePropsType = {
