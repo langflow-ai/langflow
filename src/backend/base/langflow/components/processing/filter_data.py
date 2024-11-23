@@ -40,8 +40,11 @@ class FilterDataComponent(Component):
             name="jq_query",
             display_name="JQ Query",
             info=(
-                "(Optional) JQ query to transform the data (e.g., '.[2]' for third item). "
-                "Applied after index and before column filtering."
+                "(Optional) JQ query to transform the data. Examples:\n"
+                "- '.[0]' for first item\n"
+                "- '.[] | {name, email}' for extracting specific fields\n"
+                "- 'map(select(.active == true))' for filtering arrays\n"
+                "Note: When JQ query returns a list, results will be wrapped in a 'results' field."
             ),
         ),
     ]
