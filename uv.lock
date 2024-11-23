@@ -448,6 +448,18 @@ wheels = [
 ]
 
 [[package]]
+name = "blockbuster"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "forbiddenfruit" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b9/72/14f688cb48f37758666adfc92f078b26ca4fac696d42903ed47be00d2ad0/blockbuster-1.1.0.tar.gz", hash = "sha256:f812f516eb6b91bc0255d99b7a88890a3a03d68303637c214f228b0c2d0c13ce", size = 9068 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/40/6e/22d3aabd041915de0e9e695d0744d0b0dc0f70c98301a96210ad3f67cc1c/blockbuster-1.1.0-py3-none-any.whl", hash = "sha256:f8861d1ace11053ebd80b2e98459af69c077e3c3e18a6ddd81830a8f3776d5b2", size = 7901 },
+]
+
+[[package]]
 name = "boto3"
 version = "1.34.162"
 source = { registry = "https://pypi.org/simple" }
@@ -3614,8 +3626,8 @@ local = [
 [package.dev-dependencies]
 dev = [
     { name = "asgi-lifespan" },
+    { name = "blockbuster" },
     { name = "dictdiffer" },
-    { name = "forbiddenfruit" },
     { name = "httpx" },
     { name = "ipykernel" },
     { name = "mypy" },
@@ -3744,8 +3756,8 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
+    { name = "blockbuster", specifier = ">=1.1.0,<1.2" },
     { name = "dictdiffer", specifier = ">=0.9.0" },
-    { name = "forbiddenfruit", specifier = ">=0.1.4" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "ipykernel", specifier = ">=6.29.0" },
     { name = "mypy", specifier = ">=1.11.0" },
