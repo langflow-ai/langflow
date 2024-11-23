@@ -5,6 +5,7 @@ const SvgNotDiamondIcon = (props) => (
     height="20"
     viewBox="0 0 54 32"
     fill="none"
+    {...props}
   >
     {" "}
     <g clipPath="url(#clip0_14_604)">
