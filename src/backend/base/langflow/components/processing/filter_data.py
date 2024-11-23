@@ -123,14 +123,16 @@ class FilterDataComponent(Component):
 
             # Create result Data object(s)
             if isinstance(filtered_data, list):
-                result = [
-                    Data(data=item) if isinstance(item, dict | list) else Data(data={"value": item})
-                    for item in filtered_data
-                ]
+                if self.jq_query and self.jq_query.strip():
+                    # Wrap list results in a dictionary to satisfy Data model requirements
+                    result = Data(data={"results": filtered_data})
+                else:
+                    result = [
+                        Data(data=item) if isinstance(item, dict) else Data(data={"value": item})
+                        for item in filtered_data
+                    ]
             else:
-                result = Data(
-                    data=filtered_data if isinstance(filtered_data, dict | list) else {"value": filtered_data}
-                )
+                result = Data(data=filtered_data if isinstance(filtered_data, dict) else {"value": filtered_data})
 
             self.status = result
         except (ValueError, TypeError, KeyError) as e:
