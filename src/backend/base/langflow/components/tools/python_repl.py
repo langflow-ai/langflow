@@ -16,6 +16,7 @@ class PythonREPLToolComponent(LCToolComponent):
     display_name = "Python REPL"
     description = "A tool for running Python code in a REPL environment."
     name = "PythonREPLTool"
+    icon = "Python"
 
     inputs = [
         StrInput(

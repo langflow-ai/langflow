@@ -6,6 +6,8 @@ import "ace-builds/src-noconflict/theme-twilight";
 // import "ace-builds/webpack-resolver";
 import { usePostValidateCode } from "@/controllers/API/queries/nodes/use-post-validate-code";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
+import useFlowStore from "@/stores/flowStore";
+import { cloneDeep } from "lodash";
 import { useEffect, useRef, useState } from "react";
 import AceEditor from "react-ace";
 import ReactAce from "react-ace/lib/ace";
@@ -40,6 +42,7 @@ export default function CodeAreaModal({
   readonly = false,
   open: myOpen,
   setOpen: mySetOpen,
+  componentId,
 }: codeAreaModalPropsType): JSX.Element {
   const [code, setCode] = useState(value);
   const [open, setOpen] =
@@ -58,6 +61,9 @@ export default function CodeAreaModal({
   } | null>(null);
 
   const { mutate: validateComponentCode } = usePostValidateComponentCode();
+  const currentFlow = useFlowStore((state) => state.currentFlow);
+  const nodes = useFlowStore((state) => state.nodes);
+  const setNodes = useFlowStore((state) => state.setNodes);
 
   useEffect(() => {
     // if nodeClass.template has more fields other than code and dynamic is true
@@ -120,6 +126,17 @@ export default function CodeAreaModal({
           if (data && type) {
             setValue(code);
             setNodeClass(data, type);
+            const currentNode = nodes.find((node) => node.id === componentId);
+            const currentNodeIndex = nodes.findIndex(
+              (node) => node.id === componentId,
+            );
+            const currentNodes = cloneDeep(nodes);
+
+            if (currentNode) {
+              currentNodes[currentNodeIndex].data.node = data;
+            }
+            setNodes(currentNodes);
+
             setError({ detail: { error: undefined, traceback: undefined } });
             setOpen(false);
           }
