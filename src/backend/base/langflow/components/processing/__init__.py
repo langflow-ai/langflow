@@ -1,6 +1,7 @@
 from .combine_text import CombineTextComponent
 from .create_data import CreateDataComponent
 from .extract_key import ExtractDataKeyComponent
+from .filter_data import FilterDataComponent
 from .filter_data_values import DataFilterComponent
 from .json_cleaner import JSONCleaner
 from .merge_data import MergeDataComponent
@@ -15,6 +16,7 @@ __all__ = [
     "CreateDataComponent",
     "ExtractDataKeyComponent",
     "DataFilterComponent",
+    "FilterDataComponent",
     "MergeDataComponent",
     "MessageToDataComponent",
     "ParseDataComponent",
