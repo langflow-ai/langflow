@@ -128,7 +128,7 @@ class FilterDataComponent(Component):
             if isinstance(filtered_data, list):
                 if self.jq_query and self.jq_query.strip():
                     # Wrap list results in a dictionary to satisfy Data model requirements
-                    result = Data(data={"results": filtered_data})
+                    result: Data | list[Data] = Data(data={"results": filtered_data})
                 else:
                     result = [
                         Data(data=item) if isinstance(item, dict) else Data(data={"value": item})
