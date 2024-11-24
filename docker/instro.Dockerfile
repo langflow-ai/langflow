@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1
 # Keep this syntax directive! It's used to enable Docker BuildKit
 
+# Instyro version of file based on build_and_push.Dockerfile from orginal Langflow repo
+
 ################################
 # BUILDER-BASE
 # Used to build deps + create our virtual environment
@@ -70,8 +72,8 @@ COPY --from=builder --chown=1000 /app/.venv /app/.venv
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
 
-LABEL org.opencontainers.image.title=langflow
-LABEL org.opencontainers.image.authors=['Langflow']
+LABEL org.opencontainers.image.title=instro
+LABEL org.opencontainers.image.authors=['Instro']
 LABEL org.opencontainers.image.licenses=MIT
 LABEL org.opencontainers.image.url=https://github.com/InstroAISolutions/langflow
 LABEL org.opencontainers.image.source=https://github.com/InstroAISolutions/langflow
@@ -81,15 +83,6 @@ WORKDIR /app
 
 ENV LANGFLOW_HOST=0.0.0.0
 ENV LANGFLOW_PORT=7860
-
-# Expose the port Langflow runs on
-EXPOSE 7860
-
-# Set environment variables
-ENV LANGFLOW_LOG_LEVEL=ERROR
-ENV LANGFLOW_SUPERUSER=instro
-ENV LANGFLOW_SUPERUSER_PASSWORD=6p^m8jh5Z-Zjfu
-ENV LANGFLOW_AUTO_LOGIN=false
 
 
 CMD ["langflow", "run"]

@@ -1,9 +1,9 @@
 services:
   # A Docker web service
   - type: web
-    name: langflow
+    name: instro-backend
     runtime: docker
-    dockerfilePath: ./docker/build_and_push.Dockerfile
+    dockerfilePath: ./docker/instro.Dockerfile
     repo: https://github.com/InstroAISolutions/langflow
     branch: production
     plan: standard
