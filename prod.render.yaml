@@ -5,8 +5,9 @@ services:
     runtime: docker
     dockerfilePath: ./docker/build_and_push.Dockerfile
     repo: https://github.com/InstroAISolutions/langflow
-    branch: main
+    branch: production
     plan: standard
+    region: frankfurt
     healthCheckPath: /health_check
     autoDeploy: false
     envVars:
@@ -15,7 +16,6 @@ services:
       - key: LANGFLOW_HOST
         value: 0.0.0.0
       - key: LANGFLOW_PORT
-        # default render port https://docs.render.com/web-services#port-binding
         value: 10000
       - key: LANGFLOW_LOG_LEVEL
         value: ERROR
@@ -25,10 +25,3 @@ services:
         value: 6p^m8jh5Z-Zjfu           
       - key: LANGFLOW_AUTO_LOGIN
         value: false
-      # Added but then rmeoevd again because it didn't solve the issue
-      #- key: POSTGRES_USER
-      #  value: langflow_poc_vcal_user
-      #- key: POSTGRES_PASSWORD
-      #  value: 0ab9dLTAvmMUXfimflbgP6VRDUFcdpt7
-      #- key: POSTGRES_DB
-      #  value: langflow_poc_vcal
