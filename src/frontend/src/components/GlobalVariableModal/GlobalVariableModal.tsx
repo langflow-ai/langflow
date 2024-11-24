@@ -14,6 +14,13 @@ import ForwardedIconComponent from "../genericIconComponent";
 import InputComponent from "../inputComponent";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { Textarea } from "../ui/textarea";
 import sortByName from "./utils/sort-by-name";
 
@@ -155,17 +162,28 @@ export default function GlobalVariableModal({
             placeholder="Insert a name for the variable..."
           ></Input>
           <Label>Type (optional)</Label>
-          <InputComponent
-            disabled={initialData?.type !== undefined}
-            setSelectedOption={(e) => {
-              setType(e);
-            }}
-            selectedOption={type}
-            password={false}
-            options={["Generic", "Credential"]}
-            placeholder="Choose a type for the variable..."
-            id={"type-global-variables"}
-          ></InputComponent>
+
+          <Select
+            disabled={disabled}
+            onValueChange={setType}
+            value={type}
+            defaultValue={type}
+          >
+            <SelectTrigger
+              className="h-full w-full"
+              data-testid="select-type-global-variables"
+            >
+              <SelectValue placeholder="Choose a type for the variable..." />
+            </SelectTrigger>
+            <SelectContent id="type-global-variables">
+              {["Generic", "Credential"].map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Label>Value</Label>
           {type === "Credential" ? (
             <InputComponent

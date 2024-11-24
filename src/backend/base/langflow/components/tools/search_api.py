@@ -15,6 +15,7 @@ class SearchAPIComponent(LCToolComponent):
     description: str = "Call the searchapi.io API with result limiting"
     name = "SearchAPI"
     documentation: str = "https://www.searchapi.io/docs/google"
+    icon = "SearchAPI"
 
     inputs = [
         MessageTextInput(name="engine", display_name="Engine", value="google"),

@@ -12,7 +12,7 @@ class PGVectorStoreComponent(LCVectorStoreComponent):
     description = "PGVector Vector Store with search capabilities"
     documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/pgvector/"
     name = "pgvector"
-    icon = "PGVector"
+    icon = "cpu"
 
     inputs = [
         SecretStrInput(name="pg_server_url", display_name="PostgreSQL Server Connection String", required=True),

@@ -162,7 +162,7 @@ class FlowListRead(BaseModel):
 
 class FlowListReadWithFolderName(BaseModel):
     flows: list[FlowRead]
-    name: str
+    folder_name: str
     description: str
 
 

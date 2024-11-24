@@ -76,7 +76,7 @@ export default function LoginPage(): JSX.Element {
             <span className="mb-4 text-5xl">⛓️</span>
           )}
           <span className="mb-6 text-2xl font-semibold text-primary">
-            Instro Administrator Login
+            Administrator Login
           </span>
           <div className="mb-3 w-full">
             <Form.Field name="username">

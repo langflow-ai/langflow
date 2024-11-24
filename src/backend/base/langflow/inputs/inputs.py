@@ -8,6 +8,7 @@ from pydantic import Field, field_validator
 from langflow.inputs.validators import CoalesceBool
 from langflow.schema.data import Data
 from langflow.schema.message import Message
+from langflow.services.database.models.message.model import MessageBase
 from langflow.template.field.base import Input
 
 from .input_mixin import (
@@ -151,6 +152,8 @@ class MessageInput(StrInput, InputTraceMixin):
             return v
         if isinstance(v, str | AsyncIterator | Iterator):
             return Message(text=v)
+        if isinstance(v, MessageBase):
+            return Message(**v.model_dump())
         msg = f"Invalid value type {type(v)}"
         raise ValueError(msg)
 
