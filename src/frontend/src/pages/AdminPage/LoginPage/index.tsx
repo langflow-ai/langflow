@@ -53,9 +53,9 @@ export default function LoginAdminPage() {
       <div className="flex w-72 flex-col items-center justify-center gap-2">
         {ENABLE_NEW_LOGO ? (
           <InstroLogo
-          title="Instro logo"
-          className="mb-4 h-10 w-10 scale-[1.5]"
-        />
+            title="Instro logo"
+            className="mb-4 h-10 w-10 scale-[1.5]"
+          />
         ) : (
           <span className="mb-4 text-5xl">⛓️</span>
         )}
