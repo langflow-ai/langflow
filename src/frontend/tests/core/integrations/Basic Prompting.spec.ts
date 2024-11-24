@@ -15,51 +15,53 @@ test(
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
 
-  while (modalCount === 0) {
-    await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForSelector('[data-testid="modal-title"]', {
-      timeout: 3000,
+    while (modalCount === 0) {
+      await page.getByText("New Flow", { exact: true }).click();
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
+      modalCount = await page.getByTestId("modal-title")?.count();
+    }
+
+    await page.getByTestId("side_nav_options_all-templates").click();
+    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 100000,
     });
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
 
-  await page.getByTestId("side_nav_options_all-templates").click();
-  await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.getByTestId("fit_view").click();
+    await page.getByTestId("zoom_out").click();
+    await page.getByTestId("zoom_out").click();
+    await page.getByTestId("zoom_out").click();
 
-  await page.waitForSelector('[data-testid="fit_view"]', {
-    timeout: 100000,
-  });
+    let outdatedComponents = await page
+      .getByTestId("icon-AlertTriangle")
+      .count();
 
-  await page.getByTestId("fit_view").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
+    while (outdatedComponents > 0) {
+      await page.getByTestId("icon-AlertTriangle").first().click();
+      outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+    }
 
-  let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+    let filledApiKey = await page.getByTestId("remove-icon-badge").count();
+    while (filledApiKey > 0) {
+      await page.getByTestId("remove-icon-badge").first().click();
+      filledApiKey = await page.getByTestId("remove-icon-badge").count();
+    }
 
-  while (outdatedComponents > 0) {
-    await page.getByTestId("icon-AlertTriangle").first().click();
-    outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
-  }
+    const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
+    const isApiKeyInputVisible = await apiKeyInput.isVisible();
 
-  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
-  while (filledApiKey > 0) {
-    await page.getByTestId("remove-icon-badge").first().click();
-    filledApiKey = await page.getByTestId("remove-icon-badge").count();
-  }
+    if (isApiKeyInputVisible) {
+      await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+    }
 
-  const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
-  const isApiKeyInputVisible = await apiKeyInput.isVisible();
+    await page.getByTestId("dropdown_str_model_name").click();
+    await page.getByTestId("gpt-4o-1-option").click();
 
-  if (isApiKeyInputVisible) {
-    await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
-  }
-
-  await page.getByTestId("dropdown_str_model_name").click();
-  await page.getByTestId("gpt-4o-1-option").click();
-
-  await page.getByTestId("button_run_chat output").click();
-  await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.getByTestId("button_run_chat output").click();
+    await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();

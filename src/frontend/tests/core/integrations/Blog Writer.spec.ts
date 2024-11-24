@@ -2,50 +2,14 @@ import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
-test("Blog Writer",
-       { tag: ["@release", "@starter-project"] },
-     async ({ page }) => {
-  test.skip(
-    !process?.env?.OPENAI_API_KEY,
-    "OPENAI_API_KEY required to run this test",
-  );
-
-  if (!process.env.CI) {
-    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-  }
-
-  await page.goto("/");
-  await page.waitForSelector('[data-testid="mainpage_title"]', {
-    timeout: 30000,
-  });
-
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 30000,
-  });
-
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
-    }
-  } catch (error) {
-    modalCount = 0;
-  }
-
-  while (modalCount === 0) {
-    await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForSelector('[data-testid="modal-title"]', {
-      timeout: 3000,
-    });
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
-
-  await page.getByTestId("side_nav_options_all-templates").click();
-  await page.getByRole("heading", { name: "Blog Writer" }).click();
-  await page.waitForSelector('[data-testid="fit_view"]', {
-    timeout: 1000,
-  });
+test(
+  "Blog Writer",
+  { tag: ["@release", "@starter-project"] },
+  async ({ page }) => {
+    test.skip(
+      !process?.env?.OPENAI_API_KEY,
+      "OPENAI_API_KEY required to run this test",
+    );
 
     if (!process.env.CI) {
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
@@ -70,16 +34,53 @@ test("Blog Writer",
       modalCount = 0;
     }
 
-  while (outdatedComponents > 0) {
-    await page.getByTestId("icon-AlertTriangle").first().click();
-    outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
-  }
+    while (modalCount === 0) {
+      await page.getByText("New Flow", { exact: true }).click();
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
+      modalCount = await page.getByTestId("modal-title")?.count();
+    }
 
-  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
-  while (filledApiKey > 0) {
-    await page.getByTestId("remove-icon-badge").first().click();
-    filledApiKey = await page.getByTestId("remove-icon-badge").count();
-  }
+    await page.getByTestId("side_nav_options_all-templates").click();
+    await page.getByRole("heading", { name: "Blog Writer" }).click();
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 1000,
+    });
+
+    if (!process.env.CI) {
+      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+    }
+
+    await page.goto("/");
+    await page.waitForSelector('[data-testid="mainpage_title"]', {
+      timeout: 30000,
+    });
+
+    await page.waitForSelector('[id="new-project-btn"]', {
+      timeout: 30000,
+    });
+
+    let modalCount = 0;
+    try {
+      const modalTitleElement = await page?.getByTestId("modal-title");
+      if (modalTitleElement) {
+        modalCount = await modalTitleElement.count();
+      }
+    } catch (error) {
+      modalCount = 0;
+    }
+
+    while (outdatedComponents > 0) {
+      await page.getByTestId("icon-AlertTriangle").first().click();
+      outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+    }
+
+    let filledApiKey = await page.getByTestId("remove-icon-badge").count();
+    while (filledApiKey > 0) {
+      await page.getByTestId("remove-icon-badge").first().click();
+      filledApiKey = await page.getByTestId("remove-icon-badge").count();
+    }
 
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
@@ -96,24 +97,24 @@ test("Blog Writer",
       outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
     }
 
-  await page
-    .getByTestId("inputlist_str_urls_0")
-    .nth(0)
-    .fill(
-      "https://www.natgeokids.com/uk/discover/animals/sea-life/turtle-facts/",
-    );
-  await page
-    .getByTestId("inputlist_str_urls_1")
-    .nth(0)
-    .fill("https://www.originaldiving.com/blog/top-ten-turtle-facts");
+    await page
+      .getByTestId("inputlist_str_urls_0")
+      .nth(0)
+      .fill(
+        "https://www.natgeokids.com/uk/discover/animals/sea-life/turtle-facts/",
+      );
+    await page
+      .getByTestId("inputlist_str_urls_1")
+      .nth(0)
+      .fill("https://www.originaldiving.com/blog/top-ten-turtle-facts");
 
-  await page
-    .getByTestId("textarea_str_input_value")
-    .fill(
-      "Use the references above for style to write a new blog/tutorial about turtles. Suggest non-covered topics.",
-    );
+    await page
+      .getByTestId("textarea_str_input_value")
+      .fill(
+        "Use the references above for style to write a new blog/tutorial about turtles. Suggest non-covered topics.",
+      );
 
-  await page.getByTestId("button_run_chat output").click();
+    await page.getByTestId("button_run_chat output").click();
 
     if (isApiKeyInputVisible) {
       await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
@@ -158,7 +159,8 @@ test("Blog Writer",
       .last()
       .isVisible();
 
-  await page.getByText("turtles").last().isVisible();
-  await page.getByText("sea").last().isVisible();
-  await page.getByText("survival").last().isVisible();
-});
+    await page.getByText("turtles").last().isVisible();
+    await page.getByText("sea").last().isVisible();
+    await page.getByText("survival").last().isVisible();
+  },
+);
