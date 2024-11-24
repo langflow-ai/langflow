@@ -2,8 +2,8 @@ import concurrent.futures
 import json
 
 import httpx
-from langchain_core.pydantic_v1 import BaseModel, SecretStr
 from loguru import logger
+from pydantic import BaseModel, SecretStr
 
 from langflow.field_typing import Embeddings
 
