@@ -114,6 +114,7 @@ const CustomInputPopover = ({
 
           {!selectedOption && (
             <input
+              autoComplete="off"
               onFocus={() => setIsFocused(true)}
               autoFocus={autoFocus}
               id={id}

@@ -264,7 +264,7 @@ export default function ChatMessage({
                                   <span
                                     className={cn(
                                       closeChat
-                                        ? "cursor-pointer hover:underline"
+                                        ? "cursor-pointer underline"
                                         : "",
                                     )}
                                     onClick={() => {
@@ -550,6 +550,20 @@ export default function ChatMessage({
                                           <span className="inline-block w-fit max-w-full">
                                             {props.children}
                                           </span>
+                                        );
+                                      },
+                                      ol({ node, ...props }) {
+                                        return (
+                                          <ol className="max-w-full">
+                                            {props.children}
+                                          </ol>
+                                        );
+                                      },
+                                      ul({ node, ...props }) {
+                                        return (
+                                          <ul className="max-w-full">
+                                            {props.children}
+                                          </ul>
                                         );
                                       },
                                       pre({ node, ...props }) {

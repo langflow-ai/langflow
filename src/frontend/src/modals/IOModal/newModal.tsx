@@ -443,7 +443,11 @@ export default function IOModal({
                     "absolute right-12 top-2 flex h-8 items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
                   )}
                 >
-                  <ShadTooltip styleClasses="z-50" content="New Chat">
+                  <ShadTooltip
+                    side="bottom"
+                    styleClasses="z-50"
+                    content="New Chat"
+                  >
                     <Button
                       className="mr-2 h-[32px] w-[32px] hover:bg-secondary-hover"
                       variant="ghost"

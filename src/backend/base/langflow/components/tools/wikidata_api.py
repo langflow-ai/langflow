@@ -39,21 +39,12 @@ class WikidataAPIWrapper(BaseModel):
     def run(self, query: str) -> list[dict[str, Any]]:
         try:
             results = self.results(query)
-            if not results:
-                msg = "No search results found for the given query."
+            if results:
+                return results
 
-                raise ToolException(msg)
+            error_message = "No search results found for the given query."
 
-            # Process and structure the results
-            return [
-                {
-                    "label": result.get("label", ""),
-                    "description": result.get("description", ""),
-                    "concepturi": result.get("concepturi", ""),
-                    "id": result.get("id", ""),
-                }
-                for result in results
-            ]
+            raise ToolException(error_message)
 
         except Exception as e:
             error_message = f"Error in Wikidata Search API: {e!s}"
@@ -65,6 +56,7 @@ class WikidataAPIComponent(LCToolComponent):
     display_name = "Wikidata API"
     description = "Performs a search using the Wikidata API."
     name = "WikidataAPI"
+    icon = "Wikipedia"
 
     inputs = [
         MultilineInput(
@@ -99,11 +91,7 @@ class WikidataAPIComponent(LCToolComponent):
         data = [
             Data(
                 text=result["label"],
-                metadata={
-                    "id": result["id"],
-                    "concepturi": result["concepturi"],
-                    "description": result["description"],
-                },
+                metadata=result,
             )
             for result in results
         ]
