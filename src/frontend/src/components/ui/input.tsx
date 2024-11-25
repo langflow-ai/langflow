@@ -1,6 +1,6 @@
 import * as React from "react";
 import { cn } from "../../utils/utils";
-import ForwardedIconComponent from "../genericIconComponent";
+import ForwardedIconComponent from "../common/genericIconComponent";
 
 export interface InputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {
