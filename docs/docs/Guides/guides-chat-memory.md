@@ -51,3 +51,22 @@ You can also display all messages stored across every flow and session by going 
 
 ![](/img/settings-messages.png)
 
+
+
+## Chat Memory Storing in a Database
+
+Chat memory can be retrieved from an external database or vector store using the [**Chat Memory**](/components-helpers#chat-memory) component, and messages can be stored using the [**Store Message**](/components-helpers#store-message) component. External databases can be accessed as memory through the respective [**Chat Memories components**](/Components/components-memories).
+
+Steps to Store and Retrieve Chat History from a Database:
+	1.	Load the [Memory Chatbot](/starter-projects-memory-chatbot) Starter Project.
+	2.	Add the [Store Message](/components-helpers#store-message) component to the flow.
+	3.	Add the [AstraDBChatMemory Component](/Components/components-memories#astradbchatmemory-component) to the flow.
+	4.	Configure the AstraDBChatMemory Component with your AstraDB instance details.
+	5.	Connect the AstraDBChatMemory Component output to the external memory inputs of the [Chat Memory](/components-helpers#chat-memory) and [store Message](/components-helpers#store-message) components.
+	6.	Link the [Chat Output](/components-io#chat-output) component to the input of the [Store Message](/components-helpers#store-message) component. 
+
+Example Flow
+
+![Sample Flow storing Chat Memory in AstraDB](/img/AstraDBChatMemory.png)
+
+
