@@ -1,4 +1,5 @@
 name: Docker Build and Push
+run-name: Docker Build and Push @${{ inputs.release_type }} by @${{ github.actor }}
 on:
   workflow_call:
     inputs:
@@ -61,7 +62,7 @@ jobs:
       - name: Verify a main version exists
         if: ${{ inputs.main_version == '' }}
         run: |
-          # due to our how we split packages, we need to have a main version to check out. 
+          # due to our how we split packages, we need to have a main version to check out.
           echo "Must specify a main version to check out."
           exit 1
 
