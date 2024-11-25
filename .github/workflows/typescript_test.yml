@@ -12,7 +12,7 @@ on:
         description: "Test suites to run (JSON array)"
         required: false
         type: string
-        default: '[]'
+        default: "[]"
       release:
         description: "Whether this is a release build"
         required: false
@@ -153,7 +153,8 @@ jobs:
 
           echo "Final test suites to run: $SUITES"
           echo "Test grep pattern: $TEST_GREP"
-          echo "matrix=$SUITES" >> $GITHUB_OUTPUT
+          # Ensure proper JSON formatting for matrix output
+          echo "matrix=$(echo $SUITES | jq -c .)" >> $GITHUB_OUTPUT
           echo "test_grep=$TEST_GREP" >> $GITHUB_OUTPUT
 
   setup-and-test:
