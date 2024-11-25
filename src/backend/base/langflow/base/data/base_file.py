@@ -144,6 +144,13 @@ class BaseFileComponent(Component, ABC):
             value=True,
             info="If true, files with unsupported extensions will not be processed.",
         ),
+        BoolInput(
+            name="ignore_unspecified_files",
+            display_name="Ignore Unspecified Files",
+            advanced=True,
+            value=False,
+            info=f"If true, Data with no '{SERVER_FILE_PATH_FIELDNAME}' property will be ignored.",
+        ),
     ]
 
     _base_outputs = [Output(display_name="Data", name="data", method="load_files")]
@@ -321,11 +328,14 @@ class BaseFileComponent(Component, ABC):
                         path=server_file_path,
                         delete_after_processing=self.delete_server_file_after_processing,
                     )
-                else:
+                elif not self.ignore_unspecified_files:
                     msg = f"Data object missing '{self.SERVER_FILE_PATH_FIELDNAME}' property."
                     self.log(msg)
                     if not self.silent_errors:
                         raise ValueError(msg)
+                else:
+                    msg = f"Ignoring Data object missing '{self.SERVER_FILE_PATH_FIELDNAME}' property:\n{obj}"
+                    self.log(msg)
 
         return resolved_files
 
