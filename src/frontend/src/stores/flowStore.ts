@@ -32,7 +32,6 @@ import { FlowStoreType, VertexLayerElementType } from "../types/zustand/flow";
 import { buildFlowVerticesWithFallback } from "../utils/buildUtils";
 import {
   checkChatInput,
-  checkOldComponents,
   cleanEdges,
   detectBrokenEdgesEdges,
   getHandleId,
@@ -285,6 +284,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         return node;
       });
 
+      const newEdges = cleanEdges(newNodes, get().edges);
+
       if (callback) {
         // Defer the callback execution to ensure it runs after state updates are fully applied.
         queueMicrotask(callback);
@@ -293,6 +294,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       return {
         ...state,
         nodes: newNodes,
+        edges: newEdges,
       };
     });
   },

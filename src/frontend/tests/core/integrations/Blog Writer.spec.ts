@@ -33,13 +33,17 @@ test("Blog Writer", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 3000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Blog Writer" }).click();
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="fit_view"]', {
+    timeout: 1000,
+  });
 
   await page.getByTestId("fit_view").click();
   await page.getByTestId("zoom_out").click();
@@ -50,14 +54,12 @@ test("Blog Writer", async ({ page }) => {
 
   while (outdatedComponents > 0) {
     await page.getByTestId("icon-AlertTriangle").first().click();
-    await page.waitForTimeout(1000);
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
   let filledApiKey = await page.getByTestId("remove-icon-badge").count();
   while (filledApiKey > 0) {
     await page.getByTestId("remove-icon-badge").first().click();
-    await page.waitForTimeout(1000);
     filledApiKey = await page.getByTestId("remove-icon-badge").count();
   }
 
@@ -71,7 +73,6 @@ test("Blog Writer", async ({ page }) => {
   await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
 
-  await page.waitForTimeout(1000);
   await page
     .getByTestId("inputlist_str_urls_0")
     .nth(0)
@@ -90,7 +91,6 @@ test("Blog Writer", async ({ page }) => {
     );
 
   await page.getByTestId("button_run_chat output").click();
-  await page.waitForTimeout(5000);
 
   await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
@@ -106,8 +106,6 @@ test("Blog Writer", async ({ page }) => {
     )
     .last()
     .isVisible();
-
-  await page.waitForTimeout(3000);
 
   await page.getByText("turtles").last().isVisible();
   await page.getByText("sea").last().isVisible();

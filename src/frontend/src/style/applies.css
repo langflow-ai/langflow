@@ -1205,7 +1205,7 @@
   }
 
   .integration-icon {
-    @apply h-8 w-8;
+    @apply h-8 w-8 rounded-md;
   }
 
   .show-node-icon {
