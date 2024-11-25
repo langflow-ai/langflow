@@ -10,8 +10,8 @@ __all__ = [
     "CreateListComponent",
     "CurrentDateComponent",
     "IDGeneratorComponent",
-    "OutputParserComponent",
-    "StructuredOutputComponent",
-    "StoreMessageComponent",
     "MemoryComponent",
+    "OutputParserComponent",
+    "StoreMessageComponent",
+    "StructuredOutputComponent",
 ]

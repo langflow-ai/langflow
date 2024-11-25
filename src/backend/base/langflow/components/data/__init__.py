@@ -12,8 +12,8 @@ __all__ = [
     "CSVToDataComponent",
     "DirectoryComponent",
     "FileComponent",
+    "JSONToDataComponent",
     "SQLExecutorComponent",
     "URLComponent",
     "WebhookComponent",
-    "JSONToDataComponent",
 ]

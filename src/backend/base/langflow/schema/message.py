@@ -104,7 +104,7 @@ class Message(Data):
             value = [value]
         return value
 
-    def model_post_init(self, __context: Any) -> None:
+    def model_post_init(self, /, _context: Any) -> None:
         new_files: list[Any] = []
         for file in self.files or []:
             if is_image_file(file):

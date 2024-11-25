@@ -60,7 +60,7 @@ class AIMLModelComponent(LCModelComponent):
 
     @override
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
-        if field_name in ("api_key", "aiml_api_base", "model_name"):
+        if field_name in {"api_key", "aiml_api_base", "model_name"}:
             aiml = AimlModels()
             aiml.get_aiml_models()
             build_config["model_name"]["options"] = aiml.chat_models
