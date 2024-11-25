@@ -1,3 +1,4 @@
+import { toNormalCase } from "@/utils/utils";
 import { ColDef } from "ag-grid-community";
 import { useEffect, useState } from "react";
 import ForwardedIconComponent from "../../../../components/common/genericIconComponent";
@@ -48,9 +49,12 @@ export default function ShortcutsPage() {
 
   function handleRestore() {
     setShortcuts(defaultShortcuts);
-    defaultShortcuts.forEach(({ name, shortcut }) => {
-      const fixedName = name.split(" ")[0].toLowerCase();
-      updateUniqueShortcut(fixedName, shortcut);
+    defaultShortcuts.forEach(({ name, shortcut_mod }) => {
+      const fixedName = name
+        .split(" ")
+        .map((s, index) => (index !== 0 ? toNormalCase(s) : s.toLowerCase()))
+        .join("");
+      updateUniqueShortcut(fixedName, shortcut_mod);
     });
     localStorage.removeItem("langflow-shortcuts");
   }
