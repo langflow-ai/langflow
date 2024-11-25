@@ -1,4 +1,5 @@
 import operator
+import re
 from typing import Any, ClassVar
 from uuid import UUID
 
@@ -99,7 +100,11 @@ class BaseComponent:
             return self.get_template_config(component_instance)
 
         except AttributeError as e:
-            raise ImportError(e)
+            pattern = r"module '.*?' has no attribute '.*?'"
+            if re.search(pattern, str(e)):
+                raise ImportError(e) from e
+            raise
+        return {}
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError
