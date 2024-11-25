@@ -11,6 +11,7 @@ from sqlmodel import Session, col, select
 from langflow.schema.message import Message
 from langflow.services.database.models.message.model import MessageRead, MessageTable
 from langflow.services.deps import session_scope
+from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 
 
 def get_messages(
@@ -162,8 +163,19 @@ def store_message(
         logger.warning("No message provided.")
         return []
 
-    if not message.session_id or not message.sender or not message.sender_name:
-        msg = "All of session_id, sender, and sender_name must be provided."
+    required_fields = ["session_id", "sender", "sender_name"]
+    missing_fields = [field for field in required_fields if not getattr(message, field)]
+    if missing_fields:
+        missing_descriptions = {
+            "session_id": "session_id (unique conversation identifier)",
+            "sender": f"sender (e.g., '{MESSAGE_SENDER_USER}' or '{MESSAGE_SENDER_AI}')",
+            "sender_name": "sender_name (display name, e.g., 'User' or 'Assistant')",
+        }
+        missing = ", ".join(missing_descriptions[field] for field in missing_fields)
+        msg = (
+            f"It looks like we're missing some important information: {missing}. "
+            "Please ensure that your message includes all the required fields."
+        )
         raise ValueError(msg)
     if hasattr(message, "id") and message.id:
         return update_messages([message])

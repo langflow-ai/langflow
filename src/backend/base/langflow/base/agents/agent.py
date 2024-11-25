@@ -1,4 +1,5 @@
 import asyncio
+import re
 from abc import abstractmethod
 from typing import TYPE_CHECKING, cast
 
@@ -122,18 +123,21 @@ class LCAgentComponent(Component):
         if isinstance(agent, AgentExecutor):
             runnable = agent
         else:
-            if not self.tools:
+            if not hasattr(self, "tools") or not self.tools:
                 msg = "Tools are required to run the agent."
                 raise ValueError(msg)
+            handle_parsing_errors = hasattr(self, "handle_parsing_errors") and self.handle_parsing_errors
+            verbose = hasattr(self, "verbose") and self.verbose
+            max_iterations = hasattr(self, "max_iterations") and self.max_iterations
             runnable = AgentExecutor.from_agent_and_tools(
                 agent=agent,
                 tools=self.tools,
-                handle_parsing_errors=self.handle_parsing_errors,
-                verbose=self.verbose,
-                max_iterations=self.max_iterations,
+                handle_parsing_errors=handle_parsing_errors,
+                verbose=verbose,
+                max_iterations=max_iterations,
             )
         input_dict: dict[str, str | list[BaseMessage]] = {"input": self.input_value}
-        if self.chat_history:
+        if hasattr(self, "chat_history") and self.chat_history:
             input_dict["chat_history"] = data_to_messages(self.chat_history)
 
         if hasattr(self, "graph"):
@@ -175,6 +179,18 @@ class LCAgentComponent(Component):
     def create_agent_runnable(self) -> Runnable:
         """Create the agent."""
 
+    def validate_tool_names(self) -> None:
+        """Validate tool names to ensure they match the required pattern."""
+        pattern = re.compile(r"^[a-zA-Z0-9_-]+$")
+        if hasattr(self, "tools") and self.tools:
+            for tool in self.tools:
+                if not pattern.match(tool.name):
+                    msg = (
+                        f"Invalid tool name '{tool.name}': must only contain letters, numbers, underscores, dashes,"
+                        " and cannot contain spaces."
+                    )
+                    raise ValueError(msg)
+
 
 class LCToolsAgentComponent(LCAgentComponent):
     _base_inputs = [
@@ -190,6 +206,7 @@ class LCToolsAgentComponent(LCAgentComponent):
     ]
 
     def build_agent(self) -> AgentExecutor:
+        self.validate_tool_names()
         agent = self.create_agent_runnable()
         return AgentExecutor.from_agent_and_tools(
             agent=RunnableAgent(runnable=agent, input_keys_arg=["input"], return_keys_arg=["output"]),

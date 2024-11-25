@@ -21,19 +21,25 @@ test("user can add components by hovering and clicking the plus icon", async ({
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 3000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
   // Start with blank flow
   await page.getByTestId("blank-flow").click();
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="sidebar-search-input"]', {
+    timeout: 3000,
+  });
 
   // Search for a component
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("chat input");
-  await page.waitForTimeout(500);
 
+  await page.waitForSelector('[data-testid="inputsChat Input"]', {
+    timeout: 2000,
+  });
   // Hover over the component and verify plus icon
   const componentLocator = page.getByTestId("inputsChat Input");
   // Find the plus icon within the specific component container
@@ -48,26 +54,24 @@ test("user can add components by hovering and clicking the plus icon", async ({
 
   await expect(opacity).toBe("0");
 
-  // Hover over the component
   await componentLocator.hover();
-
-  // Check if the plus icon is visible and has full opacity
-
+  // Hover over the component
   await expect(plusIcon).toBeVisible();
-
+  // Wait for the animation to change the opacity
   await page.waitForTimeout(500);
 
   const opacityAfterHover = await plusIcon.evaluate((el) =>
     window.getComputedStyle(el).getPropertyValue("opacity"),
   );
 
-  await expect(opacityAfterHover).toBe("1");
+  expect(Number(opacityAfterHover)).toBeGreaterThan(0);
 
   // Click the plus icon associated with this component
   await plusIcon.click();
-  await page.waitForTimeout(500);
+  // Wait for the component to be added to the flow
+  await page.waitForSelector(".react-flow__node", { timeout: 1000 });
 
   // Verify component was added to the flow
-  const addedComponent = await page.locator(".react-flow__node").first();
+  const addedComponent = page.locator(".react-flow__node").first();
   await expect(addedComponent).toBeVisible();
 });

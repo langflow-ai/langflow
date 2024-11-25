@@ -6,6 +6,7 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { NodeType } from "@/types/flow";
 import { cloneDeep } from "lodash";
+import { useUpdateNodeInternals } from "reactflow";
 import { mutateTemplate } from "../helpers/mutate-template";
 
 export type handleOnNewValueType = (
@@ -33,6 +34,7 @@ const useHandleOnNewValue = ({
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
   const setNode = setNodeExternal ?? useFlowStore((state) => state.setNode);
+  const updateNodeInternals = useUpdateNodeInternals();
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
@@ -90,14 +92,21 @@ const useHandleOnNewValue = ({
       );
     }
 
-    setNode(nodeId, (oldNode) => {
-      const newData = cloneDeep(oldNode.data);
-      newData.node = newNode;
-      return {
-        ...oldNode,
-        data: newData,
-      };
-    });
+    setNode(
+      nodeId,
+      (oldNode) => {
+        const newData = cloneDeep(oldNode.data);
+        newData.node = newNode;
+        return {
+          ...oldNode,
+          data: newData,
+        };
+      },
+      true,
+      () => {
+        updateNodeInternals(nodeId);
+      },
+    );
   };
 
   return { handleOnNewValue };

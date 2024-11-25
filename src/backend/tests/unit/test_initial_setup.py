@@ -3,11 +3,9 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
-from langflow.custom.directory_reader.utils import (
-    abuild_custom_component_list_from_path,
-)
+from langflow.custom.directory_reader.utils import abuild_custom_component_list_from_path
+from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.initial_setup.setup import (
-    STARTER_FOLDER_NAME,
     get_project_data,
     load_starter_projects,
     update_projects_components_with_latest_component_versions,

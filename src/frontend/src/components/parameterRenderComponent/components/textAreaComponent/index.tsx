@@ -73,6 +73,7 @@ export default function TextAreaComponent({
       editNode ? inputClasses.editNode : inputClasses.normal({ isFocused }),
       disabled && inputClasses.disabled,
       password && !passwordVisible && "text-clip",
+      isFocused && "pr-10",
     );
   };
 
@@ -81,7 +82,7 @@ export default function TextAreaComponent({
   };
 
   const renderIcon = () => (
-    <div className={cn(isFocused && "opacity-0")}>
+    <div>
       {!disabled && (
         <div
           className={cn(

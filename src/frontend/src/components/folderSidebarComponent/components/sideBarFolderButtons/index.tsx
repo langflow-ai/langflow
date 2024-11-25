@@ -125,7 +125,7 @@ const SideBarFoldersButtonsComponent = ({
     });
   };
 
-  const { mutate: mutateDownloadFolder } = useGetDownloadFolders();
+  const { mutate: mutateDownloadFolder } = useGetDownloadFolders({});
 
   const handleDownloadFolder = (id: string) => {
     mutateDownloadFolder(
@@ -133,20 +133,29 @@ const SideBarFoldersButtonsComponent = ({
         folderId: id,
       },
       {
-        onSuccess: (data) => {
-          data.folder_name = data?.name || "folder";
-          data.folder_description = data?.description || "";
+        onSuccess: (response) => {
+          // Create a blob from the response data
+          const blob = new Blob([response.data], {
+            type: "application/x-zip-compressed",
+          });
 
-          const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-            JSON.stringify(data),
-          )}`;
-
+          const url = window.URL.createObjectURL(blob);
           const link = document.createElement("a");
-          link.href = jsonString;
-          link.download = `${data?.name}.json`;
+          link.href = url;
 
+          // Get filename from header or use default
+          const filename =
+            response.headers?.["content-disposition"]
+              ?.split("filename=")[1]
+              ?.replace(/['"]/g, "") ?? "flows.zip";
+
+          link.setAttribute("download", filename);
+          document.body.appendChild(link);
           link.click();
-          track("Folder Exported", { folderId: id! });
+          link.remove();
+          window.URL.revokeObjectURL(url);
+
+          track("Folder Exported", { folderId: id });
         },
         onError: () => {
           setErrorData({
