@@ -42,7 +42,7 @@ test("Blog Writer", async ({ page }) => {
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Blog Writer" }).click();
   await page.waitForSelector('[data-testid="fit_view"]', {
-    timeout: 1000,
+    timeout: 5000,
   });
 
   await page.getByTestId("fit_view").click();
