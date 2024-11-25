@@ -9,7 +9,7 @@ export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
   },
   output: "o",
   play: "p",
-  flow: "mod+b",
+  flow: "mod+shift+b",
   undo: "mod+z",
   redo: "mod+y",
   open: "mod+k",
@@ -30,9 +30,11 @@ export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
   update: "mod+u",
   download: "mod+j",
   freeze: "mod+f",
-  FreezePath: "mod+shift+f",
+  freezePath: "mod+shift+f",
   toolMode: "mod+shift+m",
+  toggleSidebar: "mod+b",
   updateUniqueShortcut: (name, combination) => {
+    console.log(name, combination);
     set({
       [name]: combination,
     });
