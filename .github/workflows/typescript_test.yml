@@ -81,7 +81,7 @@ jobs:
           RELEASE="${{ inputs.release || 'false' }}"
           echo "Release build: $RELEASE"
 
-          if [[ "$RELEASE" == "true"]]; then
+          if [[ "$RELEASE" == "true" ]]; then
             SUITES='["release"]'
             echo "Release build detected - setting suites to: $SUITES"
             # No grep pattern for release - run all tests
