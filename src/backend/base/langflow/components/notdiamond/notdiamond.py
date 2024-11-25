@@ -51,6 +51,7 @@ class NotDiamondComponent(Component):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._selected_model_name = None
 
     inputs = [
         MessageInput(name="input_value", display_name="Input"),
@@ -98,7 +99,18 @@ class NotDiamondComponent(Component):
         ),
     ]
 
-    outputs = [Output(display_name="Output", name="output", method="model_select")]
+    outputs = [
+        Output(display_name="Output", name="output", method="model_select"),
+        Output(
+            display_name="Selected Model",
+            name="selected_model",
+            method="get_selected_model",
+            required_inputs=["output"],
+        ),
+    ]
+
+    def get_selected_model(self) -> str:
+        return self._selected_model_name
 
     def model_select(self) -> Message:
         api_key = SecretStr(self.api_key).get_secret_value() if self.api_key else None
@@ -141,28 +153,26 @@ class NotDiamondComponent(Component):
         )
 
         result = response.json()
+        chosen_model = self.models[0]  # By default there is a fallback model
+        self._selected_model_name = get_model_name(chosen_model)
 
         if "providers" not in result:
             # No provider returned by NotDiamond API, likely failed. Fallback to first model.
-            return self._call_get_chat_result(self.models[0], input_value, system_message)
+            return self._call_get_chat_result(chosen_model, input_value, system_message)
 
         providers = result["providers"]
 
         if len(providers) == 0:
             # No provider returned by NotDiamond API, likely failed. Fallback to first model.
-            return self._call_get_chat_result(self.models[0], input_value, system_message)
+            return self._call_get_chat_result(chosen_model, input_value, system_message)
 
         nd_result = providers[0]
 
-        chosen_model = None
         for nd_model, selected_model in zip(mapped_selected_models, selected_models, strict=False):
             if nd_model["provider"] == nd_result["provider"] and nd_model["model"] == nd_result["model"]:
                 chosen_model = selected_model
+                self._selected_model_name = get_model_name(chosen_model)
                 break
-
-        if chosen_model is None:
-            # No provider returned by NotDiamond API, likely failed. Fallback to first model.
-            return self._call_get_chat_result(self.models[0], input_value, system_message)
 
         return self._call_get_chat_result(chosen_model, input_value, system_message)
 
