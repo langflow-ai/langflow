@@ -93,9 +93,13 @@ class BaseComponent:
         if not self._code:
             return {}
 
-        cc_class = eval_custom_component_code(self._code)
-        component_instance = cc_class(_code=self._code)
-        return self.get_template_config(component_instance)
+        try:
+            cc_class = eval_custom_component_code(self._code)
+            component_instance = cc_class(_code=self._code)
+            return self.get_template_config(component_instance)
+
+        except AttributeError as e:
+            raise ImportError(e)
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError
