@@ -41,8 +41,7 @@ test("should be able to see output preview from grouped components and connect c
 
   await page
     .getByTestId("inputsText Input")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-    });
+    .dragTo(page.locator('//*[@id="react-flow-id"]'), {});
 
   await page.getByTestId("zoom_out").click();
   await page.getByTestId("zoom_out").click();
@@ -50,12 +49,10 @@ test("should be able to see output preview from grouped components and connect c
   await page.getByTestId("zoom_out").click();
 
   await page
-  .getByTestId("inputsText Input")
-  .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-    targetPosition: { x: 500, y: 150 },
-  });
-
-
+    .getByTestId("inputsText Input")
+    .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+      targetPosition: { x: 500, y: 150 },
+    });
 
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("combine text");
@@ -70,13 +67,11 @@ test("should be able to see output preview from grouped components and connect c
       targetPosition: { x: 10, y: 10 },
     });
 
-
   await page
     .getByTestId("processingCombine Text")
     .dragTo(page.locator('//*[@id="react-flow-id"]'), {
       targetPosition: { x: 200, y: 10 },
     });
-
 
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("text");
@@ -111,33 +106,30 @@ test("should be able to see output preview from grouped components and connect c
     return style.backgroundColor === "rgb(228, 228, 231)";
   });
 
-
   const secondHasGradient = await secondBlockedHandle?.evaluate((el) => {
     const style = window.getComputedStyle(el);
     return style.backgroundColor === "rgb(228, 228, 231)";
   });
-
 
   const thirdHasGradient = await thirdBlockedHandle?.evaluate((el) => {
     const style = window.getComputedStyle(el);
     return style.backgroundColor === "rgb(228, 228, 231)";
   });
 
-
   expect(hasGradient).toBe(true);
   expect(secondHasGradient).toBe(true);
   expect(thirdHasGradient).toBe(true);
 
-  const unlockedHandle =  page
+  const unlockedHandle = page
     .getByTestId("div-handle-textinput-shownode-text-left")
     .last();
-  const secondUnlockedHandle =  page
+  const secondUnlockedHandle = page
     .getByTestId("div-handle-combinetext-shownode-second text-left")
     .last();
-  const thirdUnlockedHandle =  page
+  const thirdUnlockedHandle = page
     .getByTestId("div-handle-combinetext-shownode-second text-left")
     .first();
-  const fourthUnlockedHandle =  page
+  const fourthUnlockedHandle = page
     .getByTestId("div-handle-textoutput-shownode-text-left")
     .first();
 
@@ -149,7 +141,6 @@ test("should be able to see output preview from grouped components and connect c
     );
   });
 
-
   const secondHasGradientUnlocked = await secondUnlockedHandle?.evaluate(
     (el) => {
       const style = window.getComputedStyle(el);
@@ -160,12 +151,10 @@ test("should be able to see output preview from grouped components and connect c
     },
   );
 
-
   const thirdHasGradientLocked = await thirdUnlockedHandle?.evaluate((el) => {
     const style = window.getComputedStyle(el);
     return style.backgroundColor === "rgb(228, 228, 231)";
   });
-
 
   const fourthHasGradientUnlocked = await fourthUnlockedHandle?.evaluate(
     (el) => {
@@ -176,7 +165,6 @@ test("should be able to see output preview from grouped components and connect c
       );
     },
   );
-
 
   expect(hasGradientUnlocked).toBe(true);
   expect(secondHasGradientUnlocked).toBe(true);
@@ -199,11 +187,10 @@ test("should be able to see output preview from grouped components and connect c
 
   await page.getByRole("button", { name: "Group" }).click();
 
-
   await page.getByTitle("fit view").click();
 
   //connection 2
-  const elementTextOutput0 =  page
+  const elementTextOutput0 = page
     .getByTestId("handle-textinput-shownode-text-right")
     .nth(0);
   await elementTextOutput0.click();
@@ -228,7 +215,7 @@ test("should be able to see output preview from grouped components and connect c
     .getByTestId("handle-groupnode-shownode-combined text-right")
     .nth(0);
   await elementGroupOutput.click();
-  const elementTextOutputInput =  page
+  const elementTextOutputInput = page
     .getByTestId("handle-textoutput-shownode-text-left")
     .nth(0);
 
@@ -255,7 +242,6 @@ test("should be able to see output preview from grouped components and connect c
     .getByPlaceholder("Type something...", { exact: true })
     .nth(2)
     .fill("-");
-
 
   await page.getByTestId("button_run_text output").last().click();
 
