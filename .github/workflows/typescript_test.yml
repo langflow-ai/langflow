@@ -56,9 +56,9 @@ jobs:
   determine-test-suite:
     runs-on: ubuntu-latest
     outputs:
-      suites: ${{ steps.set-matrix.outputs.matrix }}
+      matrix-combinations: ${{ steps.setup-matrix.outputs.matrix-combinations }}
       test_grep: ${{ steps.set-matrix.outputs.test_grep }}
-      shard_count: ${{ steps.count-tests.outputs.shard_count }}
+      suites: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -175,8 +175,8 @@ jobs:
         run: npm ci
         working-directory: ./src/frontend
 
-      - name: Count Tests and Calculate Shards
-        id: count-tests
+      - name: Setup Matrix Combinations
+        id: setup-matrix
         run: |
           cd src/frontend
 
@@ -197,22 +197,30 @@ jobs:
             SHARD_COUNT=10
           fi
 
-          # Create a JSON array and ensure it's properly escaped for GitHub Actions output
-          INDEX_ARRAY=$(jq -c -n --arg count "$SHARD_COUNT" '[range(1; ($count|tonumber) + 1)]')
+          # Create matrix combinations JSON
+          MATRIX_COMBINATIONS=$(jq -n \
+            --arg count "$SHARD_COUNT" \
+            '{
+              "include": [
+                range(1; ($count|tonumber) + 1) |
+                {
+                  "shardIndex": .,
+                  "shardTotal": ($count|tonumber)
+                }
+              ]
+            }')
 
-          echo "shard_count=${SHARD_COUNT}" >> "$GITHUB_OUTPUT"
-          echo "shard_indices=${INDEX_ARRAY}" >> "$GITHUB_OUTPUT"
+          # Output the matrix combinations
+          echo "matrix-combinations=$MATRIX_COMBINATIONS" >> "$GITHUB_OUTPUT"
 
   setup-and-test:
-    name: Playwright Tests - Group ${{ matrix.shardIndex }}
+    name: Playwright Tests - Group ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
     runs-on: ubuntu-latest
     needs: determine-test-suite
     if: ${{ fromJson(needs.determine-test-suite.outputs.suites)[0] != null }}
     strategy:
       fail-fast: false
-      matrix:
-        shardIndex: ${{ fromJson(needs.determine-test-suite.outputs.shard_indices) }}
-        shardTotal: ${{ fromJson(format('[{0}]', needs.determine-test-suite.outputs.shard_count)) }}
+      matrix: ${{ fromJson(needs.determine-test-suite.outputs.matrix-combinations) }}
     env:
       OPENAI_API_KEY: ${{ inputs.openai_api_key || secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ inputs.store_api_key || secrets.STORE_API_KEY }}
