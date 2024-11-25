@@ -1,4 +1,4 @@
-import { ForwardedIconComponent } from "@/components/genericIconComponent";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { processNodeAdvancedFields } from "@/CustomNodes/helpers/process-node-advanced-fields";
@@ -104,7 +104,7 @@ export default function UpdateAllComponents() {
   return (
     <div
       className={cn(
-        "absolute bottom-2 left-1/2 z-50 flex w-[500px] -translate-x-1/2 items-center gap-8 rounded-lg bg-warning px-4 py-2 text-sm font-medium text-warning-foreground shadow-md transition-all ease-in",
+        "bg-warning text-warning-foreground absolute bottom-2 left-1/2 z-50 flex w-[500px] -translate-x-1/2 items-center gap-8 rounded-lg px-4 py-2 text-sm font-medium shadow-md transition-all ease-in",
         dismissed && "translate-y-[120%]",
       )}
     >
@@ -123,7 +123,7 @@ export default function UpdateAllComponents() {
         <Button
           variant="link"
           size="icon"
-          className="shrink-0 text-sm text-warning-foreground"
+          className="text-warning-foreground shrink-0 text-sm"
           onClick={() => {
             setDismissed(true);
           }}
