@@ -1,9 +1,9 @@
-import { convertTestName } from "@/components/storeCardComponent/utils/convert-test-name";
+import { convertTestName } from "@/components/common/storeCardComponent/utils/convert-test-name";
 import { swatchColors } from "@/utils/styleUtils";
 import { cn, getNumberFromString } from "@/utils/utils";
 import IconComponent, {
   ForwardedIconComponent,
-} from "../../../../components/genericIconComponent";
+} from "../../../../components/common/genericIconComponent";
 import { TemplateCardComponentProps } from "../../../../types/templates/types";
 
 export default function TemplateCardComponent({

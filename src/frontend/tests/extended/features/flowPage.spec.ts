@@ -1,7 +1,7 @@
 import { test } from "@playwright/test";
 
 test.describe("Flow Page tests", () => {
-  test("save", async ({ page }) => {
+  test("save", { tag: ["@release"] }, async ({ page }) => {
     await page.goto("/");
     await page.waitForSelector('[data-testid="mainpage_title"]', {
       timeout: 30000,
