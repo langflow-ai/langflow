@@ -5,6 +5,7 @@ import path from "path";
 test(
   "should able to see and interact with logs",
   { tag: ["@release", "@workspace", "@api"] },
+
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
@@ -15,7 +16,24 @@ test(
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
 
+    await page.goto("/");
+    await page.waitForSelector('[data-testid="mainpage_title"]', {
+      timeout: 30000,
+    });
+
+    await page.waitForSelector('[id="new-project-btn"]', {
+      timeout: 30000,
+    });
+
     let modalCount = 0;
+    try {
+      const modalTitleElement = await page?.getByTestId("modal-title");
+      if (modalTitleElement) {
+        modalCount = await modalTitleElement.count();
+      }
+    } catch (error) {
+      modalCount = 0;
+    }
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
