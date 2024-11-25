@@ -120,13 +120,9 @@ jobs:
 
               # Create grep pattern if we have tags
               if [ ${#TAGS[@]} -gt 0 ]; then
-                # Convert array of tags into regex lookaheads with proper escaping
-                REGEX_PATTERN=""
-                for TAG in "${TAGS[@]}"; do
-                  REGEX_PATTERN="${REGEX_PATTERN}(?=.*${TAG})"
-                done
-                # Escape the quotes properly for GitHub Actions
-                TEST_GREP="--grep \"${REGEX_PATTERN}\""
+                # Join tags with | for OR logic
+                REGEX_PATTERN=$(IFS='|'; echo "${TAGS[*]}")
+                TEST_GREP="--grep=\"${REGEX_PATTERN}\""
               fi
             else
               # Process input suites to tags
@@ -148,13 +144,9 @@ jobs:
               fi
 
               if [ ${#TAGS[@]} -gt 0 ]; then
-                # Convert array of tags into regex lookaheads with proper escaping
-                REGEX_PATTERN=""
-                for TAG in "${TAGS[@]}"; do
-                  REGEX_PATTERN="${REGEX_PATTERN}(?=.*${TAG})"
-                done
-                # Escape the quotes properly for GitHub Actions
-                TEST_GREP="--grep \"${REGEX_PATTERN}\""
+                # Join tags with | for OR logic
+                REGEX_PATTERN=$(IFS='|'; echo "${TAGS[*]}")
+                TEST_GREP="--grep=\"${REGEX_PATTERN}\""
               fi
             fi
           fi
