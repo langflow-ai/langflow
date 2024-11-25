@@ -94,6 +94,14 @@ class APIRequestComponent(Component):
             info="Save the API response to a temporary file",
             advanced=True,
         ),
+        BoolInput(
+            name="include_httpx_metadata",
+            display_name="Include HTTPx Metadata",
+            value=False,
+            info=("Include properties such as headers, status_code, response_headers, "
+                  "and redirection_history in the output."),
+            advanced=True,
+        ),
     ]
 
     outputs = [
@@ -137,6 +145,7 @@ class APIRequestComponent(Component):
         *,
         follow_redirects: bool = True,
         save_to_file: bool = False,
+        include_httpx_metadata: bool = False,
     ) -> Data:
         method = method.upper()
         if method not in {"GET", "POST", "PATCH", "PUT", "DELETE"}:
@@ -173,6 +182,7 @@ class APIRequestComponent(Component):
                 redirection_history.append({"url": str(response.url), "status_code": response.status_code})
 
             is_binary, file_path = self._response_info(response, with_file_path=save_to_file)
+            response_headers = self._headers_to_dict(response.headers)
 
             if save_to_file:
                 mode = "wb" if is_binary else "w"
@@ -180,15 +190,20 @@ class APIRequestComponent(Component):
                 with file_path.open(mode, encoding=encoding) as f:
                     f.write(response.content if is_binary else response.text)
 
-                return Data(
-                    data={
-                        "source": url,
-                        "headers": headers,
-                        "status_code": response.status_code,
-                        "file_path": str(file_path),
-                        **({"redirection_history": redirection_history} if redirection_history else {}),
-                    },
-                )
+                metadata = {
+                    "source": url,
+                    "file_path": str(file_path),
+                }
+                if include_httpx_metadata:
+                    metadata.update(
+                        {
+                            "headers": headers,
+                            "status_code": response.status_code,
+                            "response_headers": response_headers,
+                            **({"redirection_history": redirection_history} if redirection_history else {}),
+                        }
+                    )
+                return Data(data=metadata)
             # Populate result when not saving to a file
             if is_binary:
                 result = response.content
@@ -198,15 +213,17 @@ class APIRequestComponent(Component):
                 except Exception:  # noqa: BLE001
                     logger.opt(exception=True).debug("Error decoding JSON response")
                     result = response.text
-            return Data(
-                data={
-                    "source": url,
-                    "headers": headers,
-                    "status_code": response.status_code,
-                    "result": result,
-                    **({"redirection_history": redirection_history} if redirection_history else {}),
-                },
-            )
+            metadata = {"source": url, "result": result}
+            if include_httpx_metadata:
+                metadata.update(
+                    {
+                        "headers": headers,
+                        "status_code": response.status_code,
+                        "response_headers": response_headers,
+                        **({"redirection_history": redirection_history} if redirection_history else {}),
+                    }
+                )
+            return Data(data=metadata)
         except httpx.TimeoutException:
             return Data(
                 data={
@@ -244,6 +261,7 @@ class APIRequestComponent(Component):
         timeout = self.timeout
         follow_redirects = self.follow_redirects
         save_to_file = self.save_to_file
+        include_httpx_metadata = self.include_httpx_metadata
 
         invalid_urls = [url for url in urls if not validators.url(url)]
         if invalid_urls:
@@ -280,6 +298,7 @@ class APIRequestComponent(Component):
                         timeout,
                         follow_redirects=follow_redirects,
                         save_to_file=save_to_file,
+                        include_httpx_metadata=include_httpx_metadata,
                     )
                     for u, rec in zip(urls, bodies, strict=True)
                 ]
@@ -346,3 +365,7 @@ class APIRequestComponent(Component):
         file_path = component_temp_dir / filename
 
         return is_binary, file_path
+
+    def _headers_to_dict(self, headers: httpx.Headers) -> dict[str,str]:
+        """Convert HTTP headers to a dictionary with lowercased keys."""
+        return {k.lower(): v for k, v in headers.items()}
