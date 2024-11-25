@@ -135,24 +135,23 @@ const HeaderComponent = ({
                 ))}
               </div>
             </div>
-            <div className="flex gap-2">
-              <ShadTooltip content="New Flow" side="bottom">
-                <Button
-                  variant="default"
-                  onClick={() => setNewProjectModal(true)}
-                  id="new-project-btn"
-                >
-                  <ForwardedIconComponent
-                    name="Plus"
-                    aria-hidden="true"
-                    className="h-4 w-4"
-                  />
-                  <span className="hidden whitespace-nowrap font-semibold md:inline">
-                    New Flow
-                  </span>
-                </Button>
-              </ShadTooltip>
-            </div>
+            <ShadTooltip content="New Flow" side="bottom">
+              <Button
+                variant="default"
+                className="!px-3 md:!px-4 md:!pl-3.5"
+                onClick={() => setNewProjectModal(true)}
+                id="new-project-btn"
+              >
+                <ForwardedIconComponent
+                  name="Plus"
+                  aria-hidden="true"
+                  className="h-4 w-4"
+                />
+                <span className="hidden whitespace-nowrap font-semibold md:inline">
+                  New Flow
+                </span>
+              </Button>
+            </ShadTooltip>
           </div>
         </>
       )}
