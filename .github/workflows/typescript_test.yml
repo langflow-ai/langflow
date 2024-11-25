@@ -74,7 +74,7 @@ jobs:
         id: set-matrix
         run: |
           # Start with input suites if provided, otherwise empty array
-          SUITES="${{ inputs.suites || '[]' }}"
+          SUITES='${{ inputs.suites || "[]" }}'
           echo "Initial suites: $SUITES"
           TEST_GREP=""
 
