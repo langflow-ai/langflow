@@ -1,5 +1,5 @@
 import { Disclosure } from "@headlessui/react";
-import IconComponent from "../../../../components/genericIconComponent";
+import IconComponent from "../../../../components/common/genericIconComponent";
 import { DisclosureComponentType } from "../../../../types/components";
 
 export default function DisclosureComponent({

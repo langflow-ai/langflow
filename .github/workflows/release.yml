@@ -49,6 +49,7 @@ jobs:
     with:
       python-versions: "['3.10', '3.11', '3.12']"
       frontend-tests-folder: "tests"
+      release: true
 
   release-base:
     name: Release Langflow Base

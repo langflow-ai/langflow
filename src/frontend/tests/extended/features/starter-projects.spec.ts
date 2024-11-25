@@ -1,85 +1,86 @@
 import { expect, Page, test } from "@playwright/test";
 
-test("user must be able to interact with starter projects", async ({
-  page,
-  context,
-}) => {
-  await page.goto("/");
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
+test(
+  "user must be able to interact with starter projects",
+  { tag: ["@release", "@starter-projects"] },
+  async ({ page, context }) => {
+    await page.goto("/");
+    let modalCount = 0;
+    try {
+      const modalTitleElement = await page?.getByTestId("modal-title");
+      if (modalTitleElement) {
+        modalCount = await modalTitleElement.count();
+      }
+    } catch (error) {
+      modalCount = 0;
     }
-  } catch (error) {
-    modalCount = 0;
-  }
 
-  while (modalCount === 0) {
-    await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
+    while (modalCount === 0) {
+      await page.getByText("New Flow", { exact: true }).click();
+      await page.waitForTimeout(3000);
+      modalCount = await page.getByTestId("modal-title")?.count();
+    }
 
-  expect(page.getByText("Start from scratch", { exact: true })).toBeVisible();
-  expect(page.getByRole("button", { name: "Blank Flow" })).toBeVisible();
+    expect(page.getByText("Start from scratch", { exact: true })).toBeVisible();
+    expect(page.getByRole("button", { name: "Blank Flow" })).toBeVisible();
 
-  await page.getByTestId("side_nav_options_all-templates").click();
-  await page.waitForTimeout(500);
+    await page.getByTestId("side_nav_options_all-templates").click();
+    await page.waitForTimeout(500);
 
-  await page.getByPlaceholder("Search...").fill("Document");
-  await page.waitForTimeout(500);
+    await page.getByPlaceholder("Search...").fill("Document");
+    await page.waitForTimeout(500);
 
-  expect(
-    page.getByTestId("template_basic-prompting-(hello,-world)"),
-  ).not.toBeVisible();
+    expect(
+      page.getByTestId("template_basic-prompting-(hello,-world)"),
+    ).not.toBeVisible();
 
-  expect(page.getByTestId("template_document-q&a").first()).toBeVisible();
-  expect(
-    page.getByTestId(`template_sequential-tasks-agents`).first(),
-  ).toBeVisible();
+    expect(page.getByTestId("template_document-q&a").first()).toBeVisible();
+    expect(
+      page.getByTestId(`template_sequential-tasks-agents`).first(),
+    ).toBeVisible();
 
-  expect(page.getByTestId("template_vector-store")).not.toBeVisible();
-  expect(page.getByTestId(`template_simple-agent`)).not.toBeVisible();
-  expect(page.getByTestId(`template_dynamic-agent`)).not.toBeVisible();
-  expect(
-    page.getByTestId(`template_hierarchical-tasks-agent`),
-  ).not.toBeVisible();
+    expect(page.getByTestId("template_vector-store")).not.toBeVisible();
+    expect(page.getByTestId(`template_simple-agent`)).not.toBeVisible();
+    expect(page.getByTestId(`template_dynamic-agent`)).not.toBeVisible();
+    expect(
+      page.getByTestId(`template_hierarchical-tasks-agent`),
+    ).not.toBeVisible();
 
-  await page.waitForTimeout(500);
+    await page.waitForTimeout(500);
 
-  await page.getByTestId(`side_nav_options_prompting`).click();
-  await page.waitForTimeout(500);
-  expect(page.getByTestId(`category_title_prompting`)).toBeVisible();
+    await page.getByTestId(`side_nav_options_prompting`).click();
+    await page.waitForTimeout(500);
+    expect(page.getByTestId(`category_title_prompting`)).toBeVisible();
 
-  await page.getByTestId(`side_nav_options_rag`).click();
-  await page.waitForTimeout(500);
+    await page.getByTestId(`side_nav_options_rag`).click();
+    await page.waitForTimeout(500);
 
-  expect(page.getByTestId(`category_title_rag`)).toBeVisible();
-  expect(page.getByTestId(`template_vector-store-rag`)).toBeVisible();
+    expect(page.getByTestId(`category_title_rag`)).toBeVisible();
+    expect(page.getByTestId(`template_vector-store-rag`)).toBeVisible();
 
-  expect(
-    page.getByTestId(`template_basic-prompting-(hello,-world)`),
-  ).not.toBeVisible();
-  expect(page.getByTestId(`template_document-qa`)).not.toBeVisible();
+    expect(
+      page.getByTestId(`template_basic-prompting-(hello,-world)`),
+    ).not.toBeVisible();
+    expect(page.getByTestId(`template_document-qa`)).not.toBeVisible();
 
-  await page.getByTestId(`side_nav_options_agents`).click();
-  await page.waitForTimeout(500);
+    await page.getByTestId(`side_nav_options_agents`).click();
+    await page.waitForTimeout(500);
 
-  expect(page.getByTestId(`category_title_agents`)).toBeVisible();
+    expect(page.getByTestId(`category_title_agents`)).toBeVisible();
 
-  await page.waitForTimeout(500);
+    await page.waitForTimeout(500);
 
-  expect(
-    page.getByTestId(`template_basic-prompting-(hello,-world)`),
-  ).not.toBeVisible();
-  expect(page.getByTestId(`template_document-qa`)).not.toBeVisible();
-  expect(page.getByTestId(`template_vector-store-rag`)).not.toBeVisible();
+    expect(
+      page.getByTestId(`template_basic-prompting-(hello,-world)`),
+    ).not.toBeVisible();
+    expect(page.getByTestId(`template_document-qa`)).not.toBeVisible();
+    expect(page.getByTestId(`template_vector-store-rag`)).not.toBeVisible();
 
-  await page.waitForTimeout(500);
+    await page.waitForTimeout(500);
 
-  await waitForTemplateVisibility(page, templateIds);
-});
+    await waitForTemplateVisibility(page, templateIds);
+  },
+);
 
 async function waitForTemplateVisibility(page: Page, templateIds: string[]) {
   const timeout = 10000; // Increased timeout for better reliability

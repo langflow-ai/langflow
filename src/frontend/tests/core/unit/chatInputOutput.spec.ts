@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("chat_io_teste", async ({ page }) => {
+test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.goto("/");
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
   await page.waitForSelector('[data-testid="mainpage_title"]', {

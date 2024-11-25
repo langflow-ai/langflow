@@ -13,6 +13,11 @@ on:
         required: false
         type: string
         default: "tests/core"
+      release:
+        description: "Release"
+        required: false
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       branch:
@@ -89,6 +94,7 @@ jobs:
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: ${{ inputs.frontend-tests-folder }}
+      release: ${{ inputs.release || false }}
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
@@ -98,6 +104,7 @@ jobs:
     if: ${{ needs.path-filter.outputs.python == 'true'}}
     name: Lint Backend
     uses: ./.github/workflows/lint-py.yml
+
 
   test-docs-build:
     needs: path-filter

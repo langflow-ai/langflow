@@ -7,8 +7,8 @@ import { someFlowTemplateFields } from "@/utils/reactflowUtils";
 import { useEffect, useState } from "react";
 import ShortUniqueId from "short-unique-id";
 import AccordionComponent from "../../components/accordionComponent";
-import IconComponent from "../../components/genericIconComponent";
-import ShadTooltip from "../../components/shadTooltipComponent";
+import IconComponent from "../../components/common/genericIconComponent";
+import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import {

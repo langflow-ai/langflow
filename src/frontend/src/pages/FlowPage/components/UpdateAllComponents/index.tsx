@@ -1,4 +1,4 @@
-import { ForwardedIconComponent } from "@/components/genericIconComponent";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { processNodeAdvancedFields } from "@/CustomNodes/helpers/process-node-advanced-fields";

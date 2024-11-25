@@ -1,7 +1,7 @@
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useParams } from "react-router-dom";
-import CollectionCardComponent from "../../../../../../components/cardComponent";
+import CollectionCardComponent from "../../../../../../components/core/cardComponent";
 const CollectionCard = ({ item, type, isLoading, control }) => {
   const navigate = useCustomNavigate();
   const isComponent = item.is_component ?? false;

@@ -8,6 +8,16 @@ on:
       STORE_API_KEY:
         required: true
     inputs:
+      suites:
+        description: "Test suites to run (JSON array)"
+        required: false
+        type: string
+        default: '["starter-projects", "components", "workspace", "api", "database"]'
+      release:
+        description: "Whether this is a release build"
+        required: false
+        type: boolean
+        default: false
       tests_folder:
         description: "(Optional) Tests to run"
         required: false
@@ -19,6 +29,16 @@ on:
         type: string
   workflow_dispatch:
     inputs:
+      suites:
+        description: "Test suites to run (JSON array)"
+        required: false
+        type: string
+        default: '["starter-projects", "components", "workspace", "api", "database"]'
+      release:
+        description: "Whether this is a release build"
+        required: false
+        type: boolean
+        default: false
       tests_folder:
         description: "(Optional) Tests to run"
         required: false
@@ -33,9 +53,114 @@ env:
   PLAYWRIGHT_BROWSERS_PATH: "ms-playwright"
 
 jobs:
+  determine-test-suite:
+    runs-on: ubuntu-latest
+    outputs:
+      suites: ${{ steps.set-matrix.outputs.matrix }}
+      test_grep: ${{ steps.set-matrix.outputs.test_grep }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
+
+      - name: Paths Filter
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: .github/changes-filter.yaml
+
+      - name: Set Matrix and Test Grep
+        id: set-matrix
+        run: |
+          # Start with input suites if provided, otherwise empty array
+          SUITES='${{ inputs.suites }}'
+          echo "Initial suites: $SUITES"
+          TEST_GREP=""
+
+          RELEASE="${{ inputs.release || 'false' }}"
+          echo "Release build: $RELEASE"
+
+          if [[ "$RELEASE" == "true" || "$SUITES" == "[]" ]]; then
+            SUITES='["release"]'
+            echo "Release build detected - setting suites to: $SUITES"
+            # No grep pattern for release - run all tests
+            TEST_GREP=""
+          else
+            # If input suites were not provided, determine based on changes
+            if [[ "$SUITES" == "[]" ]]; then
+              echo "No input suites provided - determining from changes"
+              TAGS=()
+              # Add suites and tags based on changed files
+              if [[ "${{ steps.filter.outputs.components }}" == "true" ]]; then
+                SUITES=$(echo $SUITES | jq '. += ["components"]')
+                TAGS+=("@components")
+                echo "Added components suite"
+              fi
+              if [[ "${{ steps.filter.outputs.starter-projects }}" == "true" ]]; then
+                SUITES=$(echo $SUITES | jq '. += ["starter-projects"]')
+                TAGS+=("@starter-projects")
+                echo "Added starter-projects suite"
+              fi
+              if [[ "${{ steps.filter.outputs.workspace }}" == "true" ]]; then
+                SUITES=$(echo $SUITES | jq '. += ["workspace"]')
+                TAGS+=("@workspace")
+                echo "Added workspace suite"
+              fi
+              if [[ "${{ steps.filter.outputs.api }}" == "true" ]]; then
+                SUITES=$(echo $SUITES | jq '. += ["api"]')
+                TAGS+=("@api")
+                echo "Added api suite"
+              fi
+              if [[ "${{ steps.filter.outputs.database }}" == "true" ]]; then
+                SUITES=$(echo $SUITES | jq '. += ["database"]')
+                TAGS+=("@database")
+                echo "Added database suite"
+              fi
+
+              # Create grep pattern if we have tags
+              if [ ${#TAGS[@]} -gt 0 ]; then
+                # Join tags with | for OR logic
+                REGEX_PATTERN=$(IFS='|'; echo "${TAGS[*]}")
+                TEST_GREP="--grep=\"${REGEX_PATTERN}\""
+              fi
+            else
+              # Process input suites to tags
+              TAGS=()
+              if echo "$SUITES" | jq -e 'contains(["components"])' > /dev/null; then
+                TAGS+=("@components")
+              fi
+              if echo "$SUITES" | jq -e 'contains(["starter-projects"])' > /dev/null; then
+                TAGS+=("@starter-projects")
+              fi
+              if echo "$SUITES" | jq -e 'contains(["workspace"])' > /dev/null; then
+                TAGS+=("@workspace")
+              fi
+              if echo "$SUITES" | jq -e 'contains(["api"])' > /dev/null; then
+                TAGS+=("@api")
+              fi
+              if echo "$SUITES" | jq -e 'contains(["database"])' > /dev/null; then
+                TAGS+=("@database")
+              fi
+
+              if [ ${#TAGS[@]} -gt 0 ]; then
+                # Join tags with | for OR logic
+                REGEX_PATTERN=$(IFS='|'; echo "${TAGS[*]}")
+                TEST_GREP="--grep=\"${REGEX_PATTERN}\""
+              fi
+            fi
+          fi
+
+          echo "Final test suites to run: $SUITES"
+          echo "Test grep pattern: $TEST_GREP"
+          echo "matrix=$SUITES" >> $GITHUB_OUTPUT
+          echo "test_grep=$TEST_GREP" >> $GITHUB_OUTPUT
+
   setup-and-test:
     name: Playwright Tests - Group ${{ matrix.shardIndex }}
     runs-on: ubuntu-latest
+    needs: determine-test-suite
+    if: ${{ fromJson(needs.determine-test-suite.outputs.suites)[0] != null }}
     strategy:
       fail-fast: false
       matrix:
@@ -120,8 +245,9 @@ jobs:
           max_attempts: 2
           command: |
             cd src/frontend
-            npx playwright test ${{ inputs.tests_folder }} --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --list
-            npx playwright test ${{ inputs.tests_folder }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
+            echo 'Running tests with pattern: ${{ needs.determine-test-suite.outputs.test_grep }}'
+            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --list
+            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
 
       - name: Upload blob report to GitHub Actions Artifacts
         if: always()

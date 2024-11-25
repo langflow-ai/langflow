@@ -1,4 +1,4 @@
-import ForwardedIconComponent from "../../../../../../components/genericIconComponent";
+import ForwardedIconComponent from "../../../../../../components/common/genericIconComponent";
 import { Button } from "../../../../../../components/ui/button";
 import { API_PAGE_PARAGRAPH } from "../../../../../../constants/constants";
 import SecretKeyModal from "../../../../../../modals/secretKeyModal";

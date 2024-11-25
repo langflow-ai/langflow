@@ -5,8 +5,8 @@ import {
 } from "@/controllers/API/queries/messages";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useEffect, useState } from "react";
-import IconComponent from "../../components/genericIconComponent";
-import ShadTooltip from "../../components/shadTooltipComponent";
+import IconComponent from "../../components/common/genericIconComponent";
+import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
 import { InputOutput } from "../../constants/enums";
 import useAlertStore from "../../stores/alertStore";

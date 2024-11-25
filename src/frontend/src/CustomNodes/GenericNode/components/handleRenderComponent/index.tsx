@@ -2,7 +2,7 @@ import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Handle, Position } from "reactflow";
-import ShadTooltip from "../../../../components/shadTooltipComponent";
+import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import {
   isValidConnection,
   scapedJSONStringfy,

@@ -1,4 +1,4 @@
-import FolderSidebarNav from "@/components/folderSidebarComponent";
+import FolderSidebarNav from "@/components/core/folderSidebarComponent";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useDeleteFolders } from "@/controllers/API/queries/folders";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
@@ -7,8 +7,8 @@ import useAlertStore from "@/stores/alertStore";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import DropdownButton from "../../../../components/dropdownButtonComponent";
-import PageLayout from "../../../../components/pageLayout";
+import PageLayout from "../../../../components/common/pageLayout";
+import DropdownButton from "../../../../components/core/dropdownButtonComponent";
 import {
   MY_COLLECTION_DESC,
   USER_PROJECTS_HEADER,

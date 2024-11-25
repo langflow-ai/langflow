@@ -1,4 +1,4 @@
-import AppHeader from "@/components/appHeaderComponent";
+import AppHeader from "@/components/core/appHeaderComponent";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import { Outlet } from "react-router-dom";
 

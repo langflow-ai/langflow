@@ -1,5 +1,5 @@
 import * as Form from "@radix-ui/react-form";
-import InputComponent from "../../../../../../components/inputComponent";
+import InputComponent from "../../../../../../components/core/parameterRenderComponent/components/inputComponent";
 import { Button } from "../../../../../../components/ui/button";
 import {
   Card,

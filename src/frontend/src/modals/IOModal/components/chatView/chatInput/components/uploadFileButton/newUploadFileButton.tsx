@@ -1,5 +1,5 @@
-import ShadTooltip from "@/components/shadTooltipComponent";
-import ForwardedIconComponent from "../../../../../../../components/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
+import ForwardedIconComponent from "../../../../../../../components/common/genericIconComponent";
 import { Button } from "../../../../../../../components/ui/button";
 
 const UploadFileButton = ({

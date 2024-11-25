@@ -1,5 +1,5 @@
 import { ChangeEvent, KeyboardEvent } from "react";
-import ForwardedIconComponent from "../../../../../../components/genericIconComponent";
+import ForwardedIconComponent from "../../../../../../components/common/genericIconComponent";
 import { Input } from "../../../../../../components/ui/input";
 
 type InputSearchComponentProps = {

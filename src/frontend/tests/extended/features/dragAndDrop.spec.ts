@@ -3,7 +3,7 @@ import { readFileSync } from "fs";
 
 test.describe("drag and drop test", () => {
   /// <reference lib="dom"/>
-  test("drop collection", async ({ page }) => {
+  test("drop collection", { tag: ["@release"] }, async ({ page }) => {
     await page.goto("/");
 
     let modalCount = 0;

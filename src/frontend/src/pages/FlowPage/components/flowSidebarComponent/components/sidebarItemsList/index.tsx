@@ -1,4 +1,4 @@
-import ShadTooltip from "@/components/shadTooltipComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { removeCountFromString } from "@/utils/utils";
 import SidebarDraggableComponent from "../sidebarDraggableComponent";
 

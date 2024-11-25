@@ -1,6 +1,11 @@
-import IconComponent from "../../../../components/genericIconComponent";
+import IconComponent, {
+  ForwardedIconComponent,
+} from "../../../../components/common/genericIconComponent";
 import { Button } from "../../../../components/ui/button";
 
+import Dropdown from "@/components/core/dropdownComponent";
+import GlobalVariableModal from "@/components/core/GlobalVariableModal/GlobalVariableModal";
+import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import {
   useDeleteGlobalVariables,
   useGetGlobalVariables,
@@ -12,10 +17,6 @@ import {
   SelectionChangedEvent,
 } from "ag-grid-community";
 import { useRef, useState } from "react";
-import GlobalVariableModal from "../../../../components/GlobalVariableModal/GlobalVariableModal";
-import Dropdown from "../../../../components/dropdownComponent";
-import ForwardedIconComponent from "../../../../components/genericIconComponent";
-import TableComponent from "../../../../components/tableComponent";
 import { Badge } from "../../../../components/ui/badge";
 import useAlertStore from "../../../../stores/alertStore";
 
