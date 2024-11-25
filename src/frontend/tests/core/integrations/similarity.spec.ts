@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 test(
   "user must be able to check similarity between embedding texts",
   { tag: ["@release", "@components"] },
+
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
