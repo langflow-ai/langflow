@@ -34,7 +34,9 @@ test("Simple Agent", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 3000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
@@ -57,14 +59,12 @@ test("Simple Agent", async ({ page }) => {
 
   while (outdatedComponents > 0) {
     await page.getByTestId("icon-AlertTriangle").first().click();
-    await page.waitForTimeout(1000);
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
   let filledApiKey = await page.getByTestId("remove-icon-badge").count();
   while (filledApiKey > 0) {
     await page.getByTestId("remove-icon-badge").first().click();
-    await page.waitForTimeout(1000);
     filledApiKey = await page.getByTestId("remove-icon-badge").count();
   }
 
@@ -77,7 +77,6 @@ test("Simple Agent", async ({ page }) => {
   await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
 
-  await page.waitForTimeout(500);
 
   await page.getByTestId("button_run_chat output").last().click();
 
