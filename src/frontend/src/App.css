@@ -144,6 +144,12 @@ body {
   transition-duration: 150ms;
   stroke-width: 2px !important;
 }
+.react-flow__connection path {
+  transition: color;
+  stroke: var(--connection) !important;
+  transition-duration: 150ms;
+  stroke-width: 2px !important;
+}
 
 .react-flow__edge.running .react-flow__edge-path {
   stroke: hsl(var(--foreground)) !important;

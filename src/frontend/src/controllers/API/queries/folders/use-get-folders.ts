@@ -1,4 +1,4 @@
-import { DEFAULT_FOLDER, STARTER_FOLDER_NAME } from "@/constants/constants";
+import { DEFAULT_FOLDER } from "@/constants/constants";
 import { FolderType } from "@/pages/MainPage/entities";
 import useAuthStore from "@/stores/authStore";
 import { useFolderStore } from "@/stores/foldersStore";
@@ -29,10 +29,9 @@ export const useGetFoldersQuery: useQueryFunctionType<
     const myCollectionId = data?.find((f) => f.name === DEFAULT_FOLDER)?.id;
     setMyCollectionId(myCollectionId);
     setFolders(data);
-    const { getTypes, types } = useTypesStore.getState();
+    const { types } = useTypesStore.getState();
 
     await refreshFlows({ get_all: true, header_flows: true });
-    if (!types || Object.keys(types).length === 0) await getTypes();
 
     return data;
   };

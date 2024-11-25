@@ -40,8 +40,11 @@ class FilterDataComponent(Component):
             name="jq_query",
             display_name="JQ Query",
             info=(
-                "(Optional) JQ query to transform the data (e.g., '.[2]' for third item). "
-                "Applied after index and before column filtering."
+                "(Optional) JQ query to transform the data. Examples:\n"
+                "- '.[0]' for first item\n"
+                "- '.[] | {name, email}' for extracting specific fields\n"
+                "- 'map(select(.active == true))' for filtering arrays\n"
+                "Note: When JQ query returns a list, results will be wrapped in a 'results' field."
             ),
         ),
     ]
@@ -123,14 +126,16 @@ class FilterDataComponent(Component):
 
             # Create result Data object(s)
             if isinstance(filtered_data, list):
-                result = [
-                    Data(data=item) if isinstance(item, dict | list) else Data(data={"value": item})
-                    for item in filtered_data
-                ]
+                if self.jq_query and self.jq_query.strip():
+                    # Wrap list results in a dictionary to satisfy Data model requirements
+                    result: Data | list[Data] = Data(data={"results": filtered_data})
+                else:
+                    result = [
+                        (Data(data=item) if isinstance(item, dict) else Data(data={"value": item}))
+                        for item in filtered_data
+                    ]
             else:
-                result = Data(
-                    data=filtered_data if isinstance(filtered_data, dict | list) else {"value": filtered_data}
-                )
+                result = Data(data=(filtered_data if isinstance(filtered_data, dict) else {"value": filtered_data}))
 
             self.status = result
         except (ValueError, TypeError, KeyError) as e:
