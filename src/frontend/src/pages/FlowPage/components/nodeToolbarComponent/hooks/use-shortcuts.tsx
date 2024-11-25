@@ -44,7 +44,7 @@ export default function useShortcuts({
   const group = useShortcutsStore((state) => state.group);
   const download = useShortcutsStore((state) => state.download);
   const freeze = useShortcutsStore((state) => state.freeze);
-  const freezeAll = useShortcutsStore((state) => state.FreezePath);
+  const freezeAll = useShortcutsStore((state) => state.freezePath);
   const toolMode = useShortcutsStore((state) => state.toolMode);
 
   function handleFreezeAll(e: KeyboardEvent) {
