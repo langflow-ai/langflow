@@ -6,7 +6,7 @@ import ForwardedIconComponent from "../../../../../components/common/genericIcon
 import { Button } from "../../../../../components/ui/button";
 import BaseModal from "../../../../../modals/baseModal";
 import { useShortcutsStore } from "../../../../../stores/shortcuts";
-import { toTitleCase } from "../../../../../utils/utils";
+import { toNormalCase, toTitleCase } from "../../../../../utils/utils";
 
 export default function EditShortcutButton({
   children,
@@ -68,7 +68,10 @@ export default function EditShortcutButton({
         ) {
           fixCombination[0] = "mod";
         }
-        const shortcutName = shortcut[0].split(" ")[0].toLowerCase();
+        const shortcutName = shortcut[0]
+          .split(" ")
+          .map((s, index) => (index !== 0 ? toNormalCase(s) : s.toLowerCase()))
+          .join("");
         setUniqueShortcut(shortcutName, fixCombination.join("").toLowerCase());
         setShortcuts(newCombination);
         localStorage.setItem(
