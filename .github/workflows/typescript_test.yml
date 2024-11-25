@@ -212,7 +212,6 @@ jobs:
     name: Playwright Tests - Group ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
     runs-on: ubuntu-latest
     needs: determine-test-suite
-    if: ${{ fromJson(needs.determine-test-suite.outputs.suites)[0] != null }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.determine-test-suite.outputs.matrix) }}
