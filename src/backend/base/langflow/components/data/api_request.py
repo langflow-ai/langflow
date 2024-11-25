@@ -98,8 +98,10 @@ class APIRequestComponent(Component):
             name="include_httpx_metadata",
             display_name="Include HTTPx Metadata",
             value=False,
-            info=("Include properties such as headers, status_code, response_headers, "
-                  "and redirection_history in the output."),
+            info=(
+                "Include properties such as headers, status_code, response_headers, "
+                "and redirection_history in the output."
+            ),
             advanced=True,
         ),
     ]
@@ -366,6 +368,6 @@ class APIRequestComponent(Component):
 
         return is_binary, file_path
 
-    def _headers_to_dict(self, headers: httpx.Headers) -> dict[str,str]:
+    def _headers_to_dict(self, headers: httpx.Headers) -> dict[str, str]:
         """Convert HTTP headers to a dictionary with lowercased keys."""
         return {k.lower(): v for k, v in headers.items()}
