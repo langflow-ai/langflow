@@ -3,7 +3,6 @@ import { expect, test } from "@playwright/test";
 test(
   "user must be able to check similarity between embedding texts",
   { tag: ["@release", "@components"] },
-
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
@@ -11,7 +10,6 @@ test(
     );
 
     await page.goto("/");
-    await page.waitForTimeout(500);
 
     let modalCount = 0;
     try {
@@ -25,7 +23,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
@@ -34,7 +34,9 @@ test(
     //first component
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai embedding");
-    await page.waitForTimeout(500);
+    await page.waitForSelector("text=OpenAI Embeddings", {
+      timeout: 1000,
+    });
 
     await page
       .getByText("OpenAI Embeddings", { exact: true })
@@ -51,11 +53,11 @@ test(
 
     await page.mouse.up();
 
-    await page.waitForTimeout(1000);
-
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text embedder");
-    await page.waitForTimeout(500);
+    await page.waitForSelector("text=Text Embedder", {
+      timeout: 1000,
+    });
 
     await page
       .getByTestId("embeddingsText Embedder")
@@ -93,7 +95,9 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("embedding similarity");
-    await page.waitForTimeout(500);
+    await page.waitForSelector("text=Embedding Similarity", {
+      timeout: 1000,
+    });
 
     await page
       .getByTestId("embeddingsEmbedding Similarity")
@@ -114,7 +118,9 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("parse data");
-    await page.waitForTimeout(500);
+    await page.waitForSelector("text=Parse Data", {
+      timeout: 1000,
+    });
 
     await page
       .getByTestId("processingParse Data")
@@ -135,7 +141,9 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text output");
-    await page.waitForTimeout(500);
+    await page.waitForSelector("text=Text Output", {
+      timeout: 1000,
+    });
 
     await page
       .getByTestId("outputsText Output")
@@ -154,7 +162,9 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("filter data");
-    await page.waitForTimeout(500);
+    await page.waitForSelector("text=Filter Data", {
+      timeout: 1000,
+    });
 
     await page
       .getByTestId("processingFilter Data")
@@ -177,14 +187,12 @@ test(
 
     while (outdatedComponents > 0) {
       await page.getByTestId("icon-AlertTriangle").first().click();
-      // await page.waitForTimeout(1000);
       outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
     }
 
     let filledApiKey = await page.getByTestId("remove-icon-badge").count();
     while (filledApiKey > 0) {
       await page.getByTestId("remove-icon-badge").first().click();
-      await page.waitForTimeout(1000);
       filledApiKey = await page.getByTestId("remove-icon-badge").count();
     }
 
@@ -320,13 +328,10 @@ test(
     await textOutputInput.hover();
     await page.mouse.up();
 
-    await page.waitForTimeout(3000);
-
     await page.getByTestId("button_run_text output").click();
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.waitForTimeout(1000);
     await page
       .getByTestId(/rf__node-TextOutput-[a-zA-Z0-9]{5}/)
       .getByTestId("output-inspection-text")
