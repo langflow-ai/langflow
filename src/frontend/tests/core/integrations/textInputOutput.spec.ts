@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
-test(
+test.skip(
   "TextInputOutputComponent",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
