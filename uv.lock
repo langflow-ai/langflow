@@ -3491,7 +3491,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.1.0"
+version = "1.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "assemblyai" },
@@ -3645,8 +3645,8 @@ requires-dist = [
     { name = "certifi", specifier = ">=2023.11.17,<2025.0.0" },
     { name = "chromadb", specifier = ">=0.4,<1.0.0" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse-connect'", specifier = "==0.7.19" },
-    { name = "composio-langchain", specifier = "==0.5.42" },
     { name = "cohere", specifier = ">=5.5.3,<6.0.0" },
+    { name = "composio-langchain", specifier = "==0.5.42" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
     { name = "dspy-ai", specifier = ">=2.4.0,<3.0.0" },
@@ -3686,7 +3686,7 @@ requires-dist = [
     { name = "langchain-unstructured", specifier = "~=0.1.5" },
     { name = "langflow-base", editable = "src/backend/base" },
     { name = "langfuse", specifier = "~=2.53.1" },
-    { name = "langsmith", specifier = "~=0.1.136" },
+    { name = "langsmith", specifier = "~=0.1.137" },
     { name = "langwatch", specifier = "==0.1.16" },
     { name = "lark", specifier = ">=1.2.2,<2.0.0" },
     { name = "litellm", specifier = ">=1.44.0,<2.0.0" },
@@ -3765,7 +3765,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofiles" },
@@ -4014,18 +4014,18 @@ wheels = [
 
 [[package]]
 name = "langsmith"
-version = "0.1.136"
+version = "0.1.145"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
-    { name = "orjson" },
+    { name = "orjson", marker = "platform_python_implementation != 'PyPy'" },
     { name = "pydantic" },
     { name = "requests" },
     { name = "requests-toolbelt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1c/fe/7de2ef64464819bfae186831e82be1c24d009a90fda0130acd6269ecc48e/langsmith-0.1.136.tar.gz", hash = "sha256:5c0de01a313db70dd9a85845c0f416a69b5b653b3e98ba413d7d41e8851315b1", size = 287752 }
+sdist = { url = "https://files.pythonhosted.org/packages/6a/e9/adb0c961d26fcefd17770e4ed02dd522c18484f10555b0924c56aebee587/langsmith-0.1.145.tar.gz", hash = "sha256:b6e53f7b1624846f03769a1fce673baf2a0a262b4f4129b1f6bd127a1f44f8fd", size = 299444 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/20/cc/e559a369fd3811534563e568ee7077fdc1698d86d99afe28d5167e692787/langsmith-0.1.136-py3-none-any.whl", hash = "sha256:cad2215eb7a754ee259878e19c558f4f8d3795aa1b699f087d4500e640f80d0a", size = 296724 },
+    { url = "https://files.pythonhosted.org/packages/d3/e7/a5ed65f6b425ce0079f25e3f0540c9c4838abb155f65170f59585e64e02c/langsmith-0.1.145-py3-none-any.whl", hash = "sha256:bd3001fc6738ad9061a2709d60f62a6bdf4892a17e63c7751f73a6f32a100729", size = 310947 },
 ]
 
 [[package]]
