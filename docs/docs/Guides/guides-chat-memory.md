@@ -67,6 +67,6 @@ Steps to Store and Retrieve Chat History from a Database:
 
 Example Flow
 
-![Sample Flow storing Chat Memory in AstraDB](/img/AstraDBChatMemory.png)
+![Sample Flow storing Chat Memory in AstraDB](/img/astra_db_chat_memory_rounded.png)
 
 
