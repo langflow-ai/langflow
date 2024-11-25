@@ -33,33 +33,34 @@ test("Memory Chatbot", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 3000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Memory Chatbot" }).click();
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="fit_view"]', {
+    timeout: 5000,
+  });
 
   await page.getByTestId("fit_view").click();
   await page.getByTestId("zoom_out").click();
   await page.getByTestId("zoom_out").click();
   await page.getByTestId("zoom_out").click();
 
-  await page.waitForTimeout(1000);
 
   let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
 
   while (outdatedComponents > 0) {
     await page.getByTestId("icon-AlertTriangle").first().click();
-    await page.waitForTimeout(1000);
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
   let filledApiKey = await page.getByTestId("remove-icon-badge").count();
   while (filledApiKey > 0) {
     await page.getByTestId("remove-icon-badge").first().click();
-    await page.waitForTimeout(1000);
     filledApiKey = await page.getByTestId("remove-icon-badge").count();
   }
 
@@ -72,8 +73,6 @@ test("Memory Chatbot", async ({ page }) => {
 
   await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
-
-  await page.waitForTimeout(1000);
 
   await page.getByTestId("button_run_chat output").click();
   await page.waitForSelector("text=built successfully", { timeout: 30000 });
