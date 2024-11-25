@@ -1,3 +1,4 @@
+import PaginatorComponent from "@/components/common/paginatorComponent";
 import {
   useAddUser,
   useDeleteUsers,
@@ -9,7 +10,6 @@ import { useContext, useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
 import LoadingComponent from "../../components/common/loadingComponent";
 import ShadTooltip from "../../components/common/shadTooltipComponent";
-import PaginatorComponent from "../../components/core/paginatorComponent";
 import { Button } from "../../components/ui/button";
 import { CheckBoxDiv } from "../../components/ui/checkbox";
 import { Input } from "../../components/ui/input";
