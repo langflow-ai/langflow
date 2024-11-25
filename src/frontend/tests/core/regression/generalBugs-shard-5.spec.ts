@@ -11,7 +11,7 @@ test("should be able to see output preview from grouped components and connect c
   const thirdRandomName = Math.random().toString(36).substring(2);
 
   try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
+    const modalTitleElement = page?.getByTestId("modal-title");
     if (modalTitleElement) {
       modalCount = await modalTitleElement.count();
     }
@@ -106,9 +106,6 @@ test("should be able to see output preview from grouped components and connect c
     .getByTestId("div-handle-textoutput-shownode-text-right")
     .first();
 
-  //wait for the colors to be applied
-  await page.waitForTimeout(500);
-
   const hasGradient = await blockedHandle?.evaluate((el) => {
     const style = window.getComputedStyle(el);
     return style.backgroundColor === "rgb(228, 228, 231)";
@@ -131,16 +128,16 @@ test("should be able to see output preview from grouped components and connect c
   expect(secondHasGradient).toBe(true);
   expect(thirdHasGradient).toBe(true);
 
-  const unlockedHandle = await page
+  const unlockedHandle =  page
     .getByTestId("div-handle-textinput-shownode-text-left")
     .last();
-  const secondUnlockedHandle = await page
+  const secondUnlockedHandle =  page
     .getByTestId("div-handle-combinetext-shownode-second text-left")
     .last();
-  const thirdUnlockedHandle = await page
+  const thirdUnlockedHandle =  page
     .getByTestId("div-handle-combinetext-shownode-second text-left")
     .first();
-  const fourthUnlockedHandle = await page
+  const fourthUnlockedHandle =  page
     .getByTestId("div-handle-textoutput-shownode-text-left")
     .first();
 
@@ -202,41 +199,36 @@ test("should be able to see output preview from grouped components and connect c
 
   await page.getByRole("button", { name: "Group" }).click();
 
-  await page.waitForTimeout(500);
 
   await page.getByTitle("fit view").click();
 
-  await page.waitForTimeout(500);
-
   //connection 2
-  const elementTextOutput0 = await page
+  const elementTextOutput0 =  page
     .getByTestId("handle-textinput-shownode-text-right")
     .nth(0);
   await elementTextOutput0.click();
-  const elementGroupInput0 = await page.getByTestId(
+  const elementGroupInput0 = page.getByTestId(
     "handle-groupnode-shownode-first text-left",
   );
   await elementGroupInput0.click();
 
-  await page.waitForTimeout(500);
-
   //connection 3
-  const elementTextOutput1 = await page
+  const elementTextOutput1 = page
     .getByTestId("handle-textinput-shownode-text-right")
     .nth(2);
   await elementTextOutput1.click();
-  await page.waitForTimeout(500);
-  const elementGroupInput1 = await page
+
+  const elementGroupInput1 = page
     .getByTestId("handle-groupnode-shownode-second text-left")
     .nth(1);
   await elementGroupInput1.click();
 
   //connection 4
-  const elementGroupOutput = await page
+  const elementGroupOutput = page
     .getByTestId("handle-groupnode-shownode-combined text-right")
     .nth(0);
   await elementGroupOutput.click();
-  const elementTextOutputInput = await page
+  const elementTextOutputInput =  page
     .getByTestId("handle-textoutput-shownode-text-left")
     .nth(0);
 
@@ -244,31 +236,26 @@ test("should be able to see output preview from grouped components and connect c
 
   await page.getByTestId("textarea_str_input_value").nth(0).fill(randomName);
 
-  await page.waitForTimeout(500);
   await page
     .getByTestId("textarea_str_input_value")
     .nth(1)
     .fill(secondRandomName);
-  await page.waitForTimeout(500);
 
   await page
     .getByPlaceholder("Type something...", { exact: true })
     .nth(4)
     .fill(thirdRandomName);
-  await page.waitForTimeout(500);
 
   await page
     .getByPlaceholder("Type something...", { exact: true })
     .nth(3)
     .fill("-");
-  await page.waitForTimeout(500);
 
   await page
     .getByPlaceholder("Type something...", { exact: true })
     .nth(2)
     .fill("-");
 
-  await page.waitForTimeout(500);
 
   await page.getByTestId("button_run_text output").last().click();
 
@@ -277,13 +264,11 @@ test("should be able to see output preview from grouped components and connect c
   await page.getByText("built successfully").last().click({
     timeout: 15000,
   });
-  await page.waitForTimeout(500);
 
   expect(
     await page.getByTestId("output-inspection-combined text").first(),
   ).not.toBeDisabled();
   await page.getByTestId("output-inspection-combined text").first().click();
-  await page.waitForTimeout(500);
 
   await page.getByText("Component Output").isVisible();
 
