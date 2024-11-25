@@ -162,7 +162,6 @@ jobs:
           # Ensure proper JSON formatting for matrix output
           echo "matrix=$(echo $SUITES | jq -c .)" >> $GITHUB_OUTPUT
           echo "test_grep=$TEST_GREP" >> $GITHUB_OUTPUT
-
       - name: Count Tests and Calculate Shards
         id: count-tests
         run: |
@@ -187,8 +186,8 @@ jobs:
             SHARD_COUNT=10
           fi
 
-          # Create a JSON array of numbers from 1 to SHARD_COUNT
-          INDEX_ARRAY=$(seq -s, 1 $SHARD_COUNT | jq -Rc '[splits(",")[] | tonumber]')
+          # Create a JSON array of numbers from 1 to SHARD_COUNT using jq directly
+          INDEX_ARRAY=$(jq -n --arg count "$SHARD_COUNT" '[range(1; ($count|tonumber) + 1)]')
 
           echo "Calculated shard count: $SHARD_COUNT"
           echo "shard_count=$SHARD_COUNT" >> $GITHUB_OUTPUT
