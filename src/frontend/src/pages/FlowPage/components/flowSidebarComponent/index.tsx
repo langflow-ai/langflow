@@ -193,11 +193,8 @@ export function FlowSidebarComponent() {
             .filter(
               (category) => Object.keys(filteredData[category]).length > 0,
             )
-            .toSorted(
-              (a, b) =>
-                fuseCategories.findIndex((value) => value === a) ??
-                0 - fuseCategories.findIndex((value) => value === b) ??
-                0,
+            .toSorted((a, b) =>
+              fuseCategories.indexOf(b) < fuseCategories.indexOf(a) ? 1 : -1,
             ),
         );
       }
