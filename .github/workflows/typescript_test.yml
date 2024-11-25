@@ -74,6 +74,7 @@ jobs:
         id: set-matrix
         run: |
           # Start with input suites if provided, otherwise empty array
+          echo "Changes filter output: ${{ steps.filter.outputs }}"
           SUITES='${{ inputs.suites }}'
           echo "Initial suites: $SUITES"
           TEST_GREP=""
@@ -81,15 +82,15 @@ jobs:
           RELEASE="${{ inputs.release || 'false' }}"
           echo "Release build: $RELEASE"
 
-          # if release OR steps.filter.outputs.frontend-tests is true
-          if [[ "$RELEASE" == "true" || "${{ steps.filter.outputs.frontend-tests }}" == "true" ]]; then
+          # Only set to release if it's explicitly a release build
+          if [[ "$RELEASE" == "true" ]]; then
             SUITES='["release"]'
             echo "Release build detected - setting suites to: $SUITES"
             # No grep pattern for release - run all tests
             TEST_GREP=""
           else
             # If input suites were not provided, determine based on changes
-            if [[ "$SUITES" == "[]"  ]]; then
+            if [[ "$SUITES" == "[]" ]]; then
               echo "No input suites provided - determining from changes"
               TAGS=()
               # Add suites and tags based on changed files
