@@ -33,7 +33,7 @@ on:
         description: "Test suites to run (JSON array)"
         required: false
         type: string
-        default: '["starter-projects", "components", "workspace", "api", "database"]'
+        default: '[]'
       release:
         description: "Whether this is a release build"
         required: false
