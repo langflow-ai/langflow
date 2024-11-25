@@ -9,7 +9,7 @@
 <p align="center" style="font-size: 12px;">
     <a href="https://docs.langflow.org" style="text-decoration: underline;">Docs</a> -
     <a href="https://astra.datastax.com/signup?type=langflow" style="text-decoration: underline;">Free Cloud Service</a> -
-    <a href="https://docs.langflow.org/getting-started-installation" style="text-decoration: underline;">Self Managed</a>
+    <a href="https://docs.langflow.org/get-started-installation" style="text-decoration: underline;">Self Managed</a>
 
 </p>
 
@@ -46,7 +46,7 @@ pip install langflow
 ```
 
 - **Cloud:** DataStax Langflow is a hosted environment with zero setup. [Sign up for a free account.](https://astra.datastax.com/signup?type=langflow)
-- **Self-managed:** Run Langflow in your environment. [Install Langflow](https://docs.langflow.org/getting-started-installation) to run a local Langflow server, and then use the [Quickstart](https://docs.langflow.org/getting-started-quickstart) guide to create and execute a flow.
+- **Self-managed:** Run Langflow in your environment. [Install Langflow](https://docs.langflow.org/get-started-installation) to run a local Langflow server, and then use the [Quickstart](https://docs.langflow.org/get-started-quickstart) guide to create and execute a flow.
 - **Hugging Face:** [Clone the space using this link](https://huggingface.co/spaces/Langflow/Langflow?duplicate=true) to create a Langflow workspace.
 
 [![Getting Started](https://github.com/user-attachments/assets/f1adfbe7-3c35-43a4-b265-661f3d4f875f)](https://www.youtube.com/watch?v=kinngWhaUKM)
