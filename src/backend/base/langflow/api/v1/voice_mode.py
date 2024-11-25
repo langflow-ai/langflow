@@ -9,20 +9,22 @@ from loguru import logger
 from sqlalchemy import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
-from langflow.api.utils import CurrentActiveUser, DbSession, AsyncDbSession
+from langflow.api.utils import AsyncDbSession, CurrentActiveUser, DbSession
 from langflow.api.v1.chat import build_flow
 from langflow.api.v1.schemas import InputValueRequest
 from langflow.services.auth.utils import get_current_user_by_jwt
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.deps import async_session_scope
-from langflow.services.deps import get_variable_service
+from langflow.services.deps import async_session_scope, get_variable_service
 
 router = APIRouter(prefix="/voice", tags=["Voice"])
 
 SILENCE_THRESHOLD = 0.5
 PREFIX_PADDING_MS = 300
 SILENCE_DURATION_MS = 500
-SESSION_INSTRUCTIONS = "Always call the execute_flow function with the user's question as the input parameter and use that to craft your responses."
+SESSION_INSTRUCTIONS = (
+    "Always call the execute_flow function with the user's question "
+    "as the input parameter and use that to craft your responses."
+)
 
 
 async def get_flow_desc_from_db(flow_id: str) -> Flow:
@@ -32,7 +34,8 @@ async def get_flow_desc_from_db(flow_id: str) -> Flow:
         result = await session.exec(stmt)
         flow = result.scalar_one_or_none()
         if not flow:
-            raise ValueError(f"Flow {flow_id} not found")
+            error_message = f"Flow with id {flow_id} not found"
+            raise ValueError(error_message)
         return flow.description
 
 
@@ -93,7 +96,7 @@ async def handle_function_call(
         await openai_ws.send(json.dumps(function_output))
         await openai_ws.send(json.dumps({"type": "response.create"}))
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Error executing flow: {e!s}")
         # Send error back to OpenAI with correct format
         function_output = {
@@ -113,11 +116,10 @@ async def websocket_endpoint(
     flow_id: str,
     background_tasks: BackgroundTasks,
     session: DbSession,
-    asyncSession: AsyncDbSession,
+    async_session: AsyncDbSession,
 ):
     # Generate a unique session ID for this conversation
-    conversation_id = str(uuid4())  # renamed to avoid confusion with session param
-    current_user = await get_current_user_by_jwt(websocket.cookies.get("access_token_lf"), asyncSession)
+    current_user = await get_current_user_by_jwt(websocket.cookies.get("access_token_lf"), async_session)
     await websocket.accept()
 
     # Check for OpenAI API key in variables first
@@ -156,7 +158,7 @@ async def websocket_endpoint(
             },
         }
         # }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         await websocket.send_json({"error": f"Failed to load flow: {e!s}"})
         logger.error(e)
         return
