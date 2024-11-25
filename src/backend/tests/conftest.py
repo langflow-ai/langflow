@@ -63,9 +63,6 @@ def blockbuster(request):
                 "io.TextIOWrapper.read",
             ]:
                 bb.functions[func].can_block_functions.append(("importlib_metadata/__init__.py", {"metadata"}))
-            for func in bb.functions:
-                if func.startswith("sqlite3."):
-                    bb.functions[func].deactivate()
             bb.functions["threading.Lock.acquire"].deactivate()
             yield bb
 
