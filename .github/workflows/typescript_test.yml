@@ -58,6 +58,7 @@ jobs:
     outputs:
       suites: ${{ steps.set-matrix.outputs.matrix }}
       test_grep: ${{ steps.set-matrix.outputs.test_grep }}
+      shard_count: ${{ steps.count-tests.outputs.shard_count }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -162,6 +163,33 @@ jobs:
           echo "matrix=$(echo $SUITES | jq -c .)" >> $GITHUB_OUTPUT
           echo "test_grep=$TEST_GREP" >> $GITHUB_OUTPUT
 
+      - name: Count Tests and Calculate Shards
+        id: count-tests
+        run: |
+          cd src/frontend
+
+          # Get the test count using playwright's built-in grep
+          if [ -n "${{ steps.set-matrix.outputs.test_grep }}" ]; then
+            # Use the grep pattern with playwright
+            TEST_COUNT=$(npx playwright test ${{ inputs.tests_folder }} ${{ steps.set-matrix.outputs.test_grep }} --list | wc -l)
+          else
+            # Count all tests if no pattern
+            TEST_COUNT=$(npx playwright test ${{ inputs.tests_folder }} --list | wc -l)
+          fi
+
+          echo "Total tests to run: $TEST_COUNT"
+
+          # Calculate optimal shard count - 1 shard per 5 tests, min 1, max 10
+          SHARD_COUNT=$(( (TEST_COUNT + 4) / 5 ))
+          if [ $SHARD_COUNT -lt 1 ]; then
+            SHARD_COUNT=1
+          elif [ $SHARD_COUNT -gt 10 ]; then
+            SHARD_COUNT=10
+          fi
+
+          echo "Calculated shard count: $SHARD_COUNT"
+          echo "shard_count=$SHARD_COUNT" >> $GITHUB_OUTPUT
+
   setup-and-test:
     name: Playwright Tests - Group ${{ matrix.shardIndex }}
     runs-on: ubuntu-latest
@@ -170,8 +198,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shardIndex: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        shardTotal: [10]
+        # Use the dynamically calculated shard count
+        shardIndex: ${{ fromJson(format('[{0}]', join(range(1, needs.determine-test-suite.outputs.shard_count + 1), ','))) }}
+        shardTotal: [${{ needs.determine-test-suite.outputs.shard_count }}]
     env:
       OPENAI_API_KEY: ${{ inputs.openai_api_key || secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ inputs.store_api_key || secrets.STORE_API_KEY }}
