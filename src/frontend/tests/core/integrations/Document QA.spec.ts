@@ -33,13 +33,17 @@ test("Document Q&A", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 3000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Document Q&A" }).click();
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="fit_view"]', {
+    timeout: 3000,
+  });
 
   await page.getByTestId("fit_view").click();
   await page.getByTestId("zoom_out").click();
@@ -50,14 +54,12 @@ test("Document Q&A", async ({ page }) => {
 
   while (outdatedComponents > 0) {
     await page.getByTestId("icon-AlertTriangle").first().click();
-    await page.waitForTimeout(1000);
     outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
   }
 
   let filledApiKey = await page.getByTestId("remove-icon-badge").count();
   while (filledApiKey > 0) {
     await page.getByTestId("remove-icon-badge").first().click();
-    await page.waitForTimeout(1000);
     filledApiKey = await page.getByTestId("remove-icon-badge").count();
   }
 
@@ -71,7 +73,6 @@ test("Document Q&A", async ({ page }) => {
   await page.getByTestId("dropdown_str_model_name").click();
   await page.getByTestId("gpt-4o-1-option").click();
 
-  await page.waitForTimeout(1000);
   const fileChooserPromise = page.waitForEvent("filechooser");
   await page.getByTestId("button_upload_file").click();
   const fileChooser = await fileChooserPromise;
@@ -80,7 +81,9 @@ test("Document Q&A", async ({ page }) => {
   );
   await page.getByText("test_file.txt").isVisible();
 
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="button_run_chat output"]', {
+    timeout: 3000,
+  });
 
   await page.getByTestId("button_run_chat output").click();
   await page.waitForSelector("text=built successfully", { timeout: 30000 });
@@ -104,7 +107,9 @@ test("Document Q&A", async ({ page }) => {
     .fill("whats the text in the file?");
   await page.getByTestId("button-send").last().click();
 
-  await page.waitForTimeout(3000);
+  await page.waitForSelector("text=this is a test file", {
+    timeout: 10000,
+  });
 
   await page.getByText("this is a test file").last().isVisible();
 

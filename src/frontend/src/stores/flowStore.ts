@@ -32,7 +32,6 @@ import { FlowStoreType, VertexLayerElementType } from "../types/zustand/flow";
 import { buildFlowVerticesWithFallback } from "../utils/buildUtils";
 import {
   checkChatInput,
-  checkOldComponents,
   cleanEdges,
   detectBrokenEdgesEdges,
   getHandleId,
@@ -58,20 +57,27 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     }
   },
   autoSaveFlow: undefined,
-  componentsToUpdate: false,
+  componentsToUpdate: [],
+  setComponentsToUpdate: (change) => {
+    let newChange =
+      typeof change === "function" ? change(get().componentsToUpdate) : change;
+    set({ componentsToUpdate: newChange });
+  },
   updateComponentsToUpdate: (nodes) => {
-    let outdatedNodes = false;
+    let outdatedNodes: string[] = [];
     const templates = useTypesStore.getState().templates;
     for (let i = 0; i < nodes.length; i++) {
       const currentCode = templates[nodes[i].data?.type]?.template?.code?.value;
       const thisNodesCode = nodes[i].data?.node!.template?.code?.value;
-      outdatedNodes =
+      if (
         currentCode &&
         thisNodesCode &&
         currentCode !== thisNodesCode &&
         !nodes[i].data?.node?.edited &&
-        !componentsToIgnoreUpdate.includes(nodes[i].data?.type);
-      if (outdatedNodes) break;
+        !componentsToIgnoreUpdate.includes(nodes[i].data?.type)
+      ) {
+        outdatedNodes.push(nodes[i].id);
+      }
     }
     set({ componentsToUpdate: outdatedNodes });
   },
@@ -278,6 +284,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         return node;
       });
 
+      const newEdges = cleanEdges(newNodes, get().edges);
+
       if (callback) {
         // Defer the callback execution to ensure it runs after state updates are fully applied.
         queueMicrotask(callback);
@@ -286,6 +294,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       return {
         ...state,
         nodes: newNodes,
+        edges: newEdges,
       };
     });
   },
@@ -700,7 +709,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             ?.map((element) => element.id)
             .filter(Boolean) as string[]) ?? get().nodes.map((n) => n.id);
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.ERROR);
-        if (get().componentsToUpdate)
+        if (get().componentsToUpdate.length > 0)
           setErrorData({
             title:
               "There are outdated components in the flow. The error could be related to them.",
