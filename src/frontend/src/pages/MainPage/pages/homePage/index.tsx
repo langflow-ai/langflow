@@ -1,5 +1,5 @@
-import CardsWrapComponent from "@/components/cardsWrapComponent";
-import PaginatorComponent from "@/components/paginatorComponent";
+import PaginatorComponent from "@/components/common/paginatorComponent";
+import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
 import { CustomBanner } from "@/customization/components/custom-banner";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";

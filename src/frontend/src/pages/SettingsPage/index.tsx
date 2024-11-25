@@ -1,11 +1,11 @@
-import SideBarButtonsComponent from "@/components/sidebarComponent";
+import SideBarButtonsComponent from "@/components/core/sidebarComponent";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ENABLE_PROFILE_ICONS } from "@/customization/feature-flags";
 import useAuthStore from "@/stores/authStore";
 import { useStoreStore } from "@/stores/storeStore";
 import { Outlet } from "react-router-dom";
-import ForwardedIconComponent from "../../components/genericIconComponent";
-import PageLayout from "../../components/pageLayout";
+import ForwardedIconComponent from "../../components/common/genericIconComponent";
+import PageLayout from "../../components/common/pageLayout";
 
 export default function SettingsPage(): JSX.Element {
   const autoLogin = useAuthStore((state) => state.autoLogin);
