@@ -1,209 +1,12 @@
 {
+  "id": "5155918c-68b1-4013-8d7b-61f31ffa931c",
   "data": {
-    "edges": [
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Memory",
-            "id": "Memory-tBe70",
-            "name": "messages_text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "CHAT_HISTORY",
-            "id": "Prompt-WSv03",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Memory-tBe70{œdataTypeœ:œMemoryœ,œidœ:œMemory-tBe70œ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-WSv03{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-WSv03œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Memory-tBe70",
-        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-tBe70œ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-WSv03",
-        "targetHandle": "{œfieldNameœ: œCHAT_HISTORYœ, œidœ: œPrompt-WSv03œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-VUqPC",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "USER_INPUT",
-            "id": "Prompt-WSv03",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-VUqPC{œdataTypeœ:œChatInputœ,œidœ:œChatInput-VUqPCœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-WSv03{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-WSv03œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ChatInput-VUqPC",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-VUqPCœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-WSv03",
-        "targetHandle": "{œfieldNameœ: œUSER_INPUTœ, œidœ: œPrompt-WSv03œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-WSv03",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "AnthropicModel-laWKJ",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-WSv03{œdataTypeœ:œPromptœ,œidœ:œPrompt-WSv03œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-laWKJ{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-laWKJœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-WSv03",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-WSv03œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AnthropicModel-laWKJ",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-laWKJœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "AnthropicModel",
-            "id": "AnthropicModel-laWKJ",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-XNaWv",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-AnthropicModel-laWKJ{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-laWKJœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-XNaWv{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-XNaWvœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "AnthropicModel-laWKJ",
-        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-laWKJœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-XNaWv",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-XNaWvœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "URL",
-            "id": "URL-9b1oo",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "EXAMPLE_COMPONENTS",
-            "id": "Prompt-WSv03",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-URL-9b1oo{œdataTypeœ:œURLœ,œidœ:œURL-9b1ooœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-WSv03{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-WSv03œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "URL-9b1oo",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-9b1ooœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-WSv03",
-        "targetHandle": "{œfieldNameœ: œEXAMPLE_COMPONENTSœ, œidœ: œPrompt-WSv03œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "URL",
-            "id": "URL-HTi1a",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "BASE_COMPONENT_CODE",
-            "id": "Prompt-WSv03",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-URL-HTi1a{œdataTypeœ:œURLœ,œidœ:œURL-HTi1aœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-WSv03{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-WSv03œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "URL-HTi1a",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-HTi1aœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-WSv03",
-        "targetHandle": "{œfieldNameœ: œBASE_COMPONENT_CODEœ, œidœ: œPrompt-WSv03œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "URL",
-            "id": "URL-bqkBy",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "CUSTOM_COMPONENT_CODE",
-            "id": "Prompt-WSv03",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-URL-bqkBy{œdataTypeœ:œURLœ,œidœ:œURL-bqkByœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-WSv03{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-WSv03œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "URL-bqkBy",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-bqkByœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-WSv03",
-        "targetHandle": "{œfieldNameœ: œCUSTOM_COMPONENT_CODEœ, œidœ: œPrompt-WSv03œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      }
-    ],
     "nodes": [
       {
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-VUqPC",
+          "id": "ChatInput-j1FgM",
           "node": {
             "base_classes": [
               "Message"
@@ -484,8 +287,8 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "height": 234,
-        "id": "ChatInput-VUqPC",
+        "height": 231,
+        "id": "ChatInput-j1FgM",
         "position": {
           "x": 1436.7228707197569,
           "y": 1045.2749109595
@@ -502,7 +305,7 @@
         "data": {
           "description": "Retrieves stored chat messages from Langflow tables or an external memory.",
           "display_name": "Chat Memory",
-          "id": "Memory-tBe70",
+          "id": "Memory-QarNf",
           "node": {
             "base_classes": [
               "Data",
@@ -726,8 +529,8 @@
           "type": "Memory"
         },
         "dragging": false,
-        "height": 264,
-        "id": "Memory-tBe70",
+        "height": 262,
+        "id": "Memory-QarNf",
         "position": {
           "x": 1830.6888981898887,
           "y": 946.1205963195098
@@ -744,7 +547,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-WSv03",
+          "id": "Prompt-VXWKj",
           "node": {
             "base_classes": [
               "Message"
@@ -946,8 +749,8 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "height": 693,
-        "id": "Prompt-WSv03",
+        "height": 685,
+        "id": "Prompt-VXWKj",
         "position": {
           "x": 2219.5265974825707,
           "y": 521.6320563271215
@@ -964,7 +767,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-XNaWv",
+          "id": "ChatOutput-ZCLW2",
           "node": {
             "base_classes": [
               "Message"
@@ -1222,8 +1025,8 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "height": 234,
-        "id": "ChatOutput-XNaWv",
+        "height": 232,
+        "id": "ChatOutput-ZCLW2",
         "position": {
           "x": 2947.267779013826,
           "y": 891.8123698756774
@@ -1232,13 +1035,13 @@
           "x": 2947.267779013826,
           "y": 891.8123698756774
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode",
         "width": 320
       },
       {
         "data": {
-          "id": "note-ybslb",
+          "id": "note-lkK06",
           "node": {
             "description": "# Fetch Components code \n\nUsing the URL component we are extracting from Github, the code from a few classes to provide as example to the LLM. \n\nThis ensures we are always up to date with recent information from the codebase.",
             "display_name": "",
@@ -1248,8 +1051,8 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 325,
-        "id": "note-ybslb",
+        "height": 324,
+        "id": "note-lkK06",
         "position": {
           "x": 1430.2014058924922,
           "y": -19.30392196909918
@@ -1260,11 +1063,11 @@
         },
         "selected": false,
         "type": "noteNode",
-        "width": 325
+        "width": 324
       },
       {
         "data": {
-          "id": "note-7Judu",
+          "id": "note-1foCQ",
           "node": {
             "description": "# 🛠️ Custom Component Generator 🚀\n\nHi! I'm here to help you create custom components for Langflow. Think of me as your technical partner who can help turn your ideas into working components! \n\n## 🎯 How to Work With Me\n\n### 1. 💭 Tell Me What You Want to Build\nSimply describe what you want your component to do in plain English. For example:\n- \"I need a component that sends Slack messages\"\n- \"I want to create a tool that can process CSV files\"\n- \"I need something that can translate text\"\n\n### 2. 📚 Share Any Relevant Information\nIf you're working with a specific:\n- 🔑 API or service (just share the documentation link or main endpoints)\n- 📄 File format\n- 🔄 Data structure\n- 🔧 Existing component you want to modify\n\n### 3. 🎨 Let Me Help Design It\nI'll help by:\n- 📊 Breaking down complex requirements into manageable pieces\n- 💡 Suggesting the best way to structure inputs and outputs\n- ⚙️ Creating the component code\n- 📝 Explaining how to use it\n\n### 4. 🔄 Iterative Refinement\nWe can then:\n- ✅ Test and refine the component\n- ⭐ Add features\n- 🔧 Modify behavior\n- 🛡️ Improve error handling\n- 📖 Add documentation\n\n## 🚀 What I Can Help With\n\nI can help create components that:\n- 📊 Process different file types (CSV, JSON, Excel, etc.)\n- 🔌 Integrate with external APIs\n- 🔄 Transform data\n- 🔀 Route messages\n- 🌐 Handle web requests\n- 🎯 Parse structured data\n- ✨ And much more!\n\n## 💡 Tips for Best Results\n\n1. **Be Specific** 🎯: The more details you provide about what you want to accomplish, the better I can help.\n\n2. **Share Examples** 📋: If you have example data or specific use cases, share them.\n\n3. **Ask Questions** ❓: Don't hesitate to ask for clarification or modifications.\n\nJust start by telling me what kind of component you'd like to create, and I'll guide you through the process! \n\nReady to build something awesome? 🚀 Let's get started!",
             "display_name": "",
@@ -1275,7 +1078,7 @@
         },
         "dragging": false,
         "height": 573,
-        "id": "note-7Judu",
+        "id": "note-1foCQ",
         "position": {
           "x": 807.6293964045135,
           "y": 605.6504562080672
@@ -1295,7 +1098,7 @@
       },
       {
         "data": {
-          "id": "AnthropicModel-laWKJ",
+          "id": "AnthropicModel-39lt2",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1364,7 +1167,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "anthropic_api_key",
                 "password": true,
                 "placeholder": "",
@@ -1372,7 +1175,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "ANTHROPIC_API_KEY"
+                "value": ""
               },
               "anthropic_api_url": {
                 "_input_type": "MessageTextInput",
@@ -1574,8 +1377,8 @@
           "type": "AnthropicModel"
         },
         "dragging": false,
-        "height": 515,
-        "id": "AnthropicModel-laWKJ",
+        "height": 687,
+        "id": "AnthropicModel-39lt2",
         "position": {
           "x": 2587.564685535714,
           "y": 646.2448246136587
@@ -1590,7 +1393,7 @@
       },
       {
         "data": {
-          "id": "URL-HTi1a",
+          "id": "URL-j0mBc",
           "node": {
             "base_classes": [
               "Data",
@@ -1709,8 +1512,8 @@
           "type": "URL"
         },
         "dragging": false,
-        "height": 368,
-        "id": "URL-HTi1a",
+        "height": 365,
+        "id": "URL-j0mBc",
         "position": {
           "x": 1436.3617127766433,
           "y": 264.218898085405
@@ -1725,7 +1528,7 @@
       },
       {
         "data": {
-          "id": "URL-9b1oo",
+          "id": "URL-ynvHI",
           "node": {
             "base_classes": [
               "Data",
@@ -1835,11 +1638,13 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": [
-                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/helpers/extract_key.py",
-                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/helpers/data_conditional_router.py",
+                  "https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/agents/agent.py",
+                  "https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/helpers/structured_output.py",
                   "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/tools/calculator.py",
                   "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/tools/tavily_search.py",
-                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/models/ollama.py"
+                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/models/ollama.py",
+                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/logic/conditional_router.py",
+                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/data/file.py"
                 ]
               }
             },
@@ -1848,15 +1653,15 @@
           "type": "URL"
         },
         "dragging": false,
-        "height": 568,
-        "id": "URL-9b1oo",
+        "height": 661,
+        "id": "URL-ynvHI",
         "position": {
-          "x": 1837.4098708175009,
-          "y": 323.6213535047409
+          "x": 1831.5895760156684,
+          "y": 245.62940316018893
         },
         "positionAbsolute": {
-          "x": 1837.4098708175009,
-          "y": 323.6213535047409
+          "x": 1831.5895760156684,
+          "y": 245.62940316018893
         },
         "selected": false,
         "type": "genericNode",
@@ -1864,7 +1669,7 @@
       },
       {
         "data": {
-          "id": "URL-bqkBy",
+          "id": "URL-xqtKG",
           "node": {
             "base_classes": [
               "Data",
@@ -1983,8 +1788,8 @@
           "type": "URL"
         },
         "dragging": false,
-        "height": 368,
-        "id": "URL-bqkBy",
+        "height": 365,
+        "id": "URL-xqtKG",
         "position": {
           "x": 1436.982480021523,
           "y": 651.1409296825055
@@ -1998,22 +1803,213 @@
         "width": 320
       }
     ],
+    "edges": [
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Memory",
+            "id": "Memory-QarNf",
+            "name": "messages_text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "CHAT_HISTORY",
+            "id": "Prompt-VXWKj",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Memory-QarNf{œdataTypeœ:œMemoryœ,œidœ:œMemory-QarNfœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-VXWKj{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-VXWKjœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Memory-QarNf",
+        "sourceHandle": "{œdataTypeœ:œMemoryœ,œidœ:œMemory-QarNfœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-VXWKj",
+        "targetHandle": "{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-VXWKjœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-j1FgM",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "USER_INPUT",
+            "id": "Prompt-VXWKj",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-j1FgM{œdataTypeœ:œChatInputœ,œidœ:œChatInput-j1FgMœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-VXWKj{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-VXWKjœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-j1FgM",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-j1FgMœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-VXWKj",
+        "targetHandle": "{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-VXWKjœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-VXWKj",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "AnthropicModel-39lt2",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-VXWKj{œdataTypeœ:œPromptœ,œidœ:œPrompt-VXWKjœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-39lt2{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-39lt2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-VXWKj",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-VXWKjœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "AnthropicModel-39lt2",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-39lt2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "AnthropicModel",
+            "id": "AnthropicModel-39lt2",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-ZCLW2",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-AnthropicModel-39lt2{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-39lt2œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-ZCLW2{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-ZCLW2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "AnthropicModel-39lt2",
+        "sourceHandle": "{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-39lt2œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-ZCLW2",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-ZCLW2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "URL",
+            "id": "URL-ynvHI",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "EXAMPLE_COMPONENTS",
+            "id": "Prompt-VXWKj",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-URL-ynvHI{œdataTypeœ:œURLœ,œidœ:œURL-ynvHIœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-VXWKj{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-VXWKjœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "URL-ynvHI",
+        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-ynvHIœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-VXWKj",
+        "targetHandle": "{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-VXWKjœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "URL",
+            "id": "URL-j0mBc",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "BASE_COMPONENT_CODE",
+            "id": "Prompt-VXWKj",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-URL-j0mBc{œdataTypeœ:œURLœ,œidœ:œURL-j0mBcœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-VXWKj{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-VXWKjœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "URL-j0mBc",
+        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-j0mBcœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-VXWKj",
+        "targetHandle": "{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-VXWKjœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "URL",
+            "id": "URL-xqtKG",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "CUSTOM_COMPONENT_CODE",
+            "id": "Prompt-VXWKj",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-URL-xqtKG{œdataTypeœ:œURLœ,œidœ:œURL-xqtKGœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-VXWKj{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-VXWKjœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "URL-xqtKG",
+        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-xqtKGœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-VXWKj",
+        "targetHandle": "{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-VXWKjœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+      }
+    ],
     "viewport": {
-      "x": -776.9383804523111,
-      "y": -4.900459222819279,
-      "zoom": 0.5322184854204348
+      "x": -1123.4732050518141,
+      "y": -154.4525805182622,
+      "zoom": 0.8590630148881792
     }
   },
   "description": "Generates well-structured code for custom components following Langflow's specifications.",
-  "endpoint_name": null,
-  "gradient": "1",
-  "icon": "SquareCode",
-  "id": "aabe02e5-255f-447a-8ec2-be6f43955a43",
-  "is_component": false,
-  "last_tested_version": "1.0.19.post2",
   "name": "Custom Component Generator",
-  "tags": [
-    "coding",
-    "web-scraping"
-  ]
+  "last_tested_version": "1.1.0",
+  "endpoint_name": null,
+  "is_component": false
 }
