@@ -163,11 +163,18 @@ jobs:
           echo "matrix=$(echo $SUITES | jq -c .)" >> $GITHUB_OUTPUT
           echo "test_grep=$TEST_GREP" >> $GITHUB_OUTPUT
 
-      - name: Install Playwright
-        id: install-playwright
-        uses: ./.github/actions/install-playwright
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        id: setup-node
         with:
-          working-directory: ./src/frontend
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: ./src/frontend/package-lock.json
+
+      - name: Install Node.js dependencies
+        run: npm ci
+        working-directory: ./src/frontend
+
       - name: Count Tests and Calculate Shards
         id: count-tests
         run: |
