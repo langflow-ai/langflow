@@ -123,10 +123,10 @@ jobs:
                 # Convert array of tags into regex lookaheads with proper escaping
                 REGEX_PATTERN=""
                 for TAG in "${TAGS[@]}"; do
-                  REGEX_PATTERN="${REGEX_PATTERN}\(\?=\.\*${TAG}\)"
+                  REGEX_PATTERN="${REGEX_PATTERN}(?=.*${TAG})"
                 done
                 # Escape the quotes properly for GitHub Actions
-                TEST_GREP='--grep='"'${REGEX_PATTERN}'"
+                TEST_GREP="--grep \"${REGEX_PATTERN}\""
               fi
             else
               # Process input suites to tags
@@ -151,10 +151,10 @@ jobs:
                 # Convert array of tags into regex lookaheads with proper escaping
                 REGEX_PATTERN=""
                 for TAG in "${TAGS[@]}"; do
-                  REGEX_PATTERN="${REGEX_PATTERN}\(\?=\.\*${TAG}\)"
+                  REGEX_PATTERN="${REGEX_PATTERN}(?=.*${TAG})"
                 done
                 # Escape the quotes properly for GitHub Actions
-                TEST_GREP='--grep='"'${REGEX_PATTERN}'"
+                TEST_GREP="--grep \"${REGEX_PATTERN}\""
               fi
             fi
           fi
