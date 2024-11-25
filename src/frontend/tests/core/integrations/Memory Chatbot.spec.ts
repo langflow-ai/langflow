@@ -50,7 +50,6 @@ test("Memory Chatbot", async ({ page }) => {
   await page.getByTestId("zoom_out").click();
   await page.getByTestId("zoom_out").click();
 
-
   let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
 
   while (outdatedComponents > 0) {
