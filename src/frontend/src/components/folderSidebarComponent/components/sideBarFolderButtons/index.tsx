@@ -455,6 +455,7 @@ const SideBarFoldersButtonsComponent = ({
                                 onChange={(e) => {
                                   handleEditFolderName(e, item.name);
                                 }}
+                                maxLength={38}
                                 ref={refInput}
                                 onKeyDown={(e) => {
                                   handleKeyDownFn(e, item);
