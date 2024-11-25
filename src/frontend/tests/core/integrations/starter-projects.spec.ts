@@ -1,4 +1,4 @@
-const { test, expect } = require("@playwright/test");
+import { expect, test } from "@playwright/test";
 
 test("vector store from starter projects should have its connections and nodes on the flow", async ({
   page,
