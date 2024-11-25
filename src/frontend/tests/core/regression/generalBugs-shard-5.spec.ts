@@ -21,7 +21,9 @@ test("should be able to see output preview from grouped components and connect c
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 3000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
@@ -33,134 +35,97 @@ test("should be able to see output preview from grouped components and connect c
 
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("text input");
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="inputsText Input"]', {
+    timeout: 3000,
+  });
 
   await page
     .getByTestId("inputsText Input")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
-  await page
-    .locator('//*[@id="react-flow-id"]')
-    .hover()
-    .then(async () => {
-      await page.mouse.down();
-      await page.mouse.move(-200, 100);
-      await page.waitForTimeout(400);
+    .dragTo(page.locator('//*[@id="react-flow-id"]'), {
     });
 
-  await page.mouse.up();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
+  await page.getByTestId("zoom_out").click();
 
   await page
-    .getByTestId("inputsText Input")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
+  .getByTestId("inputsText Input")
+  .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+    targetPosition: { x: 500, y: 150 },
+  });
+
+
 
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("combine text");
-  await page.waitForTimeout(1000);
 
-  await page
-    .locator('//*[@id="react-flow-id"]')
-    .hover()
-    .then(async () => {
-      await page.mouse.down();
-      await page.mouse.move(-200, 100);
-      await page.waitForTimeout(400);
-    });
-
-  await page.mouse.up();
+  await page.waitForSelector('[data-testid="processingCombine Text"]', {
+    timeout: 3000,
+  });
 
   await page
     .getByTestId("processingCombine Text")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-  await page
-    .locator('//*[@id="react-flow-id"]')
-    .hover()
-    .then(async () => {
-      await page.mouse.down();
-      await page.mouse.move(-200, 100);
-      await page.waitForTimeout(400);
+    .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+      targetPosition: { x: 10, y: 10 },
     });
 
-  await page.mouse.up();
 
   await page
     .getByTestId("processingCombine Text")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-  await page
-    .locator('//*[@id="react-flow-id"]')
-    .hover()
-    .then(async () => {
-      await page.mouse.down();
-      await page.mouse.move(-200, 100);
-      await page.waitForTimeout(200);
+    .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+      targetPosition: { x: 200, y: 10 },
     });
 
-  await page.mouse.up();
 
   await page.getByTestId("sidebar-search-input").click();
-  await page.getByTestId("sidebar-search-input").fill("text output");
-  await page.waitForTimeout(1000);
+  await page.getByTestId("sidebar-search-input").fill("text");
 
-  await page
-    .locator('//*[@id="react-flow-id"]')
-    .hover()
-    .then(async () => {
-      await page.mouse.down();
-      await page.mouse.move(-200, 100);
-    });
-
-  await page.mouse.up();
+  await page.waitForSelector('[data-testid="outputsText Output"]', {
+    timeout: 3000,
+  });
 
   await page
     .getByTestId("outputsText Output")
-    .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-  await page.getByTestId("fit_view").click({
-    force: true,
-  });
-  await page.waitForTimeout(500);
-
+    .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+      targetPosition: { x: 10, y: 400 },
+    });
   //connection 1
-  const elementCombineTextOutput0 = await page
+  const elementCombineTextOutput0 = page
     .getByTestId("div-handle-combinetext-shownode-combined text-right")
     .nth(0);
   await elementCombineTextOutput0.click();
 
-  const blockedHandle = await page
+  const blockedHandle = page
     .getByTestId("div-handle-textinput-shownode-text-right")
-    .nth(2);
-  const secondBlockedHandle = await page
+    .first();
+  const secondBlockedHandle = page
     .getByTestId("div-handle-combinetext-shownode-combined text-right")
-    .nth(2);
-  const thirdBlockedHandle = await page
+    .nth(3);
+  const thirdBlockedHandle = page
     .getByTestId("div-handle-textoutput-shownode-text-right")
-    .nth(0);
+    .first();
+
+  //wait for the colors to be applied
+  await page.waitForTimeout(500);
 
   const hasGradient = await blockedHandle?.evaluate((el) => {
     const style = window.getComputedStyle(el);
     return style.backgroundColor === "rgb(228, 228, 231)";
   });
 
-  await page.waitForTimeout(500);
 
   const secondHasGradient = await secondBlockedHandle?.evaluate((el) => {
     const style = window.getComputedStyle(el);
     return style.backgroundColor === "rgb(228, 228, 231)";
   });
 
-  await page.waitForTimeout(500);
 
   const thirdHasGradient = await thirdBlockedHandle?.evaluate((el) => {
     const style = window.getComputedStyle(el);
     return style.backgroundColor === "rgb(228, 228, 231)";
   });
 
-  await page.waitForTimeout(500);
 
   expect(hasGradient).toBe(true);
   expect(secondHasGradient).toBe(true);
@@ -187,7 +152,6 @@ test("should be able to see output preview from grouped components and connect c
     );
   });
 
-  await page.waitForTimeout(500);
 
   const secondHasGradientUnlocked = await secondUnlockedHandle?.evaluate(
     (el) => {
@@ -199,14 +163,12 @@ test("should be able to see output preview from grouped components and connect c
     },
   );
 
-  await page.waitForTimeout(500);
 
   const thirdHasGradientLocked = await thirdUnlockedHandle?.evaluate((el) => {
     const style = window.getComputedStyle(el);
     return style.backgroundColor === "rgb(228, 228, 231)";
   });
 
-  await page.waitForTimeout(500);
 
   const fourthHasGradientUnlocked = await fourthUnlockedHandle?.evaluate(
     (el) => {
@@ -218,7 +180,6 @@ test("should be able to see output preview from grouped components and connect c
     },
   );
 
-  await page.waitForTimeout(500);
 
   expect(hasGradientUnlocked).toBe(true);
   expect(secondHasGradientUnlocked).toBe(true);
@@ -257,11 +218,14 @@ test("should be able to see output preview from grouped components and connect c
   );
   await elementGroupInput0.click();
 
+  await page.waitForTimeout(500);
+
   //connection 3
   const elementTextOutput1 = await page
     .getByTestId("handle-textinput-shownode-text-right")
     .nth(2);
   await elementTextOutput1.click();
+  await page.waitForTimeout(500);
   const elementGroupInput1 = await page
     .getByTestId("handle-groupnode-shownode-second text-left")
     .nth(1);
