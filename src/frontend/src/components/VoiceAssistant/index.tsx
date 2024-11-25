@@ -6,6 +6,9 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "../ui/button";
 import { workletCode } from "./streamProcessor";
 import { base64ToFloat32Array } from "./utils";
+import APIKeyModal from "../../modals/apiKeyModal";
+import { useStoreStore } from "../../stores/storeStore";
+import { usePostAddApiKey } from "@/controllers/API/queries/api-keys";
 
 interface VoiceAssistantProps {
   flowId: string;
@@ -15,6 +18,7 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [status, setStatus] = useState("");
   const [message, setMessage] = useState("");
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -24,6 +28,10 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
   const microphoneRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const messagesStore = useMessagesStore();
+  const validApiKey = useStoreStore((state) => state.validApiKey);
+  const hasApiKey = useStoreStore((state) => state.hasApiKey);
+
+  const { mutate: mutateAddApiKey } = usePostAddApiKey();
 
   // Initialize audio context and websocket
   const initializeAudio = async () => {
@@ -256,6 +264,9 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
 
       case "error":
         console.error("Server error:", data.error);
+        if (data.code === "api_key_missing") {
+          setShowApiKeyModal(true);
+        }
         setStatus("Error: " + data.error);
         break;
     }
@@ -298,6 +309,20 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
     setIsRecording(!isRecording);
   };
 
+  const handleApiKeySubmit = (apiKey: string) => {
+    mutateAddApiKey(
+      { key: apiKey },
+      {
+        onSuccess: () => {
+          // Retry connection after API key is set
+          if (!isRecording) {
+            initializeAudio();
+          }
+        }
+      }
+    );
+  };
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -320,6 +345,11 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
       </Button>
       {status && <div className="text-sm text-gray-600">{status}</div>}
       {message && <div className="text-sm">{message}</div>}
+      <APIKeyModal
+        open={showApiKeyModal}
+        setOpen={setShowApiKeyModal}
+        onSubmit={handleApiKeySubmit}
+      />
     </div>
   );
 }

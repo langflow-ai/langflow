@@ -9,12 +9,13 @@ from loguru import logger
 from sqlalchemy import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
-from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils import CurrentActiveUser, DbSession, AsyncDbSession
 from langflow.api.v1.chat import build_flow
 from langflow.api.v1.schemas import InputValueRequest
 from langflow.services.auth.utils import get_current_user_by_jwt
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import async_session_scope
+from langflow.services.deps import get_variable_service
 
 router = APIRouter(prefix="/voice", tags=["Voice"])
 
@@ -43,7 +44,7 @@ async def handle_function_call(
     flow_id: str,
     background_tasks: BackgroundTasks,
     current_user: CurrentActiveUser,
-    session: DbSession,
+    session: AsyncDbSession,
 ):
     try:
         conversation_id = str(uuid4())
@@ -112,11 +113,32 @@ async def websocket_endpoint(
     flow_id: str,
     background_tasks: BackgroundTasks,
     session: DbSession,
+    asyncSession: AsyncDbSession,
 ):
     # Generate a unique session ID for this conversation
     conversation_id = str(uuid4())  # renamed to avoid confusion with session param
-    current_user = await get_current_user_by_jwt(websocket.cookies.get("access_token_lf"), session)
+    current_user = await get_current_user_by_jwt(websocket.cookies.get("access_token_lf"), asyncSession)
     await websocket.accept()
+
+    # Check for OpenAI API key in variables first
+    variable_service = get_variable_service()
+    try:
+        openai_key = variable_service.get_variable(
+            user_id=current_user.id, name="OPENAI_API_KEY", field="voice_mode", session=session
+        )
+    except ValueError:
+        # Key not found in variables, check environment
+        openai_key = os.getenv("OPENAI_API_KEY")
+        if not openai_key:
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "code": "api_key_missing",
+                    "message": "OpenAI API key not found. Please set your API key in the variables section.",
+                }
+            )
+            await websocket.close()
+            return
 
     # Get flow and build tool schema
     try:
@@ -139,14 +161,9 @@ async def websocket_endpoint(
         logger.error(e)
         return
 
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        await websocket.send_json({"error": "API key not set"})
-        return
-
     url = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01"
     headers = {
-        "Authorization": f"Bearer {api_key}",
+        "Authorization": f"Bearer {openai_key}",
         "OpenAI-Beta": "realtime=v1",
     }
 
