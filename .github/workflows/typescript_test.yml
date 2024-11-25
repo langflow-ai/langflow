@@ -182,10 +182,8 @@ jobs:
 
           # Get the test count using playwright's built-in grep
           if [ -n "${{ steps.set-matrix.outputs.test_grep }}" ]; then
-            # Use the grep pattern with playwright
             TEST_COUNT=$(npx playwright test ${{ inputs.tests_folder }} ${{ steps.set-matrix.outputs.test_grep }} --list | wc -l)
           else
-            # Count all tests if no pattern
             TEST_COUNT=$(npx playwright test ${{ inputs.tests_folder }} --list | wc -l)
           fi
 
@@ -199,12 +197,11 @@ jobs:
             SHARD_COUNT=10
           fi
 
-          # Create a JSON array of numbers from 1 to SHARD_COUNT using jq directly
-          INDEX_ARRAY=$(jq -n --arg count "$SHARD_COUNT" '[range(1; ($count|tonumber) + 1)]')
+          # Create a JSON array and ensure it's properly escaped for GitHub Actions output
+          INDEX_ARRAY=$(jq -c -n --arg count "$SHARD_COUNT" '[range(1; ($count|tonumber) + 1)]')
 
-          echo "Calculated shard count: $SHARD_COUNT"
-          echo "shard_count=$SHARD_COUNT" >> $GITHUB_OUTPUT
-          echo "shard_indices=$INDEX_ARRAY" >> $GITHUB_OUTPUT
+          echo "shard_count=${SHARD_COUNT}" >> "$GITHUB_OUTPUT"
+          echo "shard_indices=${INDEX_ARRAY}" >> "$GITHUB_OUTPUT"
 
   setup-and-test:
     name: Playwright Tests - Group ${{ matrix.shardIndex }}
