@@ -12,7 +12,7 @@ on:
         description: "Test suites to run (JSON array)"
         required: false
         type: string
-        default: '[]'
+        default: "[]"
       release:
         description: "Whether this is a release build"
         required: false
@@ -74,6 +74,7 @@ jobs:
         id: set-matrix
         run: |
           # Start with input suites if provided, otherwise empty array
+          echo "Changes filter output: ${{ steps.filter.outputs }}"
           SUITES='${{ inputs.suites }}'
           echo "Initial suites: $SUITES"
           TEST_GREP=""
@@ -81,6 +82,7 @@ jobs:
           RELEASE="${{ inputs.release || 'false' }}"
           echo "Release build: $RELEASE"
 
+          # Only set to release if it's explicitly a release build
           if [[ "$RELEASE" == "true" ]]; then
             SUITES='["release"]'
             echo "Release build detected - setting suites to: $SUITES"
@@ -93,27 +95,27 @@ jobs:
               TAGS=()
               # Add suites and tags based on changed files
               if [[ "${{ steps.filter.outputs.components }}" == "true" ]]; then
-                SUITES=$(echo $SUITES | jq '. += ["components"]')
+                SUITES=$(echo $SUITES | jq -c '. += ["components"]')
                 TAGS+=("@components")
                 echo "Added components suite"
               fi
               if [[ "${{ steps.filter.outputs.starter-projects }}" == "true" ]]; then
-                SUITES=$(echo $SUITES | jq '. += ["starter-projects"]')
+                SUITES=$(echo $SUITES | jq -c '. += ["starter-projects"]')
                 TAGS+=("@starter-projects")
                 echo "Added starter-projects suite"
               fi
               if [[ "${{ steps.filter.outputs.workspace }}" == "true" ]]; then
-                SUITES=$(echo $SUITES | jq '. += ["workspace"]')
+                SUITES=$(echo $SUITES | jq -c '. += ["workspace"]')
                 TAGS+=("@workspace")
                 echo "Added workspace suite"
               fi
               if [[ "${{ steps.filter.outputs.api }}" == "true" ]]; then
-                SUITES=$(echo $SUITES | jq '. += ["api"]')
+                SUITES=$(echo $SUITES | jq -c '. += ["api"]')
                 TAGS+=("@api")
                 echo "Added api suite"
               fi
               if [[ "${{ steps.filter.outputs.database }}" == "true" ]]; then
-                SUITES=$(echo $SUITES | jq '. += ["database"]')
+                SUITES=$(echo $SUITES | jq -c '. += ["database"]')
                 TAGS+=("@database")
                 echo "Added database suite"
               fi
@@ -151,9 +153,13 @@ jobs:
             fi
           fi
 
+          # Ensure compact JSON output
+          SUITES=$(echo "$SUITES" | jq -c '.')
+
           echo "Final test suites to run: $SUITES"
           echo "Test grep pattern: $TEST_GREP"
-          echo "matrix=$SUITES" >> $GITHUB_OUTPUT
+          # Ensure proper JSON formatting for matrix output
+          echo "matrix=$(echo $SUITES | jq -c .)" >> $GITHUB_OUTPUT
           echo "test_grep=$TEST_GREP" >> $GITHUB_OUTPUT
 
   setup-and-test:
