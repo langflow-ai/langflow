@@ -1,7 +1,7 @@
 ---
 title: Install Langflow
 sidebar_position: 1
-slug: /getting-started-installation
+slug: /get-started-installation
 ---
 
 You can deploy Langflow either locally or as a hosted service with [**Datastax Langflow**](#datastax-langflow).
@@ -40,7 +40,7 @@ python -m langflow run
 
 2. Confirm that a local Langflow instance starts by visiting `http://127.0.0.1:7860` in a Chromium-based browser.
 
-Now that Langflow is running, follow the [Quickstart](/getting-started-quickstart) to create your first flow.
+Now that Langflow is running, follow the [Quickstart](/get-started-quickstart) to create your first flow.
 
 ## Manage Langflow versions
 
@@ -50,7 +50,7 @@ To upgrade Langflow to the latest version, use the pip upgrade command.
 python -m pip install langflow -U
 ```
 
-To install a specific verison of the Langflow package, add the required version to the command.
+To install a specific version of the Langflow package, add the required version to the command.
 
 ```bash
 python -m pip install langflow==1.1

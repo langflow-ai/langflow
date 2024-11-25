@@ -1,7 +1,7 @@
 ---
 title: Quickstart
 sidebar_position: 2
-slug: /getting-started-quickstart
+slug: /get-started-quickstart
 ---
 
 
