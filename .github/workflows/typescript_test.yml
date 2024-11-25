@@ -56,9 +56,9 @@ jobs:
   determine-test-suite:
     runs-on: ubuntu-latest
     outputs:
-      matrix-combinations: ${{ steps.setup-matrix.outputs.matrix-combinations }}
+      matrix: ${{ steps.setup-matrix.outputs.matrix }}
       test_grep: ${{ steps.set-matrix.outputs.test_grep }}
-      suites: ${{ steps.set-matrix.outputs.matrix }}
+      suites: ${{ steps.set-matrix.outputs.suites }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -197,21 +197,16 @@ jobs:
             SHARD_COUNT=10
           fi
 
-          # Create matrix combinations JSON
-          MATRIX_COMBINATIONS=$(jq -n \
-            --arg count "$SHARD_COUNT" \
-            '{
-              "include": [
-                range(1; ($count|tonumber) + 1) |
-                {
-                  "shardIndex": .,
-                  "shardTotal": ($count|tonumber)
-                }
-              ]
-            }')
+          # Create the matrix combinations string
+          MATRIX_COMBINATIONS=""
+          for i in $(seq 1 $SHARD_COUNT); do
+            if [ $i -gt 1 ]; then
+              MATRIX_COMBINATIONS="$MATRIX_COMBINATIONS,"
+            fi
+            MATRIX_COMBINATIONS="$MATRIX_COMBINATIONS{\"shardIndex\": $i, \"shardTotal\": $SHARD_COUNT}"
+          done
 
-          # Output the matrix combinations
-          echo "matrix-combinations=$MATRIX_COMBINATIONS" >> "$GITHUB_OUTPUT"
+          echo "matrix={\"include\":[$MATRIX_COMBINATIONS]}" >> "$GITHUB_OUTPUT"
 
   setup-and-test:
     name: Playwright Tests - Group ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
@@ -220,7 +215,7 @@ jobs:
     if: ${{ fromJson(needs.determine-test-suite.outputs.suites)[0] != null }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJson(needs.determine-test-suite.outputs.matrix-combinations) }}
+      matrix: ${{ fromJson(needs.determine-test-suite.outputs.matrix) }}
     env:
       OPENAI_API_KEY: ${{ inputs.openai_api_key || secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ inputs.store_api_key || secrets.STORE_API_KEY }}
@@ -275,8 +270,8 @@ jobs:
           command: |
             cd src/frontend
             echo 'Running tests with pattern: ${{ needs.determine-test-suite.outputs.test_grep }}'
-            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --list
-            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
+            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --shard ${{ matrix.shardIndex }} --list
+            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }} --workers 2
 
       - name: Upload blob report to GitHub Actions Artifacts
         if: always()
