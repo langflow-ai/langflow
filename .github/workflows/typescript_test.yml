@@ -187,8 +187,12 @@ jobs:
             SHARD_COUNT=10
           fi
 
+          # Create a JSON array of numbers from 1 to SHARD_COUNT
+          INDEX_ARRAY=$(seq -s, 1 $SHARD_COUNT | jq -Rc '[splits(",")[] | tonumber]')
+
           echo "Calculated shard count: $SHARD_COUNT"
           echo "shard_count=$SHARD_COUNT" >> $GITHUB_OUTPUT
+          echo "shard_indices=$INDEX_ARRAY" >> $GITHUB_OUTPUT
 
   setup-and-test:
     name: Playwright Tests - Group ${{ matrix.shardIndex }}
@@ -198,8 +202,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Use the dynamically calculated shard count
-        shardIndex: ${{ fromJson(format('[{0}]', join(range(1, needs.determine-test-suite.outputs.shard_count + 1), ','))) }}
+        shardIndex: ${{ fromJson(needs.determine-test-suite.outputs.shard_indices) }}
         shardTotal: ${{ fromJson(format('[{0}]', needs.determine-test-suite.outputs.shard_count)) }}
     env:
       OPENAI_API_KEY: ${{ inputs.openai_api_key || secrets.OPENAI_API_KEY }}
