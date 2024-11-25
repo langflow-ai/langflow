@@ -1,13 +1,13 @@
 module.exports = {
   docs: [
-    'Getting-Started/welcome-to-langflow',
+    'Get-Started/welcome-to-langflow',
     {
       type: 'category',
-      label: 'Getting Started',
+      label: 'Get Started',
       items: [
-        'Getting-Started/getting-started-installation',
-        'Getting-Started/getting-started-quickstart',
-        'Getting-Started/welcome-to-langflow',
+        'Get-Started/get-started-installation',
+        'Get-Started/get-started-quickstart',
+        'Get-Started/welcome-to-langflow',
       ],
     },
     {

@@ -92,11 +92,19 @@ const config = {
             from: [
               "/whats-new-a-new-chapter-langflow",
               "/👋 Welcome-to-Langflow",
+              "/getting-started-welcome-to-langflow"
             ],
           },
           {
-            to: "/getting-started-installation",
-            from: "/getting-started-common-installation-issues",
+            to: "/get-started-installation",
+            from: [
+              "/getting-started-installation",
+              "/getting-started-common-installation-issues",
+            ],
+          },
+          {
+            to: "/get-started-quickstart",
+            from: "/getting-started-quickstart",
           },
           {
             to: "/workspace-overview",
