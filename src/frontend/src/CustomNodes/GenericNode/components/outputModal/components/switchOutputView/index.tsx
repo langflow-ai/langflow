@@ -1,8 +1,8 @@
 import { MAX_TEXT_LENGTH } from "@/constants/constants";
 import { LogsLogType, OutputLogType } from "@/types/api";
 import { useMemo } from "react";
-import DataOutputComponent from "../../../../../../components/dataOutputComponent";
-import ForwardedIconComponent from "../../../../../../components/genericIconComponent";
+import ForwardedIconComponent from "../../../../../../components/common/genericIconComponent";
+import DataOutputComponent from "../../../../../../components/core/dataOutputComponent";
 import {
   Alert,
   AlertDescription,

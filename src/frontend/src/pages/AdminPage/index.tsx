@@ -1,3 +1,4 @@
+import PaginatorComponent from "@/components/common/paginatorComponent";
 import {
   useAddUser,
   useDeleteUsers,
@@ -6,10 +7,9 @@ import {
 } from "@/controllers/API/queries/auth";
 import { cloneDeep } from "lodash";
 import { useContext, useEffect, useRef, useState } from "react";
-import IconComponent from "../../components/genericIconComponent";
-import LoadingComponent from "../../components/loadingComponent";
-import PaginatorComponent from "../../components/paginatorComponent";
-import ShadTooltip from "../../components/shadTooltipComponent";
+import IconComponent from "../../components/common/genericIconComponent";
+import LoadingComponent from "../../components/common/loadingComponent";
+import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
 import { CheckBoxDiv } from "../../components/ui/checkbox";
 import { Input } from "../../components/ui/input";
