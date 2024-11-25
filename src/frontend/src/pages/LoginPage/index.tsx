@@ -4,7 +4,7 @@ import { CustomLink } from "@/customization/components/custom-link";
 import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
 import * as Form from "@radix-ui/react-form";
 import { useContext, useState } from "react";
-import InputComponent from "../../components/inputComponent";
+import InputComponent from "../../components/core/parameterRenderComponent/components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { SIGNIN_ERROR_ALERT } from "../../constants/alerts_constants";
