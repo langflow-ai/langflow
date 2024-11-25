@@ -15,6 +15,8 @@ test(
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
 
+    let modalCount = 0;
+
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
       await page.waitForSelector('[data-testid="modal-title"]', {
