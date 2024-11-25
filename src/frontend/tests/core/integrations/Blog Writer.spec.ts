@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
@@ -48,28 +48,14 @@ test(
       timeout: 1000,
     });
 
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
+    await page.getByTestId("fit_view").click();
+    await page.getByTestId("zoom_out").click();
+    await page.getByTestId("zoom_out").click();
+    await page.getByTestId("zoom_out").click();
 
-    await page.goto("/");
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
-
-    await page.waitForSelector('[id="new-project-btn"]', {
-      timeout: 30000,
-    });
-
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
+    let outdatedComponents = await page
+      .getByTestId("icon-AlertTriangle")
+      .count();
 
     while (outdatedComponents > 0) {
       await page.getByTestId("icon-AlertTriangle").first().click();
@@ -82,39 +68,8 @@ test(
       filledApiKey = await page.getByTestId("remove-icon-badge").count();
     }
 
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-
-    let outdatedComponents = await page
-      .getByTestId("icon-AlertTriangle")
-      .count();
-
-    while (outdatedComponents > 0) {
-      await page.getByTestId("icon-AlertTriangle").first().click();
-      await page.waitForTimeout(1000);
-      outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
-    }
-
-    await page
-      .getByTestId("inputlist_str_urls_0")
-      .nth(0)
-      .fill(
-        "https://www.natgeokids.com/uk/discover/animals/sea-life/turtle-facts/",
-      );
-    await page
-      .getByTestId("inputlist_str_urls_1")
-      .nth(0)
-      .fill("https://www.originaldiving.com/blog/top-ten-turtle-facts");
-
-    await page
-      .getByTestId("textarea_str_input_value")
-      .fill(
-        "Use the references above for style to write a new blog/tutorial about turtles. Suggest non-covered topics.",
-      );
-
-    await page.getByTestId("button_run_chat output").click();
+    const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
+    const isApiKeyInputVisible = await apiKeyInput.isVisible();
 
     if (isApiKeyInputVisible) {
       await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
@@ -123,7 +78,6 @@ test(
     await page.getByTestId("dropdown_str_model_name").click();
     await page.getByTestId("gpt-4o-1-option").click();
 
-    await page.waitForTimeout(1000);
     await page
       .getByTestId("inputlist_str_urls_0")
       .nth(0)
@@ -142,7 +96,6 @@ test(
       );
 
     await page.getByTestId("button_run_chat output").click();
-    await page.waitForTimeout(5000);
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
