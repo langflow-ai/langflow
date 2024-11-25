@@ -37,7 +37,6 @@ const useHandleOnNewValue = ({
   const updateNodeInternals = useUpdateNodeInternals();
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
-
   const postTemplateValue = usePostTemplateValue({
     parameterId: name,
     nodeId: nodeId,
@@ -72,14 +71,21 @@ const useHandleOnNewValue = ({
 
     const setNodeClass = (newNodeClass: APIClassType) => {
       options?.setNodeClass && options.setNodeClass(newNodeClass);
-      setNode(nodeId, (oldNode) => {
-        const newData = cloneDeep(oldNode.data);
-        newData.node = newNodeClass;
-        return {
-          ...oldNode,
-          data: newData,
-        };
-      });
+      setNode(
+        nodeId,
+        (oldNode) => {
+          const newData = cloneDeep(oldNode.data);
+          newData.node = newNodeClass;
+          return {
+            ...oldNode,
+            data: newData,
+          };
+        },
+        true,
+        () => {
+          updateNodeInternals(nodeId);
+        },
+      );
     };
 
     if (shouldUpdate && changes.value !== undefined) {
