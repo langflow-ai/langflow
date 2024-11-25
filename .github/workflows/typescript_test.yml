@@ -120,12 +120,13 @@ jobs:
 
               # Create grep pattern if we have tags
               if [ ${#TAGS[@]} -gt 0 ]; then
-                # Convert array of tags into regex lookaheads
+                # Convert array of tags into regex lookaheads with proper escaping
                 REGEX_PATTERN=""
                 for TAG in "${TAGS[@]}"; do
-                  REGEX_PATTERN="${REGEX_PATTERN}(?=.*${TAG})"
+                  REGEX_PATTERN="${REGEX_PATTERN}\(\?=\.\*${TAG}\)"
                 done
-                TEST_GREP="--grep \"${REGEX_PATTERN}\""
+                # Escape the quotes properly for GitHub Actions
+                TEST_GREP='--grep='"'${REGEX_PATTERN}'"
               fi
             else
               # Process input suites to tags
@@ -147,12 +148,13 @@ jobs:
               fi
 
               if [ ${#TAGS[@]} -gt 0 ]; then
-                # Convert array of tags into regex lookaheads
+                # Convert array of tags into regex lookaheads with proper escaping
                 REGEX_PATTERN=""
                 for TAG in "${TAGS[@]}"; do
-                  REGEX_PATTERN="${REGEX_PATTERN}(?=.*${TAG})"
+                  REGEX_PATTERN="${REGEX_PATTERN}\(\?=\.\*${TAG}\)"
                 done
-                TEST_GREP="--grep \"${REGEX_PATTERN}\""
+                # Escape the quotes properly for GitHub Actions
+                TEST_GREP='--grep='"'${REGEX_PATTERN}'"
               fi
             fi
           fi
@@ -251,7 +253,7 @@ jobs:
           max_attempts: 2
           command: |
             cd src/frontend
-            echo "Running tests with grep pattern: ${{ needs.determine-test-suite.outputs.test_grep }}"
+            echo "Running tests with pattern: ${{ needs.determine-test-suite.outputs.test_grep }}"
             npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --list
             npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
 
