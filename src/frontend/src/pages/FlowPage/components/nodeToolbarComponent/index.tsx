@@ -789,6 +789,7 @@ export default function NodeToolbarComponent({
                 }}
                 nodeClass={data.node}
                 value={data.node?.template[name].value ?? ""}
+                componentId={data.id}
               >
                 <></>
               </CodeAreaModal>
