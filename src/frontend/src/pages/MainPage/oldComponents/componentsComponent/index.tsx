@@ -1,3 +1,4 @@
+import PaginatorComponent from "@/components/common/paginatorComponent";
 import { PAGINATION_PAGE, PAGINATION_SIZE } from "@/constants/constants";
 import { usePostDownloadMultipleFlows } from "@/controllers/API/queries/flows";
 import TemplatesModal from "@/modals/templatesModal";
@@ -5,9 +6,8 @@ import { Pagination } from "@/types/utils/types";
 import { useEffect, useMemo, useState } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { useLocation, useParams } from "react-router-dom";
-import CardsWrapComponent from "../../../../components/cardsWrapComponent";
-import PaginatorComponent from "../../../../components/paginatorComponent";
-import { SkeletonCardComponent } from "../../../../components/skeletonCardComponent";
+import { SkeletonCardComponent } from "../../../../components/common/skeletonCardComponent";
+import CardsWrapComponent from "../../../../components/core/cardsWrapComponent";
 import DeleteConfirmationModal from "../../../../modals/deleteConfirmationModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";

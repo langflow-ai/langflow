@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("IntComponent", async ({ page }) => {
+test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.goto("/");
   await page.waitForSelector('[data-testid="mainpage_title"]', {
     timeout: 30000,
