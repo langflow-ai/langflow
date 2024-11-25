@@ -35,6 +35,6 @@ Join Langflow's vibrant community of developers and AI enthusiasts. See the foll
 
 ## Get started with Langflow
 
-- [Install Langflow](/getting-started-installation)
-- [Quickstart](/getting-started-quickstart)
+- [Install Langflow](/get-started-installation)
+- [Quickstart](/get-started-quickstart)
 
