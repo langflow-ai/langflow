@@ -276,4 +276,4 @@ src/frontend/temp
 .history
 
 .dspy_cache/
-cache.db
+*.db
