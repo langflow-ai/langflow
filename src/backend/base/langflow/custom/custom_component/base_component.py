@@ -1,4 +1,5 @@
 import operator
+import re
 from typing import Any, ClassVar
 from uuid import UUID
 
@@ -93,7 +94,15 @@ class BaseComponent:
         if not self._code:
             return {}
 
-        cc_class = eval_custom_component_code(self._code)
+        try:
+            cc_class = eval_custom_component_code(self._code)
+
+        except AttributeError as e:
+            pattern = r"module '.*?' has no attribute '.*?'"
+            if re.search(pattern, str(e)):
+                raise ImportError(e) from e
+            raise
+
         component_instance = cc_class(_code=self._code)
         return self.get_template_config(component_instance)
 
