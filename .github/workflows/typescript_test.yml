@@ -200,7 +200,7 @@ jobs:
       matrix:
         # Use the dynamically calculated shard count
         shardIndex: ${{ fromJson(format('[{0}]', join(range(1, needs.determine-test-suite.outputs.shard_count + 1), ','))) }}
-        shardTotal: [${{ needs.determine-test-suite.outputs.shard_count }}]
+        shardTotal: ${{ fromJson(format('[{0}]', needs.determine-test-suite.outputs.shard_count)) }}
     env:
       OPENAI_API_KEY: ${{ inputs.openai_api_key || secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ inputs.store_api_key || secrets.STORE_API_KEY }}
