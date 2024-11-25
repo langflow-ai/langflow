@@ -22,6 +22,7 @@ starter-projects:
   - "src/backend/base/langflow/initial_setup/**"
   - "src/frontend/src/pages/MainPage/**"
   - "src/frontend/src/utils/reactflowUtils.ts"
+  - "src/frontend/tests/extended/features/**"
 
 components:
   - "src/frontend/src/components/**"
@@ -33,6 +34,12 @@ components:
   - "src/frontend/src/style/**"
   - "src/frontend/src/utils/styleUtils.ts"
   - "src/backend/base/langflow/components/**"
+  - "src/frontend/tests/core/features/**"
+  - "src/frontend/tests/core/integrations/**"
+  - "src/frontend/tests/core/regression/**"
+  - "src/frontend/tests/extended/integrations/**"
+  - "src/frontend/tests/extended/features/**"
+  - "src/frontend/tests/extended/regression/**"
 
 workspace:
   - "src/backend/base/langflow/inputs/**"
@@ -43,12 +50,21 @@ workspace:
   - "src/frontend/src/CustomEdges/**"
   - "src/frontend/src/utils/reactflowUtils.ts"
   - "src/frontend/src/utils/buildUtils.ts"
+  - "src/frontend/tests/core/features/**"
+  - "src/frontend/tests/core/unit/**"
+  - "src/frontend/tests/extended/features/**"
+  - "src/frontend/tests/core/regression/**"
 
 api:
   - "src/backend/base/langflow/api/**"
   - "src/frontend/src/controllers/**"
+  - "src/frontend/tests/core/features/**"
+  - "src/frontend/tests/extended/features/**"
+  - "src/frontend/tests/extended/regression/**"
 
 database:
   - "src/backend/base/langflow/services/database/**"
   - "src/backend/base/langflow/alembic/**"
   - "src/frontend/src/controllers/**"
+  - "src/frontend/tests/core/features/**"
+  - "src/frontend/tests/extended/features/**"
