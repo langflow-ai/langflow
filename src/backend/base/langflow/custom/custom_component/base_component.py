@@ -96,15 +96,15 @@ class BaseComponent:
 
         try:
             cc_class = eval_custom_component_code(self._code)
-            component_instance = cc_class(_code=self._code)
-            return self.get_template_config(component_instance)
 
         except AttributeError as e:
             pattern = r"module '.*?' has no attribute '.*?'"
             if re.search(pattern, str(e)):
                 raise ImportError(e) from e
             raise
-        return {}
+
+        component_instance = cc_class(_code=self._code)
+        return self.get_template_config(component_instance)
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
         raise NotImplementedError
