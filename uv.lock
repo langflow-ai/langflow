@@ -448,6 +448,18 @@ wheels = [
 ]
 
 [[package]]
+name = "blockbuster"
+version = "1.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "forbiddenfruit" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ec/75/b220b51bf86f0ac04c2d5d37c14bde16d2f88efaa2487cdfea89e9523c06/blockbuster-1.1.1.tar.gz", hash = "sha256:7b9adc2a6cff91d8e671458bf8fe24bd9b78472f28095d677666e178e3f4faef", size = 9080 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7e/67/3fc297f8b3a1af3d43ec2252dbc59e710fb003427f63f2bfc9974fa68ccc/blockbuster-1.1.1-py3-none-any.whl", hash = "sha256:cf75011d3cb5266c618be292337f3f3ecbc00e0d056849a64a183ba1cb55518b", size = 7902 },
+]
+
+[[package]]
 name = "boto3"
 version = "1.34.162"
 source = { registry = "https://pypi.org/simple" }
@@ -968,15 +980,12 @@ wheels = [
 
 [[package]]
 name = "composio-core"
-version = "0.5.9"
+version = "0.5.42"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "click" },
-    { name = "docker" },
-    { name = "e2b-code-interpreter" },
     { name = "fastapi" },
-    { name = "gql" },
     { name = "importlib-metadata" },
     { name = "inflection" },
     { name = "jsonref" },
@@ -986,20 +995,19 @@ dependencies = [
     { name = "pyperclip" },
     { name = "pysher" },
     { name = "requests" },
-    { name = "requests-toolbelt" },
     { name = "rich" },
     { name = "semver" },
     { name = "sentry-sdk" },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/33/a0/c1496ce0fb28171e4713499ef9bc849df44e5bcf3a14442f4069e66fe1da/composio_core-0.5.9.tar.gz", hash = "sha256:c401a86c72b4dae1d0e3075d52ec3a2b66ef6fdc46d232486e0992d8b4e97602", size = 252849 }
+sdist = { url = "https://files.pythonhosted.org/packages/83/b9/a66a7646564f91937e2ac9a72c12308a37aac76dea88ea1d727a061bf153/composio_core-0.5.42.tar.gz", hash = "sha256:b38ea94e25807a6da813efb2c53ea8e01f71e54f0275ecfa55225887b36b6537", size = 295930 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/00/8f/96fe624e94121edaf852f526bf923f437554631a160363b33ab3338ca237/composio_core-0.5.9-py3-none-any.whl", hash = "sha256:a9f013b3f152fa9e730ad8e71bef07965ac40bbf8ecd6e4b439e1ff1b4a12474", size = 410561 },
+    { url = "https://files.pythonhosted.org/packages/00/7a/45acb7b6bcca477712f89bd43888393f365dca0270062e97389e3653aec8/composio_core-0.5.42-py3-none-any.whl", hash = "sha256:351ddee8ac8203ea8039098c8afce7c43b1cf4a97eccbb2046c489a3a53afa54", size = 457643 },
 ]
 
 [[package]]
 name = "composio-langchain"
-version = "0.5.9"
+version = "0.5.42"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "composio-core" },
@@ -1008,9 +1016,9 @@ dependencies = [
     { name = "langchainhub" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9f/7c/f95092b589677c2a5bda9bf4cc8ff6b652c7c2c151a723c25a875d70a893/composio_langchain-0.5.9.tar.gz", hash = "sha256:9b0c5dff2545615180c5892d622fd38aa3a61a987871725dff555413b45078f9", size = 3973 }
+sdist = { url = "https://files.pythonhosted.org/packages/18/3e/fa76297c590405d17ca8183396a51ae461845f82e232e64f68f383e2f804/composio_langchain-0.5.42.tar.gz", hash = "sha256:ed95acce4603099eccc022cd42f75df876dc566ecd0ed509bb33d18d0c541358", size = 4281 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/97/a8/c117bc0201a82c2b2c9e66f59aa54b20d6327cdbc0cfb676e0dd78143ebc/composio_langchain-0.5.9-py3-none-any.whl", hash = "sha256:245caaefb769a98dbfb7a715d283f811b459c16a54e1c8579be5b23acc2e55ae", size = 4389 },
+    { url = "https://files.pythonhosted.org/packages/da/a4/4d65985c49db8d828ef39843003c443919fa9a285d3244dba3aaedbd4fd1/composio_langchain-0.5.42-py3-none-any.whl", hash = "sha256:ddbffa94c5ad7105bdc877e0103a5633cca8c736a7b6853230078e143e718700", size = 4701 },
 ]
 
 [[package]]
@@ -2246,21 +2254,6 @@ wheels = [
 ]
 
 [[package]]
-name = "gql"
-version = "3.5.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "anyio" },
-    { name = "backoff" },
-    { name = "graphql-core" },
-    { name = "yarl" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/3d/85/feda24b33adcc6c8463a62a8e2ca2cc3425dc6d687388ff728ceae231204/gql-3.5.0.tar.gz", hash = "sha256:ccb9c5db543682b28f577069950488218ed65d4ac70bb03b6929aaadaf636de9", size = 179939 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/74/fb/01a200e1c31b79690427c8e983014e4220d2652b4372a46fe4598e1d7a8e/gql-3.5.0-py2.py3-none-any.whl", hash = "sha256:70dda5694a5b194a8441f077aa5fb70cc94e4ec08016117523f013680901ecb7", size = 74001 },
-]
-
-[[package]]
 name = "grandalf"
 version = "0.8"
 source = { registry = "https://pypi.org/simple" }
@@ -2270,15 +2263,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/95/0e/4ac934b416857969f9135dec17ac80660634327e003a870835dd1f382659/grandalf-0.8.tar.gz", hash = "sha256:2813f7aab87f0d20f334a3162ccfbcbf085977134a17a5b516940a93a77ea974", size = 38128 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/61/30/44c7eb0a952478dbb5f2f67df806686d6a7e4b19f6204e091c4f49dc7c69/grandalf-0.8-py3-none-any.whl", hash = "sha256:793ca254442f4a79252ea9ff1ab998e852c1e071b863593e5383afee906b4185", size = 41802 },
-]
-
-[[package]]
-name = "graphql-core"
-version = "3.2.4"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/66/9e/aa527fb09a9d7399d5d7d2aa2da490e4580707652d3b4fc156996ae88a5b/graphql-core-3.2.4.tar.gz", hash = "sha256:acbe2e800980d0e39b4685dd058c2f4042660b89ebca38af83020fd872ff1264", size = 504611 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d1/33/cc72c4c658c6316f188a60bc4e5a91cd4ceaaa8c3e7e691ac9297e4e72c7/graphql_core-3.2.4-py3-none-any.whl", hash = "sha256:1604f2042edc5f3114f49cac9d77e25863be51b23a54a61a23245cf32f6476f0", size = 203179 },
 ]
 
 [[package]]
@@ -3507,7 +3491,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.1.0"
+version = "1.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "assemblyai" },
@@ -3525,7 +3509,6 @@ dependencies = [
     { name = "faiss-cpu" },
     { name = "fake-useragent" },
     { name = "fastavro" },
-    { name = "firecrawl-py" },
     { name = "gitpython" },
     { name = "google-api-python-client" },
     { name = "google-search-results" },
@@ -3615,8 +3598,8 @@ local = [
 [package.dev-dependencies]
 dev = [
     { name = "asgi-lifespan" },
+    { name = "blockbuster" },
     { name = "dictdiffer" },
-    { name = "forbiddenfruit" },
     { name = "httpx" },
     { name = "ipykernel" },
     { name = "mypy" },
@@ -3652,102 +3635,101 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "assemblyai", specifier = ">=0.33.0" },
+    { name = "assemblyai", specifier = ">=0.33.0,<1.0.0" },
     { name = "astra-assistants", extras = ["tools"], specifier = "~=2.2.6" },
-    { name = "atlassian-python-api", specifier = ">=3.41.16" },
-    { name = "beautifulsoup4", specifier = ">=4.12.2" },
+    { name = "atlassian-python-api", specifier = ">=3.41.16,<4.0.0" },
+    { name = "beautifulsoup4", specifier = ">=4.12.2,<5.0.0" },
     { name = "boto3", specifier = "~=1.34.162" },
     { name = "cassio", marker = "extra == 'cassio'", specifier = ">=0.1.7" },
     { name = "celery", extras = ["redis"], marker = "extra == 'deploy'", specifier = ">=5.3.6" },
     { name = "certifi", specifier = ">=2023.11.17,<2025.0.0" },
-    { name = "chromadb", specifier = ">=0.4" },
+    { name = "chromadb", specifier = ">=0.4,<1.0.0" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse-connect'", specifier = "==0.7.19" },
-    { name = "cohere", specifier = ">=5.5.3" },
-    { name = "composio-langchain", specifier = "==0.5.9" },
+    { name = "cohere", specifier = ">=5.5.3,<6.0.0" },
+    { name = "composio-langchain", specifier = "==0.5.42" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
-    { name = "dspy-ai", specifier = ">=2.4.0" },
-    { name = "duckduckgo-search", specifier = ">=6.3.4" },
-    { name = "elasticsearch", specifier = ">=8.12.0" },
-    { name = "faiss-cpu", specifier = ">=1.8.0" },
-    { name = "fake-useragent", specifier = ">=1.5.0" },
-    { name = "fastavro", specifier = ">=1.8.0" },
-    { name = "firecrawl-py", specifier = "==1.5.0" },
+    { name = "dspy-ai", specifier = ">=2.4.0,<3.0.0" },
+    { name = "duckduckgo-search", specifier = ">=6.3.4,<7.0.0" },
+    { name = "elasticsearch", specifier = ">=8.12.0,<9.0.0" },
+    { name = "faiss-cpu", specifier = ">=1.8.0,<2.0.0" },
+    { name = "fake-useragent", specifier = ">=1.5.0,<2.0.0" },
+    { name = "fastavro", specifier = ">=1.8.0,<2.0.0" },
     { name = "flower", marker = "extra == 'deploy'", specifier = ">=2.0.0" },
-    { name = "gitpython", specifier = ">=3.1.43" },
-    { name = "google-api-python-client", specifier = ">=2.130.0" },
-    { name = "google-search-results", specifier = ">=2.4.1" },
-    { name = "huggingface-hub", extras = ["inference"], specifier = ">=0.23.2" },
-    { name = "jq", specifier = ">=1.8.0" },
-    { name = "json-repair", specifier = ">=0.25.2" },
-    { name = "kubernetes", specifier = ">=30.1.0" },
+    { name = "gitpython", specifier = ">=3.1.43,<4.0.0" },
+    { name = "google-api-python-client", specifier = ">=2.130.0,<3.0.0" },
+    { name = "google-search-results", specifier = ">=2.4.1,<3.0.0" },
+    { name = "huggingface-hub", extras = ["inference"], specifier = ">=0.23.2,<1.0.0" },
+    { name = "jq", specifier = ">=1.8.0,<2.0.0" },
+    { name = "json-repair", specifier = ">=0.25.2,<1.0.0" },
+    { name = "kubernetes", specifier = ">=30.1.0,<32.0.0" },
     { name = "langchain", specifier = "~=0.3.3" },
-    { name = "langchain-anthropic", specifier = ">=0.1.23" },
+    { name = "langchain-anthropic", specifier = ">=0.1.23,<1.0.0" },
     { name = "langchain-astradb", specifier = "~=0.5.2" },
-    { name = "langchain-aws", specifier = ">=0.1.16" },
-    { name = "langchain-chroma", specifier = ">=0.1.1" },
-    { name = "langchain-cohere", specifier = ">=0.1.5" },
-    { name = "langchain-elasticsearch", specifier = ">=0.2.0" },
-    { name = "langchain-google-calendar-tools", specifier = ">=0.0.1" },
+    { name = "langchain-aws", specifier = ">=0.1.16,<1.0.0" },
+    { name = "langchain-chroma", specifier = ">=0.1.1,<1.0.0" },
+    { name = "langchain-cohere", specifier = ">=0.1.5,<1.0.0" },
+    { name = "langchain-elasticsearch", specifier = ">=0.2.0,<1.0.0" },
+    { name = "langchain-google-calendar-tools", specifier = ">=0.0.1,<1.0.0" },
     { name = "langchain-google-community", specifier = "~=2.0.1" },
-    { name = "langchain-google-genai", specifier = ">=1.0.8" },
+    { name = "langchain-google-genai", specifier = ">=2.0.1,<3.0.0" },
     { name = "langchain-google-vertexai", specifier = "~=2.0.5" },
-    { name = "langchain-groq", specifier = ">=0.1.9" },
-    { name = "langchain-milvus", specifier = ">=0.1.1" },
+    { name = "langchain-groq", specifier = ">=0.1.9,<1.0.0" },
+    { name = "langchain-milvus", specifier = ">=0.1.1,<1.0.0" },
     { name = "langchain-mistralai", specifier = "~=0.2.0" },
-    { name = "langchain-mongodb", specifier = ">=0.1.6" },
+    { name = "langchain-mongodb", specifier = ">=0.1.6,<1.0.0" },
     { name = "langchain-nvidia-ai-endpoints", specifier = "~=0.3.0" },
-    { name = "langchain-ollama", specifier = ">=0.2.0" },
+    { name = "langchain-ollama", specifier = ">=0.2.0,<1.0.0" },
     { name = "langchain-openai", specifier = "~=0.2.2" },
     { name = "langchain-pinecone", specifier = "~=0.2.0" },
-    { name = "langchain-pinecone", specifier = ">=0.1.3" },
+    { name = "langchain-pinecone", specifier = ">=0.1.3,<1.0.0" },
     { name = "langchain-unstructured", specifier = "~=0.1.5" },
     { name = "langflow-base", editable = "src/backend/base" },
     { name = "langfuse", specifier = "~=2.53.1" },
-    { name = "langsmith", specifier = "~=0.1.136" },
+    { name = "langsmith", specifier = "~=0.1.137" },
     { name = "langwatch", specifier = "==0.1.16" },
-    { name = "lark", specifier = ">=1.2.2" },
-    { name = "litellm", specifier = ">=1.44.0" },
+    { name = "lark", specifier = ">=1.2.2,<2.0.0" },
+    { name = "litellm", specifier = ">=1.44.0,<2.0.0" },
     { name = "llama-cpp-python", marker = "extra == 'local'", specifier = "~=0.2.0" },
-    { name = "markdown", specifier = ">=3.7" },
-    { name = "markupsafe", specifier = ">=2.1.3" },
-    { name = "mem0ai", specifier = ">=0.1.26" },
-    { name = "metal-sdk", specifier = ">=2.5.0" },
-    { name = "metaphor-python", specifier = ">=0.1.11" },
-    { name = "networkx", specifier = ">=3.1" },
-    { name = "nltk", specifier = ">=3.9.1" },
-    { name = "numexpr", specifier = ">=2.8.6" },
-    { name = "opensearch-py", specifier = ">=2.7.1" },
-    { name = "pgvector", specifier = ">=0.2.3" },
-    { name = "pyarrow", specifier = ">=14.0.0" },
-    { name = "pyautogen", specifier = ">=0.2.0" },
+    { name = "markdown", specifier = ">=3.7,<4.0.0" },
+    { name = "markupsafe", specifier = ">=2.1.3,<4.0.0" },
+    { name = "mem0ai", specifier = ">=0.1.26,<1.0.0" },
+    { name = "metal-sdk", specifier = ">=2.5.0,<3.0.0" },
+    { name = "metaphor-python", specifier = ">=0.1.11,<1.0.0" },
+    { name = "networkx", specifier = ">=3.1,<4.0.0" },
+    { name = "nltk", specifier = ">=3.9.1,<4.0.0" },
+    { name = "numexpr", specifier = ">=2.8.6,<3.0.0" },
+    { name = "opensearch-py", specifier = ">=2.7.1,<3.0.0" },
+    { name = "pgvector", specifier = ">=0.2.3,<1.0.0" },
+    { name = "pyarrow", specifier = ">=14.0.0,<18.0.0" },
+    { name = "pyautogen", specifier = ">=0.2.0,<1.0.0" },
     { name = "pydantic-settings", specifier = "==2.4.0" },
-    { name = "pymongo", specifier = ">=4.6.0" },
-    { name = "pytube", specifier = ">=15.0.0" },
-    { name = "pywin32", marker = "sys_platform == 'win32'", specifier = ">=306" },
+    { name = "pymongo", specifier = ">=4.6.0,<5.0.0" },
+    { name = "pytube", specifier = ">=15.0.0,<16.0.0" },
+    { name = "pywin32", marker = "sys_platform == 'win32'", specifier = ">=306,<307" },
     { name = "qdrant-client", specifier = "~=1.9.2" },
     { name = "qianfan", specifier = "==0.3.5" },
-    { name = "ragstack-ai-knowledge-store", specifier = ">=0.2.1" },
-    { name = "redis", specifier = ">=5.0.1" },
+    { name = "ragstack-ai-knowledge-store", specifier = ">=0.2.1,<1.0.0" },
+    { name = "redis", specifier = ">=5.0.1,<6.0.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
-    { name = "spider-client", specifier = ">=0.0.27" },
-    { name = "sqlalchemy", extras = ["aiosqlite", "postgresql-psycopg2binary", "postgresql-psycopgbinary"], specifier = ">=2.0.36" },
+    { name = "spider-client", specifier = ">=0.0.27,<1.0.0" },
+    { name = "sqlalchemy", extras = ["aiosqlite", "postgresql-psycopg2binary", "postgresql-psycopgbinary"], specifier = ">=2.0.36,<3.0.0" },
     { name = "supabase", specifier = "~=2.6.0" },
-    { name = "types-cachetools", specifier = ">=5.3.0.5" },
-    { name = "upstash-vector", specifier = ">=0.5.0" },
-    { name = "weaviate-client", specifier = ">=4.8" },
-    { name = "wikipedia", specifier = ">=1.4.0" },
-    { name = "wolframalpha", specifier = ">=5.1.3" },
-    { name = "yfinance", specifier = ">=0.2.40" },
-    { name = "youtube-transcript-api", specifier = ">=0.6.2" },
-    { name = "zep-python", specifier = ">=2.0.0" },
+    { name = "types-cachetools", specifier = ">=5.3.0.5,<6.0.0" },
+    { name = "upstash-vector", specifier = ">=0.5.0,<1.0.0" },
+    { name = "weaviate-client", specifier = ">=4.8,<5.0.0" },
+    { name = "wikipedia", specifier = ">=1.4.0,<2.0.0" },
+    { name = "wolframalpha", specifier = ">=5.1.3,<6.0.0" },
+    { name = "yfinance", specifier = ">=0.2.40,<1.0.0" },
+    { name = "youtube-transcript-api", specifier = ">=0.6.2,<1.0.0" },
+    { name = "zep-python", specifier = ">=2.0.0,<3.0.0" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
+    { name = "blockbuster", specifier = ">=1.1.1,<1.2" },
     { name = "dictdiffer", specifier = ">=0.9.0" },
-    { name = "forbiddenfruit", specifier = ">=0.1.4" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "ipykernel", specifier = ">=6.29.0" },
     { name = "mypy", specifier = ">=1.11.0" },
@@ -3783,7 +3765,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofiles" },
@@ -3906,66 +3888,66 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiofiles", specifier = ">=24.1.0" },
-    { name = "alembic", specifier = ">=1.13.0" },
-    { name = "assemblyai", specifier = ">=0.33.0" },
-    { name = "asyncer", specifier = ">=0.0.5" },
+    { name = "aiofiles", specifier = ">=24.1.0,<25.0.0" },
+    { name = "alembic", specifier = ">=1.13.0,<2.0.0" },
+    { name = "assemblyai", specifier = ">=0.33.0,<1.0.0" },
+    { name = "asyncer", specifier = ">=0.0.5,<1.0.0" },
     { name = "bcrypt", specifier = "==4.0.1" },
-    { name = "cachetools", specifier = ">=5.5.0" },
+    { name = "cachetools", specifier = ">=5.5.0,<6.0.0" },
     { name = "celery", marker = "extra == 'all'", specifier = ">=5.3.1" },
     { name = "celery", marker = "extra == 'deploy'", specifier = ">=5.3.1" },
-    { name = "chardet", specifier = ">=5.2.0" },
+    { name = "chardet", specifier = ">=5.2.0,<6.0.0" },
     { name = "clickhouse-connect", specifier = "==0.7.19" },
     { name = "crewai", specifier = "~=0.80.0" },
     { name = "cryptography", specifier = ">=42.0.5,<44.0.0" },
     { name = "ctransformers", marker = "extra == 'all'", specifier = ">=0.2" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2" },
-    { name = "defusedxml", specifier = ">=0.7.1" },
+    { name = "defusedxml", specifier = ">=0.7.1,<1.0.0" },
     { name = "devtools", marker = "extra == 'dev'", specifier = ">=0.12.2" },
     { name = "dictdiffer", marker = "extra == 'dev'", specifier = ">=0.9.0" },
-    { name = "diskcache", specifier = ">=5.6.3" },
-    { name = "docstring-parser", specifier = ">=0.16" },
-    { name = "duckdb", specifier = ">=1.0.0" },
-    { name = "emoji", specifier = ">=2.12.0" },
-    { name = "fastapi", specifier = ">=0.115.2" },
-    { name = "fastapi-pagination", specifier = ">=0.12.29" },
-    { name = "filelock", specifier = ">=3.15.4" },
-    { name = "firecrawl-py", specifier = ">=0.0.16" },
+    { name = "diskcache", specifier = ">=5.6.3,<6.0.0" },
+    { name = "docstring-parser", specifier = ">=0.16,<1.0.0" },
+    { name = "duckdb", specifier = ">=1.0.0,<2.0.0" },
+    { name = "emoji", specifier = ">=2.12.0,<3.0.0" },
+    { name = "fastapi", specifier = ">=0.115.2,<1.0.0" },
+    { name = "fastapi-pagination", specifier = ">=0.12.29,<1.0.0" },
+    { name = "filelock", specifier = ">=3.15.4,<4.0.0" },
+    { name = "firecrawl-py", specifier = ">=1.0.16,<2.0.0" },
     { name = "flower", marker = "extra == 'all'", specifier = ">=1.0.0" },
     { name = "flower", marker = "extra == 'deploy'", specifier = ">=1.0.0" },
-    { name = "grandalf", specifier = ">=0.8.0" },
-    { name = "gunicorn", specifier = ">=22.0.0" },
-    { name = "httpx", extras = ["http2"], specifier = ">=0.27" },
+    { name = "grandalf", specifier = ">=0.8.0,<1.0.0" },
+    { name = "gunicorn", specifier = ">=22.0.0,<24.0.0" },
+    { name = "httpx", extras = ["http2"], specifier = ">=0.27,<1.0.0" },
     { name = "httpx", extras = ["http2"], marker = "extra == 'dev'", specifier = ">=0.27" },
     { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.29.0" },
-    { name = "jq", marker = "sys_platform != 'win32'", specifier = ">=1.7.0" },
+    { name = "jq", marker = "sys_platform != 'win32'", specifier = ">=1.7.0,<2.0.0" },
     { name = "langchain", specifier = "~=0.3.3" },
     { name = "langchain-core", specifier = "~=0.3.15" },
-    { name = "langchain-experimental", specifier = ">=0.0.61" },
+    { name = "langchain-experimental", specifier = ">=0.0.61,<1.0.0" },
     { name = "langchainhub", specifier = "~=0.1.15" },
     { name = "llama-cpp-python", marker = "extra == 'all'", specifier = ">=0.2.0" },
     { name = "llama-cpp-python", marker = "extra == 'local'", specifier = ">=0.2.0" },
-    { name = "loguru", specifier = ">=0.7.1" },
-    { name = "multiprocess", specifier = ">=0.70.14" },
+    { name = "loguru", specifier = ">=0.7.1,<1.0.0" },
+    { name = "multiprocess", specifier = ">=0.70.14,<1.0.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11.0" },
-    { name = "nanoid", specifier = ">=2.0.0" },
-    { name = "nest-asyncio", specifier = ">=1.6.0" },
-    { name = "opentelemetry-api", specifier = ">=1.25.0" },
-    { name = "opentelemetry-exporter-prometheus", specifier = ">=0.46b0" },
-    { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.46b0" },
-    { name = "opentelemetry-sdk", specifier = ">=1.25.0" },
+    { name = "nanoid", specifier = ">=2.0.0,<3.0.0" },
+    { name = "nest-asyncio", specifier = ">=1.6.0,<2.0.0" },
+    { name = "opentelemetry-api", specifier = ">=1.25.0,<2.0.0" },
+    { name = "opentelemetry-exporter-prometheus", specifier = ">=0.46b0,<1.0.0" },
+    { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.46b0,<1.0.0" },
+    { name = "opentelemetry-sdk", specifier = ">=1.25.0,<2.0.0" },
     { name = "orjson", specifier = "==3.10.0" },
     { name = "pandas", specifier = "==2.2.2" },
     { name = "pandas-stubs", marker = "extra == 'dev'", specifier = ">=2.1.4.231227" },
-    { name = "passlib", specifier = ">=1.7.4" },
-    { name = "pillow", specifier = ">=10.2.0" },
-    { name = "platformdirs", specifier = ">=4.2.0" },
+    { name = "passlib", specifier = ">=1.7.4,<2.0.0" },
+    { name = "pillow", specifier = ">=10.2.0,<11.0.0" },
+    { name = "platformdirs", specifier = ">=4.2.0,<5.0.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.7.0" },
-    { name = "prometheus-client", specifier = ">=0.20.0" },
+    { name = "prometheus-client", specifier = ">=0.20.0,<1.0.0" },
     { name = "pydantic", specifier = "~=2.7.0" },
-    { name = "pydantic-settings", specifier = ">=2.2.0" },
+    { name = "pydantic-settings", specifier = ">=2.2.0,<3.0.0" },
     { name = "pypdf", specifier = "~=5.1.0" },
-    { name = "pyperclip", specifier = ">=1.8.2" },
+    { name = "pyperclip", specifier = ">=1.8.2,<2.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0.0" },
@@ -3976,22 +3958,22 @@ requires-dist = [
     { name = "pytest-split", marker = "extra == 'dev'", specifier = ">=0.9.0" },
     { name = "pytest-sugar", marker = "extra == 'dev'", specifier = ">=1.0.0" },
     { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.6.0" },
-    { name = "python-docx", specifier = ">=1.1.0" },
-    { name = "python-jose", specifier = ">=3.3.0" },
-    { name = "python-multipart", specifier = ">=0.0.12" },
+    { name = "python-docx", specifier = ">=1.1.0,<2.0.0" },
+    { name = "python-jose", specifier = ">=3.3.0,<4.0.0" },
+    { name = "python-multipart", specifier = ">=0.0.12,<1.0.0" },
     { name = "redis", marker = "extra == 'all'", specifier = ">=4.6.0" },
     { name = "redis", marker = "extra == 'deploy'", specifier = ">=4.6.0" },
     { name = "requests", marker = "extra == 'dev'", specifier = ">=2.32.0" },
     { name = "respx", marker = "extra == 'dev'", specifier = ">=0.21.1" },
-    { name = "rich", specifier = ">=13.7.0" },
+    { name = "rich", specifier = ">=13.7.0,<14.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6.2" },
     { name = "sentence-transformers", marker = "extra == 'all'", specifier = ">=2.0.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.0.0" },
-    { name = "sentry-sdk", extras = ["fastapi", "loguru"], specifier = ">=2.5.1" },
-    { name = "setuptools", specifier = ">=70" },
-    { name = "spider-client", specifier = ">=0.0.27" },
+    { name = "sentry-sdk", extras = ["fastapi", "loguru"], specifier = ">=2.5.1,<3.0.0" },
+    { name = "setuptools", specifier = ">=70,<76.0.0" },
+    { name = "spider-client", specifier = ">=0.0.27,<1.0.0" },
     { name = "sqlmodel", specifier = "==0.0.18" },
-    { name = "typer", specifier = ">=0.13.0" },
+    { name = "typer", specifier = ">=0.13.0,<1.0.0" },
     { name = "types-google-cloud-ndb", marker = "extra == 'dev'", specifier = ">=2.2.0.0" },
     { name = "types-markdown", marker = "extra == 'dev'", specifier = ">=3.7.0.20240822" },
     { name = "types-passlib", marker = "extra == 'dev'", specifier = ">=1.7.7.13" },
@@ -4001,8 +3983,8 @@ requires-dist = [
     { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0.12.8" },
     { name = "types-redis", marker = "extra == 'dev'", specifier = ">=4.6.0.5" },
     { name = "types-requests", marker = "extra == 'dev'", specifier = ">=2.32.0" },
-    { name = "uncurl", specifier = ">=0.0.11" },
-    { name = "uvicorn", specifier = ">=0.30.0" },
+    { name = "uncurl", specifier = ">=0.0.11,<1.0.0" },
+    { name = "uvicorn", specifier = ">=0.30.0,<1.0.0" },
     { name = "validators", specifier = ">=0.34.0" },
     { name = "vulture", marker = "extra == 'dev'", specifier = ">=2.11" },
 ]
@@ -4034,18 +4016,18 @@ wheels = [
 
 [[package]]
 name = "langsmith"
-version = "0.1.136"
+version = "0.1.145"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
-    { name = "orjson" },
+    { name = "orjson", marker = "platform_python_implementation != 'PyPy'" },
     { name = "pydantic" },
     { name = "requests" },
     { name = "requests-toolbelt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1c/fe/7de2ef64464819bfae186831e82be1c24d009a90fda0130acd6269ecc48e/langsmith-0.1.136.tar.gz", hash = "sha256:5c0de01a313db70dd9a85845c0f416a69b5b653b3e98ba413d7d41e8851315b1", size = 287752 }
+sdist = { url = "https://files.pythonhosted.org/packages/6a/e9/adb0c961d26fcefd17770e4ed02dd522c18484f10555b0924c56aebee587/langsmith-0.1.145.tar.gz", hash = "sha256:b6e53f7b1624846f03769a1fce673baf2a0a262b4f4129b1f6bd127a1f44f8fd", size = 299444 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/20/cc/e559a369fd3811534563e568ee7077fdc1698d86d99afe28d5167e692787/langsmith-0.1.136-py3-none-any.whl", hash = "sha256:cad2215eb7a754ee259878e19c558f4f8d3795aa1b699f087d4500e640f80d0a", size = 296724 },
+    { url = "https://files.pythonhosted.org/packages/d3/e7/a5ed65f6b425ce0079f25e3f0540c9c4838abb155f65170f59585e64e02c/langsmith-0.1.145-py3-none-any.whl", hash = "sha256:bd3001fc6738ad9061a2709d60f62a6bdf4892a17e63c7751f73a6f32a100729", size = 310947 },
 ]
 
 [[package]]
@@ -6431,18 +6413,17 @@ wheels = [
 
 [[package]]
 name = "pywin32"
-version = "307"
+version = "306"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/12/3d/91d710c40cc61fd241025351fd61fb674859973c5a0b3111e532d7229012/pywin32-307-cp310-cp310-win32.whl", hash = "sha256:f8f25d893c1e1ce2d685ef6d0a481e87c6f510d0f3f117932781f412e0eba31b", size = 5904291 },
-    { url = "https://files.pythonhosted.org/packages/94/b4/20804bb7528419d503c71cfcb8988f0eb9f3596501a9d86eb528c9998055/pywin32-307-cp310-cp310-win_amd64.whl", hash = "sha256:36e650c5e5e6b29b5d317385b02d20803ddbac5d1031e1f88d20d76676dd103d", size = 6535115 },
-    { url = "https://files.pythonhosted.org/packages/65/55/f1c84fcccbd5b75c09aa2a948551ad4569f9c14994a39959d3fee3267911/pywin32-307-cp310-cp310-win_arm64.whl", hash = "sha256:0c12d61e0274e0c62acee79e3e503c312426ddd0e8d4899c626cddc1cafe0ff4", size = 7948521 },
-    { url = "https://files.pythonhosted.org/packages/f9/29/5f50cb02aef57711bf941e1d93bfe602625f89faf33abb737441ab698496/pywin32-307-cp311-cp311-win32.whl", hash = "sha256:fec5d27cc893178fab299de911b8e4d12c5954e1baf83e8a664311e56a272b75", size = 5905392 },
-    { url = "https://files.pythonhosted.org/packages/5e/8d/dd2bf7e5dbfed3ea17b07763bc13d007583ef48914ed446be1c329c8e601/pywin32-307-cp311-cp311-win_amd64.whl", hash = "sha256:987a86971753ed7fdd52a7fb5747aba955b2c7fbbc3d8b76ec850358c1cc28c3", size = 6536159 },
-    { url = "https://files.pythonhosted.org/packages/63/72/dce6d08a2adeaf9e7e0462173610900d01d16a449aa74c9e035b7c2ec8f8/pywin32-307-cp311-cp311-win_arm64.whl", hash = "sha256:fd436897c186a2e693cd0437386ed79f989f4d13d6f353f8787ecbb0ae719398", size = 7949586 },
-    { url = "https://files.pythonhosted.org/packages/90/4e/9c660fa6c34db3c9542c9682b0ccd9edd63a6a4cb6ac4d22014b2c3355c9/pywin32-307-cp312-cp312-win32.whl", hash = "sha256:07649ec6b01712f36debf39fc94f3d696a46579e852f60157a729ac039df0815", size = 5916997 },
-    { url = "https://files.pythonhosted.org/packages/9c/11/c56e771d2cdbd2dac8e656edb2c814e4b2239da2c9028aa7265cdfff8aed/pywin32-307-cp312-cp312-win_amd64.whl", hash = "sha256:00d047992bb5dcf79f8b9b7c81f72e0130f9fe4b22df613f755ab1cc021d8347", size = 6519708 },
-    { url = "https://files.pythonhosted.org/packages/cd/64/53b1112cb05f85a6c87339a9f90a3b82d67ecb46f16b45abaac3bf4dee2b/pywin32-307-cp312-cp312-win_arm64.whl", hash = "sha256:b53658acbfc6a8241d72cc09e9d1d666be4e6c99376bc59e26cdb6223c4554d2", size = 7952978 },
+    { url = "https://files.pythonhosted.org/packages/08/dc/28c668097edfaf4eac4617ef7adf081b9cf50d254672fcf399a70f5efc41/pywin32-306-cp310-cp310-win32.whl", hash = "sha256:06d3420a5155ba65f0b72f2699b5bacf3109f36acbe8923765c22938a69dfc8d", size = 8506422 },
+    { url = "https://files.pythonhosted.org/packages/d3/d6/891894edec688e72c2e308b3243fad98b4066e1839fd2fe78f04129a9d31/pywin32-306-cp310-cp310-win_amd64.whl", hash = "sha256:84f4471dbca1887ea3803d8848a1616429ac94a4a8d05f4bc9c5dcfd42ca99c8", size = 9226392 },
+    { url = "https://files.pythonhosted.org/packages/8b/1e/fc18ad83ca553e01b97aa8393ff10e33c1fb57801db05488b83282ee9913/pywin32-306-cp311-cp311-win32.whl", hash = "sha256:e65028133d15b64d2ed8f06dd9fbc268352478d4f9289e69c190ecd6818b6407", size = 8507689 },
+    { url = "https://files.pythonhosted.org/packages/7e/9e/ad6b1ae2a5ad1066dc509350e0fbf74d8d50251a51e420a2a8feaa0cecbd/pywin32-306-cp311-cp311-win_amd64.whl", hash = "sha256:a7639f51c184c0272e93f244eb24dafca9b1855707d94c192d4a0b4c01e1100e", size = 9227547 },
+    { url = "https://files.pythonhosted.org/packages/91/20/f744bff1da8f43388498503634378dbbefbe493e65675f2cc52f7185c2c2/pywin32-306-cp311-cp311-win_arm64.whl", hash = "sha256:70dba0c913d19f942a2db25217d9a1b726c278f483a919f1abfed79c9cf64d3a", size = 10388324 },
+    { url = "https://files.pythonhosted.org/packages/14/91/17e016d5923e178346aabda3dfec6629d1a26efe587d19667542105cf0a6/pywin32-306-cp312-cp312-win32.whl", hash = "sha256:383229d515657f4e3ed1343da8be101000562bf514591ff383ae940cad65458b", size = 8507705 },
+    { url = "https://files.pythonhosted.org/packages/83/1c/25b79fc3ec99b19b0a0730cc47356f7e2959863bf9f3cd314332bddb4f68/pywin32-306-cp312-cp312-win_amd64.whl", hash = "sha256:37257794c1ad39ee9be652da0462dc2e394c8159dfd913a8a4e8eb6fd346da0e", size = 9227429 },
+    { url = "https://files.pythonhosted.org/packages/1c/43/e3444dc9a12f8365d9603c2145d16bf0a2f8180f343cf87be47f5579e547/pywin32-306-cp312-cp312-win_arm64.whl", hash = "sha256:5821ec52f6d321aa59e2db7e0a35b997de60c201943557d108af9d4ae1ec7040", size = 10388145 },
 ]
 
 [[package]]
