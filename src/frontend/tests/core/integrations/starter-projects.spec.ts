@@ -1,4 +1,4 @@
-const { test, expect } = require("@playwright/test");
+import { expect, test } from "@playwright/test";
 
 test(
   "vector store from starter projects should have its connections and nodes on the flow",
@@ -72,14 +72,13 @@ test(
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page
-      .getByRole("heading", { name: "Vector Store RAG" })
-      .first()
-      .click();
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 100000,
-    });
+    while (modalCount === 0) {
+      await page.getByText("New Flow", { exact: true }).click();
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
+      modalCount = await page.getByTestId("modal-title")?.count();
+    }
 
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
