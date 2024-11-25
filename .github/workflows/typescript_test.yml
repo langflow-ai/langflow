@@ -162,6 +162,12 @@ jobs:
           # Ensure proper JSON formatting for matrix output
           echo "matrix=$(echo $SUITES | jq -c .)" >> $GITHUB_OUTPUT
           echo "test_grep=$TEST_GREP" >> $GITHUB_OUTPUT
+
+      - name: Install Playwright
+        id: install-playwright
+        uses: ./.github/actions/install-playwright
+        with:
+          working-directory: ./src/frontend
       - name: Count Tests and Calculate Shards
         id: count-tests
         run: |
