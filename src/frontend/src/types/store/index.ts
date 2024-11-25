@@ -44,7 +44,8 @@ export type shortcutsStoreType = {
   update: string;
   download: string;
   freeze: string;
-  FreezePath: string;
+  toggleSidebar: string;
+  freezePath: string;
   toolMode: string;
   shortcuts: Array<{
     name: string;
