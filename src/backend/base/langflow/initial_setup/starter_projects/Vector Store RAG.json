@@ -996,7 +996,7 @@
         "data": {
           "id": "note-UrQ0p",
           "node": {
-            "description": "## 📚 1. Load Data Flow\n\nRun this first! Load data from a local file and embed it into the vector database.\n\nSelect a Database and a Collection, or create new ones. \n\nClick ▶️ **Run component** on the **Astra DB** component to load your data.\n\n* If you're using OSS Langflow, add your Astra DB Application Token to the Astra DB component.\n\n#### Next steps:\n Experiment by changing the prompt and the contextual data to see how the retrieval flow's responses change.",
+            "description": "## 🐕 2. Retriever Flow\n\nThis flow answers your questions with contextual data retrieved from your vector database.\n\nOpen the **Playground** and ask, \n\n```\nWhat is this document about?\n```\n",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -3242,7 +3242,7 @@
         "data": {
           "id": "note-igpjN",
           "node": {
-            "description": "## 🐕 2. Retriever Flow\n\nThis flow answers your questions with contextual data retrieved from your vector database.\n\nOpen the **Playground** and ask, \n\n```\nWhat is this document about?\n```\n",
+            "description": "## 📚 1. Load Data Flow\n\nRun this first! Load data from a local file and embed it into the vector database.\n\nSelect a Database and a Collection, or create new ones. \n\nClick ▶️ **Run component** on the **Astra DB** component to load your data.\n\n* If you're using OSS Langflow, add your Astra DB Application Token to the Astra DB component.\n\n#### Next steps:\n Experiment by changing the prompt and the contextual data to see how the retrieval flow's responses change.",
             "display_name": "",
             "documentation": "",
             "template": {
