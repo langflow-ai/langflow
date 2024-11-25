@@ -37,7 +37,6 @@ const useHandleOnNewValue = ({
   const updateNodeInternals = useUpdateNodeInternals();
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
-
   const postTemplateValue = usePostTemplateValue({
     parameterId: name,
     nodeId: nodeId,
