@@ -120,7 +120,12 @@ jobs:
 
               # Create grep pattern if we have tags
               if [ ${#TAGS[@]} -gt 0 ]; then
-                TEST_GREP="--grep $(IFS=\|; echo "${TAGS[*]}")"
+                # Convert array of tags into regex lookaheads
+                REGEX_PATTERN=""
+                for TAG in "${TAGS[@]}"; do
+                  REGEX_PATTERN="${REGEX_PATTERN}(?=.*${TAG})"
+                done
+                TEST_GREP="--grep \"${REGEX_PATTERN}\""
               fi
             else
               # Process input suites to tags
@@ -142,7 +147,12 @@ jobs:
               fi
 
               if [ ${#TAGS[@]} -gt 0 ]; then
-                TEST_GREP="--grep $(IFS=\|; echo "${TAGS[*]}")"
+                # Convert array of tags into regex lookaheads
+                REGEX_PATTERN=""
+                for TAG in "${TAGS[@]}"; do
+                  REGEX_PATTERN="${REGEX_PATTERN}(?=.*${TAG})"
+                done
+                TEST_GREP="--grep \"${REGEX_PATTERN}\""
               fi
             fi
           fi
