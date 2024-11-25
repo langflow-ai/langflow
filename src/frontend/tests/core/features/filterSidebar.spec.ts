@@ -1,8 +1,9 @@
 import { expect, test } from "@playwright/test";
 
 test(
-  "user must see on handle click the possibility connections - LLMChain",
+  "user must see on handle click the possibility connections",
   { tag: ["@release", "@components", "@api"] },
+
   async ({ page }) => {
     await page.goto("/");
     await page.waitForSelector('[data-testid="mainpage_title"]', {
@@ -60,40 +61,6 @@ test(
         timeout: 3000,
       },
     );
-    await page.getByTestId("handle-apirequest-shownode-urls-left").click();
-
-    await page.waitForTimeout(500);
-
-    expect(await page.getByTestId("icon-ListFilter").first()).toBeVisible();
-
-    await page
-      .getByTestId("icon-X")
-      .first()
-      .hover()
-      .then(async () => {
-        await page
-          .getByText("Remove filter", {
-            exact: false,
-          })
-          .first()
-          .isVisible();
-      });
-
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("api request");
-
-    await page.waitForTimeout(1000);
-    await page
-      .getByTestId("dataAPI Request")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-    await page.waitForTimeout(500);
-
     await page.getByTestId("handle-apirequest-shownode-urls-left").click();
 
     await page.waitForTimeout(500);
