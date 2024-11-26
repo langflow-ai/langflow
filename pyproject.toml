@@ -31,7 +31,7 @@ maintainers = [
 
 # Define your main dependencies here
 dependencies = [
-    "langflow-base==0.1.0",
+    "langflow-base==0.1.1",
     "beautifulsoup4>=4.12.2,<5.0.0",
     "google-search-results>=2.4.1,<3.0.0",
     "google-api-python-client>=2.130.0,<3.0.0",
@@ -112,6 +112,7 @@ dependencies = [
     "sqlalchemy[aiosqlite,postgresql_psycopg2binary,postgresql_psycopgbinary]>=2.0.36,<3.0.0",
     "atlassian-python-api>=3.41.16,<4.0.0",
     "mem0ai>=0.1.26,<1.0.0",
+    "aiofile>=3.9.0,<4.0.0",
 ]
 
 [project.urls]

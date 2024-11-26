@@ -1,6 +1,6 @@
-import CardsWrapComponent from "@/components/cardsWrapComponent";
-import SideBarFoldersButtonsComponent from "@/components/folderSidebarComponent/components/sideBarFolderButtons";
-import LoadingComponent from "@/components/loadingComponent";
+import LoadingComponent from "@/components/common/loadingComponent";
+import CardsWrapComponent from "@/components/core/cardsWrapComponent";
+import SideBarFoldersButtonsComponent from "@/components/core/folderSidebarComponent/components/sideBarFolderButtons";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useDeleteFolders } from "@/controllers/API/queries/folders";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";

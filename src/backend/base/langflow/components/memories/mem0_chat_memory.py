@@ -103,13 +103,13 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
 
     def ingest_data(self) -> Memory:
         """Ingests a new message into Mem0 memory and returns the updated memory instance."""
-        mem0_memory = self.existing_memory if self.existing_memory else self.build_mem0()
+        mem0_memory = self.existing_memory or self.build_mem0()
 
         if not self.ingest_message or not self.user_id:
             logger.warning("Missing 'ingest_message' or 'user_id'; cannot ingest data.")
             return mem0_memory
 
-        metadata = self.metadata if self.metadata else {}
+        metadata = self.metadata or {}
 
         logger.info("Ingesting message for user_id: %s", self.user_id)
 
