@@ -157,3 +157,143 @@ def test_dataset_type_preservation():
     assert isinstance(result[0].data["bool_val"], bool)
     assert isinstance(result[0].data["list_val"], list)
     assert isinstance(result[0].data["dict_val"], dict)
+
+
+def test_add_row_with_dict(sample_dataset):
+    """Test adding a single row using a dictionary."""
+    new_row = {"name": "Alice", "age": 28, "city": "Seattle"}
+    result = sample_dataset.add_row(new_row)
+
+    assert isinstance(result, DataSet)
+    assert len(result) == len(sample_dataset) + 1
+    assert result.iloc[-1]["name"] == "Alice"
+    assert result.iloc[-1]["age"] == 28
+    assert result.iloc[-1]["city"] == "Seattle"
+
+
+def test_add_row_with_data_object(sample_dataset):
+    """Test adding a single row using a Data object."""
+    new_row = Data(data={"name": "Alice", "age": 28, "city": "Seattle"})
+    result = sample_dataset.add_row(new_row)
+
+    assert isinstance(result, DataSet)
+    assert len(result) == len(sample_dataset) + 1
+    assert result.iloc[-1]["name"] == "Alice"
+    assert result.iloc[-1]["age"] == 28
+    assert result.iloc[-1]["city"] == "Seattle"
+
+
+def test_add_rows_with_dicts(sample_dataset):
+    """Test adding multiple rows using dictionaries."""
+    new_rows = [{"name": "Alice", "age": 28, "city": "Seattle"}, {"name": "Charlie", "age": 32, "city": "Portland"}]
+    result = sample_dataset.add_rows(new_rows)
+
+    assert isinstance(result, DataSet)
+    assert len(result) == len(sample_dataset) + 2
+    assert result.iloc[-2]["name"] == "Alice"
+    assert result.iloc[-1]["name"] == "Charlie"
+
+
+def test_add_rows_with_data_objects(sample_dataset):
+    """Test adding multiple rows using Data objects."""
+    new_rows = [
+        Data(data={"name": "Alice", "age": 28, "city": "Seattle"}),
+        Data(data={"name": "Charlie", "age": 32, "city": "Portland"}),
+    ]
+    result = sample_dataset.add_rows(new_rows)
+
+    assert isinstance(result, DataSet)
+    assert len(result) == len(sample_dataset) + 2
+    assert result.iloc[-2]["name"] == "Alice"
+    assert result.iloc[-1]["name"] == "Charlie"
+
+
+def test_add_rows_mixed_types(sample_dataset):
+    """Test adding multiple rows using a mix of dictionaries and Data objects."""
+    new_rows = [
+        {"name": "Alice", "age": 28, "city": "Seattle"},
+        Data(data={"name": "Charlie", "age": 32, "city": "Portland"}),
+    ]
+    result = sample_dataset.add_rows(new_rows)
+
+    assert isinstance(result, DataSet)
+    assert len(result) == len(sample_dataset) + 2
+    assert result.iloc[-2]["name"] == "Alice"
+    assert result.iloc[-1]["name"] == "Charlie"
+
+
+def test_init_with_data_objects():
+    """Test initialization with Data objects."""
+    data_objects = [Data(data={"name": "John", "age": 30}), Data(data={"name": "Jane", "age": 25})]
+    dataset = DataSet(data_objects)
+
+    assert isinstance(dataset, DataSet)
+    assert len(dataset) == 2
+    assert list(dataset.columns) == ["name", "age"]
+    assert dataset.iloc[0]["name"] == "John"
+    assert dataset.iloc[1]["age"] == 25
+
+
+def test_init_with_dicts():
+    """Test initialization with dictionaries."""
+    data_dicts = [{"name": "John", "age": 30}, {"name": "Jane", "age": 25}]
+    dataset = DataSet(data_dicts)
+
+    assert isinstance(dataset, DataSet)
+    assert len(dataset) == 2
+    assert list(dataset.columns) == ["name", "age"]
+    assert dataset.iloc[0]["name"] == "John"
+    assert dataset.iloc[1]["age"] == 25
+
+
+def test_init_with_dict_of_lists():
+    """Test initialization with a dictionary of lists."""
+    data = {"name": ["John", "Jane"], "age": [30, 25]}
+    dataset = DataSet(data)
+
+    assert isinstance(dataset, DataSet)
+    assert len(dataset) == 2
+    assert list(dataset.columns) == ["name", "age"]
+    assert dataset.iloc[0]["name"] == "John"
+    assert dataset.iloc[1]["age"] == 25
+
+
+def test_init_with_pandas_dataframe():
+    """Test initialization with a pandas DataFrame."""
+    test_df = pd.DataFrame({"name": ["John", "Jane"], "age": [30, 25]})
+    dataset = DataSet(test_df)
+
+    assert isinstance(dataset, DataSet)
+    assert len(dataset) == 2
+    assert list(dataset.columns) == ["name", "age"]
+    assert dataset.iloc[0]["name"] == "John"
+    assert dataset.iloc[1]["age"] == 25
+
+
+def test_init_with_none():
+    """Test initialization with None."""
+    dataset = DataSet(None)
+    assert isinstance(dataset, DataSet)
+    assert len(dataset) == 0
+
+
+def test_init_with_invalid_list():
+    """Test initialization with invalid list items."""
+    invalid_data = [
+        {"name": "John", "age": 30},
+        Data(data={"name": "Jane", "age": 25}),  # Mixed types should fail
+    ]
+    with pytest.raises(ValueError, match="List items must be either all Data objects or all dictionaries"):
+        DataSet(invalid_data)
+
+
+def test_init_with_kwargs():
+    """Test initialization with additional kwargs."""
+    data = {"name": ["John", "Jane"], "age": [30, 25]}
+    dataset = DataSet(data=data, index=["a", "b"])
+
+    assert isinstance(dataset, DataSet)
+    assert len(dataset) == 2
+    assert list(dataset.index) == ["a", "b"]
+    assert dataset.loc["a"]["name"] == "John"
+    assert dataset.loc["b"]["age"] == 25
