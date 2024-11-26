@@ -131,7 +131,6 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                             and attr in node_data["template"].get(field_name)
                             # Check if it needs to be updated
                             and field_dict[attr] != node_data["template"][field_name][attr]
-                            and attr != "load_from_db"
                         ):
                             node_changes_log[node_type].append(
                                 {
