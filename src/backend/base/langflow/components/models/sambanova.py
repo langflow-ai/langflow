@@ -9,17 +9,17 @@ from langflow.io import DropdownInput, FloatInput, IntInput, SecretStrInput, Str
 
 
 class SambaNovaComponent(LCModelComponent):
-    display_name = "SambanovaCloud"
+    display_name = "SambaNova"
     description = "Generate text using Sambanova LLMs."
     documentation = "https://cloud.sambanova.ai/"
-    icon = "Sambanova"
-    name = "SambanovaModel"
+    icon = "SambaNova"
+    name = "SambaNovaModel"
 
     inputs = [
         *LCModelComponent._base_inputs,
         StrInput(
-            name="sambanova_base_url",
-            display_name="Sambanova Cloud Base Url",
+            name="sambanova_url",
+            display_name="SambaNova Cloud Base Url",
             advanced=True,
             info="The base URL of the Sambanova Cloud API. "
             "Defaults to https://api.sambanova.ai/v1/chat/completions. "
@@ -57,7 +57,7 @@ class SambaNovaComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
-        sambanova_base_url = self.sambanova_base_url
+        sambanova_url = self.sambanova_url
         sambanova_api_key = self.sambanova_api_key
         model_name = self.model_name
         max_tokens = self.max_tokens
@@ -69,6 +69,6 @@ class SambaNovaComponent(LCModelComponent):
             model=model_name,
             max_tokens=max_tokens or 1024,
             temperature=temperature or 0.07,
-            sambanova_url=sambanova_base_url,
+            sambanova_url=sambanova_url,
             sambanova_api_key=api_key,
         )
