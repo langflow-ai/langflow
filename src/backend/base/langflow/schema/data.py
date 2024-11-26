@@ -204,7 +204,7 @@ class Data(BaseModel):
     def __contains__(self, key) -> bool:
         return key in self.data
 
-    def __eq__(self, other):
+    def __eq__(self, /, other):
         return isinstance(other, Data) and self.data == other.data
 
 
