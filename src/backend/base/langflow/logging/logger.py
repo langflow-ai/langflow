@@ -171,6 +171,35 @@ class AsyncFileSink(AsyncSink):
         await asyncio.to_thread(self._sink.write, message)
 
 
+def is_valid_log_format(format_string) -> bool: 
+    """Validates a logging format string by attempting to format it with a dummy LogRecord.
+
+    Args:
+        format_string (str): The format string to validate.
+
+    Returns:
+        bool: True if the format string is valid, False otherwise.
+    """
+    record = logging.LogRecord(
+        name="dummy",
+        level=logging.INFO,
+        pathname="dummy_path",
+        lineno=0,
+        msg="dummy message",
+        args=None,
+        exc_info=None
+    )
+
+    formatter = logging.Formatter(format_string)
+
+    try:
+        # Attempt to format the record
+        formatter.format(record)
+    except (KeyError, ValueError, TypeError) as e:
+       return False
+    return True
+
+
 def configure(
     *,
     log_level: str | None = None,
@@ -203,7 +232,7 @@ def configure(
     elif log_env.lower() == "container_csv":
         logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss.SSS} {level} {file} {line} {function} {message}")
     else:
-        if log_format is None:
+        if log_format is None or not is_valid_log_format(log_format):
             log_format = DEFAULT_LOG_FORMAT
 
         # Configure loguru to use RichHandler
