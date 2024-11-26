@@ -149,7 +149,7 @@ jobs:
               if [ ${#TAGS[@]} -gt 0 ]; then
                 # Join tags with | for OR logic
                 REGEX_PATTERN=$(IFS='|'; echo "${TAGS[*]}")
-                TEST_GREP="--grep=\"${REGEX_PATTERN}\""
+                TEST_GREP="--grep \"${REGEX_PATTERN}\""
               fi
             fi
           fi
