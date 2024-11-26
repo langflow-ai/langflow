@@ -11,8 +11,8 @@ Each agent has an LLM model and a unique set of tools at its disposal, with **Pr
 Each successive agent in the flow builds on the work of the previous agent, creating a chain of reasoning for solving complex problems.
 
 ## Prerequisites
-- [OpenAI API key created](https://platform.openai.com/)
-- [Tavily AI API key created](https://www.tavily.com/)
+- [An OpenAI API key](https://platform.openai.com/)
+- [A Tavily AI API key](https://www.tavily.com/)
 
 ## Open Langflow and create a new flow
 
@@ -23,7 +23,7 @@ This opens a starter template with the necessary components to run the flow.
 
 The Sequential Tasks Agent flow consists of these components:
 
-* The **Agent** components use the connected LLM to reason through the user's input and select among the connected tools to complete its task.
+* The **Agent** components use the connected LLM to analyze the user's input and select among the connected tools to complete the tasks.
 * The **Chat Input** component accepts user input to the chat.
 * The **Prompt** component combines the user input with a user-defined prompt.
 * The **Chat Output** component prints the flow's output to the chat.
