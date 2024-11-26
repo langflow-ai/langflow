@@ -62,7 +62,7 @@ class EventManager:
 
     def send_event(self, *, event_type: Literal["message", "error", "warning", "info", "token"], data: LoggableType):
         try:
-            if isinstance(data, dict) and event_type in ["message", "error", "warning", "info", "token"]:
+            if isinstance(data, dict) and event_type in {"message", "error", "warning", "info", "token"}:
                 data = create_event_by_type(event_type, **data)
         except TypeError as e:
             logger.debug(f"Error creating playground event: {e}")

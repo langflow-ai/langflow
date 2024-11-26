@@ -5,8 +5,9 @@ import { VariantProps, cva } from "class-variance-authority";
 import { PanelLeft } from "lucide-react";
 import * as React from "react";
 
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "../../utils/utils";
-import ShadTooltip from "../shadTooltipComponent";
+import ShadTooltip from "../common/shadTooltipComponent";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Separator } from "./separator";
@@ -164,6 +165,7 @@ const Sidebar = React.forwardRef<
     ref,
   ) => {
     const { state, setOpen, defaultOpen } = useSidebar();
+    const isMobile = useIsMobile();
 
     React.useEffect(() => {
       if (collapsible === "none") {
@@ -172,6 +174,16 @@ const Sidebar = React.forwardRef<
         setOpen(defaultOpen);
       }
     }, [collapsible]);
+
+    React.useEffect(() => {
+      if (collapsible !== "none") {
+        if (isMobile) {
+          setOpen(false);
+        } else {
+          setOpen(defaultOpen);
+        }
+      }
+    }, [isMobile]);
 
     if (collapsible === "none") {
       return (

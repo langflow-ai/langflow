@@ -16,7 +16,7 @@ OpenAI uses this loaded data to generate a blog post, as instructed by the **Tex
 
 ---
 
-- [Langflow installed and running](/getting-started-installation)
+- [Langflow installed and running](/get-started-installation)
 - [OpenAI API key created](https://platform.openai.com/)
 
 
