@@ -86,8 +86,6 @@ def serialize_field(value):
         if hasattr(value, "to_json"):
             return value.to_json()
         return value.dict()
-    if isinstance(value, str):
-        return {"result": value}
     return str(value)
 
 
