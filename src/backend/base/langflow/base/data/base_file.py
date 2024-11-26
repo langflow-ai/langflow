@@ -22,8 +22,14 @@ class BaseFileComponent(Component, ABC):
     class BaseFile:
         """Internal class to represent a file with additional metadata."""
 
-        def __init__(self, data: Data | list[Data], path: Path, *, delete_after_processing: bool = False,
-                     silent_errors: bool = False):
+        def __init__(
+            self,
+            data: Data | list[Data],
+            path: Path,
+            *,
+            delete_after_processing: bool = False,
+            silent_errors: bool = False,
+        ):
             self._data = data if isinstance(data, list) else [data]
             self.path = path
             self.delete_after_processing = delete_after_processing
@@ -416,7 +422,6 @@ class BaseFileComponent(Component, ABC):
                 msg = f"Attempted Path Traversal in {archive_type} File: {member}"
                 raise ValueError(msg)
             extract_func(output_dir, member)
-
 
     def _unpack_bundle(self, bundle_path: Path, output_dir: Path):
         """Unpack a bundle into a temporary directory.
