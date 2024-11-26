@@ -171,7 +171,7 @@ class AsyncFileSink(AsyncSink):
         await asyncio.to_thread(self._sink.write, message)
 
 
-def is_valid_log_format(format_string) -> bool: 
+def is_valid_log_format(format_string) -> bool:
     """Validates a logging format string by attempting to format it with a dummy LogRecord.
 
     Args:
@@ -181,13 +181,7 @@ def is_valid_log_format(format_string) -> bool:
         bool: True if the format string is valid, False otherwise.
     """
     record = logging.LogRecord(
-        name="dummy",
-        level=logging.INFO,
-        pathname="dummy_path",
-        lineno=0,
-        msg="dummy message",
-        args=None,
-        exc_info=None
+        name="dummy", level=logging.INFO, pathname="dummy_path", lineno=0, msg="dummy message", args=None, exc_info=None
     )
 
     formatter = logging.Formatter(format_string)
@@ -195,8 +189,8 @@ def is_valid_log_format(format_string) -> bool:
     try:
         # Attempt to format the record
         formatter.format(record)
-    except (KeyError, ValueError, TypeError) as e:
-       return False
+    except (KeyError, ValueError, TypeError):
+        return False
     return True
 
 
