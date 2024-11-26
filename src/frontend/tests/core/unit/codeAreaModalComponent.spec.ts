@@ -20,7 +20,6 @@ test(
         modalCount = await modalTitleElement.count();
       }
     } catch (error) {
-      2;
       modalCount = 0;
     }
 
