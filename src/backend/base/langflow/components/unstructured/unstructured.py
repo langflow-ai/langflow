@@ -116,7 +116,7 @@ class UnstructuredComponent(BaseFileComponent):
 
         # Rename the `source` field to `self.SERVER_FILE_PATH_FIELDNAME`, to avoid conflicts with the `source` field
         for data in processed_data:
-            if "source" in data.data:
+            if data and "source" in data.data:
                 data.data[self.SERVER_FILE_PATH_FIELDNAME] = data.data.pop("source")
 
         return self.rollup_data(file_list, processed_data)
