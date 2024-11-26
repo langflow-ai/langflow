@@ -226,7 +226,7 @@ def configure(
     else:
         if os.getenv("LANGFLOW_LOG_FORMAT") and log_format is None:
             log_format = os.getenv("LANGFLOW_LOG_FORMAT")
-            
+
         if log_format is None or not is_valid_log_format(log_format):
             log_format = DEFAULT_LOG_FORMAT
 
