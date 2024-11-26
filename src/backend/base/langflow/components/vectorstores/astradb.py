@@ -547,10 +547,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Set the API key name if provided
         api_key_name = self.z_02_api_key_name or kwargs.get("z_02_api_key_name")
         provider_key = self.z_03_provider_api_key or kwargs.get("z_03_provider_api_key")
-        if provider_key:
-            authentication["providerKey"] = provider_key.split(".")[0]
         if api_key_name:
-            authentication["providerKey"] = api_key_name.split(".")[0]
+            authentication["providerKey"] = api_key_name
+        if authentication:
+            provider_key = None
+            authentication["providerKey"] = authentication["providerKey"].split(".")[0]
 
         # Set authentication and parameters to None if no values are provided
         if not authentication:
@@ -590,8 +591,17 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             msg = f"Invalid setup mode: {self.setup_mode}"
             raise ValueError(msg) from e
 
+        metric_value = self.metric or None
+        autodetect = False
+
         if self.embedding_choice == "Embedding Model":
             embedding_dict = {"embedding": self.embedding_model}
+        # Use autodetect if the collection name is NOT set to "+ Create new collection"
+        elif self.collection_name != "+ Create new collection":
+            autodetect = True
+            metric_value = None
+            setup_mode_value = None
+            embedding_dict = {}
         else:
             from astrapy.info import CollectionVectorServiceOptions
 
@@ -654,12 +664,13 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 api_endpoint=self.api_endpoint,
                 namespace=self.keyspace or None,
                 collection_name=getattr(self, "collection_name_new", None) or self.collection_name,
+                autodetect_collection=autodetect,
                 environment=(
                     parse_api_endpoint(getattr(self, "api_endpoint", None)).environment
                     if getattr(self, "api_endpoint", None)
                     else None
                 ),
-                metric=self.metric or None,
+                metric=metric_value,
                 batch_size=self.batch_size or None,
                 bulk_insert_batch_concurrency=self.bulk_insert_batch_concurrency or None,
                 bulk_insert_overwrite_concurrency=self.bulk_insert_overwrite_concurrency or None,
