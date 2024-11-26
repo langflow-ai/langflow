@@ -12,7 +12,7 @@ on:
         description: "Test suites to run (JSON array)"
         required: false
         type: string
-        default: '[]'
+        default: "[]"
       release:
         description: "Whether this is a release build"
         required: false
@@ -33,7 +33,7 @@ on:
         description: "Test suites to run (JSON array)"
         required: false
         type: string
-        default: '["starter-projects", "components", "workspace", "api", "database"]'
+        default: '[]'
       release:
         description: "Whether this is a release build"
         required: false
@@ -56,8 +56,9 @@ jobs:
   determine-test-suite:
     runs-on: ubuntu-latest
     outputs:
-      suites: ${{ steps.set-matrix.outputs.matrix }}
+      matrix: ${{ steps.setup-matrix.outputs.matrix }}
       test_grep: ${{ steps.set-matrix.outputs.test_grep }}
+      suites: ${{ steps.set-matrix.outputs.suites }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -74,6 +75,7 @@ jobs:
         id: set-matrix
         run: |
           # Start with input suites if provided, otherwise empty array
+          echo "Changes filter output: ${{ steps.filter.outputs }}"
           SUITES='${{ inputs.suites }}'
           echo "Initial suites: $SUITES"
           TEST_GREP=""
@@ -81,11 +83,12 @@ jobs:
           RELEASE="${{ inputs.release || 'false' }}"
           echo "Release build: $RELEASE"
 
+          # Only set to release if it's explicitly a release build
           if [[ "$RELEASE" == "true" ]]; then
             SUITES='["release"]'
             echo "Release build detected - setting suites to: $SUITES"
-            # No grep pattern for release - run all tests
-            TEST_GREP=""
+            # grep pattern for release is the @release tag - run all tests
+            TEST_GREP="--grep=\"@release\""
           else
             # If input suites were not provided, determine based on changes
             if [[ "$SUITES" == "[]" ]]; then
@@ -93,27 +96,27 @@ jobs:
               TAGS=()
               # Add suites and tags based on changed files
               if [[ "${{ steps.filter.outputs.components }}" == "true" ]]; then
-                SUITES=$(echo $SUITES | jq '. += ["components"]')
+                SUITES=$(echo $SUITES | jq -c '. += ["components"]')
                 TAGS+=("@components")
                 echo "Added components suite"
               fi
               if [[ "${{ steps.filter.outputs.starter-projects }}" == "true" ]]; then
-                SUITES=$(echo $SUITES | jq '. += ["starter-projects"]')
+                SUITES=$(echo $SUITES | jq -c '. += ["starter-projects"]')
                 TAGS+=("@starter-projects")
                 echo "Added starter-projects suite"
               fi
               if [[ "${{ steps.filter.outputs.workspace }}" == "true" ]]; then
-                SUITES=$(echo $SUITES | jq '. += ["workspace"]')
+                SUITES=$(echo $SUITES | jq -c '. += ["workspace"]')
                 TAGS+=("@workspace")
                 echo "Added workspace suite"
               fi
               if [[ "${{ steps.filter.outputs.api }}" == "true" ]]; then
-                SUITES=$(echo $SUITES | jq '. += ["api"]')
+                SUITES=$(echo $SUITES | jq -c '. += ["api"]')
                 TAGS+=("@api")
                 echo "Added api suite"
               fi
               if [[ "${{ steps.filter.outputs.database }}" == "true" ]]; then
-                SUITES=$(echo $SUITES | jq '. += ["database"]')
+                SUITES=$(echo $SUITES | jq -c '. += ["database"]')
                 TAGS+=("@database")
                 echo "Added database suite"
               fi
@@ -151,21 +154,68 @@ jobs:
             fi
           fi
 
+          # Ensure compact JSON output
+          SUITES=$(echo "$SUITES" | jq -c '.')
+
           echo "Final test suites to run: $SUITES"
           echo "Test grep pattern: $TEST_GREP"
-          echo "matrix=$SUITES" >> $GITHUB_OUTPUT
+          # Ensure proper JSON formatting for matrix output
+          echo "matrix=$(echo $SUITES | jq -c .)" >> $GITHUB_OUTPUT
           echo "test_grep=$TEST_GREP" >> $GITHUB_OUTPUT
 
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        id: setup-node
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: ./src/frontend/package-lock.json
+
+      - name: Install Node.js dependencies
+        run: npm ci
+        working-directory: ./src/frontend
+
+      - name: Setup Matrix Combinations
+        id: setup-matrix
+        run: |
+          cd src/frontend
+
+          # Get the test count using playwright's built-in grep
+          if [ -n "${{ steps.set-matrix.outputs.test_grep }}" ]; then
+            TEST_COUNT=$(npx playwright test ${{ inputs.tests_folder }} ${{ steps.set-matrix.outputs.test_grep }} --list | wc -l)
+          else
+            TEST_COUNT=$(npx playwright test ${{ inputs.tests_folder }} --list | wc -l)
+          fi
+
+          echo "Total tests to run: $TEST_COUNT"
+
+          # Calculate optimal shard count - 1 shard per 5 tests, min 1, max 10
+          SHARD_COUNT=$(( (TEST_COUNT + 4) / 5 ))
+          if [ $SHARD_COUNT -lt 1 ]; then
+            SHARD_COUNT=1
+          elif [ $SHARD_COUNT -gt 10 ]; then
+            SHARD_COUNT=10
+          fi
+
+          # Create the matrix combinations string
+          MATRIX_COMBINATIONS=""
+          for i in $(seq 1 $SHARD_COUNT); do
+            if [ $i -gt 1 ]; then
+              MATRIX_COMBINATIONS="$MATRIX_COMBINATIONS,"
+            fi
+            MATRIX_COMBINATIONS="$MATRIX_COMBINATIONS{\"shardIndex\": $i, \"shardTotal\": $SHARD_COUNT}"
+          done
+
+          echo "matrix={\"include\":[$MATRIX_COMBINATIONS]}" >> "$GITHUB_OUTPUT"
+
   setup-and-test:
-    name: Playwright Tests - Group ${{ matrix.shardIndex }}
+    name: Playwright Tests - Group ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
     runs-on: ubuntu-latest
+    if: ${{ needs.determine-test-suite.outputs.test_grep != '' }}
     needs: determine-test-suite
-    if: ${{ fromJson(needs.determine-test-suite.outputs.suites)[0] != null }}
     strategy:
       fail-fast: false
-      matrix:
-        shardIndex: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        shardTotal: [10]
+      matrix: ${{ fromJson(needs.determine-test-suite.outputs.matrix) }}
     env:
       OPENAI_API_KEY: ${{ inputs.openai_api_key || secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ inputs.store_api_key || secrets.STORE_API_KEY }}
@@ -220,8 +270,8 @@ jobs:
           command: |
             cd src/frontend
             echo 'Running tests with pattern: ${{ needs.determine-test-suite.outputs.test_grep }}'
-            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --list
-            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
+            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --shard ${{ matrix.shardIndex }} --list
+            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }} --workers 2
 
       - name: Upload blob report to GitHub Actions Artifacts
         if: always()
