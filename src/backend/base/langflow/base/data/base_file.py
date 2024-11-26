@@ -398,7 +398,7 @@ class BaseFileComponent(Component, ABC):
             return self._unpack_and_collect_files(collected_files)
 
         return collected_files
- 
+
     def _unpack_bundle(self, bundle_path: Path, output_dir: Path):
         """Unpack a bundle into a temporary directory.
 
@@ -409,6 +409,7 @@ class BaseFileComponent(Component, ABC):
         Raises:
             ValueError: If the bundle format is unsupported or cannot be read.
         """
+
         def _safe_extract_zip(bundle: ZipFile, output_dir: Path):
             """Safely extract ZIP files."""
             for member in bundle.namelist():
