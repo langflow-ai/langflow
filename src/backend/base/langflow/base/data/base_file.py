@@ -297,6 +297,7 @@ class BaseFileComponent(Component, ABC):
 
         def add_file(data: Data, path: str | Path, *, delete_after_processing: bool):
             resolved_path = Path(self.resolve_path(str(path)))
+
             if not resolved_path.exists():
                 msg = f"File or directory not found: {path}"
                 self.log(msg)
