@@ -1,7 +1,6 @@
 import shutil
 import tarfile
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from zipfile import ZipFile, is_zipfile
