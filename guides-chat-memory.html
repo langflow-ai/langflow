@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://www.googletagmanager.com">
 <script>window.dataLayer=window.dataLayer||[]</script>
 <script>!function(e,t,a,n){e[n]=e[n]||[],e[n].push({"gtm.start":(new Date).getTime(),event:"gtm.js"});var g=t.getElementsByTagName(a)[0],m=t.createElement(a);m.async=!0,m.src="https://www.googletagmanager.com/gtm.js?id=GTM-NK5M4ZT8",g.parentNode.insertBefore(m,g)}(window,document,"script","dataLayer")</script><link rel="stylesheet" href="/assets/css/styles.7db0cd89.css">
-<script src="/assets/js/runtime~main.54bedb52.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.f2445227.js" defer="defer"></script>
 <script src="/assets/js/main.05ecd6bc.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -34,6 +34,45 @@
 <p><img decoding="async" loading="lazy" src="/assets/images/chat-input-controls-pane-b60b21c923aa47a2265ae1775e693cb0.png" width="3246" height="1772" class="img_ev3q"></p>
 <p>By default, if the <code>Session ID</code> value is empty, it is set to the same value as <code>Flow ID</code>.</p>
 <p>You can also display all messages stored across every flow and session by going to <strong>Settings</strong> &gt; <strong>Messages</strong>.</p>
-<p><img decoding="async" loading="lazy" src="/assets/images/settings-messages-d0ad3a8e3bea5f8896565c041946a919.png" width="2910" height="1686" class="img_ev3q"></p></div></article><nav class="pagination-nav docusaurus-mt-lg" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/components-vector-stores"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Vector Stores</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/guides-data-message"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Data &amp; Message</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#4ee86e27d1004e8288a72c633c323703" class="table-of-contents__link toc-highlight">Session ID</a></li></ul></div></div></div></div></main></div></div></div><div id="ms-floating-button" class="ms-fixed ms-bottom-4 ms-right-8 ms-z-[100] ms-flex ms-flex-col ms-items-end hover:ms-cursor-pointer"><div class="ms-relative ms-mb-4"><div style="background-color:#f6f6f6" class="ms-absolute -ms-bottom-1 ms-right-6 -ms-z-10 ms-h-4 ms-w-4 ms-rotate-45"></div><div style="background-color:#f6f6f6" class="ms-z-10 ms-flex ms-items-center ms-justify-center ms-rounded-lg ms-px-3 ms-py-2"><p style="color:#000000;margin:0" class="ms-text-sm">Hi, how can I help you?</p></div></div><div style="background-color:#f6f6f6" class="ms-flex ms-h-16 ms-w-16 ms-flex-col ms-items-center ms-justify-center ms-self-end ms-rounded-full ms-p-2 ms-transition"><div class="ms-rotate-0 ms-flex ms-h-full ms-w-full ms-transform ms-cursor-pointer ms-items-center ms-justify-center ms-rounded-full ms-transition-all ms-delay-75 ms-duration-100 ms-ease-in-out"><div style="color:#000000;font-size:22px;width:48px;height:48px;margin:0px;padding:0px;display:flex;align-items:center;justify-content:center;text-align:center"><img src="/img/langflow-icon-black-transparent.svg" srcdark="" style="width:40px"></div></div></div><div></div></div></div>
+<p><img decoding="async" loading="lazy" src="/assets/images/settings-messages-d0ad3a8e3bea5f8896565c041946a919.png" width="2910" height="1686" class="img_ev3q"></p>
+<h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="store-chat-memory-in-an-external-database">Store chat memory in an external database<a href="#store-chat-memory-in-an-external-database" class="hash-link" aria-label="Direct link to Store chat memory in an external database" title="Direct link to Store chat memory in an external database">​</a></h2>
+<p>Chat memory is retrieved from an external database or vector store using the <a href="/components-helpers#chat-memory"><strong>Chat Memory</strong></a> component.</p>
+<p>Chat memory is stored to an external database or vector store using the <a href="/components-helpers#store-message">Store Message</a> component.</p>
+<p>The <a href="/Components/components-memories"><strong>Chat Memories</strong></a> components provide access to their respective external databases <strong>as memory</strong>. This allows AIs to access external memory for persistence and context retention. For example, connect the <strong>Chat Memory</strong> component to an <strong>AstraDBChatMemory</strong>* component to store the message history in an external Astra DB database.</p>
+<p>This example stores and retrieves chat history from an <a href="/Components/components-memories#astradbchatmemory-component">AstraDBChatMemory</a> component with <strong>Store Message</strong> and <strong>Chat Memory</strong> components.</p>
+<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="prerequisites">Prerequisites<a href="#prerequisites" class="hash-link" aria-label="Direct link to Prerequisites" title="Direct link to Prerequisites">​</a></h3>
+<ul>
+<li><a href="https://platform.openai.com/" target="_blank" rel="noopener noreferrer">An OpenAI API key</a></li>
+<li><a href="https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html" target="_blank" rel="noopener noreferrer">An Astra DB vector database</a> with:<!-- -->
+<ul>
+<li>Application Token</li>
+<li>API Endpoint</li>
+</ul>
+</li>
+</ul>
+<h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="connect-the-chat-memory-component-to-an-external-database">Connect the chat memory component to an external database<a href="#connect-the-chat-memory-component-to-an-external-database" class="hash-link" aria-label="Direct link to Connect the chat memory component to an external database" title="Direct link to Connect the chat memory component to an external database">​</a></h3>
+<ol>
+<li>Load the <a href="/starter-projects-memory-chatbot">Memory Chatbot</a> starter project.
+This starter project extends the basic prompting flow to include a chat memory component.</li>
+<li>Add the <a href="/components-helpers#store-message">Store Message</a> component to the flow.
+The <strong>Store message</strong> component stores messages in the external database.</li>
+<li>Add the <a href="/Components/components-memories#astradbchatmemory-component">AstraDBChatMemory Component</a> to the flow.
+The <strong>Astra DB Chat Memory</strong> component stores and retrieves messages from <strong>Astra DB</strong>.</li>
+<li>Configure the <strong>AstraDBChatMemory</strong> component with your AstraDB instance details.<!-- -->
+<ol>
+<li>In the <strong>Astra DB Application Token</strong> field, add your Astra token. (<code>AstraCS:...</code>)</li>
+<li>In the <strong>API Endpoint</strong> field, add your Astra database&#x27;s endpoint. (for example, <code>https://12adb-bc-5378c845f05a6-e0a12-bd889b4-us-east-2.apps.astra.datastax.com</code>)</li>
+</ol>
+</li>
+<li>Connect the <strong>AstraDBChatMemory</strong> component output to the external memory inputs of the <a href="/components-helpers#chat-memory">Chat Memory</a> and <a href="/components-helpers#store-message">Store Message</a> components.</li>
+<li>Link the <a href="/components-io#chat-output">Chat Output</a> component to the input of the <a href="/components-helpers#store-message">Store Message</a> component.</li>
+</ol>
+<p>Your completed flow should look like this:</p>
+<p><img decoding="async" loading="lazy" alt="Sample Flow storing Chat Memory in AstraDB" src="/assets/images/astra_db_chat_memory_rounded-9746ca2bb69d3b07ac0a071f4b9471b3.png" width="3178" height="1228" class="img_ev3q"></p>
+<ol start="7">
+<li>In Langflow, create message traffic by running a flow.</li>
+<li>Inspect your Astra database&#x27;s tables and activity.
+You will see new tables and traffic created.</li>
+</ol></div></article><nav class="pagination-nav docusaurus-mt-lg" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/components-vector-stores"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Vector Stores</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/guides-data-message"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Data &amp; Message</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#4ee86e27d1004e8288a72c633c323703" class="table-of-contents__link toc-highlight">Session ID</a></li><li><a href="#store-chat-memory-in-an-external-database" class="table-of-contents__link toc-highlight">Store chat memory in an external database</a><ul><li><a href="#prerequisites" class="table-of-contents__link toc-highlight">Prerequisites</a></li><li><a href="#connect-the-chat-memory-component-to-an-external-database" class="table-of-contents__link toc-highlight">Connect the chat memory component to an external database</a></li></ul></li></ul></div></div></div></div></main></div></div></div><div id="ms-floating-button" class="ms-fixed ms-bottom-4 ms-right-8 ms-z-[100] ms-flex ms-flex-col ms-items-end hover:ms-cursor-pointer"><div class="ms-relative ms-mb-4"><div style="background-color:#f6f6f6" class="ms-absolute -ms-bottom-1 ms-right-6 -ms-z-10 ms-h-4 ms-w-4 ms-rotate-45"></div><div style="background-color:#f6f6f6" class="ms-z-10 ms-flex ms-items-center ms-justify-center ms-rounded-lg ms-px-3 ms-py-2"><p style="color:#000000;margin:0" class="ms-text-sm">Hi, how can I help you?</p></div></div><div style="background-color:#f6f6f6" class="ms-flex ms-h-16 ms-w-16 ms-flex-col ms-items-center ms-justify-center ms-self-end ms-rounded-full ms-p-2 ms-transition"><div class="ms-rotate-0 ms-flex ms-h-full ms-w-full ms-transform ms-cursor-pointer ms-items-center ms-justify-center ms-rounded-full ms-transition-all ms-delay-75 ms-duration-100 ms-ease-in-out"><div style="color:#000000;font-size:22px;width:48px;height:48px;margin:0px;padding:0px;display:flex;align-items:center;justify-content:center;text-align:center"><img src="/img/langflow-icon-black-transparent.svg" srcdark="" style="width:40px"></div></div></div><div></div></div></div>
 </body>
 </html>
