@@ -1,3 +1,5 @@
+from typing import cast
+
 import pandas as pd
 
 from langflow.schema.data import Data
@@ -9,34 +11,42 @@ class DataSet(pd.DataFrame):
     This class extends pandas.DataFrame to provide seamless integration between
     Langflow's Data objects and pandas' powerful data manipulation capabilities.
 
-    Key Features:
-        - Direct initialization from a list of Data objects
-        - Maintains all pandas DataFrame functionality
-        - Conversion back to Data objects when needed
-
-    Notes:
-        - Nested dictionaries within Data objects are preserved in their column representation
-        - All pandas DataFrame operations (groupby, merge, concat, etc.) remain available
-        - Column dtypes are inferred from the Data objects' contents
+    Args:
+        data: Input data in various formats:
+            - List[Data]: List of Data objects
+            - List[Dict]: List of dictionaries
+            - Dict: Dictionary of arrays/lists
+            - pandas.DataFrame: Existing DataFrame
+            - Any format supported by pandas.DataFrame
+        **kwargs: Additional arguments passed to pandas.DataFrame constructor
 
     Examples:
-        >>> data_objects = [
-        ...     Data(data={"name": "John", "age": 30}),
-        ...     Data(data={"name": "Jane", "age": 25})
-        ... ]
-        >>> dataset = DataSet.from_data_list(data_objects)
-        >>> dataset['age'].mean()
-        27.5
-        >>> original_data = dataset.to_data_list()
+        >>> # From Data objects
+        >>> dataset = DataSet([Data(data={"name": "John"}), Data(data={"name": "Jane"})])
 
-    Inheritance:
-        This class inherits all functionality from pandas.DataFrame, meaning any
-        operation that works on a DataFrame will work on a DataSet:
-        - Filtering: dataset[dataset['age'] > 25]
-        - Aggregation: dataset.groupby('category').mean()
-        - Statistical operations: dataset.describe()
-        - etc.
+        >>> # From dictionaries
+        >>> dataset = DataSet([{"name": "John"}, {"name": "Jane"}])
+
+        >>> # From dictionary of lists
+        >>> dataset = DataSet({"name": ["John", "Jane"], "age": [30, 25]})
     """
+
+    def __init__(self, data: None | list[dict | Data] | dict | pd.DataFrame = None, **kwargs):
+        if data is None:
+            super().__init__(**kwargs)
+            return
+
+        if isinstance(data, list):
+            if all(isinstance(x, Data) for x in data):
+                data = [d.data for d in data]
+            elif not all(isinstance(x, dict) for x in data):
+                msg = "List items must be either all Data objects or all dictionaries"
+                raise ValueError(msg)
+            kwargs["data"] = data
+        elif isinstance(data, dict | pd.DataFrame):
+            kwargs["data"] = data
+
+        super().__init__(**kwargs)
 
     @classmethod
     def from_data_list(cls, data_list: list[Data]) -> "DataSet":
@@ -44,56 +54,49 @@ class DataSet(pd.DataFrame):
 
         This method converts a list of Data objects into a DataFrame structure,
         preserving all data from the original Data objects.
-
-        Args:
-            data_list (list[Data]): A list of Data objects to convert into a DataFrame.
-                Each Data object's internal dictionary becomes a row in the DataFrame.
-
-        Returns:
-            DataSet: A new DataSet instance containing all data from the input list.
-
-        Examples:
-            >>> data_objects = [
-            ...     Data(data={"name": "John", "age": 30}),
-            ...     Data(data={"name": "Jane", "age": 25})
-            ... ]
-            >>> dataset = DataSet.from_data_list(data_objects)
-            >>> print(dataset.columns)
-            Index(['name', 'age'], dtype='object')
-
-        Notes:
-            - Column names are derived from the keys in the Data objects
-            - If Data objects have different keys, the resulting DataFrame will have
-              NaN values for missing data
-            - The original structure of nested data is preserved in the DataFrame
         """
-        data_dicts = [d.data for d in data_list]
-        return cls(data_dicts)
+        return cls(data_list)
 
     def to_data_list(self) -> list[Data]:
-        """Converts the DataSet back to a list of Data objects.
+        """Converts the DataSet back to a list of Data objects."""
+        list_of_dicts = self.to_dict(orient="records")
+        return [Data(data=row) for row in list_of_dicts]
 
-        This method transforms each row of the DataFrame back into a Data object,
-        reconstructing the original data structure.
+    def add_row(self, data: dict | Data) -> "DataSet":
+        """Adds a single row to the dataset.
+
+        Args:
+            data: Either a Data object or a dictionary to add as a new row
 
         Returns:
-            list[Data]: A list of Data objects, where each object corresponds to
-                a row in the DataFrame.
+            DataSet: A new DataSet with the added row
 
-        Examples:
-            >>> dataset = DataSet({'name': ['John'], 'age': [30]})
-            >>> data_objects = dataset.to_data_list()
-            >>> print(data_objects[0].data)
-            {'name': 'John', 'age': 30}
-
-        Notes:
-            - Each row is converted to a dictionary using to_dict()
-            - The resulting Data objects will contain all columns as keys in their
-              internal dictionary
-            - Any modifications made to the DataFrame will be reflected in the
-              resulting Data objects
+        Example:
+            >>> dataset = DataSet([{"name": "John"}])
+            >>> dataset = dataset.add_row({"name": "Jane"})
         """
-        return [Data(data=row.to_dict()) for _, row in self.iterrows()]
+        if isinstance(data, Data):
+            data = data.data
+        new_df = self._constructor([data])
+        return cast(DataSet, pd.concat([self, new_df], ignore_index=True))
+
+    def add_rows(self, data: list[dict | Data]) -> "DataSet":
+        """Adds multiple rows to the dataset.
+
+        Args:
+            data: List of Data objects or dictionaries to add as new rows
+
+        Returns:
+            DataSet: A new DataSet with the added rows
+        """
+        processed_data = []
+        for item in data:
+            if isinstance(item, Data):
+                processed_data.append(item.data)
+            else:
+                processed_data.append(item)
+        new_df = self._constructor(processed_data)
+        return cast(DataSet, pd.concat([self, new_df], ignore_index=True))
 
     @property
     def _constructor(self):
