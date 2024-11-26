@@ -65,8 +65,8 @@ This example stores and retrieves chat history from an [AstraDBChatMemory](/Comp
 
 ### Prerequisites
 
-* [OpenAI API key](https://platform.openai.com/)
-* [An Astra DB vector database created](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html) with:
+* [An OpenAI API key](https://platform.openai.com/)
+* [An Astra DB vector database](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html) with:
 	* Application Token
 	* API Endpoint
 
@@ -79,8 +79,8 @@ The **Store message** component stores messages in the external database.
 3. Add the [AstraDBChatMemory Component](/Components/components-memories#astradbchatmemory-component) to the flow.
 The **Astra DB Chat Memory** component stores and retrieves messages from **Astra DB**.
 4. Configure the **AstraDBChatMemory** component with your AstraDB instance details.
-	1. In the **Astra DB Application Token** field, add your Astra token.
-	2. In the **API Endpoint** field, add your Astra database's endpoint.
+	1. In the **Astra DB Application Token** field, add your Astra token. (`AstraCS:...`)
+	2. In the **API Endpoint** field, add your Astra database's endpoint. (for example, `https://12adb-bc-5378c845f05a6-e0a12-bd889b4-us-east-2.apps.astra.datastax.com`)
 5. Connect the **AstraDBChatMemory** component output to the external memory inputs of the [Chat Memory](/components-helpers#chat-memory) and [Store Message](/components-helpers#store-message) components.
 6. Link the [Chat Output](/components-io#chat-output) component to the input of the [Store Message](/components-helpers#store-message) component.
 
