@@ -87,8 +87,8 @@ jobs:
           if [[ "$RELEASE" == "true" ]]; then
             SUITES='["release"]'
             echo "Release build detected - setting suites to: $SUITES"
-            # No grep pattern for release - run all tests
-            TEST_GREP=""
+            # grep pattern for release is the @release tag - run all tests
+            TEST_GREP="--grep=\"@release\""
           else
             # If input suites were not provided, determine based on changes
             if [[ "$SUITES" == "[]" ]]; then
@@ -211,6 +211,7 @@ jobs:
   setup-and-test:
     name: Playwright Tests - Group ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
     runs-on: ubuntu-latest
+    if: ${{ needs.determine-test-suite.outputs.test_grep != '' }}
     needs: determine-test-suite
     strategy:
       fail-fast: false
