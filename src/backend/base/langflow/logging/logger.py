@@ -20,7 +20,11 @@ from typing_extensions import NotRequired
 from langflow.settings import DEV
 
 VALID_LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-
+# Human-readable
+DEFAULT_LOG_FORMAT = (
+            "<green>{time:YYYY-MM-DD HH:mm:ss}</green> - <level>"
+            "{level: <8}</level> - {module} - <level>{message}</level>"
+        )
 
 class SizedLogBuffer:
     def __init__(
@@ -147,6 +151,7 @@ class LogConfig(TypedDict):
     log_file: NotRequired[Path]
     disable: NotRequired[bool]
     log_env: NotRequired[str]
+    log_format: NotRequired[str]
 
 
 class AsyncFileSink(AsyncSink):
@@ -172,6 +177,7 @@ def configure(
     log_file: Path | None = None,
     disable: bool | None = False,
     log_env: str | None = None,
+    log_format: str | None = None,
     async_file: bool = False,
 ) -> None:
     if disable and log_level is None and log_file is None:
@@ -195,11 +201,8 @@ def configure(
     elif log_env.lower() == "container_csv":
         logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss.SSS} {level} {file} {line} {function} {message}")
     else:
-        # Human-readable
-        log_format = (
-            "<green>{time:YYYY-MM-DD HH:mm:ss}</green> - <level>"
-            "{level: <8}</level> - {module} - <level>{message}</level>"
-        )
+        if log_format is None:
+            log_format = DEFAULT_LOG_FORMAT           
 
         # Configure loguru to use RichHandler
         logger.configure(
