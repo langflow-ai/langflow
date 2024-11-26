@@ -17,8 +17,6 @@ test(
 
     await page.goto("/");
 
-    await page.waitForTimeout(1000);
-
     let modalCount = 0;
     try {
       const modalTitleElement = await page?.getByTestId("modal-title");
@@ -31,13 +29,17 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 2000,
+    });
 
     await page.getByTestId("fit_view").click();
 
@@ -88,8 +90,6 @@ test(
     await page.mouse.up();
     await page.mouse.down();
 
-    await page.waitForTimeout;
-
     await page.getByTestId("fit_view").click();
 
     let outdatedComponents = await page
@@ -98,14 +98,12 @@ test(
 
     while (outdatedComponents > 0) {
       await page.getByTestId("icon-AlertTriangle").first().click();
-      await page.waitForTimeout(1000);
       outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
     }
 
     let filledApiKey = await page.getByTestId("remove-icon-badge").count();
     while (filledApiKey > 0) {
       await page.getByTestId("remove-icon-badge").first().click();
-      await page.waitForTimeout(1000);
       filledApiKey = await page.getByTestId("remove-icon-badge").count();
     }
 
@@ -153,8 +151,6 @@ AI:
 
     await page.locator('//*[@id="react-flow-id"]').hover();
 
-    await page.waitForTimeout(1000);
-
     await page.getByText("Playground", { exact: true }).last().click();
 
     await page.waitForSelector('[data-testid="button-send"]', {
@@ -175,13 +171,15 @@ AI:
 
     await page.getByTestId("button-send").click();
 
-    await page.waitForTimeout(400);
+    await page.waitForSelector("text=AI", { timeout: 30000 });
 
     const textLocator = page.locator("text=AI");
     await textLocator.nth(6).waitFor({ timeout: 30000 });
     await expect(textLocator.nth(1)).toBeVisible();
 
-    await page.waitForTimeout(3000);
+    await page.waitForSelector("[data-testid='button-send']", {
+      timeout: 3000,
+    });
 
     const memoryResponseText = await page
       .locator(".form-modal-chat-text")
