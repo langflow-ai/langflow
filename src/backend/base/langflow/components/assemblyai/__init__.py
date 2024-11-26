@@ -8,6 +8,6 @@ __all__ = [
     "AssemblyAIGetSubtitles",
     "AssemblyAILeMUR",
     "AssemblyAIListTranscripts",
-    "AssemblyAITranscriptionJobPoller",
     "AssemblyAITranscriptionJobCreator",
+    "AssemblyAITranscriptionJobPoller",
 ]

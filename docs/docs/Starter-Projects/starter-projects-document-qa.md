@@ -14,7 +14,7 @@ Build a question-and-answer chatbot with a document loaded from local memory.
 
 ---
 
-- [Langflow installed and running](/getting-started-installation)
+- [Langflow installed and running](/get-started-installation)
 - [OpenAI API key created](https://platform.openai.com/)
 
 
