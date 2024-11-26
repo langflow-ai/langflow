@@ -24,7 +24,12 @@ async def test_successful_get_request(api_request):
     respx.get(url).mock(return_value=Response(200, json=mock_response))
 
     # Making the request
-    result = await api_request.make_request(client=httpx.AsyncClient(), method=method, url=url)
+    result = await api_request.make_request(
+        client=httpx.AsyncClient(),
+        method=method,
+        url=url,
+        include_httpx_metadata=True,
+    )
 
     # Assertions
     assert result.data["status_code"] == 200
