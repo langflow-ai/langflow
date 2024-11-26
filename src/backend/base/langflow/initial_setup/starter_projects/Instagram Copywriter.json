@@ -1704,7 +1704,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -2623,7 +2623,7 @@
                 "dynamic": false,
                 "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
                 "list": false,
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "openai_api_base",
                 "placeholder": "",
                 "required": false,
