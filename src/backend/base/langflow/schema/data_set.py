@@ -94,3 +94,10 @@ class DataSet(pd.DataFrame):
               resulting Data objects
         """
         return [Data(data=row.to_dict()) for _, row in self.iterrows()]
+
+    @property
+    def _constructor(self):
+        def _c(*args, **kwargs):
+            return DataSet(*args, **kwargs).__finalize__(self)
+
+        return _c
