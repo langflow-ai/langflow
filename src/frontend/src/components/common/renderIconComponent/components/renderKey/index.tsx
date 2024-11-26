@@ -19,6 +19,8 @@ export default function RenderKey({
         />
       ) : check === "ctrl" && IS_MAC ? (
         <span>⌃</span>
+      ) : check === "mod" && !IS_MAC ? (
+        <span>Ctrl</span>
       ) : check === "alt" && IS_MAC ? (
         <ForwardedIconComponent
           name="OptionIcon"
