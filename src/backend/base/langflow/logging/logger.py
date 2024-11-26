@@ -213,8 +213,6 @@ def configure(
         logger.disable("langflow")
     if os.getenv("LANGFLOW_LOG_LEVEL", "").upper() in VALID_LOG_LEVELS and log_level is None:
         log_level = os.getenv("LANGFLOW_LOG_LEVEL")
-    if os.getenv("LANGFLOW_LOG_FORMAT") and log_format is None:
-        log_format = os.getenv("LANGFLOW_LOG_FORMAT")
     if log_level is None:
         log_level = "ERROR"
 
@@ -232,6 +230,9 @@ def configure(
     elif log_env.lower() == "container_csv":
         logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss.SSS} {level} {file} {line} {function} {message}")
     else:
+        if os.getenv("LANGFLOW_LOG_FORMAT") and log_format is None:
+            log_format = os.getenv("LANGFLOW_LOG_FORMAT")
+            
         if log_format is None or not is_valid_log_format(log_format):
             log_format = DEFAULT_LOG_FORMAT
 
