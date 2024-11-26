@@ -80,19 +80,25 @@ def handle_on_chain_start(
     return agent_message, start_time
 
 
+def _extract_output_text(output: str | list) -> str:
+    if isinstance(output, str):
+        text = output
+    elif isinstance(output, list) and len(output) == 1 and isinstance(output[0], dict) and "text" in output[0]:
+        text = output[0]["text"]
+    else:
+        msg = f"Output is not a string or list of dictionaries with 'text' key: {output}"
+        raise ValueError(msg)
+    return text
+
+
 def handle_on_chain_end(
     event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType, start_time: float
 ) -> tuple[Message, float]:
     data_output = event["data"].get("output")
     if data_output and isinstance(data_output, AgentFinish) and data_output.return_values.get("output"):
         output = data_output.return_values.get("output")
-        if isinstance(output, str):
-            agent_message.text = output
-        elif isinstance(output, list) and len(output) == 1 and isinstance(output[0], dict) and "text" in output[0]:
-            agent_message.text = output[0]["text"]
-        else:
-            msg = f"Output is not a string or list of dictionaries with 'text' key: {output}"
-            raise ValueError(msg)
+
+        agent_message.text = _extract_output_text(output)
         agent_message.properties.state = "complete"
         # Add duration to the last content if it exists
         if agent_message.content_blocks:
@@ -201,7 +207,9 @@ def handle_on_chain_stream(
 ) -> tuple[Message, float]:
     data_chunk = event["data"].get("chunk", {})
     if isinstance(data_chunk, dict) and data_chunk.get("output"):
-        agent_message.text = data_chunk.get("output")
+        output = data_chunk.get("output")
+        if output and isinstance(output, str | list):
+            agent_message.text = _extract_output_text(output)
         agent_message.properties.state = "complete"
         agent_message = send_message_method(message=agent_message)
         start_time = perf_counter()
