@@ -200,7 +200,7 @@ class APIRequestComponent(Component):
                     metadata.update(
                         {
                             "headers": json.dumps(headers),
-                            "status_code": str(response.status_code),
+                            "status_code": response.status_code,
                             "response_headers": json.dumps(response_headers),
                             **({"redirection_history": json.dumps(redirection_history)} if redirection_history else {}),
                         }
@@ -220,7 +220,7 @@ class APIRequestComponent(Component):
                 metadata.update(
                     {
                         "headers": json.dumps(headers),
-                        "status_code": str(response.status_code),
+                        "status_code": response.status_code,
                         "response_headers": json.dumps(response_headers),
                         **({"redirection_history": json.dumps(redirection_history)} if redirection_history else {}),
                     }
