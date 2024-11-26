@@ -13,6 +13,7 @@ class BingSearchAPIComponent(LCToolComponent):
     display_name = "Bing Search API"
     description = "Call the Bing Search API."
     name = "BingSearchAPI"
+    icon = "Bing"
 
     inputs = [
         SecretStrInput(name="bing_subscription_key", display_name="Bing Subscription Key"),

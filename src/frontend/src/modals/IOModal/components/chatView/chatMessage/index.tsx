@@ -1,4 +1,4 @@
-import ShadTooltip from "@/components/shadTooltipComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -9,9 +9,9 @@ import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
 import MaleTechnology from "../../../../../assets/male-technologist.png";
 import Robot from "../../../../../assets/robot.png";
-import CodeTabsComponent from "../../../../../components/codeTabsComponent";
-import IconComponent from "../../../../../components/genericIconComponent";
-import SanitizedHTMLWrapper from "../../../../../components/sanitizedHTMLWrapper";
+import IconComponent from "../../../../../components/common/genericIconComponent";
+import SanitizedHTMLWrapper from "../../../../../components/common/sanitizedHTMLWrapper";
+import CodeTabsComponent from "../../../../../components/core/codeTabsComponent";
 import {
   EMPTY_INPUT_SEND_MESSAGE,
   EMPTY_OUTPUT_SEND_MESSAGE,

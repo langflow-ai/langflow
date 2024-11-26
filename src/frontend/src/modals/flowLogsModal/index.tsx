@@ -1,10 +1,10 @@
+import IconComponent from "@/components/common/genericIconComponent";
+import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { useGetTransactionsQuery } from "@/controllers/API/queries/transactions";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { FlowSettingsPropsType } from "@/types/components";
 import { ColDef, ColGroupDef } from "ag-grid-community";
 import { useEffect, useState } from "react";
-import IconComponent from "../../components/genericIconComponent";
-import TableComponent from "../../components/tableComponent";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import { FlowSettingsPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 
 export default function FlowLogsModal({

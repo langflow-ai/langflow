@@ -6,7 +6,7 @@ class Finish:
     def __bool__(self) -> bool:
         return True
 
-    def __eq__(self, other):
+    def __eq__(self, /, other):
         return isinstance(other, Finish)
 
 
