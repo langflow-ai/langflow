@@ -1,5 +1,5 @@
 import ShadTooltip from "@/components/common/shadTooltipComponent";
-import PlaygroundButton from "@/components/flowToolbarComponent/components/playground-button";
+import PlaygroundButton from "@/components/core/flowToolbarComponent/components/playground-button";
 import {
   ENABLE_API,
   ENABLE_LANGFLOW_STORE,
