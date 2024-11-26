@@ -38,7 +38,7 @@ class DataSet(pd.DataFrame):
 
         if isinstance(data, list):
             if all(isinstance(x, Data) for x in data):
-                data = [d.data for d in data]
+                data = [d.data for d in data if hasattr(d, "data")]
             elif not all(isinstance(x, dict) for x in data):
                 msg = "List items must be either all Data objects or all dictionaries"
                 raise ValueError(msg)
@@ -47,15 +47,6 @@ class DataSet(pd.DataFrame):
             kwargs["data"] = data
 
         super().__init__(**kwargs)
-
-    @classmethod
-    def from_data_list(cls, data_list: list[Data]) -> "DataSet":
-        """Creates a DataSet from a list of Data objects.
-
-        This method converts a list of Data objects into a DataFrame structure,
-        preserving all data from the original Data objects.
-        """
-        return cls(data_list)
 
     def to_data_list(self) -> list[Data]:
         """Converts the DataSet back to a list of Data objects."""

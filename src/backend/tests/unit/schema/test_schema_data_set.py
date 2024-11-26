@@ -17,13 +17,13 @@ def sample_data_objects() -> list[Data]:
 @pytest.fixture
 def sample_dataset(sample_data_objects) -> DataSet:
     """Fixture providing a sample DataSet instance."""
-    return DataSet.from_data_list(sample_data_objects)
+    return DataSet(sample_data_objects)
 
 
 def test_from_data_list_basic():
     """Test basic functionality of from_data_list."""
     data_objects = [Data(data={"name": "John", "age": 30}), Data(data={"name": "Jane", "age": 25})]
-    dataset = DataSet.from_data_list(data_objects)
+    dataset = DataSet(data_objects)
 
     assert isinstance(dataset, DataSet)
     assert isinstance(dataset, pd.DataFrame)
@@ -35,7 +35,7 @@ def test_from_data_list_basic():
 
 def test_from_data_list_empty():
     """Test from_data_list with empty input."""
-    dataset = DataSet.from_data_list([])
+    dataset = DataSet([])
     assert isinstance(dataset, DataSet)
     assert len(dataset) == 0
 
@@ -46,7 +46,7 @@ def test_from_data_list_missing_fields():
         Data(data={"name": "John", "age": 30}),
         Data(data={"name": "Jane", "city": "Boston"}),  # Missing age
     ]
-    dataset = DataSet.from_data_list(data_objects)
+    dataset = DataSet(data_objects)
 
     assert isinstance(dataset, DataSet)
     assert set(dataset.columns) == {"name", "age", "city"}
@@ -60,7 +60,7 @@ def test_from_data_list_nested_data():
         Data(data={"name": "John", "address": {"city": "New York", "zip": "10001"}}),
         Data(data={"name": "Jane", "address": {"city": "Boston", "zip": "02108"}}),
     ]
-    dataset = DataSet.from_data_list(data_objects)
+    dataset = DataSet(data_objects)
 
     assert isinstance(dataset, DataSet)
     assert isinstance(dataset["address"][0], dict)
@@ -123,7 +123,7 @@ def test_dataset_pandas_operations(sample_dataset):
 def test_dataset_with_null_values():
     """Test handling of null values in DataSet."""
     data_objects = [Data(data={"name": "John", "age": None}), Data(data={"name": None, "age": 25})]
-    dataset = DataSet.from_data_list(data_objects)
+    dataset = DataSet(data_objects)
 
     assert pd.isna(dataset.iloc[0]["age"])
     assert pd.isna(dataset.iloc[1]["name"])
@@ -148,7 +148,7 @@ def test_dataset_type_preservation():
             }
         )
     ]
-    dataset = DataSet.from_data_list(data_objects)
+    dataset = DataSet(data_objects)
     result = dataset.to_data_list()
 
     assert isinstance(result[0].data["int_val"], int)
