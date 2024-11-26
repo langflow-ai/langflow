@@ -330,7 +330,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         return collection_options.vector
 
-
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         # Refresh the collection name options
         build_config["collection_name"]["options"] = self._initialize_collection_options()
@@ -385,11 +384,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 build_config["z_01_model_parameters"]["value"] = collection_options.service.parameters
 
                 if collection_options.service.authentication:
-                    build_config["z_02_api_key_name"]["value"] = (
-                        collection_options.service.authentication.get("providerKey")
+                    build_config["z_02_api_key_name"]["value"] = collection_options.service.authentication.get(
+                        "providerKey"
                     )
-                    build_config["z_03_provider_api_key"]["value"] = (
-                        collection_options.service.authentication.get("apiKey")
+                    build_config["z_03_provider_api_key"]["value"] = collection_options.service.authentication.get(
+                        "apiKey"
                     )
                 build_config["z_04_authentication"]["value"] = collection_options.service.authentication
             else:
@@ -540,9 +539,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Fetch values from kwargs if any self.* attributes are None
         provider_mapping = self.update_providers_mapping()
-        provider_value = provider_mapping.get(self.embedding_provider, [None])[0] or kwargs.get(
-            "embedding_provider"
-        )
+        provider_value = provider_mapping.get(self.embedding_provider, [None])[0] or kwargs.get("embedding_provider")
         model_name = self.model or kwargs.get("model")
         authentication = {**(self.z_04_authentication or {}), **kwargs.get("z_04_authentication", {})}
         parameters = self.z_01_model_parameters or kwargs.get("z_01_model_parameters", {})
@@ -602,13 +599,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             collection_options = self.get_collection_options()
 
             # Ensure collection_options and its nested attributes are handled safely
-            authentication = (
-                getattr(self, "z_04_authentication", {})
-                or (
-                    collection_options.service.authentication
-                    if collection_options and collection_options.service
-                    else {}
-                )
+            authentication = getattr(self, "z_04_authentication", {}) or (
+                collection_options.service.authentication if collection_options and collection_options.service else {}
             )
 
             # Build the vectorize options dictionary
@@ -662,7 +654,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 api_endpoint=self.api_endpoint,
                 namespace=self.keyspace or None,
                 collection_name=getattr(self, "collection_name_new", None) or self.collection_name,
-                environment = (
+                environment=(
                     parse_api_endpoint(getattr(self, "api_endpoint", None)).environment
                     if getattr(self, "api_endpoint", None)
                     else None
