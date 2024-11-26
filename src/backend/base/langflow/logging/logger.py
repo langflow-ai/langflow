@@ -184,6 +184,8 @@ def configure(
         logger.disable("langflow")
     if os.getenv("LANGFLOW_LOG_LEVEL", "").upper() in VALID_LOG_LEVELS and log_level is None:
         log_level = os.getenv("LANGFLOW_LOG_LEVEL")
+    if os.getenv("LANGFLOW_LOG_FORMAT") and log_format is None:
+        log_format = os.getenv("LANGFLOW_LOG_FORMAT")
     if log_level is None:
         log_level = "ERROR"
 
