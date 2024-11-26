@@ -22,10 +22,12 @@ class BaseFileComponent(Component, ABC):
     class BaseFile:
         """Internal class to represent a file with additional metadata."""
 
-        def __init__(self, data: Data | list[Data], path: Path, *, delete_after_processing: bool = False):
-            self.data = data
+        def __init__(self, data: Data | list[Data], path: Path, *, delete_after_processing: bool = False,
+                     silent_errors: bool = False):
+            self._data = data if isinstance(data, list) else [data]
             self.path = path
             self.delete_after_processing = delete_after_processing
+            self._silent_errors = silent_errors
 
         @property
         def data(self) -> list[Data]:
@@ -39,8 +41,7 @@ class BaseFileComponent(Component, ABC):
                 self._data = value
             else:
                 msg = f"data must be a Data object or a list of Data objects. Got: {type(value)}"
-                self.log(msg)
-                if not self.silent_errors:
+                if not self._silent_errors:
                     raise ValueError(msg)
 
         def merge_data(self, new_data: Data | list[Data] | None) -> list[Data]:
@@ -62,8 +63,7 @@ class BaseFileComponent(Component, ABC):
                 new_data_list = new_data
             else:
                 msg = "new_data must be a Data object, a list of Data objects, or None."
-                self.log(msg)
-                if not self.silent_errors:
+                if not self._silent_errors:
                     raise ValueError(msg)
                 return self.data
 
@@ -89,11 +89,13 @@ class BaseFileComponent(Component, ABC):
             )
 
     # Subclasses can override these class variables
-    VALID_EXTENSIONS = []  # To be overridden by child classes
+    VALID_EXTENSIONS: list[str] = []  # To be overridden by child classes
     IGNORE_STARTS_WITH = [".", "__MACOSX"]
 
     SERVER_FILE_PATH_FIELDNAME = "file_path"
     SUPPORTED_BUNDLE_EXTENSIONS = ["zip", "tar", "tgz", "bz2", "gz"]
+
+    file_path: list[Data] | None = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -110,7 +112,7 @@ class BaseFileComponent(Component, ABC):
         FileInput(
             name="path",
             display_name="Path",
-            file_types=[],  # Dynamically set in __init__
+            fileTypes=[],  # Dynamically set in __init__
             info="",  # Dynamically set in __init__
             required=False,
         ),
@@ -172,7 +174,7 @@ class BaseFileComponent(Component, ABC):
         Returns:
             list[Data]: Parsed data from the processed files.
         """
-        self._temp_dirs = []
+        self._temp_dirs: list[TemporaryDirectory] = []
         final_files = []  # Initialize to avoid UnboundLocalError
         try:
             # Step 1: Validate the provided paths
@@ -243,7 +245,7 @@ class BaseFileComponent(Component, ABC):
 
         def _build_data_dict(data_list: list[Data | None], data_list_field: str) -> dict[str, list[Data]]:
             """Builds a dictionary grouping Data objects by a specified field."""
-            data_dict = {}
+            data_dict: dict[str, list[Data]] = {}
             for data in data_list:
                 if data is None:
                     continue
@@ -289,7 +291,7 @@ class BaseFileComponent(Component, ABC):
         resolved_files = []
 
         def add_file(data: Data, path: str | Path, *, delete_after_processing: bool):
-            resolved_path = Path(self.resolve_path(path))
+            resolved_path = Path(self.resolve_path(str(path)))
             if not resolved_path.exists():
                 msg = f"File or directory not found: {path}"
                 self.log(msg)
@@ -299,11 +301,11 @@ class BaseFileComponent(Component, ABC):
                 BaseFileComponent.BaseFile(data, resolved_path, delete_after_processing=delete_after_processing)
             )
 
-        if self.path and not self.file_path:  # Only process self.path if file_path is not provided
+        if self.path and (not hasattr(self, "file_path") or not self.file_path):
             # Wrap self.path into a Data object
-            data_obj = Data(file_path=self.path)
+            data_obj = Data(data={"file_path": self.path})
             add_file(data=data_obj, path=self.path, delete_after_processing=False)
-        elif self.file_path:
+        elif hasattr(self, "file_path") and self.file_path:
             if isinstance(self.file_path, Data):
                 self.file_path = [self.file_path]
             elif not isinstance(self.file_path, list):
@@ -391,7 +393,7 @@ class BaseFileComponent(Component, ABC):
 
     def _safe_extract(
         self,
-        extract_func: Callable[[Path], None],
+        extract_func: Callable[[Path, str], None],
         members: list[str],
         output_dir: Path,
         archive_type: str,
@@ -409,10 +411,12 @@ class BaseFileComponent(Component, ABC):
         """
         for member in members:
             member_path = output_dir / member
+            # Ensure no path traversal outside `output_dir`
             if not member_path.resolve().is_relative_to(output_dir.resolve()):
                 msg = f"Attempted Path Traversal in {archive_type} File: {member}"
                 raise ValueError(msg)
             extract_func(output_dir, member)
+
 
     def _unpack_bundle(self, bundle_path: Path, output_dir: Path):
         """Unpack a bundle into a temporary directory.
@@ -424,27 +428,24 @@ class BaseFileComponent(Component, ABC):
         Raises:
             ValueError: If the bundle format is unsupported or cannot be read.
         """
-        if is_zipfile(bundle_path):
+
+        def zip_extract(output_dir: Path, member: str):
             with ZipFile(bundle_path, "r") as bundle:
-                self._safe_extract(
-                    lambda output_dir, member: bundle.extract(member, path=output_dir),
-                    bundle.namelist(),
-                    output_dir,
-                    "ZIP",
-                )
-        elif tarfile.is_tarfile(bundle_path):
+                bundle.extract(member, path=output_dir)
+
+        def tar_extract(output_dir: Path, member: str):
             with tarfile.open(bundle_path, "r:*") as bundle:
-                self._safe_extract(
-                    lambda output_dir, member: bundle.extract(member, path=output_dir),
-                    [member.name for member in bundle.getmembers()],
-                    output_dir,
-                    "TAR",
-                )
+                bundle.extract(member, path=output_dir)
+
+        if is_zipfile(bundle_path):
+            with ZipFile(bundle_path, "r") as zip_bundle:
+                zip_extract(zip_bundle.extract, zip_bundle.namelist(), output_dir, "ZIP")
+        elif tarfile.is_tarfile(bundle_path):
+            with tarfile.open(bundle_path, "r:*") as tar_bundle:
+                tar_extract(tar_bundle.extract, [member.name for member in tar_bundle.getmembers()], output_dir, "TAR")
         else:
             msg = f"Unsupported bundle format: {bundle_path.suffix}"
-            self.log(msg)
-            if not self.silent_errors:
-                raise ValueError(msg)
+            raise ValueError(msg)
 
     def _filter_and_mark_files(self, files: list[BaseFile]) -> list[BaseFile]:
         """Validate file types and mark files for removal.
