@@ -185,6 +185,10 @@ class APIRequestComponent(Component):
             is_binary, file_path = self._response_info(response, with_file_path=save_to_file)
             response_headers = self._headers_to_dict(response.headers)
 
+            metadata: dict[str, Any] = {
+                "source": url,
+            }
+
             if save_to_file:
                 mode = "wb" if is_binary else "w"
                 encoding = response.encoding if mode == "w" else None
@@ -192,13 +196,10 @@ class APIRequestComponent(Component):
                     with file_path.open(mode, encoding=encoding) as f:
                         f.write(response.content if is_binary else response.text)
 
-                metadata: dict[str, Any] = {
-                    "source": url,
-                    "file_path": str(file_path),
-                }
                 if include_httpx_metadata:
                     metadata.update(
                         {
+                            "file_path": str(file_path),
                             "headers": headers,
                             "status_code": response.status_code,
                             "response_headers": response_headers,
@@ -215,7 +216,11 @@ class APIRequestComponent(Component):
                 except Exception:  # noqa: BLE001
                     self.log("Error decoding JSON response")
                     result = response.text.encode("utf-8")
-            metadata: dict[str, Any] = {"source": url, "result": result}
+
+            # Add result to metadata
+            metadata.update({"result": result})
+
+            # Add metadata to the output
             if include_httpx_metadata:
                 metadata.update(
                     {
