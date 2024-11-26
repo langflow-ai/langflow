@@ -72,8 +72,6 @@ export default function EditShortcutButton({
         const shortcutName = toCamelCase(shortcut[0]);
         setUniqueShortcut(shortcutName, fixCombination.join("").toLowerCase());
         setShortcuts(newCombination);
-        console.log(newCombination);
-        console.log(shortcutName, fixCombination.join("").toLowerCase());
         localStorage.setItem(
           "langflow-shortcuts",
           JSON.stringify(newCombination),
