@@ -11,7 +11,6 @@ from zoneinfo import ZoneInfo
 
 import httpx
 import validators
-from loguru import logger
 
 from langflow.base.curl.parse import parse_context
 from langflow.custom import Component
@@ -35,7 +34,7 @@ class APIRequestComponent(Component):
         MessageTextInput(
             name="urls",
             display_name="URLs",
-            is_list=True,
+            list=True,
             info="Enter one or more URLs, separated by commas.",
         ),
         MessageTextInput(
@@ -122,12 +121,12 @@ class APIRequestComponent(Component):
                     json_data = json.loads(parsed.data)
                     build_config["body"]["value"] = json_data
                 except json.JSONDecodeError:
-                    logger.exception("Error decoding JSON data")
+                    self.log("Error decoding JSON data")
             else:
                 build_config["body"]["value"] = {}
         except Exception as exc:
             msg = f"Error parsing curl: {exc}"
-            logger.exception(msg)
+            self.log(msg)
             raise ValueError(msg) from exc
         return build_config
 
@@ -159,7 +158,7 @@ class APIRequestComponent(Component):
                 body = json.loads(body)
             except Exception as e:
                 msg = f"Error decoding JSON data: {e}"
-                logger.exception(msg)
+                self.log.exception(msg)
                 body = None
                 raise ValueError(msg) from e
 
@@ -189,8 +188,9 @@ class APIRequestComponent(Component):
             if save_to_file:
                 mode = "wb" if is_binary else "w"
                 encoding = response.encoding if mode == "w" else None
-                with file_path.open(mode, encoding=encoding) as f:
-                    f.write(response.content if is_binary else response.text)
+                if file_path:
+                    with file_path.open(mode, encoding=encoding) as f:
+                        f.write(response.content if is_binary else response.text)
 
                 metadata = {
                     "source": url,
@@ -199,10 +199,10 @@ class APIRequestComponent(Component):
                 if include_httpx_metadata:
                     metadata.update(
                         {
-                            "headers": headers,
-                            "status_code": response.status_code,
-                            "response_headers": response_headers,
-                            **({"redirection_history": redirection_history} if redirection_history else {}),
+                            "headers": json.dumps(headers),
+                            "status_code": str(response.status_code),
+                            "response_headers": json.dumps(response_headers),
+                            **({"redirection_history": json.dumps(redirection_history)} if redirection_history else {}),
                         }
                     )
                 return Data(data=metadata)
@@ -213,16 +213,16 @@ class APIRequestComponent(Component):
                 try:
                     result = response.json()
                 except Exception:  # noqa: BLE001
-                    logger.opt(exception=True).debug("Error decoding JSON response")
-                    result = response.text
-            metadata = {"source": url, "result": result}
+                    self.log("Error decoding JSON response")
+                    result = response.text.encode('utf-8')
+            metadata = {"source": url, "result": str(result)}
             if include_httpx_metadata:
                 metadata.update(
                     {
-                        "headers": headers,
-                        "status_code": response.status_code,
-                        "response_headers": response_headers,
-                        **({"redirection_history": redirection_history} if redirection_history else {}),
+                        "headers": json.dumps(headers),
+                        "status_code": str(response.status_code),
+                        "response_headers": json.dumps(response_headers),
+                        **({"redirection_history": json.dumps(redirection_history)} if redirection_history else {}),
                     }
                 )
             return Data(data=metadata)
@@ -236,7 +236,7 @@ class APIRequestComponent(Component):
                 },
             )
         except Exception as exc:  # noqa: BLE001
-            logger.opt(exception=True).debug(f"Error making request to {url}")
+            self.log(f"Error making request to {url}")
             return Data(
                 data={
                     "source": url,
@@ -349,7 +349,7 @@ class APIRequestComponent(Component):
         # Step 3: Infer file extension or use part of the request URL if no filename
         if not filename:
             # Extract the last segment of the URL path
-            url_path = urlparse(response.request.url).path
+            url_path = urlparse(str(response.request.url)).path
             base_name = Path(url_path).name  # Get the last segment of the path
             if not base_name:  # If the path ends with a slash or is empty
                 base_name = "response"
