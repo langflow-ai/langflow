@@ -409,6 +409,10 @@ async def build_flow(
             for task in tasks:
                 task.cancel()
             return
+        except Exception as e:
+            logger.error(f"Error building vertices: {e}")
+            event_manager.on_error(data={"error": str(e)})
+            raise
         event_manager.on_end(data={})
         await event_manager.queue.put((None, None, time.time))
 
