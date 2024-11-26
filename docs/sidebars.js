@@ -19,6 +19,7 @@ module.exports = {
         'Starter-Projects/starter-projects-memory-chatbot',
         'Starter-Projects/starter-projects-simple-agent',
         'Starter-Projects/starter-projects-vector-store-rag',
+        'Starter-Projects/starter-projects-sequential-agent',
         'Starter-Projects/starter-projects-travel-planning-agent',
       ],
     },
