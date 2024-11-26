@@ -79,14 +79,16 @@ def serialize_field(value):
     if isinstance(value, Document):
         return value.to_json()
     if isinstance(value, BaseModel):
-        return value.model_dump()
+        return serialize_field(value.model_dump())
+    if isinstance(value, dict):
+        return {k: serialize_field(v) for k, v in value.items()}
     if isinstance(value, V1BaseModel):
         if hasattr(value, "to_json"):
             return value.to_json()
         return value.dict()
     if isinstance(value, str):
         return {"result": value}
-    return value
+    return str(value)
 
 
 def get_artifact_type(value, build_result) -> str:
