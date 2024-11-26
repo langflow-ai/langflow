@@ -1,9 +1,8 @@
-import ForwardedIconComponent from "@/components/genericIconComponent";
-import ShadTooltip from "@/components/shadTooltipComponent";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
-import { cn } from "@/utils/utils";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { debounce } from "lodash";
 import { useCallback, useEffect, useState } from "react";
 
@@ -29,7 +28,6 @@ const HeaderComponent = ({
   isEmptyFolder,
 }: HeaderComponentProps) => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const { open } = useSidebar();
 
   // Debounce the setSearch function from the parent
   const debouncedSetSearch = useCallback(
@@ -57,15 +55,8 @@ const HeaderComponent = ({
         className="flex items-center pb-8 text-xl font-semibold"
         data-testid="mainpage_title"
       >
-        <div
-          className={cn("h-7 w-10 transition-all lg:hidden", open && "md:w-0")}
-        >
-          <div
-            className={cn(
-              "relative left-0 opacity-100 transition-all",
-              open ? "md:opacity-0" : "",
-            )}
-          >
+        <div className="h-7 w-10 transition-all group-data-[open=true]/sidebar-wrapper:md:w-0 lg:hidden">
+          <div className="relative left-0 opacity-100 transition-all group-data-[open=true]/sidebar-wrapper:md:opacity-0">
             <SidebarTrigger>
               <ForwardedIconComponent
                 name="PanelLeftOpen"
@@ -144,24 +135,23 @@ const HeaderComponent = ({
                 ))}
               </div>
             </div>
-            <div className="flex gap-2">
-              <ShadTooltip content="New Flow" side="bottom">
-                <Button
-                  variant="default"
-                  onClick={() => setNewProjectModal(true)}
-                  id="new-project-btn"
-                >
-                  <ForwardedIconComponent
-                    name="Plus"
-                    aria-hidden="true"
-                    className="h-4 w-4"
-                  />
-                  <span className="hidden whitespace-nowrap font-semibold md:inline">
-                    New Flow
-                  </span>
-                </Button>
-              </ShadTooltip>
-            </div>
+            <ShadTooltip content="New Flow" side="bottom">
+              <Button
+                variant="default"
+                className="!px-3 md:!px-4 md:!pl-3.5"
+                onClick={() => setNewProjectModal(true)}
+                id="new-project-btn"
+              >
+                <ForwardedIconComponent
+                  name="Plus"
+                  aria-hidden="true"
+                  className="h-4 w-4"
+                />
+                <span className="hidden whitespace-nowrap font-semibold md:inline">
+                  New Flow
+                </span>
+              </Button>
+            </ShadTooltip>
           </div>
         </>
       )}

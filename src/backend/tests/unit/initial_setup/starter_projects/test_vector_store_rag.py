@@ -24,14 +24,14 @@ def ingestion_graph():
     file_component.set(path="test.txt")
     file_component.set_on_output(name="data", value=Data(text="This is a test file."), cache=True)
     text_splitter = SplitTextComponent(_id="text-splitter-123")
-    text_splitter.set(data_inputs=file_component.load_file)
+    text_splitter.set(data_inputs=file_component.load_files)
     openai_embeddings = OpenAIEmbeddingsComponent(_id="openai-embeddings-123")
     openai_embeddings.set(
         openai_api_key="sk-123", openai_api_base="https://api.openai.com/v1", openai_api_type="openai"
     )
     vector_store = AstraVectorStoreComponent(_id="vector-store-123")
     vector_store.set(
-        embedding=openai_embeddings.build_embeddings,
+        embedding_model=openai_embeddings.build_embeddings,
         ingest_data=text_splitter.split_text,
         api_endpoint="https://astra.example.com",
         token="token",  # noqa: S106
@@ -53,7 +53,7 @@ def rag_graph():
         search_input=chat_input.message_response,
         api_endpoint="https://astra.example.com",
         token="token",  # noqa: S106
-        embedding=openai_embeddings.build_embeddings,
+        embedding_model=openai_embeddings.build_embeddings,
     )
     # Mock search_documents
     rag_vector_store.set_on_output(

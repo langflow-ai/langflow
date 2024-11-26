@@ -9,12 +9,18 @@
             "dataType": "CalculatorTool",
             "id": "CalculatorTool-DF8xQ",
             "name": "api_build_tool",
-            "output_types": ["Tool"]
+            "output_types": [
+              "Tool"
+            ]
           },
           "targetHandle": {
             "fieldName": "tools",
             "id": "Agent-5e01q",
-            "inputTypes": ["Tool", "BaseTool", "StructuredTool"],
+            "inputTypes": [
+              "Tool",
+              "BaseTool",
+              "StructuredTool"
+            ],
             "type": "other"
           }
         },
@@ -32,12 +38,16 @@
             "dataType": "Agent",
             "id": "Agent-5e01q",
             "name": "response",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-s1eJK",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -55,12 +65,16 @@
             "dataType": "Prompt",
             "id": "Prompt-KkcsZ",
             "name": "prompt",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "Agent-5e01q",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -78,7 +92,9 @@
           "display_name": "Prompt",
           "id": "Prompt-KkcsZ",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
@@ -94,7 +110,9 @@
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
-            "field_order": ["template"],
+            "field_order": [
+              "template"
+            ],
             "frozen": false,
             "icon": "prompts",
             "legacy": false,
@@ -108,7 +126,9 @@
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Message",
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -141,7 +161,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message", "Text"],
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -161,7 +184,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message", "Text"],
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -181,7 +207,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message", "Text"],
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -201,7 +230,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message", "Text"],
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -221,7 +253,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message", "Text"],
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -277,7 +312,9 @@
           "display_name": "Chat Output",
           "id": "ChatOutput-s1eJK",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -309,7 +346,9 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -322,7 +361,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "background_color",
@@ -342,7 +383,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "chat_icon",
@@ -380,7 +423,9 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -400,7 +445,9 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -421,7 +468,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -437,7 +487,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -457,7 +509,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -493,7 +547,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "text_color",
@@ -564,7 +620,9 @@
           "display_name": "Agent",
           "id": "Agent-5e01q",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -613,7 +671,9 @@
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -642,7 +702,9 @@
                 "display_name": "Agent Description",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -691,8 +753,10 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": ["Message"],
-                "load_from_db": true,
+                "input_types": [
+                  "Message"
+                ],
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -742,7 +806,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input provided by the user for the agent to process.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -816,7 +882,9 @@
                 "display_name": "External Memory",
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
-                "input_types": ["BaseChatMessageHistory"],
+                "input_types": [
+                  "BaseChatMessageHistory"
+                ],
                 "list": false,
                 "name": "memory",
                 "placeholder": "",
@@ -910,7 +978,10 @@
                 "dynamic": false,
                 "info": "Order of the messages.",
                 "name": "order",
-                "options": ["Ascending", "Descending"],
+                "options": [
+                  "Ascending",
+                  "Descending"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -926,7 +997,9 @@
                 "display_name": "Output Parser",
                 "dynamic": false,
                 "info": "The parser to use to parse the output of the model",
-                "input_types": ["OutputParser"],
+                "input_types": [
+                  "OutputParser"
+                ],
                 "list": false,
                 "name": "output_parser",
                 "placeholder": "",
@@ -977,7 +1050,11 @@
                 "dynamic": false,
                 "info": "Filter by sender type.",
                 "name": "sender",
-                "options": ["Machine", "User", "Machine and User"],
+                "options": [
+                  "Machine",
+                  "User",
+                  "Machine and User"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -993,7 +1070,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Filter by sender name.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -1013,7 +1092,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -1033,7 +1114,9 @@
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1070,7 +1153,9 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1091,7 +1176,11 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": ["Tool", "BaseTool", "StructuredTool"],
+                "input_types": [
+                  "Tool",
+                  "BaseTool",
+                  "StructuredTool"
+                ],
                 "list": true,
                 "name": "tools",
                 "placeholder": "",
@@ -1142,7 +1231,10 @@
         "data": {
           "id": "CalculatorTool-DF8xQ",
           "node": {
-            "base_classes": ["Data", "Tool"],
+            "base_classes": [
+              "Data",
+              "Tool"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1150,7 +1242,9 @@
             "display_name": "Calculator",
             "documentation": "",
             "edited": false,
-            "field_order": ["expression"],
+            "field_order": [
+              "expression"
+            ],
             "frozen": false,
             "icon": "calculator",
             "legacy": false,
@@ -1165,7 +1259,9 @@
                 "name": "api_run_model",
                 "required_inputs": [],
                 "selected": "Data",
-                "types": ["Data"],
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1175,7 +1271,9 @@
                 "name": "api_build_tool",
                 "required_inputs": [],
                 "selected": "Tool",
-                "types": ["Tool"],
+                "types": [
+                  "Tool"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1198,7 +1296,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import ast\nimport operator\n\nfrom langchain.tools import StructuredTool\nfrom langchain_core.tools import ToolException\nfrom loguru import logger\nfrom pydantic import BaseModel, Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import MessageTextInput\nfrom langflow.schema import Data\n\n\nclass CalculatorToolComponent(LCToolComponent):\n    display_name = \"Calculator\"\n    description = \"Perform basic arithmetic operations on a given expression.\"\n    icon = \"calculator\"\n    name = \"CalculatorTool\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"expression\",\n            display_name=\"Expression\",\n            info=\"The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').\",\n            tool_mode=True,\n        ),\n    ]\n\n    class CalculatorToolSchema(BaseModel):\n        expression: str = Field(..., description=\"The arithmetic expression to evaluate.\")\n\n    def run_model(self) -> list[Data]:\n        return self._evaluate_expression(self.expression)\n\n    def build_tool(self) -> Tool:\n        return StructuredTool.from_function(\n            name=\"calculator\",\n            description=\"Evaluate basic arithmetic expressions. Input should be a string containing the expression.\",\n            func=self._eval_expr_with_error,\n            args_schema=self.CalculatorToolSchema,\n        )\n\n    def _eval_expr(self, node):\n        # Define the allowed operators\n        operators = {\n            ast.Add: operator.add,\n            ast.Sub: operator.sub,\n            ast.Mult: operator.mul,\n            ast.Div: operator.truediv,\n            ast.Pow: operator.pow,\n        }\n        if isinstance(node, ast.Num):\n            return node.n\n        if isinstance(node, ast.BinOp):\n            return operators[type(node.op)](self._eval_expr(node.left), self._eval_expr(node.right))\n        if isinstance(node, ast.UnaryOp):\n            return operators[type(node.op)](self._eval_expr(node.operand))\n        if isinstance(node, ast.Call):\n            msg = (\n                \"Function calls like sqrt(), sin(), cos() etc. are not supported. \"\n                \"Only basic arithmetic operations (+, -, *, /, **) are allowed.\"\n            )\n            raise TypeError(msg)\n        msg = f\"Unsupported operation or expression type: {type(node).__name__}\"\n        raise TypeError(msg)\n\n    def _eval_expr_with_error(self, expression: str) -> list[Data]:\n        try:\n            return self._evaluate_expression(expression)\n        except Exception as e:\n            raise ToolException(str(e)) from e\n\n    def _evaluate_expression(self, expression: str) -> list[Data]:\n        try:\n            # Parse the expression and evaluate it\n            tree = ast.parse(expression, mode=\"eval\")\n            result = self._eval_expr(tree.body)\n\n            # Format the result to a reasonable number of decimal places\n            formatted_result = f\"{result:.6f}\".rstrip(\"0\").rstrip(\".\")\n\n            self.status = formatted_result\n            return [Data(data={\"result\": formatted_result})]\n\n        except (SyntaxError, TypeError, KeyError) as e:\n            error_message = f\"Invalid expression: {e}\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n        except ZeroDivisionError:\n            error_message = \"Error: Division by zero\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n        except Exception as e:  # noqa: BLE001\n            logger.opt(exception=True).debug(\"Error evaluating expression\")\n            error_message = f\"Error: {e}\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n"
+                "value": "import ast\nimport operator\n\nfrom langchain.tools import StructuredTool\nfrom langchain_core.tools import ToolException\nfrom loguru import logger\nfrom pydantic import BaseModel, Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import MessageTextInput\nfrom langflow.schema import Data\n\n\nclass CalculatorToolComponent(LCToolComponent):\n    display_name = \"Calculator\"\n    description = \"Perform basic arithmetic operations on a given expression.\"\n    icon = \"calculator\"\n    name = \"CalculatorTool\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"expression\",\n            display_name=\"Expression\",\n            info=\"The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').\",\n        ),\n    ]\n\n    class CalculatorToolSchema(BaseModel):\n        expression: str = Field(..., description=\"The arithmetic expression to evaluate.\")\n\n    def run_model(self) -> list[Data]:\n        return self._evaluate_expression(self.expression)\n\n    def build_tool(self) -> Tool:\n        return StructuredTool.from_function(\n            name=\"calculator\",\n            description=\"Evaluate basic arithmetic expressions. Input should be a string containing the expression.\",\n            func=self._eval_expr_with_error,\n            args_schema=self.CalculatorToolSchema,\n        )\n\n    def _eval_expr(self, node):\n        # Define the allowed operators\n        operators = {\n            ast.Add: operator.add,\n            ast.Sub: operator.sub,\n            ast.Mult: operator.mul,\n            ast.Div: operator.truediv,\n            ast.Pow: operator.pow,\n        }\n        if isinstance(node, ast.Num):\n            return node.n\n        if isinstance(node, ast.BinOp):\n            return operators[type(node.op)](self._eval_expr(node.left), self._eval_expr(node.right))\n        if isinstance(node, ast.UnaryOp):\n            return operators[type(node.op)](self._eval_expr(node.operand))\n        if isinstance(node, ast.Call):\n            msg = (\n                \"Function calls like sqrt(), sin(), cos() etc. are not supported. \"\n                \"Only basic arithmetic operations (+, -, *, /, **) are allowed.\"\n            )\n            raise TypeError(msg)\n        msg = f\"Unsupported operation or expression type: {type(node).__name__}\"\n        raise TypeError(msg)\n\n    def _eval_expr_with_error(self, expression: str) -> list[Data]:\n        try:\n            return self._evaluate_expression(expression)\n        except Exception as e:\n            raise ToolException(str(e)) from e\n\n    def _evaluate_expression(self, expression: str) -> list[Data]:\n        try:\n            # Parse the expression and evaluate it\n            tree = ast.parse(expression, mode=\"eval\")\n            result = self._eval_expr(tree.body)\n\n            # Format the result to a reasonable number of decimal places\n            formatted_result = f\"{result:.6f}\".rstrip(\"0\").rstrip(\".\")\n\n            self.status = formatted_result\n            return [Data(data={\"result\": formatted_result})]\n\n        except (SyntaxError, TypeError, KeyError) as e:\n            error_message = f\"Invalid expression: {e}\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n        except ZeroDivisionError:\n            error_message = \"Error: Division by zero\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n        except Exception as e:  # noqa: BLE001\n            logger.opt(exception=True).debug(\"Error evaluating expression\")\n            error_message = f\"Error: {e}\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n"
               },
               "expression": {
                 "_input_type": "MessageTextInput",
@@ -1206,7 +1304,9 @@
                 "display_name": "Expression",
                 "dynamic": false,
                 "info": "The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "expression",
@@ -1249,11 +1349,14 @@
   },
   "description": "Calculate SaaS subscription price based on costs, profit margin, and subscribers using step-by-step method and Chain-of-Thought prompting. ",
   "endpoint_name": null,
+  "gradient": "3",
   "icon": "calculator",
   "id": "9357f72e-2121-4541-8e7d-74b7ba2ada2b",
-  "gradient": "3",
   "is_component": false,
   "last_tested_version": "1.0.19.post2",
   "name": "SaaS Pricing",
-  "tags": ["agents", "assistants"]
+  "tags": [
+    "agents",
+    "assistants"
+  ]
 }

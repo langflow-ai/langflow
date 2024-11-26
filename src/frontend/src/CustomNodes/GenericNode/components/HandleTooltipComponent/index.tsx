@@ -1,4 +1,4 @@
-import { convertTestName } from "@/components/storeCardComponent/utils/convert-test-name";
+import { convertTestName } from "@/components/common/storeCardComponent/utils/convert-test-name";
 import { Badge } from "@/components/ui/badge";
 
 export default function HandleTooltipComponent({
@@ -48,6 +48,7 @@ export default function HandleTooltipComponent({
           {tooltips.map((word, index) => (
             <Badge
               className="h-6 rounded-md p-1"
+              key={`${index}-${word.toLowerCase()}`}
               style={{
                 backgroundColor: left
                   ? `hsl(var(--${accentColorName}))`

@@ -95,7 +95,7 @@ class YouTubeTranscriptsComponent(LCToolComponent):
                 else TranscriptFormat.CHUNKS,
                 chunk_size_seconds=self.chunk_size_seconds,
                 language=self.language.split(",") if self.language else ["en"],
-                translation=self.translation if self.translation else None,
+                translation=self.translation or None,
             )
 
             transcripts = loader.load()
@@ -140,7 +140,7 @@ class YouTubeTranscriptsComponent(LCToolComponent):
                 else TranscriptFormat.CHUNKS,
                 chunk_size_seconds=chunk_size_seconds,
                 language=language.split(",") if language else ["en"],
-                translation=translation if translation else None,
+                translation=translation or None,
             )
 
             transcripts = loader.load()

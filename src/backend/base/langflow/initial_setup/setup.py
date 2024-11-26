@@ -14,11 +14,8 @@ from loguru import logger
 from sqlalchemy.exc import NoResultFound
 from sqlmodel import select
 
-from langflow.base.constants import (
-    FIELD_FORMAT_ATTRIBUTES,
-    NODE_FORMAT_ATTRIBUTES,
-    ORJSON_OPTIONS,
-)
+from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBUTES, ORJSON_OPTIONS
+from langflow.initial_setup.constants import STARTER_FOLDER_DESCRIPTION, STARTER_FOLDER_NAME
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.model import Folder, FolderCreate
@@ -37,28 +34,34 @@ from langflow.services.deps import (
 from langflow.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
 from langflow.utils.util import escape_json_dump
 
-STARTER_FOLDER_NAME = "Starter Projects"
-STARTER_FOLDER_DESCRIPTION = "Starter projects to help you get started in Langflow."
-
 # In the folder ./starter_projects we have a few JSON files that represent
 # starter projects. We want to load these into the database so that users
 # can use them as a starting point for their own projects.
 
 
 def update_projects_components_with_latest_component_versions(project_data, all_types_dict):
-    # project data has a nodes key, which is a list of nodes
-    # we want to run through each node and see if it exists in the all_types_dict
-    # if so, we go into  the template key and also get the template from all_types_dict
-    # and update it all
+    # Flatten the all_types_dict for easy access
     all_types_dict_flat = {}
     for category in all_types_dict.values():
         for key, component in category.items():
             all_types_dict_flat[key] = component  # noqa: PERF403
+
     node_changes_log = defaultdict(list)
     project_data_copy = deepcopy(project_data)
+
     for node in project_data_copy.get("nodes", []):
         node_data = node.get("data").get("node")
         node_type = node.get("data").get("type")
+
+        # Skip updating if tool_mode is True
+        if node_data.get("tool_mode", False):
+            continue
+
+        # Skip nodes with outputs of the specified format
+        # NOTE: to account for the fact that the Simple Agent has dynamic outputs
+        if any(output.get("types") == ["Tool"] for output in node_data.get("outputs", [])):
+            continue
+
         if node_type in all_types_dict_flat:
             latest_node = all_types_dict_flat.get(node_type)
             latest_template = latest_node.get("template")

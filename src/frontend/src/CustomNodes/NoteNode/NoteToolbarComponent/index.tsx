@@ -1,4 +1,4 @@
-import ShadTooltip from "@/components/shadTooltipComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/popover";
 import {
   Select,
-  SelectContent,
+  SelectContentWithoutPortal,
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select-custom";
@@ -20,7 +20,7 @@ import { useShortcutsStore } from "@/stores/shortcuts";
 import { noteDataType } from "@/types/flow";
 import { classNames, cn, openInNewTab } from "@/utils/utils";
 import { cloneDeep } from "lodash";
-import IconComponent from "../../../components/genericIconComponent";
+import IconComponent from "../../../components/common/genericIconComponent";
 
 export default function NoteToolbarComponent({
   data,
@@ -84,7 +84,7 @@ export default function NoteToolbarComponent({
       <div className="w-26 noflow nowheel nopan nodelete nodrag h-10">
         <span className="isolate inline-flex rounded-md shadow-sm">
           <Popover>
-            <ShadTooltip content="Color pick">
+            <ShadTooltip content="Pick Color">
               <PopoverTrigger>
                 <div>
                   <div
@@ -145,8 +145,8 @@ export default function NoteToolbarComponent({
             </PopoverContent>
           </Popover>
           <Select onValueChange={handleSelectChange} value="">
-            <ShadTooltip content="All" side="top">
-              <SelectTrigger>
+            <SelectTrigger>
+              <ShadTooltip content="Show More" side="top">
                 <div>
                   <div
                     data-testid="more-options-modal"
@@ -160,9 +160,9 @@ export default function NoteToolbarComponent({
                     />
                   </div>
                 </div>
-              </SelectTrigger>
-            </ShadTooltip>
-            <SelectContent>
+              </ShadTooltip>
+            </SelectTrigger>
+            <SelectContentWithoutPortal>
               <SelectItem value={"duplicate"}>
                 <ToolbarSelectItem
                   shortcut={
@@ -211,7 +211,7 @@ export default function NoteToolbarComponent({
                   </span>
                 </div>
               </SelectItem>
-            </SelectContent>
+            </SelectContentWithoutPortal>
           </Select>
         </span>
       </div>

@@ -40,6 +40,7 @@ from langflow.schema.dotdict import dotdict
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.deps import get_chat_service, get_tracing_service
+from langflow.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import InputValueRequest
@@ -1072,7 +1073,7 @@ class Graph:
         else:
             return graph
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, /, other: object) -> bool:
         if not isinstance(other, Graph):
             return False
         return self.__repr__() == other.__repr__()
@@ -1345,9 +1346,18 @@ class Graph:
         files: list[str] | None = None,
         user_id: str | None = None,
     ):
-        # Call astep but synchronously
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self.astep(inputs, files, user_id))
+        """Runs the next vertex in the graph.
+
+        Note:
+            This function is a synchronous wrapper around `astep`.
+            It creates an event loop if one does not exist.
+
+        Args:
+            inputs: The inputs for the vertex. Defaults to None.
+            files: The files for the vertex. Defaults to None.
+            user_id: The user ID. Defaults to None.
+        """
+        return run_until_complete(self.astep(inputs, files, user_id))
 
     async def build_vertex(
         self,
@@ -1928,6 +1938,13 @@ class Graph:
         return [layer for layer in refined_layers if layer]
 
     def sort_chat_inputs_first(self, vertices_layers: list[list[str]]) -> list[list[str]]:
+        # First check if any chat inputs have dependencies
+        for layer in vertices_layers:
+            for vertex_id in layer:
+                if "ChatInput" in vertex_id and self.get_predecessors(self.get_vertex(vertex_id)):
+                    return vertices_layers
+
+        # If no chat inputs have dependencies, move them to first layer
         chat_inputs_first = []
         for layer in vertices_layers:
             layer_chat_inputs_first = [vertex_id for vertex_id in layer if "ChatInput" in vertex_id]
@@ -1935,6 +1952,7 @@ class Graph:
             for vertex_id in layer_chat_inputs_first:
                 # Remove the ChatInput from the layer
                 layer.remove(vertex_id)
+
         if not chat_inputs_first:
             return vertices_layers
 

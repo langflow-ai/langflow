@@ -1,9 +1,11 @@
 from collections.abc import Callable
-from typing import cast
+from typing import Any, cast
 
-from crewai import Agent, Crew, Process, Task
+from crewai import LLM, Agent, Crew, Process, Task
 from crewai.task import TaskOutput
+from crewai.tools.base_tool import Tool
 from langchain_core.agents import AgentAction, AgentFinish
+from pydantic import SecretStr
 
 from langflow.custom import Component
 from langflow.inputs.inputs import HandleInput, InputTypes
@@ -11,6 +13,82 @@ from langflow.io import BoolInput, IntInput, Output
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 from langflow.utils.constants import MESSAGE_SENDER_AI
+
+
+def _find_api_key(model):
+    """Attempts to find the API key attribute for a LangChain LLM model instance using partial matching.
+
+    Args:
+        model: LangChain LLM model instance.
+
+    Returns:
+        The API key if found, otherwise None.
+    """
+    # Define the possible API key attribute patterns
+    key_patterns = ["key", "token"]
+
+    # Iterate over the model attributes
+    for attr in dir(model):
+        attr_lower = attr.lower()
+
+        # Check if the attribute name contains any of the key patterns
+        if any(pattern in attr_lower for pattern in key_patterns):
+            value = getattr(model, attr, None)
+
+            # Check if the value is a non-empty string
+            if isinstance(value, str):
+                return value
+            if isinstance(value, SecretStr):
+                return value.get_secret_value()
+
+    return None
+
+
+def convert_llm(llm: Any, excluded_keys=None) -> LLM:
+    """Converts a LangChain LLM object to a CrewAI-compatible LLM object.
+
+    Args:
+        llm: A LangChain LLM object.
+        excluded_keys: A set of keys to exclude from the conversion.
+
+    Returns:
+        A CrewAI-compatible LLM object
+    """
+    if not llm:
+        return None
+
+    # Check if this is already an LLM object
+    if isinstance(llm, LLM):
+        return llm
+
+    # Retrieve the API Key from the LLM
+    if excluded_keys is None:
+        excluded_keys = {"model", "model_name", "_type", "api_key"}
+
+    # Find the API key in the LLM
+    api_key = _find_api_key(llm)
+
+    # Convert Langchain LLM to CrewAI-compatible LLM object
+    return LLM(
+        model=llm.model_name,
+        api_key=api_key,
+        **{k: v for k, v in llm.dict().items() if k not in excluded_keys},
+    )
+
+
+def convert_tools(tools):
+    """Converts LangChain tools to CrewAI-compatible tools.
+
+    Args:
+        tools: A LangChain tools list.
+
+    Returns:
+        A CrewAI-compatible tools list.
+    """
+    if not tools:
+        return []
+
+    return [Tool.from_langchain(tool) for tool in tools]
 
 
 class BaseCrewComponent(Component):
@@ -39,11 +117,32 @@ class BaseCrewComponent(Component):
         Output(display_name="Output", name="output", method="build_output"),
     ]
 
+    # Model properties to exclude when creating a CrewAI LLM object
+    manager_llm: LLM | None
+
     def task_is_valid(self, task_data: Data, crew_type: Process) -> Task:
         return "task_type" in task_data and task_data.task_type == crew_type
 
-    def get_tasks_and_agents(self) -> tuple[list[Task], list[Agent]]:
+    def get_tasks_and_agents(self, agents_list=None) -> tuple[list[Task], list[Agent]]:
+        # Allow passing a custom list of agents
+        if not agents_list:
+            agents_list = self.agents or []
+
+        # Set all the agents llm attribute to the crewai llm
+        for agent in agents_list:
+            # Convert Agent LLM and Tools to proper format
+            agent.llm = convert_llm(agent.llm)
+            agent.tools = convert_tools(agent.tools)
+
         return self.tasks, self.agents
+
+    def get_manager_llm(self) -> LLM | None:
+        if not self.manager_llm:
+            return None
+
+        self.manager_llm = convert_llm(self.manager_llm)
+
+        return self.manager_llm
 
     def build_crew(self) -> Crew:
         msg = "build_crew must be implemented in subclasses"

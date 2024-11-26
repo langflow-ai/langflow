@@ -1,5 +1,5 @@
-import useDragStart from "@/components/cardComponent/hooks/use-on-drag-start";
-import ForwardedIconComponent from "@/components/genericIconComponent";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import useDragStart from "@/components/core/cardComponent/hooks/use-on-drag-start";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -114,6 +114,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
         className={`my-2 flex flex-row bg-background ${
           isComponent ? "cursor-default" : "cursor-pointer"
         } group justify-between rounded-lg border border-border p-4 hover:border-placeholder-foreground hover:shadow-sm`}
+        data-testid="list-card"
       >
         {/* left side */}
         <div

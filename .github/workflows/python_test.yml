@@ -33,6 +33,8 @@ jobs:
   build:
     name: Unit Tests - Python ${{ matrix.python-version }} - Group ${{ matrix.group }}
     runs-on: ubuntu-latest
+    env:
+      UV_CACHE_DIR: /tmp/.uv-cache
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12"]' ) }}
@@ -145,13 +147,16 @@ jobs:
         if: steps.check-version.outputs.skipped == 'false'
         run: |
           make build main=true
-      - name: Install wheel
+      - name: Install wheel and Test CLI
         if: steps.check-version.outputs.skipped == 'false'
         run: |
-          python -m pip install dist/*.whl
+          uv venv new-venv
+          source new-venv/bin/activate
+          uv pip install dist/*.whl
       - name: Test CLI
         if: steps.check-version.outputs.skipped == 'false'
         run: |
+          source new-venv/bin/activate
           python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
