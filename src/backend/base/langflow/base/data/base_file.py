@@ -46,7 +46,6 @@ class BaseFileComponent(Component, ABC):
                 self._data = value
             else:
                 msg = f"data must be a Data object or a list of Data objects. Got: {type(value)}"
-                self.log(msg)
                 if not self._silent_errors:
                     raise ValueError(msg)
 
@@ -69,7 +68,6 @@ class BaseFileComponent(Component, ABC):
                 new_data_list = new_data
             else:
                 msg = "new_data must be a Data object, a list of Data objects, or None."
-                self.log(msg)
                 if not self._silent_errors:
                     raise ValueError(msg)
                 return self.data

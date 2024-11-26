@@ -112,7 +112,7 @@ class UnstructuredComponent(BaseFileComponent):
 
         documents = loader.load()
 
-        processed_data = [Data.from_document(doc) for doc in documents]  # Using the from_document method of Data
+        processed_data: list[Data | None] = [Data.from_document(doc) if doc else None for doc in documents]
 
         # Rename the `source` field to `self.SERVER_FILE_PATH_FIELDNAME`, to avoid conflicts with the `source` field
         for data in processed_data:
