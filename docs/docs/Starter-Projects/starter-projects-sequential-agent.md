@@ -6,7 +6,7 @@ slug: /starter-projects-sequential-agent
 
 Build a **Sequential Tasks Agent** flow for a multi-agent application using multiple **Agent** components.
 
-Each agent has an LLM model and a unique set of tools at its disposal, with **Prompt** components connected to the **Agent Instructions** fields to control the agent's behavior. For example, the **Researcher Agent** has a **Tavily AI Search** component connected as a tool. The **Prompt** instructs the agent to use to answer your query, format the response, and pass the query and research results on to the next agent in the flow.
+Each agent has an LLM model and a unique set of tools at its disposal, with **Prompt** components connected to the **Agent Instructions** fields to control the agent's behavior. For example, the **Researcher Agent** has a **Tavily AI Search** component connected as a tool. The **Prompt** instructs the agent how to answer your query, format the response, and pass the query and research results on to the next agent in the flow.
 
 Each successive agent in the flow builds on the work of the previous agent, creating a chain of reasoning for solving complex problems.
 
