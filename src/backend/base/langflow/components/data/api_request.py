@@ -199,10 +199,10 @@ class APIRequestComponent(Component):
                 if include_httpx_metadata:
                     metadata.update(
                         {
-                            "headers": json.dumps(headers),
+                            "headers": headers,
                             "status_code": response.status_code,
-                            "response_headers": json.dumps(response_headers),
-                            **({"redirection_history": json.dumps(redirection_history)} if redirection_history else {}),
+                            "response_headers": response_headers,
+                            **({"redirection_history": redirection_history} if redirection_history else {}),
                         }
                     )
                 return Data(data=metadata)
@@ -219,10 +219,10 @@ class APIRequestComponent(Component):
             if include_httpx_metadata:
                 metadata.update(
                     {
-                        "headers": json.dumps(headers),
+                        "headers": headers,
                         "status_code": response.status_code,
-                        "response_headers": json.dumps(response_headers),
-                        **({"redirection_history": json.dumps(redirection_history)} if redirection_history else {}),
+                        "response_headers": response_headers,
+                        **({"redirection_history": redirection_history} if redirection_history else {}),
                     }
                 )
             return Data(data=metadata)
