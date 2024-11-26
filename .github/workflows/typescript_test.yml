@@ -271,6 +271,9 @@ jobs:
             cd src/frontend
             echo 'Running tests with pattern: ${{ needs.determine-test-suite.outputs.test_grep }}'
             npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --shard ${{ matrix.shardIndex }} --list
+            # echo command before running
+            echo "npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }} --workers 2"
+
             npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }} --workers 2
 
       - name: Upload blob report to GitHub Actions Artifacts
