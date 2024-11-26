@@ -1,6 +1,6 @@
 import { useGetDownloadFileMutation } from "@/controllers/API/queries/files";
 import { useState } from "react";
-import { ForwardedIconComponent } from "../../../../../components/genericIconComponent";
+import { ForwardedIconComponent } from "../../../../../components/common/genericIconComponent";
 import { BASE_URL_API } from "../../../../../constants/constants";
 import { fileCardPropsType } from "../../../../../types/components";
 import formatFileName from "../filePreviewChat/utils/format-file-name";

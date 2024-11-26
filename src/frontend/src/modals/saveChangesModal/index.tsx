@@ -1,4 +1,4 @@
-import ForwardedIconComponent from "@/components/genericIconComponent";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import Loading from "@/components/ui/loading";
 import { truncate } from "lodash";
 import { useState } from "react";

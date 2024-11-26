@@ -122,7 +122,7 @@ class DatabaseService(Service):
             pragmas_list = []
             for key, val in pragmas.items():
                 pragmas_list.append(f"PRAGMA {key} = {val}")
-            logger.info(f"sqlite connection, setting pragmas: {pragmas_list}")
+            logger.debug(f"sqlite connection, setting pragmas: {pragmas_list}")
             if pragmas_list:
                 cursor = dbapi_connection.cursor()
                 try:
@@ -187,6 +187,7 @@ class DatabaseService(Service):
                 flow.user_id = superuser.id
                 flow.name = self._generate_unique_flow_name(flow.name, existing_names)
                 existing_names.add(flow.name)
+                session.add(flow)
 
             # Commit changes
             await session.commit()
