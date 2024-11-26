@@ -1,4 +1,4 @@
-from .add_metadata import AddMetadataComponent
+from .alter_metadata import AlterMetadataComponent
 from .combine_text import CombineTextComponent
 from .create_data import CreateDataComponent
 from .extract_key import ExtractDataKeyComponent
@@ -13,7 +13,7 @@ from .split_text import SplitTextComponent
 from .update_data import UpdateDataComponent
 
 __all__ = [
-    "AddMetadataComponent",
+    "AlterMetadataComponent",
     "CombineTextComponent",
     "CreateDataComponent",
     "DataFilterComponent",
