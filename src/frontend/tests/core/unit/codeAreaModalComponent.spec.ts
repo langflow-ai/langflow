@@ -25,7 +25,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
@@ -37,7 +39,9 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("python function");
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="sidebar-options-trigger"]', {
+      timeout: 3000,
+    });
 
     await page.getByTestId("sidebar-options-trigger").click();
     await page
@@ -45,7 +49,9 @@ test(
       .isVisible({ timeout: 5000 });
     await page.getByTestId("sidebar-legacy-switch").click();
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="prototypesPython Function"]', {
+      timeout: 3000,
+    });
 
     await page
       .getByTestId("prototypesPython Function")
@@ -81,11 +87,9 @@ class PythonFunctionComponent(CustomComponent):
     await page.locator("textarea").press("Control+a");
     await page.locator("textarea").fill(wCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
-    await page.waitForTimeout(1000);
     await page.locator("textarea").press("Control+a");
     await page.locator("textarea").fill(wCode);
     await page.locator("textarea").fill(customComponentCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
-    await page.waitForTimeout(1000);
   },
 );
