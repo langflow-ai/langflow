@@ -42,8 +42,8 @@ __all__ = [
     "RedisVectorStoreComponent",
     "SupabaseVectorStoreComponent",
     "UpstashVectorStoreComponent",
-    "VectaraVectorStoreComponent",
     "VectaraRagComponent",
     "VectaraSelfQueryRetriverComponent",
+    "VectaraVectorStoreComponent",
     "WeaviateVectorStoreComponent",
 ]

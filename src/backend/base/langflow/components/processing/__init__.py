@@ -13,17 +13,17 @@ from .split_text import SplitTextComponent
 from .update_data import UpdateDataComponent
 
 __all__ = [
+    "CombineTextComponent",
     "CreateDataComponent",
-    "ExtractDataKeyComponent",
     "DataFilterComponent",
     "FilterDataComponent",
+    "ExtractDataKeyComponent",
+    "JSONCleaner",
     "MergeDataComponent",
     "MessageToDataComponent",
     "ParseDataComponent",
-    "SelectDataComponent",
-    "UpdateDataComponent",
     "ParseJSONDataComponent",
-    "JSONCleaner",
-    "CombineTextComponent",
+    "SelectDataComponent",
     "SplitTextComponent",
+    "UpdateDataComponent",
 ]

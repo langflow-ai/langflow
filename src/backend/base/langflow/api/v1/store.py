@@ -61,7 +61,7 @@ async def check_if_store_has_api_key(
     return {"has_api_key": api_key is not None, "is_valid": is_valid}
 
 
-@router.post("/components/", response_model=CreateComponentResponse, status_code=201)
+@router.post("/components/", status_code=201)
 async def share_component(
     component: StoreComponentCreate,
     store_api_key: Annotated[str, Depends(get_user_store_api_key)],
@@ -123,7 +123,7 @@ async def get_components(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@router.get("/components/{component_id}", response_model=DownloadComponentResponse)
+@router.get("/components/{component_id}")
 async def download_component(
     component_id: UUID,
     store_api_key: Annotated[str, Depends(get_user_store_api_key)],
