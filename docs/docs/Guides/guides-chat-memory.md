@@ -81,7 +81,7 @@ The **Astra DB Chat Memory** component stores and retrieves messages from **Astr
 4. Configure the **AstraDBChatMemory** component with your AstraDB instance details.
 	1. In the **Astra DB Application Token** field, add your Astra token.
 	2. In the **API Endpoint** field, add your Astra database's endpoint.
-5. Connect the **AstraDBChatMemory** component output to the external memory inputs of the [Chat Memory](/components-helpers#chat-memory) and [store Message](/components-helpers#store-message) components.
+5. Connect the **AstraDBChatMemory** component output to the external memory inputs of the [Chat Memory](/components-helpers#chat-memory) and [Store Message](/components-helpers#store-message) components.
 6. Link the [Chat Output](/components-io#chat-output) component to the input of the [Store Message](/components-helpers#store-message) component.
 
 Your completed flow should look like this:
