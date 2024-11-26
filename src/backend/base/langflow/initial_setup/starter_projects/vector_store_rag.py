@@ -16,7 +16,7 @@ def ingestion_graph():
     # Ingestion Graph
     file_component = FileComponent()
     text_splitter = SplitTextComponent()
-    text_splitter.set(data_inputs=file_component.load_file)
+    text_splitter.set(data_inputs=file_component.load_files)
     openai_embeddings = OpenAIEmbeddingsComponent()
     vector_store = AstraDBVectorStoreComponent()
     vector_store.set(
