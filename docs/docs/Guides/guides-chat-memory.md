@@ -53,20 +53,41 @@ You can also display all messages stored across every flow and session by going 
 
 
 
-## Chat Memory Storing in a Database
+## Store chat memory in an external database
 
-Chat memory can be retrieved from an external database or vector store using the [**Chat Memory**](/components-helpers#chat-memory) component, and messages can be stored using the [**Store Message**](/components-helpers#store-message) component. External databases can be accessed as memory through the respective [**Chat Memories components**](/Components/components-memories).
+Chat memory is retrieved from an external database or vector store using the [**Chat Memory**](/components-helpers#chat-memory) component.
 
-Steps to Store and Retrieve Chat History from a Database:
-	1.	Load the [Memory Chatbot](/starter-projects-memory-chatbot) Starter Project.
-	2.	Add the [Store Message](/components-helpers#store-message) component to the flow.
-	3.	Add the [AstraDBChatMemory Component](/Components/components-memories#astradbchatmemory-component) to the flow.
-	4.	Configure the AstraDBChatMemory Component with your AstraDB instance details.
-	5.	Connect the AstraDBChatMemory Component output to the external memory inputs of the [Chat Memory](/components-helpers#chat-memory) and [store Message](/components-helpers#store-message) components.
-	6.	Link the [Chat Output](/components-io#chat-output) component to the input of the [Store Message](/components-helpers#store-message) component. 
+Chat memory is stored to an external database or vector store using the [Store Message](/components-helpers#store-message) component.
 
-Example Flow
+The [**Chat Memories**](/Components/components-memories) components provide access to their respective external databases **as memory**. This allows AIs to access external memory for persistence and context retention. For example, connect the **Chat Memory** component to an **AstraDBChatMemory*** component to store the message history in an external Astra DB database.
+
+This example stores and retrieves chat history from an [AstraDBChatMemory](/Components/components-memories#astradbchatmemory-component) component with **Store Message** and **Chat Memory** components.
+
+### Prerequisites
+
+* [OpenAI API key](https://platform.openai.com/)
+* [An Astra DB vector database created](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html) with:
+	* Application Token
+	* API Endpoint
+
+### Connect the chat memory component to an external database
+
+1. Load the [Memory Chatbot](/starter-projects-memory-chatbot) starter project.
+This starter project extends the basic prompting flow to include a chat memory component.
+2. Add the [Store Message](/components-helpers#store-message) component to the flow.
+The **Store message** component stores messages in the external database.
+3. Add the [AstraDBChatMemory Component](/Components/components-memories#astradbchatmemory-component) to the flow.
+The **Astra DB Chat Memory** component stores and retrieves messages from **Astra DB**.
+4. Configure the **AstraDBChatMemory** component with your AstraDB instance details.
+	1. In the **Astra DB Application Token** field, add your Astra token.
+	2. In the **API Endpoint** field, add your Astra database's endpoint.
+5. Connect the **AstraDBChatMemory** component output to the external memory inputs of the [Chat Memory](/components-helpers#chat-memory) and [store Message](/components-helpers#store-message) components.
+6. Link the [Chat Output](/components-io#chat-output) component to the input of the [Store Message](/components-helpers#store-message) component.
+
+Your completed flow should look like this:
 
 ![Sample Flow storing Chat Memory in AstraDB](/img/astra_db_chat_memory_rounded.png)
 
-
+7. In Langflow, create message traffic by running a flow.
+8. Inspect your Astra database's tables and activity.
+You will see new tables and traffic created.
