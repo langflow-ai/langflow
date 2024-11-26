@@ -397,32 +397,6 @@ class BaseFileComponent(Component, ABC):
 
         return collected_files
 
-    def _safe_extract(
-        self,
-        extract_func: Callable[[Path, str], None],
-        members: list[str],
-        output_dir: Path,
-        archive_type: str,
-    ):
-        """Safely extract files from an archive, ensuring no path traversal.
-
-        Args:
-            extract_func (Callable): Function to perform the extraction.
-            members (list[str]): List of members (file paths) to extract.
-            output_dir (Path): Directory where files will be extracted.
-            archive_type (str): Type of archive (ZIP or TAR) for logging.
-
-        Raises:
-            ValueError: If an attempted path traversal is detected.
-        """
-        for member in members:
-            member_path = output_dir / member
-            # Ensure no path traversal outside `output_dir`
-            if not member_path.resolve().is_relative_to(output_dir.resolve()):
-                msg = f"Attempted Path Traversal in {archive_type} File: {member}"
-                raise ValueError(msg)
-            extract_func(output_dir, member)
-
     def _unpack_bundle(self, bundle_path: Path, output_dir: Path):
         """Unpack a bundle into a temporary directory.
 
@@ -434,20 +408,33 @@ class BaseFileComponent(Component, ABC):
             ValueError: If the bundle format is unsupported or cannot be read.
         """
 
-        def zip_extract(output_dir: Path, member: str):
-            with ZipFile(bundle_path, "r") as bundle:
+        def _safe_extract_zip(bundle: ZipFile, output_dir: Path):
+            """Safely extract ZIP files."""
+            for member in bundle.namelist():
+                member_path = output_dir / member
+                # Ensure no path traversal outside `output_dir`
+                if not member_path.resolve().is_relative_to(output_dir.resolve()):
+                    msg = f"Attempted Path Traversal in ZIP File: {member}"
+                    raise ValueError(msg)
                 bundle.extract(member, path=output_dir)
 
-        def tar_extract(output_dir: Path, member: str):
-            with tarfile.open(bundle_path, "r:*") as bundle:
+        def _safe_extract_tar(bundle: tarfile.TarFile, output_dir: Path):
+            """Safely extract TAR files."""
+            for member in bundle.getmembers():
+                member_path = output_dir / member.name
+                # Ensure no path traversal outside `output_dir`
+                if not member_path.resolve().is_relative_to(output_dir.resolve()):
+                    msg = f"Attempted Path Traversal in TAR File: {member.name}"
+                    raise ValueError(msg)
                 bundle.extract(member, path=output_dir)
 
+        # Check and extract based on file type
         if is_zipfile(bundle_path):
             with ZipFile(bundle_path, "r") as zip_bundle:
-                zip_extract(zip_bundle.extract, zip_bundle.namelist(), output_dir, "ZIP")
+                _safe_extract_zip(zip_bundle, output_dir)
         elif tarfile.is_tarfile(bundle_path):
             with tarfile.open(bundle_path, "r:*") as tar_bundle:
-                tar_extract(tar_bundle.extract, [member.name for member in tar_bundle.getmembers()], output_dir, "TAR")
+                _safe_extract_tar(tar_bundle, output_dir)
         else:
             msg = f"Unsupported bundle format: {bundle_path.suffix}"
             raise ValueError(msg)
