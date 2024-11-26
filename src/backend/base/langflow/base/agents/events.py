@@ -88,7 +88,7 @@ def handle_on_chain_end(
         output = data_output.return_values.get("output")
         if isinstance(output, str):
             agent_message.text = output
-        elif isinstance(output, list) and len(output) > 1 and isinstance(output[0], dict) and "text" in output[0]:
+        elif isinstance(output, list) and len(output) == 1 and isinstance(output[0], dict) and "text" in output[0]:
             agent_message.text = output[0]["text"]
         else:
             msg = f"Output is not a string or list of dictionaries with 'text' key: {output}"
