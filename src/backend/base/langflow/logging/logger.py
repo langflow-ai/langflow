@@ -22,9 +22,9 @@ from langflow.settings import DEV
 VALID_LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 # Human-readable
 DEFAULT_LOG_FORMAT = (
-            "<green>{time:YYYY-MM-DD HH:mm:ss}</green> - <level>"
-            "{level: <8}</level> - {module} - <level>{message}</level>"
-        )
+    "<green>{time:YYYY-MM-DD HH:mm:ss}</green> - <level>" "{level: <8}</level> - {module} - <level>{message}</level>"
+)
+
 
 class SizedLogBuffer:
     def __init__(
@@ -204,7 +204,7 @@ def configure(
         logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss.SSS} {level} {file} {line} {function} {message}")
     else:
         if log_format is None:
-            log_format = DEFAULT_LOG_FORMAT           
+            log_format = DEFAULT_LOG_FORMAT
 
         # Configure loguru to use RichHandler
         logger.configure(
