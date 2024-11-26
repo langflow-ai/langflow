@@ -66,10 +66,7 @@ async def test_failed_request(api_request):
 
     # Making the request
     result = await api_request.make_request(
-        client=httpx.AsyncClient(),
-        method=method,
-        url=url,
-        include_httpx_metadata=True
+        client=httpx.AsyncClient(), method=method, url=url, include_httpx_metadata=True
     )
 
     # Assertions
@@ -85,11 +82,7 @@ async def test_timeout(api_request):
 
     # Making the request
     result = await api_request.make_request(
-        client=httpx.AsyncClient(),
-        method=method,
-        url=url,
-        timeout=1,
-        include_httpx_metadata=True
+        client=httpx.AsyncClient(), method=method, url=url, timeout=1, include_httpx_metadata=True
     )
 
     # Assertions
