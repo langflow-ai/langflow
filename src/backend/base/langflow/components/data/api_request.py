@@ -192,7 +192,7 @@ class APIRequestComponent(Component):
                     with file_path.open(mode, encoding=encoding) as f:
                         f.write(response.content if is_binary else response.text)
 
-                metadata = {
+                metadata: dict[str, Any] = {
                     "source": url,
                     "file_path": str(file_path),
                 }
