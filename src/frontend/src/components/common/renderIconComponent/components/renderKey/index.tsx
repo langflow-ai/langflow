@@ -24,13 +24,13 @@ export default function RenderKey({
           name="OptionIcon"
           className={cn(tableRender ? "h-4 w-4" : "h-3 w-3")}
         />
-      ) : check === "cmd" ? (
+      ) : (check === "mod" && IS_MAC) || check === "cmd" ? (
         <ForwardedIconComponent
           name="Command"
           className={cn(tableRender ? "h-4 w-4" : "h-3 w-3")}
         />
       ) : (
-        <span>{value}</span>
+        <span>{value.toUpperCase()}</span>
       )}
     </div>
   );

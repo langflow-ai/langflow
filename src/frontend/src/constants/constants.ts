@@ -761,133 +761,107 @@ export const IS_MAC = navigator.userAgent.toUpperCase().includes("MAC");
 export const defaultShortcuts = [
   {
     name: "Advanced Settings",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + A`,
-    shortcut_mod: "mod+shift+a",
+    shortcut: "mod+shift+a",
   },
   {
     name: "Minimize",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Q`,
-    shortcut_mod: "mod+q",
+    shortcut: "mod+q",
   },
   {
     name: "Code",
-    shortcut: `Space`,
-    shortcut_mod: "space",
+    shortcut: "space",
   },
   {
     name: "Copy",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + C`,
-    shortcut_mod: "mod+c",
+    shortcut: "mod+c",
   },
   {
     name: "Duplicate",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + D`,
-    shortcut_mod: "mod+d",
+    shortcut: "mod+d",
   },
   {
     name: "Component Share",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + S`,
-    shortcut_mod: "mod+shift+s",
+    shortcut: "mod+shift+s",
   },
   {
     name: "Docs",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + D`,
-    shortcut_mod: "mod+shift+d",
+    shortcut: "mod+shift+d",
   },
   {
     name: "Changes Save",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + S`,
-    shortcut_mod: "mod+s",
+    shortcut: "mod+s",
   },
   {
     name: "Save Component",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Alt + S`,
-    shortcut_mod: "mod+alt+s",
+    shortcut: "mod+alt+s",
   },
   {
     name: "Delete",
-    shortcut: "Backspace",
-    shortcut_mod: "backspace",
+    shortcut: "backspace",
   },
   {
     name: "Open playground",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + K`,
-    shortcut_mod: "mod+k",
+    shortcut: "mod+k",
   },
   {
     name: "Undo",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Z`,
-    shortcut_mod: "mod+z",
+    shortcut: "mod+z",
   },
   {
     name: "Redo",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Y`,
-    shortcut_mod: "mod+y",
+    shortcut: "mod+y",
   },
   {
     name: "Group",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + G`,
-    shortcut_mod: "mod+g",
+    shortcut: "mod+g",
   },
   {
     name: "Cut",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + X`,
-    shortcut_mod: "mod+x",
+    shortcut: "mod+x",
   },
   {
     name: "Paste",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + V`,
-    shortcut_mod: "mod+v",
+    shortcut: "mod+v",
   },
   {
     name: "API",
-    shortcut: `R`,
-    shortcut_mod: "r",
+    shortcut: "r",
   },
   {
     name: "Download",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + J`,
-    shortcut_mod: "mod+j",
+    shortcut: "mod+j",
   },
   {
     name: "Update",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + U`,
-    shortcut_mod: "mod+u",
+    shortcut: "mod+u",
   },
   {
     name: "Freeze",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + F`,
-    shortcut_mod: "mod+f",
+    shortcut: "mod+f",
   },
   {
     name: "Freeze Path",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + F`,
-    shortcut_mod: "mod+shift+f",
+    shortcut: "mod+shift+f",
   },
   {
     name: "Flow Share",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + B`,
-    shortcut_mod: "mod+shift+b",
+    shortcut: "mod+shift+b",
   },
   {
     name: "Play",
-    shortcut: `P`,
-    shortcut_mod: "p",
+    shortcut: "p",
   },
   {
     name: "Output Inspection",
-    shortcut: `O`,
-    shortcut_mod: "o",
+    shortcut: "o",
   },
   {
     name: "Tool Mode",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + M`,
-    shortcut_mod: "mod+shift+m",
+    shortcut: "mod+shift+m",
   },
   {
     name: "Toggle Sidebar",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + B`,
-    shortcut_mod: "mod+b",
+    shortcut: "mod+b",
   },
 ];
 
@@ -945,7 +919,7 @@ export const TEXT_FIELD_TYPES: string[] = ["str", "SecretStr"];
 export const NODE_WIDTH = 384;
 export const NODE_HEIGHT = NODE_WIDTH * 3;
 
-export const SHORTCUT_KEYS = ["cmd", "ctrl", "alt", "shift"];
+export const SHORTCUT_KEYS = ["cmd", "ctrl", "mod", "alt", "shift"];
 
 export const SERVER_HEALTH_INTERVAL = 10000;
 export const REFETCH_SERVER_HEALTH_INTERVAL = 20000;

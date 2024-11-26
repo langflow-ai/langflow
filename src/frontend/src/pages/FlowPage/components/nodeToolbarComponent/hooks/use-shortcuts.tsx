@@ -35,10 +35,10 @@ export default function useShortcuts({
   minimizeFunction?: () => void;
   activateToolMode?: () => void;
 }) {
-  const advanced = useShortcutsStore((state) => state.advanced);
+  const advancedSettings = useShortcutsStore((state) => state.advancedSettings);
   const minimize = useShortcutsStore((state) => state.minimize);
-  const component = useShortcutsStore((state) => state.component);
-  const save = useShortcutsStore((state) => state.save);
+  const componentShare = useShortcutsStore((state) => state.componentShare);
+  const save = useShortcutsStore((state) => state.saveComponent);
   const docs = useShortcutsStore((state) => state.docs);
   const code = useShortcutsStore((state) => state.code);
   const group = useShortcutsStore((state) => state.group);
@@ -125,9 +125,11 @@ export default function useShortcuts({
 
   useHotkeys(minimize, handleMinimizeWShortcut, { preventDefault: true });
   useHotkeys(group, handleGroupWShortcut, { preventDefault: true });
-  useHotkeys(component, handleShareWShortcut, { preventDefault: true });
+  useHotkeys(componentShare, handleShareWShortcut, { preventDefault: true });
   useHotkeys(code, handleCodeWShortcut, { preventDefault: true });
-  useHotkeys(advanced, handleAdvancedWShortcut, { preventDefault: true });
+  useHotkeys(advancedSettings, handleAdvancedWShortcut, {
+    preventDefault: true,
+  });
   useHotkeys(save, handleSaveWShortcut, { preventDefault: true });
   useHotkeys(docs, handleDocsWShortcut, { preventDefault: true });
   useHotkeys(download, handleDownloadWShortcut, { preventDefault: true });
