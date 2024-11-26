@@ -7,7 +7,7 @@ import * as React from "react";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "../../utils/utils";
-import ShadTooltip from "../shadTooltipComponent";
+import ShadTooltip from "../common/shadTooltipComponent";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Separator } from "./separator";

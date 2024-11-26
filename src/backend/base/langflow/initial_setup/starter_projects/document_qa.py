@@ -24,7 +24,7 @@ Answer:
 """
     file_component = FileComponent()
     parse_data_component = ParseDataComponent()
-    parse_data_component.set(data=file_component.load_file)
+    parse_data_component.set(data=file_component.load_files)
 
     chat_input = ChatInput()
     prompt_component = PromptComponent()
