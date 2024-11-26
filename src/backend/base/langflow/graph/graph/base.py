@@ -1073,7 +1073,7 @@ class Graph:
         else:
             return graph
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, /, other: object) -> bool:
         if not isinstance(other, Graph):
             return False
         return self.__repr__() == other.__repr__()

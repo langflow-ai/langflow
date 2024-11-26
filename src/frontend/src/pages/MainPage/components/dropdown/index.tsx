@@ -1,4 +1,4 @@
-import ForwardedIconComponent from "@/components/genericIconComponent";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import useAlertStore from "@/stores/alertStore";
 import { FlowType } from "@/types/flow";

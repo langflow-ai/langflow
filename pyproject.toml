@@ -12,7 +12,7 @@ packages = ["src/backend/langflow"]
 
 [project]
 name = "langflow"
-version = "1.1.0"
+version = "1.1.1"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.13"
 license = "MIT"
@@ -31,7 +31,7 @@ maintainers = [
 
 # Define your main dependencies here
 dependencies = [
-    "langflow-base==0.1.0",
+    "langflow-base==0.1.1",
     "beautifulsoup4>=4.12.2,<5.0.0",
     "google-search-results>=2.4.1,<3.0.0",
     "google-api-python-client>=2.130.0,<3.0.0",
@@ -79,11 +79,11 @@ dependencies = [
     "langchain-google-calendar-tools>=0.0.1,<1.0.0",
     "langchain-milvus>=0.1.1,<1.0.0",
     "langwatch==0.1.16",
-    "langsmith~=0.1.136",
+    "langsmith~=0.1.137",
     "yfinance>=0.2.40,<1.0.0",
     "wolframalpha>=5.1.3,<6.0.0",
     "astra-assistants[tools]~=2.2.6",
-    "composio-langchain==0.5.9",
+    "composio-langchain==0.5.42",
     "spider-client>=0.0.27,<1.0.0",
     "nltk>=3.9.1,<4.0.0",
     "lark>=1.2.2,<2.0.0",
@@ -112,6 +112,7 @@ dependencies = [
     "sqlalchemy[aiosqlite,postgresql_psycopg2binary,postgresql_psycopgbinary]>=2.0.36,<3.0.0",
     "atlassian-python-api>=3.41.16,<4.0.0",
     "mem0ai>=0.1.26,<1.0.0",
+    "aiofile>=3.9.0,<4.0.0",
 ]
 
 [project.urls]
@@ -176,7 +177,7 @@ dev-dependencies = [
     "asgi-lifespan>=2.1.0",
     "pytest-github-actions-annotate-failures>=0.2.0",
     "pytest-codspeed>=3.0.0",
-    "forbiddenfruit>=0.1.4",
+    "blockbuster>=1.1.1,<1.2",
 ]
 
 
