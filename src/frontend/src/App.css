@@ -183,3 +183,7 @@ body {
 code {
   font-family: var(--font-mono) s !important;
 }
+
+.ag-cell {
+  --ag-internal-calculated-line-height: none !important;
+}
