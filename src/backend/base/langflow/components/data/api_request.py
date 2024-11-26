@@ -214,7 +214,7 @@ class APIRequestComponent(Component):
                     result = response.json()
                 except Exception:  # noqa: BLE001
                     self.log("Error decoding JSON response")
-                    result = response.text.encode('utf-8')
+                    result = response.text.encode("utf-8")
             metadata = {"source": url, "result": str(result)}
             if include_httpx_metadata:
                 metadata.update(
