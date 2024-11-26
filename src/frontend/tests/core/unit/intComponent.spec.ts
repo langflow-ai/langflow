@@ -34,12 +34,9 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("openai");
 
-  await page.waitForSelector(
-    '[data-testid="modelsOpenAI"]',
-    {
-      timeout: 3000,
-    },
-  );
+  await page.waitForSelector('[data-testid="modelsOpenAI"]', {
+    timeout: 3000,
+  });
 
   await page
     .getByTestId("modelsOpenAI")
