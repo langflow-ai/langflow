@@ -44,6 +44,28 @@ This component creates a tool for performing basic arithmetic operations on a gi
 
 This component allows you to evaluate basic arithmetic expressions. It supports addition, subtraction, multiplication, division, and exponentiation. The tool uses a secure evaluation method that prevents the execution of arbitrary Python code.
 
+## Combinatorial Reasoner
+
+This component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to create an optimized prompt with embedded reasons. Sign up for access here: https://forms.gle/oWNv2NKjBNaqqvCx6 
+
+### Parameters
+
+#### Inputs
+| Name                   | Display Name | Description                           |
+|------------------------|--------------|---------------------------------------|
+| prompt                 | Prompt      | Input to run CR on                    |
+| openai_api_key         | OpenAI API Key | OpenAI API key for authentication     |
+| username               | Username       | Username for Icosa API authentication |
+| password               | Password | Password for Icosa API authentication |
+| model_name             | Model Name      | OpenAI LLM to use for reason generation|
+
+#### Outputs
+
+| Name    | Display Name | Description                          |
+|---------|-----------|--------------------------------------|
+| optimized_prompt | Optimized Prompt| A message object containing the optimized prompt |
+| reasons | Selected Reasons| A list of the selected reasons that are embedded in the optimized prompt|
+
 ## Glean Search API
 
 This component allows you to call the Glean Search API.
