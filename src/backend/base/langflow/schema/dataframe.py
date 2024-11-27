@@ -23,13 +23,13 @@ class DataFrame(pandas_DataFrame):
 
     Examples:
         >>> # From Data objects
-        >>> dataset = DataSet([Data(data={"name": "John"}), Data(data={"name": "Jane"})])
+        >>> dataset = DataFrame([Data(data={"name": "John"}), Data(data={"name": "Jane"})])
 
         >>> # From dictionaries
-        >>> dataset = DataSet([{"name": "John"}, {"name": "Jane"}])
+        >>> dataset = DataFrame([{"name": "John"}, {"name": "Jane"}])
 
         >>> # From dictionary of lists
-        >>> dataset = DataSet({"name": ["John", "Jane"], "age": [30, 25]})
+        >>> dataset = DataFrame({"name": ["John", "Jane"], "age": [30, 25]})
     """
 
     def __init__(self, data: None | list[dict | Data] | dict | pd.DataFrame = None, **kwargs):
@@ -50,7 +50,7 @@ class DataFrame(pandas_DataFrame):
         super().__init__(**kwargs)
 
     def to_data_list(self) -> list[Data]:
-        """Converts the DataSet back to a list of Data objects."""
+        """Converts the DataFrame back to a list of Data objects."""
         list_of_dicts = self.to_dict(orient="records")
         return [Data(data=row) for row in list_of_dicts]
 
@@ -61,10 +61,10 @@ class DataFrame(pandas_DataFrame):
             data: Either a Data object or a dictionary to add as a new row
 
         Returns:
-            DataSet: A new DataSet with the added row
+            DataFrame: A new DataFrame with the added row
 
         Example:
-            >>> dataset = DataSet([{"name": "John"}])
+            >>> dataset = DataFrame([{"name": "John"}])
             >>> dataset = dataset.add_row({"name": "Jane"})
         """
         if isinstance(data, Data):
@@ -79,7 +79,7 @@ class DataFrame(pandas_DataFrame):
             data: List of Data objects or dictionaries to add as new rows
 
         Returns:
-            DataSet: A new DataSet with the added rows
+            DataFrame: A new DataFrame with the added rows
         """
         processed_data = []
         for item in data:
