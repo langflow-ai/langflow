@@ -195,7 +195,7 @@ For information about other environment variables and their usage, see [Environm
 
 ## Precautions
 
-For information about securing your global variables and other sensitive data, see [Security Best Practices](/security-best-practices#secret-management).
+For information about securing your global variables and other sensitive data, see [Security Best Practices](/configuration-security-best-practices).
 
 :::warning
 Make sure to follow security best practices when working with sensitive data like API keys and credentials.
