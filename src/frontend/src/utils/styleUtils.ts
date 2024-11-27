@@ -282,6 +282,7 @@ import { PythonIcon } from "../icons/Python";
 import { QDrantIcon } from "../icons/QDrant";
 import { QianFanChatIcon } from "../icons/QianFanChat";
 import { RedisIcon } from "../icons/Redis";
+import { SambaNovaIcon } from "../icons/SambaNova";
 import { SearxIcon } from "../icons/Searx";
 import { ShareIcon } from "../icons/Share";
 import { Share2Icon } from "../icons/Share2";
@@ -654,6 +655,7 @@ export const nodeIconsLucide: iconsType = {
   Qdrant: QDrantIcon,
   ElasticsearchStore: ElasticsearchIcon,
   Weaviate: WeaviateIcon,
+  SambaNova: SambaNovaIcon,
   Searx: SearxIcon,
   SlackDirectoryLoader: SvgSlackIcon,
   SpiderTool: SpiderIcon,
