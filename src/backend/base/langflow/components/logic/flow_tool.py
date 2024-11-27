@@ -60,7 +60,7 @@ class FlowToolComponent(LCToolComponent):
         StrInput(
             name="tool_description",
             display_name="Description",
-            info="The description of the tool.",
+            info="The description of the tool; defaults to the Flow's description.",
         ),
         BoolInput(
             name="return_direct",
@@ -93,9 +93,10 @@ class FlowToolComponent(LCToolComponent):
         except Exception:  # noqa: BLE001
             logger.opt(exception=True).warning("Failed to set run_id")
         inputs = get_flow_inputs(graph)
+        tool_description = self.tool_description.strip() if self.tool_description.strip() else flow_data.description
         tool = FlowTool(
             name=self.tool_name,
-            description=self.tool_description,
+            description=tool_description,
             graph=graph,
             return_direct=self.return_direct,
             inputs=inputs,
