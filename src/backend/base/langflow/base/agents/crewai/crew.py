@@ -134,7 +134,7 @@ class BaseCrewComponent(Component):
             agent.llm = convert_llm(agent.llm)
             agent.tools = convert_tools(agent.tools)
 
-        return self.tasks, self.agents
+        return self.tasks, agents_list
 
     def get_manager_llm(self) -> LLM | None:
         if not self.manager_llm:
