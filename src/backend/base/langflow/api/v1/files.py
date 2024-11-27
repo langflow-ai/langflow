@@ -172,7 +172,7 @@ async def list_files(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     try:
-        files = await storage_service.list_files(flow_id=flow.id)
+        files = await storage_service.list_files(flow_id=str(flow.id))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

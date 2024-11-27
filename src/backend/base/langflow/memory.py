@@ -149,7 +149,10 @@ def update_messages(messages: Message | list[Message]) -> list[Message]:
             message_id = UUID(message.id) if isinstance(message.id, str) else message.id
             msg = session.get(MessageTable, message_id)
             if msg:
-                msg = msg.sqlmodel_update(message.model_dump(exclude_unset=True, exclude_none=True))
+                if hasattr(message, "data"):
+                    msg = msg.sqlmodel_update(message.data)
+                else:
+                    msg = msg.sqlmodel_update(message.model_dump(exclude_unset=True, exclude_none=True))
                 session.add(msg)
                 session.commit()
                 session.refresh(msg)

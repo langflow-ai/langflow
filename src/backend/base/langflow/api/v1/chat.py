@@ -22,7 +22,6 @@ from langflow.api.utils import (
     build_and_cache_graph_from_data,
     build_graph_from_data,
     build_graph_from_db,
-    build_graph_from_db_no_cache,
     format_elapsed_time,
     format_exception_message,
     get_top_level_vertices,
@@ -165,13 +164,13 @@ async def build_flow(
         try:
             flow_id_str = str(flow_id)
             if not data:
-                graph = await build_graph_from_db_no_cache(flow_id=flow_id_str, session=session)
+                graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
             else:
                 async with async_session_scope() as new_session:
                     result = await new_session.exec(select(Flow.name).where(Flow.id == flow_id_str))
                     flow_name = result.first()
                 graph = await build_graph_from_data(
-                    flow_id_str, data.model_dump(), user_id=str(current_user.id), flow_name=flow_name
+                    flow_id=flow_id_str, payload=data.model_dump(), user_id=str(current_user.id), flow_name=flow_name
                 )
             graph.validate_stream()
             if stop_component_id or start_component_id:
@@ -194,6 +193,7 @@ async def build_flow(
             # and return the same structure but only with the ids
             components_count = len(graph.vertices)
             vertices_to_run = list(graph.vertices_to_run.union(get_top_level_vertices(graph, graph.vertices_to_run)))
+            await chat_service.set_cache(flow_id_str, graph)
             background_tasks.add_task(
                 telemetry_service.log_package_playground,
                 PlaygroundPayload(
@@ -216,12 +216,10 @@ async def build_flow(
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
             logger.exception("Error checking build status")
             raise HTTPException(status_code=500, detail=str(exc)) from exc
-
         return first_layer, vertices_to_run, graph
 
     async def _build_vertex(vertex_id: str, graph: Graph, event_manager: EventManager) -> VertexBuildResponse:
         flow_id_str = str(flow_id)
-
         next_runnable_vertices = []
         top_level_vertices = []
         start_time = time.perf_counter()
@@ -505,6 +503,11 @@ async def build_vertex(
     top_level_vertices = []
     start_time = time.perf_counter()
     error_message = None
+    try:
+        graph = await chat_service.get_cache(flow_id_str)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Graph not found") from exc
+
     try:
         cache = await chat_service.get_cache(flow_id_str)
         if isinstance(cache, CacheMiss):
