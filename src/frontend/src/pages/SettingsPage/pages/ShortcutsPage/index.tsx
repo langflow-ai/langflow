@@ -1,3 +1,4 @@
+import { toCamelCase } from "@/utils/utils";
 import { ColDef } from "ag-grid-community";
 import { useEffect, useState } from "react";
 import ForwardedIconComponent from "../../../../components/common/genericIconComponent";
@@ -40,7 +41,6 @@ export default function ShortcutsPage() {
     setNodesRowData(shortcuts);
   }, [shortcuts]);
 
-  const combinationToEdit = shortcuts.filter((s) => s.name === selectedRows[0]);
   const [open, setOpen] = useState(false);
   const updateUniqueShortcut = useShortcutsStore(
     (state) => state.updateUniqueShortcut,
@@ -49,7 +49,7 @@ export default function ShortcutsPage() {
   function handleRestore() {
     setShortcuts(defaultShortcuts);
     defaultShortcuts.forEach(({ name, shortcut }) => {
-      const fixedName = name.split(" ")[0].toLowerCase();
+      const fixedName = toCamelCase(name);
       updateUniqueShortcut(fixedName, shortcut);
     });
     localStorage.removeItem("langflow-shortcuts");
