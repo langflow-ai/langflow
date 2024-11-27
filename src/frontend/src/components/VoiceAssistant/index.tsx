@@ -1,14 +1,14 @@
 import { BuildStatus } from "@/constants/enums";
+import { usePostAddApiKey } from "@/controllers/API/queries/api-keys";
 import useFlowStore from "@/stores/flowStore";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { AudioLines } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import APIKeyModal from "../../modals/apiKeyModal";
+import { useStoreStore } from "../../stores/storeStore";
 import { Button } from "../ui/button";
 import { workletCode } from "./streamProcessor";
 import { base64ToFloat32Array } from "./utils";
-import APIKeyModal from "../../modals/apiKeyModal";
-import { useStoreStore } from "../../stores/storeStore";
-import { usePostAddApiKey } from "@/controllers/API/queries/api-keys";
 
 interface VoiceAssistantProps {
   flowId: string;
@@ -318,8 +318,8 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
           if (!isRecording) {
             initializeAudio();
           }
-        }
-      }
+        },
+      },
     );
   };
 

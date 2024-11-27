@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
+import IconComponent from "../../components/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import IconComponent from "../../components/genericIconComponent";
-import useAlertStore from "../../stores/alertStore";
-import BaseModal from "../baseModal";
 import { SAVE_API_KEY_ALERT } from "../../constants/constants";
 import { usePostGlobalVariables } from "../../controllers/API/queries/variables";
+import useAlertStore from "../../stores/alertStore";
+import BaseModal from "../baseModal";
 
 export default function APIKeyModal({
   open,
@@ -31,7 +31,7 @@ export default function APIKeyModal({
         name: "OPENAI_API_KEY",
         value: apiKey,
         type: "secret",
-        default_fields: ["voice_mode"]
+        default_fields: ["voice_mode"],
       });
       setSuccessData({
         title: SAVE_API_KEY_ALERT,
@@ -55,7 +55,8 @@ export default function APIKeyModal({
       <BaseModal.Content>
         <div className="flex flex-col gap-4">
           <p className="text-sm text-muted-foreground">
-            Please enter your OpenAI API key to enable voice mode. Your key will be stored securely as the global variable OPENAI_API_KEY.
+            Please enter your OpenAI API key to enable voice mode. Your key will
+            be stored securely as the global variable OPENAI_API_KEY.
           </p>
           <Input
             type="password"
@@ -76,11 +77,7 @@ export default function APIKeyModal({
           >
             Cancel
           </Button>
-          <Button
-            disabled={!apiKey}
-            onClick={handleSave}
-            className="px-8"
-          >
+          <Button disabled={!apiKey} onClick={handleSave} className="px-8">
             Save
           </Button>
         </div>
