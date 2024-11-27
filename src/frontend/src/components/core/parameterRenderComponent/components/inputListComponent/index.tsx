@@ -75,7 +75,7 @@ export default function InputListComponent({
             className={cn(
               editNode ? "input-edit-node" : "",
               disabled ? "disabled-state" : "",
-              "relative peer",
+              "peer relative",
               index === 0 && value.length > 1 && "pr-7 focus:pr-3",
             )}
             placeholder={getPlaceholder(disabled, placeholder)}
@@ -83,40 +83,40 @@ export default function InputListComponent({
             data-testid={`${id}_${index}`}
           />
           {index === 0 && value.length > 1 && (
-            <div className="absolute right-[65px] flex items-center peer-focus:hidden peer-focus:pointer-events-none">
+            <div className="absolute right-[65px] flex items-center peer-focus:pointer-events-none peer-focus:hidden">
               <div
                 onClick={addNewInput}
                 className={cn(
-                  "hit-area-icon !h-9 group flex items-center justify-center text-center",
+                  "hit-area-icon group flex !h-9 items-center justify-center text-center",
                   disabled
-                  ? "pointer-events-none bg-background hover:bg-background"
-                  : "",
-                index === 0
-                  ? "bg-background hover:bg-muted"
-                  : "hover:bg-smooth-red",
-              )}
-            >
-              <Button
-                unstyled
-                size="icon"
-                className={cn(
-                  "hit-area-icon flex items-center justify-center",
-                  getButtonClassName(),
+                    ? "pointer-events-none bg-background hover:bg-background"
+                    : "",
+                  index === 0
+                    ? "bg-background hover:bg-muted"
+                    : "hover:bg-smooth-red",
                 )}
-                data-testid={getTestId("plus", index)}
-                disabled={disabled}
               >
-                <IconComponent
-                  name={"Plus"}
+                <Button
+                  unstyled
+                  size="icon"
                   className={cn(
-                    "icon-size justify-self-center text-muted-foreground",
-                    !disabled && "hover:cursor-pointer hover:text-foreground",
-                    "group-hover:text-foreground",
+                    "hit-area-icon flex items-center justify-center",
+                    getButtonClassName(),
                   )}
-                  strokeWidth={ICON_STROKE_WIDTH}
-                />
-              </Button>
-            </div>
+                  data-testid={getTestId("plus", index)}
+                  disabled={disabled}
+                >
+                  <IconComponent
+                    name={"Plus"}
+                    className={cn(
+                      "icon-size justify-self-center text-muted-foreground",
+                      !disabled && "hover:cursor-pointer hover:text-foreground",
+                      "group-hover:text-foreground",
+                    )}
+                    strokeWidth={ICON_STROKE_WIDTH}
+                  />
+                </Button>
+              </div>
             </div>
           )}
           <div
