@@ -5,7 +5,6 @@ test(
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
     await page.goto("/");
-    await page.waitForTimeout(1000);
 
     let modalCount = 0;
     try {
@@ -19,7 +18,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
@@ -27,7 +28,9 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("url");
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="dataURL"]', {
+      timeout: 3000,
+    });
     await page
       .getByTestId("dataURL")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
