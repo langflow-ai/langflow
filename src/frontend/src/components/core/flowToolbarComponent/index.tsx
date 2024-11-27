@@ -38,7 +38,7 @@ export default function FlowToolbar(): JSX.Element {
     setOpenShareModal((oldState) => !oldState);
   }
 
-  const openPlayground = useShortcutsStore((state) => state.open);
+  const openPlayground = useShortcutsStore((state) => state.openPlayground);
   const api = useShortcutsStore((state) => state.api);
   const flow = useShortcutsStore((state) => state.flow);
 
