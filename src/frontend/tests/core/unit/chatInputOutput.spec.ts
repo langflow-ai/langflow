@@ -23,7 +23,9 @@ test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 3000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
 
@@ -37,7 +39,9 @@ test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   });
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("chat output");
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="outputsChat Output"]', {
+    timeout: 2000,
+  });
 
   await page
     .getByTestId("outputsChat Output")
@@ -47,7 +51,9 @@ test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("chat input");
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="inputsChat Input"]', {
+    timeout: 2000,
+  });
 
   await page
     .getByTestId("inputsChat Input")
