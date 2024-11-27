@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 from langflow.schema.data import Data
-from langflow.schema.data_set import DataSet
+from langflow.schema.dataframe import DataFrame
 
 
 @pytest.fixture
@@ -15,17 +15,17 @@ def sample_data_objects() -> list[Data]:
 
 
 @pytest.fixture
-def sample_dataset(sample_data_objects) -> DataSet:
-    """Fixture providing a sample DataSet instance."""
-    return DataSet(sample_data_objects)
+def sample_dataset(sample_data_objects) -> DataFrame:
+    """Fixture providing a sample DataFrame instance."""
+    return DataFrame(sample_data_objects)
 
 
 def test_from_data_list_basic():
     """Test basic functionality of from_data_list."""
     data_objects = [Data(data={"name": "John", "age": 30}), Data(data={"name": "Jane", "age": 25})]
-    dataset = DataSet(data_objects)
+    dataset = DataFrame(data_objects)
 
-    assert isinstance(dataset, DataSet)
+    assert isinstance(dataset, DataFrame)
     assert isinstance(dataset, pd.DataFrame)
     assert len(dataset) == 2
     assert list(dataset.columns) == ["name", "age"]
@@ -35,8 +35,8 @@ def test_from_data_list_basic():
 
 def test_from_data_list_empty():
     """Test from_data_list with empty input."""
-    dataset = DataSet([])
-    assert isinstance(dataset, DataSet)
+    dataset = DataFrame([])
+    assert isinstance(dataset, DataFrame)
     assert len(dataset) == 0
 
 
@@ -46,9 +46,9 @@ def test_from_data_list_missing_fields():
         Data(data={"name": "John", "age": 30}),
         Data(data={"name": "Jane", "city": "Boston"}),  # Missing age
     ]
-    dataset = DataSet(data_objects)
+    dataset = DataFrame(data_objects)
 
-    assert isinstance(dataset, DataSet)
+    assert isinstance(dataset, DataFrame)
     assert set(dataset.columns) == {"name", "age", "city"}
     assert pd.isna(dataset.iloc[1]["age"])
     assert pd.isna(dataset.iloc[0]["city"])
@@ -60,9 +60,9 @@ def test_from_data_list_nested_data():
         Data(data={"name": "John", "address": {"city": "New York", "zip": "10001"}}),
         Data(data={"name": "Jane", "address": {"city": "Boston", "zip": "02108"}}),
     ]
-    dataset = DataSet(data_objects)
+    dataset = DataFrame(data_objects)
 
-    assert isinstance(dataset, DataSet)
+    assert isinstance(dataset, DataFrame)
     assert isinstance(dataset["address"][0], dict)
     assert dataset["address"][0]["city"] == "New York"
 
@@ -82,7 +82,7 @@ def test_to_data_list_basic(sample_dataset, sample_data_objects):
 
 def test_to_data_list_empty():
     """Test to_data_list with empty DataFrame."""
-    empty_dataset = DataSet()
+    empty_dataset = DataFrame()
     result = empty_dataset.to_data_list()
     assert isinstance(result, list)
     assert len(result) == 0
@@ -103,10 +103,10 @@ def test_to_data_list_modified_data(sample_dataset):
 
 
 def test_dataset_pandas_operations(sample_dataset):
-    """Test that pandas operations work correctly on DataSet."""
+    """Test that pandas operations work correctly on DataFrame."""
     # Test filtering
     filtered = sample_dataset[sample_dataset["age"] > 30]
-    assert isinstance(filtered, DataSet), f"Expected DataSet, got {type(filtered)}"
+    assert isinstance(filtered, DataFrame), f"Expected DataFrame, got {type(filtered)}"
     assert len(filtered) == 1
     assert filtered.iloc[0]["name"] == "Bob"
 
@@ -121,9 +121,9 @@ def test_dataset_pandas_operations(sample_dataset):
 
 
 def test_dataset_with_null_values():
-    """Test handling of null values in DataSet."""
+    """Test handling of null values in DataFrame."""
     data_objects = [Data(data={"name": "John", "age": None}), Data(data={"name": None, "age": 25})]
-    dataset = DataSet(data_objects)
+    dataset = DataFrame(data_objects)
 
     assert pd.isna(dataset.iloc[0]["age"])
     assert pd.isna(dataset.iloc[1]["name"])
@@ -148,7 +148,7 @@ def test_dataset_type_preservation():
             }
         )
     ]
-    dataset = DataSet(data_objects)
+    dataset = DataFrame(data_objects)
     result = dataset.to_data_list()
 
     assert isinstance(result[0].data["int_val"], int)
@@ -164,7 +164,7 @@ def test_add_row_with_dict(sample_dataset):
     new_row = {"name": "Alice", "age": 28, "city": "Seattle"}
     result = sample_dataset.add_row(new_row)
 
-    assert isinstance(result, DataSet)
+    assert isinstance(result, DataFrame)
     assert len(result) == len(sample_dataset) + 1
     assert result.iloc[-1]["name"] == "Alice"
     assert result.iloc[-1]["age"] == 28
@@ -176,7 +176,7 @@ def test_add_row_with_data_object(sample_dataset):
     new_row = Data(data={"name": "Alice", "age": 28, "city": "Seattle"})
     result = sample_dataset.add_row(new_row)
 
-    assert isinstance(result, DataSet)
+    assert isinstance(result, DataFrame)
     assert len(result) == len(sample_dataset) + 1
     assert result.iloc[-1]["name"] == "Alice"
     assert result.iloc[-1]["age"] == 28
@@ -188,7 +188,7 @@ def test_add_rows_with_dicts(sample_dataset):
     new_rows = [{"name": "Alice", "age": 28, "city": "Seattle"}, {"name": "Charlie", "age": 32, "city": "Portland"}]
     result = sample_dataset.add_rows(new_rows)
 
-    assert isinstance(result, DataSet)
+    assert isinstance(result, DataFrame)
     assert len(result) == len(sample_dataset) + 2
     assert result.iloc[-2]["name"] == "Alice"
     assert result.iloc[-1]["name"] == "Charlie"
@@ -202,7 +202,7 @@ def test_add_rows_with_data_objects(sample_dataset):
     ]
     result = sample_dataset.add_rows(new_rows)
 
-    assert isinstance(result, DataSet)
+    assert isinstance(result, DataFrame)
     assert len(result) == len(sample_dataset) + 2
     assert result.iloc[-2]["name"] == "Alice"
     assert result.iloc[-1]["name"] == "Charlie"
@@ -216,7 +216,7 @@ def test_add_rows_mixed_types(sample_dataset):
     ]
     result = sample_dataset.add_rows(new_rows)
 
-    assert isinstance(result, DataSet)
+    assert isinstance(result, DataFrame)
     assert len(result) == len(sample_dataset) + 2
     assert result.iloc[-2]["name"] == "Alice"
     assert result.iloc[-1]["name"] == "Charlie"
@@ -225,9 +225,9 @@ def test_add_rows_mixed_types(sample_dataset):
 def test_init_with_data_objects():
     """Test initialization with Data objects."""
     data_objects = [Data(data={"name": "John", "age": 30}), Data(data={"name": "Jane", "age": 25})]
-    dataset = DataSet(data_objects)
+    dataset = DataFrame(data_objects)
 
-    assert isinstance(dataset, DataSet)
+    assert isinstance(dataset, DataFrame)
     assert len(dataset) == 2
     assert list(dataset.columns) == ["name", "age"]
     assert dataset.iloc[0]["name"] == "John"
@@ -237,9 +237,9 @@ def test_init_with_data_objects():
 def test_init_with_dicts():
     """Test initialization with dictionaries."""
     data_dicts = [{"name": "John", "age": 30}, {"name": "Jane", "age": 25}]
-    dataset = DataSet(data_dicts)
+    dataset = DataFrame(data_dicts)
 
-    assert isinstance(dataset, DataSet)
+    assert isinstance(dataset, DataFrame)
     assert len(dataset) == 2
     assert list(dataset.columns) == ["name", "age"]
     assert dataset.iloc[0]["name"] == "John"
@@ -249,9 +249,9 @@ def test_init_with_dicts():
 def test_init_with_dict_of_lists():
     """Test initialization with a dictionary of lists."""
     data = {"name": ["John", "Jane"], "age": [30, 25]}
-    dataset = DataSet(data)
+    dataset = DataFrame(data)
 
-    assert isinstance(dataset, DataSet)
+    assert isinstance(dataset, DataFrame)
     assert len(dataset) == 2
     assert list(dataset.columns) == ["name", "age"]
     assert dataset.iloc[0]["name"] == "John"
@@ -261,9 +261,9 @@ def test_init_with_dict_of_lists():
 def test_init_with_pandas_dataframe():
     """Test initialization with a pandas DataFrame."""
     test_df = pd.DataFrame({"name": ["John", "Jane"], "age": [30, 25]})
-    dataset = DataSet(test_df)
+    dataset = DataFrame(test_df)
 
-    assert isinstance(dataset, DataSet)
+    assert isinstance(dataset, DataFrame)
     assert len(dataset) == 2
     assert list(dataset.columns) == ["name", "age"]
     assert dataset.iloc[0]["name"] == "John"
@@ -272,8 +272,8 @@ def test_init_with_pandas_dataframe():
 
 def test_init_with_none():
     """Test initialization with None."""
-    dataset = DataSet(None)
-    assert isinstance(dataset, DataSet)
+    dataset = DataFrame(None)
+    assert isinstance(dataset, DataFrame)
     assert len(dataset) == 0
 
 
@@ -284,15 +284,15 @@ def test_init_with_invalid_list():
         Data(data={"name": "Jane", "age": 25}),  # Mixed types should fail
     ]
     with pytest.raises(ValueError, match="List items must be either all Data objects or all dictionaries"):
-        DataSet(invalid_data)
+        DataFrame(invalid_data)
 
 
 def test_init_with_kwargs():
     """Test initialization with additional kwargs."""
     data = {"name": ["John", "Jane"], "age": [30, 25]}
-    dataset = DataSet(data=data, index=["a", "b"])
+    dataset = DataFrame(data=data, index=["a", "b"])
 
-    assert isinstance(dataset, DataSet)
+    assert isinstance(dataset, DataFrame)
     assert len(dataset) == 2
     assert list(dataset.index) == ["a", "b"]
     assert dataset.loc["a"]["name"] == "John"

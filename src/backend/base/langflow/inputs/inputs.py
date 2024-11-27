@@ -1,6 +1,6 @@
 import warnings
 from collections.abc import AsyncIterator, Iterator
-from typing import Any, get_args
+from typing import Any, TypeAlias, get_args
 
 from pandas import DataFrame
 from pydantic import Field, field_validator
@@ -76,6 +76,10 @@ class DataInput(HandleInput, InputTraceMixin, ListableInputMixin, ToolModeMixin)
     """
 
     input_types: list[str] = ["Data"]
+
+
+class DataFrameInput(HandleInput, InputTraceMixin, ListableInputMixin, ToolModeMixin):
+    input_types: list[str] = ["DataFrame"]
 
 
 class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
@@ -492,7 +496,7 @@ class DefaultPromptField(Input):
     value: Any = ""  # Set the value to empty string
 
 
-InputTypes = (
+InputTypes: TypeAlias = (
     Input
     | DefaultPromptField
     | BoolInput
@@ -516,6 +520,7 @@ InputTypes = (
     | TableInput
     | LinkInput
     | SliderInput
+    | DataFrameInput
 )
 
 InputTypesMap: dict[str, type[InputTypes]] = {t.__name__: t for t in get_args(InputTypes)}
