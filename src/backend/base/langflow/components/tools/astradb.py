@@ -1,3 +1,4 @@
+import os
 from typing import Any
 
 from astrapy import Collection, DataAPIClient, Database
