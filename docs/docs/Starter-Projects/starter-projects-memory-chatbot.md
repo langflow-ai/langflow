@@ -14,7 +14,7 @@ This flow extends the [basic prompting](/starter-projects-basic-prompting) flo
 
 ---
 
-- [Langflow installed and running](/getting-started-installation)
+- [Langflow installed and running](/get-started-installation)
 - [OpenAI API key created](https://platform.openai.com/)
 
 
@@ -49,7 +49,7 @@ Check and adjust advanced parameters by opening the Advanced Settings of the **
 
 
 
-## Use Session ID in with the memory chatbot flow {#4e68c3c0750942f98c45c1c45d7ffbbe}
+## Use Session ID with the memory chatbot flow {#4e68c3c0750942f98c45c1c45d7ffbbe}
 
 
 ---

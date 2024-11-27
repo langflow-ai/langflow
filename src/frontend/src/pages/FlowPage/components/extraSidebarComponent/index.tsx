@@ -5,7 +5,7 @@ import {
 import { useStoreStore } from "@/stores/storeStore";
 import { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
-import IconComponent from "../../../../components/genericIconComponent";
+import IconComponent from "../../../../components/common/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
 import { Separator } from "../../../../components/ui/separator";
 import {
@@ -191,7 +191,6 @@ export default function ExtraSidebar(): JSX.Element {
             // Set search input state
             setSearch(event.target.value);
           }}
-          autoComplete="off"
           readOnly
           onClick={() =>
             document?.getElementById("search")?.removeAttribute("readonly")
