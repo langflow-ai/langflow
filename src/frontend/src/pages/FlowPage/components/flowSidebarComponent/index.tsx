@@ -159,7 +159,8 @@ export function FlowSidebarComponent() {
     return Object.entries(dataFilter).some(
       ([category, items]) =>
         Object.keys(items).length > 0 &&
-        CATEGORIES.find((c) => c.name === category),
+        (CATEGORIES.find((c) => c.name === category) ||
+          BUNDLES.find((b) => b.name === category)),
     );
   }, [dataFilter]);
   const [sortedCategories, setSortedCategories] = useState<string[]>([]);
@@ -195,7 +196,8 @@ export function FlowSidebarComponent() {
             .filter(
               (category) =>
                 Object.keys(filteredData[category]).length > 0 &&
-                CATEGORIES.find((c) => c.name === category),
+                (CATEGORIES.find((c) => c.name === category) ||
+                  BUNDLES.find((b) => b.name === category)),
             )
             .toSorted((a, b) =>
               fuseCategories.indexOf(b) < fuseCategories.indexOf(a) ? 1 : -1,
