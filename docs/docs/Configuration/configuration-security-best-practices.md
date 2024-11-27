@@ -1,7 +1,7 @@
 ---
-title: Best Practices
+title: Security best practices
 sidebar_position: 1
-slug: /Security/best-practices
+slug: /configuration-security-best-practices
 ---
 
 # Security Best Practices

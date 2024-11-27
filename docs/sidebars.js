@@ -52,6 +52,7 @@ module.exports = {
         "Configuration/configuration-cli",
         "Configuration/configuration-global-variables",
         "Configuration/environment-variables",
+        "Configuration/configuration-security-best-practices"
       ],
     },
     {
@@ -144,11 +145,6 @@ module.exports = {
           href: "/api",
         },
       ],
-    },
-    {
-      type: "category",
-      label: "Security",
-      items: ["Security/best-practices"],
     },
   ],
 };
