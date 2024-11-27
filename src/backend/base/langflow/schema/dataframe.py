@@ -1,11 +1,12 @@
 from typing import cast
 
 import pandas as pd
+from pandas import DataFrame as pandas_DataFrame
 
 from langflow.schema.data import Data
 
 
-class DataSet(pd.DataFrame):
+class DataFrame(pandas_DataFrame):
     """A pandas DataFrame subclass specialized for handling collections of Data objects.
 
     This class extends pandas.DataFrame to provide seamless integration between
@@ -53,7 +54,7 @@ class DataSet(pd.DataFrame):
         list_of_dicts = self.to_dict(orient="records")
         return [Data(data=row) for row in list_of_dicts]
 
-    def add_row(self, data: dict | Data) -> "DataSet":
+    def add_row(self, data: dict | Data) -> "DataFrame":
         """Adds a single row to the dataset.
 
         Args:
@@ -69,9 +70,9 @@ class DataSet(pd.DataFrame):
         if isinstance(data, Data):
             data = data.data
         new_df = self._constructor([data])
-        return cast(DataSet, pd.concat([self, new_df], ignore_index=True))
+        return cast(DataFrame, pd.concat([self, new_df], ignore_index=True))
 
-    def add_rows(self, data: list[dict | Data]) -> "DataSet":
+    def add_rows(self, data: list[dict | Data]) -> "DataFrame":
         """Adds multiple rows to the dataset.
 
         Args:
@@ -87,11 +88,11 @@ class DataSet(pd.DataFrame):
             else:
                 processed_data.append(item)
         new_df = self._constructor(processed_data)
-        return cast(DataSet, pd.concat([self, new_df], ignore_index=True))
+        return cast(DataFrame, pd.concat([self, new_df], ignore_index=True))
 
     @property
     def _constructor(self):
         def _c(*args, **kwargs):
-            return DataSet(*args, **kwargs).__finalize__(self)
+            return DataFrame(*args, **kwargs).__finalize__(self)
 
         return _c

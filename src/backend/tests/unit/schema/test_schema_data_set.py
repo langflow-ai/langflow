@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 from langflow.schema.data import Data
-from langflow.schema.data_set import DataSet
+from langflow.schema.dataframe import DataSet
 
 
 @pytest.fixture
