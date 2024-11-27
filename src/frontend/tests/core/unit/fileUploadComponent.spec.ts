@@ -28,7 +28,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
     await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -39,7 +41,9 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("file");
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="dataFile"]', {
+      timeout: 3000,
+    });
 
     await page
       .getByTestId("dataFile")
@@ -165,7 +169,8 @@ test(
 
     await page.getByText("Run Flow", { exact: true }).click();
 
-    await page.waitForTimeout(3000);
-    expect(await page.getByText("this is a test file").isVisible()).toBe(true);
+    await expect(page.getByText("this is a test file")).toBeVisible({
+      timeout: 3000,
+    });
   },
 );
