@@ -1043,7 +1043,8 @@ class Component(CustomComponent):
         if len(stored_messages) != 1:
             msg = "Only one message can be stored at a time."
             raise ValueError(msg)
-        return stored_messages[0]
+        stored_message = stored_messages[0]
+        return await Message.create(**stored_message.model_dump())
 
     async def _send_message_event(self, message: Message, id_: str | None = None, category: str | None = None) -> None:
         if hasattr(self, "_event_manager") and self._event_manager:
