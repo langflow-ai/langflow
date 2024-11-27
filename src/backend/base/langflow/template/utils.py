@@ -73,11 +73,6 @@ def update_frontend_node_with_template_values(frontend_node, raw_frontend_node):
     if not is_valid_data(frontend_node, raw_frontend_node):
         return frontend_node
 
-    # Check if the display_name is different than "CustomComponent"
-    # if so, update the display_name in the frontend_node
-    if raw_frontend_node["display_name"] != "CustomComponent":
-        frontend_node["display_name"] = raw_frontend_node["display_name"]
-
     update_template_values(frontend_node["template"], raw_frontend_node["template"])
 
     old_code = raw_frontend_node["template"]["code"]["value"]
