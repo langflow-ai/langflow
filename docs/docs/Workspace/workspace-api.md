@@ -40,8 +40,8 @@ The **Tweaks** tab displays the available parameters for your flow. Modifying 
 
 Send image files to the Langflow API.
 
-The default file limit is 100 MB. This value can be configured by changing the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` environment variable.
-For more, see [Environment variables](/environment-variables#supported-variables).
+The default file limit is 100 MB. To configure this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` environment variable.
+For more information, see [Environment variables](/environment-variables#supported-variables).
 
 1. To send an image to your flow with the API, POST the image file to the `v1/files/upload` endpoint of your flow.
 
