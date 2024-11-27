@@ -167,7 +167,7 @@ async def build_flow(
                 graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
             else:
                 async with async_session_scope() as new_session:
-                    result = await new_session.exec(select(Flow.name).where(Flow.id == flow_id_str))
+                    result = await new_session.exec(select(Flow.name).where(Flow.id == flow_id))
                     flow_name = result.first()
                 graph = await build_graph_from_data(
                     flow_id=flow_id_str, payload=data.model_dump(), user_id=str(current_user.id), flow_name=flow_name
