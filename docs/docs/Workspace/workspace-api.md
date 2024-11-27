@@ -36,6 +36,46 @@ The **Python Code** tab displays code to interact with your flow's `.json` f
 The **Tweaks** tab displays the available parameters for your flow. Modifying the parameters changes the code parameters across all windows. For example, changing the **Chat Input** component's `input_value` will change that value across all API calls.
 
 
+## Send image files to your flow with the API
+
+1. To send an image to your flow with the API, POST the image file to the `v1/files/upload` endpoint of your flow.
+
+```curl
+curl -X POST "http://127.0.0.1:7860/api/v1/files/upload/a430cc57-06bb-4c11-be39-d3d4de68d2c4" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@image-file.png"
+```
+
+2. The API returns the image file path in the format `"file_path":"<flow-id>/<timestamp>_<file-name>"}`.
+
+```json
+{"flowId":"a430cc57-06bb-4c11-be39-d3d4de68d2c4","file_path":"a430cc57-06bb-4c11-be39-d3d4de68d2c4/2024-11-27_14-47-50_image-file.png"}
+```
+
+3. Post this image file to the **Chat Input** component of a **Basic prompting** flow.
+Pass the file path value as an input in the **Tweaks** section of the curl call to Langflow.
+
+```curl
+curl -X POST \
+    "http://127.0.0.1:7860/api/v1/run/a430cc57-06bb-4c11-be39-d3d4de68d2c4?stream=false" \
+    -H 'Content-Type: application/json'\
+    -d '{
+    "output_type": "chat",
+    "input_type": "chat",
+    "tweaks": {
+  "ChatInput-b67sL": {
+    "files": "a430cc57-06bb-4c11-be39-d3d4de68d2c4/2024-11-27_14-47-50_image-file.png",
+    "input_value": "what do you see?"
+  }
+}}'
+```
+
+4. Your chatbot describes the image file you sent.
+
+```plain
+"text": "This flowchart appears to represent a complex system for processing financial inquiries using various AI agents and tools. Here’s a breakdown of its components and how they might work together..."
+```
+
 ## Chat Widget {#48f121a6cb3243979a341753da0c2700}
 
 
