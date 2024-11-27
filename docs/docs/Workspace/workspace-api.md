@@ -38,6 +38,8 @@ The **Tweaks** tab displays the available parameters for your flow. Modifying 
 
 ## Send image files to your flow with the API
 
+In addition to messages, you can also send images to the Langflow API.
+
 1. To send an image to your flow with the API, POST the image file to the `v1/files/upload` endpoint of your flow.
 
 ```curl
