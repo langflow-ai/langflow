@@ -1,6 +1,6 @@
 import { Code } from "lucide-react";
 import { forwardRef } from "react";
-import ForwardedIconComponent from "../../components/genericIconComponent";
+import ForwardedIconComponent from "../../components/common/genericIconComponent";
 
 export const GradientInfinity = forwardRef<
   SVGSVGElement,
