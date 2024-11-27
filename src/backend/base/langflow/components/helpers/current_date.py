@@ -59,9 +59,7 @@ class CurrentDateComponent(Component):
         ),
     ]
     outputs = [
-        Output(
-            display_name="Current Date", name="current_date", method="get_current_date"
-        ),
+        Output(display_name="Current Date", name="current_date", method="get_current_date"),
     ]
 
     def get_current_date(self) -> Message:
