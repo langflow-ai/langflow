@@ -61,6 +61,15 @@ def convert_llm(llm: Any, excluded_keys=None) -> LLM:
     if isinstance(llm, LLM):
         return llm
 
+    # Check if we should use model_name or model
+    if hasattr(llm, "model_name"):
+        model_name = llm.model_name
+    elif hasattr(llm, "model"):
+        model_name = llm.model
+    else:
+        msg = "Could not find model name in the LLM object"
+        raise ValueError(msg)
+
     # Retrieve the API Key from the LLM
     if excluded_keys is None:
         excluded_keys = {"model", "model_name", "_type", "api_key"}
@@ -70,7 +79,7 @@ def convert_llm(llm: Any, excluded_keys=None) -> LLM:
 
     # Convert Langchain LLM to CrewAI-compatible LLM object
     return LLM(
-        model=llm.model_name,
+        model=model_name,
         api_key=api_key,
         **{k: v for k, v in llm.dict().items() if k not in excluded_keys},
     )
@@ -134,7 +143,7 @@ class BaseCrewComponent(Component):
             agent.llm = convert_llm(agent.llm)
             agent.tools = convert_tools(agent.tools)
 
-        return self.tasks, self.agents
+        return self.tasks, agents_list
 
     def get_manager_llm(self) -> LLM | None:
         if not self.manager_llm:
