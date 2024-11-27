@@ -573,7 +573,7 @@ async def load_flows_from_directory() -> None:
                 # behavior where flows could be added and folder_id was None, orphaning
                 # them within Langflow.
                 if existing.folder_id is None:
-                    folder_id = get_default_folder_id(session, user_id)
+                    folder_id = await get_default_folder_id(session, user_id)
                     existing.folder_id = folder_id
 
                 session.add(existing)
@@ -581,7 +581,7 @@ async def load_flows_from_directory() -> None:
                 logger.info(f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}")
 
                 # Current behavior loads all new flows into default folder
-                folder_id = get_default_folder_id(session, user_id)
+                folder_id = await get_default_folder_id(session, user_id)
 
                 flow["user_id"] = user_id
                 flow["folder_id"] = folder_id
