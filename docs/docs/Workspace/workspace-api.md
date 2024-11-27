@@ -38,12 +38,12 @@ The **Tweaks** tab displays the available parameters for your flow. Modifying 
 
 ## Send image files to your flow with the API
 
-Send image files to the Langflow API.
+Send image files to the Langflow API for AI analysis.
 
 The default file limit is 100 MB. To configure this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` environment variable.
-For more information, see [Environment variables](/environment-variables#supported-variables).
+For more information, see [Supported variables](/environment-variables#supported-variables).
 
-1. To send an image to your flow with the API, POST the image file to the `v1/files/upload` endpoint of your flow.
+1. To send an image to your flow with the API, POST the image file to the `v1/files/upload/<flow-id>` endpoint of your flow.
 
 ```curl
 curl -X POST "http://127.0.0.1:7860/api/v1/files/upload/a430cc57-06bb-4c11-be39-d3d4de68d2c4" \
@@ -51,13 +51,13 @@ curl -X POST "http://127.0.0.1:7860/api/v1/files/upload/a430cc57-06bb-4c11-be39-
   -F "file=@image-file.png"
 ```
 
-2. The API returns the image file path in the format `"file_path":"<flow-id>/<timestamp>_<file-name>"}`.
+The API returns the image file path in the format `"file_path":"<flow-id>/<timestamp>_<file-name>"}`.
 
 ```json
 {"flowId":"a430cc57-06bb-4c11-be39-d3d4de68d2c4","file_path":"a430cc57-06bb-4c11-be39-d3d4de68d2c4/2024-11-27_14-47-50_image-file.png"}
 ```
 
-3. Post this image file to the **Chat Input** component of a **Basic prompting** flow.
+2. Post the image file to the **Chat Input** component of a **Basic prompting** flow.
 Pass the file path value as an input in the **Tweaks** section of the curl call to Langflow.
 
 ```curl
@@ -75,7 +75,7 @@ curl -X POST \
 }}'
 ```
 
-4. Your chatbot describes the image file you sent.
+Your chatbot describes the image file you sent.
 
 ```plain
 "text": "This flowchart appears to represent a complex system for processing financial inquiries using various AI agents and tools. Here’s a breakdown of its components and how they might work together..."
