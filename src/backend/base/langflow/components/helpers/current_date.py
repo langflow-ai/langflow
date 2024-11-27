@@ -12,7 +12,6 @@ class CurrentDateComponent(Component):
     display_name = "Current Date"
     description = "Returns the current date and time in the selected timezone."
     icon = "clock"
-    beta = True
     name = "CurrentDate"
 
     inputs = [
@@ -60,7 +59,9 @@ class CurrentDateComponent(Component):
         ),
     ]
     outputs = [
-        Output(display_name="Current Date", name="current_date", method="get_current_date"),
+        Output(
+            display_name="Current Date", name="current_date", method="get_current_date"
+        ),
     ]
 
     def get_current_date(self) -> Message:
