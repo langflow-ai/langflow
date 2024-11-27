@@ -56,11 +56,7 @@ test(
     await page
       .getByTestId("prototypesPython Function")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
     await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
     await page.getByTestId("zoom_out").click();
     await page.getByTestId("div-generic-node").click();
 
