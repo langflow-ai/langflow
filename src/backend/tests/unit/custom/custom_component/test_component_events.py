@@ -211,7 +211,7 @@ async def test_component_streaming_message():
     # Create a proper mock vertex with graph and flow_id
     vertex = MagicMock()
     mock_graph = MagicMock()
-    mock_graph.flow_id = uuid4()  # Valid UUID string
+    mock_graph.flow_id = uuid4()
     vertex.graph = mock_graph
 
     component = ComponentForTesting(_vertex=vertex)
@@ -239,8 +239,8 @@ async def test_component_streaming_message():
     sent_message = await component.send_message(message)
 
     # Verify the message
-    assert sent_message.id is not None
-    assert sent_message.text == "Hello World!"
+    assert sent_message[0].id is not None
+    assert sent_message[0].text == "Hello World!"
 
     # Check tokens in queue
     tokens = []
