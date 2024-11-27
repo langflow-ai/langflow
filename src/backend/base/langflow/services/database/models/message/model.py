@@ -77,7 +77,11 @@ class MessageBase(SQLModel):
             content_blocks.append(content)
 
         if isinstance(flow_id, str):
-            flow_id = UUID(flow_id)
+            try:
+                flow_id = UUID(flow_id)
+            except ValueError as exc:
+                msg = f"Flow ID {flow_id} is not a valid UUID"
+                raise ValueError(msg) from exc
 
         return cls(
             sender=message.sender,
