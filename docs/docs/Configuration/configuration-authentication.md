@@ -44,7 +44,7 @@ python -m langflow run --env-file .env
 7. To add a new user, click **New User**, and then add the **Username** and **Password**.
 8. To activate the new user, select **Active**.
    The user can only sign in if you select them as **Active**.
-9. To give the user `superuser` priveleges, click **Superuser**.
+9. To give the user `superuser` privileges, click **Superuser**.
 10. Click **Save**.
 11. To confirm your new user has been created, sign out of Langflow, and then sign back in using your new **Username** and **Password**.
 
@@ -117,11 +117,3 @@ By default, this variable is set to `False`. When enabled, new users are automat
 ```bash
 LANGFLOW_NEW_USER_IS_ACTIVE=False
 ```
-
----
-
-**NOTE**
-
-While you can also set these variables using export commands in your shell, using a .env file is recommended as it's more secure and maintainable.
-
----
