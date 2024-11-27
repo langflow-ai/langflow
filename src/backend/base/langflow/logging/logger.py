@@ -190,6 +190,7 @@ def is_valid_log_format(format_string) -> bool:
         # Attempt to format the record
         formatter.format(record)
     except (KeyError, ValueError, TypeError):
+        logger.error("Invalid log format string passed, fallback to default")
         return False
     return True
 
