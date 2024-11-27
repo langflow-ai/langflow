@@ -100,7 +100,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
     });
   };
 
-  const changes = useShortcutsStore((state) => state.changes);
+  const changes = useShortcutsStore((state) => state.changesSave);
   useHotkeys(changes, handleSave, { preventDefault: true });
 
   return currentFlow && onFlowPage ? (
