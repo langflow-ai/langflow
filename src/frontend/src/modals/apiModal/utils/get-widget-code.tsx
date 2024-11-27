@@ -15,7 +15,7 @@ export default function getWidgetCode({
   <langflow-chat
     window_title="${flowName}"
     flow_id="${flowId}"
-    host_url="http://localhost:7860"${
+    host_url="${window.location.protocol}//${window.location.host}"${
       !isAuth
         ? `
     api_key="..."`
