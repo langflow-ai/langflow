@@ -52,6 +52,7 @@ module.exports = {
         "Configuration/configuration-cli",
         "Configuration/configuration-global-variables",
         "Configuration/environment-variables",
+        "Configuration/configuration-objects",
       ],
     },
     {
@@ -75,11 +76,6 @@ module.exports = {
         "Components/components-tools",
         "Components/components-vector-stores",
       ],
-    },
-    {
-      type: "category",
-      label: "Types",
-      items: ["Types/types-data", "Types/types-message"],
     },
     {
       type: "category",
