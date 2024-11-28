@@ -78,7 +78,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       disabled,
       asChild = false,
       children,
-      ignoreTitleCase=false,
+      ignoreTitleCase = false,
       ...props
     },
     ref,
