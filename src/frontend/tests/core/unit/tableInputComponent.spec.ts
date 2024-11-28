@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
 
-// TODO: This component doesn't have table input needs updating
 test(
   "user must be able to interact with table input component",
   {
@@ -36,7 +35,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
     await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -44,7 +45,12 @@ test(
     });
     await page.getByTestId("blank-flow").click();
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector(
+      '[data-testid="sidebar-custom-component-button"]',
+      {
+        timeout: 3000,
+      },
+    );
 
     await page.getByTestId("sidebar-custom-component-button").click();
 
@@ -104,11 +110,15 @@ class CustomComponent(Component):
 
     await page.getByText("Check & Save").last().click();
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('text="Open Table"', {
+      timeout: 3000,
+    });
 
     await page.getByText("Open Table").click();
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector(".ag-cell-value", {
+      timeout: 3000,
+    });
 
     const visibleTextsGroup1 = ["Alpha", "Bravo", "Charlie", "Delta", "Echo"];
     const visibleTextsGroup2 = ["X1", "Y2", "Z3", "W4", "V5"];
@@ -130,21 +140,28 @@ class CustomComponent(Component):
 
     await page.getByPlaceholder("Empty").fill(randomText);
     await page.getByText("Save").last().click();
-    await page.waitForTimeout(500);
-
+    await expect(page.getByTestId("icon-Type")).toBeHidden({
+      timeout: 2000,
+    });
     await page.locator(".ag-cell-value").nth(12).click();
 
     await page.getByPlaceholder("Empty").fill(secondRandomText);
     await page.getByText("Save").last().click();
-    await page.waitForTimeout(500);
+    await expect(page.getByTestId("icon-Type")).toBeHidden({
+      timeout: 2000,
+    });
 
     await page.locator(".ag-cell-value").nth(24).click();
-    await page.waitForTimeout(500);
+    await expect(page.getByTestId("icon-Type")).toBeVisible({
+      timeout: 2000,
+    });
 
     await page.getByPlaceholder("Empty").fill(thirdRandomText);
     await page.getByText("Save").last().click();
 
-    await page.waitForTimeout(500);
+    await expect(page.getByTestId("icon-Type")).toBeHidden({
+      timeout: 2000,
+    });
 
     expect(page.getByText(randomText)).toBeVisible();
     expect(page.getByText(secondRandomText)).toBeVisible();
@@ -154,7 +171,9 @@ class CustomComponent(Component):
 
     await page.getByTestId("icon-Copy").last().click();
 
-    await page.waitForTimeout(500);
+    await expect(page.getByTestId("duplicate-row-button")).toBeDisabled({
+      timeout: 1000,
+    });
 
     let numberOfCopiedRows = await page.getByText(thirdRandomText).count();
     expect(numberOfCopiedRows).toBe(2);
@@ -162,7 +181,9 @@ class CustomComponent(Component):
     await page.locator('input[type="checkbox"]').last().click();
     await page.getByTestId("icon-Trash2").last().click();
 
-    await page.waitForTimeout(500);
+    await expect(page.getByTestId("delete-row-button")).toBeDisabled({
+      timeout: 1000,
+    });
 
     await page.locator('input[type="checkbox"]').last().click();
     await page.getByTestId("icon-Trash2").click();
@@ -172,11 +193,15 @@ class CustomComponent(Component):
 
     await page.getByText("Close").last().click();
 
-    await page.waitForTimeout(500);
+    await page.waitForSelector("text=Open Table", {
+      timeout: 3000,
+    });
 
     await page.getByText("Open Table").click();
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector(".ag-cell-value", {
+      timeout: 3000,
+    });
 
     const visibleTexts = ["Alpha", "Bravo", "Charlie", "Delta", "Echo"];
     const notVisibleTexts = ["X1", "thirdRandomText"];
