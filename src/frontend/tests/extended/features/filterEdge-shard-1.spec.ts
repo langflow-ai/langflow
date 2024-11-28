@@ -140,6 +140,7 @@ test(
       "modelsOpenAI",
       "modelsPerplexity",
       "modelsQianfan",
+      "modelsSambaNova",
       "modelsVertex AI",
     ];
 
