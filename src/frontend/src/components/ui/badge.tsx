@@ -18,7 +18,7 @@ const badgeVariants = cva(
         secondaryStatic: "bg-muted text-muted-foreground border-0",
         pinkStatic: "bg-accent-pink text-accent-pink-foreground border-0",
         emerald:
-          "bg-accent-emerald text-accent-emerald-foreground hover:bg-accent-emerald-hover",
+          "bg-accent-emerald text-accent-emerald-foreground hover:bg-accent-emerald-hover border-0",
         successStatic:
           "bg-accent-emerald text-accent-emerald-foreground border-0",
         errorStatic: "bg-error-background text-error-foreground border-0",
