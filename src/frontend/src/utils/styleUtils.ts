@@ -241,6 +241,7 @@ import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
 import { CassandraIcon } from "../icons/Cassandra";
 import { ChromaIcon } from "../icons/ChromaIcon";
 import { ClickhouseIcon } from "../icons/Clickhouse";
+import { CloudflareIcon } from "../icons/Cloudflare";
 import { CohereIcon } from "../icons/Cohere";
 import { ComposioIcon } from "../icons/Composio";
 import { ConfluenceIcon } from "../icons/Confluence";
@@ -263,6 +264,7 @@ import { GroqIcon } from "../icons/Groq";
 import { HCDIcon } from "../icons/HCD";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
 import { IFixIcon } from "../icons/IFixIt";
+import { IcosaIcon } from "../icons/Icosa";
 import { LMStudioIcon } from "../icons/LMStudio";
 import { LangChainIcon } from "../icons/LangChain";
 import { MaritalkIcon } from "../icons/Maritalk";
@@ -506,6 +508,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Notion", name: "Notion", icon: "Notion" },
   { display_name: "NVIDIA", name: "nvidia", icon: "NVIDIA" },
   { display_name: "Vectara", name: "vectara", icon: "Vectara" },
+  { display_name: "Icosa Computing", name: "icosacomputing", icon: "Icosa" },
   { display_name: "Google", name: "google", icon: "Google" },
   { display_name: "CrewAI", name: "crewai", icon: "CrewAI" },
   { display_name: "NotDiamond", name: "notdiamond", icon: "NotDiamond" },
@@ -599,6 +602,7 @@ export const nodeIconsLucide: iconsType = {
   Chroma: ChromaIcon,
   Couchbase: CouchbaseIcon,
   Clickhouse: ClickhouseIcon,
+  Cloudflare: CloudflareIcon,
   AirbyteJSONLoader: AirbyteIcon,
   AmazonBedrockEmbeddings: AWSIcon,
   Amazon: AWSIcon,
@@ -633,6 +637,7 @@ export const nodeIconsLucide: iconsType = {
   HuggingFaceHub: HuggingFaceIcon,
   HuggingFace: HuggingFaceIcon,
   HuggingFaceEmbeddings: HuggingFaceIcon,
+  Icosa: IcosaIcon,
   IFixitLoader: IFixIcon,
   CrewAI: CrewAiIcon,
   NotDiamond: NotDiamondIcon,
