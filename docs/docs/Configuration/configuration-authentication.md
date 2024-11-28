@@ -40,11 +40,11 @@ python -m langflow run --env-file .env
 
 5. Sign in with your username `admin` and password `securepassword`.
 6. To open the **Admin Page**, click your user profile image, and then select **Admin Page**.
-You can also go to `http://127.0.0.1:7861/admin`.
+   You can also go to `http://127.0.0.1:7861/admin`.
 7. To add a new user, click **New User**, and then add the **Username** and **Password**.
 8. To activate the new user, select **Active**.
-The user can only sign in if you select them as **Active**.
-9. To give the user `superuser` priveleges, click  **Superuser**.
+   The user can only sign in if you select them as **Active**.
+9. To give the user `superuser` privileges, click **Superuser**.
 10. Click **Save**.
 11. To confirm your new user has been created, sign out of Langflow, and then sign back in using your new **Username** and **Password**.
 
@@ -57,6 +57,7 @@ Langflow provides a command-line utility for interactively creating superusers:
 ```bash
 langflow superuser
 ```
+
 2. Langflow prompts you for a **Username** and **Password**:
 
 ```
@@ -73,13 +74,13 @@ Superuser created successfully.
 
 The following table lists the available authentication configuration variables, their descriptions, and default values:
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `LANGFLOW_AUTO_LOGIN` | Enables automatic login | `True` |
-| `LANGFLOW_SUPERUSER` | Superuser username | - |
-| `LANGFLOW_SUPERUSER_PASSWORD` | Superuser password | - |
-| `LANGFLOW_SECRET_KEY` | Key for encrypting superuser password | - |
-| `LANGFLOW_NEW_USER_IS_ACTIVE` | Automatically activates new users | `False` |
+| Variable                      | Description                           | Default |
+| ----------------------------- | ------------------------------------- | ------- |
+| `LANGFLOW_AUTO_LOGIN`         | Enables automatic login               | `True`  |
+| `LANGFLOW_SUPERUSER`          | Superuser username                    | -       |
+| `LANGFLOW_SUPERUSER_PASSWORD` | Superuser password                    | -       |
+| `LANGFLOW_SECRET_KEY`         | Key for encrypting superuser password | -       |
+| `LANGFLOW_NEW_USER_IS_ACTIVE` | Automatically activates new users     | `False` |
 
 ### LANGFLOW_AUTO_LOGIN
 
@@ -88,7 +89,7 @@ By default, this variable is set to `True`. When enabled, Langflow operates as i
 To disable automatic login and enforce user authentication:
 
 ```shell
-export LANGFLOW_AUTO_LOGIN=False
+LANGFLOW_AUTO_LOGIN=False
 ```
 
 ### LANGFLOW_SUPERUSER and LANGFLOW_SUPERUSER_PASSWORD
@@ -97,8 +98,8 @@ These environment variables are only relevant when LANGFLOW_AUTO_LOGIN is set to
 To create a superuser manually:
 
 ```bash
-export LANGFLOW_SUPERUSER=admin
-export LANGFLOW_SUPERUSER_PASSWORD=securepassword
+LANGFLOW_SUPERUSER=admin
+LANGFLOW_SUPERUSER_PASSWORD=securepassword
 ```
 
 ### LANGFLOW_SECRET_KEY
@@ -106,15 +107,13 @@ export LANGFLOW_SUPERUSER_PASSWORD=securepassword
 This environment variable holds a secret key used for encrypting the superuser's password. Make sure to set this to a secure, randomly generated string.
 
 ```bash
-export LANGFLOW_SECRET_KEY=randomly_generated_secure_key
+LANGFLOW_SECRET_KEY=randomly_generated_secure_key
 ```
 
 ### LANGFLOW_NEW_USER_IS_ACTIVE
 
 By default, this variable is set to `False`. When enabled, new users are automatically activated and can log in without requiring explicit activation by the superuser.
 
-
-
-
-
-
+```bash
+LANGFLOW_NEW_USER_IS_ACTIVE=False
+```
