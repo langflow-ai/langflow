@@ -19,6 +19,7 @@ from langflow.services.database.models.transactions.model import TransactionTabl
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.deps import async_session_scope, get_async_session, get_session
 from langflow.services.store.utils import get_lf_version_from_pypi
+from langflow.template.field.base import UNDEFINED, Output
 
 if TYPE_CHECKING:
     from langflow.services.chat.service import ChatService
@@ -296,3 +297,28 @@ def custom_params(
     if page is None and size is None:
         return None
     return Params(page=page or MIN_PAGE_SIZE, size=size or MAX_PAGE_SIZE)
+
+
+def create_output_for_toolset_component(component_node: dict):
+    component_node["tool_mode"] = True
+    component_node["outputs"] = [
+        Output(
+            types=["Tool"],
+            selected="Tool",
+            name="component_as_tool",
+            hidden=None,
+            display_name="Toolset",
+            method="to_toolkit",
+            value=UNDEFINED,
+            cache=True,
+            required_inputs=None,
+        )
+    ]
+    return component_node
+
+
+def check_if_toolset_component(value_dict: dict, field: str, value: Any) -> bool:
+    set_toolset_component = value_dict.get("tool_mode") and value_dict.get("tool_mode") is True
+    if set_toolset_component:
+        return value if field == "tool_mode" else True
+    return False

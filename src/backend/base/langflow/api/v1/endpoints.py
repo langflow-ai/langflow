@@ -19,7 +19,13 @@ from fastapi import (
 from loguru import logger
 from sqlmodel import select
 
-from langflow.api.utils import CurrentActiveUser, DbSession, parse_value
+from langflow.api.utils import (
+    CurrentActiveUser,
+    DbSession,
+    check_if_toolset_component,
+    create_output_for_toolset_component,
+    parse_value,
+)
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -609,6 +615,7 @@ async def custom_component_update(
     """
     try:
         component = Component(_code=code_request.code)
+        toolset_component = False
 
         component_node, cc_instance = build_custom_component_template(
             component,
@@ -623,6 +630,9 @@ async def custom_component_update(
                     value = value_dict.get("value")
                     input_type = str(value_dict.get("_input_type"))
                     params[key] = parse_value(value, input_type)
+                    toolset_component = check_if_toolset_component(
+                        value_dict, code_request.field, code_request.field_value
+                    )
 
             load_from_db_fields = [
                 field_name
@@ -644,6 +654,9 @@ async def custom_component_update(
                 field_name=code_request.field,
                 field_value=code_request.field_value,
             )
+
+        if toolset_component:
+            component_node = create_output_for_toolset_component(component_node)
 
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

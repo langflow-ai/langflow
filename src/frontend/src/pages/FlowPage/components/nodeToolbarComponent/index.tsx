@@ -32,6 +32,7 @@ import { useStoreStore } from "../../../../stores/storeStore";
 import { nodeToolbarPropsType } from "../../../../types/components";
 import { FlowType } from "../../../../types/flow";
 import {
+  checkHasToolMode,
   createFlowComponent,
   downloadNode,
   expandGroupNode,
@@ -88,6 +89,7 @@ export default function NodeToolbarComponent({
       setErrorData,
       "tool_mode",
     );
+
     updateNodeInternals(data.id);
   }
   function minimize() {
@@ -145,9 +147,7 @@ export default function NodeToolbarComponent({
   }
   // Check if any of the data.node.template fields have tool_mode as True
   // if so we can show the tool mode button
-  const hasToolMode =
-    data.node?.template &&
-    Object.values(data.node.template).some((field) => field.tool_mode);
+  const hasToolMode = checkHasToolMode(data.node?.template ?? {});
 
   function openDocs() {
     if (data.node?.documentation) {

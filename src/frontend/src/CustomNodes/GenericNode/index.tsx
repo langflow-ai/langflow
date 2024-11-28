@@ -17,7 +17,10 @@ import { useShortcutsStore } from "../../stores/shortcuts";
 import { useTypesStore } from "../../stores/typesStore";
 import { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
-import { scapedJSONStringfy } from "../../utils/reactflowUtils";
+import {
+  checkHasToolMode,
+  scapedJSONStringfy,
+} from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
 import { getNodeInputColors } from "../helpers/get-node-input-colors";
 import { getNodeInputColorsName } from "../helpers/get-node-input-colors-name";
@@ -257,6 +260,8 @@ export default function GenericNode({
     data.node?.outputs?.some((output) => output.name === "component_as_tool") ??
     false;
 
+  const hasToolMode = checkHasToolMode(data.node?.template ?? {});
+
   const renderInputParameter = Object.keys(data.node!.template)
     .filter((templateField) => templateField.charAt(0) !== "_")
     .sort((a, b) =>
@@ -331,10 +336,6 @@ export default function GenericNode({
     setValidationStatus(data);
     return null;
   };
-
-  const hasToolMode =
-    data.node?.template &&
-    Object.values(data.node.template).some((field) => field.tool_mode);
 
   return (
     <div className={cn(isOutdated && !isUserEdited ? "relative -mt-10" : "")}>
