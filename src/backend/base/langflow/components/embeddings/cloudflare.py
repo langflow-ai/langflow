@@ -30,7 +30,7 @@ class CloudflareWorkersAIEmbeddingsComponent(LCModelComponent):
             display_name="Model Name",
             info="List of supported models https://developers.cloudflare.com/workers-ai/models/#text-embeddings",
             required=True,
-            value="@cf/baai/bge-base-en-v1.5",
+            value="@cf/baai/bge-base-en-v1.5"
         ),
         BoolInput(
             name="strip_new_lines",
@@ -75,6 +75,6 @@ class CloudflareWorkersAIEmbeddingsComponent(LCModelComponent):
                 strip_new_lines=self.strip_new_lines,
             )
         except Exception as e:
-            raise ValueError(f"Could not connect to CloudflareWorkersAIEmbeddings API: {e!s}") from e
+            raise ValueError(f"Could not connect to CloudflareWorkersAIEmbeddings API: {str(e)}") from e
 
         return embeddings
