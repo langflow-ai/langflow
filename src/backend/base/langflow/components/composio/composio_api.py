@@ -233,14 +233,6 @@ class ComposioAPIComponent(LCToolComponent):
                     build_config[field]["show"] = True
                     build_config[field]["advanced"] = False
 
-        # if field_name == "api_key":
-        #     if hasattr(self, "api_key") and self.api_key != "":
-        #         if build_config["app_names"]["value"] == "":
-        #             build_config = self._update_app_names_with_connected_status(build_config)
-        #             # Show app_names when API key is provided
-        #             build_config["app_names"]["show"] = True
-        #             build_config["app_names"]["advanced"] = False
-        #     return build_config
 
         if field_name in {"app_names"} and hasattr(self, "api_key") and self.api_key != "":
             # app_name = self._get_normalized_app_name()
