@@ -9,10 +9,11 @@ from composio_langchain import Action, App, ComposioToolSet
 from langchain_core.tools import Tool
 from loguru import logger
 from typing_extensions import override
-from langflow.io import Output
+
 # Local imports
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import DropdownInput, LinkInput, MessageTextInput, MultiselectInput, SecretStrInput, StrInput
+from langflow.io import Output
 
 
 class ComposioAPIComponent(LCToolComponent):
@@ -24,9 +25,7 @@ class ComposioAPIComponent(LCToolComponent):
 
     inputs = [
         # Basic configuration inputs
-        MessageTextInput(
-            name="entity_id", display_name="Entity ID", value="default", advanced=True
-        ),
+        MessageTextInput(name="entity_id", display_name="Entity ID", value="default", advanced=True),
         SecretStrInput(
             name="api_key",
             display_name="Composio API Key",
@@ -91,6 +90,7 @@ class ComposioAPIComponent(LCToolComponent):
     outputs = [
         Output(name="tools", display_name="Tools", method="build_tool"),
     ]
+
     def _check_for_authorization(self, app: str) -> str:
         """Checks if the app is authorized.
 
@@ -277,7 +277,7 @@ class ComposioAPIComponent(LCToolComponent):
                 try:
                     # Check if already connected
                     entity.get_connection(app=app_name)
-                    build_config["auth_status"]["value"] = f"✅"
+                    build_config["auth_status"]["value"] = "✅"
                     build_config["auth_link"]["show"] = False
                     # Show action selection for connected apps
                     build_config["action_names"]["show"] = True
