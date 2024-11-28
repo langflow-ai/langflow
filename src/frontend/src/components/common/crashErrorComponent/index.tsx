@@ -51,7 +51,11 @@ export default function CrashErrorComponent({
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  <Button className="ml-3" variant={"outline"}>
+                  <Button
+                    className="ml-3"
+                    ignoreTitleCase
+                    variant={"outline"}
+                  >
                     Report on GitHub
                   </Button>
                 </a>
