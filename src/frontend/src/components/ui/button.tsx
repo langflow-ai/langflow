@@ -53,9 +53,13 @@ export interface ButtonProps
   asChild?: boolean;
   loading?: boolean;
   unstyled?: boolean;
+  ignoreTitleCase?: boolean;
 }
 
-function toTitleCase(text: string) {
+function toTitleCase(text: string, ignoreTitleCase?: boolean) {
+  if (ignoreTitleCase) {
+    return text;
+  }
   return text
     .split(" ")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -74,6 +78,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       disabled,
       asChild = false,
       children,
+      ignoreTitleCase=false,
       ...props
     },
     ref,
@@ -81,7 +86,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const Comp = asChild ? Slot : "button";
     let newChildren = children;
     if (typeof children === "string") {
-      newChildren = toTitleCase(children);
+      newChildren = toTitleCase(children, ignoreTitleCase);
     }
     return (
       <>
