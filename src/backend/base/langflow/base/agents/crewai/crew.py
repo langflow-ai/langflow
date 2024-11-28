@@ -71,7 +71,7 @@ def convert_llm(llm: Any, excluded_keys=None) -> LLM:
         raise ValueError(msg)
 
     # Normalize Ollama with prefix TODO: Handle all litellm supported models
-    if llm.dict().get("_type") == "ollama-llm":
+    if llm.dict().get("_type") == "chat-ollama":
         model_name = f"ollama/{model_name}"
 
     # Retrieve the API Key from the LLM
