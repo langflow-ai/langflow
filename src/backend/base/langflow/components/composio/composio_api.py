@@ -212,27 +212,6 @@ class ComposioAPIComponent(LCToolComponent):
         connections = toolset.client.get_entity(id=self.entity_id).get_connections()
         return list({connection.appUniqueId for connection in connections})
 
-    # def _update_app_names_with_connected_status(self, build_config: dict) -> dict:
-    #     """Update app names dropdown with connection status.
-
-    #     Args:
-    #         build_config (dict): The current build configuration.
-
-    #     Returns:
-    #         dict: Updated build configuration.
-    #     """
-    #     connected_app_names = self._get_connected_app_names_for_entity()
-
-    #     app_names = [
-    #         f"{app_name} ✅" for app_name in App.__annotations__ if app_name.lower() in connected_app_names
-    #     ]
-    #     non_connected_app_names = [
-    #         app_name for app_name in App.__annotations__ if app_name.lower() not in connected_app_names
-    #     ]
-    #     build_config["app_names"]["options"] = app_names + non_connected_app_names
-    #     build_config["app_names"]["value"] = app_names[0] if app_names else ""
-    #     return build_config
-
     def _get_normalized_app_name(self) -> str:
         """Get app name without connection status suffix.
 
