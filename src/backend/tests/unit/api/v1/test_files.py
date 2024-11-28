@@ -3,6 +3,7 @@ import re
 import shutil
 import tempfile
 from contextlib import suppress
+from io import BytesIO
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -23,6 +24,13 @@ def mock_storage_service():
     service.get_file.return_value = b"file content"  # Binary content for files
     service.list_files.return_value = ["file1.txt", "file2.jpg"]
     service.delete_file.return_value = None
+
+    # Mock the settings service with proper max_file_size_upload attribute
+    settings_mock = MagicMock()
+    settings_mock.settings = MagicMock()
+    settings_mock.settings.max_file_size_upload = 1  # Default 1MB limit
+    service.settings_service = settings_mock
+
     return service
 
 
@@ -69,6 +77,20 @@ async def files_client_fixture(
         # clear the temp db
         with suppress(FileNotFoundError):
             db_path.unlink()
+
+
+@pytest.fixture
+async def max_file_size_upload_fixture(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_MAX_FILE_SIZE_UPLOAD", "1")
+    yield
+    monkeypatch.undo()
+
+
+@pytest.fixture
+async def max_file_size_upload_10mb_fixture(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_MAX_FILE_SIZE_UPLOAD", "10")
+    yield
+    monkeypatch.undo()
 
 
 async def test_upload_file(files_client, created_api_key, flow):
@@ -154,3 +176,33 @@ async def test_file_operations(client, created_api_key, flow):
     # Verify that the file is indeed deleted
     response = await client.get(f"api/v1/files/list/{flow_id}", headers=headers)
     assert full_file_name not in response.json()["files"]
+
+
+@pytest.mark.usefixtures("max_file_size_upload_fixture")
+async def test_upload_file_size_limit(files_client, created_api_key, flow):
+    headers = {"x-api-key": created_api_key.api_key}
+
+    # Test file under the limit (500KB)
+    small_content = b"x" * (500 * 1024)
+    small_file = ("small_file.txt", small_content, "application/octet-stream")
+    headers["Content-Length"] = str(len(small_content))
+    response = await files_client.post(
+        f"api/v1/files/upload/{flow.id}",
+        files={"file": small_file},
+        headers=headers,
+    )
+    assert response.status_code == 201, f"Expected 201, got {response.status_code}: {response.json()}"
+
+    # Test file over the limit (1MB + 1KB)
+    large_content = b"x" * (1024 * 1024 + 1024)
+
+    bio = BytesIO(large_content)
+    headers["Content-Length"] = str(len(large_content))
+    response = await files_client.post(
+        f"api/v1/files/upload/{flow.id}",
+        files={"file": ("large_file.txt", bio, "application/octet-stream")},
+        headers=headers,
+    )
+
+    assert response.status_code == 413, f"Expected 413, got {response.status_code}: {response.json()}"
+    assert "Content size limit exceeded. Maximum allowed is 1MB and got 1.001MB." in response.json()["detail"]
