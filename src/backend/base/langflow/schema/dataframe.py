@@ -103,7 +103,3 @@ class DataFrame(pandas_DataFrame):
         Returns True if the DataFrame has at least one row, False otherwise.
         """
         return not self.empty
-
-    def __nonzero__(self):
-        """Python 2 compatibility method for truth value testing."""
-        return self.__bool__()
