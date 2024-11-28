@@ -9,6 +9,7 @@ from pathlib import Path
 from uuid import UUID
 
 import orjson
+from aiofile import async_open
 from emoji import demojize, purely_emoji
 from loguru import logger
 from sqlalchemy.exc import NoResultFound
@@ -545,13 +546,14 @@ async def load_flows_from_directory() -> None:
         user_id = user.id
         _flows_path = Path(flows_path)
         files = [f for f in _flows_path.iterdir() if f.is_file()]
-        for f in files:
-            if f.suffix != ".json":
+        for file_path in files:
+            if file_path.suffix != ".json":
                 continue
-            logger.info(f"Loading flow from file: {f.name}")
-            content = f.read_text(encoding="utf-8")
+            logger.info(f"Loading flow from file: {file_path.name}")
+            async with async_open(file_path, "r", encoding="utf-8") as f:
+                content = await f.read()
             flow = orjson.loads(content)
-            no_json_name = f.stem
+            no_json_name = file_path.stem
             flow_endpoint_name = flow.get("endpoint_name")
             if _is_valid_uuid(no_json_name):
                 flow["id"] = no_json_name

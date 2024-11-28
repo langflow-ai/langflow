@@ -1,6 +1,6 @@
-import asyncio
 from pathlib import Path
 
+from aiofile import async_open
 from loguru import logger
 
 from .service import StorageService
@@ -33,11 +33,9 @@ class LocalStorageService(StorageService):
         folder_path.mkdir(parents=True, exist_ok=True)
         file_path = folder_path / file_name
 
-        def write_file(file_path: Path, data: bytes) -> None:
-            file_path.write_bytes(data)
-
         try:
-            await asyncio.to_thread(write_file, file_path, data)
+            async with async_open(file_path, "wb") as f:
+                await f.write(data)
             logger.info(f"File {file_name} saved successfully in flow {flow_id}.")
         except Exception:
             logger.exception(f"Error saving file {file_name} in flow {flow_id}")
@@ -57,10 +55,9 @@ class LocalStorageService(StorageService):
             msg = f"File {file_name} not found in flow {flow_id}"
             raise FileNotFoundError(msg)
 
-        def read_file(file_path: Path) -> bytes:
-            return file_path.read_bytes()
+        async with async_open(file_path, "rb") as f:
+            content = await f.read()
 
-        content = await asyncio.to_thread(read_file, file_path)
         logger.debug(f"File {file_name} retrieved successfully from flow {flow_id}.")
         return content
 
