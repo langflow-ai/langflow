@@ -1,4 +1,4 @@
-import { test,expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 test(
   "user should be able to download a flow or a component",
@@ -66,17 +66,23 @@ test(
     await page.getByTestId("icon-ChevronLeft").last().click();
     await page.getByTestId("home-dropdown-menu").nth(0).click();
     await page.getByTestId("btn-download-json").last().click();
-    await expect(page.getByText(/.*exported successfully/)).toBeVisible({timeout:3000});
+    await expect(page.getByText(/.*exported successfully/)).toBeVisible({
+      timeout: 3000,
+    });
 
     await page.getByText("Flows", { exact: true }).click();
     await page.getByTestId("home-dropdown-menu").nth(0).click();
     await page.getByTestId("btn-download-json").last().click();
-    await expect(page.getByText(/.*exported successfully/).last()).toBeVisible({timeout:3000});
+    await expect(page.getByText(/.*exported successfully/).last()).toBeVisible({
+      timeout: 3000,
+    });
 
     await page.getByText("Components", { exact: true }).click();
     await page.getByTestId("home-dropdown-menu").nth(0).click();
     await page.getByTestId("btn-download-json").last().click();
-    await expect(page.getByText(/.*exported successfully/).last()).toBeVisible({timeout:3000});
+    await expect(page.getByText(/.*exported successfully/).last()).toBeVisible({
+      timeout: 3000,
+    });
   },
 );
 
@@ -177,6 +183,8 @@ test(
     await page.getByTestId("icon-ChevronLeft").last().click();
     await page.getByTestId("home-dropdown-menu").nth(1).click();
     await page.getByTestId("btn-duplicate-flow").last().click();
-    await expect(page.getByText("Flow duplicated successfully")).toBeVisible({timeout:3000});
+    await expect(page.getByText("Flow duplicated successfully")).toBeVisible({
+      timeout: 3000,
+    });
   },
 );
