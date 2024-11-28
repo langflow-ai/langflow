@@ -41,9 +41,12 @@ test(
     });
     await page.getByTestId("blank-flow").click();
 
-    await page.waitForSelector('[data-testid="sidebar-custom-component-button"]', {
-      timeout: 3000,
-    });
+    await page.waitForSelector(
+      '[data-testid="sidebar-custom-component-button"]',
+      {
+        timeout: 3000,
+      },
+    );
 
     await page.getByTestId("sidebar-custom-component-button").click();
     await page.getByTitle("fit view").click();
