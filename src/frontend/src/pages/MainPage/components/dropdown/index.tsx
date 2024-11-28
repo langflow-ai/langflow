@@ -10,25 +10,19 @@ type DropdownComponentProps = {
   flowData: FlowType;
   setOpenDelete: (open: boolean) => void;
   handlePlaygroundClick?: () => void;
+  handleDuplicate: () => void;
 };
 
 const DropdownComponent = ({
   flowData,
   setOpenDelete,
   handlePlaygroundClick,
+  handleDuplicate,
 }: DropdownComponentProps) => {
+  console.log("flowData", flowData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
-  const { handleDuplicate } = useDuplicateFlows(
-    [flowData.id],
-    [flowData],
-    () => {},
-    setSuccessData,
-    () => {},
-    () => {},
-    "flow",
-  );
 
   const handleExport = () => {
     downloadFlow(flowData, flowData.name, flowData.description);

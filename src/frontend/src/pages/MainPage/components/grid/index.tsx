@@ -22,6 +22,7 @@ import useDescriptionModal from "../../oldComponents/componentsComponent/hooks/u
 import { useGetTemplateStyle } from "../../utils/get-template-style";
 import { timeElapsed } from "../../utils/time-elapse";
 import DropdownComponent from "../dropdown";
+import useDuplicateFlows from "../../oldComponents/componentsComponent/hooks/use-handle-duplicate";
 
 const GridComponent = ({ flowData }: { flowData: FlowType }) => {
   const navigate = useCustomNavigate();
@@ -50,6 +51,16 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
     const { inputs, outputs } = getInputsAndOutputs(flow?.data?.nodes ?? []);
     return inputs.length > 0 || outputs.length > 0;
   }
+
+  const { handleDuplicate } = useDuplicateFlows(
+    [flowData.id],
+    [flowData],
+    () => {},
+    setSuccessData,
+    () => {},
+    () => {},
+    isComponent ? "Component" : "Flow",
+  );
 
   /* const handlePlaygroundClick = () => {
     track("Playground Button Clicked", { flowId: flowData.id });
@@ -158,6 +169,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
                 <DropdownComponent
                   flowData={flowData}
                   setOpenDelete={setOpenDelete}
+                  handleDuplicate={handleDuplicate}
                 />
               </DropdownMenuContent>
             </DropdownMenu>

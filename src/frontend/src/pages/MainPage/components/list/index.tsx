@@ -21,6 +21,7 @@ import useDescriptionModal from "../../oldComponents/componentsComponent/hooks/u
 import { useGetTemplateStyle } from "../../utils/get-template-style";
 import { timeElapsed } from "../../utils/time-elapse";
 import DropdownComponent from "../dropdown";
+import useDuplicateFlows from "../../oldComponents/componentsComponent/hooks/use-handle-duplicate";
 
 const ListComponent = ({ flowData }: { flowData: FlowType }) => {
   const navigate = useCustomNavigate();
@@ -93,6 +94,16 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
         });
       });
   };
+
+  const { handleDuplicate } = useDuplicateFlows(
+    [flowData.id],
+    [flowData],
+    () => {},
+    setSuccessData,
+    () => {},
+    () => {},
+    isComponent ? "Component" : "Flow",
+  );
 
   const { onDragStart } = useDragStart(flowData);
 
@@ -197,6 +208,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
                 handlePlaygroundClick={() => {
                   // handlePlaygroundClick();
                 }}
+                handleDuplicate={handleDuplicate}
               />
             </DropdownMenuContent>
           </DropdownMenu>
