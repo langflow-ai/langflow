@@ -247,7 +247,7 @@ class ComposioAPIComponent(LCToolComponent):
         dynamic_fields = ["app_credentials", "username", "auth_link", "auth_status", "action_names"]
         for field in dynamic_fields:
             if field in build_config:
-                if build_config[field]["value"] == None or build_config[field]["value"] == "":
+                if build_config[field]["value"] is None or build_config[field]["value"] == "":
                     build_config[field]["show"] = False
                     build_config[field]["advanced"] = True  # Hide from main view
                 else:
