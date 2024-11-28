@@ -96,3 +96,10 @@ class DataFrame(pandas_DataFrame):
             return DataFrame(*args, **kwargs).__finalize__(self)
 
         return _c
+
+    def __bool__(self):
+        """Truth value testing for the DataFrame.
+
+        Returns True if the DataFrame has at least one row, False otherwise.
+        """
+        return not self.empty

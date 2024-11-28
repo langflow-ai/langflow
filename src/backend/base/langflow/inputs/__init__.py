@@ -1,6 +1,7 @@
 from .inputs import (
     BoolInput,
     CodeInput,
+    DataFrameInput,
     DataInput,
     DefaultPromptField,
     DictInput,
@@ -51,4 +52,5 @@ __all__ = [
     "SliderInput",
     "StrInput",
     "TableInput",
+    "DataFrameInput",
 ]
