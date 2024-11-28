@@ -1,3 +1,4 @@
+import { convertTestName } from "@/components/common/storeCardComponent/utils/convert-test-name";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
@@ -176,6 +177,9 @@ export const SidebarDraggableComponent = forwardRef(
               <div className="flex shrink-0 items-center gap-1">
                 {!disabled && (
                   <Button
+                    data-testid={`add-component-button-${convertTestName(
+                      display_name,
+                    )}`}
                     variant="ghost"
                     size="icon"
                     tabIndex={-1}

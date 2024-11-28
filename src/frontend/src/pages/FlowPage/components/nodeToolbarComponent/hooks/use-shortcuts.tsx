@@ -18,6 +18,7 @@ export default function useShortcuts({
   ungroup,
   minimizeFunction,
   activateToolMode,
+  hasToolMode,
 }: {
   showOverrideModal?: boolean;
   showModalAdvanced?: boolean;
@@ -34,6 +35,7 @@ export default function useShortcuts({
   ungroup?: () => void;
   minimizeFunction?: () => void;
   activateToolMode?: () => void;
+  hasToolMode?: boolean;
 }) {
   const advancedSettings = useShortcutsStore((state) => state.advancedSettings);
   const minimize = useShortcutsStore((state) => state.minimize);
@@ -117,7 +119,8 @@ export default function useShortcuts({
     minimizeFunction();
   }
 
-  function handleToolModeWShortcut(e: KeyboardEvent) {
+  function handleToolModeWShortcut(e: KeyboardEvent, hasToolMode?: boolean) {
+    if (!hasToolMode) return;
     if (isWrappedWithClass(e, "noflow") || !activateToolMode) return;
     e.preventDefault();
     activateToolMode();
@@ -135,5 +138,7 @@ export default function useShortcuts({
   useHotkeys(download, handleDownloadWShortcut, { preventDefault: true });
   useHotkeys(freeze, handleFreeze);
   useHotkeys(freezeAll, handleFreezeAll);
-  useHotkeys(toolMode, handleToolModeWShortcut, { preventDefault: true });
+  useHotkeys(toolMode, (e) => handleToolModeWShortcut(e, hasToolMode), {
+    preventDefault: true,
+  });
 }
