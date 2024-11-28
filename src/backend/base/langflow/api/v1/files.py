@@ -12,7 +12,7 @@ from fastapi.responses import StreamingResponse
 from langflow.api.utils import AsyncDbSession, CurrentActiveUser
 from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.database.models.flow import Flow
-from langflow.services.deps import get_settings_service, get_storage_service
+from langflow.services.deps import get_storage_service
 from langflow.services.storage.service import StorageService
 from langflow.services.storage.utils import build_content_type_from_extension
 
@@ -46,16 +46,6 @@ async def upload_file(
     session: AsyncDbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ) -> UploadFileResponse:
-    try:
-        max_file_size_upload = get_settings_service().settings.max_file_size_upload
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
-
-    if file.size > max_file_size_upload * 1024 * 1024:
-        raise HTTPException(
-            status_code=413, detail=f"File size is larger than the maximum file size {max_file_size_upload}MB."
-        )
-
     try:
         flow_id_str = str(flow_id)
         flow = await session.get(Flow, flow_id_str)
