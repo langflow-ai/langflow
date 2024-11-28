@@ -11,6 +11,7 @@ from sqlmodel import Session, col, select
 from langflow.schema.message import Message
 from langflow.services.database.models.message.model import MessageRead, MessageTable
 from langflow.services.deps import async_session_scope, session_scope
+from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 
 
 def get_messages(
