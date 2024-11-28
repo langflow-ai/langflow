@@ -7,7 +7,7 @@ from .zep import ZepChatMemory
 __all__ = [
     "AstraDBChatMemory",
     "CassandraChatMemory",
+    "Mem0MemoryComponent",
     "RedisIndexChatMemory",
     "ZepChatMemory",
-    "Mem0MemoryComponent",
 ]

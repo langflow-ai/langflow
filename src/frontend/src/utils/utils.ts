@@ -1,8 +1,8 @@
+import TableAutoCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAutoCellRender";
 import { ColumnField, FormatterType } from "@/types/utils/functions";
 import { ColDef, ColGroupDef } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import TableAutoCellRender from "../components/tableComponent/components/tableAutoCellRender";
 import {
   DRAG_EVENTS_CUSTOM_TYPESS,
   MESSAGES_TABLE_ORDER,
@@ -25,6 +25,13 @@ export function classNames(...classes: Array<string>): string {
 
 export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
+}
+
+export function toCamelCase(str: string): string {
+  return str
+    .split(" ")
+    .map((s, index) => (index !== 0 ? toNormalCase(s) : s.toLowerCase()))
+    .join("");
 }
 
 export function toNormalCase(str: string): string {

@@ -86,7 +86,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "langflow-base"
-version = "0.1.0"
+version = "0.1.1"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.13"
 license = "MIT"
@@ -163,6 +163,7 @@ dependencies = [
     "defusedxml>=0.7.1,<1.0.0",
     "pypdf~=5.1.0",
     "jsonpatch>=1.33",
+    "validators>=0.34.0",
 ]
 
 [project.urls]

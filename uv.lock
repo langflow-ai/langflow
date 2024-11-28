@@ -14,6 +14,18 @@ members = [
 ]
 
 [[package]]
+name = "aiofile"
+version = "3.9.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "caio" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/67/e2/d7cb819de8df6b5c1968a2756c3cb4122d4fa2b8fc768b53b7c9e5edb646/aiofile-3.9.0.tar.gz", hash = "sha256:e5ad718bb148b265b6df1b3752c4d1d83024b93da9bd599df74b9d9ffcf7919b", size = 17943 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/50/25/da1f0b4dd970e52bf5a36c204c107e11a0c6d3ed195eba0bfbc664c312b2/aiofile-3.9.0-py3-none-any.whl", hash = "sha256:ce2f6c1571538cbdfa0143b04e16b208ecb0e9cb4148e528af8a640ed51cc8aa", size = 19539 },
+]
+
+[[package]]
 name = "aiofiles"
 version = "24.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -510,6 +522,21 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/c3/38/a0f315319737ecf45b4319a8cd1f3a908e29d9277b46942263292115eee7/cachetools-5.5.0.tar.gz", hash = "sha256:2cc24fb4cbe39633fb7badd9db9ca6295d766d9c2995f245725a46715d050f2a", size = 27661 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a4/07/14f8ad37f2d12a5ce41206c21820d8cb6561b728e51fad4530dff0552a67/cachetools-5.5.0-py3-none-any.whl", hash = "sha256:02134e8439cdc2ffb62023ce1debca2944c3f289d66bb17ead3ab3dede74b292", size = 9524 },
+]
+
+[[package]]
+name = "caio"
+version = "0.9.17"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/88/cf/59b868909a85ad9eca985ad5bbeb3c0a8cd435e50ae12def770d16911753/caio-0.9.17.tar.gz", hash = "sha256:8f30511526814d961aeef389ea6885273abe6c655f1e08abbadb95d12fdd9b4f", size = 25001 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/db/c3/17bc41b7c795d91d58ee7a70ad98e23f1ba0d50bdeadd82173bb02cddc8e/caio-0.9.17-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:3f69395fdd45c115b2ef59732e3c8664722a2b51de2d6eedb3d354b2f5f3be3c", size = 37849 },
+    { url = "https://files.pythonhosted.org/packages/bf/3f/0ae9f69deb3dc96b20bf084cc262b438a154d5de08a064628272713ff239/caio-0.9.17-cp310-cp310-manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3028b746e9ec7f6d6ebb386a7fd8caf0eebed5d6e6b4f18c8ef25861934b1673", size = 79417 },
+    { url = "https://files.pythonhosted.org/packages/52/44/a79c7004a9562a176d78437816c736c34ab9fb6233a4b8164eb25628a09c/caio-0.9.17-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:079730a353bbde03796fab681e969472eace09ffbe5000e584868a7fe389ba6f", size = 37842 },
+    { url = "https://files.pythonhosted.org/packages/57/e2/1d04e506a5fd735856f0bb95b4d03b800947bd43c98193ee57d37070a51e/caio-0.9.17-cp311-cp311-manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:549caa51b475877fe32856a26fe937366ae7a1c23a9727005b441db9abb12bcc", size = 79985 },
+    { url = "https://files.pythonhosted.org/packages/c3/b8/37dcee4bc4fae1701a86373a297bbca797f6b7bfe5f85993a11049649c63/caio-0.9.17-cp312-cp312-macosx_10_9_universal2.whl", hash = "sha256:0ddb253b145a53ecca76381677ce465bc5efeaecb6aaf493fac43ae79659f0fb", size = 37909 },
+    { url = "https://files.pythonhosted.org/packages/80/f5/5e993120daeb4ec084f5f84c118bbd48b65379f63ed56919bf224e0eab42/caio-0.9.17-cp312-cp312-manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b3e320b0ea371c810359934f8e8fe81777c493cc5fb4d41de44277cbe7336e74", size = 81709 },
+    { url = "https://files.pythonhosted.org/packages/58/72/3f4895adb1d23b0ac1d8afc748405a2ad3c77d8d0f23b05a64ff583c11e5/caio-0.9.17-py3-none-any.whl", hash = "sha256:c55d4dc6b3a36f93237ecd6360e1c131c3808bc47d4191a130148a99b80bb311", size = 19062 },
 ]
 
 [[package]]
@@ -3491,9 +3518,10 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.1.0"
+version = "1.1.1"
 source = { editable = "." }
 dependencies = [
+    { name = "aiofile" },
     { name = "assemblyai" },
     { name = "astra-assistants", extra = ["tools"] },
     { name = "atlassian-python-api" },
@@ -3635,6 +3663,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
     { name = "assemblyai", specifier = ">=0.33.0,<1.0.0" },
     { name = "astra-assistants", extras = ["tools"], specifier = "~=2.2.6" },
     { name = "atlassian-python-api", specifier = ">=3.41.16,<4.0.0" },
@@ -3686,7 +3715,7 @@ requires-dist = [
     { name = "langchain-unstructured", specifier = "~=0.1.5" },
     { name = "langflow-base", editable = "src/backend/base" },
     { name = "langfuse", specifier = "~=2.53.1" },
-    { name = "langsmith", specifier = "~=0.1.136" },
+    { name = "langsmith", specifier = "~=0.1.137" },
     { name = "langwatch", specifier = "==0.1.16" },
     { name = "lark", specifier = ">=1.2.2,<2.0.0" },
     { name = "litellm", specifier = ">=1.44.0,<2.0.0" },
@@ -3765,7 +3794,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofiles" },
@@ -3825,6 +3854,7 @@ dependencies = [
     { name = "typer" },
     { name = "uncurl" },
     { name = "uvicorn" },
+    { name = "validators" },
 ]
 
 [package.optional-dependencies]
@@ -3986,6 +4016,7 @@ requires-dist = [
     { name = "types-requests", marker = "extra == 'dev'", specifier = ">=2.32.0" },
     { name = "uncurl", specifier = ">=0.0.11,<1.0.0" },
     { name = "uvicorn", specifier = ">=0.30.0,<1.0.0" },
+    { name = "validators", specifier = ">=0.34.0" },
     { name = "vulture", marker = "extra == 'dev'", specifier = ">=2.11" },
 ]
 
@@ -4016,18 +4047,18 @@ wheels = [
 
 [[package]]
 name = "langsmith"
-version = "0.1.136"
+version = "0.1.145"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
-    { name = "orjson" },
+    { name = "orjson", marker = "platform_python_implementation != 'PyPy'" },
     { name = "pydantic" },
     { name = "requests" },
     { name = "requests-toolbelt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1c/fe/7de2ef64464819bfae186831e82be1c24d009a90fda0130acd6269ecc48e/langsmith-0.1.136.tar.gz", hash = "sha256:5c0de01a313db70dd9a85845c0f416a69b5b653b3e98ba413d7d41e8851315b1", size = 287752 }
+sdist = { url = "https://files.pythonhosted.org/packages/6a/e9/adb0c961d26fcefd17770e4ed02dd522c18484f10555b0924c56aebee587/langsmith-0.1.145.tar.gz", hash = "sha256:b6e53f7b1624846f03769a1fce673baf2a0a262b4f4129b1f6bd127a1f44f8fd", size = 299444 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/20/cc/e559a369fd3811534563e568ee7077fdc1698d86d99afe28d5167e692787/langsmith-0.1.136-py3-none-any.whl", hash = "sha256:cad2215eb7a754ee259878e19c558f4f8d3795aa1b699f087d4500e640f80d0a", size = 296724 },
+    { url = "https://files.pythonhosted.org/packages/d3/e7/a5ed65f6b425ce0079f25e3f0540c9c4838abb155f65170f59585e64e02c/langsmith-0.1.145-py3-none-any.whl", hash = "sha256:bd3001fc6738ad9061a2709d60f62a6bdf4892a17e63c7751f73a6f32a100729", size = 310947 },
 ]
 
 [[package]]

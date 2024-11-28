@@ -5,8 +5,12 @@ import { VariantProps, cva } from "class-variance-authority";
 import { PanelLeft } from "lucide-react";
 import * as React from "react";
 
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useHotkeys } from "react-hotkeys-hook";
+import isWrappedWithClass from "../../pages/FlowPage/components/PageComponent/utils/is-wrapped-with-class";
+import { useShortcutsStore } from "../../stores/shortcuts";
 import { cn } from "../../utils/utils";
-import ShadTooltip from "../shadTooltipComponent";
+import ShadTooltip from "../common/shadTooltipComponent";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Separator } from "./separator";
@@ -17,7 +21,6 @@ const SIDEBAR_COOKIE_NAME = "sidebar:state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = "19rem";
 const SIDEBAR_WIDTH_ICON = "4rem";
-const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
 type SidebarContext = {
   state: "expanded" | "collapsed";
@@ -83,23 +86,7 @@ const SidebarProvider = React.forwardRef<
     // Helper to toggle the sidebar.
     const toggleSidebar = React.useCallback(() => {
       return setOpen((open) => !open);
-    }, [setOpen]);
-
-    // Adds a keyboard shortcut to toggle the sidebar.
-    React.useEffect(() => {
-      const handleKeyDown = (event: KeyboardEvent) => {
-        if (
-          event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
-          (event.metaKey || event.ctrlKey)
-        ) {
-          event.preventDefault();
-          toggleSidebar();
-        }
-      };
-
-      window.addEventListener("keydown", handleKeyDown);
-      return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [toggleSidebar]);
+    }, [setOpen, open]);
 
     // We add a state so that we can do data-state="expanded" or "collapsed".
     // This makes it easier to style the sidebar with Tailwind classes.
@@ -114,6 +101,22 @@ const SidebarProvider = React.forwardRef<
         defaultOpen,
       }),
       [state, open, setOpen, toggleSidebar, defaultOpen],
+    );
+
+    const toggleSidebarShortcut = useShortcutsStore(
+      (state) => state.toggleSidebar,
+    );
+
+    useHotkeys(
+      toggleSidebarShortcut,
+      (e: KeyboardEvent) => {
+        if (isWrappedWithClass(e, "noflow")) return;
+        e.preventDefault();
+        toggleSidebar();
+      },
+      {
+        preventDefault: true,
+      },
     );
 
     return (
@@ -164,6 +167,7 @@ const Sidebar = React.forwardRef<
     ref,
   ) => {
     const { state, setOpen, defaultOpen } = useSidebar();
+    const isMobile = useIsMobile();
 
     React.useEffect(() => {
       if (collapsible === "none") {
@@ -172,6 +176,16 @@ const Sidebar = React.forwardRef<
         setOpen(defaultOpen);
       }
     }, [collapsible]);
+
+    React.useEffect(() => {
+      if (collapsible !== "none") {
+        if (isMobile) {
+          setOpen(false);
+        } else {
+          setOpen(defaultOpen);
+        }
+      }
+    }, [isMobile]);
 
     if (collapsible === "none") {
       return (
