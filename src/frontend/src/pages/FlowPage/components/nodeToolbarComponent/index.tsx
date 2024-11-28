@@ -85,7 +85,7 @@ export default function NodeToolbarComponent({
       data.node!,
       handleNodeClass,
       postToolModeValue,
-      setNoticeData,
+      setErrorData,
       "tool_mode",
     );
     updateNodeInternals(data.id);
@@ -222,6 +222,7 @@ export default function NodeToolbarComponent({
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
 
   useEffect(() => {
     setFlowComponent(createFlowComponent(cloneDeep(data), version));
