@@ -53,7 +53,10 @@ test(
       timeout: 3000,
     });
     await page.getByTestId("prototypesPython Function").hover();
-    await page.getByTestId("prototypesPython Function").getByTestId("icon-Plus").click();
+    await page
+      .getByTestId("prototypesPython Function")
+      .getByTestId("icon-Plus")
+      .click();
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
     await page.getByTestId("div-generic-node").click();
