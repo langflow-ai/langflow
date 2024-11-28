@@ -341,10 +341,8 @@ export default function GenericNode({
       <div
         className={cn(
           borderColor,
-          showNode
-            ? "w-80 rounded-xl shadow-sm hover:shadow-md"
-            : `h-[4.065rem] w-48 rounded-[0.75rem] ${!selected ? "border-[1px] border-border ring-[0.5px] ring-border" : ""}`,
-          "generic-node-div group/node relative",
+          showNode ? "w-80" : `w-48`,
+          "generic-node-div group/node relative rounded-xl shadow-sm hover:shadow-md",
           !hasOutputs && "pb-4",
         )}
       >
@@ -357,8 +355,9 @@ export default function GenericNode({
               className="h-[18px] w-[18px] shrink-0"
             />
             <span className="flex-1 truncate text-sm font-medium">
-              Update Ready
+              {showNode && "Update Ready"}
             </span>
+
             <Button
               variant="warning"
               size="iconMd"
@@ -424,21 +423,19 @@ export default function GenericNode({
                 </>
               )}
             </div>
-            {showNode && (
-              <NodeStatus
-                data={data}
-                frozen={data.node?.frozen}
-                showNode={showNode}
-                display_name={data.node?.display_name!}
-                nodeId={data.id}
-                selected={selected}
-                setBorderColor={setBorderColor}
-                buildStatus={buildStatus}
-                isOutdated={isOutdated}
-                isUserEdited={isUserEdited}
-                getValidationStatus={getValidationStatus}
-              />
-            )}
+            <NodeStatus
+              data={data}
+              frozen={data.node?.frozen}
+              showNode={showNode}
+              display_name={data.node?.display_name!}
+              nodeId={data.id}
+              selected={selected}
+              setBorderColor={setBorderColor}
+              buildStatus={buildStatus}
+              isOutdated={isOutdated}
+              isUserEdited={isUserEdited}
+              getValidationStatus={getValidationStatus}
+            />
           </div>
           {showNode && (
             <div>
