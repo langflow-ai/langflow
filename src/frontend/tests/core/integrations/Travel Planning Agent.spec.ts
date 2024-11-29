@@ -7,6 +7,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
 import { selectGptModel } from "../../utils/select-gpt-model";
 import { updateOldComponents } from "../../utils/update-old-components";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
   "Travel Planning Agent",
@@ -39,11 +40,8 @@ test(
       timeout: 100000,
     });
 
-    await adjustScreenView(page);
-    await updateOldComponents(page);
-    await removeOldApiKeys(page);
-    await addNewApiKeys(page);
-    await selectGptModel(page);
+    await initialGPTsetup(page);
+
 
     const randomCity = cities[Math.floor(Math.random() * cities.length)];
     const randomCity2 = cities[Math.floor(Math.random() * cities.length)];
