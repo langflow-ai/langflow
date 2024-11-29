@@ -1,0 +1,65 @@
+name: Store pytest durations
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run job at 6:30 UTC, 10.30pm PST, or 11.30pm PDT
+    - cron: "30 6 * * *"
+
+env:
+  PYTEST_RUN_PATH: "src/backend/tests"
+
+jobs:
+  build:
+    name: Run pytest and store durations
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      UV_CACHE_DIR: /tmp/.uv-cache
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "pyproject.toml"
+      - name: Restore uv cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.uv-cache
+          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+            uv-${{ runner.os }}
+      - name: Install the project
+        run: uv sync --dev
+      - name: Run unit tests
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 12
+          max_attempts: 2
+          command: uv run pytest src/backend/tests --durations-path src/backend/tests/.test_durations --splitting-algorithm least_duration --store-durations
+      - name: Minimize uv cache
+        run: uv cache prune --ci
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch-token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update test durations"
+          title: "chore: update test durations"
+          body: |
+            Automated PR to update test durations file.
+
+            This PR was automatically created by the store_pytest_durations workflow.
+          branch: update-test-durations
+          branch-suffix: timestamp
+          delete-branch: true
+          maintainer-can-modify: true
