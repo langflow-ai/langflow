@@ -33,7 +33,7 @@ on:
         description: "Test suites to run (JSON array)"
         required: false
         type: string
-        default: '[]'
+        default: "[]"
       release:
         description: "Whether this is a release build"
         required: false
@@ -223,6 +223,8 @@ jobs:
       SEARCH_API_KEY: "${{ secrets.SEARCH_API_KEY }}"
       ASTRA_DB_APPLICATION_TOKEN: "${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}"
       ASTRA_DB_API_ENDPOINT: "${{ secrets.ASTRA_DB_API_ENDPOINT }}"
+      ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
+      TAVILY_API_KEY: "${{ secrets.TAVILY_API_KEY }}"
       UV_CACHE_DIR: /tmp/.uv-cache
     outputs:
       failed: ${{ steps.check-failure.outputs.failed }}
