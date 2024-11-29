@@ -120,7 +120,7 @@ class MemoryComponent(Component):
 
             # Adjust messages to meet the n_messages limit after initially fetching n_messages+1.
             if len(stored) > n_messages:
-                stored = stored[-n_messages:] if order == 'DESC' else stored[:n_messages]
+                stored = stored[-n_messages:] if order == "DESC" else stored[:n_messages]
         self.status = stored
         return stored
 
