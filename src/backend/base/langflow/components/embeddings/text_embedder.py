@@ -53,7 +53,7 @@ class TextEmbedderComponent(Component):
                 raise ValueError(msg)
 
             # Ensure the base URL has proper protocol
-            if hasattr(embedding_model.client, "base_url"):
+            if hasattr(embedding_model.client, "base_url") and isinstance(embedding_model.client.base_url, str):
                 base_url = embedding_model.client.base_url
                 if not base_url.startswith(("http://", "https://")):
                     embedding_model.client.base_url = f"https://{base_url}"
