@@ -7,11 +7,11 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { buildDataTransfer } from "../../utils/build-data-transfer";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
 import { selectGptModel } from "../../utils/select-gpt-model";
 import { updateOldComponents } from "../../utils/update-old-components";
 import { waitForOpenModalWithoutChatInput } from "../../utils/wait-for-open-modal";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
   "Image Sentiment Analysis",
