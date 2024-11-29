@@ -66,5 +66,5 @@ class StoreMessageComponent(Component):
         else:
             store_message(message, flow_id=self.graph.flow_id)
             stored = get_messages(session_id=message.session_id, sender_name=message.sender_name, sender=message.sender)
-        self.status = stored
+        self.status = stored[0]
         return stored[0]
