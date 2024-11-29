@@ -24,7 +24,7 @@ const HomePage = ({ type }) => {
   const [newProjectModal, setNewProjectModal] = useState(false);
   const { folderId } = useParams();
   const [pageIndex, setPageIndex] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(12);
   const [search, setSearch] = useState("");
   const handleFileDrop = useFileDrop("flows");
   const [flowType, setFlowType] = useState<"flows" | "components">(type);
@@ -53,7 +53,7 @@ const HomePage = ({ type }) => {
     components: folderData?.folder?.components ?? [],
     pagination: {
       page: folderData?.flows?.page ?? 1,
-      size: folderData?.flows?.size ?? 10,
+      size: folderData?.flows?.size ?? 12,
       total: folderData?.flows?.total ?? 0,
       pages: folderData?.flows?.pages ?? 0,
     },
@@ -167,7 +167,7 @@ const HomePage = ({ type }) => {
               <PaginatorComponent
                 pageIndex={data.pagination.page}
                 pageSize={data.pagination.size}
-                rowsCount={[10, 20, 50, 100]}
+                rowsCount={[12, 24, 48, 96]}
                 totalRowsCount={data.pagination.total}
                 paginate={handlePageChange}
                 pages={data.pagination.pages}
