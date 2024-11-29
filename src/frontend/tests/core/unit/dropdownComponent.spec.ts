@@ -25,7 +25,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
     await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -37,7 +39,9 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("amazon");
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="modelsAmazon Bedrock"]', {
+      timeout: 3000,
+    });
 
     await page
       .getByTestId("modelsAmazon Bedrock")
@@ -73,7 +77,9 @@ test(
       expect(false).toBeTruthy();
     }
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="more-options-modal"]', {
+      timeout: 3000,
+    });
 
     await page.getByTestId("more-options-modal").click();
     await page.getByTestId("advanced-button-modal").click();
@@ -148,7 +154,6 @@ test(
       expect(false).toBeTruthy();
     }
     await page.getByTestId("code-button-modal").click();
-    await page.waitForTimeout(1000);
 
     await page.locator("textarea").press("Control+a");
     const emptyOptionsCode = `from langchain_community.chat_models.bedrock import BedrockChat
