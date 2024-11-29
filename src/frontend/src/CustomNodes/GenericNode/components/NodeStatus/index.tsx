@@ -187,8 +187,6 @@ export default function NodeStatus({
     return "Run component";
   };
 
-  console.log(validationStatus?.data?.duration);
-
   return showNode ? (
     <>
       <div className="flex flex-shrink-0 items-center">
