@@ -4,10 +4,10 @@ import asyncio
 import re
 from typing import TYPE_CHECKING, Literal
 
+import pandas as pd
 from langchain_core.tools import BaseTool, ToolException
 from langchain_core.tools.structured import StructuredTool
 from loguru import logger
-import pandas as pd
 from pydantic import BaseModel
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
@@ -244,7 +244,8 @@ class ComponentToolkit:
         return tools
 
     def update_tools_metadata(
-        self, tools: list[BaseTool | StructuredTool],
+        self,
+        tools: list[BaseTool | StructuredTool],
     ) -> list[BaseTool]:
         # update the tool_name and description according to the name and secriotion mentioned in the list
         if isinstance(self.metadata, pd.DataFrame):

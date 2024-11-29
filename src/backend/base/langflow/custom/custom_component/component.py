@@ -978,9 +978,7 @@ class Component(CustomComponent):
         component_toolkit = _get_component_toolkit()
         tools = component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
-            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(
-                tools=tools
-            )
+            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
         return tools
 
     def get_project_name(self):
