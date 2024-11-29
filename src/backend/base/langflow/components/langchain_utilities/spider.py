@@ -19,7 +19,6 @@ class SpiderTool(Component):
     description: str = "Spider API for web crawling and scraping."
     output_types: list[str] = ["Document"]
     documentation: str = "https://spider.cloud/docs/api"
-    icon = "LangChain"
 
     inputs = [
         SecretStrInput(
