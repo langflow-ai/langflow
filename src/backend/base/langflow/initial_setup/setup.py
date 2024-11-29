@@ -9,6 +9,7 @@ from pathlib import Path
 from uuid import UUID
 
 import orjson
+from aiofile import async_open
 from emoji import demojize, purely_emoji
 from loguru import logger
 from sqlalchemy.exc import NoResultFound
@@ -131,7 +132,6 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                             and attr in node_data["template"].get(field_name)
                             # Check if it needs to be updated
                             and field_dict[attr] != node_data["template"][field_name][attr]
-                            and attr != "load_from_db"
                         ):
                             node_changes_log[node_type].append(
                                 {
@@ -546,13 +546,14 @@ async def load_flows_from_directory() -> None:
         user_id = user.id
         _flows_path = Path(flows_path)
         files = [f for f in _flows_path.iterdir() if f.is_file()]
-        for f in files:
-            if f.suffix != ".json":
+        for file_path in files:
+            if file_path.suffix != ".json":
                 continue
-            logger.info(f"Loading flow from file: {f.name}")
-            content = f.read_text(encoding="utf-8")
+            logger.info(f"Loading flow from file: {file_path.name}")
+            async with async_open(file_path, "r", encoding="utf-8") as f:
+                content = await f.read()
             flow = orjson.loads(content)
-            no_json_name = f.stem
+            no_json_name = file_path.stem
             flow_endpoint_name = flow.get("endpoint_name")
             if _is_valid_uuid(no_json_name):
                 flow["id"] = no_json_name
@@ -573,7 +574,7 @@ async def load_flows_from_directory() -> None:
                 # behavior where flows could be added and folder_id was None, orphaning
                 # them within Langflow.
                 if existing.folder_id is None:
-                    folder_id = get_default_folder_id(session, user_id)
+                    folder_id = await get_default_folder_id(session, user_id)
                     existing.folder_id = folder_id
 
                 session.add(existing)
@@ -581,7 +582,7 @@ async def load_flows_from_directory() -> None:
                 logger.info(f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}")
 
                 # Current behavior loads all new flows into default folder
-                folder_id = get_default_folder_id(session, user_id)
+                folder_id = await get_default_folder_id(session, user_id)
 
                 flow["user_id"] = user_id
                 flow["folder_id"] = folder_id
