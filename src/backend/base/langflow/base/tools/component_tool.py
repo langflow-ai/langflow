@@ -4,9 +4,10 @@ import asyncio
 import re
 from typing import TYPE_CHECKING, Literal
 
-from langchain_core.tools import ToolException
+from langchain_core.tools import BaseTool, ToolException
 from langchain_core.tools.structured import StructuredTool
 from loguru import logger
+import pandas as pd
 from pydantic import BaseModel
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
@@ -18,7 +19,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from langchain_core.callbacks import Callbacks
-    from langchain_core.tools import BaseTool
 
     from langflow.custom.custom_component.component import Component
     from langflow.events.event_manager import EventManager
@@ -160,8 +160,9 @@ def _format_tool_name(name: str):
 
 
 class ComponentToolkit:
-    def __init__(self, component: Component):
+    def __init__(self, component: Component, metadata: pd.DataFrame | None = None):
         self.component = component
+        self.metadata = metadata
 
     def get_tools(
         self, tool_name: str | None = None, tool_description: str | None = None, callbacks: Callbacks | None = None
@@ -240,4 +241,18 @@ class ComponentToolkit:
                 f"but {len(tools)} tools were found."
             )
             raise ValueError(msg)
+        return tools
+
+    def update_tools_metadata(
+        self, tools: list[BaseTool | StructuredTool],
+    ) -> list[BaseTool]:
+        # update the tool_name and description according to the name and secriotion mentioned in the list
+        if isinstance(self.metadata, pd.DataFrame):
+            for tool, metadata in zip(tools, self.metadata.T.to_dict().values(), strict=False):
+                if isinstance(tool, StructuredTool | BaseTool):
+                    tool.name = metadata.get("name", tool.name)
+                    tool.description = metadata.get("description", tool.description)
+                else:
+                    msg = f"Expected a StructuredTool or BaseTool, got {type(tool)}"
+                    raise TypeError(msg)
         return tools
