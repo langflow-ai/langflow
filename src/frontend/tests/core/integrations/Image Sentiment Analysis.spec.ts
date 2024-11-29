@@ -11,6 +11,7 @@ import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
 import { selectGptModel } from "../../utils/select-gpt-model";
 import { updateOldComponents } from "../../utils/update-old-components";
 import { waitForOpenModalWithoutChatInput } from "../../utils/wait-for-open-modal";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
   "Image Sentiment Analysis",
@@ -40,11 +41,7 @@ test(
 
     await page.getByTestId("fit_view").click();
 
-    await adjustScreenView(page);
-    await updateOldComponents(page);
-    await removeOldApiKeys(page);
-    await addNewApiKeys(page);
-    await selectGptModel(page);
+    await initialGPTsetup(page);
 
     await page.getByText("Playground", { exact: true }).last().click();
 
