@@ -23,9 +23,7 @@ class GoogleSerperAPIComponent(LCToolComponent):
     icon = "Google"
     legacy = True
     inputs = [
-        SecretStrInput(
-            name="serper_api_key", display_name="Serper API Key", required=True
-        ),
+        SecretStrInput(name="serper_api_key", display_name="Serper API Key", required=True),
         MultilineInput(
             name="query",
             display_name="Query",
@@ -57,9 +55,7 @@ class GoogleSerperAPIComponent(LCToolComponent):
             description="The type of search to perform (e.g., 'news' or 'search').",
         )
         k: int = Field(4, description="The number of results to return.")
-        query_params: dict[str, Any] = Field(
-            {}, description="Additional query parameters to pass to the API."
-        )
+        query_params: dict[str, Any] = Field({}, description="Additional query parameters to pass to the API.")
 
     def run_model(self) -> Data | list[Data]:
         wrapper = self._build_wrapper(self.k, self.query_type, self.query_params)
@@ -73,9 +69,7 @@ class GoogleSerperAPIComponent(LCToolComponent):
         else:
             list_results = []
 
-        data = [
-            Data(data=result, text=result.get("snippet", "")) for result in list_results
-        ]
+        data = [Data(data=result, text=result.get("snippet", "")) for result in list_results]
         self.status = data
         return data
 
