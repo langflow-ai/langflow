@@ -5,10 +5,12 @@ import path from "path";
 import { addNewApiKeys } from "../../utils/add-new-api-keys";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { buildDataTransfer } from "../../utils/build-data-transfer";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
 import { selectGptModel } from "../../utils/select-gpt-model";
 import { updateOldComponents } from "../../utils/update-old-components";
+import { waitForOpenModalWithoutChatInput } from "../../utils/wait-for-open-modal";
 
 test(
   "Image Sentiment Analysis",
@@ -55,21 +57,7 @@ test(
     const fileContent = readFileSync(filePath, "base64");
 
     // Create the DataTransfer and File objects within the browser context
-    const dataTransfer = await page.evaluateHandle(
-      ({ fileContent }) => {
-        const dt = new DataTransfer();
-        const byteCharacters = atob(fileContent);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const file = new File([byteArray], "chain.png", { type: "image/png" });
-        dt.items.add(file);
-        return dt;
-      },
-      { fileContent },
-    );
+    const dataTransfer = await buildDataTransfer(page, fileContent);
 
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,
@@ -81,9 +69,7 @@ test(
     // Dispatch the drop event on the target element
     await element.dispatchEvent("drop", { dataTransfer });
 
-    await page.waitForSelector('[data-testid="button-send"]', {
-      timeout: 100000,
-    });
+    await waitForOpenModalWithoutChatInput(page);
 
     await page.getByTestId("button-send").click();
 

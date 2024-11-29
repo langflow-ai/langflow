@@ -8,6 +8,7 @@ import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
 import { selectGptModel } from "../../utils/select-gpt-model";
 import { updateOldComponents } from "../../utils/update-old-components";
+import { waitForOpenModalWithoutChatInput } from "../../utils/wait-for-open-modal";
 
 test(
   "Twitter Thread Generator",
@@ -53,9 +54,7 @@ test(
       .last()
       .isVisible();
 
-    await page.waitForSelector('[data-testid="button-send"]', {
-      timeout: 100000,
-    });
+    await waitForOpenModalWithoutChatInput(page);
 
     const textContents = await getAllResponseMessage(page);
 
