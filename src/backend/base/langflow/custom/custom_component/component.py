@@ -13,7 +13,7 @@ import yaml
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, ValidationError
 
-from langflow.base.tools.constants import TOOL_OUTPUT_DISPLAY_NAME, TOOL_OUTPUT_NAME
+from langflow.base.tools.constants import TOOL_OUTPUT_DISPLAY_NAME, TOOL_OUTPUT_NAME, TOOLS_METADATA_INPUT_NAME
 from langflow.custom.tree_visitor import RequiredInputsVisitor
 from langflow.exceptions.component import StreamingError
 from langflow.field_typing import Tool  # noqa: TCH001 Needed by _add_toolkit_output
@@ -399,6 +399,16 @@ class Component(CustomComponent):
         if field_name == "tool_mode" or frontend_node.get("tool_mode"):
             is_tool_mode = field_value or frontend_node.get("tool_mode")
             frontend_node["outputs"] = [self._build_tool_output()] if is_tool_mode else frontend_node["outputs"]
+            if is_tool_mode:
+                input_field_data = self._build_tools_metadata_input().to_dict()
+                frontend_node["template"].update(
+                    {TOOLS_METADATA_INPUT_NAME: input_field_data}
+                ) if field_value else frontend_node["template"].pop(TOOLS_METADATA_INPUT_NAME, None)
+            elif TOOLS_METADATA_INPUT_NAME in frontend_node["template"]:
+                frontend_node["template"].pop(TOOLS_METADATA_INPUT_NAME)
+        if TOOLS_METADATA_INPUT_NAME in frontend_node["template"]:
+            self.tools_metadata = frontend_node["template"][TOOLS_METADATA_INPUT_NAME]["value"]
+            frontend_node["outputs"] = [self._build_tool_output()]
 
         return self._validate_frontend_node(frontend_node)
 
@@ -966,7 +976,10 @@ class Component(CustomComponent):
 
     def to_toolkit(self) -> list[Tool]:
         component_toolkit = _get_component_toolkit()
-        return component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
+        tools = component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
+        if hasattr(self, TOOLS_METADATA_INPUT_NAME):
+            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
+        return tools
 
     def get_project_name(self):
         if hasattr(self, "_tracing_service") and self._tracing_service:
@@ -1137,6 +1150,39 @@ class Component(CustomComponent):
 
     def _append_tool_to_outputs_map(self):
         self._outputs_map[TOOL_OUTPUT_NAME] = self._build_tool_output()
+        # add a new input for the tool schema
+        # self.inputs.append(self._build_tool_schema())
 
     def _build_tool_output(self) -> Output:
         return Output(name=TOOL_OUTPUT_NAME, display_name=TOOL_OUTPUT_DISPLAY_NAME, method="to_toolkit", types=["Tool"])
+
+    def _build_tools_metadata_input(self):
+        tools = self.to_toolkit()
+        table_schema = [
+            {
+                "name": "name",
+                "display_name": "Name",
+                "type": "str",
+                "description": "Specify the name of the output field.",
+            },
+            {
+                "name": "description",
+                "display_name": "Description",
+                "type": "str",
+                "description": "Describe the purpose of the output field.",
+            },
+        ]
+        tool_data = (
+            self.tools_metadata
+            if hasattr(self, TOOLS_METADATA_INPUT_NAME)
+            else [{"name": tool.name, "description": tool.description} for tool in tools]
+        )
+        from langflow.io import TableInput
+
+        return TableInput(
+            name=TOOLS_METADATA_INPUT_NAME,
+            display_name="Tools Metadata",
+            real_time_refresh=True,
+            table_schema=table_schema,
+            value=tool_data,
+        )
