@@ -4,10 +4,10 @@ import path from "path";
 import { addNewApiKeys } from "../../utils/add-new-api-keys";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
 import { selectGptModel } from "../../utils/select-gpt-model";
 import { updateOldComponents } from "../../utils/update-old-components";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
   "Travel Planning Agent",
@@ -41,7 +41,6 @@ test(
     });
 
     await initialGPTsetup(page);
-
 
     const randomCity = cities[Math.floor(Math.random() * cities.length)];
     const randomCity2 = cities[Math.floor(Math.random() * cities.length)];

@@ -5,13 +5,16 @@ import { removeOldApiKeys } from "./remove-old-api-keys";
 import { selectGptModel } from "./select-gpt-model";
 import { updateOldComponents } from "./update-old-components";
 
-export async function initialGPTsetup(page: Page, options?: {
-  skipAdjustScreenView?: boolean;
-  skipUpdateOldComponents?: boolean;
-  skipRemoveOldApiKeys?: boolean;
-  skipAddNewApiKeys?: boolean;
-  skipSelectGptModel?: boolean;
-}) {
+export async function initialGPTsetup(
+  page: Page,
+  options?: {
+    skipAdjustScreenView?: boolean;
+    skipUpdateOldComponents?: boolean;
+    skipRemoveOldApiKeys?: boolean;
+    skipAddNewApiKeys?: boolean;
+    skipSelectGptModel?: boolean;
+  },
+) {
   if (!options?.skipAdjustScreenView) {
     await adjustScreenView(page);
   }
