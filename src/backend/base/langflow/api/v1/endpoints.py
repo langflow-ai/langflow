@@ -6,7 +6,6 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
-from langflow.template.field.base import UNDEFINED
 import sqlalchemy as sa
 from fastapi import (
     APIRouter,
