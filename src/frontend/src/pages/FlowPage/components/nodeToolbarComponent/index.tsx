@@ -189,6 +189,7 @@ export default function NodeToolbarComponent({
     ungroup: handleungroup,
     minimizeFunction: minimize,
     activateToolMode: activateToolMode,
+    hasToolMode,
   });
 
   const paste = useFlowStore((state) => state.paste);

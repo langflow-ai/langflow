@@ -75,6 +75,7 @@ class CloudflareWorkersAIEmbeddingsComponent(LCModelComponent):
                 strip_new_lines=self.strip_new_lines,
             )
         except Exception as e:
-            raise ValueError(f"Could not connect to CloudflareWorkersAIEmbeddings API: {e!s}") from e
+            msg = f"Could not connect to CloudflareWorkersAIEmbeddings API: {e!s}"
+            raise ValueError(msg) from e
 
         return embeddings
