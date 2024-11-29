@@ -610,7 +610,6 @@ async def custom_component_update(
     """
     try:
         component = Component(_code=code_request.code)
-
         component_node, cc_instance = build_custom_component_template(
             component,
             user_id=user.id,
