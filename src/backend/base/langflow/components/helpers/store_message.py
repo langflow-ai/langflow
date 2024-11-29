@@ -44,7 +44,7 @@ class StoreMessageComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Stored Messages", name="stored_messages", method="store_message"),
+        Output(display_name="Stored Message", name="stored_message", method="store_message"),
     ]
 
     def store_message(self) -> Message:
@@ -62,9 +62,14 @@ class StoreMessageComponent(Component):
             stored = self.memory.messages
             stored = [Message.from_lc_message(m) for m in stored]
             if message.sender:
-                stored = [m for m in stored if m.sender == message.sender]
+                stored = next(m for m in stored if m.sender == message.sender)
         else:
             store_message(message, flow_id=self.graph.flow_id)
-            stored = get_messages(session_id=message.session_id, sender_name=message.sender_name, sender=message.sender)
+            stored = next(
+                iter(
+                    get_messages(session_id=message.session_id, sender_name=message.sender_name, sender=message.sender)
+                ),
+                None,
+            )
         self.status = stored
         return stored
