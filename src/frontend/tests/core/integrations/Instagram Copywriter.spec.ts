@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
@@ -9,6 +9,11 @@ test(
     test.skip(
       !process?.env?.OPENAI_API_KEY,
       "OPENAI_API_KEY required to run this test",
+    );
+
+    test.skip(
+      !process?.env?.TAVILY_API_KEY,
+      "TAVILY_API_KEY required to run this test",
     );
 
     if (!process.env.CI) {
@@ -43,7 +48,7 @@ test(
     }
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.getByRole("heading", { name: "Instagram Copywriter" }).click();
 
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
@@ -70,11 +75,17 @@ test(
     }
 
     const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
-    const isApiKeyInputVisible = await apiKeyInput.isVisible();
+    const isApiKeyInputVisible = await apiKeyInput.count();
 
-    if (isApiKeyInputVisible) {
-      await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+    if (isApiKeyInputVisible > 0) {
+      for (let i = 0; i < isApiKeyInputVisible; i++) {
+        await apiKeyInput.nth(i).fill(process.env.OPENAI_API_KEY ?? "");
+      }
     }
+
+    await page
+      .getByTestId("popover-anchor-input-tavily_api_key")
+      .fill(process.env.TAVILY_API_KEY ?? "");
 
     await page.getByTestId("dropdown_str_model_name").click();
     await page.getByTestId("gpt-4o-1-option").click();
@@ -96,38 +107,11 @@ test(
       timeout: 100000,
     });
 
-    await page
-      .getByTestId("input-chat-playground")
-      .last()
-      .fill("Say hello as a pirate");
+    const textContents = await page
+      .getByTestId("div-chat-message")
+      .allTextContents();
 
-    await page.waitForSelector('[data-testid="button-send"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("button-send").last().click();
-
-    await page.waitForSelector("text=matey", {
-      timeout: 100000,
-    });
-
-    await page.getByText("matey").last().isVisible();
-    await page.getByText("Default Session").last().click();
-
-    await page.getByText("timestamp", { exact: true }).last().isVisible();
-    await page.getByText("text", { exact: true }).last().isVisible();
-    await page.getByText("sender", { exact: true }).last().isVisible();
-    await page.getByText("sender_name", { exact: true }).last().isVisible();
-    await page.getByText("session_id", { exact: true }).last().isVisible();
-    await page.getByText("files", { exact: true }).last().isVisible();
-
-    await page.getByRole("gridcell").last().isVisible();
-    await page.getByRole("combobox").click();
-    await page.getByLabel("Delete").click();
-    await page.waitForSelector('[data-testid="input-chat-playground"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("input-chat-playground").last().isVisible();
+    const concatAllText = textContents.join(" ");
+    expect(concatAllText.length).toBeGreaterThan(300);
   },
 );

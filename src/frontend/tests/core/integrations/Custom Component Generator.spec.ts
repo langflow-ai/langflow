@@ -7,7 +7,7 @@ test(
   { tag: ["@release", "@starter-project"] },
   async ({ page }) => {
     test.skip(
-      !process?.env?.OPENAI_API_KEY,
+      !process?.env?.ANTHROPIC_API_KEY,
       "OPENAI_API_KEY required to run this test",
     );
 
@@ -58,52 +58,20 @@ test(
       outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
     }
 
-    await page.getByText("Anthropic", { exact: true }).last().click();
-    await page.keyboard.press("Delete");
-
-    await page.getByTestId("sidebar-search-input").fill("OpenAI");
-
-    await page
-      .getByTestId("modelsOpenAI")
-      .hover()
-      .then(async () => {
-        await page.getByTestId("add-component-button-openai").click();
-      });
-
-    await page
-      .getByTestId("handle-prompt-shownode-prompt message-right")
-      .first()
-      .click();
-    await page
-      .getByTestId("handle-openaimodel-shownode-input-left")
-      .first()
-      .click();
-
-    await page
-      .getByTestId("handle-openaimodel-shownode-text-right")
-      .first()
-      .click();
-
-    await page
-      .getByTestId("handle-chatoutput-shownode-text-left")
-      .first()
-      .click();
-
     let filledApiKey = await page.getByTestId("remove-icon-badge").count();
     while (filledApiKey > 0) {
       await page.getByTestId("remove-icon-badge").first().click();
       filledApiKey = await page.getByTestId("remove-icon-badge").count();
     }
 
-    const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
+    const apiKeyInput = page.getByTestId(
+      "popover-anchor-input-anthropic_api_key",
+    );
     const isApiKeyInputVisible = await apiKeyInput.isVisible();
 
     if (isApiKeyInputVisible) {
-      await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
+      await apiKeyInput.fill(process.env.ANTHROPIC_API_KEY ?? "");
     }
-
-    await page.getByTestId("dropdown_str_model_name").click();
-    await page.getByTestId("gpt-4o-1-option").click();
 
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
