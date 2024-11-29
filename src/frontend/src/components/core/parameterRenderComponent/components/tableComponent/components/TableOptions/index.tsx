@@ -24,7 +24,7 @@ export default function TableOptions({
         {addRow && (
           <div>
             <ShadTooltip content={"Add a new row"}>
-              <Button unstyled onClick={addRow}>
+              <Button data-testid="add-row-button" unstyled onClick={addRow}>
                 <IconComponent
                   name="Plus"
                   className={cn("h-5 w-5 text-primary transition-all")}
@@ -44,7 +44,12 @@ export default function TableOptions({
                 )
               }
             >
-              <Button unstyled onClick={duplicateRow} disabled={!hasSelection}>
+              <Button
+                data-testid="duplicate-row-button"
+                unstyled
+                onClick={duplicateRow}
+                disabled={!hasSelection}
+              >
                 <IconComponent
                   name="Copy"
                   className={cn(
@@ -67,7 +72,12 @@ export default function TableOptions({
                 )
               }
             >
-              <Button unstyled onClick={deleteRow} disabled={!hasSelection}>
+              <Button
+                data-testid="delete-row-button"
+                unstyled
+                onClick={deleteRow}
+                disabled={!hasSelection}
+              >
                 <IconComponent
                   name="Trash2"
                   className={cn(
@@ -84,6 +94,7 @@ export default function TableOptions({
         <div>
           <ShadTooltip content="Reset Columns">
             <Button
+              data-testid="reset-columns-button"
               unstyled
               onClick={() => {
                 resetGrid();
