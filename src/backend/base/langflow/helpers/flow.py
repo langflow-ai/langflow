@@ -88,6 +88,9 @@ async def run_flow(
     if user_id is None:
         msg = "Session is invalid"
         raise ValueError(msg)
+    if graph and tweaks:
+        msg = "Cannot pass both 'tweaks' and 'graph' parameters simultaneously"
+        raise ValueError(msg)
     if graph is None:
         graph = await load_flow(user_id, flow_id, flow_name, tweaks)
     if run_id:
