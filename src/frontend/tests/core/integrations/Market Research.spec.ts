@@ -9,6 +9,7 @@ import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
 import { selectGptModel } from "../../utils/select-gpt-model";
 import { updateOldComponents } from "../../utils/update-old-components";
 import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
   "Market Research",
@@ -37,11 +38,7 @@ test(
       timeout: 100000,
     });
 
-    await adjustScreenView(page);
-    await updateOldComponents(page);
-    await removeOldApiKeys(page);
-    await addNewApiKeys(page);
-    await selectGptModel(page);
+    await initialGPTsetup(page);
 
     await page
       .getByTestId("popover-anchor-input-api_key")
