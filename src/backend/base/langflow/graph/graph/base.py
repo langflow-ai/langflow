@@ -2009,6 +2009,11 @@ class Graph:
     ) -> list[str]:
         """Sorts the vertices in the graph."""
         self.mark_all_vertices("ACTIVE")
+        if stop_component_id in self.cycle_vertices:
+            # Make the stop into a start because we are in a cycle and
+            # we cannot know where is the input or output
+            start_component_id = stop_component_id
+            stop_component_id = None
         if stop_component_id is not None:
             self.stop_vertex = stop_component_id
             vertices = self.__filter_vertices(stop_component_id)
