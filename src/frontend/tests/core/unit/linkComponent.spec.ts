@@ -27,7 +27,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
@@ -39,7 +41,12 @@ test(
     });
     await page.getByTestId("blank-flow").click();
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector(
+      '[data-testid="sidebar-custom-component-button"]',
+      {
+        timeout: 3000,
+      },
+    );
 
     await page.getByTestId("sidebar-custom-component-button").click();
     await page.getByTitle("fit view").click();
@@ -47,9 +54,11 @@ test(
 
     await page.getByTestId("title-Custom Component").first().click();
 
-    await page.waitForTimeout(500);
+    await page.waitForSelector('[data-testid="code-button-modal"]', {
+      timeout: 3000,
+    });
+
     await page.getByTestId("code-button-modal").click();
-    await page.waitForTimeout(500);
 
     let cleanCode = await extractAndCleanCode(page);
 
@@ -83,7 +92,10 @@ test(
     await page.keyboard.press("Backspace");
     await page.locator("textarea").last().fill(cleanCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
-    await page.waitForTimeout(500);
+
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 3000,
+    });
 
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
