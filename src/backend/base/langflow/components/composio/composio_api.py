@@ -1,6 +1,8 @@
+# Standard library imports
 from collections.abc import Sequence
 from typing import Any
 
+# Third-party imports
 from composio.client.collections import AppAuthScheme
 from composio.client.exceptions import NoItemsFound
 from composio_langchain import Action, App, ComposioToolSet
@@ -8,8 +10,10 @@ from langchain_core.tools import Tool
 from loguru import logger
 from typing_extensions import override
 
+# Local imports
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import DropdownInput, LinkInput, MessageTextInput, MultiselectInput, SecretStrInput, StrInput
+from langflow.io import Output
 
 
 class ComposioAPIComponent(LCToolComponent):
@@ -20,13 +24,14 @@ class ComposioAPIComponent(LCToolComponent):
     documentation: str = "https://docs.composio.dev"
 
     inputs = [
+        # Basic configuration inputs
         MessageTextInput(name="entity_id", display_name="Entity ID", value="default", advanced=True),
         SecretStrInput(
             name="api_key",
             display_name="Composio API Key",
             required=True,
-            refresh_button=True,
-            info="Refer to https://docs.composio.dev/introduction/foundations/howtos/get_api_key",
+            # refresh_button=True,
+            info="Refer to https://docs.composio.dev/faq/api_key/api_key",
         ),
         DropdownInput(
             name="app_names",
@@ -36,7 +41,7 @@ class ComposioAPIComponent(LCToolComponent):
             info="The app name to use. Please refresh after selecting app name",
             refresh_button=True,
         ),
-        # Initially hidden fields for different auth types
+        # Authentication-related inputs (initially hidden)
         SecretStrInput(
             name="app_credentials",
             display_name="App Credentials",
@@ -80,6 +85,10 @@ class ComposioAPIComponent(LCToolComponent):
             dynamic=True,
             show=False,
         ),
+    ]
+
+    outputs = [
+        Output(name="tools", display_name="Tools", method="build_tool"),
     ]
 
     def _check_for_authorization(self, app: str) -> str:
@@ -203,21 +212,13 @@ class ComposioAPIComponent(LCToolComponent):
         connections = toolset.client.get_entity(id=self.entity_id).get_connections()
         return list({connection.appUniqueId for connection in connections})
 
-    def _update_app_names_with_connected_status(self, build_config: dict) -> dict:
-        connected_app_names = self._get_connected_app_names_for_entity()
-
-        app_names = [
-            f"{app_name}_CONNECTED" for app_name in App.__annotations__ if app_name.lower() in connected_app_names
-        ]
-        non_connected_app_names = [
-            app_name for app_name in App.__annotations__ if app_name.lower() not in connected_app_names
-        ]
-        build_config["app_names"]["options"] = app_names + non_connected_app_names
-        build_config["app_names"]["value"] = app_names[0] if app_names else ""
-        return build_config
-
     def _get_normalized_app_name(self) -> str:
-        return self.app_names.replace("_CONNECTED", "").replace("_connected", "")
+        """Get app name without connection status suffix.
+
+        Returns:
+            str: Normalized app name.
+        """
+        return self.app_names.replace(" ✅", "").replace("_connected", "")
 
     @override
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
@@ -225,20 +226,16 @@ class ComposioAPIComponent(LCToolComponent):
         dynamic_fields = ["app_credentials", "username", "auth_link", "auth_status", "action_names"]
         for field in dynamic_fields:
             if field in build_config:
-                build_config[field]["show"] = False
-                build_config[field]["advanced"] = True  # Hide from main view
-
-        if field_name == "api_key":
-            if hasattr(self, "api_key") and self.api_key != "":
-                build_config = self._update_app_names_with_connected_status(build_config)
-                # Show app_names when API key is provided
-                build_config["app_names"]["show"] = True
-                build_config["app_names"]["advanced"] = False
-            return build_config
+                if build_config[field]["value"] is None or build_config[field]["value"] == "":
+                    build_config[field]["show"] = False
+                    build_config[field]["advanced"] = True  # Hide from main view
+                else:
+                    build_config[field]["show"] = True
+                    build_config[field]["advanced"] = False
 
         if field_name in {"app_names"} and hasattr(self, "api_key") and self.api_key != "":
-            app_name = self._get_normalized_app_name()
-
+            # app_name = self._get_normalized_app_name()
+            app_name = self.app_names
             try:
                 toolset = self._build_wrapper()
                 entity = toolset.client.get_entity(id=self.entity_id)
@@ -250,8 +247,8 @@ class ComposioAPIComponent(LCToolComponent):
                 try:
                     # Check if already connected
                     entity.get_connection(app=app_name)
-                    build_config["auth_status"]["value"] = f"{app_name} CONNECTED"
-
+                    build_config["auth_status"]["value"] = "✅"
+                    build_config["auth_link"]["show"] = False
                     # Show action selection for connected apps
                     build_config["action_names"]["show"] = True
                     build_config["action_names"]["advanced"] = False
@@ -287,15 +284,16 @@ class ComposioAPIComponent(LCToolComponent):
                         build_config["auth_status"]["value"] = "Unsupported auth mode"
 
                 # Update action names if connected
-                if build_config["auth_status"]["value"] == f"{app_name} CONNECTED":
+                if build_config["auth_status"]["value"] == "✅":
                     all_action_names = list(Action.__annotations__)
                     app_action_names = [
                         action_name
                         for action_name in all_action_names
                         if action_name.lower().startswith(app_name.lower() + "_")
                     ]
-                    build_config["action_names"]["options"] = app_action_names
-                    build_config["action_names"]["value"] = [app_action_names[0]] if app_action_names else [""]
+                    if build_config["action_names"]["options"] != app_action_names:
+                        build_config["action_names"]["options"] = app_action_names
+                        build_config["action_names"]["value"] = [app_action_names[0]] if app_action_names else [""]
 
             except Exception as e:  # noqa: BLE001
                 logger.error(f"Error checking auth status: {e}, app: {app_name}")
@@ -304,6 +302,11 @@ class ComposioAPIComponent(LCToolComponent):
         return build_config
 
     def build_tool(self) -> Sequence[Tool]:
+        """Build Composio tools based on selected actions.
+
+        Returns:
+            Sequence[Tool]: List of configured Composio tools.
+        """
         composio_toolset = self._build_wrapper()
         return composio_toolset.get_tools(actions=self.action_names)
 
