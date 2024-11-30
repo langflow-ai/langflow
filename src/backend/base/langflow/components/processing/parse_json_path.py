@@ -1,7 +1,8 @@
+from jsonpath_ng import parse
+
 from langflow.custom import Component
 from langflow.io import MessageTextInput, Output
 from langflow.schema import Data
-from jsonpath_ng import parse
 
 
 class JSONPathComponent(Component):
@@ -15,7 +16,7 @@ class JSONPathComponent(Component):
             name="input_value",
             display_name="JSON TEXT",
             info="This is a JSONPath component Input",
-            value='',
+            value="",
             tool_mode=True,
         ),
         MessageTextInput(
@@ -35,6 +36,7 @@ class JSONPathComponent(Component):
         # Parse the input JSON
         try:
             import json
+
             json_data = json.loads(self.input_value)
 
             # Apply the JSONPath query
@@ -47,4 +49,4 @@ class JSONPathComponent(Component):
             return data
         except Exception as e:
             # Handle any errors and provide feedback
-            return Data(error=f"Error: {str(e)}")
+            return Data(error=f"Error: {e!s}")

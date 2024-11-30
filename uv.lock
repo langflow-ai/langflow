@@ -2983,6 +2983,18 @@ wheels = [
 ]
 
 [[package]]
+name = "jsonpath-ng"
+version = "1.7.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "ply" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6d/86/08646239a313f895186ff0a4573452038eed8c86f54380b3ebac34d32fb2/jsonpath-ng-1.7.0.tar.gz", hash = "sha256:f6f5f7fd4e5ff79c785f1573b394043b39849fb2bb47bcead935d12b00beab3c", size = 37838 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/35/5a/73ecb3d82f8615f32ccdadeb9356726d6cae3a4bbc840b437ceb95708063/jsonpath_ng-1.7.0-py3-none-any.whl", hash = "sha256:f3d7f9e848cba1b6da28c55b1c26ff915dc9e0b1ba7e752a53d6da8d5cbd00b6", size = 30105 },
+]
+
+[[package]]
 name = "jsonpath-python"
 version = "1.0.6"
 source = { registry = "https://pypi.org/simple" }
@@ -3543,6 +3555,7 @@ dependencies = [
     { name = "huggingface-hub", extra = ["inference"] },
     { name = "jq" },
     { name = "json-repair" },
+    { name = "jsonpath-ng" },
     { name = "kubernetes" },
     { name = "langchain" },
     { name = "langchain-anthropic" },
@@ -3692,6 +3705,7 @@ requires-dist = [
     { name = "huggingface-hub", extras = ["inference"], specifier = ">=0.23.2,<1.0.0" },
     { name = "jq", specifier = ">=1.8.0,<2.0.0" },
     { name = "json-repair", specifier = ">=0.25.2,<1.0.0" },
+    { name = "jsonpath-ng", specifier = ">=1.5.3" },
     { name = "kubernetes", specifier = ">=30.1.0,<32.0.0" },
     { name = "langchain", specifier = "~=0.3.3" },
     { name = "langchain-anthropic", specifier = ">=0.1.23,<1.0.0" },
@@ -5430,6 +5444,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/96/2d/02d4312c973c6050a18b314a5ad0b3210edb65a906f868e31c111dede4a6/pluggy-1.5.0.tar.gz", hash = "sha256:2cffa88e94fdc978c4c574f15f9e59b7f4201d439195c3715ca9e2486f1d0cf1", size = 67955 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/88/5f/e351af9a41f866ac3f1fac4ca0613908d9a41741cfcf2228f4ad853b697d/pluggy-1.5.0-py3-none-any.whl", hash = "sha256:44e1ad92c8ca002de6377e165f3e0f1be63266ab4d554740532335b9d75ea669", size = 20556 },
+]
+
+[[package]]
+name = "ply"
+version = "3.11"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e5/69/882ee5c9d017149285cab114ebeab373308ef0f874fcdac9beb90e0ac4da/ply-3.11.tar.gz", hash = "sha256:00c7c1aaa88358b9c765b6d3000c6eec0ba42abca5351b095321aef446081da3", size = 159130 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a3/58/35da89ee790598a0700ea49b2a66594140f44dec458c07e8e3d4979137fc/ply-3.11-py2.py3-none-any.whl", hash = "sha256:096f9b8350b65ebd2fd1346b12452efe5b9607f7482813ffca50c22722a807ce", size = 49567 },
 ]
 
 [[package]]
