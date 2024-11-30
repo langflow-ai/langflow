@@ -1,8 +1,10 @@
 from json import loads
+
+from jsonpath_ng import parse
+
 from langflow.custom import Component
 from langflow.io import MessageTextInput, Output
 from langflow.schema import Data
-from jsonpath_ng import parse
 
 
 class JSONPathComponent(Component):
@@ -45,7 +47,7 @@ class JSONPathComponent(Component):
             return Data(text=results)
         except ValueError as e:
             # Handle JSON parsing errors
-            return Data(error=f"JSON Parsing Error: {str(e)}")
+            return Data(error=f"JSON Parsing Error: {e!s}")
         except Exception as e:
             # Handle other potential errors            
             msg = f"Error cleaning JSON string: {e}"
