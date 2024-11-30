@@ -130,6 +130,7 @@ class BaseFileComponent(Component, ABC):
             ),
             required=False,
             input_types=["Data"],
+            advanced=True,  # Added advanced=True here
         ),
         BoolInput(
             name="silent_errors",
