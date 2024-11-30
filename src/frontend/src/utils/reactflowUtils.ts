@@ -1736,3 +1736,7 @@ export function someFlowTemplateFields(
     });
   });
 }
+
+export function checkHasToolMode(template: APITemplateType) {
+  return template && Object.values(template).some((field) => field.tool_mode);
+}

@@ -69,6 +69,7 @@ export default function InputGlobalComponent({
       });
     }
   }
+
   return (
     <InputComponent
       nodeStyle

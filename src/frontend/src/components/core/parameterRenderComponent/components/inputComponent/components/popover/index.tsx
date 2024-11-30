@@ -62,6 +62,8 @@ const CustomInputPopover = ({
     }
   };
 
+  console.log(placeholder, value, id);
+
   return (
     <Popover modal open={showOptions} onOpenChange={setShowOptions}>
       <PopoverAnchor>

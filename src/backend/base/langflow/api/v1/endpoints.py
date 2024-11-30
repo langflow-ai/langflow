@@ -615,6 +615,9 @@ async def custom_component_update(
             component,
             user_id=user.id,
         )
+
+        component_node["tool_mode"] = code_request.tool_mode
+
         if hasattr(cc_instance, "set_attributes"):
             template = code_request.get_template()
             params = {}
