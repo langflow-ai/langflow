@@ -19,6 +19,7 @@ from langchain_core.vectorstores import VectorStore, VectorStoreRetriever
 from langchain_text_splitters import TextSplitter
 
 from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 
 NestedDict: TypeAlias = dict[str, str | dict]
@@ -77,4 +78,5 @@ CUSTOM_COMPONENT_SUPPORTED_TYPES = {
     "Callable": Callable,
     "LanguageModel": LanguageModel,
     "Retriever": Retriever,
+    "DataFrame": DataFrame,
 }
