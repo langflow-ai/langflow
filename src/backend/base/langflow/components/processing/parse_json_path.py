@@ -49,6 +49,6 @@ class JSONPathComponent(Component):
             # Handle JSON parsing errors
             return Data(error=f"JSON Parsing Error: {e!s}")
         except Exception as e:
-            # Handle other potential errors            
+            # Handle other potential errors
             msg = f"Error cleaning JSON string: {e}"
-            raise ValueError(msg) from e            
+            raise ValueError(msg) from e
