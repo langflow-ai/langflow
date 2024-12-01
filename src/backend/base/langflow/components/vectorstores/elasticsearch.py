@@ -23,7 +23,6 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
 
     display_name: str = "Elasticsearch"
     description: str = "Elasticsearch Vector Store with with advanced, customizable search capabilities."
-    documentation = "https://python.langchain.com/docs/integrations/vectorstores/elasticsearch"
     name = "Elasticsearch"
     icon = "ElasticsearchStore"
 
@@ -50,6 +49,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
         MultilineInput(
             name="search_input",
             display_name="Search Input",
+            tool_mode=True,
             info="Enter a search query. Leave empty to retrieve all documents.",
         ),
         StrInput(

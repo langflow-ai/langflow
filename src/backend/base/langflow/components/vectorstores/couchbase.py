@@ -11,7 +11,6 @@ from langflow.schema import Data
 class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Couchbase"
     description = "Couchbase Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/v0.1/docs/integrations/document_loaders/couchbase/"
     name = "Couchbase"
     icon = "Couchbase"
 
@@ -25,7 +24,7 @@ class CouchbaseVectorStoreComponent(LCVectorStoreComponent):
         StrInput(name="scope_name", display_name="Scope Name", required=True),
         StrInput(name="collection_name", display_name="Collection Name", required=True),
         StrInput(name="index_name", display_name="Index Name", required=True),
-        MultilineInput(name="search_query", display_name="Search Query"),
+        MultilineInput(name="search_query", display_name="Search Query", tool_mode=True),
         DataInput(
             name="ingest_data",
             display_name="Ingest Data",

@@ -19,7 +19,6 @@ from langflow.schema import Data
 class HCDVectorStoreComponent(LCVectorStoreComponent):
     display_name: str = "Hyper-Converged Database"
     description: str = "Implementation of Vector Store using Hyper-Converged Database (HCD) with search capabilities"
-    documentation: str = "https://python.langchain.com/docs/integrations/vectorstores/astradb"
     name = "HCD"
     icon: str = "HCD"
 
@@ -51,10 +50,7 @@ class HCDVectorStoreComponent(LCVectorStoreComponent):
             value="HCD_API_ENDPOINT",
             required=True,
         ),
-        MultilineInput(
-            name="search_input",
-            display_name="Search Input",
-        ),
+        MultilineInput(name="search_input", display_name="Search Input", tool_mode=True),
         DataInput(
             name="ingest_data",
             display_name="Ingest Data",

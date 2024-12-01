@@ -10,7 +10,6 @@ from langflow.schema import Data
 class SupabaseVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Supabase"
     description = "Supabase Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/supabase/"
     name = "SupabaseVectorStore"
     icon = "Supabase"
 
@@ -19,7 +18,7 @@ class SupabaseVectorStoreComponent(LCVectorStoreComponent):
         SecretStrInput(name="supabase_service_key", display_name="Supabase Service Key", required=True),
         StrInput(name="table_name", display_name="Table Name", advanced=True),
         StrInput(name="query_name", display_name="Query Name"),
-        MultilineInput(name="search_query", display_name="Search Query"),
+        MultilineInput(name="search_query", display_name="Search Query", tool_mode=True),
         DataInput(
             name="ingest_data",
             display_name="Ingest Data",

@@ -15,7 +15,6 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
 
     display_name: str = "Chroma DB"
     description: str = "Chroma Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/docs/integrations/vectorstores/chroma"
     name = "Chroma"
     icon = "Chroma"
 
@@ -28,10 +27,13 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         StrInput(
             name="persist_directory",
             display_name="Persist Directory",
+            info="Define a directory to store the data on a Chroma DB.",
+            value="./chroma_dbs/",
         ),
         MultilineInput(
             name="search_query",
             display_name="Search Query",
+            tool_mode=True,
         ),
         DataInput(
             name="ingest_data",

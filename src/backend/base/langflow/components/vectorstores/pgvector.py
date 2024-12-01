@@ -10,14 +10,13 @@ from langflow.utils.connection_string_parser import transform_connection_string
 class PGVectorStoreComponent(LCVectorStoreComponent):
     display_name = "PGVector"
     description = "PGVector Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/pgvector/"
     name = "pgvector"
     icon = "cpu"
 
     inputs = [
         SecretStrInput(name="pg_server_url", display_name="PostgreSQL Server Connection String", required=True),
         StrInput(name="collection_name", display_name="Table", required=True),
-        MultilineInput(name="search_query", display_name="Search Query"),
+        MultilineInput(name="search_query", display_name="Search Query", tool_mode=True),
         DataInput(
             name="ingest_data",
             display_name="Ingestion Data",

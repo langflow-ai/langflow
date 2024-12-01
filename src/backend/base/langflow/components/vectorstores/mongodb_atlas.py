@@ -12,7 +12,6 @@ from langflow.schema import Data
 class MongoVectorStoreComponent(LCVectorStoreComponent):
     display_name = "MongoDB Atlas"
     description = "MongoDB Atlas Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/mongodb_atlas"
     name = "MongoDBAtlasVector"
     icon = "MongoDB"
 
@@ -30,7 +29,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
         StrInput(name="db_name", display_name="Database Name", required=True),
         StrInput(name="collection_name", display_name="Collection Name", required=True),
         StrInput(name="index_name", display_name="Index Name", required=True),
-        MultilineInput(name="search_query", display_name="Search Query"),
+        MultilineInput(name="search_query", display_name="Search Query", tool_mode=True),
         DataInput(
             name="ingest_data",
             display_name="Ingest Data",

@@ -10,7 +10,6 @@ from langflow.schema import Data
 class WeaviateVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Weaviate"
     description = "Weaviate Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/weaviate"
     name = "Weaviate"
     icon = "Weaviate"
 
@@ -24,7 +23,7 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
             info="Requires capitalized index name.",
         ),
         StrInput(name="text_key", display_name="Text Key", value="text", advanced=True),
-        MultilineInput(name="search_query", display_name="Search Query"),
+        MultilineInput(name="search_query", display_name="Search Query", tool_mode=True),
         DataInput(
             name="ingest_data",
             display_name="Ingest Data",

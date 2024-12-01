@@ -14,7 +14,6 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
 
     display_name: str = "Redis"
     description: str = "Implementation of Vector Store using Redis"
-    documentation = "https://python.langchain.com/docs/integrations/vectorstores/redis"
     name = "Redis"
     icon = "Redis"
 
@@ -29,7 +28,7 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
             name="schema",
             display_name="Schema",
         ),
-        MultilineInput(name="search_query", display_name="Search Query"),
+        MultilineInput(name="search_query", display_name="Search Query", tool_mode=True),
         DataInput(
             name="ingest_data",
             display_name="Ingest Data",

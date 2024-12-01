@@ -19,7 +19,6 @@ from langflow.schema import Data
 class CassandraVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Cassandra"
     description = "Cassandra Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/cassandra"
     name = "Cassandra"
     icon = "Cassandra"
 
@@ -79,7 +78,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             advanced=True,
             is_list=True,
         ),
-        MultilineInput(name="search_query", display_name="Search Query"),
+        MultilineInput(name="search_query", display_name="Search Query", tool_mode=True),
         DataInput(
             name="ingest_data",
             display_name="Ingest Data",

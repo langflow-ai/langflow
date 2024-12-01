@@ -17,7 +17,6 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
 
     display_name: str = "Vectara"
     description: str = "Vectara Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/vectara"
     name = "Vectara"
     icon = "Vectara"
 
@@ -39,6 +38,7 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
         MessageTextInput(
             name="search_query",
             display_name="Search Query",
+            tool_mode=True,
         ),
         IntInput(
             name="number_of_results",

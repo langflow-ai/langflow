@@ -16,7 +16,6 @@ from langflow.schema import Data
 class UpstashVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Upstash"
     description = "Upstash Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/upstash/"
     name = "Upstash"
     icon = "Upstash"
 
@@ -45,7 +44,7 @@ class UpstashVectorStoreComponent(LCVectorStoreComponent):
             display_name="Namespace",
             info="Leave empty for default namespace.",
         ),
-        MultilineInput(name="search_query", display_name="Search Query"),
+        MultilineInput(name="search_query", display_name="Search Query", tool_mode=True),
         MultilineInput(
             name="metadata_filter",
             display_name="Metadata Filter",

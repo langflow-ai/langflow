@@ -12,7 +12,6 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
 
     display_name: str = "FAISS"
     description: str = "FAISS Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/faiss"
     name = "FAISS"
     icon = "FAISS"
 
@@ -30,6 +29,7 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
         MultilineInput(
             name="search_query",
             display_name="Search Query",
+            tool_mode=True,
         ),
         DataInput(
             name="ingest_data",

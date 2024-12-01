@@ -17,24 +17,32 @@ class StructuredOutputComponent(Component):
         "or creating consistent outputs."
     )
     icon = "braces"
+    name = "StructuredOutput"
 
     inputs = [
         HandleInput(
             name="llm",
             display_name="Language Model",
-            info="The language model to use to generate the structured output.",
+            info="The language model used to generate the structured output.",
             input_types=["LanguageModel"],
         ),
-        MessageTextInput(name="input_value", display_name="Input message"),
+        MessageTextInput(
+            name="input_value",
+            display_name="Input Message",
+            info="The input message to the language model.",
+            tool_mode=True,
+        ),
         StrInput(
             name="schema_name",
             display_name="Schema Name",
             info="Provide a name for the output data schema.",
+            advanced=True,
         ),
         TableInput(
             name="output_schema",
             display_name="Output Schema",
             info="Define the structure and data types for the model's output.",
+            required=True,
             table_schema=[
                 {
                     "name": "name",
@@ -70,6 +78,7 @@ class StructuredOutputComponent(Component):
             name="multiple",
             display_name="Generate Multiple",
             info="Set to True if the model should generate a list of outputs instead of a single output.",
+            advanced=True,
         ),
     ]
 

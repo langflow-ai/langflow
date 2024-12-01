@@ -21,7 +21,6 @@ from langflow.schema import Data
 class CassandraGraphVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Cassandra Graph"
     description = "Cassandra Graph Vector Store"
-    documentation = "https://python.langchain.com/v0.2/api_reference/community/graph_vectorstores.html"
     name = "CassandraGraph"
     icon = "Cassandra"
 

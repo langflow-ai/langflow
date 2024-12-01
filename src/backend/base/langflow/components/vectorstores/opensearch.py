@@ -24,7 +24,6 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
 
     display_name: str = "OpenSearch"
     description: str = "OpenSearch Vector Store with advanced, customizable search capabilities."
-    documentation = "https://python.langchain.com/docs/integrations/vectorstores/opensearch"
     name = "OpenSearch"
     icon = "OpenSearch"
 
@@ -44,6 +43,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         MultilineInput(
             name="search_input",
             display_name="Search Input",
+            tool_mode=True,
             info=(
                 "Enter a search query. Leave empty to retrieve all documents. "
                 "If you need a more advanced search consider using Hybrid Search Query instead."

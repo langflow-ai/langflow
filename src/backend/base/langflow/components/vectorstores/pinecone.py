@@ -10,7 +10,6 @@ from langflow.schema import Data
 class PineconeVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Pinecone"
     description = "Pinecone Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/pinecone/"
     name = "Pinecone"
     icon = "Pinecone"
     inputs = [
@@ -31,7 +30,7 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
             value="text",
             advanced=True,
         ),
-        MultilineInput(name="search_query", display_name="Search Query"),
+        MultilineInput(name="search_query", display_name="Search Query", tool_mode=True),
         DataInput(
             name="ingest_data",
             display_name="Ingest Data",

@@ -31,6 +31,7 @@ class MemoryComponent(Component):
             value="Machine and User",
             info="Filter by sender type.",
             advanced=True,
+            tool_mode=True,
         ),
         MessageTextInput(
             name="sender_name",

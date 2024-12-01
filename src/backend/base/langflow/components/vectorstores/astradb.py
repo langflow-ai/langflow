@@ -96,6 +96,7 @@ class AstraVectorStoreComponent(LCVectorStoreComponent):
         MultilineInput(
             name="search_input",
             display_name="Search Input",
+            tool_mode=True,
         ),
         DataInput(
             name="ingest_data",

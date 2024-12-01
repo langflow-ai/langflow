@@ -20,7 +20,6 @@ class MilvusVectorStoreComponent(LCVectorStoreComponent):
 
     display_name: str = "Milvus"
     description: str = "Milvus vector store with search capabilities"
-    documentation = "https://python.langchain.com/docs/integrations/vectorstores/milvus"
     name = "Milvus"
     icon = "Milvus"
 
@@ -53,7 +52,7 @@ class MilvusVectorStoreComponent(LCVectorStoreComponent):
         DictInput(name="search_params", display_name="Search Parameters", advanced=True),
         BoolInput(name="drop_old", display_name="Drop Old Collection", value=False, advanced=True),
         FloatInput(name="timeout", display_name="Timeout", advanced=True),
-        MultilineInput(name="search_query", display_name="Search Query"),
+        MultilineInput(name="search_query", display_name="Search Query", tool_mode=True),
         DataInput(
             name="ingest_data",
             display_name="Ingest Data",
