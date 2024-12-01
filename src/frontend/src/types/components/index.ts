@@ -1,4 +1,3 @@
-import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { ReactElement, ReactNode } from "react";
 import { ReactFlowJsonObject } from "reactflow";
 import { InputOutput } from "../../constants/enums";
@@ -10,7 +9,6 @@ import {
 } from "../api";
 import { ChatMessageType } from "../chat";
 import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
-import { ColumnField } from "../utils/functions";
 import { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
   name?: string;
@@ -41,6 +39,8 @@ export type InputComponentType = {
   objectOptions?: Array<{ name: string; id: string }>;
   isObjectOption?: boolean;
   onChangeFolderName?: (e: any) => void;
+  nodeStyle?: boolean;
+  isToolMode?: boolean;
 };
 export type DropDownComponent = {
   disabled?: boolean;
@@ -52,6 +52,7 @@ export type DropDownComponent = {
   editNode?: boolean;
   id?: string;
   children?: ReactNode;
+  name?: string;
 };
 export type ParameterComponentType = {
   selected?: boolean;
@@ -88,6 +89,9 @@ export type NodeOutputFieldComponentType = {
   type: string | undefined;
   outputName?: string;
   outputProxy?: OutputFieldProxyType;
+  lastOutput?: boolean;
+  colorName?: string[];
+  isToolMode?: boolean;
 };
 
 export type NodeInputFieldComponentType = {
@@ -100,9 +104,12 @@ export type NodeInputFieldComponentType = {
   name: string;
   required: boolean;
   optionalHandle: Array<String> | undefined | null;
+  lastInput?: boolean;
   info: string;
   proxy: { field: string; id: string } | undefined;
   showNode: boolean;
+  colorName?: string[];
+  isToolMode?: boolean;
 };
 
 export type IOJSONInputComponentType = {
@@ -119,6 +126,7 @@ export type outputComponentType = {
   idx: number;
   name: string;
   proxy?: OutputFieldProxyType;
+  isToolMode?: boolean;
 };
 
 export type DisclosureComponentType = {
@@ -240,10 +248,12 @@ export type ShadToolTipType = {
   setOpen?: (open: boolean) => void;
   content?: ReactNode | null;
   side?: "top" | "right" | "bottom" | "left";
+  align?: "start" | "center" | "end";
   asChild?: boolean;
   children?: ReactElement;
   delayDuration?: number;
   styleClasses?: string;
+  avoidCollisions?: boolean;
 };
 
 export type TextHighlightType = {
@@ -267,6 +277,7 @@ export type IconComponentProps = {
   strokeWidth?: number;
   id?: string;
   skipFallback?: boolean;
+  dataTestId?: string;
 };
 
 export type InputProps = {
@@ -328,8 +339,8 @@ export type PaginatorComponentType = {
   rowsCount?: number[];
   totalRowsCount: number;
   paginate: (pageIndex: number, pageSize: number) => void;
-  storeComponent?: boolean;
   pages?: number;
+  isComponent?: boolean;
 };
 
 export type ConfirmationModalType = {
@@ -535,6 +546,8 @@ export type nodeToolbarPropsType = {
   onCloseAdvancedModal?: (close: boolean) => void;
   isOutdated: boolean;
   updateNode: () => void;
+  closeToolbar?: () => void;
+  setOpenShowMoreOptions?: (open: boolean) => void;
 };
 
 export type parsedDataType = {
@@ -569,6 +582,7 @@ export type codeAreaModalPropsType = {
   readonly?: boolean;
   open?: boolean;
   setOpen?: (open: boolean) => void;
+  componentId?: string;
 };
 
 export type chatMessagePropsType = {
@@ -581,6 +595,7 @@ export type chatMessagePropsType = {
     message: string,
     stream_url?: string,
   ) => void;
+  closeChat?: () => void;
 };
 
 export type genericModalPropsType = {
@@ -616,10 +631,12 @@ export type textModalPropsType = {
   setValue: (value: string) => void;
   value: string;
   disabled?: boolean;
-  children: ReactNode;
+  children?: ReactNode;
   readonly?: boolean;
   password?: boolean;
   changeVisibility?: () => void;
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
 };
 
 export type newFlowModalPropsType = {
@@ -634,6 +651,7 @@ export type IOModalPropsType = {
   disable?: boolean;
   isPlayground?: boolean;
   cleanOnClose?: boolean;
+  canvasOpen?: boolean;
 };
 
 export type buttonBoxPropsType = {
@@ -752,6 +770,7 @@ export type chatViewProps = {
   setLockChat: (lock: boolean) => void;
   visibleSession?: string;
   focusChat?: string;
+  closeChat?: () => void;
 };
 
 export type IOFileInputProps = {

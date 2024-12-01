@@ -54,8 +54,12 @@ export type FlowPoolType = {
 };
 
 export type FlowStoreType = {
+  fitViewNode: (nodeId: string) => void;
   autoSaveFlow: (() => void) | undefined;
-  componentsToUpdate: boolean;
+  componentsToUpdate: string[];
+  setComponentsToUpdate: (
+    update: string[] | ((oldState: string[]) => string[]),
+  ) => void;
   updateComponentsToUpdate: (nodes: Node[]) => void;
   onFlowPage: boolean;
   setOnFlowPage: (onFlowPage: boolean) => void;
@@ -105,6 +109,7 @@ export type FlowStoreType = {
     id: string,
     update: Node | ((oldState: Node) => Node),
     isUserChange?: boolean,
+    callback?: () => void,
   ) => void;
   getNode: (id: string) => Node | undefined;
   deleteNode: (nodeId: string | Array<string>) => void;
@@ -231,4 +236,8 @@ export type FlowStoreType = {
   stopBuilding: () => void;
   buildController: AbortController;
   setBuildController: (controller: AbortController) => void;
+  currentBuildingNodeId: string[] | undefined;
+  setCurrentBuildingNodeId: (nodeIds: string[] | undefined) => void;
+  clearEdgesRunningByNodes: () => Promise<void>;
+  updateToolMode: (nodeId: string, toolMode: boolean) => void;
 };

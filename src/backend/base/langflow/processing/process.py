@@ -6,6 +6,7 @@ from loguru import logger
 from pydantic import BaseModel
 
 from langflow.graph.vertex.base import Vertex
+from langflow.processing.utils import validate_and_repair_json
 from langflow.schema.graph import InputValue, Tweaks
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.deps import get_settings_service
@@ -32,7 +33,7 @@ async def run_graph_internal(
 ) -> tuple[list[RunOutputs], str]:
     """Run the graph and generate the result."""
     inputs = inputs or []
-    session_id_str = flow_id if session_id is None else session_id
+    effective_session_id = session_id or flow_id
     components = []
     inputs_list = []
     types = []
@@ -45,17 +46,17 @@ async def run_graph_internal(
         types.append(input_value_request.type)
 
     fallback_to_env_vars = get_settings_service().settings.fallback_to_env_var
-
+    graph.session_id = effective_session_id
     run_outputs = await graph.arun(
         inputs=inputs_list,
         inputs_components=components,
         types=types,
         outputs=outputs or [],
         stream=stream,
-        session_id=session_id_str or "",
+        session_id=effective_session_id or "",
         fallback_to_env_vars=fallback_to_env_vars,
     )
-    return run_outputs, session_id_str
+    return run_outputs, effective_session_id
 
 
 async def run_graph(
@@ -142,7 +143,10 @@ def apply_tweaks(node: dict[str, Any], node_tweaks: dict[str, Any]) -> None:
         if tweak_name not in template_data:
             continue
         if tweak_name in template_data:
-            if isinstance(tweak_value, dict):
+            if template_data[tweak_name]["type"] == "NestedDict":
+                value = validate_and_repair_json(tweak_value)
+                template_data[tweak_name]["value"] = value
+            elif isinstance(tweak_value, dict):
                 for k, v in tweak_value.items():
                     _k = "file_path" if template_data[tweak_name]["type"] == "file" else k
                     template_data[tweak_name][_k] = v

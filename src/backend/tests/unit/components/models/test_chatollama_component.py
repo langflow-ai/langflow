@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 from urllib.parse import urljoin
 
 import pytest
-from langchain_community.chat_models import ChatOllama
+from langchain_ollama import ChatOllama
 from langflow.components.models import ChatOllamaComponent
 
 

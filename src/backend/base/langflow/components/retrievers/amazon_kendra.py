@@ -11,6 +11,7 @@ class AmazonKendraRetrieverComponent(CustomComponent):
     description: str = "Retriever that uses the Amazon Kendra API."
     name = "AmazonKendra"
     icon = "Amazon"
+    legacy: bool = True
 
     def build_config(self):
         return {

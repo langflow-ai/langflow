@@ -36,7 +36,6 @@ def astradb_client():
 
 
 @pytest.mark.api_key_required
-@pytest.mark.asyncio
 async def test_base(astradb_client: AstraDB):
     from langflow.components.embeddings import OpenAIEmbeddingsComponent
 
@@ -49,7 +48,7 @@ async def test_base(astradb_client: AstraDB):
             "token": application_token,
             "api_endpoint": api_endpoint,
             "collection_name": BASIC_COLLECTION,
-            "embedding": ComponentInputHandle(
+            "embedding_model": ComponentInputHandle(
                 clazz=OpenAIEmbeddingsComponent,
                 inputs={"openai_api_key": get_openai_api_key()},
                 output_name="embeddings",
@@ -65,7 +64,6 @@ async def test_base(astradb_client: AstraDB):
 
 
 @pytest.mark.api_key_required
-@pytest.mark.asyncio
 async def test_astra_embeds_and_search():
     application_token = get_astradb_application_token()
     api_endpoint = get_astradb_api_endpoint()
@@ -81,7 +79,7 @@ async def test_astra_embeds_and_search():
             "ingest_data": ComponentInputHandle(
                 clazz=TextToData, inputs={"text_data": ["test1", "test2"]}, output_name="from_text"
             ),
-            "embedding": ComponentInputHandle(
+            "embedding_model": ComponentInputHandle(
                 clazz=OpenAIEmbeddingsComponent,
                 inputs={"openai_api_key": get_openai_api_key()},
                 output_name="embeddings",
@@ -101,7 +99,7 @@ def test_astra_vectorize():
     store = None
     try:
         options = {"provider": "nvidia", "modelName": "NV-Embed-QA"}
-        options_comp = {"provider": "nvidia", "z_00_model_name": "NV-Embed-QA"}
+        options_comp = {"embedding_provider": "nvidia", "model": "NV-Embed-QA"}
 
         store = AstraDBVectorStore(
             collection_name=VECTORIZE_COLLECTION,
@@ -152,8 +150,8 @@ def test_astra_vectorize_with_provider_api_key():
         }
 
         options_comp = {
-            "provider": "openai",
-            "z_00_model_name": "text-embedding-3-small",
+            "embedding_provider": "openai",
+            "model": "text-embedding-3-small",
             "z_01_model_parameters": {},
             "z_03_provider_api_key": "openai",
             "z_04_authentication": {},
@@ -208,8 +206,8 @@ def test_astra_vectorize_passes_authentication():
             "authentication": {"providerKey": "openai"},
         }
         options_comp = {
-            "provider": "openai",
-            "z_00_model_name": "text-embedding-3-small",
+            "embedding_provider": "openai",
+            "model": "text-embedding-3-small",
             "z_01_model_parameters": {},
             "z_04_authentication": {"providerKey": "openai"},
         }

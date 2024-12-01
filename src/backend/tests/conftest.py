@@ -1,3 +1,4 @@
+import asyncio
 import json
 import shutil
 
@@ -12,12 +13,12 @@ from uuid import UUID
 import orjson
 import pytest
 from asgi_lifespan import LifespanManager
+from blockbuster import blockbuster_ctx
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
-from langflow.components.inputs import ChatInput
 from langflow.graph import Graph
-from langflow.initial_setup.setup import STARTER_FOLDER_NAME
+from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow, FlowCreate
@@ -28,7 +29,9 @@ from langflow.services.database.models.vertex_builds.crud import delete_vertex_b
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
 from loguru import logger
+from sqlalchemy.orm import selectinload
 from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel.pool import StaticPool
 from typer.testing import CliRunner
 
@@ -39,6 +42,22 @@ if TYPE_CHECKING:
 
 
 load_dotenv()
+
+
+@pytest.fixture(autouse=True)
+def blockbuster():
+    with blockbuster_ctx() as bb:
+        for func in [
+            "io.BufferedReader.read",
+            "io.BufferedWriter.write",
+            "io.TextIOWrapper.read",
+            "io.TextIOWrapper.write",
+        ]:
+            bb.functions[func].can_block_functions.append(("settings/service.py", {"initialize"}))
+        for func in bb.functions:
+            if func.startswith("sqlite3."):
+                bb.functions[func].deactivate()
+        yield bb
 
 
 def pytest_configure(config):
@@ -83,21 +102,21 @@ def get_text():
         assert path.exists(), f"File {path} does not exist. Available files: {list(data_path.iterdir())}"
 
 
-def delete_transactions_by_flow_id(db: Session, flow_id: UUID):
+async def delete_transactions_by_flow_id(db: AsyncSession, flow_id: UUID):
     stmt = select(TransactionTable).where(TransactionTable.flow_id == flow_id)
-    transactions = db.exec(stmt)
+    transactions = await db.exec(stmt)
     for transaction in transactions:
-        db.delete(transaction)
-    db.commit()
+        await db.delete(transaction)
+    await db.commit()
 
 
-def _delete_transactions_and_vertex_builds(session, user: User):
-    flow_ids = [flow.id for flow in user.flows]
+async def _delete_transactions_and_vertex_builds(session, flows: list[Flow]):
+    flow_ids = [flow.id for flow in flows]
     for flow_id in flow_ids:
         if not flow_id:
             continue
-        delete_vertex_builds_by_flow_id(session, flow_id)
-        delete_transactions_by_flow_id(session, flow_id)
+        await delete_vertex_builds_by_flow_id(session, flow_id)
+        await delete_transactions_by_flow_id(session, flow_id)
 
 
 @pytest.fixture
@@ -275,6 +294,13 @@ def json_memory_chatbot_no_llm():
     return pytest.MEMORY_CHATBOT_NO_LLM.read_text(encoding="utf-8")
 
 
+@pytest.fixture(autouse=True)
+def deactivate_tracing(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_DEACTIVATE_TRACING", "true")
+    yield
+    monkeypatch.undo()
+
+
 @pytest.fixture(name="client")
 async def client_fixture(
     session: Session,  # noqa: ARG001
@@ -286,23 +312,28 @@ async def client_fixture(
     if "noclient" in request.keywords:
         yield
     else:
-        db_dir = tempfile.mkdtemp()
-        db_path = Path(db_dir) / "test.db"
-        monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
-        monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
-        if "load_flows" in request.keywords:
-            shutil.copyfile(
-                pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"
-            )
-            monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
-            monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
 
-        from langflow.main import create_app
+        def init_app():
+            db_dir = tempfile.mkdtemp()
+            db_path = Path(db_dir) / "test.db"
+            monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
+            monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+            if "load_flows" in request.keywords:
+                shutil.copyfile(
+                    pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"
+                )
+                monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
+                monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
 
-        app = create_app()
-        db_service = get_db_service()
-        db_service.database_url = f"sqlite:///{db_path}"
-        db_service.reload_engine()
+            from langflow.main import create_app
+
+            app = create_app()
+            db_service = get_db_service()
+            db_service.database_url = f"sqlite:///{db_path}"
+            db_service.reload_engine()
+            return app, db_path
+
+        app, db_path = await asyncio.to_thread(init_app)
         # app.dependency_overrides[get_session] = get_session_override
         async with (
             LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager,
@@ -347,31 +378,32 @@ async def test_user(client):
 
 
 @pytest.fixture
-def active_user(client):  # noqa: ARG001
+async def active_user(client):  # noqa: ARG001
     db_manager = get_db_service()
-    with db_manager.with_session() as session:
+    async with db_manager.with_async_session() as session:
         user = User(
             username="activeuser",
             password=get_password_hash("testpassword"),
             is_active=True,
             is_superuser=False,
         )
-        if active_user := session.exec(select(User).where(User.username == user.username)).first():
+        stmt = select(User).where(User.username == user.username)
+        if active_user := (await session.exec(stmt)).first():
             user = active_user
         else:
             session.add(user)
-            session.commit()
-            session.refresh(user)
+            await session.commit()
+            await session.refresh(user)
         user = UserRead.model_validate(user, from_attributes=True)
     yield user
     # Clean up
     # Now cleanup transactions, vertex_build
-    with db_manager.with_session() as session:
-        user = session.get(User, user.id)
-        _delete_transactions_and_vertex_builds(session, user)
-        session.delete(user)
+    async with db_manager.with_async_session() as session:
+        user = await session.get(User, user.id, options=[selectinload(User.flows)])
+        await _delete_transactions_and_vertex_builds(session, user.flows)
+        await session.delete(user)
 
-        session.commit()
+        await session.commit()
 
 
 @pytest.fixture
@@ -385,31 +417,32 @@ async def logged_in_headers(client, active_user):
 
 
 @pytest.fixture
-def active_super_user(client):  # noqa: ARG001
+async def active_super_user(client):  # noqa: ARG001
     db_manager = get_db_service()
-    with db_manager.with_session() as session:
+    async with db_manager.with_async_session() as session:
         user = User(
             username="activeuser",
             password=get_password_hash("testpassword"),
             is_active=True,
             is_superuser=True,
         )
-        if active_user := session.exec(select(User).where(User.username == user.username)).first():
+        stmt = select(User).where(User.username == user.username)
+        if active_user := (await session.exec(stmt)).first():
             user = active_user
         else:
             session.add(user)
-            session.commit()
-            session.refresh(user)
+            await session.commit()
+            await session.refresh(user)
         user = UserRead.model_validate(user, from_attributes=True)
     yield user
     # Clean up
     # Now cleanup transactions, vertex_build
-    with db_manager.with_session() as session:
-        user = session.get(User, user.id)
-        _delete_transactions_and_vertex_builds(session, user)
-        session.delete(user)
+    async with db_manager.with_async_session() as session:
+        user = await session.get(User, user.id, options=[selectinload(User.flows)])
+        await _delete_transactions_and_vertex_builds(session, user.flows)
+        await session.delete(user)
 
-        session.commit()
+        await session.commit()
 
 
 @pytest.fixture
@@ -523,6 +556,8 @@ async def added_webhook_test(client, json_webhook_test, logged_in_headers):
 
 @pytest.fixture
 async def flow_component(client: AsyncClient, logged_in_headers):
+    from langflow.components.inputs import ChatInput
+
     chat_input = ChatInput()
     graph = Graph(start=chat_input, end=chat_input)
     graph_dict = graph.dump(name="Chat Input Component")

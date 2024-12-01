@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils import AsyncDbSession, CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import UsersResponse
 from langflow.services.auth.utils import (
     get_current_active_superuser,
@@ -25,7 +25,7 @@ router = APIRouter(tags=["Users"], prefix="/users")
 @router.post("/", response_model=UserRead, status_code=201)
 async def add_user(
     user: UserCreate,
-    session: DbSession,
+    session: AsyncDbSession,
 ) -> User:
     """Add a new user to the database."""
     new_user = User.model_validate(user, from_attributes=True)
@@ -33,13 +33,13 @@ async def add_user(
         new_user.password = get_password_hash(user.password)
         new_user.is_active = get_settings_service().auth_settings.NEW_USER_IS_ACTIVE
         session.add(new_user)
-        session.commit()
-        session.refresh(new_user)
-        folder = create_default_folder_if_it_doesnt_exist(session, new_user.id)
+        await session.commit()
+        await session.refresh(new_user)
+        folder = await create_default_folder_if_it_doesnt_exist(session, new_user.id)
         if not folder:
             raise HTTPException(status_code=500, detail="Error creating default folder")
     except IntegrityError as e:
-        session.rollback()
+        await session.rollback()
         raise HTTPException(status_code=400, detail="This username is unavailable.") from e
 
     return new_user
@@ -58,14 +58,14 @@ async def read_all_users(
     *,
     skip: int = 0,
     limit: int = 10,
-    session: DbSession,
+    session: AsyncDbSession,
 ) -> UsersResponse:
     """Retrieve a list of users from the database with pagination."""
     query: SelectOfScalar = select(User).offset(skip).limit(limit)
-    users = session.exec(query).fetchall()
+    users = (await session.exec(query)).fetchall()
 
     count_query = select(func.count()).select_from(User)
-    total_count = session.exec(count_query).first()
+    total_count = (await session.exec(count_query)).first()
 
     return UsersResponse(
         total_count=total_count,
@@ -78,7 +78,7 @@ async def patch_user(
     user_id: UUID,
     user_update: UserUpdate,
     user: CurrentActiveUser,
-    session: DbSession,
+    session: AsyncDbSession,
 ) -> User:
     """Update an existing user's data."""
     update_password = bool(user_update.password)
@@ -93,10 +93,10 @@ async def patch_user(
             raise HTTPException(status_code=400, detail="You can't change your password here")
         user_update.password = get_password_hash(user_update.password)
 
-    if user_db := get_user_by_id(session, user_id):
+    if user_db := await get_user_by_id(session, user_id):
         if not update_password:
             user_update.password = user_db.password
-        return update_user(user_db, user_update, session)
+        return await update_user(user_db, user_update, session)
     raise HTTPException(status_code=404, detail="User not found")
 
 
@@ -105,7 +105,7 @@ async def reset_password(
     user_id: UUID,
     user_update: UserUpdate,
     user: CurrentActiveUser,
-    session: DbSession,
+    session: AsyncDbSession,
 ) -> User:
     """Reset a user's password."""
     if user_id != user.id:
@@ -117,8 +117,8 @@ async def reset_password(
         raise HTTPException(status_code=400, detail="You can't use your current password")
     new_password = get_password_hash(user_update.password)
     user.password = new_password
-    session.commit()
-    session.refresh(user)
+    await session.commit()
+    await session.refresh(user)
 
     return user
 

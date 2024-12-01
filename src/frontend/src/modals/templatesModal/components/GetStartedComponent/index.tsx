@@ -1,12 +1,13 @@
 import BaseModal from "@/modals/baseModal";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { CardData } from "@/types/templates/types";
-import memoryChatbotSpiral from "../../../../assets/artwork-spiral-1-def.svg";
-import vectorRagSpiral from "../../../../assets/artwork-spiral-2-def.svg";
-import multiAgentSpiral from "../../../../assets/artwork-spiral-3-def.svg";
-import memoryChatbotBg from "../../../../assets/memory-chatbot-bg.png";
-import multiAgentBg from "../../../../assets/multi-agent-bg.png";
-import vectorRagBg from "../../../../assets/vector-rag-bg.png";
+import memoryChatbot from "../../../../assets/temp-pat-1.png";
+import vectorRag from "../../../../assets/temp-pat-2.png";
+import multiAgent from "../../../../assets/temp-pat-3.png";
+import memoryChatbotHorizontal from "../../../../assets/temp-pat-m-1.png";
+import vectorRagHorizontal from "../../../../assets/temp-pat-m-2.png";
+import multiAgentHorizontal from "../../../../assets/temp-pat-m-3.png";
+
 import TemplateGetStartedCardComponent from "../TemplateGetStartedCardComponent";
 
 export default function GetStartedComponent() {
@@ -15,43 +16,34 @@ export default function GetStartedComponent() {
   // Define the card data
   const cardData: CardData[] = [
     {
-      bgImage: memoryChatbotBg,
-      spiralImage: memoryChatbotSpiral,
+      bgImage: memoryChatbot,
+      bgHorizontalImage: memoryChatbotHorizontal,
       icon: "MessagesSquare",
-      category: "Chatbot",
-      title: "Memory Chatbot",
-      description:
-        "Get hands-on with Langflow by building a simple RAGbot that uses memory.",
-      flow: examples.find((example) => example.name === "Memory Chatbot"),
+      category: "prompting",
+      flow: examples.find((example) => example.name === "Basic Prompting"),
     },
     {
-      bgImage: vectorRagBg,
-      spiralImage: vectorRagSpiral,
-      icon: "MessagesSquare",
-      category: "Vector RAG",
-      title: "Vector RAG",
-      description:
-        "Ingest data into a native vector store and efficiently retrieve it.",
+      bgImage: vectorRag,
+      bgHorizontalImage: vectorRagHorizontal,
+      icon: "Database",
+      category: "RAG",
       flow: examples.find((example) => example.name === "Vector Store RAG"),
     },
     {
-      bgImage: multiAgentBg,
-      spiralImage: multiAgentSpiral,
-      icon: "MessagesSquare",
+      bgImage: multiAgent,
+      bgHorizontalImage: multiAgentHorizontal,
+      icon: "Bot",
       category: "Agents",
-      title: "Multi-Agent",
-      flow: examples.find((example) => example.name === "Dynamic Agent"),
-      description:
-        "Deploy a team of agents with a Manager-Worker structure to tackle complex tasks.",
+      flow: examples.find((example) => example.name === "Simple Agent"),
     },
   ];
 
   return (
-    <div className="flex flex-1 flex-col gap-8">
-      <BaseModal.Header description="Start building with templates that highlight Langflow's capabilities across Chatbot, RAG, and Agent use cases.">
-        Get Started
+    <div className="flex flex-1 flex-col gap-4 md:gap-8">
+      <BaseModal.Header description="Start with templates showcasing Langflow's Prompting, RAG, and Agent use cases.">
+        Get started
       </BaseModal.Header>
-      <div className="grid flex-1 grid-cols-3 gap-4">
+      <div className="grid flex-1 grid-cols-1 gap-4 lg:grid-cols-3">
         {cardData.map((card, index) => (
           <TemplateGetStartedCardComponent key={index} {...card} />
         ))}

@@ -33,10 +33,14 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Install the project's dependencies using the lockfile and settings
+# We need to mount the root uv.lock and pyproject.toml to build the base with uv because we're still using uv workspaces
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
     --mount=type=bind,source=src/backend/base/uv.lock,target=src/backend/base/uv.lock \
     --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=README.md,target=README.md \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     cd src/backend/base && uv sync --frozen --no-install-project --no-dev --no-editable
 
 ADD ./src /app/src
@@ -48,7 +52,14 @@ RUN npm install \
     && cp -r build /app/src/backend/base/langflow/frontend \
     && rm -rf /tmp/src/frontend
 
+ADD ./src/backend/base /app/src/backend/base
 WORKDIR /app/src/backend/base
+# again we need these because of workspaces
+ADD ./pyproject.toml /app/pyproject.toml
+ADD ./uv.lock /app/uv.lock
+ADD ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
+ADD ./src/backend/base/uv.lock /app/src/backend/base/uv.lock
+ADD ./src/backend/base/README.md /app/src/backend/base/README.md
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable
 
@@ -59,10 +70,11 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 FROM python:3.12.3-slim AS runtime
 
 RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
-COPY --from=builder --chown=1000 /app/src/backend/base/.venv /app/src/backend/base/.venv
+# and we use the venv at the root because workspaces
+COPY --from=builder --chown=1000 /app/.venv /app/.venv
 
 # Place executables in the environment at the front of the path
-ENV PATH="/app/src/backend/base/.venv/bin:$PATH"
+ENV PATH="/app/.venv/bin:$PATH"
 
 LABEL org.opencontainers.image.title=langflow
 LABEL org.opencontainers.image.authors=['Langflow']

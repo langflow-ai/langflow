@@ -28,6 +28,8 @@ export type FlowsManagerStoreType = {
   setHealthCheckMaxRetries: (healthCheckMaxRetries: number) => void;
   flowToCanvas: FlowType | null;
   setFlowToCanvas: (flowToCanvas: FlowType | null) => Promise<void>;
+  IOModalOpen: boolean;
+  setIOModalOpen: (IOModalOpen: boolean) => void;
 };
 
 export type UseUndoRedoOptions = {

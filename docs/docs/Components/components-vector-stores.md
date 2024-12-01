@@ -25,7 +25,7 @@ For more information, see the [DataStax documentation](https://docs.datastax.com
 | search_input | Search Input | Query string for similarity search |
 | ingest_data | Ingest Data | Data to be ingested into the vector store |
 | namespace | Namespace | Optional namespace within Astra DB to use for the collection |
-| embedding_service | Embedding Model or Astra Vectorize | Determines whether to use an Embedding Model or Astra Vectorize for the collection |
+| embedding_choice | Embedding Model or Astra Vectorize | Determines whether to use an Embedding Model or Astra Vectorize for the collection |
 | embedding | Embedding Model | Allows an embedding model configuration (when using Embedding Model) |
 | provider | Vectorize Provider | Provider for Astra Vectorize (when using Astra Vectorize) |
 | metric | Metric | Optional distance metric for vector comparisons |

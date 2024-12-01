@@ -83,7 +83,7 @@ class CustomComponent(BaseComponent):
     _flows_data: list[Data] | None = None
     _outputs: list[OutputValue] = []
     _logs: list[Log] = []
-    _output_logs: dict[str, Log] = {}
+    _output_logs: dict[str, list[Log] | Log] = {}
     _tracing_service: TracingService | None = None
     _tree: dict | None = None
 
@@ -93,8 +93,8 @@ class CustomComponent(BaseComponent):
         Args:
             **data: Additional keyword arguments to initialize the custom component.
         """
-        self.cache = TTLCache(maxsize=1024, ttl=60)
-        self._logs = []
+        self.cache: TTLCache = TTLCache(maxsize=1024, ttl=60)
+        self._logs: list[Log] = []
         self._results: dict = {}
         self._artifacts: dict = {}
         super().__init__(**data)
@@ -108,10 +108,12 @@ class CustomComponent(BaseComponent):
 
     @property
     def trace_name(self) -> str:
-        if self._vertex is None:
-            msg = "Vertex is not set"
+        if hasattr(self, "_id") and self._id is None:
+            msg = "Component id is not set"
             raise ValueError(msg)
-        return f"{self.display_name} ({self._vertex.id})"
+        if hasattr(self, "_id"):
+            return f"{self.display_name} ({self._id})"
+        return f"{self.display_name}"
 
     def update_state(self, name: str, value: Any) -> None:
         if not self._vertex:
@@ -183,7 +185,7 @@ class CustomComponent(BaseComponent):
 
     @property
     def user_id(self):
-        if hasattr(self, "_user_id"):
+        if hasattr(self, "_user_id") and self._user_id:
             return self._user_id
         return self.graph.user_id
 
@@ -228,7 +230,7 @@ class CustomComponent(BaseComponent):
         field_value: Any,
         field_name: str | None = None,
     ):
-        build_config[field_name] = field_value
+        build_config[field_name]["value"] = field_value
         return build_config
 
     @property
@@ -363,7 +365,7 @@ class CustomComponent(BaseComponent):
         return build_methods[0] if build_methods else {}
 
     @property
-    def get_function_entrypoint_return_type(self) -> list[Any]:
+    def _get_function_entrypoint_return_type(self) -> list[Any]:
         """Gets the return type of the function entrypoint for the custom component.
 
         Returns:
@@ -446,7 +448,7 @@ class CustomComponent(BaseComponent):
         variable_service = get_variable_service()
 
         with session_scope() as session:
-            return variable_service.list_variables(user_id=self.user_id, session=session)
+            return variable_service.list_variables_sync(user_id=self.user_id, session=session)
 
     def index(self, value: int = 0):
         """Returns a function that returns the value at the given index in the iterable.
@@ -475,7 +477,7 @@ class CustomComponent(BaseComponent):
         if not self.user_id:
             msg = "Session is invalid"
             raise ValueError(msg)
-        return await load_flow(user_id=str(self._user_id), flow_id=flow_id, tweaks=tweaks)
+        return await load_flow(user_id=str(self.user_id), flow_id=flow_id, tweaks=tweaks)
 
     async def run_flow(
         self,
@@ -491,7 +493,7 @@ class CustomComponent(BaseComponent):
             flow_id=flow_id,
             flow_name=flow_name,
             tweaks=tweaks,
-            user_id=str(self._user_id),
+            user_id=str(self.user_id),
             run_id=self.graph.run_id,
         )
 
@@ -500,7 +502,7 @@ class CustomComponent(BaseComponent):
             msg = "Session is invalid"
             raise ValueError(msg)
         try:
-            return list_flows(user_id=str(self._user_id))
+            return list_flows(user_id=str(self.user_id))
         except Exception as e:
             msg = f"Error listing flows: {e}"
             raise ValueError(msg) from e

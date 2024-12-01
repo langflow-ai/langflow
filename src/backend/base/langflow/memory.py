@@ -1,15 +1,17 @@
+import json
 from collections.abc import Sequence
 from uuid import UUID
 
+from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage
 from loguru import logger
 from sqlalchemy import delete
 from sqlmodel import Session, col, select
 
-from langflow.field_typing import BaseChatMessageHistory
 from langflow.schema.message import Message
 from langflow.services.database.models.message.model import MessageRead, MessageTable
 from langflow.services.deps import session_scope
+from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 
 
 def get_messages(
@@ -74,6 +76,25 @@ def add_messages(messages: Message | list[Message], flow_id: str | None = None):
         raise
 
 
+def update_messages(messages: Message | list[Message]) -> list[Message]:
+    if not isinstance(messages, list):
+        messages = [messages]
+
+    with session_scope() as session:
+        updated_messages: list[MessageTable] = []
+        for message in messages:
+            msg = session.get(MessageTable, message.id)
+            if msg:
+                msg.sqlmodel_update(message.model_dump(exclude_unset=True, exclude_none=True))
+                session.add(msg)
+                session.commit()
+                session.refresh(msg)
+                updated_messages.append(msg)
+            else:
+                logger.warning(f"Message with id {message.id} not found")
+        return [MessageRead.model_validate(message, from_attributes=True) for message in updated_messages]
+
+
 def add_messagetables(messages: list[MessageTable], session: Session):
     for message in messages:
         try:
@@ -83,7 +104,15 @@ def add_messagetables(messages: list[MessageTable], session: Session):
         except Exception as e:
             logger.exception(e)
             raise
-    return [MessageRead.model_validate(message, from_attributes=True) for message in messages]
+
+    new_messages = []
+    for msg in messages:
+        msg.properties = json.loads(msg.properties) if isinstance(msg.properties, str) else msg.properties  # type: ignore[arg-type]
+        msg.content_blocks = [json.loads(j) if isinstance(j, str) else j for j in msg.content_blocks]  # type: ignore[arg-type]
+        msg.category = msg.category or ""
+        new_messages.append(msg)
+
+    return [MessageRead.model_validate(message, from_attributes=True) for message in new_messages]
 
 
 def delete_messages(session_id: str) -> None:
@@ -98,6 +127,19 @@ def delete_messages(session_id: str) -> None:
             .where(col(MessageTable.session_id) == session_id)
             .execution_options(synchronize_session="fetch")
         )
+
+
+def delete_message(id_: str) -> None:
+    """Delete a message from the monitor service based on the provided ID.
+
+    Args:
+        id_ (str): The ID of the message to delete.
+    """
+    with session_scope() as session:
+        message = session.get(MessageTable, id_)
+        if message:
+            session.delete(message)
+            session.commit()
 
 
 def store_message(
@@ -121,10 +163,22 @@ def store_message(
         logger.warning("No message provided.")
         return []
 
-    if not message.session_id or not message.sender or not message.sender_name:
-        msg = "All of session_id, sender, and sender_name must be provided."
+    required_fields = ["session_id", "sender", "sender_name"]
+    missing_fields = [field for field in required_fields if not getattr(message, field)]
+    if missing_fields:
+        missing_descriptions = {
+            "session_id": "session_id (unique conversation identifier)",
+            "sender": f"sender (e.g., '{MESSAGE_SENDER_USER}' or '{MESSAGE_SENDER_AI}')",
+            "sender_name": "sender_name (display name, e.g., 'User' or 'Assistant')",
+        }
+        missing = ", ".join(missing_descriptions[field] for field in missing_fields)
+        msg = (
+            f"It looks like we're missing some important information: {missing}. "
+            "Please ensure that your message includes all the required fields."
+        )
         raise ValueError(msg)
-
+    if hasattr(message, "id") and message.id:
+        return update_messages([message])
     return add_messages([message], flow_id=flow_id)
 
 

@@ -132,7 +132,7 @@ Cada opción se detalla a continuación:
 - `--help`: Muestra todas las opciones disponibles.
 - `--host`: Establece el host al que vincular el servidor. Se puede configurar usando la variable de entorno `LANGFLOW_HOST`. El valor predeterminado es `127.0.0.1`.
 - `--workers`: Establece el número de procesos. Se puede configurar usando la variable de entorno `LANGFLOW_WORKERS`. El valor predeterminado es `1`.
-- `--timeout`: Establece el tiempo de espera del worker en segundos. El valor predeterminado es `60`.
+- `--worker-timeout`: Establece el tiempo de espera del worker en segundos. El valor predeterminado es `60`.
 - `--port`: Establece el puerto en el que escuchar. Se puede configurar usando la variable de entorno `LANGFLOW_PORT`. El valor predeterminado es `7860`.
 - `--env-file`: Especifica la ruta al archivo .env que contiene variables de entorno. El valor predeterminado es `.env`.
 - `--log-level`: Establece el nivel de registro. Se puede configurar usando la variable de entorno `LANGFLOW_LOG_LEVEL`. El valor predeterminado es `critical`.

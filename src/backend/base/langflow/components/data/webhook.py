@@ -6,15 +6,15 @@ from langflow.schema import Data
 
 
 class WebhookComponent(Component):
-    display_name = "Webhook Input"
+    display_name = "Webhook"
     description = "Defines a webhook input for the flow."
     name = "Webhook"
 
     inputs = [
         MultilineInput(
             name="data",
-            display_name="Data",
-            info="Use this field to quickly test the webhook component by providing a JSON payload.",
+            display_name="Payload",
+            info="Receives a payload from external systems via HTTP POST.",
         )
     ]
     outputs = [

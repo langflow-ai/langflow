@@ -97,7 +97,7 @@ def setup_llm_caching() -> None:
     except ImportError:
         logger.warning(f"Could not import {settings_service.settings.cache_type}. ")
     except Exception:  # noqa: BLE001
-        logger.opt(exception=True).warning("Could not setup LLM caching.")
+        logger.warning("Could not setup LLM caching.")
 
 
 def set_langchain_cache(settings) -> None:

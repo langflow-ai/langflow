@@ -6,6 +6,7 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { NodeType } from "@/types/flow";
 import { cloneDeep } from "lodash";
+import { useUpdateNodeInternals } from "reactflow";
 import { mutateTemplate } from "../helpers/mutate-template";
 
 export type handleOnNewValueType = (
@@ -33,13 +34,14 @@ const useHandleOnNewValue = ({
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
   const setNode = setNodeExternal ?? useFlowStore((state) => state.setNode);
+  const updateNodeInternals = useUpdateNodeInternals();
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
-
   const postTemplateValue = usePostTemplateValue({
     parameterId: name,
     nodeId: nodeId,
     node: node,
+    tool_mode: node.tool_mode ?? false,
   });
 
   const handleOnNewValue: handleOnNewValueType = async (changes, options?) => {
@@ -70,17 +72,24 @@ const useHandleOnNewValue = ({
 
     const setNodeClass = (newNodeClass: APIClassType) => {
       options?.setNodeClass && options.setNodeClass(newNodeClass);
-      setNode(nodeId, (oldNode) => {
-        const newData = cloneDeep(oldNode.data);
-        newData.node = newNodeClass;
-        return {
-          ...oldNode,
-          data: newData,
-        };
-      });
+      setNode(
+        nodeId,
+        (oldNode) => {
+          const newData = cloneDeep(oldNode.data);
+          newData.node = newNodeClass;
+          return {
+            ...oldNode,
+            data: newData,
+          };
+        },
+        true,
+        () => {
+          updateNodeInternals(nodeId);
+        },
+      );
     };
 
-    if (shouldUpdate && changes.value) {
+    if (shouldUpdate && changes.value !== undefined) {
       mutateTemplate(
         changes.value,
         newNode,
@@ -90,14 +99,21 @@ const useHandleOnNewValue = ({
       );
     }
 
-    setNode(nodeId, (oldNode) => {
-      const newData = cloneDeep(oldNode.data);
-      newData.node = newNode;
-      return {
-        ...oldNode,
-        data: newData,
-      };
-    });
+    setNode(
+      nodeId,
+      (oldNode) => {
+        const newData = cloneDeep(oldNode.data);
+        newData.node = newNode;
+        return {
+          ...oldNode,
+          data: newData,
+        };
+      },
+      true,
+      () => {
+        updateNodeInternals(nodeId);
+      },
+    );
   };
 
   return { handleOnNewValue };

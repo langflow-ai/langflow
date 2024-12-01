@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from langflow.graph.vertex.base import Vertex
 
 
-async def instantiate_class(
+def instantiate_class(
     vertex: Vertex,
     user_id=None,
     event_manager: EventManager | None = None,
@@ -42,6 +42,7 @@ async def instantiate_class(
         _parameters=custom_params,
         _vertex=vertex,
         _tracing_service=get_tracing_service(),
+        _id=vertex.id,
     )
     if hasattr(custom_component, "set_event_manager"):
         custom_component.set_event_manager(event_manager)

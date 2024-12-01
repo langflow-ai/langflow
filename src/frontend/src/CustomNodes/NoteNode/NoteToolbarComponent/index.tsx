@@ -1,4 +1,4 @@
-import ShadTooltip from "@/components/shadTooltipComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/popover";
 import {
   Select,
-  SelectContent,
+  SelectContentWithoutPortal,
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select-custom";
@@ -17,11 +17,10 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
-import { NodeDataType, noteDataType } from "@/types/flow";
+import { noteDataType } from "@/types/flow";
 import { classNames, cn, openInNewTab } from "@/utils/utils";
-import { cloneDeep, set, take } from "lodash";
-import { useState } from "react";
-import IconComponent from "../../../components/genericIconComponent";
+import { cloneDeep } from "lodash";
+import IconComponent from "../../../components/common/genericIconComponent";
 
 export default function NoteToolbarComponent({
   data,
@@ -30,7 +29,6 @@ export default function NoteToolbarComponent({
   data: noteDataType;
   bgColor: string;
 }) {
-  const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const nodes = useFlowStore((state) => state.nodes);
   const setLastCopiedSelection = useFlowStore(
@@ -86,18 +84,21 @@ export default function NoteToolbarComponent({
       <div className="w-26 noflow nowheel nopan nodelete nodrag h-10">
         <span className="isolate inline-flex rounded-md shadow-sm">
           <Popover>
-            <ShadTooltip content="Color pick">
+            <ShadTooltip content="Pick Color">
               <PopoverTrigger>
                 <div>
                   <div
                     data-testid="color_picker"
-                    className="relative inline-flex items-center rounded-l-md bg-background px-2 py-2 text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+                    className="relative inline-flex items-center rounded-l-md bg-background px-2 py-2 text-foreground shadow-md transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
                   >
                     <div
                       style={{
-                        backgroundColor: COLOR_OPTIONS[bgColor],
+                        backgroundColor: COLOR_OPTIONS[bgColor] ?? "#00000000",
                       }}
-                      className="h-4 w-4 rounded-full"
+                      className={cn(
+                        "h-4 w-4 rounded-full",
+                        COLOR_OPTIONS[bgColor] === null && "border",
+                      )}
                     ></div>
                   </div>
                 </div>
@@ -131,9 +132,10 @@ export default function NoteToolbarComponent({
                         className={cn(
                           "h-4 w-4 rounded-full hover:border hover:border-ring",
                           bgColor === color ? "border-2 border-blue-500" : "",
+                          code === null && "border",
                         )}
                         style={{
-                          backgroundColor: code,
+                          backgroundColor: code ?? "#00000000",
                         }}
                       ></div>
                     </Button>
@@ -143,13 +145,13 @@ export default function NoteToolbarComponent({
             </PopoverContent>
           </Popover>
           <Select onValueChange={handleSelectChange} value="">
-            <ShadTooltip content="All" side="top">
-              <SelectTrigger>
+            <SelectTrigger>
+              <ShadTooltip content="Show More" side="top">
                 <div>
                   <div
                     data-testid="more-options-modal"
                     className={classNames(
-                      "relative -ml-px inline-flex h-8 w-[2rem] items-center rounded-r-md bg-background text-foreground shadow-md ring-1 ring-inset ring-ring transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
+                      "relative -ml-px inline-flex h-8 w-[2rem] items-center rounded-r-md bg-background text-foreground shadow-md transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
                     )}
                   >
                     <IconComponent
@@ -158,9 +160,9 @@ export default function NoteToolbarComponent({
                     />
                   </div>
                 </div>
-              </SelectTrigger>
-            </ShadTooltip>
-            <SelectContent>
+              </ShadTooltip>
+            </SelectTrigger>
+            <SelectContentWithoutPortal>
               <SelectItem value={"duplicate"}>
                 <ToolbarSelectItem
                   shortcut={
@@ -209,7 +211,7 @@ export default function NoteToolbarComponent({
                   </span>
                 </div>
               </SelectItem>
-            </SelectContent>
+            </SelectContentWithoutPortal>
           </Select>
         </span>
       </div>

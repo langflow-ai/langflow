@@ -82,13 +82,20 @@ async def run_flow(
     output_type: str | None = "chat",
     user_id: str | None = None,
     run_id: str | None = None,
+    session_id: str | None = None,
+    graph: Graph | None = None,
 ) -> list[RunOutputs]:
     if user_id is None:
         msg = "Session is invalid"
         raise ValueError(msg)
-    graph = await load_flow(user_id, flow_id, flow_name, tweaks)
+    if graph is None:
+        graph = await load_flow(user_id, flow_id, flow_name, tweaks)
     if run_id:
         graph.set_run_id(UUID(run_id))
+    if session_id:
+        graph.session_id = session_id
+    if user_id:
+        graph.user_id = user_id
 
     if inputs is None:
         inputs = []
@@ -283,15 +290,17 @@ def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: UUID | None =
         return FlowRead.model_validate(flow, from_attributes=True)
 
 
-def generate_unique_flow_name(flow_name, user_id, session):
+async def generate_unique_flow_name(flow_name, user_id, session):
     original_name = flow_name
     n = 1
     while True:
         # Check if a flow with the given name exists
-        existing_flow = session.exec(
-            select(Flow).where(
-                Flow.name == flow_name,
-                Flow.user_id == user_id,
+        existing_flow = (
+            await session.exec(
+                select(Flow).where(
+                    Flow.name == flow_name,
+                    Flow.user_id == user_id,
+                )
             )
         ).first()
 

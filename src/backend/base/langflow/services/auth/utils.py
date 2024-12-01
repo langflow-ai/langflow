@@ -3,7 +3,7 @@ import random
 import warnings
 from collections.abc import Coroutine
 from datetime import datetime, timedelta, timezone
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
 from cryptography.fernet import Fernet
@@ -11,15 +11,17 @@ from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from jose import JWTError, jwt
 from loguru import logger
-from sqlmodel import Session
+from sqlmodel.ext.asyncio.session import AsyncSession
 from starlette.websockets import WebSocket
 
 from langflow.services.database.models.api_key.crud import check_key
-from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_session, get_settings_service
+from langflow.services.deps import get_async_session, get_db_service, get_settings_service
 from langflow.services.settings.service import SettingsService
+
+if TYPE_CHECKING:
+    from langflow.services.database.models.api_key.model import ApiKey
 
 oauth2_login = OAuth2PasswordBearer(tokenUrl="api/v1/login", auto_error=False)
 
@@ -35,41 +37,40 @@ MINIMUM_KEY_LENGTH = 32
 async def api_key_security(
     query_param: Annotated[str, Security(api_key_query)],
     header_param: Annotated[str, Security(api_key_header)],
-    db: Annotated[Session, Depends(get_session)],
 ) -> UserRead | None:
     settings_service = get_settings_service()
-    result: ApiKey | User | None = None
-    if settings_service.auth_settings.AUTO_LOGIN:
-        # Get the first user
-        if not settings_service.auth_settings.SUPERUSER:
+    result: ApiKey | User | None
+
+    async with get_db_service().with_async_session() as db:
+        if settings_service.auth_settings.AUTO_LOGIN:
+            # Get the first user
+            if not settings_service.auth_settings.SUPERUSER:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Missing first superuser credentials",
+                )
+
+            result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
+
+        elif not query_param and not header_param:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Missing first superuser credentials",
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="An API key must be passed as query or header",
             )
 
-        result = get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
+        elif query_param:
+            result = await check_key(db, query_param)
 
-    elif not query_param and not header_param:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="An API key must be passed as query or header",
-        )
+        else:
+            result = await check_key(db, header_param)
 
-    elif query_param:
-        result = check_key(db, query_param)
-
-    else:
-        result = check_key(db, header_param)
-
-    if not result:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid or missing API key",
-        )
-    if isinstance(result, ApiKey):
-        return UserRead.model_validate(result.user, from_attributes=True)
-    if isinstance(result, User):
-        return UserRead.model_validate(result, from_attributes=True)
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid or missing API key",
+            )
+        if isinstance(result, User):
+            return UserRead.model_validate(result, from_attributes=True)
     msg = "Invalid result type"
     raise ValueError(msg)
 
@@ -78,11 +79,11 @@ async def get_current_user(
     token: Annotated[str, Security(oauth2_login)],
     query_param: Annotated[str, Security(api_key_query)],
     header_param: Annotated[str, Security(api_key_header)],
-    db: Annotated[Session, Depends(get_session)],
+    db: Annotated[AsyncSession, Depends(get_async_session)],
 ) -> User:
     if token:
         return await get_current_user_by_jwt(token, db)
-    user = await api_key_security(query_param, header_param, db)
+    user = await api_key_security(query_param, header_param)
     if user:
         return user
 
@@ -93,8 +94,8 @@ async def get_current_user(
 
 
 async def get_current_user_by_jwt(
-    token: Annotated[str, Depends(oauth2_login)],
-    db: Annotated[Session, Depends(get_session)],
+    token: str,
+    db: AsyncSession,
 ) -> User:
     settings_service = get_settings_service()
 
@@ -142,7 +143,7 @@ async def get_current_user_by_jwt(
             headers={"WWW-Authenticate": "Bearer"},
         ) from e
 
-    user = get_user_by_id(db, user_id)
+    user = await get_user_by_id(db, user_id)
     if user is None or not user.is_active:
         logger.info("User not found or inactive.")
         raise HTTPException(
@@ -155,7 +156,7 @@ async def get_current_user_by_jwt(
 
 async def get_current_user_for_websocket(
     websocket: WebSocket,
-    db: Annotated[Session, Depends(get_session)],
+    db: Annotated[AsyncSession, Depends(get_async_session)],
     query_param: Annotated[str, Security(api_key_query)],
 ) -> User | None:
     token = websocket.query_params.get("token")
@@ -163,17 +164,17 @@ async def get_current_user_for_websocket(
     if token:
         return await get_current_user_by_jwt(token, db)
     if api_key:
-        return await api_key_security(api_key, query_param, db)
+        return await api_key_security(api_key, query_param)
     return None
 
 
-def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
+async def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
     if not current_user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
     return current_user
 
 
-def get_current_active_superuser(current_user: Annotated[User, Depends(get_current_user)]) -> User:
+async def get_current_active_superuser(current_user: Annotated[User, Depends(get_current_user)]) -> User:
     if not current_user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
     if not current_user.is_superuser:
@@ -205,12 +206,12 @@ def create_token(data: dict, expires_delta: timedelta):
     )
 
 
-def create_super_user(
+async def create_super_user(
     username: str,
     password: str,
-    db: Session,
+    db: AsyncSession,
 ) -> User:
-    super_user = get_user_by_username(db, username)
+    super_user = await get_user_by_username(db, username)
 
     if not super_user:
         super_user = User(
@@ -222,17 +223,17 @@ def create_super_user(
         )
 
         db.add(super_user)
-        db.commit()
-        db.refresh(super_user)
+        await db.commit()
+        await db.refresh(super_user)
 
     return super_user
 
 
-def create_user_longterm_token(db: Session) -> tuple[UUID, dict]:
+async def create_user_longterm_token(db: AsyncSession) -> tuple[UUID, dict]:
     settings_service = get_settings_service()
 
     username = settings_service.auth_settings.SUPERUSER
-    super_user = get_user_by_username(db, username)
+    super_user = await get_user_by_username(db, username)
     if not super_user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Super user hasn't been created")
     access_token_expires_longterm = timedelta(days=365)
@@ -242,7 +243,7 @@ def create_user_longterm_token(db: Session) -> tuple[UUID, dict]:
     )
 
     # Update: last_login_at
-    update_user_last_login_at(super_user.id, db)
+    await update_user_last_login_at(super_user.id, db)
 
     return super_user.id, {
         "access_token": access_token,
@@ -268,7 +269,7 @@ def get_user_id_from_token(token: str) -> UUID:
         return UUID(int=0)
 
 
-def create_user_tokens(user_id: UUID, db: Session, *, update_last_login: bool = False) -> dict:
+async def create_user_tokens(user_id: UUID, db: AsyncSession, *, update_last_login: bool = False) -> dict:
     settings_service = get_settings_service()
 
     access_token_expires = timedelta(seconds=settings_service.auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS)
@@ -285,7 +286,7 @@ def create_user_tokens(user_id: UUID, db: Session, *, update_last_login: bool = 
 
     # Update: last_login_at
     if update_last_login:
-        update_user_last_login_at(user_id, db)
+        await update_user_last_login_at(user_id, db)
 
     return {
         "access_token": access_token,
@@ -294,7 +295,7 @@ def create_user_tokens(user_id: UUID, db: Session, *, update_last_login: bool = 
     }
 
 
-def create_refresh_token(refresh_token: str, db: Session):
+async def create_refresh_token(refresh_token: str, db: AsyncSession):
     settings_service = get_settings_service()
 
     try:
@@ -312,12 +313,12 @@ def create_refresh_token(refresh_token: str, db: Session):
         if user_id is None or token_type == "":
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
-        user_exists = get_user_by_id(db, user_id)
+        user_exists = await get_user_by_id(db, user_id)
 
         if user_exists is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
-        return create_user_tokens(user_id, db)
+        return await create_user_tokens(user_id, db)
 
     except JWTError as e:
         logger.exception("JWT decoding error")
@@ -327,8 +328,8 @@ def create_refresh_token(refresh_token: str, db: Session):
         ) from e
 
 
-def authenticate_user(username: str, password: str, db: Session) -> User | None:
-    user = get_user_by_username(db, username)
+async def authenticate_user(username: str, password: str, db: AsyncSession) -> User | None:
+    user = await get_user_by_username(db, username)
 
     if not user:
         return None
@@ -381,6 +382,6 @@ def decrypt_api_key(encrypted_api_key: str, settings_service: SettingsService):
         try:
             decrypted_key = fernet.decrypt(encrypted_api_key.encode()).decode()
         except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Failed to decrypt API key")
+            logger.debug("Failed to decrypt API key")
             decrypted_key = fernet.decrypt(encrypted_api_key).decode()
     return decrypted_key

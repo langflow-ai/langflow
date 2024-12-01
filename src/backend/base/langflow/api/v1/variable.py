@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 from sqlalchemy.exc import NoResultFound
 
-from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils import AsyncDbSession, CurrentActiveUser
 from langflow.services.database.models.variable import VariableCreate, VariableRead, VariableUpdate
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import GENERIC_TYPE
@@ -15,7 +15,7 @@ router = APIRouter(prefix="/variables", tags=["Variables"])
 @router.post("/", response_model=VariableRead, status_code=201)
 async def create_variable(
     *,
-    session: DbSession,
+    session: AsyncDbSession,
     variable: VariableCreate,
     current_user: CurrentActiveUser,
 ):
@@ -30,10 +30,10 @@ async def create_variable(
     if not variable.value:
         raise HTTPException(status_code=400, detail="Variable value cannot be empty")
 
-    if variable.name in variable_service.list_variables(user_id=current_user.id, session=session):
+    if variable.name in await variable_service.list_variables(user_id=current_user.id, session=session):
         raise HTTPException(status_code=400, detail="Variable name already exists")
     try:
-        return variable_service.create_variable(
+        return await variable_service.create_variable(
             user_id=current_user.id,
             name=variable.name,
             value=variable.value,
@@ -50,7 +50,7 @@ async def create_variable(
 @router.get("/", response_model=list[VariableRead], status_code=200)
 async def read_variables(
     *,
-    session: DbSession,
+    session: AsyncDbSession,
     current_user: CurrentActiveUser,
 ):
     """Read all variables."""
@@ -59,7 +59,7 @@ async def read_variables(
         msg = "Variable service is not an instance of DatabaseVariableService"
         raise TypeError(msg)
     try:
-        return variable_service.get_all(user_id=current_user.id, session=session)
+        return await variable_service.get_all(user_id=current_user.id, session=session)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -67,7 +67,7 @@ async def read_variables(
 @router.patch("/{variable_id}", response_model=VariableRead, status_code=200)
 async def update_variable(
     *,
-    session: DbSession,
+    session: AsyncDbSession,
     variable_id: UUID,
     variable: VariableUpdate,
     current_user: CurrentActiveUser,
@@ -78,7 +78,7 @@ async def update_variable(
         msg = "Variable service is not an instance of DatabaseVariableService"
         raise TypeError(msg)
     try:
-        return variable_service.update_variable_fields(
+        return await variable_service.update_variable_fields(
             user_id=current_user.id,
             variable_id=variable_id,
             variable=variable,
@@ -94,13 +94,13 @@ async def update_variable(
 @router.delete("/{variable_id}", status_code=204)
 async def delete_variable(
     *,
-    session: DbSession,
+    session: AsyncDbSession,
     variable_id: UUID,
     current_user: CurrentActiveUser,
 ) -> None:
     """Delete a variable."""
     variable_service = get_variable_service()
     try:
-        variable_service.delete_variable_by_id(user_id=current_user.id, variable_id=variable_id, session=session)
+        await variable_service.delete_variable_by_id(user_id=current_user.id, variable_id=variable_id, session=session)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

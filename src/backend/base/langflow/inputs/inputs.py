@@ -1,6 +1,6 @@
 import warnings
 from collections.abc import AsyncIterator, Iterator
-from typing import Any, get_args
+from typing import Any, TypeAlias, get_args
 
 from pandas import DataFrame
 from pydantic import Field, field_validator
@@ -8,6 +8,7 @@ from pydantic import Field, field_validator
 from langflow.inputs.validators import CoalesceBool
 from langflow.schema.data import Data
 from langflow.schema.message import Message
+from langflow.services.database.models.message.model import MessageBase
 from langflow.template.field.base import Input
 
 from .input_mixin import (
@@ -25,6 +26,7 @@ from .input_mixin import (
     SerializableFieldTypes,
     SliderMixin,
     TableMixin,
+    ToolModeMixin,
 )
 
 
@@ -66,7 +68,7 @@ class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
     field_type: SerializableFieldTypes = FieldTypes.OTHER
 
 
-class DataInput(HandleInput, InputTraceMixin, ListableInputMixin):
+class DataInput(HandleInput, InputTraceMixin, ListableInputMixin, ToolModeMixin):
     """Represents an Input that has a Handle that receives a Data object.
 
     Attributes:
@@ -76,7 +78,11 @@ class DataInput(HandleInput, InputTraceMixin, ListableInputMixin):
     input_types: list[str] = ["Data"]
 
 
-class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
+class DataFrameInput(HandleInput, InputTraceMixin, ListableInputMixin, ToolModeMixin):
+    input_types: list[str] = ["DataFrame"]
+
+
+class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.PROMPT
 
 
@@ -148,13 +154,15 @@ class MessageInput(StrInput, InputTraceMixin):
             return Message(**v)
         if isinstance(v, Message):
             return v
-        if isinstance(v, str):
+        if isinstance(v, str | AsyncIterator | Iterator):
             return Message(text=v)
+        if isinstance(v, MessageBase):
+            return Message(**v.model_dump())
         msg = f"Invalid value type {type(v)}"
         raise ValueError(msg)
 
 
-class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin):
+class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin, ToolModeMixin):
     """Represents a text input component for the Langflow system.
 
     This component is used to handle text inputs in the Langflow system.
@@ -208,7 +216,7 @@ class MessageTextInput(StrInput, MetadataTraceMixin, InputTraceMixin):
         return value
 
 
-class MultilineInput(MessageTextInput, MultilineMixin, InputTraceMixin):
+class MultilineInput(MessageTextInput, MultilineMixin, InputTraceMixin, ToolModeMixin):
     """Represents a multiline input field.
 
     Attributes:
@@ -406,7 +414,7 @@ class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
     value: dict | None = {}
 
 
-class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin):
+class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a dropdown input field.
 
     This class represents a dropdown input field and provides functionality for handling dropdown values.
@@ -488,7 +496,7 @@ class DefaultPromptField(Input):
     value: Any = ""  # Set the value to empty string
 
 
-InputTypes = (
+InputTypes: TypeAlias = (
     Input
     | DefaultPromptField
     | BoolInput
@@ -512,6 +520,7 @@ InputTypes = (
     | TableInput
     | LinkInput
     | SliderInput
+    | DataFrameInput
 )
 
 InputTypesMap: dict[str, type[InputTypes]] = {t.__name__: t for t in get_args(InputTypes)}

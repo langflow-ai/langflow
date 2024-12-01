@@ -1,7 +1,9 @@
 import { Button } from "@/components/ui/button";
+import Loading from "@/components/ui/loading";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
+import useFlowStore from "@/stores/flowStore";
 import { useEffect, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
 import {
@@ -38,6 +40,7 @@ export default function ChatInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { validateFileSize } = useFileSizeValidator(setErrorData);
+  const stopBuilding = useFlowStore((state) => state.stopBuilding);
 
   useFocusOnUnlock(lockChat, inputRef);
   useAutoResizeTextArea(chatValue, inputRef);
@@ -150,7 +153,7 @@ export default function ChatInput({
     );
   };
 
-  const classNameFilePreview = `flex w-full items-center gap-2 bg-background py-2 overflow-auto custom-scroll`;
+  const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto custom-scroll`;
 
   const handleButtonClick = () => {
     fileInputRef.current!.click();
@@ -164,17 +167,33 @@ export default function ChatInput({
   if (noInput) {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center">
-        <div className="flex flex-col items-center justify-center gap-3 bg-background p-2">
-          <Button
-            className="font-semibold"
-            onClick={() => {
-              sendMessage({
-                repeat: 1,
-              });
-            }}
-          >
-            Run Flow
-          </Button>
+        <div className="flex w-full flex-col items-center justify-center gap-3 rounded-md border border-input bg-muted p-2 py-4">
+          {!lockChat ? (
+            <Button
+              data-testid="button-send"
+              className="font-semibold"
+              onClick={() => {
+                sendMessage({
+                  repeat: 1,
+                });
+              }}
+            >
+              Run Flow
+            </Button>
+          ) : (
+            <Button
+              onClick={stopBuilding}
+              data-testid="button-stop"
+              unstyled
+              className="form-modal-send-button cursor-pointer bg-muted text-foreground hover:bg-secondary-hover dark:hover:bg-input"
+            >
+              <div className="flex items-center gap-2 rounded-md text-[14px] font-medium">
+                Stop
+                <Loading className="h-[16px] w-[16px]" />
+              </div>
+            </Button>
+          )}
+
           <p className="text-muted-foreground">
             Add a{" "}
             <a
@@ -193,7 +212,7 @@ export default function ChatInput({
 
   return (
     <div className="flex w-full flex-col-reverse">
-      <div className="flex w-full flex-col rounded-md border border-border p-4">
+      <div className="flex w-full flex-col rounded-md border border-input p-4 hover:border-muted-foreground focus:border-[1.75px] has-[:focus]:border-primary">
         <TextAreaWrapper
           checkSendingOk={checkSendingOk}
           send={send}

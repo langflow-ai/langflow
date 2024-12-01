@@ -1,4 +1,3 @@
-import pytest
 from langflow.components.inputs import ChatInput
 from langflow.memory import get_messages
 from langflow.schema.message import Message
@@ -6,7 +5,6 @@ from langflow.schema.message import Message
 from tests.integration.utils import run_single_component
 
 
-@pytest.mark.asyncio
 async def test_default():
     outputs = await run_single_component(ChatInput, run_input="hello")
     assert isinstance(outputs["message"], Message)
@@ -21,7 +19,6 @@ async def test_default():
     assert outputs["message"].sender_name == "User"
 
 
-@pytest.mark.asyncio
 async def test_sender():
     outputs = await run_single_component(
         ChatInput, inputs={"sender": "Machine", "sender_name": "AI"}, run_input="hello"
@@ -32,7 +29,6 @@ async def test_sender():
     assert outputs["message"].sender_name == "AI"
 
 
-@pytest.mark.asyncio
 async def test_do_not_store_messages():
     session_id = "test-session-id"
     outputs = await run_single_component(

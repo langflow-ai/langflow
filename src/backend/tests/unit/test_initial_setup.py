@@ -1,10 +1,11 @@
+import asyncio
 from datetime import datetime
 from pathlib import Path
 
 import pytest
-from langflow.custom.directory_reader.utils import build_custom_component_list_from_path
+from langflow.custom.directory_reader.utils import abuild_custom_component_list_from_path
+from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.initial_setup.setup import (
-    STARTER_FOLDER_NAME,
     get_project_data,
     load_starter_projects,
     update_projects_components_with_latest_component_versions,
@@ -37,22 +38,23 @@ def test_get_project_data():
             project_tags,
         ) = get_project_data(project)
         assert isinstance(project_gradient, str) or project_gradient is None
-        assert isinstance(project_tags, list)
-        assert isinstance(project_name, str)
-        assert isinstance(project_description, str)
-        assert isinstance(project_is_component, bool)
-        assert isinstance(updated_at_datetime, datetime)
-        assert isinstance(project_data, dict)
-        assert isinstance(project_icon, str) or project_icon is None
-        assert isinstance(project_icon_bg_color, str) or project_icon_bg_color is None
+        assert isinstance(project_tags, list), f"Project {project_name} has no tags"
+        assert isinstance(project_name, str), f"Project {project_name} has no name"
+        assert isinstance(project_description, str), f"Project {project_name} has no description"
+        assert isinstance(project_is_component, bool), f"Project {project_name} has no is_component"
+        assert isinstance(updated_at_datetime, datetime), f"Project {project_name} has no updated_at_datetime"
+        assert isinstance(project_data, dict), f"Project {project_name} has no data"
+        assert isinstance(project_icon, str) or project_icon is None, f"Project {project_name} has no icon"
+        assert (
+            isinstance(project_icon_bg_color, str) or project_icon_bg_color is None
+        ), f"Project {project_name} has no icon_bg_color"
 
 
-@pytest.mark.asyncio
 @pytest.mark.usefixtures("client")
 async def test_create_or_update_starter_projects():
     with session_scope() as session:
         # Get the number of projects returned by load_starter_projects
-        num_projects = len(load_starter_projects())
+        num_projects = len(await asyncio.to_thread(load_starter_projects))
 
         # Get the number of projects in the database
         folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
@@ -65,7 +67,6 @@ async def test_create_or_update_starter_projects():
 
 
 # Some starter projects require integration
-# @pytest.mark.asyncio
 # async def test_starter_projects_can_run_successfully(client):
 #     with session_scope() as session:
 #         # Run the function to create or update projects
@@ -128,10 +129,9 @@ def add_edge(source, target, from_output, to_input):
     }
 
 
-@pytest.mark.asyncio
 async def test_refresh_starter_projects():
     data_path = str(Path(__file__).parent.parent.parent.absolute() / "base" / "langflow" / "components")
-    components = build_custom_component_list_from_path(data_path)
+    components = await abuild_custom_component_list_from_path(data_path)
 
     chat_input = find_component_by_name(components, "ChatInput")
     chat_output = find_component_by_name(components, "ChatOutput")

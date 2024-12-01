@@ -7,6 +7,7 @@ class ZepChatMemory(LCChatMemoryComponent):
     display_name = "Zep Chat Memory"
     description = "Retrieves and store chat messages from Zep."
     name = "ZepChatMemory"
+    icon = "ZepMemory"
 
     inputs = [
         MessageTextInput(name="url", display_name="Zep URL", info="URL of the Zep instance."),

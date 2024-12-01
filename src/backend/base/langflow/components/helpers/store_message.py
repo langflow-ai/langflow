@@ -39,6 +39,7 @@ class StoreMessageComponent(Component):
             display_name="Session ID",
             info="The session ID of the chat. If empty, the current session ID parameter will be used.",
             value="",
+            advanced=True,
         ),
     ]
 

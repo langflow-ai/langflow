@@ -16,9 +16,10 @@ from langflow.schema.dotdict import dotdict
 
 class SearXNGToolComponent(LCToolComponent):
     search_headers: dict = {}
-    display_name = "SearXNG Search Tool"
+    display_name = "SearXNG Search"
     description = "A component that searches for tools using SearXNG."
     name = "SearXNGTool"
+    legacy: bool = True
 
     inputs = [
         MessageTextInput(
@@ -127,7 +128,10 @@ class SearXNGToolComponent(LCToolComponent):
 
         schema_fields = {
             "query": (str, Field(..., description="The query to search for.")),
-            "categories": (list[str], Field(default=[], description="The categories to search in.")),
+            "categories": (
+                list[str],
+                Field(default=[], description="The categories to search in."),
+            ),
         }
 
         searx_search_schema = create_model("SearxSearchSchema", **schema_fields)

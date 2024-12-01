@@ -1,11 +1,13 @@
 import json
 from uuid import UUID
 
+import pytest
 from langflow.memory import get_messages
 from langflow.services.database.models.flow import FlowCreate, FlowUpdate
 from orjson import orjson
 
 
+@pytest.mark.benchmark
 async def test_build_flow(client, json_memory_chatbot_no_llm, logged_in_headers):
     flow_id = await _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
 
@@ -15,6 +17,7 @@ async def test_build_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
     check_messages(flow_id)
 
 
+@pytest.mark.benchmark
 async def test_build_flow_from_request_data(client, json_memory_chatbot_no_llm, logged_in_headers):
     flow_id = await _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
     response = await client.get("api/v1/flows/" + str(flow_id), headers=logged_in_headers)
@@ -70,7 +73,7 @@ async def consume_and_assert_stream(r):
             assert parsed["event"] == "vertices_sorted"
             ids = parsed["data"]["ids"]
             ids.sort()
-            assert ids == ["ChatInput-CIGht", "Memory-amN4Z"]
+            assert ids == ["ChatInput-CIGht"]
 
             to_run = parsed["data"]["to_run"]
             to_run.sort()

@@ -8,7 +8,7 @@ from langflow.base.models.model import LCModelComponent
 from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.inputs import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
+from langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
 from langflow.inputs.inputs import HandleInput
 
 
@@ -27,7 +27,12 @@ class OpenAIModelComponent(LCModelComponent):
             info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
             range_spec=RangeSpec(min=0, max=128000),
         ),
-        DictInput(name="model_kwargs", display_name="Model Kwargs", advanced=True),
+        DictInput(
+            name="model_kwargs",
+            display_name="Model Kwargs",
+            advanced=True,
+            info="Additional keyword arguments to pass to the model.",
+        ),
         BoolInput(
             name="json_mode",
             display_name="JSON Mode",
@@ -65,7 +70,7 @@ class OpenAIModelComponent(LCModelComponent):
             advanced=False,
             value="OPENAI_API_KEY",
         ),
-        FloatInput(name="temperature", display_name="Temperature", value=0.1),
+        SliderInput(name="temperature", display_name="Temperature", value=0.1, range_spec=RangeSpec(min=0, max=1)),
         IntInput(
             name="seed",
             display_name="Seed",

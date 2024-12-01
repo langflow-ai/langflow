@@ -59,7 +59,7 @@ This will set up the development environment by installing backend and frontend 
 
 It is advised to run `make lint`, `make format`, and `make unit_tests` before pushing to the repository.
 
-### Run locally (Poetry and Node.js)
+### Run locally (uv and Node.js)
 
 Langflow can run locally by cloning the repository and installing the dependencies. We recommend using a virtual environment to isolate the dependencies from your system.
 

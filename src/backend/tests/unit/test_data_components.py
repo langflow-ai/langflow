@@ -15,7 +15,6 @@ def api_request():
     return data.APIRequestComponent()
 
 
-@pytest.mark.asyncio
 @respx.mock
 async def test_successful_get_request(api_request):
     # Mocking a successful GET request
@@ -25,7 +24,12 @@ async def test_successful_get_request(api_request):
     respx.get(url).mock(return_value=Response(200, json=mock_response))
 
     # Making the request
-    result = await api_request.make_request(client=httpx.AsyncClient(), method=method, url=url)
+    result = await api_request.make_request(
+        client=httpx.AsyncClient(),
+        method=method,
+        url=url,
+        include_httpx_metadata=True,
+    )
 
     # Assertions
     assert result.data["status_code"] == 200
@@ -53,7 +57,6 @@ def test_parse_curl(api_request):
     assert new_build_config["body"]["value"] == {"key": "value"}
 
 
-@pytest.mark.asyncio
 @respx.mock
 async def test_failed_request(api_request):
     # Mocking a failed GET request
@@ -62,13 +65,14 @@ async def test_failed_request(api_request):
     respx.get(url).mock(return_value=Response(404))
 
     # Making the request
-    result = await api_request.make_request(client=httpx.AsyncClient(), method=method, url=url)
+    result = await api_request.make_request(
+        client=httpx.AsyncClient(), method=method, url=url, include_httpx_metadata=True
+    )
 
     # Assertions
     assert result.data["status_code"] == 404
 
 
-@pytest.mark.asyncio
 @respx.mock
 async def test_timeout(api_request):
     # Mocking a timeout
@@ -77,14 +81,15 @@ async def test_timeout(api_request):
     respx.get(url).mock(side_effect=httpx.TimeoutException(message="Timeout", request=None))
 
     # Making the request
-    result = await api_request.make_request(client=httpx.AsyncClient(), method=method, url=url, timeout=1)
+    result = await api_request.make_request(
+        client=httpx.AsyncClient(), method=method, url=url, timeout=1, include_httpx_metadata=True
+    )
 
     # Assertions
     assert result.data["status_code"] == 408
     assert result.data["error"] == "Request timed out"
 
 
-@pytest.mark.asyncio
 @respx.mock
 async def test_build_with_multiple_urls(api_request):
     # This test depends on having a working internet connection and accessible URLs

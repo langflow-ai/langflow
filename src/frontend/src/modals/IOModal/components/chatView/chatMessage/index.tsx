@@ -1,4 +1,4 @@
-import ShadTooltip from "@/components/shadTooltipComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -9,9 +9,9 @@ import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
 import MaleTechnology from "../../../../../assets/male-technologist.png";
 import Robot from "../../../../../assets/robot.png";
-import CodeTabsComponent from "../../../../../components/codeTabsComponent";
-import IconComponent from "../../../../../components/genericIconComponent";
-import SanitizedHTMLWrapper from "../../../../../components/sanitizedHTMLWrapper";
+import IconComponent from "../../../../../components/common/genericIconComponent";
+import SanitizedHTMLWrapper from "../../../../../components/common/sanitizedHTMLWrapper";
+import CodeTabsComponent from "../../../../../components/core/codeTabsComponent";
 import {
   EMPTY_INPUT_SEND_MESSAGE,
   EMPTY_OUTPUT_SEND_MESSAGE,
@@ -203,6 +203,10 @@ export default function ChatMessage({
           "form-modal-chat-position group hover:bg-background",
           chat.isSend ? "" : " ",
         )}
+        style={{
+          backgroundColor: chat.background_color || "#FF00FF", // Loud magenta as default
+          color: chat.text_color || "#00FFFF", // Loud cyan as default
+        }}
       >
         <div
           className={
@@ -216,11 +220,19 @@ export default function ChatMessage({
                 !chat.isSend ? "bg-chat-bot-icon" : "bg-chat-user-icon",
               )}
             >
-              <img
-                src={!chat.isSend ? Robot : MaleTechnology}
-                className="absolute scale-[60%]"
-                alt={!chat.isSend ? "robot_image" : "male_technology"}
-              />
+              {chat.icon ? (
+                <img
+                  src={chat.icon}
+                  className="absolute scale-[60%]"
+                  alt="icon"
+                />
+              ) : (
+                <img
+                  src={!chat.isSend ? Robot : MaleTechnology}
+                  className="absolute scale-[60%]"
+                  alt={!chat.isSend ? "robot_image" : "male_technology"}
+                />
+              )}
             </div>
             <span
               className="max-w-24 truncate text-xs"

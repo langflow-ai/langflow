@@ -1,18 +1,17 @@
 import copy
 import json
-from typing import TYPE_CHECKING, cast
+from datetime import datetime
+from decimal import Decimal
+from typing import cast
+from uuid import UUID
 
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from langchain_core.prompts.image import ImagePromptTemplate
 from loguru import logger
 from pydantic import BaseModel, model_serializer, model_validator
 
-from langflow.schema.serialize import recursive_serialize_or_str
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
-
-if TYPE_CHECKING:
-    from langchain_core.prompt_values import ImagePromptValue
+from langflow.utils.image import create_data_url
 
 
 class Data(BaseModel):
@@ -54,6 +53,24 @@ class Data(BaseModel):
             The text value from the data dictionary or the default value.
         """
         return self.data.get(self.text_key, self.default_value)
+
+    def set_text(self, text: str | None) -> str:
+        r"""Sets the text value in the data dictionary.
+
+        The object's `text` value is set to `text parameter as given, with the following modifications:
+
+         - `text` value of `None` is converted to an empty string.
+         - `text` value is converted to `str` type.
+
+        Args:
+            text (str): The text to be set in the data dictionary.
+
+        Returns:
+            str: The text value that was set in the data dictionary.
+        """
+        new_text = "" if text is None else str(text)
+        self.data[self.text_key] = new_text
+        return new_text
 
     @classmethod
     def from_document(cls, document: Document) -> "Data":
@@ -113,7 +130,9 @@ class Data(BaseModel):
         """
         data_copy = self.data.copy()
         text = data_copy.pop(self.text_key, self.default_value)
-        return Document(page_content=text, metadata=data_copy)
+        if isinstance(text, str):
+            return Document(page_content=text, metadata=data_copy)
+        return Document(page_content=str(text), metadata=data_copy)
 
     def to_lc_message(
         self,
@@ -138,11 +157,8 @@ class Data(BaseModel):
             if files:
                 contents = [{"type": "text", "text": text}]
                 for file_path in files:
-                    image_template = ImagePromptTemplate()
-                    image_prompt_value: ImagePromptValue = image_template.invoke(
-                        input={"path": file_path}, config={"callbacks": self.get_langchain_callbacks()}
-                    )
-                    contents.append({"type": "image_url", "image_url": image_prompt_value.image_url})
+                    image_url = create_data_url(file_path)
+                    contents.append({"type": "image_url", "image_url": {"url": image_url}})
                 human_message = HumanMessage(content=contents)
             else:
                 human_message = HumanMessage(
@@ -200,8 +216,7 @@ class Data(BaseModel):
         # return a JSON string representation of the Data atributes
         try:
             data = {k: v.to_json() if hasattr(v, "to_json") else v for k, v in self.data.items()}
-            data = recursive_serialize_or_str(data)
-            return json.dumps(data, indent=4)
+            return serialize_data(data)  # use the custom serializer
         except Exception:  # noqa: BLE001
             logger.opt(exception=True).debug("Error converting Data to JSON")
             return str(self.data)
@@ -209,5 +224,23 @@ class Data(BaseModel):
     def __contains__(self, key) -> bool:
         return key in self.data
 
-    def __eq__(self, other):
+    def __eq__(self, /, other):
         return isinstance(other, Data) and self.data == other.data
+
+
+def custom_serializer(obj):
+    if isinstance(obj, datetime):
+        return obj.astimezone().isoformat()
+    if isinstance(obj, Decimal):
+        return float(obj)
+    if isinstance(obj, UUID):
+        return str(obj)
+    if isinstance(obj, BaseModel):
+        return obj.model_dump()
+    # Add more custom serialization rules as needed
+    msg = f"Type {type(obj)} not serializable"
+    raise TypeError(msg)
+
+
+def serialize_data(data):
+    return json.dumps(data, indent=4, default=custom_serializer)

@@ -9,7 +9,7 @@ from langflow.template import Output
 class GetEnvVar(Component):
     display_name = "Get env var"
     description = "Get env var"
-    icon = "custom_components"
+    icon = "AstraDB"
 
     inputs = [
         StrInput(

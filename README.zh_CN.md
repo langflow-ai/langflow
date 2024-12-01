@@ -28,7 +28,7 @@
 <div align="center">
   <a href="./README.md"><img alt="README in English" src="https://img.shields.io/badge/英文-d9d9d9"></a>
   <a href="./README.PT.md"><img alt="README in Portuguese" src="https://img.shields.io/badge/Portuguese-d9d9d9"></a>
-  <a href="./README.ES.md"><img alt="README in Spanish" src="https://img.shields.io/badge/Spanish-d9d9d9"></a>  
+  <a href="./README.ES.md"><img alt="README in Spanish" src="https://img.shields.io/badge/Spanish-d9d9d9"></a>
   <a href="./README.zh_CN.md"><img alt="README in Simplified Chinese" src="https://img.shields.io/badge/简体中文-d9d9d9"></a>
   <a href="./README.ja.md"><img alt="README in Japanese" src="https://img.shields.io/badge/日本語-d9d9d9"></a>
   <a href="./README.KR.md"><img alt="README in KOREAN" src="https://img.shields.io/badge/한국어-d9d9d9"></a>
@@ -134,7 +134,7 @@ langflow run [OPTIONS]
 - `--help`: 显示所有可用参数。
 - `--host`: 定义绑定服务器的主机 host 参数，可以使用 LANGFLOW_HOST 环境变量设置，默认值为 127.0.0.1。
 - `--workers`: 设置工作进程的数量，可以使用 LANGFLOW_WORKERS 环境变量设置，默认值为 1。
-- `--timeout`: 设置工作进程的超时时间（秒），默认值为 60。
+- `--worker-timeout`: 设置工作进程的超时时间（秒），默认值为 60。
 - `--port`: 设置服务监听的端口，可以使用 LANGFLOW_PORT 环境变量设置，默认值为 7860。
 - `--config`: 定义配置文件的路径，默认值为 config.yaml。
 - `--env-file`: 指定包含环境变量的 .env 文件路径，默认值为 .env。
