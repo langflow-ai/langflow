@@ -3,7 +3,7 @@
 ![Langflow](./docs/static/img/hero.png)
 
 <p align="center" style="font-size: 12px;">
-    Langflow is a low-code app builder for RAG and multi-agent AI applications. It’s Python-based and agnostic to any model, API, or database.
+    Langflow — это конструктор приложений с минимумом программирования для RAG и многоагентных ИИ-приложений. Он основан на Python и не зависит от какой-либо модели, API или базы данных.
 </p>
 
 <p align="center" style="font-size: 12px;">
@@ -23,49 +23,49 @@
   <a href="./README.KR.md"><img alt="README in KOREAN" src="https://img.shields.io/badge/한국어-d9d9d9"></a>
 </div>
 
-## ✨ Core features
+## ✨ Основные функции
 
-1. **Python-based** and agnostic to models, APIs, data sources, or databases.
-2. **Visual IDE** for drag-and-drop building and testing of workflows.
-3. **Playground** to immediately test and iterate workflows with step-by-step control.
-4. **Multi-agent** orchestration and conversation management and retrieval.
-5. **Free cloud service** to get started in minutes with no setup.
-6. **Publish as an API** or export as a Python application.
-7. **Observability** with LangSmith, LangFuse, or LangWatch integration.
-8. **Enterprise-grade** security and scalability with free DataStax Langflow cloud service.
-9. **Customize workflows** or create flows entirely just using Python.
-10. **Ecosystem integrations** as reusable components for any model, API or database.
+1. **Основан на Python** и не зависит от моделей, API, источников данных или баз данных.
+2. **Визуальная IDE** для создания и тестирования рабочих процессов методом перетаскивания.
+3. **Песочница** для немедленного тестирования и итерации рабочих процессов с пошаговым управлением.
+4. **Многоагентная** оркестрация и управление диалогами и их извлечение.
+5. **Бесплатный облачный сервис** для начала работы за считанные минуты без настройки.
+6. **Публикация как API** или экспорт как Python-приложение.
+7. **Наблюдаемость** с интеграцией LangSmith, LangFuse или LangWatch.
+8. **Промышленная** безопасность и масштабируемость с бесплатным облачным сервисом DataStax Langflow.
+9. **Настройка рабочих процессов** или создание потоков полностью с использованием Python.
+10. **Интеграция экосистемы** в качестве многократно используемых компонентов для любой модели, API или базы данных.
 
 ![Integrations](./docs/static/img/integrations.png)
 
-## 📦 Quickstart
+## 📦 Быстрый старт
 
-- **Install with pip** (Python 3.10 or greater):
+- **Установка с помощью pip** (Python 3.10 или выше):
 
 ```shell
 pip install langflow
 ```
 
-- **Cloud:** DataStax Langflow is a hosted environment with zero setup. [Sign up for a free account.](https://astra.datastax.com/signup?type=langflow)
-- **Self-managed:** Run Langflow in your environment. [Install Langflow](https://docs.langflow.org/get-started-installation) to run a local Langflow server, and then use the [Quickstart](https://docs.langflow.org/get-started-quickstart) guide to create and execute a flow.
-- **Hugging Face:** [Clone the space using this link](https://huggingface.co/spaces/Langflow/Langflow?duplicate=true) to create a Langflow workspace.
+- **Облако:** DataStax Langflow — это облачная среда без необходимости настройки. [Sign up for a free account.](https://astra.datastax.com/signup?type=langflow)
+- **Самостоятельное управление:** Запустите Langflow в своей среде. [Install Langflow](https://docs.langflow.org/get-started-installation), чтобы запустить локальный сервер Langflow, а затем используйте [Quickstart](https://docs.langflow.org/get-started-quickstart) для создания и выполнения потока.
+- **Hugging Face:** [Clone the space using this link](https://huggingface.co/spaces/Langflow/Langflow?duplicate=true), чтобы создать рабочую область Langflow.
 
 [![Getting Started](https://github.com/user-attachments/assets/f1adfbe7-3c35-43a4-b265-661f3d4f875f)](https://www.youtube.com/watch?v=kinngWhaUKM)
 
-## ⭐ Stay up-to-date
+## ⭐ Будьте в курсе обновлений
 
-Star Langflow on GitHub to be instantly notified of new releases.
+Добавьте Langflow в избранное на GitHub, чтобы мгновенно получать уведомления о новых выпусках.
 
 ![Star Langflow](https://github.com/user-attachments/assets/03168b17-a11d-4b2a-b0f7-c1cce69e5a2c)
 
-## 👋 Contribute
+## 👋 Внесите вклад
 
-We welcome contributions from developers of all levels. If you'd like to contribute, please check our [contributing guidelines](./CONTRIBUTING.md) and help make Langflow more accessible.
+Мы приветствуем вклады разработчиков любого уровня. Если вы хотите внести вклад, пожалуйста, ознакомьтесь с нашими [contributing guidelines](./CONTRIBUTING.md) и помогите сделать Langflow более доступным.
 
 ---
 
 [![Star History Chart](https://api.star-history.com/svg?repos=langflow-ai/langflow&type=Timeline)](https://star-history.com/#langflow-ai/langflow&Date)
 
-## ❤️ Contributors
+## ❤️ Участники
 
 [![langflow contributors](https://contrib.rocks/image?repo=langflow-ai/langflow)](https://github.com/langflow-ai/langflow/graphs/contributors)
