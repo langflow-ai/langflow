@@ -30,7 +30,7 @@ from .input_mixin import (
 )
 
 
-class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMixin):
+class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.TABLE
     is_list: bool = True
 
