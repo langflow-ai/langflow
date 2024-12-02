@@ -4,8 +4,6 @@ sidebar_position: 1
 slug: /configuration-security-best-practices
 ---
 
-# Security Best Practices
-
 This guide outlines security best practices for deploying and managing Langflow.
 
 ## Secret Management
