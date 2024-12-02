@@ -13,5 +13,6 @@ __all__ = [
     "MessageRetrieverComponent",
     "MessageStoreComponent",
     "OutputParserComponent",
+    "MessageStoreComponent",
     "StructuredOutputComponent",
 ]
