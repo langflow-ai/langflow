@@ -56,7 +56,7 @@ class FileComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Structured Data", name="structured_data", method="get_structured_data"),
+        Output(display_name="DataFrame", name="dataframe", method="get_dataframe"),
         Output(display_name="Raw Data", name="raw_data", method="get_raw_data"),
         Output(display_name="File Paths", name="file_paths", method="get_file_paths")
     ]
@@ -111,7 +111,7 @@ class FileComponent(Component):
 
         return DataFrame(df)
 
-    def get_structured_data(self) -> DataFrame:
+    def get_dataframe(self) -> DataFrame:
         self.log("Getting structured data")
         result = self._process_file(structured=True)
         df = self._to_dataframe(result)
@@ -262,14 +262,16 @@ class FileComponent(Component):
         """Process CSV content with proper column handling and type inference"""
         self.log("Parsing CSV content")
         try:
+            # Use pandas with smart type inference
             df = pd.read_csv(
                 io.StringIO(content.decode('utf-8')),
-                dtype_backend='numpy_nullable',  
-                parse_dates=True,  
+                dtype_backend='numpy_nullable',  # Better NULL handling
+                parse_dates=True,  # Auto-detect dates
                 infer_datetime_format=True
             )
             
             if structured:
+                # Process column types first
                 column_types = {}
                 for column in df.columns:
                     if df[column].dtype.name.startswith(('int', 'uint')):
@@ -289,10 +291,12 @@ class FileComponent(Component):
                     for column in df.columns:
                         value = row[column]
                         
+                        # Handle null values
                         if pd.isna(value):
                             processed_row[column] = None
                             continue
     
+                        # Process based on inferred column type
                         if column_types[column] == 'integer':
                             processed_row[column] = int(value)
                         elif column_types[column] == 'float':
@@ -302,6 +306,7 @@ class FileComponent(Component):
                         elif column_types[column] == 'datetime':
                             processed_row[column] = pd.Timestamp(value).isoformat()
                         else:
+                            # Try to detect JSON strings
                             if isinstance(value, str):
                                 try:
                                     json_value = json.loads(value)
