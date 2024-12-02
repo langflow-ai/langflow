@@ -7,6 +7,10 @@ on:
         required: true
       STORE_API_KEY:
         required: true
+      ANTHROPIC_API_KEY:
+        required: true
+      TAVILY_API_KEY:
+        required: true
     inputs:
       suites:
         description: "Test suites to run (JSON array)"
