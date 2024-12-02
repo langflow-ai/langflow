@@ -36,13 +36,13 @@ The secret key is critical for encrypting sensitive data in Langflow. Follow the
 
 ## Database file protection
 
-1. Store the database in a secure location:
+- Store the database in a secure location:
 
    ```bash
    LANGFLOW_SAVE_DB_IN_CONFIG_DIR=true
    LANGFLOW_CONFIG_DIR=/secure/path/to/config
    ```
 
-2. Use the default database locations:
+- Use the default database locations:
    - macOS/Linux: `PYTHON_LOCATION/site-packages/langflow/langflow.db`
    - Windows: `PYTHON_LOCATION\Lib\site-packages\langflow\langflow.db`

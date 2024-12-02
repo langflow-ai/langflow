@@ -193,10 +193,6 @@ Langflow automatically detects and converts some environment variables into glob
 
 For information about other environment variables and their usage, see [Environment Variables](/environment-variables).
 
-## Precautions
+## Security best practices
 
-For information about securing your global variables and other sensitive data, see [Security Best Practices](/configuration-security-best-practices).
-
-:::warning
-Make sure to follow security best practices when working with sensitive data like API keys and credentials.
-:::
+For information about securing your global variables and other sensitive data, see [Security best practices](/configuration-security-best-practices).
