@@ -1,81 +1,44 @@
 ---
-title: 'Setup Google Cloud Vertex AI for Langflow Integration'
+title: 'Integrate Google Cloud Vertex AI with Langflow'
 slug: /integrations-setup-google-cloud-vertex-ai-langflow
 sidebar_position: 2
 description: "A comprehensive guide on creating a Google OAuth app, obtaining tokens, and integrating them with Langflow's Google components."
 ---
 
-# Setting up Google Cloud Vertex AI for Langflow
+Langflow integrates with the [Google Vertex AI API](https://console.cloud.google.com/marketplace/product/google/aiplatform.googleapis.com) for authenticating the [Vertex AI embeddings model](/components-embedding-models#vertexai-embeddings) and [Vertex AI](/components-models#vertexai) components.
 
-This guide walks you through creating a Google Cloud Vertex AI API Key and configuring it in Langflow's Vertex AI component.
+Learn how to create a service account JSON in Google Cloud to authenticate Langflow’s Vertex AI components.
 
-## Step 1: Create a New Project {#689304485d979f767f1a2ee4c8986cf6}
+## Create a project and enable the Vertex AI API
 
-Go to the [https://console.cloud.google.com/projectcreate](https://console.cloud.google.com/projectcreate), enter a name for the project, and click **Create**.
+1. Navigate to the [Google Cloud Console](https://console.cloud.google.com/).
+2. Click **Select a project**, and then click **New Project** to create a new project.
+3. To enable the Vertex AI API, navigate to the [Vertex AI API](https://console.cloud.google.com/marketplace/product/google/aiplatform.googleapis.com).
+4. Select your project, and then click **Enable**.
 
-![Create a new project](/img/google/create-a-new-project.png)
+## Create a service account
 
-## Step 2: Create a Service Account
+1. Navigate to **IAM & Admin**, and then click **Service Accounts**.
+2. To create a new service account, click **Create Service Account**.
+3. Provide a name and a description, and then click on **Create and Continue**.
+4. Assign the **Vertex AI Service Agent** role to your new account.
+This role allows Langflow to access Vertex AI resources.
+For more information, see [Vertex AI access control with IAM](https://cloud.google.com/vertex-ai/docs/general/access-control).
+5. To generate a new JSON key for the service account, navigate to your service account.
+6. Click **Add Key**, and then click **Create new key**.
+7. Under **Key type**, select **JSON**, and then click **Create**.
+A JSON private key file is downloaded.
 
-Go to [https://console.cloud.google.com/iam-admin/serviceaccounts](https://console.cloud.google.com/iam-admin/serviceaccounts), Select the project you created in the [Step 1: Create a New Project](#689304485d979f767f1a2ee4c8986cf6), and click **Create Service Account**. Provide a name, description, and then click on **Create and Continue**.
+## Configure credentials in Langflow components
 
-Create a new **Service Account**:
+With your service account configured and your credentials JSON file created, follow these steps to authenticate the Langflow application.
 
-![Create a new Service Account](/img/google/create-a-new-service-account.png)
-
-Enter **Service Account Details**:
-
-![Enter Service Account Details](/img/google/enter-service-account-details.png)
-
-### Step 2.1: Assign the Vertex AI Service Agent Role
-
-Assign the **Vertex AI Service Agent** role to your new account and complete the setup.
-
-![Assign Vertex AI Service Agent Role](/img/google/assing-vertex-ai-service-agent-role.gif)
-
-## Step 3: Generate a New Key
-
-Go to the **Keys** tab under your Service Account, click **Add Key > Create new key**, select **JSON**, and click **Create**. A JSON key file will be downloaded.
-
-![Create a new private key](/img/google/create-a-new-private-key.gif)
-
-The saved file looks like the example below:
-
-```json
-{
-  "type": "service_account",
-  "project_id": "mimetic-client-847522-v1",
-  "private_key_id": "206a9b53bba3cea76d5a42e4eddf9410da0222d2",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDJd4y2kAfjMjIL\nuqN3fecSmrAPgxGb9q1cSf/DYnppDQv7Co7hLxD/nWHLrP5Q++Yte0IJbdIjWJOb\nfhjlkjasd152as65T7asd8z4w9vwHS03cyCcIPijujzainWEL8HgQrj8/0FSAKBd\nfhjlkjasd152as65T7asd8WlUfkrjIGUAL6psr7IOfhLuyvRS9WiYrUFvV2Hdivr\nasd846f6545NZzXOJtuZd9Wk5TSo5exO8EKNHLNUU2F7HC9KAAIXb\n3546asd656873xZt75sVubOnlPj68R4UsIl2OLFMXM12cIGwRYj2vg/\n6579ads654dasd32168L4RT9GwJGCmgE+6ZU05wvwCJtpqnfD4p9cDiK0hrL\nfhjlkjasd152as65T7asd5JjO0E8whBQKBgQD9GRXUNG8OO3BZvEOZCYE3PDP9Yc\nasd315465132a1sd6544IcVSOqfiB0/ELPjPt8V4hjEcpkdQsiSYZLbM87mQcB\n-----END PRIVATE KEY-----\n",
-  "client_email": "example@mimetic-client-847522-v1.iam.gserviceaccount.com",
-  "client_id": "2956348811335699541865",
-  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/example%40mimetic-client-847522-v1.iam.gserviceaccount.com",
-  "universe_domain": "googleapis.com"
-}
-```
-
-## Step 4: Enable the Vertex AI API
-
-Go to the [Vertex AI API page](https://console.cloud.google.com/marketplace/product/google/aiplatform.googleapis.com), select your project, and click **Enable**.
-
-![Enable Vertex AI API](/img/google/enable-vertex-ai-api.png)
-
-## Step 5: Configure Credentials in Langflow Components
-
-1. Open Langflow
-2. Create a new project or open an existing one
-3. From the components sidebar, drag and drop either the **Vertex AI** or **Vertex AI Embeddings** component to your workspace
-4. In the component settings:
-   - Locate the **credentials** field
-   - Click on the field
-   - Browse and select the JSON credentials file containing your API key downloaded in [Step 3: Generate a New Key](#step-3-generate-a-new-key)
-5. After the credentials file is loaded, the component is ready to use
+1. Create a new project in Langflow.
+2. From the components sidebar, drag and drop either the **Vertex AI** or **Vertex AI Embeddings** component to your workspace.
+3. In the Vertex AI component's **Credentials** field, add the service account JSON file.
+4. Confirm the component can access the Vertex AI resources.
+Connect a **Chat input** and **Chat output** component to the Vertex AI component.
+A successful chat confirms the component has access to the Vertex AI resources.
 
 ![Configure Vertex AI Credentials in Langflow](/img/google/configure-vertex-ai-credentials-in-langflow.gif)
 
-Remember to add the credentials file in the credentials field for each Vertex AI component you add to your workspace.
-
----
