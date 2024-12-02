@@ -1,11 +1,16 @@
 from langchain_core.tools import StructuredTool
 
 from langflow.base.agents.agent import LCToolsAgentComponent
-from langflow.base.models.model_input_constants import ALL_PROVIDER_FIELDS, MODEL_PROVIDERS_DICT
+from langflow.base.models.model_input_constants import (
+    ALL_PROVIDER_FIELDS,
+    MODEL_PROVIDERS_DICT,
+)
 from langflow.base.models.model_utils import get_model_name
 from langflow.components.helpers import CurrentDateComponent
 from langflow.components.helpers.memory import MemoryComponent
-from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
+from langflow.components.langchain_utilities.tool_calling import (
+    ToolCallingAgentComponent,
+)
 from langflow.io import BoolInput, DropdownInput, MultilineInput, Output
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
@@ -18,12 +23,17 @@ def set_advanced_true(component_input):
 
 class AgentComponent(ToolCallingAgentComponent):
     display_name: str = "Agent"
-    description: str = "Define the agent's instructions, then enter a task to complete using tools."
+    description: str = (
+        "Define the agent's instructions, then enter a task to complete using tools."
+    )
     icon = "bot"
     beta = False
     name = "Agent"
 
-    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]
+    memory_inputs = [
+        set_advanced_true(component_input)
+        for component_input in MemoryComponent().inputs
+    ]
 
     inputs = [
         DropdownInput(
@@ -47,13 +57,15 @@ class AgentComponent(ToolCallingAgentComponent):
         *memory_inputs,
         BoolInput(
             name="add_current_date_tool",
-            display_name="Add tool Current Date",
+            display_name="Current Date",
             advanced=True,
             info="If true, will add a tool to the agent that returns the current date.",
             value=True,
         ),
     ]
-    outputs = [Output(name="response", display_name="Response", method="message_response")]
+    outputs = [
+        Output(name="response", display_name="Response", method="message_response")
+    ]
 
     async def message_response(self) -> Message:
         llm_model, display_name = self.get_llm()
@@ -89,7 +101,8 @@ class AgentComponent(ToolCallingAgentComponent):
 
     def get_memory_data(self):
         memory_kwargs = {
-            component_input.name: getattr(self, f"{component_input.name}") for component_input in self.memory_inputs
+            component_input.name: getattr(self, f"{component_input.name}")
+            for component_input in self.memory_inputs
         }
 
         return MemoryComponent().set(**memory_kwargs).retrieve_messages()
@@ -103,14 +116,19 @@ class AgentComponent(ToolCallingAgentComponent):
                     display_name = component_class.display_name
                     inputs = provider_info.get("inputs")
                     prefix = provider_info.get("prefix", "")
-                    return self._build_llm_model(component_class, inputs, prefix), display_name
+                    return (
+                        self._build_llm_model(component_class, inputs, prefix),
+                        display_name,
+                    )
             except Exception as e:
                 msg = f"Error building {self.agent_llm} language model"
                 raise ValueError(msg) from e
         return self.agent_llm, None
 
     def _build_llm_model(self, component, inputs, prefix=""):
-        model_kwargs = {input_.name: getattr(self, f"{prefix}{input_.name}") for input_ in inputs}
+        model_kwargs = {
+            input_.name: getattr(self, f"{prefix}{input_.name}") for input_ in inputs
+        }
         return component.set(**model_kwargs).build_model()
 
     def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:
@@ -128,7 +146,9 @@ class AgentComponent(ToolCallingAgentComponent):
                 value.input_types = []
         return build_config
 
-    def update_build_config(self, build_config: dotdict, field_value: str, field_name: str | None = None) -> dotdict:
+    def update_build_config(
+        self, build_config: dotdict, field_value: str, field_name: str | None = None
+    ) -> dotdict:
         # Iterate over all providers in the MODEL_PROVIDERS_DICT
         # Existing logic for updating build_config
         if field_name == "agent_llm":
@@ -137,7 +157,9 @@ class AgentComponent(ToolCallingAgentComponent):
                 component_class = provider_info.get("component_class")
                 if component_class and hasattr(component_class, "update_build_config"):
                     # Call the component class's update_build_config method
-                    build_config = component_class.update_build_config(build_config, field_value, field_name)
+                    build_config = component_class.update_build_config(
+                        build_config, field_value, field_name
+                    )
 
             provider_configs: dict[str, tuple[dict, list[dict]]] = {
                 provider: (
@@ -158,7 +180,9 @@ class AgentComponent(ToolCallingAgentComponent):
                     self.delete_fields(build_config, fields)
 
                 # Add provider-specific fields
-                if field_value == "OpenAI" and not any(field in build_config for field in fields_to_add):
+                if field_value == "OpenAI" and not any(
+                    field in build_config for field in fields_to_add
+                ):
                     build_config.update(fields_to_add)
                 else:
                     build_config.update(fields_to_add)
@@ -208,6 +232,8 @@ class AgentComponent(ToolCallingAgentComponent):
                     # remove the prefix from the field_name
                     if isinstance(field_name, str) and isinstance(prefix, str):
                         field_name = field_name.replace(prefix, "")
-                    build_config = component_class.update_build_config(build_config, field_value, field_name)
+                    build_config = component_class.update_build_config(
+                        build_config, field_value, field_name
+                    )
 
         return build_config
