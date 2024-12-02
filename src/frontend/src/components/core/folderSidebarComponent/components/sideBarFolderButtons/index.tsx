@@ -54,36 +54,67 @@ const SideBarFoldersButtonsComponent = ({
   const location = useLocation();
   const pathname = location.pathname;
   const folders = useFolderStore((state) => state.folders);
-
-  const isFetchingFolders = !!useIsFetching({
-    queryKey: ["useGetFolders"],
-    exact: false,
-  });
   const loading = !folders;
   const refInput = useRef<HTMLInputElement>(null);
-  const [foldersNames, setFoldersNames] = useState({});
-  const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
-  const [editFolders, setEditFolderName] = useState(
-    folders.map((obj) => ({ name: obj.name, edit: false })) ?? [],
-  );
+
   const currentFolder = pathname.split("/");
   const urlWithoutPath =
     pathname.split("/").length < (ENABLE_CUSTOM_PARAM ? 5 : 4);
-  const myCollectionId = useFolderStore((state) => state.myCollectionId);
+
   const checkPathName = (itemId: string) => {
     if (urlWithoutPath && itemId === myCollectionId) {
       return true;
     }
     return currentFolder.includes(itemId);
   };
-  const folderId = useParams().folderId ?? myCollectionId ?? "";
+
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const uploadFlow = useUploadFlow();
+  const isMobile = useIsMobile({ maxWidth: 1024 });
+  const folderIdDragging = useFolderStore((state) => state.folderIdDragging);
+  const myCollectionId = useFolderStore((state) => state.myCollectionId);
+  const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
+
+  const folderId = useParams().folderId ?? myCollectionId ?? "";
 
   const { dragOver, dragEnter, dragLeave, onDrop } = useFileDrop(folderId);
+  const uploadFlow = useUploadFlow();
+  const [foldersNames, setFoldersNames] = useState({});
+  const [editFolders, setEditFolderName] = useState(
+    folders.map((obj) => ({ name: obj.name, edit: false })) ?? [],
+  );
 
+  const isFetchingFolders = !!useIsFetching({
+    queryKey: ["useGetFolders"],
+    exact: false,
+  });
+
+  const { mutate: mutateDownloadFolder } = useGetDownloadFolders({});
+  const { mutate: mutateAddFolder, isPending } = usePostFolders();
+  const { mutate: mutateUpdateFolder } = usePatchFolders();
   const { mutate } = usePostUploadFolders();
+
+  const checkHoveringFolder = (folderId: string) => {
+    if (folderId === folderIdDragging) {
+      return "bg-accent text-accent-foreground";
+    }
+  };
+
+  const isFetchingFolder = !!useIsFetching({
+    queryKey: ["useGetFolder"],
+    exact: false,
+  });
+
+  const isDeletingFolder = !!useIsMutating({
+    mutationKey: ["useDeleteFolders"],
+  });
+
+  const isUpdatingFolder =
+    isFetchingFolders ||
+    isFetchingFolder ||
+    isPending ||
+    loading ||
+    isDeletingFolder;
 
   const handleUploadFlowsToFolder = () => {
     createFileUpload().then((files: File[]) => {
@@ -125,8 +156,6 @@ const SideBarFoldersButtonsComponent = ({
     });
   };
 
-  const { mutate: mutateDownloadFolder } = useGetDownloadFolders({});
-
   const handleDownloadFolder = (id: string) => {
     mutateDownloadFolder(
       {
@@ -165,9 +194,6 @@ const SideBarFoldersButtonsComponent = ({
       },
     );
   };
-
-  const { mutate: mutateAddFolder, isPending } = usePostFolders();
-  const { mutate: mutateUpdateFolder } = usePatchFolders();
 
   function addNewFolder() {
     mutateAddFolder(
@@ -256,22 +282,6 @@ const SideBarFoldersButtonsComponent = ({
       }));
     }
   };
-
-  const isFetchingFolder = !!useIsFetching({
-    queryKey: ["useGetFolder"],
-    exact: false,
-  });
-
-  const isDeletingFolder = !!useIsMutating({
-    mutationKey: ["useDeleteFolders"],
-  });
-
-  const isUpdatingFolder =
-    isFetchingFolders ||
-    isFetchingFolder ||
-    isPending ||
-    loading ||
-    isDeletingFolder;
 
   const HeaderButtons = () => (
     <div className="flex shrink-0 items-center justify-between gap-2">
@@ -409,8 +419,6 @@ const SideBarFoldersButtonsComponent = ({
     }
   };
 
-  const isMobile = useIsMobile({ maxWidth: 1024 });
-
   return (
     <Sidebar
       collapsible={isMobile ? "offcanvas" : "none"}
@@ -440,7 +448,10 @@ const SideBarFoldersButtonsComponent = ({
                         data-testid={`sidebar-nav-${item.name}`}
                         isActive={checkPathName(item.id!)}
                         onClick={() => handleChangeFolder!(item.id!)}
-                        className="group/menu-button"
+                        className={cn(
+                          "group/menu-button",
+                          checkHoveringFolder(item.id!),
+                        )}
                       >
                         <div
                           onDoubleClick={(event) => {
@@ -507,9 +518,12 @@ const SideBarFoldersButtonsComponent = ({
                               >
                                 <IconComponent
                                   name={"MoreHorizontal"}
-                                  className={`w-4 stroke-[1.5] px-0 text-muted-foreground group-hover/menu-button:block group-hover/menu-button:text-foreground ${
-                                    checkPathName(item.id!) ? "block" : "hidden"
-                                  }`}
+                                  className={cn(
+                                    `w-4 stroke-[1.5] px-0 text-muted-foreground group-hover/menu-button:block group-hover/menu-button:text-foreground`,
+                                    checkPathName(item.id!)
+                                      ? "block"
+                                      : "hidden",
+                                  )}
                                 />
                               </SelectTrigger>
                             </ShadTooltip>
