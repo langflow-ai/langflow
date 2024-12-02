@@ -1,5 +1,3 @@
-
-
 [tool.uv.sources]
 langflow-base = { workspace = true }
 langflow = { workspace = true }
@@ -178,6 +176,7 @@ dev-dependencies = [
     "pytest-github-actions-annotate-failures>=0.2.0",
     "pytest-codspeed>=3.0.0",
     "blockbuster>=1.1.1,<1.2",
+    "types-aiofiles>=24.1.0.20240626",
 ]
 
 

@@ -6,7 +6,7 @@ import ForwardedIconComponent from "../../../../../components/common/genericIcon
 import { Button } from "../../../../../components/ui/button";
 import BaseModal from "../../../../../modals/baseModal";
 import { useShortcutsStore } from "../../../../../stores/shortcuts";
-import { toTitleCase } from "../../../../../utils/utils";
+import { toCamelCase, toTitleCase } from "../../../../../utils/utils";
 
 export default function EditShortcutButton({
   children,
@@ -28,9 +28,7 @@ export default function EditShortcutButton({
   let shortcutInitialValue =
     defaultShortcuts.length > 0
       ? defaultShortcuts.find(
-          (s) =>
-            s.name.split(" ")[0].toLowerCase().toLowerCase() ===
-            shortcut[0]?.split(" ")[0].toLowerCase(),
+          (s) => toCamelCase(s.name) === toCamelCase(shortcut[0]),
         )?.shortcut
       : "";
   const [key, setKey] = useState<string | null>(null);
@@ -55,12 +53,6 @@ export default function EditShortcutButton({
   function editCombination(): void {
     if (key) {
       if (canEditCombination(key)) {
-        const newCombination = defaultShortcuts.map((s) => {
-          if (s.name === shortcut[0]) {
-            return { name: s.name, shortcut: key };
-          }
-          return { name: s.name, shortcut: s.shortcut };
-        });
         const fixCombination = key.split(" ");
         if (
           fixCombination[0].toLowerCase().includes("ctrl") ||
@@ -68,7 +60,16 @@ export default function EditShortcutButton({
         ) {
           fixCombination[0] = "mod";
         }
-        const shortcutName = shortcut[0].split(" ")[0].toLowerCase();
+        const newCombination = defaultShortcuts.map((s) => {
+          if (s.name === shortcut[0]) {
+            return {
+              name: s.name,
+              shortcut: fixCombination.join("").toLowerCase(),
+            };
+          }
+          return { name: s.name, shortcut: s.shortcut };
+        });
+        const shortcutName = toCamelCase(shortcut[0]);
         setUniqueShortcut(shortcutName, fixCombination.join("").toLowerCase());
         setShortcuts(newCombination);
         localStorage.setItem(

@@ -26,8 +26,8 @@ export default function ToggleShadComponent({
       break;
     default:
       if (editNode) {
-        scaleX = 0.6;
-        scaleY = 0.6;
+        scaleX = 0.8;
+        scaleY = 0.8;
       } else {
         scaleX = 1;
         scaleY = 1;
