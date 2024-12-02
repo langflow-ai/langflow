@@ -1,4 +1,4 @@
-import IconComponent from "@/components/genericIconComponent";
+import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { ButtonHTMLAttributes } from "react";
 

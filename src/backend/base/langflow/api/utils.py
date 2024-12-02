@@ -17,7 +17,7 @@ from langflow.services.database.models import User
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
-from langflow.services.deps import get_async_session, get_session
+from langflow.services.deps import async_session_scope, get_async_session, get_session
 from langflow.services.store.utils import get_lf_version_from_pypi
 
 if TYPE_CHECKING:
@@ -142,8 +142,21 @@ def format_elapsed_time(elapsed_time: float) -> str:
     return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
+async def _get_flow_name(flow_id: str) -> str:
+    async with async_session_scope() as session:
+        flow = await session.get(Flow, flow_id)
+        if flow is None:
+            msg = f"Flow {flow_id} not found"
+            raise ValueError(msg)
+    return flow.name
+
+
 async def build_graph_from_data(flow_id: str, payload: dict, **kwargs):
     """Build and cache the graph."""
+    # Get flow name
+    if "flow_name" not in kwargs:
+        flow_name = await _get_flow_name(flow_id)
+        kwargs["flow_name"] = flow_name
     graph = Graph.from_payload(payload, flow_id, **kwargs)
     for vertex_id in graph.has_session_id_vertices:
         vertex = graph.get_vertex(vertex_id)

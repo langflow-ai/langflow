@@ -1,3 +1,4 @@
+import useFlowStore from "@/stores/flowStore";
 import { cloneDeep } from "lodash"; // or any other deep cloning library you prefer
 import { useCallback } from "react";
 import { APIClassType } from "../../types/api";
@@ -10,6 +11,8 @@ const useUpdateNodeCode = (
   setIsUserEdited: (value: boolean) => void,
   updateNodeInternals: (id: string) => void,
 ) => {
+  const { setComponentsToUpdate } = useFlowStore();
+
   const updateNodeCode = useCallback(
     (newNodeClass: APIClassType, code: string, name: string, type: string) => {
       setNode(dataId, (oldNode) => {
@@ -32,6 +35,7 @@ const useUpdateNodeCode = (
         return newNode;
       });
 
+      setComponentsToUpdate((old) => old.filter((id) => id !== dataId));
       updateNodeInternals(dataId);
     },
     [dataId, dataNode, setNode, setIsOutdated, updateNodeInternals],

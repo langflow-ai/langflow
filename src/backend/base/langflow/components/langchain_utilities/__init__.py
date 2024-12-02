@@ -1,6 +1,7 @@
 from .character import CharacterTextSplitterComponent
 from .conversation import ConversationChainComponent
 from .csv import CSVAgentComponent
+from .fake_embeddings import FakeEmbeddingsComponent
 from .html_link_extractor import HtmlLinkExtractorComponent
 from .json import JsonAgentComponent
 from .json_document_builder import JSONDocumentBuilder
@@ -27,31 +28,32 @@ from .vector_store_router import VectorStoreRouterAgentComponent
 from .xml import XMLAgentComponent
 
 __all__ = [
+    "CSVAgentComponent",
     "CharacterTextSplitterComponent",
     "ConversationChainComponent",
-    "CSVAgentComponent",
+    "FakeEmbeddingsComponent",
     "HtmlLinkExtractorComponent",
     "JSONDocumentBuilder",
     "JsonAgentComponent",
-    "LangChainHubPromptComponent",
-    "LanguageRecursiveTextSplitterComponent",
     "LLMCheckerChainComponent",
     "LLMMathChainComponent",
+    "LangChainHubPromptComponent",
+    "LanguageRecursiveTextSplitterComponent",
     "NaturalLanguageTextSplitterComponent",
     "OpenAIToolsAgentComponent",
     "OpenAPIAgentComponent",
     "RecursiveCharacterTextSplitterComponent",
     "RetrievalQAComponent",
     "RunnableExecComponent",
-    "SelfQueryRetrieverComponent",
-    "SpiderTool",
     "SQLAgentComponent",
     "SQLDatabaseComponent",
     "SQLGeneratorComponent",
+    "SelfQueryRetrieverComponent",
+    "SemanticTextSplitterComponent",
+    "SpiderTool",
     "ToolCallingAgentComponent",
     "VectoStoreRetrieverComponent",
     "VectorStoreInfoComponent",
     "VectorStoreRouterAgentComponent",
     "XMLAgentComponent",
-    "SemanticTextSplitterComponent",
 ]
