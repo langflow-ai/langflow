@@ -742,6 +742,7 @@ export default function ChatMessage({
                   onDelete={() => {}}
                   onEdit={() => setEditMessage(true)}
                   className="h-fit group-hover:visible"
+                  isBotMessage={!chat.isSend}
                 />
               </div>
             </div>

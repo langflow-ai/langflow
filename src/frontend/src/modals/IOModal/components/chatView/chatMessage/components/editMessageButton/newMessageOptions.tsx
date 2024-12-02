@@ -1,31 +1,35 @@
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
-
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select-custom";
+import { cn } from "@/utils/utils";
 import { ButtonHTMLAttributes, useState } from "react";
 
 export function EditMessageButton({
   onEdit,
   onCopy,
   onDelete,
+  onEvaluate,
+  isBotMessage,
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   onEdit: () => void;
   onCopy: () => void;
   onDelete: () => void;
+  onEvaluate?: (value: boolean) => void;
+  isBotMessage?: boolean;
 }) {
   const [isCopied, setIsCopied] = useState(false);
+  const [evaluation, setEvaluation] = useState<boolean | null>(null);
 
   const handleCopy = () => {
     onCopy();
     setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000); // Reset after 2 seconds
+    setTimeout(() => setIsCopied(false), 2000);
+  };
+
+  const handleEvaluate = (value: boolean) => {
+    setEvaluation(evaluation === value ? null : value);
+    onEvaluate?.(value);
   };
 
   return (
@@ -62,6 +66,48 @@ export function EditMessageButton({
           </Button>
         </div>
       </ShadTooltip>
+
+      {isBotMessage && (
+        <div className="flex">
+          <ShadTooltip styleClasses="z-50" content="Good" side="top">
+            <div className="p-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleEvaluate(true)}
+              className="h-8 w-8"
+            >
+              <IconComponent
+                name="ThumbsUp"
+                className={cn(
+                  "h-4 w-4",
+                  evaluation === true && "text-status-green"
+                )}
+              />
+            </Button>
+          </div>
+        </ShadTooltip>
+
+        <ShadTooltip styleClasses="z-50" content="Bad" side="top">
+          <div className="p-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleEvaluate(false)}
+              className="h-8 w-8"
+            >
+              <IconComponent
+                name="ThumbsDown"
+                className={cn(
+                  "h-4 w-4",
+                  evaluation === false && "text-status-red"
+                )}
+              />
+            </Button>
+          </div>
+          </ShadTooltip>
+        </div>
+      )}
     </div>
   );
 }

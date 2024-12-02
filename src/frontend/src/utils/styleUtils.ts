@@ -205,6 +205,8 @@ import {
   TextCursorInput,
   TextSearch,
   TextSearchIcon,
+  ThumbsDown,
+  ThumbsUp,
   ToyBrick,
   Trash2,
   Type,
@@ -924,4 +926,6 @@ export const nodeIconsLucide: iconsType = {
   Cog,
   ArrowRightLeft,
   FolderSync,
+  ThumbsUp,
+  ThumbsDown,
 };
