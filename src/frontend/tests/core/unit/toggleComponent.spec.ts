@@ -25,7 +25,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
     await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -36,7 +38,9 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("directory");
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="dataDirectory"]', {
+      timeout: 30000,
+    });
     await page
       .getByTestId("dataDirectory")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));

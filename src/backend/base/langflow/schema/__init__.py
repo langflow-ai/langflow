@@ -1,6 +1,6 @@
 from .data import Data
-from .data_set import DataSet
+from .dataframe import DataFrame
 from .dotdict import dotdict
 from .message import Message
 
-__all__ = ["Data", "dotdict", "Message", "DataSet"]
+__all__ = ["Data", "dotdict", "Message", "DataFrame"]
