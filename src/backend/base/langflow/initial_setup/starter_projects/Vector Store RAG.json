@@ -4157,5 +4157,11 @@
   "id": "cc5608e0-9b81-4c93-ba28-05c2b743b3b4",
   "is_component": false,
   "last_tested_version": "1.1.1",
-  "name": "Vector Store RAG"
+  "name": "Vector Store RAG",
+  "tags": [
+    "openai",
+    "astradb",
+    "rag",
+    "q-a"
+  ]
 }
