@@ -10,6 +10,7 @@ from langflow.io import BoolInput, FileInput, HandleInput, Output
 from langflow.schema import Data
 from langflow.schema.message import Message
 
+
 class BaseFileComponent(Component, ABC):
     """Base class for handling file processing components.
 
@@ -284,7 +285,6 @@ class BaseFileComponent(Component, ABC):
         return updated_base_files
 
     def _file_path_as_list(self) -> list[Data]:
-
         file_path = self.file_path
         if not file_path:
             return []
