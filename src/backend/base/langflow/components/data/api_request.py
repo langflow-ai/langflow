@@ -11,10 +11,16 @@ from zoneinfo import ZoneInfo
 
 import httpx
 import validators
-
-from langflow.base.curl.parse import parse_context
 from langflow.custom import Component
-from langflow.io import BoolInput, DataInput, DropdownInput, IntInput, MessageTextInput, NestedDictInput, Output
+from langflow.io import (
+    BoolInput,
+    DataInput,
+    DropdownInput,
+    IntInput,
+    MessageTextInput,
+    Output,
+    TableInput,
+)
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 
@@ -25,10 +31,12 @@ class APIRequestComponent(Component):
         "This component allows you to make HTTP requests to one or more URLs. "
         "You can provide headers and body as either dictionaries or Data objects. "
         "Additionally, you can append query parameters to the URLs.\n\n"
-        "**Note:** Check advanced options for more settings."
+        "Note: Check advanced options for more settings."
     )
     icon = "Globe"
     name = "APIRequest"
+
+    default_keys = ["urls", "method", "query_params"]
 
     inputs = [
         MessageTextInput(
@@ -37,35 +45,13 @@ class APIRequestComponent(Component):
             list=True,
             info="Enter one or more URLs, separated by commas.",
         ),
-        MessageTextInput(
-            name="curl",
-            display_name="cURL",
-            info="Paste a curl command to populate the fields. "
-            "This will fill in the dictionary fields for headers and body.",
-            advanced=False,
-            refresh_button=True,
-            real_time_refresh=True,
-            tool_mode=True,
-        ),
         DropdownInput(
             name="method",
             display_name="Method",
             options=["GET", "POST", "PATCH", "PUT"],
-            value="GET",
+            value="",
             info="The HTTP method to use (GET, POST, PATCH, PUT).",
-        ),
-        NestedDictInput(
-            name="headers",
-            display_name="Headers",
-            info="The headers to send with the request as a dictionary. This is populated when using the CURL field.",
-            input_types=["Data"],
-        ),
-        NestedDictInput(
-            name="body",
-            display_name="Body",
-            info="The body to send with the request as a dictionary (for POST, PATCH, PUT). "
-            "This is populated when using the CURL field.",
-            input_types=["Data"],
+            real_time_refresh=True,
         ),
         DataInput(
             name="query_params",
@@ -73,11 +59,57 @@ class APIRequestComponent(Component):
             info="The query parameters to append to the URL.",
             tool_mode=True,
         ),
+        TableInput(
+            name="body",
+            display_name="Body",
+            info="The body to send with the request as a dictionary (for POST, PATCH, PUT).",
+            table_schema=[
+                {
+                    "name": "key",
+                    "display_name": "Key",
+                    "type": "str",
+                    "description": "Parameter name",
+                },
+                {
+                    "name": "value",
+                    "display_name": "Value",
+                    "description": "Parameter value",
+                },
+            ],
+            value=[],
+            input_types=["Data"],
+            tool_mode=True,
+            
+        ),
+        TableInput(
+            name="headers",
+            display_name="Headers",
+            info="The headers to send with the request as a dictionary.",
+            table_schema=[
+                {
+                    "name": "key",
+                    "display_name": "Header",
+                    "type": "str",
+                    "description": "Header name",
+                },
+                {
+                    "name": "value",
+                    "display_name": "Value",
+                    "type": "str",
+                    "description": "Header value",
+                },
+            ],
+            value=[],
+            advanced=True,
+            input_types=["Data"],
+            tool_mode=True,
+        ),
         IntInput(
             name="timeout",
             display_name="Timeout",
             value=5,
             info="The timeout to use for the request.",
+            advanced=True,
         ),
         BoolInput(
             name="follow_redirects",
@@ -109,30 +141,14 @@ class APIRequestComponent(Component):
         Output(display_name="Data", name="data", method="make_requests"),
     ]
 
-    def parse_curl(self, curl: str, build_config: dotdict) -> dotdict:
-        try:
-            parsed = parse_context(curl)
-            build_config["urls"]["value"] = [parsed.url]
-            build_config["method"]["value"] = parsed.method.upper()
-            build_config["headers"]["value"] = dict(parsed.headers)
-
-            if parsed.data:
-                try:
-                    json_data = json.loads(parsed.data)
-                    build_config["body"]["value"] = json_data
-                except json.JSONDecodeError:
-                    self.log("Error decoding JSON data")
+    def update_build_config(
+        self, build_config: dotdict, field_value: Any, field_name: str | None = None
+    ):
+        if field_name == "method":
+            if field_value in ["POST", "PATCH", "PUT"]:
+                build_config["body"]["advanced"] = False
             else:
-                build_config["body"]["value"] = {}
-        except Exception as exc:
-            msg = f"Error parsing curl: {exc}"
-            self.log(msg)
-            raise ValueError(msg) from exc
-        return build_config
-
-    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
-        if field_name == "curl" and field_value:
-            build_config = self.parse_curl(field_value, build_config)
+                build_config["body"]["advanced"] = True
         return build_config
 
     async def make_request(
@@ -176,13 +192,18 @@ class APIRequestComponent(Component):
             )
 
             redirection_history = [
-                {"url": str(redirect.url), "status_code": redirect.status_code} for redirect in response.history
+                {"url": str(redirect.url), "status_code": redirect.status_code}
+                for redirect in response.history
             ]
 
             if response.is_redirect:
-                redirection_history.append({"url": str(response.url), "status_code": response.status_code})
+                redirection_history.append(
+                    {"url": str(response.url), "status_code": response.status_code}
+                )
 
-            is_binary, file_path = self._response_info(response, with_file_path=save_to_file)
+            is_binary, file_path = self._response_info(
+                response, with_file_path=save_to_file
+            )
             response_headers = self._headers_to_dict(response.headers)
 
             metadata: dict[str, Any] = {
@@ -203,11 +224,15 @@ class APIRequestComponent(Component):
                             "headers": headers,
                             "status_code": response.status_code,
                             "response_headers": response_headers,
-                            **({"redirection_history": redirection_history} if redirection_history else {}),
+                            **(
+                                {"redirection_history": redirection_history}
+                                if redirection_history
+                                else {}
+                            ),
                         }
                     )
                 return Data(data=metadata)
-            # Populate result when not saving to a file
+
             if is_binary:
                 result = response.content
             else:
@@ -217,17 +242,19 @@ class APIRequestComponent(Component):
                     self.log("Error decoding JSON response")
                     result = response.text.encode("utf-8")
 
-            # Add result to metadata
             metadata.update({"result": result})
 
-            # Add metadata to the output
             if include_httpx_metadata:
                 metadata.update(
                     {
                         "headers": headers,
                         "status_code": response.status_code,
                         "response_headers": response_headers,
-                        **({"redirection_history": redirection_history} if redirection_history else {}),
+                        **(
+                            {"redirection_history": redirection_history}
+                            if redirection_history
+                            else {}
+                        ),
                     }
                 )
             return Data(data=metadata)
@@ -248,7 +275,11 @@ class APIRequestComponent(Component):
                     "headers": headers,
                     "status_code": 500,
                     "error": str(exc),
-                    **({"redirection_history": redirection_history} if redirection_history else {}),
+                    **(
+                        {"redirection_history": redirection_history}
+                        if redirection_history
+                        else {}
+                    ),
                 },
             )
 
@@ -257,12 +288,13 @@ class APIRequestComponent(Component):
         query = dict(parse_qsl(url_parts[4]))
         query.update(params)
         url_parts[4] = urlencode(query)
+        print(url_parts)
         return urlunparse(url_parts)
+
 
     async def make_requests(self) -> list[Data]:
         method = self.method
         urls = [url.strip() for url in self.urls if url.strip()]
-        curl = self.curl
         headers = self.headers or {}
         body = self.body or {}
         timeout = self.timeout
@@ -279,9 +311,6 @@ class APIRequestComponent(Component):
             query_params = dict(parse_qsl(self.query_params))
         else:
             query_params = self.query_params.data if self.query_params else {}
-
-        if curl:
-            self._build_config = self.parse_curl(curl, dotdict())
 
         if isinstance(headers, Data):
             headers = headers.data
@@ -313,7 +342,9 @@ class APIRequestComponent(Component):
         self.status = results
         return results
 
-    def _response_info(self, response: httpx.Response, *, with_file_path: bool = False) -> tuple[bool, Path | None]:
+    def _response_info(
+        self, response: httpx.Response, *, with_file_path: bool = False
+    ) -> tuple[bool, Path | None]:
         """Determine the file path and whether the response content is binary.
 
         Args:
@@ -324,51 +355,53 @@ class APIRequestComponent(Component):
             Tuple[bool, Path | None]:
                 A tuple containing a boolean indicating if the content is binary and the full file path (if applicable).
         """
-        # Determine if the content is binary
         content_type = response.headers.get("Content-Type", "")
-        is_binary = "application/octet-stream" in content_type or "application/binary" in content_type
+        is_binary = (
+            "application/octet-stream" in content_type
+            or "application/binary" in content_type
+        )
 
         if not with_file_path:
             return is_binary, None
 
-        # Step 1: Set up a subdirectory for the component in the OS temp directory
         component_temp_dir = Path(tempfile.gettempdir()) / self.__class__.__name__
         component_temp_dir.mkdir(parents=True, exist_ok=True)
 
-        # Step 2: Extract filename from Content-Disposition
         filename = None
         if "Content-Disposition" in response.headers:
             content_disposition = response.headers["Content-Disposition"]
             filename_match = re.search(r'filename="(.+?)"', content_disposition)
             if not filename_match:  # Try to match RFC 5987 style
-                filename_match = re.search(r"filename\*=(?:UTF-8'')?(.+)", content_disposition)
+                filename_match = re.search(
+                    r"filename\*=(?:UTF-8'')?(.+)", content_disposition
+                )
             if filename_match:
                 extracted_filename = filename_match.group(1)
-                # Ensure the filename is unique
                 if (component_temp_dir / extracted_filename).exists():
-                    timestamp = datetime.now(ZoneInfo("UTC")).strftime("%Y%m%d%H%M%S%f")
+                    timestamp = datetime.now(ZoneInfo("UTC")).strftime(
+                        "%Y%m%d%H%M%S%f"
+                    )
                     filename = f"{timestamp}-{extracted_filename}"
                 else:
                     filename = extracted_filename
 
-        # Step 3: Infer file extension or use part of the request URL if no filename
         if not filename:
-            # Extract the last segment of the URL path
             url_path = urlparse(str(response.request.url)).path
-            base_name = Path(url_path).name  # Get the last segment of the path
-            if not base_name:  # If the path ends with a slash or is empty
+            base_name = Path(url_path).name
+            if not base_name:
                 base_name = "response"
 
-            # Infer file extension
-            extension = mimetypes.guess_extension(content_type.split(";")[0]) if content_type else None
+            extension = (
+                mimetypes.guess_extension(content_type.split(";")[0])
+                if content_type
+                else None
+            )
             if not extension:
-                extension = ".bin" if is_binary else ".txt"  # Default extensions
+                extension = ".bin" if is_binary else ".txt"
 
-            # Combine the base name with timestamp and extension
             timestamp = datetime.now(ZoneInfo("UTC")).strftime("%Y%m%d%H%M%S%f")
             filename = f"{timestamp}-{base_name}{extension}"
 
-        # Step 4: Define the full file path
         file_path = component_temp_dir / filename
 
         return is_binary, file_path
