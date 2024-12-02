@@ -396,20 +396,14 @@ class Component(CustomComponent):
 
     def run_and_validate_update_outputs(self, frontend_node: dict, field_name: str, field_value: Any):
         frontend_node = self.update_outputs(frontend_node, field_name, field_value)
-        if field_name == "tool_mode" or frontend_node.get("tool_mode"):
-            is_tool_mode = field_value or frontend_node.get("tool_mode")
+        is_tool_mode = field_value or frontend_node.get("tool_mode")
+        if field_name == "tool_mode" or is_tool_mode:
             frontend_node["outputs"] = [self._build_tool_output()] if is_tool_mode else frontend_node["outputs"]
             if is_tool_mode:
-                input_field_data = self._build_tools_metadata_input().to_dict()
-                frontend_node["template"].update(
-                    {TOOLS_METADATA_INPUT_NAME: input_field_data}
-                ) if field_value else frontend_node["template"].pop(TOOLS_METADATA_INPUT_NAME, None)
-            elif TOOLS_METADATA_INPUT_NAME in frontend_node["template"]:
-                frontend_node["template"].pop(TOOLS_METADATA_INPUT_NAME)
-        if TOOLS_METADATA_INPUT_NAME in frontend_node["template"]:
-            self.tools_metadata = frontend_node["template"][TOOLS_METADATA_INPUT_NAME]["value"]
-            frontend_node["outputs"] = [self._build_tool_output()]
-
+                frontend_node["template"][TOOLS_METADATA_INPUT_NAME] = self._build_tools_metadata_input().to_dict()
+            else:
+                frontend_node["template"].pop(TOOLS_METADATA_INPUT_NAME, None)
+        self.tools_metadata = frontend_node["template"].get(TOOLS_METADATA_INPUT_NAME, {}).get("value")
         return self._validate_frontend_node(frontend_node)
 
     def _validate_frontend_node(self, frontend_node: dict):
@@ -1177,7 +1171,11 @@ class Component(CustomComponent):
             if hasattr(self, TOOLS_METADATA_INPUT_NAME)
             else [{"name": tool.name, "description": tool.description} for tool in tools]
         )
-        from langflow.io import TableInput
+        try:
+            from langflow.io import TableInput
+        except ImportError as e:
+            msg = "Failed to import TableInput from langflow.io"
+            raise ImportError(msg) from e
 
         return TableInput(
             name=TOOLS_METADATA_INPUT_NAME,
