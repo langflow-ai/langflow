@@ -3,7 +3,7 @@ from .current_date import CurrentDateComponent
 from .id_generator import IDGeneratorComponent
 from .memory import MemoryComponent
 from .output_parser import OutputParserComponent
-from .store_message import StoreMessageComponent
+from .message_store import MessageStoreComponent
 from .structured_output import StructuredOutputComponent
 
 __all__ = [
@@ -12,6 +12,6 @@ __all__ = [
     "IDGeneratorComponent",
     "MemoryComponent",
     "OutputParserComponent",
-    "StoreMessageComponent",
+    "MessageStoreComponent",
     "StructuredOutputComponent",
 ]
