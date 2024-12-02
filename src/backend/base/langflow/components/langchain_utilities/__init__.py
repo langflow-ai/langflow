@@ -26,6 +26,7 @@ from .vector_store import VectoStoreRetrieverComponent
 from .vector_store_info import VectorStoreInfoComponent
 from .vector_store_router import VectorStoreRouterAgentComponent
 from .xml import XMLAgentComponent
+from .retriever import RetrieverToolComponent
 
 __all__ = [
     "CSVAgentComponent",
@@ -56,4 +57,5 @@ __all__ = [
     "VectorStoreInfoComponent",
     "VectorStoreRouterAgentComponent",
     "XMLAgentComponent",
+    "RetrieverToolComponent",
 ]
