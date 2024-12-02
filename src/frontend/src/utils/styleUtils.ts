@@ -231,6 +231,7 @@ import {
 } from "lucide-react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
+import { AgentQLIcon } from "../icons/AgentQL";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
 import { AssemblyAIIcon } from "../icons/AssemblyAI";
@@ -500,6 +501,7 @@ export const SIDEBAR_CATEGORIES = [
 
 export const SIDEBAR_BUNDLES = [
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
+  { display_name: "AgentQL", name: "agentql", icon: "AgentQL" },
   { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
   {
     display_name: "DataStax",
@@ -610,6 +612,7 @@ export const nodeIconsLucide: iconsType = {
   Anthropic: AnthropicIcon,
   ChatAnthropic: AnthropicIcon,
   assemblyai: AssemblyAIIcon,
+  AgentQL: AgentQLIcon,
   AssemblyAI: AssemblyAIIcon,
   AstraDB: AstraDBIcon,
   BingSearchAPIWrapper: BingIcon,
