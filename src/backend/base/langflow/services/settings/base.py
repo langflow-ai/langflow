@@ -241,10 +241,14 @@ class Settings(BaseSettings):
         if not value:
             logger.debug("No database_url provided, trying LANGFLOW_DATABASE_URL env variable")
             if langflow_database_url := os.getenv("LANGFLOW_DATABASE_URL"):
-                if not langflow_database_url.startswith("postgres://") and not langflow_database_url.startswith("postgresql://"):
+                if not langflow_database_url.startswith("postgres://") and not langflow_database_url.startswith(
+                    "postgresql://"
+                ):
                     if langflow_database_url.startswith("sqlite://"):
                         logger.warning("Sqlite has been abandoned, please use postgres.")
-                    raise ValueError("LANGFLOW_DATABASE_URL is not correct. It should start with postgres:// or postgresql://")
+                    raise ValueError(
+                        "LANGFLOW_DATABASE_URL is not correct. It should start with postgres:// or postgresql://"
+                    )
                 value = langflow_database_url
                 logger.debug("Using LANGFLOW_DATABASE_URL env variable.")
             else:
