@@ -29,7 +29,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
@@ -43,7 +45,9 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("ollama");
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="modelsOllama"]', {
+      timeout: 3000,
+    });
 
     await page
       .getByTestId("modelsOllama")
@@ -75,13 +79,14 @@ test(
     await page.keyboard.press("Backspace");
     await page.locator("textarea").last().fill(cleanCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
-    await page.waitForTimeout(500);
 
     await page.getByTestId("fit_view").click();
 
     await mutualValidation(page);
 
     await moveSlider(page, "right", false);
+
+    // wait for the slider to update
 
     await page.waitForTimeout(500);
 

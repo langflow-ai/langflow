@@ -17,7 +17,10 @@ import { useShortcutsStore } from "../../stores/shortcuts";
 import { useTypesStore } from "../../stores/typesStore";
 import { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
-import { scapedJSONStringfy } from "../../utils/reactflowUtils";
+import {
+  checkHasToolMode,
+  scapedJSONStringfy,
+} from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
 import { getNodeInputColors } from "../helpers/get-node-input-colors";
 import { getNodeInputColorsName } from "../helpers/get-node-input-colors-name";
@@ -332,19 +335,15 @@ export default function GenericNode({
     return null;
   };
 
-  const hasToolMode =
-    data.node?.template &&
-    Object.values(data.node.template).some((field) => field.tool_mode);
+  const hasToolMode = checkHasToolMode(data.node?.template ?? {});
 
   return (
     <div className={cn(isOutdated && !isUserEdited ? "relative -mt-10" : "")}>
       <div
         className={cn(
           borderColor,
-          showNode
-            ? "w-80 rounded-xl shadow-sm hover:shadow-md"
-            : `h-[4.065rem] w-48 rounded-[0.75rem] ${!selected ? "border-[1px] border-border ring-[0.5px] ring-border" : ""}`,
-          "generic-node-div group/node relative",
+          showNode ? "w-80" : `w-48`,
+          "generic-node-div group/node relative rounded-xl shadow-sm hover:shadow-md",
           !hasOutputs && "pb-4",
         )}
       >
@@ -357,8 +356,9 @@ export default function GenericNode({
               className="h-[18px] w-[18px] shrink-0"
             />
             <span className="flex-1 truncate text-sm font-medium">
-              Update Ready
+              {showNode && "Update Ready"}
             </span>
+
             <Button
               variant="warning"
               size="iconMd"
@@ -424,21 +424,19 @@ export default function GenericNode({
                 </>
               )}
             </div>
-            {showNode && (
-              <NodeStatus
-                data={data}
-                frozen={data.node?.frozen}
-                showNode={showNode}
-                display_name={data.node?.display_name!}
-                nodeId={data.id}
-                selected={selected}
-                setBorderColor={setBorderColor}
-                buildStatus={buildStatus}
-                isOutdated={isOutdated}
-                isUserEdited={isUserEdited}
-                getValidationStatus={getValidationStatus}
-              />
-            )}
+            <NodeStatus
+              data={data}
+              frozen={data.node?.frozen}
+              showNode={showNode}
+              display_name={data.node?.display_name!}
+              nodeId={data.id}
+              selected={selected}
+              setBorderColor={setBorderColor}
+              buildStatus={buildStatus}
+              isOutdated={isOutdated}
+              isUserEdited={isUserEdited}
+              getValidationStatus={getValidationStatus}
+            />
           </div>
           {showNode && (
             <div>
