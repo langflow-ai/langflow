@@ -113,7 +113,15 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             required=True,
             real_time_refresh=True,
             refresh_button=True,
-            options=[],
+            options=["+ Create new collection"],
+            value="+ Create new collection",
+        ),
+        StrInput(
+            name="collection_name_new",
+            display_name="Collection Name",
+            info="Name of the new collection to create.",
+            advanced=False,
+            required=True,
         ),
         StrInput(
             name="keyspace",
@@ -339,13 +347,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             build_config["embedding_choice"]["advanced"] = False
             build_config["embedding_choice"]["value"] = "Embedding Model"
 
-            new_parameter = StrInput(
-                name="collection_name_new",
-                display_name="Collection Name",
-                required=True,
-            ).to_dict()
-
-            self.insert_in_dict(build_config, "embedding_choice", {"collection_name_new": new_parameter})
+            build_config["collection_name_new"]["advanced"] = False
+            build_config["collection_name_new"]["required"] = True
 
             new_parameter = HandleInput(
                 name="embedding_model",
@@ -356,7 +359,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             self.insert_in_dict(build_config, "collection_name_new", {"embedding_model": new_parameter})
         elif field_name == "collection_name" and field_value != "+ Create new collection":
-            self.del_fields(build_config, ["collection_name_new"])
+            build_config["collection_name_new"]["advanced"] = True
+            build_config["collection_name_new"]["required"] = False
+            build_config["collection_name_new"]["value"] = ""
 
         # Get the collection options
         collection_options = self.get_collection_options()
