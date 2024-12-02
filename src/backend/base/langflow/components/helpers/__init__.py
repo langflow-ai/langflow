@@ -11,7 +11,6 @@ __all__ = [
     "CurrentDateComponent",
     "IDGeneratorComponent",
     "MessageRetrieverComponent",
-    "MessageStoreComponent",
     "OutputParserComponent",
     "MessageStoreComponent",
     "StructuredOutputComponent",
