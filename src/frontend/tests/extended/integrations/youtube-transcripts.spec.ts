@@ -56,8 +56,6 @@ test(
       .getByTestId("textarea_str_url")
       .fill("https://www.youtube.com/watch?v=VqhCQZaH4Vs");
 
-    await page.getByTestId("textarea_str_language").fill("en");
-
     await page.getByTestId("button_run_youtube transcripts").click();
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
