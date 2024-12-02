@@ -1,7 +1,7 @@
 import httpx
 
 from langflow.custom import Component
-from langflow.io import DictInput, Output, SecretStrInput, StrInput
+from langflow.io import DictInput, MultilineInput, Output, SecretStrInput, StrInput
 from langflow.schema import Data
 
 
@@ -26,7 +26,7 @@ class AgentQL(Component):
             required=True,
             info="The URL of the webpage to query.",
         ),
-        StrInput(
+        MultilineInput(
             name="query",
             display_name="Query",
             required=True,
@@ -49,12 +49,12 @@ class AgentQL(Component):
         url = "https://api.agentql.com/v1/query-data"
         headers = {
             "X-API-Key": self.api_key,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
         payload = {
             "query": self.query,
             "url": self.url,
-            "params": params
+            "params": params,
         }
 
         response = httpx.post(url, headers=headers, json=payload)
