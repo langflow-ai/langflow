@@ -22,7 +22,7 @@ The secret key is critical for encrypting sensitive data in Langflow. Follow the
   - Never commit the secret key to version control
   - Regularly rotate the secret key
 
-- Default secret key locations:
+- Use the default secret key locations:
   - macOS: `~/Library/Caches/langflow/secret_key`
   - Linux: `~/.cache/langflow/secret_key`
   - Windows: `%USERPROFILE%\AppData\Local\langflow\secret_key`
