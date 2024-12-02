@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 import validators
+
 from langflow.custom import Component
 from langflow.io import (
     BoolInput,
@@ -79,7 +80,6 @@ class APIRequestComponent(Component):
             value=[],
             input_types=["Data"],
             tool_mode=True,
-            
         ),
         TableInput(
             name="headers",
@@ -141,9 +141,7 @@ class APIRequestComponent(Component):
         Output(display_name="Data", name="data", method="make_requests"),
     ]
 
-    def update_build_config(
-        self, build_config: dotdict, field_value: Any, field_name: str | None = None
-    ):
+    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "method":
             if field_value in ["POST", "PATCH", "PUT"]:
                 build_config["body"]["advanced"] = False
@@ -192,18 +190,13 @@ class APIRequestComponent(Component):
             )
 
             redirection_history = [
-                {"url": str(redirect.url), "status_code": redirect.status_code}
-                for redirect in response.history
+                {"url": str(redirect.url), "status_code": redirect.status_code} for redirect in response.history
             ]
 
             if response.is_redirect:
-                redirection_history.append(
-                    {"url": str(response.url), "status_code": response.status_code}
-                )
+                redirection_history.append({"url": str(response.url), "status_code": response.status_code})
 
-            is_binary, file_path = self._response_info(
-                response, with_file_path=save_to_file
-            )
+            is_binary, file_path = self._response_info(response, with_file_path=save_to_file)
             response_headers = self._headers_to_dict(response.headers)
 
             metadata: dict[str, Any] = {
@@ -224,11 +217,7 @@ class APIRequestComponent(Component):
                             "headers": headers,
                             "status_code": response.status_code,
                             "response_headers": response_headers,
-                            **(
-                                {"redirection_history": redirection_history}
-                                if redirection_history
-                                else {}
-                            ),
+                            **({"redirection_history": redirection_history} if redirection_history else {}),
                         }
                     )
                 return Data(data=metadata)
@@ -250,11 +239,7 @@ class APIRequestComponent(Component):
                         "headers": headers,
                         "status_code": response.status_code,
                         "response_headers": response_headers,
-                        **(
-                            {"redirection_history": redirection_history}
-                            if redirection_history
-                            else {}
-                        ),
+                        **({"redirection_history": redirection_history} if redirection_history else {}),
                     }
                 )
             return Data(data=metadata)
@@ -275,11 +260,7 @@ class APIRequestComponent(Component):
                     "headers": headers,
                     "status_code": 500,
                     "error": str(exc),
-                    **(
-                        {"redirection_history": redirection_history}
-                        if redirection_history
-                        else {}
-                    ),
+                    **({"redirection_history": redirection_history} if redirection_history else {}),
                 },
             )
 
@@ -290,7 +271,6 @@ class APIRequestComponent(Component):
         url_parts[4] = urlencode(query)
         print(url_parts)
         return urlunparse(url_parts)
-
 
     async def make_requests(self) -> list[Data]:
         method = self.method
@@ -342,9 +322,7 @@ class APIRequestComponent(Component):
         self.status = results
         return results
 
-    def _response_info(
-        self, response: httpx.Response, *, with_file_path: bool = False
-    ) -> tuple[bool, Path | None]:
+    def _response_info(self, response: httpx.Response, *, with_file_path: bool = False) -> tuple[bool, Path | None]:
         """Determine the file path and whether the response content is binary.
 
         Args:
@@ -356,10 +334,7 @@ class APIRequestComponent(Component):
                 A tuple containing a boolean indicating if the content is binary and the full file path (if applicable).
         """
         content_type = response.headers.get("Content-Type", "")
-        is_binary = (
-            "application/octet-stream" in content_type
-            or "application/binary" in content_type
-        )
+        is_binary = "application/octet-stream" in content_type or "application/binary" in content_type
 
         if not with_file_path:
             return is_binary, None
@@ -372,15 +347,11 @@ class APIRequestComponent(Component):
             content_disposition = response.headers["Content-Disposition"]
             filename_match = re.search(r'filename="(.+?)"', content_disposition)
             if not filename_match:  # Try to match RFC 5987 style
-                filename_match = re.search(
-                    r"filename\*=(?:UTF-8'')?(.+)", content_disposition
-                )
+                filename_match = re.search(r"filename\*=(?:UTF-8'')?(.+)", content_disposition)
             if filename_match:
                 extracted_filename = filename_match.group(1)
                 if (component_temp_dir / extracted_filename).exists():
-                    timestamp = datetime.now(ZoneInfo("UTC")).strftime(
-                        "%Y%m%d%H%M%S%f"
-                    )
+                    timestamp = datetime.now(ZoneInfo("UTC")).strftime("%Y%m%d%H%M%S%f")
                     filename = f"{timestamp}-{extracted_filename}"
                 else:
                     filename = extracted_filename
@@ -391,11 +362,7 @@ class APIRequestComponent(Component):
             if not base_name:
                 base_name = "response"
 
-            extension = (
-                mimetypes.guess_extension(content_type.split(";")[0])
-                if content_type
-                else None
-            )
+            extension = mimetypes.guess_extension(content_type.split(";")[0]) if content_type else None
             if not extension:
                 extension = ".bin" if is_binary else ".txt"
 
