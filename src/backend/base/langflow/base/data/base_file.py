@@ -305,16 +305,15 @@ class BaseFileComponent(Component, ABC):
 
         file_paths = []
         for obj in file_path:
-            if isinstance(obj, Message):
-                obj = _message_to_data(obj)
+            data_obj = _message_to_data(obj) if isinstance(obj, Message) else obj
 
-            if not isinstance(obj, Data):
-                msg = f"Expected Data object in file_path but got {type(obj)}."
+            if not isinstance(data_obj, Data):
+                msg = f"Expected Data object in file_path but got {type(data_obj)}."
                 self.log(msg)
                 if not self.silent_errors:
                     raise ValueError(msg)
                 continue
-            file_paths.append(obj)
+            file_paths.append(data_obj)
 
         return file_paths
 
