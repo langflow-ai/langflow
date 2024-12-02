@@ -306,11 +306,12 @@ build_langflow_backup:
 	uv lock && uv build
 
 build_langflow:
-	uv lock --no-upgrade
-	uv build $(args)
+	cd ./scripts && poetry run python update_dependencies.py
+	poetry lock --no-update
+	poetry build
 ifdef restore
 	mv pyproject.toml.bak pyproject.toml
-	mv uv.lock.bak uv.lock
+	mv poetry.lock.bak poetry.lock
 endif
 
 
