@@ -20,7 +20,7 @@ from langflow.io import (
 from langflow.schema import Data
 
 
-class AstraGraphVectorStoreComponent(LCVectorStoreComponent):
+class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
     display_name: str = "Astra DB Graph"
     description: str = "Implementation of Graph Vector Store using Astra DB"
     documentation: str = "https://python.langchain.com/api_reference/astradb/graph_vectorstores/langchain_astradb.graph_vectorstores.AstraDBGraphVectorStore.html"
