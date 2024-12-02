@@ -56,7 +56,7 @@ The GitLoader component uses the GitLoader from LangChain to fetch and load docu
 
 ## Unstructured
 
-This component uses the [Unstructured](https://unstructured.io/) library to load and parse PDF, DOCX, and TXT files into structured data. This component works with both the open-source library and the Unstructured API.
+This component uses the [Unstructured.io](https://unstructured.io/) Serverless API to load and parse files into structured data.
 
 ### Parameters
 
@@ -64,8 +64,8 @@ This component uses the [Unstructured](https://unstructured.io/) library to load
 
 | Name | Display Name | Info |
 | --- | --- | --- |
-| file | File | The path to the file to be parsed (supported types: pdf, docx, txt) |
-| api_key | API Key | Unstructured API Key (optional, if not provided, open-source library will be used) |
+| file | File | The path to the file to be parsed (supported types are listed [here](https://docs.unstructured.io/api-reference/api-services/overview#supported-file-types)) |
+| api_key | API Key | Unstructured.io Serverless API Key |
 
 #### Outputs:
 
