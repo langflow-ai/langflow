@@ -18,9 +18,9 @@ The secret key is critical for encrypting sensitive data in Langflow. Follow the
 
 - Store the secret key securely:
 
-  - Use environment variables or secure secret management systems
-  - Never commit the secret key to version control
-  - Regularly rotate the secret key
+  - Use environment variables or secure secret management systems.
+  - Never commit the secret key to version control.
+  - Regularly rotate the secret key.
 
 - Use the default secret key locations:
   - macOS: `~/Library/Caches/langflow/secret_key`
@@ -29,10 +29,10 @@ The secret key is critical for encrypting sensitive data in Langflow. Follow the
 
 ## API keys and credentials
 
-- Store API keys and credentials as encrypted global variables
-- Use the Credential type for sensitive information
-- Implement proper access controls for users who can view/edit credentials
-- Regularly audit and rotate API keys
+- Store API keys and credentials as encrypted global variables.
+- Use the Credential type for sensitive information.
+- Implement proper access controls for users who can view/edit credentials.
+- Regularly audit and rotate API keys.
 
 ## Database file protection
 
