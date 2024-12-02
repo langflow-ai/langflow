@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import time
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
@@ -556,7 +557,7 @@ async def create_upload_file(
     """
     try:
         flow_id_str = str(flow_id)
-        file_path = save_uploaded_file(file, folder_name=flow_id_str)
+        file_path = await asyncio.to_thread(save_uploaded_file, file, folder_name=flow_id_str)
 
         return UploadFileResponse(
             flow_id=flow_id_str,
@@ -614,6 +615,9 @@ async def custom_component_update(
             component,
             user_id=user.id,
         )
+
+        component_node["tool_mode"] = code_request.tool_mode
+
         if hasattr(cc_instance, "set_attributes"):
             template = code_request.get_template()
             params = {}

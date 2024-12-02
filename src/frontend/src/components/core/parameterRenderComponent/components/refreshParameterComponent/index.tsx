@@ -30,6 +30,7 @@ export function RefreshParameterComponent({
     parameterId: name,
     nodeId: nodeId,
     node: nodeClass,
+    tool_mode: nodeClass.tool_mode ?? false,
   });
 
   const setErrorData = useAlertStore((state) => state.setErrorData);

@@ -5,7 +5,6 @@ test(
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
     await page.goto("/");
-    await page.waitForTimeout(1000);
 
     let modalCount = 0;
     try {
@@ -19,7 +18,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
     await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -30,7 +31,9 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="promptsPrompt"]', {
+      timeout: 30000,
+    });
 
     await page
       .locator('//*[@id="promptsPrompt"]')
@@ -66,7 +69,9 @@ test(
       .getByTestId("button_open_text_area_modal_textarea_str_text")
       .click();
 
-    await page.waitForTimeout(500);
+    await page.waitForSelector('[data-testid="icon-FileText"]', {
+      timeout: 3000,
+    });
 
     const value = await page.getByTestId("text-area-modal").inputValue();
 
