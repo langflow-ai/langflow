@@ -249,7 +249,8 @@ class ComponentToolkit:
     ) -> list[BaseTool]:
         # update the tool_name and description according to the name and secriotion mentioned in the list
         if isinstance(self.metadata, pd.DataFrame):
-            for tool, metadata in zip(tools, self.metadata.T.to_dict().values(), strict=False):
+            metadata_dict = self.metadata.to_dict(orient="records")
+            for tool, metadata in zip(tools, metadata_dict, strict=False):
                 if isinstance(tool, StructuredTool | BaseTool):
                     tool.name = metadata.get("name", tool.name)
                     tool.description = metadata.get("description", tool.description)
