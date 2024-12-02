@@ -8,6 +8,7 @@ from zipfile import ZipFile, is_zipfile
 from langflow.custom import Component
 from langflow.io import BoolInput, FileInput, HandleInput, Output
 from langflow.schema import Data
+from langflow.schema.message import Message
 
 
 class BaseFileComponent(Component, ABC):
@@ -100,8 +101,6 @@ class BaseFileComponent(Component, ABC):
     SERVER_FILE_PATH_FIELDNAME = "file_path"
     SUPPORTED_BUNDLE_EXTENSIONS = ["zip", "tar", "tgz", "bz2", "gz"]
 
-    file_path: list[Data] | None = None
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Dynamically update FileInput to include valid extensions and bundles
@@ -125,11 +124,12 @@ class BaseFileComponent(Component, ABC):
             name="file_path",
             display_name="Server File Path",
             info=(
-                f"Data object with a '{SERVER_FILE_PATH_FIELDNAME}' property pointing to server file. "
-                "Supercedes 'Path'. "
+                f"Data object with a '{SERVER_FILE_PATH_FIELDNAME}' property pointing to server file"
+                " or a Message object with a path to the file. Supercedes 'Path' but supports same file types."
             ),
             required=False,
-            input_types=["Data"],
+            input_types=["Data", "Message"],
+            is_list=True,
         ),
         BoolInput(
             name="silent_errors",
@@ -284,6 +284,39 @@ class BaseFileComponent(Component, ABC):
 
         return updated_base_files
 
+    def _file_path_as_list(self) -> list[Data]:
+        file_path = self.file_path
+        if not file_path:
+            return []
+
+        def _message_to_data(message: Message) -> Data:
+            return Data(**{self.SERVER_FILE_PATH_FIELDNAME: message.text})
+
+        if isinstance(file_path, Data):
+            file_path = [file_path]
+        elif isinstance(file_path, Message):
+            file_path = [_message_to_data(file_path)]
+        elif not isinstance(file_path, list):
+            msg = f"Expected list of Data objects in file_path but got {type(file_path)}."
+            self.log(msg)
+            if not self.silent_errors:
+                raise ValueError(msg)
+            return []
+
+        file_paths = []
+        for obj in file_path:
+            data_obj = _message_to_data(obj) if isinstance(obj, Message) else obj
+
+            if not isinstance(data_obj, Data):
+                msg = f"Expected Data object in file_path but got {type(data_obj)}."
+                self.log(msg)
+                if not self.silent_errors:
+                    raise ValueError(msg)
+                continue
+            file_paths.append(data_obj)
+
+        return file_paths
+
     def _validate_and_resolve_paths(self) -> list[BaseFile]:
         """Validate that all input paths exist and are valid, and create BaseFile instances.
 
@@ -307,28 +340,14 @@ class BaseFileComponent(Component, ABC):
                 BaseFileComponent.BaseFile(data, resolved_path, delete_after_processing=delete_after_processing)
             )
 
-        if self.path and (not hasattr(self, "file_path") or not self.file_path):
+        file_path = self._file_path_as_list()
+
+        if self.path and not file_path:
             # Wrap self.path into a Data object
-            data_obj = Data(data={"file_path": self.path})
+            data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: self.path})
             add_file(data=data_obj, path=self.path, delete_after_processing=False)
-        elif hasattr(self, "file_path") and self.file_path:
-            if isinstance(self.file_path, Data):
-                self.file_path = [self.file_path]
-            elif not isinstance(self.file_path, list):
-                msg = f"Expected list of Data objects in file_path but got {type(self.file_path)}."
-                self.log(msg)
-                if not self.silent_errors:
-                    raise ValueError(msg)
-                return []
-
-            for obj in self.file_path:
-                if not isinstance(obj, Data):
-                    msg = f"Expected Data object in file_path but got {type(obj)}."
-                    self.log(msg)
-                    if not self.silent_errors:
-                        raise ValueError(msg)
-                    continue
-
+        elif file_path:
+            for obj in file_path:
                 server_file_path = obj.data.get(self.SERVER_FILE_PATH_FIELDNAME)
                 if server_file_path:
                     add_file(
