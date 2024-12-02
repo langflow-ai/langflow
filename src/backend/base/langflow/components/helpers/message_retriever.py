@@ -11,11 +11,11 @@ from langflow.schema.message import Message
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 
 
-class MemoryComponent(Component):
-    display_name = "Message History"
+class MessageRetrieverComponent(Component):
+    display_name = "Message Retriever"
     description = "Retrieves stored chat messages from Langflow tables or an external memory."
-    icon = "message-square-more"
-    name = "Memory"
+    icon = "message-square-text"
+    name = "MessageRetriever"
 
     inputs = [
         HandleInput(
