@@ -1,4 +1,3 @@
-import { CodeBlock } from "@/modals/IOModal/components/chatView/chatMessage/codeBlock";
 import { ContentType } from "@/types/chat";
 import { ReactNode } from "react";
 import Markdown from "react-markdown";
@@ -120,9 +119,9 @@ export default function ContentDisplay({
     case "json":
       contentData = (
         <div className="pr-20">
-          <CodeBlock
+          <SimplifiedCodeTabComponent
             language="json"
-            value={JSON.stringify(content.data, null, 2)}
+            code={JSON.stringify(content.data, null, 2)}
           />
         </div>
       );
@@ -134,7 +133,10 @@ export default function ContentDisplay({
           {content.reason && <div>Reason: {content.reason}</div>}
           {content.solution && <div>Solution: {content.solution}</div>}
           {content.traceback && (
-            <CodeBlock language="text" value={content.traceback} />
+            <SimplifiedCodeTabComponent
+              language="text"
+              code={content.traceback}
+            />
           )}
         </div>
       );
@@ -184,9 +186,9 @@ export default function ContentDisplay({
         // For objects/arrays, format as JSON
         try {
           return (
-            <CodeBlock
+            <SimplifiedCodeTabComponent
               language="json"
-              value={JSON.stringify(output, null, 2)}
+              code={JSON.stringify(output, null, 2)}
             />
           );
         } catch {
@@ -203,9 +205,9 @@ export default function ContentDisplay({
           >
             {`${content.name ? `**Tool:** ${content.name}\n\n` : ""}**Input:**`}
           </Markdown>
-          <CodeBlock
+          <SimplifiedCodeTabComponent
             language="json"
-            value={JSON.stringify(content.tool_input, null, 2)}
+            code={JSON.stringify(content.tool_input, null, 2)}
           />
           {content.output !== undefined && (
             <>
@@ -228,9 +230,9 @@ export default function ContentDisplay({
               >
                 **Error:**
               </Markdown>
-              <CodeBlock
+              <SimplifiedCodeTabComponent
                 language="json"
-                value={JSON.stringify(content.error, null, 2)}
+                code={JSON.stringify(content.error, null, 2)}
               />
             </div>
           )}
