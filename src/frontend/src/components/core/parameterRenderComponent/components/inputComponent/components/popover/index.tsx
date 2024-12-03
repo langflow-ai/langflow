@@ -68,7 +68,7 @@ const CustomInputPopover = ({
         <div
           data-testid={`anchor-${id}`}
           className={cn(
-            "primary-input noflow nowheel nopan nodelete nodrag border-1 flex h-full min-h-[2.375rem] cursor-default flex-wrap items-center px-2",
+            "primary-input noflow nopan nodelete nodrag border-1 flex h-full min-h-[2.375rem] cursor-default flex-wrap items-center px-2",
             editNode && "min-h-7 p-0 px-1",
             editNode && disabled && "min-h-5 border-muted",
             disabled && "bg-muted text-muted",
