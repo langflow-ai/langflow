@@ -103,7 +103,7 @@ class ConditionalRouterComponent(Component):
             self.iterate_and_stop_once("false_result")
             return self.message
         self.iterate_and_stop_once("true_result")
-        return None
+        return ""
 
     def false_response(self) -> Message:
         result = self.evaluate_condition(
@@ -114,4 +114,4 @@ class ConditionalRouterComponent(Component):
             self.iterate_and_stop_once("true_result")
             return self.message
         self.iterate_and_stop_once("false_result")
-        return None
+        return ""
