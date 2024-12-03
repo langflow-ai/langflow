@@ -49,7 +49,8 @@ class Tweaks(RootModel):
     def __getattr__(self, name: str) -> Any:
         if name in self.root:
             return self.root[name]
-        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+        msg = f"'{type(self).__name__}' object has no attribute '{name}'"
+        raise AttributeError(msg)
 
     def __setattr__(self, name: str, value: Any) -> None:
         if name == "root" or name not in self.__fields__:
