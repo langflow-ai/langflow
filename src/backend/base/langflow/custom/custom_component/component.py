@@ -13,7 +13,12 @@ import yaml
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, ValidationError
 
-from langflow.base.tools.constants import TOOL_OUTPUT_DISPLAY_NAME, TOOL_OUTPUT_NAME, TOOLS_METADATA_INPUT_NAME
+from langflow.base.tools.constants import (
+    TOOL_OUTPUT_DISPLAY_NAME,
+    TOOL_OUTPUT_NAME,
+    TOOL_TABLE_SCHEMA,
+    TOOLS_METADATA_INPUT_NAME,
+)
 from langflow.custom.tree_visitor import RequiredInputsVisitor
 from langflow.exceptions.component import StreamingError
 from langflow.field_typing import Tool  # noqa: TCH001 Needed by _add_toolkit_output
@@ -1153,20 +1158,6 @@ class Component(CustomComponent):
 
     def _build_tools_metadata_input(self):
         tools = self.to_toolkit()
-        table_schema = [
-            {
-                "name": "name",
-                "display_name": "Name",
-                "type": "str",
-                "description": "Specify the name of the output field.",
-            },
-            {
-                "name": "description",
-                "display_name": "Description",
-                "type": "str",
-                "description": "Describe the purpose of the output field.",
-            },
-        ]
         tool_data = (
             self.tools_metadata
             if hasattr(self, TOOLS_METADATA_INPUT_NAME)
@@ -1182,6 +1173,6 @@ class Component(CustomComponent):
             name=TOOLS_METADATA_INPUT_NAME,
             display_name="Tools Metadata",
             real_time_refresh=True,
-            table_schema=table_schema,
+            table_schema=TOOL_TABLE_SCHEMA,
             value=tool_data,
         )
