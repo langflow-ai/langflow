@@ -396,14 +396,15 @@ class Component(CustomComponent):
 
     def run_and_validate_update_outputs(self, frontend_node: dict, field_name: str, field_value: Any):
         frontend_node = self.update_outputs(frontend_node, field_name, field_value)
-        is_tool_mode = field_value or frontend_node.get("tool_mode")
-        if field_name == "tool_mode" or is_tool_mode:
+        if field_name == "tool_mode" or frontend_node.get("tool_mode"):
+            is_tool_mode = field_value or frontend_node.get("tool_mode")
             frontend_node["outputs"] = [self._build_tool_output()] if is_tool_mode else frontend_node["outputs"]
             if is_tool_mode:
+                frontend_node.setdefault("template", {})
                 frontend_node["template"][TOOLS_METADATA_INPUT_NAME] = self._build_tools_metadata_input().to_dict()
-            else:
+            elif "template" in frontend_node:
                 frontend_node["template"].pop(TOOLS_METADATA_INPUT_NAME, None)
-        self.tools_metadata = frontend_node["template"].get(TOOLS_METADATA_INPUT_NAME, {}).get("value")
+        self.tools_metadata = frontend_node.get("template", {}).get(TOOLS_METADATA_INPUT_NAME, {}).get("value")
         return self._validate_frontend_node(frontend_node)
 
     def _validate_frontend_node(self, frontend_node: dict):
