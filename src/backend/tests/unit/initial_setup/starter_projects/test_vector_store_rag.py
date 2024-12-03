@@ -11,7 +11,7 @@ from langflow.components.outputs import ChatOutput
 from langflow.components.processing import ParseDataComponent
 from langflow.components.processing.split_text import SplitTextComponent
 from langflow.components.prompts import PromptComponent
-from langflow.components.vectorstores import AstraVectorStoreComponent
+from langflow.components.vectorstores import AstraDBVectorStoreComponent
 from langflow.graph import Graph
 from langflow.graph.graph.constants import Finish
 from langflow.schema import Data
@@ -29,7 +29,7 @@ def ingestion_graph():
     openai_embeddings.set(
         openai_api_key="sk-123", openai_api_base="https://api.openai.com/v1", openai_api_type="openai"
     )
-    vector_store = AstraVectorStoreComponent(_id="vector-store-123")
+    vector_store = AstraDBVectorStoreComponent(_id="vector-store-123")
     vector_store.set(
         embedding_model=openai_embeddings.build_embeddings,
         ingest_data=text_splitter.split_text,
@@ -48,7 +48,7 @@ def rag_graph():
     openai_embeddings = OpenAIEmbeddingsComponent(_id="openai-embeddings-124")
     chat_input = ChatInput(_id="chatinput-123")
     chat_input.get_output("message").value = "What is the meaning of life?"
-    rag_vector_store = AstraVectorStoreComponent(_id="rag-vector-store-123")
+    rag_vector_store = AstraDBVectorStoreComponent(_id="rag-vector-store-123")
     rag_vector_store.set(
         search_input=chat_input.message_response,
         api_endpoint="https://astra.example.com",
