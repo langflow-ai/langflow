@@ -28,7 +28,8 @@ test(
       await page.getByText("New Flow", { exact: true }).click();
       await page.waitForSelector('[data-testid="modal-title"]', {
         timeout: 3000,
-      });      modalCount = await page.getByTestId("modal-title")?.count();
+      });
+      modalCount = await page.getByTestId("modal-title")?.count();
     }
 
     await page.getByTestId("side_nav_options_all-templates").click();
@@ -82,7 +83,7 @@ test(
     await expect(page.getByText(/.*exported successfully/).last()).toBeVisible({
       timeout: 10000,
     });
-    },
+  },
 );
 
 test(
