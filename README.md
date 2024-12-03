@@ -39,10 +39,16 @@
 
 ## 📦 Quickstart
 
-- **Install with pip** (Python 3.10 or greater):
+- **Install with pip** (Python 3.10 to 3.12):
 
 ```shell
 pip install langflow
+```
+
+- **Install with uv** (Python 3.10 to 3.12):
+
+```shell
+uv pip install langflow
 ```
 
 - **Cloud:** DataStax Langflow is a hosted environment with zero setup. [Sign up for a free account.](https://astra.datastax.com/signup?type=langflow)
