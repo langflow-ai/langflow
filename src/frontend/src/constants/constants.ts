@@ -765,7 +765,7 @@ export const defaultShortcuts = [
   },
   {
     name: "Minimize",
-    shortcut: "mod+q",
+    shortcut: "mod+.",
   },
   {
     name: "Code",
