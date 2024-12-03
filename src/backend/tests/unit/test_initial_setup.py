@@ -3,6 +3,8 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
+from sqlmodel import select
+
 from langflow.custom.directory_reader.utils import abuild_custom_component_list_from_path
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.initial_setup.setup import (
@@ -13,7 +15,6 @@ from langflow.initial_setup.setup import (
 from langflow.interface.types import aget_all_types_dict
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import session_scope
-from sqlmodel import select
 
 
 def test_load_starter_projects():
