@@ -25,7 +25,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
     await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -35,8 +37,9 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Chroma");
 
-    await page.waitForTimeout(1000);
-
+    await page.waitForSelector('[data-testid="vectorstoresChroma DB"]', {
+      timeout: 3000,
+    });
     await page
       .getByTestId("vectorstoresChroma DB")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
@@ -142,7 +145,6 @@ test(
       .getByTestId("popover-anchor-input-collection_name-edit")
       .fill("NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe");
 
-    await page.waitForTimeout(1000);
     await page.getByText("Close").last().click();
 
     const plusButtonLocator = page.getByTestId("input-collection_name");
