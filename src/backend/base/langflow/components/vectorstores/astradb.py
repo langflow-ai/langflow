@@ -352,10 +352,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Refresh the collection name options
         build_config["collection_name"]["options"] = self._initialize_collection_options()
 
-        # Write to a file in my home directory with field value and field name
-        with open("/Users/erichare/field_values.txt", "a") as f:
-            f.write(f"{field_name}: {field_value}\n")
-
         # If the collection name is set to "+ Create new collection", show embedding choice
         if field_name == "collection_name" and field_value == "+ Create new collection":
             build_config["embedding_choice"]["advanced"] = False
