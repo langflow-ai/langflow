@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import IconComponent from "../../components/genericIconComponent";
+import IconComponent from "../../components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { SAVE_API_KEY_ALERT } from "../../constants/constants";
