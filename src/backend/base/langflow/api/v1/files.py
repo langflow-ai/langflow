@@ -85,7 +85,7 @@ async def upload_and_run_file(
     file_path_field: str = Query("input_value"),
     input_type: str = Query("text"),
     output_type: str = Query("text"),
-    stream: bool = Query(False),
+    stream: bool = Query(default=False),
     background_tasks: BackgroundTasks,
     request: Request,
 ) -> RunResponse:
@@ -130,9 +130,10 @@ async def upload_and_run_file(
         )
         run_response.outputs.append(RunOutputs(inputs={}, outputs=[upload_result]))
 
-        return run_response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+    else:
+        return run_response
 
 
 @router.get("/download/{flow_id}/{file_name}")
