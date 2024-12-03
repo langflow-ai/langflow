@@ -1,16 +1,13 @@
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
-import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
 import useAlertStore from "@/stores/alertStore";
-import { useTypesStore } from "@/stores/typesStore";
 import { customStringify } from "@/utils/reactflowUtils";
 import { useEffect } from "react";
 import { useBlocker, useParams } from "react-router-dom";
-import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import Page from "./components/PageComponent";
@@ -29,7 +26,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const blocker = useBlocker(changesNotSaved || isBuilding);
 
-  const version = useDarkStore((state) => state.version);
   const setOnFlowPage = useFlowStore((state) => state.setOnFlowPage);
   const { id } = useParams();
   const navigate = useCustomNavigate();
@@ -39,10 +35,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
   const flowToCanvas = useFlowsManagerStore((state) => state.flowToCanvas);
-
-  const { mutateAsync: refreshFlows } = useGetRefreshFlows();
-  const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
-  const types = useTypesStore((state) => state.types);
 
   const updatedAt = currentSavedFlow?.updated_at;
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
@@ -114,10 +106,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
         flowToCanvas
           ? setCurrentFlow(flowToCanvas)
           : getFlowToAddToCanvas(isAnExistingFlowId);
-      } else if (!flows) {
-        setIsLoading(true);
-        await refreshFlows({ get_all: true, header_flows: true });
-        setIsLoading(false);
       }
     };
     awaitgetTypes();
