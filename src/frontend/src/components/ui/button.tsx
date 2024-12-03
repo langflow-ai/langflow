@@ -83,7 +83,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const Comp = asChild ? Slot : "button";
     let newChildren = children;
     if (typeof children === "string") {
-      newChildren = (ignoreTitleCase?children:toTitleCase(children));
+      newChildren = ignoreTitleCase ? children : toTitleCase(children);
     }
     return (
       <>
