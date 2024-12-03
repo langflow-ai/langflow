@@ -61,9 +61,7 @@ export default function NodeStatus({
 
   const conditionSuccess =
     buildStatus === BuildStatus.BUILT ||
-    (!(!buildStatus || buildStatus === BuildStatus.TO_BUILD) &&
-      validationStatus &&
-      validationStatus.valid);
+    (buildStatus !== BuildStatus.TO_BUILD && validationStatus?.valid);
 
   const lastRunTime = useFlowStore(
     (state) => state.flowBuildStatus[nodeId_]?.timestamp,
@@ -164,7 +162,6 @@ export default function NodeStatus({
       return;
     }
     if (buildStatus === BuildStatus.BUILDING || isBuilding) return;
-    setValidationStatus(null);
     buildFlow({ stopNodeId: nodeId });
     track("Flow Build - Clicked", { stopNodeId: nodeId });
   };
@@ -190,7 +187,7 @@ export default function NodeStatus({
     return "Run component";
   };
 
-  return (
+  return showNode ? (
     <>
       <div className="flex flex-shrink-0 items-center">
         <div className="flex items-center gap-2 self-center">
@@ -284,5 +281,7 @@ export default function NodeStatus({
         </ShadTooltip>
       </div>
     </>
+  ) : (
+    <></>
   );
 }

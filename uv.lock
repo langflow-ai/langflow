@@ -3592,6 +3592,7 @@ dependencies = [
     { name = "redis" },
     { name = "spider-client" },
     { name = "sqlalchemy", extra = ["aiosqlite", "postgresql-psycopg2binary", "postgresql-psycopgbinary"] },
+    { name = "sseclient-py" },
     { name = "supabase" },
     { name = "types-cachetools" },
     { name = "upstash-vector" },
@@ -3649,6 +3650,7 @@ dev = [
     { name = "requests" },
     { name = "respx" },
     { name = "ruff" },
+    { name = "types-aiofiles" },
     { name = "types-google-cloud-ndb" },
     { name = "types-markdown" },
     { name = "types-passlib" },
@@ -3743,6 +3745,7 @@ requires-dist = [
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
     { name = "spider-client", specifier = ">=0.0.27,<1.0.0" },
     { name = "sqlalchemy", extras = ["aiosqlite", "postgresql-psycopg2binary", "postgresql-psycopgbinary"], specifier = ">=2.0.36,<3.0.0" },
+    { name = "sseclient-py", specifier = "==1.8.0" },
     { name = "supabase", specifier = "~=2.6.0" },
     { name = "types-cachetools", specifier = ">=5.3.0.5,<6.0.0" },
     { name = "upstash-vector", specifier = ">=0.5.0,<1.0.0" },
@@ -3780,6 +3783,7 @@ dev = [
     { name = "requests", specifier = ">=2.32.0" },
     { name = "respx", specifier = ">=0.21.1" },
     { name = "ruff", specifier = ">=0.6.2,<0.7.0" },
+    { name = "types-aiofiles", specifier = ">=24.1.0.20240626" },
     { name = "types-google-cloud-ndb", specifier = ">=2.2.0.0" },
     { name = "types-markdown", specifier = ">=3.7.0.20240822" },
     { name = "types-passlib", specifier = ">=1.7.7.13" },
@@ -3913,6 +3917,7 @@ dev = [
     { name = "asgi-lifespan" },
     { name = "pytest-codspeed" },
     { name = "pytest-github-actions-annotate-failures" },
+    { name = "types-aiofiles" },
 ]
 
 [package.metadata]
@@ -4023,6 +4028,7 @@ dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
     { name = "pytest-codspeed", specifier = ">=3.0.0" },
     { name = "pytest-github-actions-annotate-failures", specifier = ">=0.2.0" },
+    { name = "types-aiofiles", specifier = ">=24.1.0.20240626" },
 ]
 
 [[package]]
@@ -7307,6 +7313,15 @@ wheels = [
 ]
 
 [[package]]
+name = "sseclient-py"
+version = "1.8.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e8/ed/3df5ab8bb0c12f86c28d0cadb11ed1de44a92ed35ce7ff4fd5518a809325/sseclient-py-1.8.0.tar.gz", hash = "sha256:c547c5c1a7633230a38dc599a21a2dc638f9b5c297286b48b46b935c71fac3e8", size = 7791 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/49/58/97655efdfeb5b4eeab85b1fc5d3fa1023661246c2ab2a26ea8e47402d4f2/sseclient_py-1.8.0-py2.py3-none-any.whl", hash = "sha256:4ecca6dc0b9f963f8384e9d7fd529bf93dd7d708144c4fb5da0e0a1a926fee83", size = 8828 },
+]
+
+[[package]]
 name = "stack-data"
 version = "0.6.3"
 source = { registry = "https://pypi.org/simple" }
@@ -7759,6 +7774,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e7/87/9eb07fdfa14e22ec7658b5b1147836d22df3848a22c85a4e18ed272303a5/typer-0.13.0.tar.gz", hash = "sha256:f1c7198347939361eec90139ffa0fd8b3df3a2259d5852a0f7400e476d95985c", size = 97572 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/18/7e/c8bfa8cbcd3ea1d25d2beb359b5c5a3f4339a7e2e5d9e3ef3e29ba3ab3b9/typer-0.13.0-py3-none-any.whl", hash = "sha256:d85fe0b777b2517cc99c8055ed735452f2659cd45e451507c76f48ce5c1d00e2", size = 44194 },
+]
+
+[[package]]
+name = "types-aiofiles"
+version = "24.1.0.20240626"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/13/e9/013940b017c313c2e15c64017268fdb0c25e0638621fb8a5d9ebe00fb0f4/types-aiofiles-24.1.0.20240626.tar.gz", hash = "sha256:48604663e24bc2d5038eac05ccc33e75799b0779e93e13d6a8f711ddc306ac08", size = 9357 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c3/ad/c4b3275d21c5be79487c4f6ed7cd13336997746fe099236cb29256a44a90/types_aiofiles-24.1.0.20240626-py3-none-any.whl", hash = "sha256:7939eca4a8b4f9c6491b6e8ef160caee9a21d32e18534a57d5ed90aee47c66b4", size = 9389 },
 ]
 
 [[package]]

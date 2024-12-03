@@ -8,7 +8,7 @@ from langflow.base.models.model import LCModelComponent
 from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.inputs import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
+from langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
 from langflow.inputs.inputs import HandleInput
 
 
@@ -70,7 +70,7 @@ class OpenAIModelComponent(LCModelComponent):
             advanced=False,
             value="OPENAI_API_KEY",
         ),
-        FloatInput(name="temperature", display_name="Temperature", value=0.1),
+        SliderInput(name="temperature", display_name="Temperature", value=0.1, range_spec=RangeSpec(min=0, max=1)),
         IntInput(
             name="seed",
             display_name="Seed",

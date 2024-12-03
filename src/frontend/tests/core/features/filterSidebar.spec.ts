@@ -106,7 +106,9 @@ test(
       page.getByTestId("langchain_utilitiesConversationChain"),
     ).toBeVisible();
 
-    await expect(page.getByTestId("helpersCurrent Date")).toBeVisible();
+    await expect(
+      page.getByTestId("langchain_utilitiesPrompt Hub"),
+    ).toBeVisible();
 
     await page.getByTestId("sidebar-options-trigger").click();
     await page.getByTestId("sidebar-beta-switch").isVisible({ timeout: 5000 });
@@ -114,7 +116,9 @@ test(
     await expect(page.getByTestId("sidebar-beta-switch")).not.toBeChecked();
     await page.getByTestId("sidebar-options-trigger").click();
 
-    await expect(page.getByTestId("helpersCurrent Date")).not.toBeVisible();
+    await expect(
+      page.getByTestId("langchain_utilitiesPrompt Hub"),
+    ).not.toBeVisible();
 
     await page.getByTestId("sidebar-filter-reset").click();
 
