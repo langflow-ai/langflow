@@ -6,21 +6,32 @@ import { NoticeAlertType } from "../../types/alerts";
 
 export default function NoticeAlert({
   title,
-  link = "",
+  link,
   id,
   removeAlert,
 }: NoticeAlertType): JSX.Element {
   const [show, setShow] = useState(true);
+
   useEffect(() => {
-    if (show) {
+    const timeoutId = setTimeout(() => {
+      setShow(false);
+      // Wait for the leave transition before calling removeAlert
       setTimeout(() => {
-        setShow(false);
-        setTimeout(() => {
-          removeAlert(id);
-        }, 500);
-      }, 5000);
-    }
-  }, [id, removeAlert, show]);
+        removeAlert(id);
+      }, 500); // match the duration of the leave transition
+    }, 5000); // auto-dismiss alert after 5 seconds
+
+    return () => clearTimeout(timeoutId); // Cleanup timeout on component unmount or re-render
+  }, [id, removeAlert]);
+
+  const handleClick = () => {
+    setShow(false);
+    // Wait for the leave transition before calling removeAlert
+    setTimeout(() => {
+      removeAlert(id);
+    }, 500); // Ensure the alert is removed after the animation
+  };
+
   return (
     <Transition
       show={show}
@@ -32,10 +43,7 @@ export default function NoticeAlert({
       leaveTo={"transform translate-x-[-100%]"}
     >
       <div
-        onClick={() => {
-          setShow(false);
-          removeAlert(id);
-        }}
+        onClick={handleClick}
         className="noflow nowheel nopan nodelete nodrag mt-6 w-96 rounded-md bg-info-background p-4 shadow-xl"
       >
         <div className="flex">
@@ -51,15 +59,13 @@ export default function NoticeAlert({
               {title}
             </p>
             <p className="mt-3 text-sm md:ml-6 md:mt-0">
-              {link !== "" ? (
+              {link && (
                 <CustomLink
                   to={link}
                   className="whitespace-nowrap font-medium text-info-foreground hover:text-accent-foreground"
                 >
                   Details
                 </CustomLink>
-              ) : (
-                <></>
               )}
             </p>
           </div>

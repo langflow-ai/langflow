@@ -35,7 +35,7 @@ class StructuredOutputComponent(Component):
             name="output_schema",
             display_name="Output Schema",
             info="Define the structure and data types for the model's output.",
-            table_schema=[
+            value=[
                 {
                     "name": "name",
                     "display_name": "Name",
