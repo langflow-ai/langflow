@@ -114,7 +114,7 @@ export default function NodeDescription({
               }
             }}
           />
-          {charLimit && (nodeDescription?.length ?? 0) >= (charLimit - 100) && (
+          {charLimit && (nodeDescription?.length ?? 0) >= charLimit - 100 && (
             <div
               className={cn(
                 "pt-1 text-left text-[13px]",
