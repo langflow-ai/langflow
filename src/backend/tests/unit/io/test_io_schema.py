@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING, Literal
 
 import pytest
-
 from langflow.components.inputs import ChatInput
 
 if TYPE_CHECKING:
