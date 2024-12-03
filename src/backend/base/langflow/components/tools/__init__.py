@@ -11,7 +11,6 @@ from .google_search_api import GoogleSearchAPIComponent
 from .google_serper_api import GoogleSerperAPIComponent
 from .python_code_structured_tool import PythonCodeStructuredTool
 from .python_repl import PythonREPLToolComponent
-from .retriever import RetrieverToolComponent
 from .search_api import SearchAPIComponent
 from .searxng import SearXNGToolComponent
 from .serp_api import SerpAPIComponent
@@ -39,7 +38,6 @@ __all__ = [
     "GoogleSerperAPIComponent",
     "PythonCodeStructuredTool",
     "PythonREPLToolComponent",
-    "RetrieverToolComponent",
     "SearXNGToolComponent",
     "SearchAPIComponent",
     "SerpAPIComponent",
