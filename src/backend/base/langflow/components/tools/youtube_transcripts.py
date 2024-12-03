@@ -178,7 +178,10 @@ class YouTubeTranscriptsComponent(Component):
                 "zu",
             ],
             value="en",
-            info="Specify to make sure the transcripts are retrieved in your desired language. Defaults to English: 'en'",  # noqa: E501
+            info=(
+                "Specify to make sure the transcripts are retrieved in your desired language. "
+                "Defaults to English: 'en'"
+            ),
         ),
         DropdownInput(
             name="translation",
