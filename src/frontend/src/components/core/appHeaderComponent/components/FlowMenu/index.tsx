@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { UPLOAD_ERROR_ALERT } from "@/constants/alerts_constants";
 import { SAVED_HOVER } from "@/constants/constants";
+import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
 import ExportModal from "@/modals/exportModal";
 import FlowLogsModal from "@/modals/flowLogsModal";
@@ -53,7 +54,16 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const onFlowPage = useFlowStore((state) => state.onFlowPage);
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
-  const { data: folders } = useGetFoldersQuery();
+
+  const { data: folders, isFetched: isFoldersFetched } = useGetFoldersQuery();
+
+  useGetRefreshFlowsQuery(
+    {
+      get_all: true,
+      header_flows: true,
+    },
+    { enabled: isFoldersFetched },
+  );
 
   const currentFolder = useMemo(
     () => folders?.find((f) => f.id === currentFlow?.folder_id),

@@ -18,21 +18,19 @@ import { swatchColors } from "@/utils/styleUtils";
 import { cn, getNumberFromString } from "@/utils/utils";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import useDescriptionModal from "../../oldComponents/componentsComponent/hooks/use-description-modal";
+import useDescriptionModal from "../../hooks/use-description-modal";
 import { useGetTemplateStyle } from "../../utils/get-template-style";
 import { timeElapsed } from "../../utils/time-elapse";
 import DropdownComponent from "../dropdown";
 
 const GridComponent = ({ flowData }: { flowData: FlowType }) => {
   const navigate = useCustomNavigate();
-  /* const [openPlayground, setOpenPlayground] = useState(false);
-  const [loadingPlayground, setLoadingPlayground] = useState(false); */
+
   const [openDelete, setOpenDelete] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const { deleteFlow } = useDeleteFlow();
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  /* const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow); */
   const { folderId } = useParams();
   const isComponent = flowData.is_component ?? false;
   const setFlowToCanvas = useFlowsManagerStore(
@@ -42,38 +40,6 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
   const { getIcon } = useGetTemplateStyle(flowData);
 
   const editFlowLink = `/flow/${flowData.id}${folderId ? `/folder/${folderId}` : ""}`;
-
-  function hasPlayground(flow?: FlowType) {
-    if (!flow) {
-      return false;
-    }
-    const { inputs, outputs } = getInputsAndOutputs(flow?.data?.nodes ?? []);
-    return inputs.length > 0 || outputs.length > 0;
-  }
-
-  /* const handlePlaygroundClick = () => {
-    track("Playground Button Clicked", { flowId: flowData.id });
-    setLoadingPlayground(true);
-
-    if (flowData) {
-      if (!hasPlayground(flowData)) {
-        setErrorData({
-          title: "Error",
-          list: ["This flow doesn't have a playground."],
-        });
-        setLoadingPlayground(false);
-        return;
-      }
-      setCurrentFlow(flowData);
-      // setOpenPlayground(true);
-      setLoadingPlayground(false);
-    } else {
-      setErrorData({
-        title: "Error",
-        list: ["Error getting flow data."],
-      });
-    }
-  }; */
 
   const handleClick = async () => {
     if (!isComponent) {
@@ -167,35 +133,8 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
         <div className="line-clamp-2 h-full pt-5 text-sm text-primary">
           {flowData.description}
         </div>
-
-        {/* <div className="flex justify-end pt-[24px]">
-          {flowData.is_component ? (
-            <></>
-          ) : (
-            <Button
-              disabled={loadingPlayground || !hasPlayground(flowData)}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handlePlaygroundClick();
-              }}
-              variant="outline"
-            >
-              Playground
-            </Button>
-          )}
-        </div> */}
       </Card>
-      {/* {openPlayground && (
-        <IOModal
-          key={flowData.id}
-          cleanOnClose={true}
-          open={openPlayground}
-          setOpen={setOpenPlayground}
-        >
-          <></>
-        </IOModal>
-      )} */}
+
       {openDelete && (
         <DeleteConfirmationModal
           open={openDelete}

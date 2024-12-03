@@ -35,7 +35,6 @@ export const usePostAddFlow: useMutationFunctionType<
       gradient: payload.gradient || null,
       endpoint_name: payload.endpoint_name || null,
     });
-
     return response.data;
   };
 
@@ -45,9 +44,18 @@ export const usePostAddFlow: useMutationFunctionType<
     {
       ...options,
       onSettled: (response) => {
-        queryClient.refetchQueries({
-          queryKey: ["useGetFolder", response.folder_id ?? myCollectionId],
-        });
+        if (response) {
+          queryClient.refetchQueries({
+            queryKey: [
+              "useGetRefreshFlowsQuery",
+              { get_all: true, header_flows: true },
+            ],
+          });
+
+          queryClient.refetchQueries({
+            queryKey: ["useGetFolder", response.folder_id ?? myCollectionId],
+          });
+        }
       },
     },
   );

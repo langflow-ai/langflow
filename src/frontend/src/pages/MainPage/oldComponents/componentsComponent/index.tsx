@@ -16,15 +16,14 @@ import { FlowType } from "../../../../types/flow";
 import useFileDrop from "../../hooks/use-on-file-drop";
 import { getNameByType } from "../../utils/get-name-by-type";
 
+import useDescriptionModal from "../../hooks/use-description-modal";
+import useFilteredFlows from "../../hooks/use-filtered-flows";
+import useSelectAll from "../../hooks/use-handle-select-all";
+import useSelectOptionsChange from "../../hooks/use-select-options-change";
+import useSelectedFlows from "../../hooks/use-selected-flows";
 import EmptyComponent from "../emptyComponent";
 import HeaderComponent from "../headerComponent";
 import CollectionCard from "./components/collectionCard";
-import useDescriptionModal from "./hooks/use-description-modal";
-import useFilteredFlows from "./hooks/use-filtered-flows";
-import useDuplicateFlows from "./hooks/use-handle-duplicate";
-import useSelectAll from "./hooks/use-handle-select-all";
-import useSelectOptionsChange from "./hooks/use-select-options-change";
-import useSelectedFlows from "./hooks/use-selected-flows";
 
 export default function ComponentsComponent({
   type = "all",
@@ -106,15 +105,7 @@ export default function ComponentsComponent({
     setValue,
   );
 
-  const { handleDuplicate } = useDuplicateFlows(
-    selectedFlowsComponentsCards,
-    flowsFromFolder,
-    resetFilter,
-    setSuccessData,
-    setSelectedFlowsComponentsCards,
-    handleSelectAll,
-    cardTypes,
-  );
+  const handleDuplicate = () => {};
 
   const { mutate: mutateDownloadMultipleFlows } =
     usePostDownloadMultipleFlows();
