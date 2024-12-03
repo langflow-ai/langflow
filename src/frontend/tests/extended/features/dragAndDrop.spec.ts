@@ -18,7 +18,9 @@ test.describe("drag and drop test", () => {
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
     await page.locator("span").filter({ hasText: "Close" }).first().click();
