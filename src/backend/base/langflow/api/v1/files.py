@@ -6,22 +6,20 @@ from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, BackgroundTasks, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 
 from langflow.api.utils import AsyncDbSession, CurrentActiveUser
 from langflow.api.v1.schemas import UploadFileResponse
+from langflow.graph.schema import ResultData, RunOutputs
+from langflow.services.auth.utils import api_key_security
 from langflow.services.database.models.flow import Flow
+from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_storage_service
 from langflow.services.storage.service import StorageService
 from langflow.services.storage.utils import build_content_type_from_extension
 
-from langflow.services.auth.utils import api_key_security
-from langflow.services.database.models.user.model import UserRead
-from langflow.graph.schema import RunOutputs, ResultData
-from .endpoints import simplified_run_flow, SimplifiedAPIRequest, RunResponse
-
-from langflow.logging.logger import logger
+from .endpoints import RunResponse, SimplifiedAPIRequest, simplified_run_flow
 
 router = APIRouter(tags=["Files"], prefix="/files")
 
@@ -53,9 +51,7 @@ async def upload_file(
     session: AsyncDbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ) -> UploadFileResponse:
-    """
-    Handles file uploads to a specific flow.
-    """
+    """Handles file uploads to a specific flow."""
     try:
         flow_id_str = await get_flow_id(flow_id=flow_id, current_user=current_user, session=session)
 
@@ -69,7 +65,7 @@ async def upload_file(
             file_path = storage_service.build_full_path(folder, full_file_name)
         except NotImplementedError:
             # Fall back to prior behaviour
-            file_path=f"{folder}/{full_file_name}"
+            file_path = f"{folder}/{full_file_name}"
 
         return UploadFileResponse(flow_id=flow_id_str, file_path=file_path)
     except Exception as e:
@@ -107,7 +103,7 @@ async def upload_and_run_file(
 
         if not hasattr(upload_response, "file_path") or not upload_response.file_path:
             raise HTTPException(status_code=500, detail="Invalid upload response")
-        
+
         full_path = str(upload_response.file_path)
 
         if not input_request:
