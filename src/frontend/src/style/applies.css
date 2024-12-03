@@ -917,7 +917,7 @@
   }
 
   .api-modal-tabs {
-    @apply flex h-full flex-col overflow-hidden text-center;
+    @apply flex h-full flex-col overflow-hidden;
   }
   .api-modal-tablist-div {
     @apply flex items-center justify-between px-2 py-2;

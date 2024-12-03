@@ -6,7 +6,7 @@ export const getNodesWithDefaultValue = (nodes: NodeType[]) => {
   const filteredNodes: NodeType[] = [];
 
   nodes.forEach((node) => {
-    if (node?.data?.node?.template) {
+    if (node?.data?.node?.template && node?.type === "genericNode") {
       const templateKeys = Object.keys(node.data.node.template).filter(
         (templateField) =>
           templateField.charAt(0) !== "_" &&
