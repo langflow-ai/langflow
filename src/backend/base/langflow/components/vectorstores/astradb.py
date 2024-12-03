@@ -4,7 +4,6 @@ from collections import defaultdict
 import orjson
 from astrapy import DataAPIClient
 from astrapy.admin import parse_api_endpoint
-from astrapy.exceptions import CollectionNotFoundException
 from langchain_astradb import AstraDBVectorStore
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
@@ -32,24 +31,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     icon: str = "AstraDB"
 
     _cached_vector_store: AstraDBVectorStore | None = None
-
-    def list_collections(self):
-        client = DataAPIClient(token=self.token)
-
-        database = client.get_database(
-            self.api_endpoint,
-            token=self.token,
-        )
-
-        return database.list_collections()
-
-    def _initialize_collection_options(self):
-        try:
-            collections = [collection.name for collection in self.list_collections()]
-        except (CollectionNotFoundException, ConnectionError, ValueError) as _:
-            collections = []
-
-        return [*collections, "+ Create new collection"]
 
     VECTORIZE_PROVIDERS_MAPPING = defaultdict(
         list,
@@ -321,6 +302,33 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             return self.VECTORIZE_PROVIDERS_MAPPING
 
+    def get_database(self):
+        try:
+            client = DataAPIClient(token=self.token)
+
+            return client.get_database(
+                self.api_endpoint,
+                token=self.token,
+            )
+        except Exception as e:  # noqa: BLE001
+            self.log(f"Error getting database: {e}")
+
+            return None
+
+    def _initialize_collection_options(self):
+        database = self.get_database()
+        if database is None:
+            return ["+ Create new collection"]
+
+        try:
+            collections = [collection.name for collection in database.list_collections()]
+        except Exception as e:  # noqa: BLE001
+            self.log(f"Error fetching collections: {e}")
+
+            return ["+ Create new collection"]
+
+        return [*collections, "+ Create new collection"]
+
     def get_collection_choice(self):
         collection_name = self.collection_name
         if collection_name == "+ Create new collection":
@@ -329,21 +337,17 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return collection_name
 
     def get_collection_options(self):
-        client = DataAPIClient(token=self.token)
-
-        database = client.get_database(
-            self.api_endpoint,
-            token=self.token,
-        )
-
-        collection = database.get_collection(self.get_collection_choice())
-
         # Only get the options if the collection exists
-        try:
-            collection_options = collection.options()
-        except CollectionNotFoundException as e:
-            self.log(f"Collection not found: {e}")
+        database = self.get_database()
+        if database is None:
+            return None
 
+        collection_name = self.get_collection_choice()
+
+        try:
+            collection = database.get_collection(collection_name)
+            collection_options = collection.options()
+        except Exception as _:  # noqa: BLE001
             return None
 
         return collection_options.vector
@@ -369,7 +373,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             build_config["collection_name_new"]["required"] = False
             build_config["collection_name_new"]["value"] = ""
 
-        # Get the collection options
+        # Get the collection options for the selected collection
         collection_options = self.get_collection_options()
 
         # If the collection options are available (DB exists), show the advanced options
