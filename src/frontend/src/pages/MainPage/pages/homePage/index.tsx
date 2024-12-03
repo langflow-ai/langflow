@@ -77,6 +77,8 @@ const HomePage = ({ type }) => {
     flows?.find((flow) => flow.folder_id === (folderId ?? myCollectionId)) ===
     undefined;
 
+  console.log(data.flows);
+
   return (
     <CardsWrapComponent
       onFileDrop={handleFileDrop}

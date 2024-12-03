@@ -5,6 +5,7 @@ import { ReactFlowJsonObject } from "reactflow";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+import { useGetRefreshFlows } from "./use-get-refresh-flows";
 
 interface IPostAddFlow {
   name: string;
@@ -23,6 +24,7 @@ export const usePostAddFlow: useMutationFunctionType<
 > = (options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
+  const { mutate: refreshFlows } = useGetRefreshFlows();
 
   const postAddFlowFn = async (payload: IPostAddFlow): Promise<any> => {
     const response = await api.post(`${getURL("FLOWS")}/`, {
@@ -35,7 +37,6 @@ export const usePostAddFlow: useMutationFunctionType<
       gradient: payload.gradient || null,
       endpoint_name: payload.endpoint_name || null,
     });
-
     return response.data;
   };
 
@@ -45,9 +46,12 @@ export const usePostAddFlow: useMutationFunctionType<
     {
       ...options,
       onSettled: (response) => {
-        queryClient.refetchQueries({
-          queryKey: ["useGetFolder", response.folder_id ?? myCollectionId],
-        });
+        if (response) {
+          refreshFlows({ get_all: true, header_flows: true });
+          queryClient.refetchQueries({
+            queryKey: ["useGetFolder", response.folder_id ?? myCollectionId],
+          });
+        }
       },
     },
   );
