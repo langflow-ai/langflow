@@ -15,6 +15,7 @@ from .openai_tools import OpenAIToolsAgentComponent
 from .openapi import OpenAPIAgentComponent
 from .recursive_character import RecursiveCharacterTextSplitterComponent
 from .retrieval_qa import RetrievalQAComponent
+from .retriever import RetrieverToolComponent
 from .runnable_executor import RunnableExecComponent
 from .self_query import SelfQueryRetrieverComponent
 from .spider import SpiderTool
@@ -56,4 +57,5 @@ __all__ = [
     "VectorStoreInfoComponent",
     "VectorStoreRouterAgentComponent",
     "XMLAgentComponent",
+    "RetrieverToolComponent",
 ]
