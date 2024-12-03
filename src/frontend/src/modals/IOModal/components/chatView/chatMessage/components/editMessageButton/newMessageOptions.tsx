@@ -16,7 +16,7 @@ export function EditMessageButton({
   onEdit: () => void;
   onCopy: () => void;
   onDelete: () => void;
-  onEvaluate?: (value: boolean|null) => void;
+  onEvaluate?: (value: boolean | null) => void;
   isBotMessage?: boolean;
   evaluation?: boolean | null;
 }) {
@@ -81,7 +81,7 @@ export function EditMessageButton({
                   name="ThumbsUp"
                   className={cn(
                     "h-4 w-4",
-                    evaluation === true && "text-status-green"
+                    evaluation === true && "text-status-green",
                   )}
                 />
               </Button>
@@ -100,7 +100,7 @@ export function EditMessageButton({
                   name="ThumbsDown"
                   className={cn(
                     "h-4 w-4",
-                    evaluation === false && "text-status-red"
+                    evaluation === false && "text-status-red",
                   )}
                 />
               </Button>
