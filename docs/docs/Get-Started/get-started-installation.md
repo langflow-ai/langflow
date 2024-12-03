@@ -8,13 +8,13 @@ You can deploy Langflow either locally or as a hosted service with [**Datastax L
 
 ## Install Langflow locally
 
-Install Langflow locally with [pip](https://pypi.org/project/pip/) or [pipx](https://pipx.pypa.io/stable/installation/).
+Install Langflow locally with [pip](https://pypi.org/project/pip/), [uv](https://docs.astral.sh/uv/getting-started/installation/), or [pipx](https://pipx.pypa.io/stable/installation/).
 
 ### Prerequisites
 
 * [Python 3.10 to 3.12](https://www.python.org/downloads/release/python-3100/) installed
-* [pip](https://pypi.org/project/pip/) or [pipx](https://pipx.pypa.io/stable/installation/) installed
-* Before installing Langflow, we recommend creating a virtual environment to isolate your Python dependencies with [venv](https://docs.python.org/3/library/venv.html) or [conda](https://anaconda.org/anaconda/conda)
+* [pip](https://pypi.org/project/pip/), [uv](https://docs.astral.sh/uv/getting-started/installation/), or [pipx](https://pipx.pypa.io/stable/installation/) installed
+* Before installing Langflow, we recommend creating a virtual environment to isolate your Python dependencies with [venv](https://docs.python.org/3/library/venv.html), [uv](https://docs.astral.sh/uv/pip/environments), or [conda](https://anaconda.org/anaconda/conda)
 
 ### Install Langflow with pip or pipx
 
@@ -22,6 +22,12 @@ Install Langflow with pip:
 
 ```bash
 python -m pip install langflow
+```
+
+Install Langflow with uv:
+
+```bash
+uv pip install langflow
 ```
 
 Install Langflow with pipx using the Python 3.10 executable:
@@ -38,6 +44,12 @@ pipx install langflow --python python3.10
 python -m langflow run
 ```
 
+To run Langflow with uv, enter the following command.
+
+```bash
+uv run langflow run
+```
+
 2. Confirm that a local Langflow instance starts by visiting `http://127.0.0.1:7860` in a Chromium-based browser.
 
 Now that Langflow is running, follow the [Quickstart](/get-started-quickstart) to create your first flow.
@@ -48,6 +60,12 @@ To upgrade Langflow to the latest version, use the pip upgrade command.
 
 ```bash
 python -m pip install langflow -U
+```
+
+To upgrade Langflow to the latest version with uv, use the uv pip upgrade command.
+
+```bash
+uv pip install langflow -U
 ```
 
 To install a specific version of the Langflow package, add the required version to the command.
