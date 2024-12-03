@@ -377,7 +377,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             build_config["embedding_choice"]["advanced"] = True
 
             if collection_options.service:
-                self.del_fields(build_config,
+                self.del_fields(
+                    build_config,
                     [
                         "embedding_provider",
                         "model",
@@ -385,7 +386,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                         "z_02_api_key_name",
                         "z_03_provider_api_key",
                         "z_04_authentication",
-                    ]
+                    ],
                 )
 
                 build_config["embedding_model"]["advanced"] = True
