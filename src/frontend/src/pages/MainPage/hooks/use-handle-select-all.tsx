@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { FlowType } from "../../../../../types/flow";
+import { FlowType } from "../../../types/flow";
 
 const useSelectAll = (
   flowsFromFolder: FlowType[],
