@@ -134,7 +134,7 @@ const CustomInputPopover = ({
                 editNode && disabled && "h-fit w-fit",
                 disabled &&
                   "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
-                password && "max-w-64 text-clip pr-14",
+                password && "text-clip pr-14",
               )}
               placeholder={
                 selectedOptions?.length > 0 || selectedOption ? "" : placeholder
