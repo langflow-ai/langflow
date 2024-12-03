@@ -45,3 +45,14 @@ class Tweaks(RootModel):
 
     def items(self):
         return self.root.items()
+
+    def __getattr__(self, name: str) -> Any:
+        if name in self.root:
+            return self.root[name]
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name == "root" or name not in self.__fields__:
+            object.__setattr__(self, name, value)
+        else:
+            self.root[name] = value
