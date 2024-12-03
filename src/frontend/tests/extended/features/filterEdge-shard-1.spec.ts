@@ -49,9 +49,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("retrievalqa");
 
-    await page.waitForSelector('[data-testid="langchain_utilitiesRetrieval QA"]', {
-      timeout: 3000,
-    });
+    await page.waitForSelector(
+      '[data-testid="langchain_utilitiesRetrieval QA"]',
+      {
+        timeout: 3000,
+      },
+    );
     await page
       .getByTestId("langchain_utilitiesRetrieval QA")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
