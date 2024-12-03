@@ -203,7 +203,7 @@ export default function ContentDisplay({
             rehypePlugins={[rehypeMathjax]}
             className="markdown prose max-w-full text-[14px] font-normal dark:prose-invert"
           >
-            {`${content.name ? `**Tool:** ${content.name}\n\n` : ""}**Input:**`}
+            **Input:**
           </Markdown>
           <SimplifiedCodeTabComponent
             language="json"
