@@ -6,7 +6,7 @@ import { useDarkStore } from "@/stores/darkStore";
 import { SliderComponentType } from "@/types/components";
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import clsx from "clsx";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const THRESHOLDS = [0.25, 0.5, 0.75, 1];
 const BACKGROUND_COLORS = ["#4f46e5", "#7c3aed", "#a21caf", "#c026d3"];
@@ -26,7 +26,7 @@ const DEFAULT_SLIDER_BUTTONS_OPTIONS = [
 ];
 
 const MIN_LABEL = "Precise";
-const MAX_LABEL = "Wild";
+const MAX_LABEL = "Creative";
 const MIN_LABEL_ICON = "pencil-ruler";
 const MAX_LABEL_ICON = "palette";
 
@@ -60,7 +60,7 @@ export default function SliderComponent({
   maxLabel = maxLabel || MAX_LABEL;
 
   const valueAsNumber = getMinOrMaxValue(Number(value), min, max);
-  const step = rangeSpec?.step ?? 0.1;
+  const step = rangeSpec?.step ?? 0.01;
 
   useEffect(() => {
     if (disabled && value !== "") {
@@ -134,13 +134,15 @@ export default function SliderComponent({
     return getColor(optionValue, normalizedValue, "text");
   };
 
+  const [isGrabbing, setIsGrabbing] = useState(false);
+
   return (
     <div className="w-full rounded-lg pb-2">
       <Case condition={!sliderButtons && !sliderInput}>
-        <div className="relative bottom-2 flex items-center justify-end">
+        <div className="flex items-center justify-end">
           <span
             data-testid={`default_slider_display_value${editNode ? "_advanced" : ""}`}
-            className="font-mono text-sm"
+            className="absolute bottom-[4.3rem] border-2 border-red-500 font-mono text-sm hover:cursor-text"
           >
             {valueAsNumber.toFixed(2)}
           </span>
@@ -179,8 +181,11 @@ export default function SliderComponent({
           <SliderPrimitive.Thumb
             data-testid={`slider_thumb${editNode ? "_advanced" : ""}`}
             className={clsx(
-              "block h-6 w-6 cursor-pointer rounded-full border-2 border-background bg-pink-500 shadow-lg",
+              "block h-6 w-6 rounded-full border-2 border-background bg-pink-500 shadow-lg",
+              isGrabbing ? "cursor-grabbing" : "cursor-grab",
             )}
+            onPointerDown={() => setIsGrabbing(true)}
+            onPointerUp={() => setIsGrabbing(false)}
           />
         </SliderPrimitive.Root>
         {sliderInput && (
