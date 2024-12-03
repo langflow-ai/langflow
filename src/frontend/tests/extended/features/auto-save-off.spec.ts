@@ -84,9 +84,7 @@ test(
           page.getByText("Auto-saving is disabled").nth(0),
         ).toBeVisible({ timeout: 5000 });
         await expect(
-          page
-            .getByText("Enable auto-saving to avoid losing progress.")
-            .nth(0),
+          page.getByText("Enable auto-saving to avoid losing progress.").nth(0),
         ).toBeVisible({ timeout: 3000 });
       });
 
@@ -100,8 +98,7 @@ test(
     await page.getByTestId("icon-ChevronLeft").last().click();
 
     await expect(
-      page
-        .getByText("Unsaved changes will be permanently lost.")
+      page.getByText("Unsaved changes will be permanently lost."),
     ).toBeVisible();
 
     await page.getByText("Exit Anyway", { exact: true }).click();
@@ -144,7 +141,9 @@ test(
       timeout: 5000,
     });
 
-    await expect(page.getByTestId("title-NVIDIA")).toBeVisible({timeout:5000})
+    await expect(page.getByTestId("title-NVIDIA")).toBeVisible({
+      timeout: 5000,
+    });
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("NVIDIA");
@@ -189,7 +188,9 @@ test(
       timeout: 5000,
     });
 
-    await expect(page.getByTestId("title-NVIDIA").first()).toBeVisible({timeout:5000})
+    await expect(page.getByTestId("title-NVIDIA").first()).toBeVisible({
+      timeout: 5000,
+    });
 
     const nvidiaNumber = await page.getByTestId("title-NVIDIA").count();
     expect(nvidiaNumber).toBe(2);
