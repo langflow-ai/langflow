@@ -10,16 +10,17 @@ export function EditMessageButton({
   onDelete,
   onEvaluate,
   isBotMessage,
+  evaluation,
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   onEdit: () => void;
   onCopy: () => void;
   onDelete: () => void;
-  onEvaluate?: (value: boolean) => void;
+  onEvaluate?: (value: boolean|null) => void;
   isBotMessage?: boolean;
+  evaluation?: boolean | null;
 }) {
   const [isCopied, setIsCopied] = useState(false);
-  const [evaluation, setEvaluation] = useState<boolean | null>(null);
 
   const handleCopy = () => {
     onCopy();
@@ -28,8 +29,7 @@ export function EditMessageButton({
   };
 
   const handleEvaluate = (value: boolean) => {
-    setEvaluation(evaluation === value ? null : value);
-    onEvaluate?.(value);
+    onEvaluate?.(evaluation === value ? null : value);
   };
 
   return (
@@ -71,40 +71,40 @@ export function EditMessageButton({
         <div className="flex">
           <ShadTooltip styleClasses="z-50" content="Good" side="top">
             <div className="p-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleEvaluate(true)}
-              className="h-8 w-8"
-            >
-              <IconComponent
-                name="ThumbsUp"
-                className={cn(
-                  "h-4 w-4",
-                  evaluation === true && "text-status-green"
-                )}
-              />
-            </Button>
-          </div>
-        </ShadTooltip>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleEvaluate(true)}
+                className="h-8 w-8"
+              >
+                <IconComponent
+                  name="ThumbsUp"
+                  className={cn(
+                    "h-4 w-4",
+                    evaluation === true && "text-status-green"
+                  )}
+                />
+              </Button>
+            </div>
+          </ShadTooltip>
 
-        <ShadTooltip styleClasses="z-50" content="Bad" side="top">
-          <div className="p-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleEvaluate(false)}
-              className="h-8 w-8"
-            >
-              <IconComponent
-                name="ThumbsDown"
-                className={cn(
-                  "h-4 w-4",
-                  evaluation === false && "text-status-red"
-                )}
-              />
-            </Button>
-          </div>
+          <ShadTooltip styleClasses="z-50" content="Bad" side="top">
+            <div className="p-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleEvaluate(false)}
+                className="h-8 w-8"
+              >
+                <IconComponent
+                  name="ThumbsDown"
+                  className={cn(
+                    "h-4 w-4",
+                    evaluation === false && "text-status-red"
+                  )}
+                />
+              </Button>
+            </div>
           </ShadTooltip>
         </div>
       )}
