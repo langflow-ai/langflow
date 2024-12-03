@@ -111,6 +111,7 @@ dependencies = [
     "atlassian-python-api>=3.41.16,<4.0.0",
     "mem0ai>=0.1.26,<1.0.0",
     "aiofile>=3.9.0,<4.0.0",
+    "sseclient-py==1.8.0",
 ]
 
 [project.urls]
