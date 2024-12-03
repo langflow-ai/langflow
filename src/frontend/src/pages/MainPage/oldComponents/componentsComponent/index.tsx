@@ -18,7 +18,6 @@ import { getNameByType } from "../../utils/get-name-by-type";
 
 import useDescriptionModal from "../../hooks/use-description-modal";
 import useFilteredFlows from "../../hooks/use-filtered-flows";
-import useDuplicateFlows from "../../hooks/use-handle-duplicate";
 import useSelectAll from "../../hooks/use-handle-select-all";
 import useSelectOptionsChange from "../../hooks/use-select-options-change";
 import useSelectedFlows from "../../hooks/use-selected-flows";

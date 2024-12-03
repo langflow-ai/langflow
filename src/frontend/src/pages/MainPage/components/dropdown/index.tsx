@@ -19,11 +19,11 @@ const DropdownComponent = ({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
-  const { handleDuplicate } = useDuplicateFlows(
-    [flowData.id],
-    [flowData],
+  const { handleDuplicate } = useDuplicateFlows({
+    selectedFlowsComponentsCards: [flowData.id],
+    allFlows: [flowData],
     setSuccessData,
-  );
+  });
 
   const handleExport = () => {
     downloadFlow(flowData, flowData.name, flowData.description);

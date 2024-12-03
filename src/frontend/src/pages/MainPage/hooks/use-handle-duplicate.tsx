@@ -3,11 +3,17 @@ import { useFolderStore } from "@/stores/foldersStore";
 import { addVersionToDuplicates, createNewFlow } from "@/utils/reactflowUtils";
 import { useParams } from "react-router-dom";
 
-const useDuplicateFlows = (
-  selectedFlowsComponentsCards: string[],
-  allFlows: any[],
-  setSuccessData: (data: { title: string }) => void,
-) => {
+type UseDuplicateFlowsParams = {
+  selectedFlowsComponentsCards: string[];
+  allFlows: any[];
+  setSuccessData: (data: { title: string }) => void;
+};
+
+const useDuplicateFlows = ({
+  selectedFlowsComponentsCards,
+  allFlows,
+  setSuccessData,
+}: UseDuplicateFlowsParams) => {
   const { mutateAsync: postAddFlow } = usePostAddFlow();
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
