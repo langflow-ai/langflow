@@ -132,7 +132,7 @@ export default function IOModal({
   );
   const flowPool = useFlowStore((state) => state.flowPool);
   const [sessionId, setSessionId] = useState<string>(currentFlowId);
-  useGetMessagesQuery(
+  const { isFetched: messagesFetched } = useGetMessagesQuery(
     {
       mode: "union",
       id: currentFlowId,
@@ -475,22 +475,24 @@ export default function IOModal({
                       : "",
                   )}
                 >
-                  <ChatView
-                    focusChat={sessionId}
-                    sendMessage={sendMessage}
-                    chatValue={chatValue}
-                    setChatValue={setChatValue}
-                    lockChat={lockChat}
-                    setLockChat={setLockChat}
-                    visibleSession={visibleSession}
-                    closeChat={
-                      !canvasOpen
-                        ? undefined
-                        : () => {
-                            setOpen(false);
-                          }
-                    }
-                  />
+                  {messagesFetched && (
+                    <ChatView
+                      focusChat={sessionId}
+                      sendMessage={sendMessage}
+                      chatValue={chatValue}
+                      setChatValue={setChatValue}
+                      lockChat={lockChat}
+                      setLockChat={setLockChat}
+                      visibleSession={visibleSession}
+                      closeChat={
+                        !canvasOpen
+                          ? undefined
+                          : () => {
+                              setOpen(false);
+                            }
+                      }
+                    />
+                  )}
                 </div>
               ) : (
                 <span className="flex h-full w-full items-center justify-center font-thin text-muted-foreground">
