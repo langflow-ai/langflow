@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from loguru import logger
 
 from langflow.custom import Component
-from langflow.field_typing import Retriever, Text, VectorStore
+from langflow.field_typing import Text, VectorStore
 from langflow.helpers.data import docs_to_data
 from langflow.io import Output
 from langflow.schema import Data
@@ -55,11 +55,6 @@ class LCVectorStoreComponent(Component):
     trace_type = "retriever"
     outputs = [
         Output(
-            display_name="Retriever",
-            name="base_retriever",
-            method="build_base_retriever",
-        ),
-        Output(
             display_name="Search Results",
             name="search_results",
             method="search_documents",
@@ -69,7 +64,6 @@ class LCVectorStoreComponent(Component):
     def _validate_outputs(self) -> None:
         # At least these three outputs must be defined
         required_output_methods = [
-            "build_base_retriever",
             "search_documents",
             "build_vector_store",
         ]
@@ -114,22 +108,6 @@ class LCVectorStoreComponent(Component):
         data = docs_to_data(docs)
         self.status = data
         return data
-
-    def build_base_retriever(self) -> Retriever:  # type: ignore[type-var]
-        """Builds the BaseRetriever object."""
-        if self._cached_vector_store is not None:
-            vector_store = self._cached_vector_store
-        else:
-            vector_store = self.build_vector_store()
-            self._cached_vector_store = vector_store
-
-        if hasattr(vector_store, "as_retriever"):
-            retriever = vector_store.as_retriever(**self.get_retriever_kwargs())
-            if self.status is None:
-                self.status = "Retriever built successfully."
-            return retriever
-        msg = f"Vector Store {vector_store.__class__.__name__} does not have an as_retriever method."
-        raise ValueError(msg)
 
     def search_documents(self) -> list[Data]:
         """Search for documents in the vector store."""
