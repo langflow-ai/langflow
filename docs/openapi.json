@@ -2,7 +2,7 @@
     "openapi": "3.1.0",
     "info": {
         "title": "Langflow",
-        "version": "1.1.0"
+        "version": "1.1.1"
     },
     "paths": {
         "/api/v1/build/{flow_id}/vertices": {
@@ -180,7 +180,12 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/Body_build_flow_api_v1_build__flow_id__flow_post"
+                                "allOf": [
+                                    {
+                                        "$ref": "#/components/schemas/Body_build_flow_api_v1_build__flow_id__flow_post"
+                                    }
+                                ],
+                                "title": "Body"
                             }
                         }
                     }
@@ -251,7 +256,12 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/Body_build_vertex_api_v1_build__flow_id__vertices__vertex_id__post"
+                                "allOf": [
+                                    {
+                                        "$ref": "#/components/schemas/Body_build_vertex_api_v1_build__flow_id__vertices__vertex_id__post"
+                                    }
+                                ],
+                                "title": "Body"
                             }
                         }
                     }
@@ -544,7 +554,12 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/Body_experimental_run_flow_api_v1_run_advanced__flow_id__post"
+                                "allOf": [
+                                    {
+                                        "$ref": "#/components/schemas/Body_experimental_run_flow_api_v1_run_advanced__flow_id__post"
+                                    }
+                                ],
+                                "title": "Body"
                             }
                         }
                     }
