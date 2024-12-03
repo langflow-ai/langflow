@@ -535,7 +535,7 @@ const SideBarFoldersButtonsComponent = ({
                                 data-testid="btn-download-folder"
                               >
                                 <FolderSelectItem
-                                  name="Download Content"
+                                  name="Download"
                                   iconName="Download"
                                 />
                               </SelectItem>
