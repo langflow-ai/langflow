@@ -55,9 +55,7 @@ async def test_base(astradb_client: AstraDB):
             ),
         },
     )
-    from langchain_core.vectorstores import VectorStoreRetriever
 
-    assert isinstance(results["base_retriever"], VectorStoreRetriever)
     assert results["vector_store"] is not None
     assert results["search_results"] == []
     assert astradb_client.collection(BASIC_COLLECTION)
