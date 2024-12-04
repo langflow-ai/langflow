@@ -1,4 +1,4 @@
-import { test,expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
 
 test("user must be able outdated message on error", async ({ page }) => {
@@ -55,5 +55,7 @@ test("user must be able outdated message on error", async ({ page }) => {
 
   await page.getByTestId("button_run_chat output").click();
 
-  await expect(page.getByText("there are outdated components in the flow")).toBeVisible({ timeout: 30000 });
+  await expect(
+    page.getByText("there are outdated components in the flow"),
+  ).toBeVisible({ timeout: 30000 });
 });
