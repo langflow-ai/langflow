@@ -104,7 +104,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             name="collection_name_new",
             display_name="Collection Name",
             info="Name of the new collection to create.",
-            advanced=False,
+            advanced=os.getenv("ASTRA_ENHANCED", "false").lower() != "true",
             required=True,
         ),
         StrInput(
