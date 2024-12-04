@@ -1,6 +1,7 @@
 import IconComponent from "@/components/common/genericIconComponent";
 import { getMinOrMaxValue } from "@/components/core/parameterRenderComponent/components/sliderComponent/utils/get-min-max-value";
 import { InputProps } from "@/components/core/parameterRenderComponent/types";
+import { Input } from "@/components/ui/input";
 import { Case } from "@/shared/components/caseComponent";
 import { useDarkStore } from "@/stores/darkStore";
 import { SliderComponentType } from "@/types/components";
@@ -135,23 +136,65 @@ export default function SliderComponent({
   };
 
   const [isGrabbing, setIsGrabbing] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [inputValue, setInputValue] = useState(valueAsNumber.toFixed(2));
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value);
+  };
+
+  const handleInputBlur = () => {
+    const newValue = parseFloat(inputValue);
+    if (!isNaN(newValue)) {
+      const clampedValue = Math.min(Math.max(newValue, min), max);
+      handleOnNewValue({ value: clampedValue });
+    }
+    setIsEditing(false);
+    setInputValue(valueAsNumber.toFixed(2));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleInputBlur();
+    } else if (e.key === "Escape") {
+      setIsEditing(false);
+      setInputValue(valueAsNumber.toFixed(2));
+    }
+  };
 
   return (
     <div className="w-full rounded-lg pb-2">
       <Case condition={!sliderButtons && !sliderInput}>
-        <div className="flex items-center justify-end">
+        <div className="noflow nowheel nopan nodelete nodrag flex items-center justify-end">
           <div
             className={clsx(
-              "absolute bottom-[4.2rem] rounded-md px-2 py-[1px] hover:cursor-text hover:ring-[1px] hover:ring-[#D4D4D8]",
+              "absolute bottom-[4.2rem] right-3 w-14 cursor-text rounded-sm px-2 py-[1px] text-center hover:ring-[1px] hover:ring-[#D4D4D8]",
               isGrabbing && "ring-[1px] ring-[#D4D4D8]",
+              isEditing && "ring-[1px] ring-[#D4D4D8]",
             )}
           >
-            <span
-              data-testid={`default_slider_display_value${editNode ? "_advanced" : ""}`}
-              className="relative bottom-[1px] font-mono text-sm"
-            >
-              {valueAsNumber.toFixed(2)}
-            </span>
+            {isEditing ? (
+              <input
+                type="number"
+                value={inputValue}
+                onChange={handleInputChange}
+                onBlur={handleInputBlur}
+                onKeyDown={handleKeyDown}
+                className="relative bottom-[1px] w-full cursor-text rounded-sm text-center font-mono text-[15px] arrow-hide"
+                autoFocus
+              />
+            ) : (
+              <span
+                onClick={() => {
+                  setIsEditing(true);
+                  setInputValue(valueAsNumber.toFixed(2));
+                }}
+                data-testid={`default_slider_display_value${editNode ? "_advanced" : ""}`}
+                className="relative bottom-[1px] font-mono text-sm hover:cursor-text"
+              >
+                {valueAsNumber.toFixed(2)}
+              </span>
+            )}
           </div>
         </div>
       </Case>
@@ -242,12 +285,18 @@ export default function SliderComponent({
             name={minLabelIcon}
             aria-hidden="true"
           />
-          <span data-testid="min_label" className="text-muted-foreground">
+          <span
+            data-testid="min_label"
+            className="text-xs text-placeholder-foreground"
+          >
             {minLabel}
           </span>
         </div>
         <div className="flex items-center justify-end">
-          <span data-testid="max_label" className="text-muted-foreground">
+          <span
+            data-testid="max_label"
+            className="text-xs text-placeholder-foreground"
+          >
             {maxLabel}
           </span>
           <IconComponent
