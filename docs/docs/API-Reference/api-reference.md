@@ -888,6 +888,501 @@ result
    </TabItem>
 </Tabs>
 
+## Flows
+
+### Create Flows
+
+Create multiple new flows.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'POST' \
+  '$LANGFLOW_URL/api/v1/flows/batch/' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+  -d '{
+    // FlowListCreate object
+  }'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+[
+  {
+    // FlowRead objects
+  }
+]
+```
+
+  </TabItem>
+</Tabs>
+
+### Upload File
+
+Upload flows from a file.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'POST' \
+  '$LANGFLOW_URL/api/v1/flows/upload/?folder_id=OPTIONAL_FOLDER_ID' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+  -H 'Content-Type: multipart/form-data' \
+  -F 'file=@/path/to/your/file'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+[
+  {
+    // FlowRead objects
+  }
+]
+```
+
+  </TabItem>
+</Tabs>
+
+### Download Multiple Files
+
+Download multiple flows as a zip file.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'POST' \
+  '$LANGFLOW_URL/api/v1/flows/download/' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+  -d '["FLOW_ID_1", "FLOW_ID_2"]'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+// Binary file content (ZIP)
+```
+
+  </TabItem>
+</Tabs>
+
+### Read Basic Examples
+
+Retrieve a list of basic example flows.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/flows/basic_examples/' \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+A list of example flows.
+```
+
+  </TabItem>
+</Tabs>
+
+## Users
+
+### Add User
+
+Add a new user to the database.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'POST' \
+  '$LANGFLOW_URL/api/v1/users/' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+  -d '{
+    // UserCreate object
+  }'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+  // UserRead object
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Read All Users
+
+Retrieve a list of users from the database with pagination.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/users/?skip=0&limit=10' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+  // UsersResponse object
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Read Current User
+
+Retrieve the current user's data.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/users/whoami' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+  // UserRead object
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Patch User
+
+Update an existing user's data.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'PATCH' \
+  '$LANGFLOW_URL/api/v1/users/{user_id}' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+  -d '{
+    // UserUpdate object
+  }'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+  // UserRead object
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Delete User
+
+Delete a user from the database.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'DELETE' \
+  '$LANGFLOW_URL/api/v1/users/{user_id}' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
+
+  </TabItem>
+<TabItem value="result" label="Result">
+
+```plain
+{
+  // UserRead object
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Reset Password
+
+Reset a user's password.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'PATCH' \
+  '$LANGFLOW_URL/api/v1/users/{user_id}/reset-password' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+  -d '{
+    // UserUpdate object for password reset
+  }'
+```
+
+  </TabItem>
+<TabItem value="result" label="Result">
+
+```plain
+{
+  // UserRead object
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## APIKey
+
+### Get API Keys
+
+Retrieve a list of API keys.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/api_key/' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+  // ApiKeysResponse object
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Create API Key
+
+Create a new API key.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'POST' \
+  '$LANGFLOW_URL/api/v1/api_key/' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+  -d '{
+    // ApiKeyCreate object
+  }'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+  // UnmaskedApiKeyRead object
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Delete API Key
+
+Delete a specific API key.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'DELETE' \
+  '$LANGFLOW_URL/api/v1/api_key/{api_key_id}' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+  // UnmaskedApiKeyRead object
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Save Store API Key
+
+Save an API key to the store.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'POST' \
+  '$LANGFLOW_URL/api/v1/api_key/store' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+  -d '{
+    // ApiKeyCreateRequest object
+  }'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+  // UnmaskedApiKeyRead object
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## Login
+
+### Login To Get Access Token
+
+Obtain an access token by logging in.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'POST' \
+  '$LANGFLOW_URL/api/v1/login' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -d 'username=YOUR_USERNAME&password=YOUR_PASSWORD'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+  // Token object
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Auto Login
+
+Perform an automatic login.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/auto_login' \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+// Response content
+```
+
+  </TabItem>
+</Tabs>
+
+### Refresh Token
+
+Refresh the current access token.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'POST' \
+  '$LANGFLOW_URL/api/v1/refresh' \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+// Response content
+```
+
+  </TabItem>
+</Tabs>
+
+### Logout
+
+Perform a logout operation.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'POST' \
+  '$LANGFLOW_URL/api/v1/logout' \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+// Response content
+```
+
+  </TabItem>
+</Tabs>
+
 ## Variables
 
 ### Update Variable
@@ -923,7 +1418,7 @@ curl -X 'PATCH' \
   </TabItem>
 </Tabs>
 
-## Delete Variable
+### Delete Variable
 
 Delete a variable.
 
@@ -949,9 +1444,184 @@ curl -X 'DELETE' \
   </TabItem>
 </Tabs>
 
+## Files
+
+## Files
+
+### Upload File
+
+Upload a file to a specific flow.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'POST' \
+  '$LANGFLOW_URL/api/v1/files/upload/{flow_id}' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+  -H 'Content-Type: multipart/form-data' \
+  -F 'file=@/path/to/your/file'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+  // UploadFileResponse object
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Download File
+
+Download a specific file for a given flow.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/files/download/{flow_id}/{file_name}' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+// File content
+```
+
+  </TabItem>
+</Tabs>
+
+### Download Image
+
+Download an image file for a given flow.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/files/images/{flow_id}/{file_name}' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+// Image file content
+```
+
+  </TabItem>
+</Tabs>
+
+### Download Profile Picture
+
+Download a profile picture from a specific folder.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/files/profile_pictures/{folder_name}/{file_name}' \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+// Profile picture file content
+```
+
+  </TabItem>
+</Tabs>
+
+### List Profile Pictures
+
+Retrieve a list of available profile pictures.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/files/profile_pictures/list' \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+// List of profile pictures
+```
+
+  </TabItem>
+</Tabs>
+
+### List Files
+
+List all files associated with a specific flow.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/files/list/{flow_id}' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+// List of files
+```
+
+  </TabItem>
+</Tabs>
+
+### Delete File
+
+Delete a specific file from a flow.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'DELETE' \
+  '$LANGFLOW_URL/api/v1/files/delete/{flow_id}/{file_name}' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+// Deletion confirmation
+```
+
+  </TabItem>
+</Tabs>
+
+
 ## Folders
 
-## Create Folder
+### Create Folder
 
 Create a new folder.
 
@@ -965,8 +1635,8 @@ curl -X 'POST' \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
   -d '{
-  "name": "New Folder"
-}'
+    "name": "New Folder Name"
+  }'
 ```
 
   </TabItem>
@@ -974,24 +1644,24 @@ curl -X 'POST' \
 
 ```plain
 {
-  "id": "folder_id",
-  "name": "New Folder"
+  "id": "new_folder_id",
+  "name": "New Folder Name"
 }
 ```
 
   </TabItem>
 </Tabs>
 
-### Read Folders
+### Read Folder
 
-Retrieve a list of folders.
+Retrieve details of a specific folder.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
 ```curl
 curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/folders/' \
+  '$LANGFLOW_URL/api/v1/folders/{folder_id}' \
   -H 'accept: application/json' \
   -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
 ```
@@ -1000,16 +1670,11 @@ curl -X 'GET' \
   <TabItem value="result" label="Result">
 
 ```plain
-[
-  {
-    "id": "folder_id_1",
-    "name": "Folder 1"
-  },
-  {
-    "id": "folder_id_2",
-    "name": "Folder 2"
-  }
-]
+{
+  "id": "folder_id",
+  "name": "Folder Name",
+  // Additional folder details
+}
 ```
 
   </TabItem>
@@ -1017,7 +1682,7 @@ curl -X 'GET' \
 
 ### Update Folder
 
-Update an existing folder.
+Update the information of a specific folder.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
@@ -1029,8 +1694,8 @@ curl -X 'PATCH' \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
   -d '{
-  "name": "Updated Folder Name"
-}'
+    "name": "Updated Folder Name"
+  }'
 ```
 
   </TabItem>
@@ -1046,9 +1711,9 @@ curl -X 'PATCH' \
   </TabItem>
 </Tabs>
 
-## Delete Folder
+### Delete Folder
 
-Delete a folder.
+Delete a specific folder.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
@@ -1064,17 +1729,280 @@ curl -X 'DELETE' \
   <TabItem value="result" label="Result">
 
 ```plain
+204 No Content
+```
+
+  </TabItem>
+</Tabs>
+
+### Download File
+
+Download all flows from a folder as a zip file.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/folders/download/{folder_id}' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
+
+  </TabItem>
+</Tabs>
+
+### Upload File
+
+Upload flows from a file to a folder.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'POST' \
+  '$LANGFLOW_URL/api/v1/folders/upload/' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+  -F 'file=@/path/to/your/file.zip'
+```
+
+  </TabItem>
+</Tabs>
+
+## Monitor
+
+### Get Vertex Builds
+
+Retrieve Vertex Builds for a specific flow.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/monitor/builds?flow_id=YOUR_FLOW_ID' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
 {
-  "message": "Folder deleted successfully"
+  // VertexBuildMapModel
 }
 ```
 
   </TabItem>
 </Tabs>
 
+### Delete Vertex Builds
 
+Delete Vertex Builds for a specific flow.
 
+<Tabs>
+  <TabItem value="curl" label="curl" default>
 
+```curl
+curl -X 'DELETE' \
+  '$LANGFLOW_URL/api/v1/monitor/builds?flow_id=YOUR_FLOW_ID' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
 
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+204 No Content
+```
+
+  </TabItem>
+</Tabs>
+
+### Get Messages
+
+Retrieve messages with optional filters.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/monitor/messages?flow_id=YOUR_FLOW_ID&session_id=YOUR_SESSION_ID&sender=SENDER&sender_name=SENDER_NAME&order_by=timestamp' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+[
+  {
+    // MessageResponse
+  }
+]
+```
+
+  </TabItem>
+</Tabs>
+
+### Delete Messages
+
+Delete specific messages by their IDs.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'DELETE' \
+  '$LANGFLOW_URL/api/v1/monitor/messages' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+  -d '["MESSAGE_ID_1", "MESSAGE_ID_2"]'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+204 No Content
+```
+
+  </TabItem>
+</Tabs>
+
+### Update Message
+
+Update a specific message by its ID.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'PUT' \
+  '$LANGFLOW_URL/api/v1/monitor/messages/MESSAGE_ID' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+  -d '{
+    // MessageUpdate object
+  }'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+  // MessageRead object
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Update Session ID
+
+Update the session ID for messages.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'PATCH' \
+  '$LANGFLOW_URL/api/v1/monitor/messages/session/OLD_SESSION_ID?new_session_id=NEW_SESSION_ID' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+[
+  {
+    // MessageResponse
+  }
+]
+```
+
+  </TabItem>
+</Tabs>
+
+### Delete Messages by Session
+
+Delete all messages for a specific session.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'DELETE' \
+  '$LANGFLOW_URL/api/v1/monitor/messages/session/SESSION_ID' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+204 No Content
+```
+
+  </TabItem>
+</Tabs>
+
+### Get Transactions
+
+Retrieve transactions for a specific flow.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/monitor/transactions?flow_id=YOUR_FLOW_ID' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+TransactionReadResponse
+```
+
+  </TabItem>
+</Tabs>
+
+## Starter projects
+
+Retrieve starter projects.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL//api/v1/starter-projects/' \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+A list of starter projects.
+```
+
+  </TabItem>
+</Tabs>
 
 
