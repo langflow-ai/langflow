@@ -126,7 +126,6 @@ test(
     // Dispatch the drop event on the target element
     await element.dispatchEvent("drop", { dataTransfer });
 
-
     await page.waitForSelector("text=The file size is too large", {
       timeout: 10000,
     });
