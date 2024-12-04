@@ -1,6 +1,7 @@
 import asyncio
 from typing import Any
 from unittest.mock import MagicMock
+from uuid import uuid4
 
 import pytest
 from langflow.custom.custom_component.component import Component
@@ -8,7 +9,7 @@ from langflow.events.event_manager import EventManager
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.content_types import TextContent, ToolContent
 from langflow.schema.message import Message
-from langflow.schema.properties import Source
+from langflow.schema.properties import Properties, Source
 from langflow.template.field.base import Output
 
 
@@ -44,11 +45,13 @@ async def test_component_message_sending():
     component.set_event_manager(event_manager)
 
     # Create a message
+    properties = Properties()
     message = Message(
         sender="test_sender",
         session_id="test_session",
         sender_name="test_sender_name",
         content_blocks=[ContentBlock(title="Test Block", contents=[TextContent(type="text", text="Test message")])],
+        properties=properties,
     )
 
     # Send the message
@@ -72,6 +75,7 @@ async def test_component_tool_output():
     component.set_event_manager(event_manager)
 
     # Create a message with tool content
+    properties = Properties()
     message = Message(
         sender="test_sender",
         session_id="test_session",
@@ -82,6 +86,7 @@ async def test_component_tool_output():
                 contents=[ToolContent(type="tool_use", name="test_tool", tool_input={"query": "test input"})],
             )
         ],
+        properties=properties,
     )
 
     # Send the message
@@ -202,7 +207,7 @@ async def test_component_streaming_message():
     # Create a proper mock vertex with graph and flow_id
     vertex = MagicMock()
     mock_graph = MagicMock()
-    mock_graph.flow_id = "12345678-1234-5678-1234-567812345678"  # Valid UUID string
+    mock_graph.flow_id = str(uuid4())
     vertex.graph = mock_graph
 
     component = ComponentForTesting(_vertex=vertex)
@@ -219,11 +224,13 @@ async def test_component_streaming_message():
             yield StreamChunk(chunk)
 
     # Create a streaming message
+    properties = Properties()
     message = Message(
         sender="test_sender",
         session_id="test_session",
         sender_name="test_sender_name",
         text=text_generator(),
+        properties=properties,
     )
 
     # Send the streaming message

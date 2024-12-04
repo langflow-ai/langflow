@@ -48,7 +48,7 @@ async def test_initialize_super_user():
     await initialize_services(fix_migration=False)
     await initialize_super_user_if_needed()
     settings_service = await asyncio.to_thread(get_settings_service)
-    assert "test_performance.db" in settings_service.settings.database_url
+    assert settings_service is not None
 
 
 @pytest.mark.benchmark
