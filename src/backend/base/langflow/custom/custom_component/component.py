@@ -13,7 +13,12 @@ import yaml
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, ValidationError
 
-from langflow.base.tools.constants import TOOL_OUTPUT_DISPLAY_NAME, TOOL_OUTPUT_NAME
+from langflow.base.tools.constants import (
+    TOOL_OUTPUT_DISPLAY_NAME,
+    TOOL_OUTPUT_NAME,
+    TOOL_TABLE_SCHEMA,
+    TOOLS_METADATA_INPUT_NAME,
+)
 from langflow.custom.tree_visitor import RequiredInputsVisitor
 from langflow.exceptions.component import StreamingError
 from langflow.field_typing import Tool  # noqa: TCH001 Needed by _add_toolkit_output
@@ -399,7 +404,12 @@ class Component(CustomComponent):
         if field_name == "tool_mode" or frontend_node.get("tool_mode"):
             is_tool_mode = field_value or frontend_node.get("tool_mode")
             frontend_node["outputs"] = [self._build_tool_output()] if is_tool_mode else frontend_node["outputs"]
-
+            if is_tool_mode:
+                frontend_node.setdefault("template", {})
+                frontend_node["template"][TOOLS_METADATA_INPUT_NAME] = self._build_tools_metadata_input().to_dict()
+            elif "template" in frontend_node:
+                frontend_node["template"].pop(TOOLS_METADATA_INPUT_NAME, None)
+        self.tools_metadata = frontend_node.get("template", {}).get(TOOLS_METADATA_INPUT_NAME, {}).get("value")
         return self._validate_frontend_node(frontend_node)
 
     def _validate_frontend_node(self, frontend_node: dict):
@@ -966,7 +976,10 @@ class Component(CustomComponent):
 
     def to_toolkit(self) -> list[Tool]:
         component_toolkit = _get_component_toolkit()
-        return component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
+        tools = component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
+        if hasattr(self, TOOLS_METADATA_INPUT_NAME):
+            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
+        return tools
 
     def get_project_name(self):
         if hasattr(self, "_tracing_service") and self._tracing_service:
@@ -1137,6 +1150,29 @@ class Component(CustomComponent):
 
     def _append_tool_to_outputs_map(self):
         self._outputs_map[TOOL_OUTPUT_NAME] = self._build_tool_output()
+        # add a new input for the tool schema
+        # self.inputs.append(self._build_tool_schema())
 
     def _build_tool_output(self) -> Output:
         return Output(name=TOOL_OUTPUT_NAME, display_name=TOOL_OUTPUT_DISPLAY_NAME, method="to_toolkit", types=["Tool"])
+
+    def _build_tools_metadata_input(self):
+        tools = self.to_toolkit()
+        tool_data = (
+            self.tools_metadata
+            if hasattr(self, TOOLS_METADATA_INPUT_NAME)
+            else [{"name": tool.name, "description": tool.description} for tool in tools]
+        )
+        try:
+            from langflow.io import TableInput
+        except ImportError as e:
+            msg = "Failed to import TableInput from langflow.io"
+            raise ImportError(msg) from e
+
+        return TableInput(
+            name=TOOLS_METADATA_INPUT_NAME,
+            display_name="Tools Metadata",
+            real_time_refresh=True,
+            table_schema=TOOL_TABLE_SCHEMA,
+            value=tool_data,
+        )
