@@ -40,7 +40,7 @@ if not parsed_args.token:
 # Create an instance of the HfApi class to interact with the Hugging Face Hub.
 hf_api = HfApi(
     endpoint="https://huggingface.co",  # Base endpoint URL for Hugging Face Hub.
-    token=parsed_args.token,           # API token used for authentication.
+    token=parsed_args.token,  # API token used for authentication.
 )
 
 # Restart the specified space with a factory reboot.
