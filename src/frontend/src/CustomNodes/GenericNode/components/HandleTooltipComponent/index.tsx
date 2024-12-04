@@ -1,4 +1,4 @@
-import { convertTestName } from "@/components/storeCardComponent/utils/convert-test-name";
+import { convertTestName } from "@/components/common/storeCardComponent/utils/convert-test-name";
 import { Badge } from "@/components/ui/badge";
 
 export default function HandleTooltipComponent({
@@ -71,7 +71,7 @@ export default function HandleTooltipComponent({
             <b>Drag</b> to connect compatible {!isInput ? "inputs" : "outputs"}
           </div>
           <div>
-            <b>Select</b> to filter compatible {!isInput ? "inputs" : "outputs"}{" "}
+            <b>Click</b> to filter compatible {!isInput ? "inputs" : "outputs"}{" "}
             and components
           </div>
         </div>

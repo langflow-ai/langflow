@@ -1,3 +1,4 @@
+import { toCamelCase } from "@/utils/utils";
 import { create } from "zustand";
 import { defaultShortcuts } from "../constants/constants";
 import { shortcutsStoreType } from "../types/store";
@@ -7,21 +8,21 @@ export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
   setShortcuts: (newShortcuts) => {
     set({ shortcuts: newShortcuts });
   },
-  output: "o",
+  outputInspection: "o",
   play: "p",
-  flow: "mod+b",
+  flow: "mod+shift+b",
   undo: "mod+z",
   redo: "mod+y",
-  open: "mod+k",
-  advanced: "mod+shift+a",
-  minimize: "mod+shift+q",
+  openPlayground: "mod+k",
+  advancedSettings: "mod+shift+a",
+  minimize: "mod+.",
   code: "space",
   copy: "mod+c",
   duplicate: "mod+d",
-  component: "mod+shift+s",
+  componentShare: "mod+shift+s",
   docs: "mod+shift+d",
-  changes: "mod+s",
-  save: "mod+alt+s",
+  changesSave: "mod+s",
+  saveComponent: "mod+alt+s",
   delete: "backspace",
   group: "mod+g",
   cut: "mod+x",
@@ -30,8 +31,9 @@ export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
   update: "mod+u",
   download: "mod+j",
   freeze: "mod+f",
-  FreezePath: "mod+shift+f",
+  freezePath: "mod+shift+f",
   toolMode: "mod+shift+m",
+  toggleSidebar: "mod+b",
   updateUniqueShortcut: (name, combination) => {
     set({
       [name]: combination,
@@ -42,7 +44,7 @@ export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
       const savedShortcuts = localStorage.getItem("langflow-shortcuts");
       const savedArr = JSON.parse(savedShortcuts!);
       savedArr.forEach(({ name, shortcut }) => {
-        let shortcutName = name.split(" ")[0].toLowerCase();
+        let shortcutName = toCamelCase(name);
         set({
           [shortcutName]: shortcut,
         });

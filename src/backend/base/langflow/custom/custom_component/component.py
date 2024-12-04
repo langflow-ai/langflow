@@ -396,10 +396,10 @@ class Component(CustomComponent):
 
     def run_and_validate_update_outputs(self, frontend_node: dict, field_name: str, field_value: Any):
         frontend_node = self.update_outputs(frontend_node, field_name, field_value)
-        if field_name == "tool_mode":
-            # Replace all outputs with the tool_output value if tool_mode is True
-            # else replace it with the original outputs
-            frontend_node["outputs"] = [self._build_tool_output()] if field_value else frontend_node["outputs"]
+        if field_name == "tool_mode" or frontend_node.get("tool_mode"):
+            is_tool_mode = field_value or frontend_node.get("tool_mode")
+            frontend_node["outputs"] = [self._build_tool_output()] if is_tool_mode else frontend_node["outputs"]
+
         return self._validate_frontend_node(frontend_node)
 
     def _validate_frontend_node(self, frontend_node: dict):
@@ -801,9 +801,9 @@ class Component(CustomComponent):
             for input_ in self.inputs
             if hasattr(input_, "trace_as_input") and input_.trace_as_input
         }
-        # Dynamic inputs
-        dynamic_inputs = {key: value for key, value in self._attributes.items() if key not in predefined_inputs}
-        return {**predefined_inputs, **dynamic_inputs}
+        # Runtime inputs
+        runtime_inputs = {name: input_.value for name, input_ in self._inputs.items() if hasattr(input_, "value")}
+        return {**predefined_inputs, **runtime_inputs}
 
     def get_trace_as_metadata(self):
         return {

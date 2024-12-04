@@ -3,6 +3,7 @@ import asyncio
 import zlib
 from pathlib import Path
 
+from aiofile import async_open
 from loguru import logger
 
 from langflow.custom import Component
@@ -103,6 +104,22 @@ class DirectoryReader:
             # The file is always just a python file, so we can safely read it as utf-8
             with _file_path.open("rb") as f:
                 return f.read().decode("utf-8")
+
+    async def aread_file_content(self, file_path):
+        """Read and return the content of a file."""
+        _file_path = Path(file_path)
+        if not _file_path.is_file():
+            return None
+        try:
+            async with async_open(_file_path, encoding="utf-8") as file:
+                # UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 3069:
+                # character maps to <undefined>
+                return await file.read()
+        except UnicodeDecodeError:
+            # This is happening in Windows, so we need to open the file in binary mode
+            # The file is always just a python file, so we can safely read it as utf-8
+            async with async_open(_file_path, "rb") as f:
+                return (await f.read()).decode("utf-8")
 
     def get_files(self):
         """Walk through the directory path and return a list of all .py files."""
@@ -257,7 +274,7 @@ class DirectoryReader:
 
     async def process_file_async(self, file_path):
         try:
-            file_content = await asyncio.to_thread(self.read_file_content, file_path)
+            file_content = await self.aread_file_content(file_path)
         except Exception:  # noqa: BLE001
             logger.exception(f"Error while reading file {file_path}")
             return False, f"Could not read {file_path}"

@@ -13,11 +13,12 @@ from uuid import UUID
 import orjson
 import pytest
 from asgi_lifespan import LifespanManager
+from blockbuster import blockbuster_ctx
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 from langflow.graph import Graph
-from langflow.initial_setup.setup import STARTER_FOLDER_NAME
+from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow, FlowCreate
@@ -34,7 +35,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel.pool import StaticPool
 from typer.testing import CliRunner
 
-from tests import blockbuster
 from tests.api_keys import get_openai_api_key
 
 if TYPE_CHECKING:
@@ -42,7 +42,22 @@ if TYPE_CHECKING:
 
 
 load_dotenv()
-blockbuster.init()
+
+
+@pytest.fixture(autouse=True)
+def blockbuster():
+    with blockbuster_ctx() as bb:
+        for func in [
+            "io.BufferedReader.read",
+            "io.BufferedWriter.write",
+            "io.TextIOWrapper.read",
+            "io.TextIOWrapper.write",
+        ]:
+            bb.functions[func].can_block_functions.append(("settings/service.py", {"initialize"}))
+        for func in bb.functions:
+            if func.startswith("sqlite3."):
+                bb.functions[func].deactivate()
+        yield bb
 
 
 def pytest_configure(config):

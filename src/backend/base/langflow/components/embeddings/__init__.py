@@ -2,6 +2,7 @@ from .aiml import AIMLEmbeddingsComponent
 from .amazon_bedrock import AmazonBedrockEmbeddingsComponent
 from .astra_vectorize import AstraVectorizeComponent
 from .azure_openai import AzureOpenAIEmbeddingsComponent
+from .cloudflare import CloudflareWorkersAIEmbeddingsComponent
 from .cohere import CohereEmbeddingsComponent
 from .google_generative_ai import GoogleGenerativeAIEmbeddingsComponent
 from .huggingface_inference_api import HuggingFaceInferenceAPIEmbeddingsComponent
@@ -19,7 +20,9 @@ __all__ = [
     "AmazonBedrockEmbeddingsComponent",
     "AstraVectorizeComponent",
     "AzureOpenAIEmbeddingsComponent",
+    "CloudflareWorkersAIEmbeddingsComponent",
     "CohereEmbeddingsComponent",
+    "EmbeddingSimilarityComponent",
     "GoogleGenerativeAIEmbeddingsComponent",
     "HuggingFaceInferenceAPIEmbeddingsComponent",
     "LMStudioEmbeddingsComponent",
@@ -27,7 +30,6 @@ __all__ = [
     "NVIDIAEmbeddingsComponent",
     "OllamaEmbeddingsComponent",
     "OpenAIEmbeddingsComponent",
-    "EmbeddingSimilarityComponent",
     "TextEmbedderComponent",
     "VertexAIEmbeddingsComponent",
 ]
