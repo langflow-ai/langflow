@@ -27,7 +27,10 @@ test.describe("drag and drop test", () => {
 
     await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
     // Read your file into a buffer.
-    const jsonContent = readFileSync("tests/assets/collection.json", "utf-8");
+    const jsonContent = readFileSync(
+      "src/frontend/tests/assets/collection.json",
+      "utf-8",
+    );
 
     // Create the DataTransfer and File
     const dataTransfer = await page.evaluateHandle((data) => {
@@ -45,7 +48,9 @@ test.describe("drag and drop test", () => {
       dataTransfer,
     });
 
-    await page.waitForTimeout(3000);
+    await page.waitForSelector("text=uploaded successfully", {
+      timeout: 60000 * 2,
+    });
 
     const genericNode = page.getByTestId("div-generic-node");
     const elementCount = await genericNode?.count();
