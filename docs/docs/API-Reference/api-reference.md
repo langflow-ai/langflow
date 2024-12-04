@@ -888,8 +888,6 @@ result
    </TabItem>
 </Tabs>
 
-## Flows
-
 ### Create Flows
 
 Create multiple new flows.
@@ -1443,8 +1441,6 @@ curl -X 'DELETE' \
 
   </TabItem>
 </Tabs>
-
-## Files
 
 ## Files
 
