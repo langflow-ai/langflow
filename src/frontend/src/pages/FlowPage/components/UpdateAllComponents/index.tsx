@@ -136,6 +136,7 @@ export default function UpdateAllComponents() {
           className="shrink-0"
           onClick={handleUpdateAllComponents}
           loading={loadingUpdate}
+          data-testid="update-all-button"
         >
           Update All
         </Button>
