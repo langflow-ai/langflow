@@ -60,7 +60,6 @@ test(
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
 
-
     await page.getByTestId("zoom_out").click();
     await page
       .locator('//*[@id="react-flow-id"]')
@@ -75,17 +74,21 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Vectara");
 
-    await page.waitForSelector('[data-testid="vectorstoresVectara Self Query Retriever for Vectara Vector Store"]', {
-      timeout: 30000,
-    });
+    await page.waitForSelector(
+      '[data-testid="vectorstoresVectara Self Query Retriever for Vectara Vector Store"]',
+      {
+        timeout: 30000,
+      },
+    );
 
-    modelElement = page.getByTestId('vectorstoresVectara Self Query Retriever for Vectara Vector Store')
+    modelElement = page.getByTestId(
+      "vectorstoresVectara Self Query Retriever for Vectara Vector Store",
+    );
     targetElement = page.locator('//*[@id="react-flow-id"]');
     await modelElement.dragTo(targetElement);
 
     await page.mouse.up();
     await page.mouse.down();
-
 
     await page.getByTestId("fit_view").click();
     await page.getByTestId("fit_view").click();
