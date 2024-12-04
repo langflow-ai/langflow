@@ -435,7 +435,7 @@ class InterfaceVertex(ComponentVertex):
             and hasattr(self.custom_component, "store_message")
         ):
             self.custom_component.store_message(message)
-        log_vertex_build(
+        await log_vertex_build(
             flow_id=self.graph.flow_id,
             vertex_id=self.id,
             valid=True,
