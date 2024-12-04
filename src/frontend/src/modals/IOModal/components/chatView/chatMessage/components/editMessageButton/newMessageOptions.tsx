@@ -69,7 +69,7 @@ export function EditMessageButton({
 
       {isBotMessage && (
         <div className="flex">
-          <ShadTooltip styleClasses="z-50" content="Good" side="top">
+          <ShadTooltip styleClasses="z-50" content="Helpful" side="top">
             <div className="p-1">
               <Button
                 variant="ghost"
@@ -88,7 +88,7 @@ export function EditMessageButton({
             </div>
           </ShadTooltip>
 
-          <ShadTooltip styleClasses="z-50" content="Bad" side="top">
+          <ShadTooltip styleClasses="z-50" content="Not helpful" side="top">
             <div className="p-1">
               <Button
                 variant="ghost"
