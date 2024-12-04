@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
-
-test.describe("drag and drop test", () => {
-  /// <reference lib="dom"/>
-  test("drop collection", { tag: ["@release"] }, async ({ page }) => {
+import { simulateDragAndDrop } from "../../utils/simulate-drag-and-drop";
+test(
+  "user should be able to drag and drop an old collection without crashing the application",
+  { tag: ["@release"] },
+  async ({ page }) => {
     await page.goto("/");
 
     let modalCount = 0;
@@ -18,32 +19,21 @@ test.describe("drag and drop test", () => {
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
+
     await page.locator("span").filter({ hasText: "Close" }).first().click();
 
-    await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
-    // Read your file into a buffer.
-    const jsonContent = readFileSync("tests/assets/collection.json", "utf-8");
+    await page.locator("span").filter({ hasText: "My Projects" }).isVisible();
 
-    // Create the DataTransfer and File
-    const dataTransfer = await page.evaluateHandle((data) => {
-      const dt = new DataTransfer();
-      // Convert the buffer to a hex array
-      const file = new File([data], "flowtest.json", {
-        type: "application/json",
-      });
-      dt.items.add(file);
-      return dt;
-    }, jsonContent);
+    await simulateDragAndDrop(page, "assets/collection.json", "cards-wrapper");
 
-    // Now dispatch
-    await page.getByTestId("cards-wrapper").dispatchEvent("drop", {
-      dataTransfer,
+    await page.waitForSelector("text=uploaded successfully", {
+      timeout: 60000 * 2,
     });
-
-    await page.waitForTimeout(3000);
 
     const genericNode = page.getByTestId("div-generic-node");
     const elementCount = await genericNode?.count();
@@ -58,5 +48,72 @@ test.describe("drag and drop test", () => {
     expect(
       await page.locator("text=Getting Started:").last().isVisible(),
     ).toBeTruthy();
-  });
-});
+  },
+);
+
+test(
+  "user should be able to drag and drop a flow on main page",
+  { tag: ["@release"] },
+  async ({ page }) => {
+    await page.goto("/");
+
+    let modalCount = 0;
+    try {
+      const modalTitleElement = await page?.getByTestId("modal-title");
+      if (modalTitleElement) {
+        modalCount = await modalTitleElement.count();
+      }
+    } catch (error) {
+      modalCount = 0;
+    }
+
+    while (modalCount === 0) {
+      await page.getByText("New Flow", { exact: true }).click();
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
+      modalCount = await page.getByTestId("modal-title")?.count();
+    }
+
+    await page.locator("span").filter({ hasText: "Close" }).first().click();
+    await page.locator("span").filter({ hasText: "My Projects" }).isVisible();
+
+    // Read your file into a buffer.
+    const jsonContent = readFileSync(
+      "assets/flow_test_drag_and_drop.json",
+      "utf-8",
+    );
+
+    const randomName = Math.random().toString(36).substring(2, 15);
+    const jsonContentWithNewName = jsonContent.replace(
+      "LANGFLOW TEST",
+      randomName,
+    );
+
+    await simulateDragAndDrop(
+      page,
+      "assets/flow_test_drag_and_drop.json",
+      "cards-wrapper",
+      jsonContentWithNewName,
+    );
+
+    await page.waitForSelector("text=uploaded successfully", {
+      timeout: 60000 * 2,
+    });
+
+    const genericNode = page.getByTestId("div-generic-node");
+
+    const elementCount = await genericNode?.count();
+    if (elementCount > 0) {
+      expect(true).toBeTruthy();
+    }
+
+    await page.waitForSelector(`text=${randomName}`, {
+      timeout: 100000,
+    });
+
+    expect(
+      await page.locator(`text=${randomName}`).last().isVisible(),
+    ).toBeTruthy();
+  },
+);
