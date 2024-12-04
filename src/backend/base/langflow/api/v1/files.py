@@ -6,14 +6,16 @@ from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import UploadFileResponse
 from langflow.graph.schema import ResultData, RunOutputs
+from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.services.auth.utils import api_key_security
 from langflow.services.database.models.flow import Flow
+from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_storage_service
 from langflow.services.storage.service import StorageService
@@ -27,33 +29,43 @@ router = APIRouter(tags=["Files"], prefix="/files")
 # Create dep that gets the flow_id from the request
 # then finds it in the database and returns it while
 # using the current user as the owner
+async def get_valid_flow_obj(
+    flow: FlowRead,
+    user: UserRead,
+    session: AsyncDbSession,
+) -> Flow:
+    flow_id_str = str(flow.id)
+    # AttributeError: 'SelectOfScalar' object has no attribute 'first'
+    flow = await session.get(Flow, flow_id_str)
+    if not flow:
+        raise HTTPException(status_code=404, detail="Flow not found")
+    if flow.user_id != user.id:
+        raise HTTPException(status_code=403, detail="You don't have access to this flow")
+    return flow
+
 async def get_flow_id(
     flow_id: UUID,
     current_user: CurrentActiveUser,
     session: AsyncDbSession,
 ) -> str:
-    flow_id_str = str(flow_id)
-    # AttributeError: 'SelectOfScalar' object has no attribute 'first'
-    flow = await session.get(Flow, flow_id_str)
-    if not flow:
-        raise HTTPException(status_code=404, detail="Flow not found")
-    if flow.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="You don't have access to this flow")
-    return flow_id_str
+    user = UserRead(id=current_user.id)
+    flow = FlowRead(id=flow_id, user_id=current_user.id)
+    flow_obj = await get_valid_flow_obj(flow=flow, user=user, session=session)
+    return str(flow_obj.id)
 
-
-@router.post("/upload/{flow_id}", status_code=HTTPStatus.CREATED)
+@router.post("/upload/{flow_id_or_name}", status_code=HTTPStatus.CREATED)
 async def upload_file(
     *,
     file: UploadFile,
-    flow_id: Annotated[UUID, Depends(get_flow_id)],
-    current_user: CurrentActiveUser,
-    session: DbSession,
+    api_key_user: Annotated[UserRead | None, Depends(api_key_security)],
+    flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
+    session: AsyncDbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ) -> UploadFileResponse:
     """Handles file uploads to a specific flow."""
     try:
-        flow_id_str = await get_flow_id(flow_id=flow_id, current_user=current_user, session=session)
+        flow_obj = await get_valid_flow_obj(flow=flow, user=api_key_user, session=session)
+        flow_id_str = str(flow_obj.id)
 
         file_content = await file.read()
         timestamp = datetime.now(tz=timezone.utc).astimezone().strftime("%Y-%m-%d_%H-%M-%S")
@@ -72,39 +84,45 @@ async def upload_file(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post("/upload/run/{flow_id}", status_code=HTTPStatus.CREATED)
+@router.post("/upload/run/{flow_id_or_name}", status_code=HTTPStatus.CREATED)
 async def upload_and_run_file(
     *,
     file: UploadFile,
-    flow_id: Annotated[UUID, Depends(get_flow_id)],
-    current_user: CurrentActiveUser,
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],
+    flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
     session: AsyncDbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     input_request: SimplifiedAPIRequest | None = None,
-    api_key_user: Annotated[UserRead, Depends(api_key_security)],
     file_path_field: str = Query("input_value"),
     input_type: str = Query("text"),
     output_type: str = Query("text"),
     stream: bool = Query(default=False),
     background_tasks: BackgroundTasks,
-    request: Request,
 ) -> RunResponse:
-    try:
-        flow_id_str = await get_flow_id(flow_id=flow_id, current_user=current_user, session=session)
-        flow = await session.get(Flow, flow_id_str)
 
-        upload_response = await upload_file(
+    try:
+        # Rely on upload_file to validate the user/flow combination
+        upload_results = await upload_file(
             file=file,
-            flow_id=flow_id_str,
-            current_user=current_user,
+            api_key_user=api_key_user,
+            flow=flow,
             session=session,
             storage_service=storage_service,
         )
 
-        if not hasattr(upload_response, "file_path") or not upload_response.file_path:
+        upload_outputs = RunOutputs(
+            inputs={
+                "filename": file.filename, 
+                "content_type": file.content_type,
+                "size": file.size,
+            }, 
+            outputs=[ResultData(results=upload_results)]
+        )
+
+        if not hasattr(upload_results, "file_path") or not upload_results.file_path:
             raise HTTPException(status_code=500, detail="Invalid upload response")
 
-        full_path = str(upload_response.file_path)
+        full_path = str(upload_results.file_path)
 
         if not input_request:
             input_request = SimplifiedAPIRequest(
@@ -123,12 +141,8 @@ async def upload_and_run_file(
             api_key_user=api_key_user,
         )
 
-        upload_result = ResultData(
-            results=upload_response,
-            component_display_name=request.url.path,
-            component_id="upload_file",
-        )
-        run_response.outputs.append(RunOutputs(inputs={}, outputs=[upload_result]))
+        # Prepend the upload outputs as that happened first
+        run_response.outputs.insert(0, upload_outputs)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
