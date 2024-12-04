@@ -1,3 +1,4 @@
+import { FlowType } from "@/types/flow";
 import { FolderType } from "../../../pages/MainPage/entities";
 
 export type FoldersStoreType = {
@@ -13,4 +14,6 @@ export type FoldersStoreType = {
   setStarterProjectId: (id: string) => void;
   folders: FolderType[];
   setFolders: (folders: FolderType[]) => void;
+  flowsFromCurrentFolder: FlowType[];
+  setFlowsFromCurrentFolder: (flows: FlowType[]) => void;
 };
