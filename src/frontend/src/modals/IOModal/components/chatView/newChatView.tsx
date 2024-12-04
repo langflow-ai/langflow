@@ -184,7 +184,7 @@ export default function ChatView({
           ))}
         <div
           className={
-            lockChat ? "w-5/6 max-w-[768px] py-4 word-break-break-word" : ""
+            lockChat ? "m-auto w-full md:w-5/6 max-w-[768px] py-4 word-break-break-word" : ""
           }
           ref={ref}
         >
@@ -193,7 +193,7 @@ export default function ChatView({
             flowRunningSkeletonMemo}
         </div>
       </div>
-      <div className="m-auto w-5/6 max-w-[768px]">
+      <div className="m-auto w-full md:w-5/6 max-w-[768px]">
         <ChatInput
           chatValue={chatValue}
           noInput={!inputTypes.includes("ChatInput")}
