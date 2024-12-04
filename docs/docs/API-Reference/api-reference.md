@@ -1050,7 +1050,31 @@ curl -X 'GET' \
 
 ```plain
 {
-  // UsersResponse object
+    "total_count": 2,
+    "users": [
+        {
+            "id": "aa8ac16d-8400-459d-b683-f6ae72b22469",
+            "username": "langflow",
+            "profile_image": null,
+            "store_api_key": null,
+            "is_active": true,
+            "is_superuser": true,
+            "create_at": "2024-12-02T20:03:38.395299",
+            "updated_at": "2024-12-04T21:43:59.385038",
+            "last_login_at": "2024-12-04T21:43:59.384330"
+        },
+        {
+            "id": "941f6379-5689-42c9-8ced-7c1e8366ff12",
+            "username": "<string>",
+            "profile_image": null,
+            "store_api_key": null,
+            "is_active": false,
+            "is_superuser": false,
+            "create_at": "2024-12-04T21:42:29.102577",
+            "updated_at": "2024-12-04T21:42:29.102585",
+            "last_login_at": null
+        }
+    ]
 }
 ```
 
@@ -1076,7 +1100,15 @@ curl -X 'GET' \
 
 ```plain
 {
-  // UserRead object
+    "id": "aa8ac16d-8400-459d-b683-f6ae72b22469",
+    "username": "langflow",
+    "profile_image": null,
+    "store_api_key": null,
+    "is_active": true,
+    "is_superuser": true,
+    "create_at": "2024-12-02T20:03:38.395299",
+    "updated_at": "2024-12-04T21:43:59.385038",
+    "last_login_at": "2024-12-04T21:43:59.384330"
 }
 ```
 
@@ -1954,7 +1986,7 @@ Download all flows from a folder as a zip file.
 curl -X 'GET' \
   '$LANGFLOW_URL/api/v1/folders/download/{folder_id}' \
   -H 'accept: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+  -H 'Authorization: Bearer $YOUR_ACCESS_TOKEN'
 ```
 
   </TabItem>
