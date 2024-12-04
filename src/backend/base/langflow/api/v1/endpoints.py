@@ -20,7 +20,7 @@ from fastapi import (
 from loguru import logger
 from sqlmodel import select
 
-from langflow.api.utils import CurrentActiveUser, DbSession, parse_value
+from langflow.api.utils import AsyncDbSession, CurrentActiveUser, parse_value
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -379,7 +379,7 @@ async def webhook_run_flow(
 )
 async def experimental_run_flow(
     *,
-    session: DbSession,
+    session: AsyncDbSession,
     flow_id: UUID,
     inputs: list[InputValueRequest] | None = None,
     outputs: list[str] | None = None,
@@ -454,9 +454,8 @@ async def experimental_run_flow(
         try:
             # Get the flow that matches the flow_id and belongs to the user
             # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
-            flow = session.exec(
-                select(Flow).where(Flow.id == flow_id_str).where(Flow.user_id == api_key_user.id)
-            ).first()
+            stmt = select(Flow).where(Flow.id == flow_id_str).where(Flow.user_id == api_key_user.id)
+            flow = (await session.exec(stmt)).first()
         except sa.exc.StatementError as exc:
             # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
             if "badly formed hexadecimal UUID string" in str(exc):

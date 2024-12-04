@@ -5,7 +5,7 @@ from loguru import logger
 from pydantic import BaseModel
 from sqlmodel import select
 
-from langflow.api.utils import DbSession
+from langflow.api.utils import AsyncDbSession
 from langflow.services.database.models.flow import Flow
 from langflow.services.deps import get_chat_service
 
@@ -38,7 +38,7 @@ async def health():
 # It's a reliable health check for a langflow instance
 @health_check_router.get("/health_check")
 async def health_check(
-    session: DbSession,
+    session: AsyncDbSession,
 ) -> HealthResponse:
     response = HealthResponse()
     # use a fixed valid UUId that UUID collision is very unlikely
@@ -46,7 +46,7 @@ async def health_check(
     try:
         # Check database to query a bogus flow
         stmt = select(Flow).where(Flow.id == uuid.uuid4())
-        session.exec(stmt).first()
+        (await session.exec(stmt)).first()
         response.db = "ok"
     except Exception:  # noqa: BLE001
         logger.exception("Error checking database")
