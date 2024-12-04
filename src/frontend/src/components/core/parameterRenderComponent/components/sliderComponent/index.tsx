@@ -140,12 +140,19 @@ export default function SliderComponent({
     <div className="w-full rounded-lg pb-2">
       <Case condition={!sliderButtons && !sliderInput}>
         <div className="flex items-center justify-end">
-          <span
-            data-testid={`default_slider_display_value${editNode ? "_advanced" : ""}`}
-            className="absolute bottom-[4.3rem] border-2 border-red-500 font-mono text-sm hover:cursor-text"
+          <div
+            className={clsx(
+              "absolute bottom-[4.2rem] rounded-md px-2 py-[1px] hover:cursor-text hover:ring-[1px] hover:ring-[#D4D4D8]",
+              isGrabbing && "ring-[1px] ring-[#D4D4D8]",
+            )}
           >
-            {valueAsNumber.toFixed(2)}
-          </span>
+            <span
+              data-testid={`default_slider_display_value${editNode ? "_advanced" : ""}`}
+              className="relative bottom-[1px] font-mono text-sm"
+            >
+              {valueAsNumber.toFixed(2)}
+            </span>
+          </div>
         </div>
       </Case>
       <Case condition={sliderButtons && !sliderInput}>
