@@ -25,7 +25,6 @@ export default function InputFileComponent({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { validateFileSize } = useFileSizeValidator(setErrorData);
 
-
   // Clear component state
   useEffect(() => {
     if (disabled && value !== "") {
