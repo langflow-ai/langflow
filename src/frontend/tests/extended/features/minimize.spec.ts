@@ -35,7 +35,9 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text input");
-    await page.waitForSelector("data-testid=inputsText Input", { timeout: 3000 });
+    await page.waitForSelector("data-testid=inputsText Input", {
+      timeout: 3000,
+    });
 
     await page
       .getByTestId("inputsText Input")
@@ -65,7 +67,6 @@ test(
 
     await page.getByTestId("minimize-button-modal").first().click();
 
-
     await expect(
       page.locator(".react-flow__handle-left.no-show").first(),
     ).toBeVisible({ timeout: 3000 });
@@ -82,9 +83,9 @@ test(
 
     await page.getByTestId("expand-button-modal").first().click();
 
-    await expect(
-      page.locator(".react-flow__handle-left").first(),
-    ).toBeVisible({ timeout: 3000 });
+    await expect(page.locator(".react-flow__handle-left").first()).toBeVisible({
+      timeout: 3000,
+    });
 
     await expect(
       page.locator(".react-flow__handle-right").first(),
