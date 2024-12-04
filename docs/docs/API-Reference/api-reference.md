@@ -1614,158 +1614,6 @@ curl -X 'DELETE' \
   </TabItem>
 </Tabs>
 
-
-## Folders
-
-### Create Folder
-
-Create a new folder.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/folders/' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
-  -d '{
-    "name": "New Folder Name"
-  }'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-  "id": "new_folder_id",
-  "name": "New Folder Name"
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Read Folder
-
-Retrieve details of a specific folder.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/folders/{folder_id}' \
-  -H 'accept: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-  "id": "folder_id",
-  "name": "Folder Name",
-  // Additional folder details
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Update Folder
-
-Update the information of a specific folder.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'PATCH' \
-  '$LANGFLOW_URL/api/v1/folders/{folder_id}' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
-  -d '{
-    "name": "Updated Folder Name"
-  }'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-  "id": "folder_id",
-  "name": "Updated Folder Name"
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Delete Folder
-
-Delete a specific folder.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'DELETE' \
-  '$LANGFLOW_URL/api/v1/folders/{folder_id}' \
-  -H 'accept: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-204 No Content
-```
-
-  </TabItem>
-</Tabs>
-
-### Download File
-
-Download all flows from a folder as a zip file.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/folders/download/{folder_id}' \
-  -H 'accept: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
-```
-
-  </TabItem>
-</Tabs>
-
-### Upload File
-
-Upload flows from a file to a folder.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/folders/upload/' \
-  -H 'accept: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
-  -F 'file=@/path/to/your/file.zip'
-```
-
-  </TabItem>
-</Tabs>
-
 ## Monitor
 
 ### Get Vertex Builds
@@ -1973,6 +1821,264 @@ curl -X 'GET' \
 
 ```plain
 TransactionReadResponse
+```
+
+  </TabItem>
+</Tabs>
+
+
+## Folders
+
+### Create Folder
+
+Create a new folder.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'POST' \
+  '$LANGFLOW_URL/api/v1/folders/' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+  -d '{
+    "name": "New Folder Name"
+  }'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+  "id": "new_folder_id",
+  "name": "New Folder Name"
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Read Folder
+
+Retrieve details of a specific folder.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/folders/{folder_id}' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+  "id": "folder_id",
+  "name": "Folder Name",
+  // Additional folder details
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Update Folder
+
+Update the information of a specific folder.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'PATCH' \
+  '$LANGFLOW_URL/api/v1/folders/{folder_id}' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+  -d '{
+    "name": "Updated Folder Name"
+  }'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+  "id": "folder_id",
+  "name": "Updated Folder Name"
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Delete Folder
+
+Delete a specific folder.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'DELETE' \
+  '$LANGFLOW_URL/api/v1/folders/{folder_id}' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+204 No Content
+```
+
+  </TabItem>
+</Tabs>
+
+### Download File
+
+Download all flows from a folder as a zip file.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/folders/download/{folder_id}' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
+
+  </TabItem>
+</Tabs>
+
+### Upload File
+
+Upload flows from a file to a folder.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'POST' \
+  '$LANGFLOW_URL/api/v1/folders/upload/' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+  -F 'file=@/path/to/your/file.zip'
+```
+
+  </TabItem>
+</Tabs>
+
+## Health Check
+
+### Health
+
+Check the health status of the service.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/health' \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+  "status": "ok"
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Health Check
+
+Perform a detailed health check of the service.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/health_check' \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+  "status": "ok",
+  "chat": "ok",
+  "db": "ok"
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## Log
+
+### Stream Logs
+
+Stream logs in real-time using Server-Sent Events (SSE).
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/logs-stream' \
+  -H 'accept: text/event-stream'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+  "detail": "Log retrieval is disabled"
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Logs
+
+Retrieve logs with optional parameters.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/logs?lines_before=0&lines_after=0&timestamp=0' \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+  "detail": "Log retrieval is disabled"
+}
 ```
 
   </TabItem>
