@@ -50,7 +50,7 @@ test("user must be able to update outdated components", async ({ page }) => {
   await page.getByTestId("list-card").first().click();
 
   await expect(page.getByText("components are ready to update")).toBeVisible({
-    timeout: 30000
+    timeout: 30000,
   });
 
   let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
