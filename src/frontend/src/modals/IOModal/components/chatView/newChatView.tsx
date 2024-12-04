@@ -85,6 +85,7 @@ export default function ChatView({
 
     if (finalChatHistory.length === 0 && !lockChat && chatInputNode)
       setChatValue(chatInputNode.data.node.template["input_value"].value ?? "");
+    else setChatValue("");
 
     setChatHistory(finalChatHistory);
   }, [flowPool, messages, visibleSession]);
