@@ -43,6 +43,7 @@ async def get_valid_flow_obj(
         raise HTTPException(status_code=403, detail="You don't have access to this flow")
     return flow
 
+
 async def get_flow_id(
     flow_id: UUID,
     current_user: CurrentActiveUser,
@@ -52,6 +53,7 @@ async def get_flow_id(
     flow = FlowRead(id=flow_id, user_id=current_user.id)
     flow_obj = await get_valid_flow_obj(flow=flow, user=user, session=session)
     return str(flow_obj.id)
+
 
 @router.post("/upload/{flow_id_or_name}", status_code=HTTPStatus.CREATED)
 async def upload_file(
@@ -99,7 +101,6 @@ async def upload_and_run_file(
     stream: bool = Query(default=False),
     background_tasks: BackgroundTasks,
 ) -> RunResponse:
-
     try:
         # Rely on upload_file to validate the user/flow combination
         upload_results = await upload_file(
@@ -112,11 +113,11 @@ async def upload_and_run_file(
 
         upload_outputs = RunOutputs(
             inputs={
-                "filename": file.filename, 
+                "filename": file.filename,
                 "content_type": file.content_type,
                 "size": file.size,
-            }, 
-            outputs=[ResultData(results=upload_results)]
+            },
+            outputs=[ResultData(results=upload_results)],
         )
 
         if not hasattr(upload_results, "file_path") or not upload_results.file_path:
