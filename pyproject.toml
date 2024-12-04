@@ -112,6 +112,7 @@ dependencies = [
     "mem0ai>=0.1.26,<1.0.0",
     "aiofile>=3.9.0,<4.0.0",
     "jsonpath-ng>=1.5.3",
+    "sseclient-py==1.8.0",
 ]
 
 [project.urls]

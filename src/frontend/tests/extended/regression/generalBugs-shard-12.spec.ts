@@ -36,7 +36,17 @@ test(
 
     await page.waitForTimeout(1000);
 
-    let modelElement = await page.getByTestId("toolsRetrieverTool");
+    await page.getByTestId("sidebar-options-trigger").click();
+    await page
+      .getByTestId("sidebar-legacy-switch")
+      .isVisible({ timeout: 5000 });
+    await page.getByTestId("sidebar-legacy-switch").click();
+    await expect(page.getByTestId("sidebar-legacy-switch")).toBeChecked();
+    await page.getByTestId("sidebar-options-trigger").click();
+
+    let modelElement = await page.getByTestId(
+      "langchain_utilitiesRetrieverTool",
+    );
     let targetElement = await page.locator('//*[@id="react-flow-id"]');
     await modelElement.dragTo(targetElement);
 

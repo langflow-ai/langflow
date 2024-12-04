@@ -179,7 +179,7 @@ export default function SliderComponent({
           <SliderPrimitive.Thumb
             data-testid={`slider_thumb${editNode ? "_advanced" : ""}`}
             className={clsx(
-              "block h-6 w-6 rounded-full border-2 border-background bg-pink-500 shadow-lg",
+              "block h-6 w-6 cursor-pointer rounded-full border-2 border-background bg-pink-500 shadow-lg",
             )}
           />
         </SliderPrimitive.Root>
