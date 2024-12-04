@@ -5,12 +5,8 @@ import math
 import os
 import traceback
 import types
-from collections.abc import Sequence
 from datetime import datetime, timezone
-from typing import (
-    TYPE_CHECKING,
-    Any,
-)
+from typing import TYPE_CHECKING, Any
 
 from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
@@ -19,7 +15,6 @@ from openinference.semconv.trace import OpenInferenceMimeTypeValues, SpanAttribu
 from opentelemetry.semconv.trace import SpanAttributes as OTELSpanAttributes
 from opentelemetry.trace import Span, Status, StatusCode
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
-from opentelemetry.util.types import AttributeValue
 from typing_extensions import override
 
 from langflow.schema.data import Data
@@ -31,6 +26,7 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from langchain.callbacks.base import BaseCallbackHandler
+    from opentelemetry.util.types import AttributeValue
 
     from langflow.graph.vertex.base import Vertex
     from langflow.services.tracing.schema import Log
@@ -89,9 +85,9 @@ class ArizePhoenixTracer(BaseTracer):
         arize_api_key = os.getenv("ARIZE_API_KEY", None)
         arize_space_id = os.getenv("ARIZE_SPACE_ID", None)
         arize_collector_endpoint = os.getenv("ARIZE_COLLECTOR_ENDPOINT", "https://otlp.arize.com")
-        enable_arize_tracing = True if arize_api_key and arize_space_id else False
-        ARIZE_ENDPOINT = f"{arize_collector_endpoint}/v1"
-        ARIZE_HEADERS = {
+        enable_arize_tracing = bool(arize_api_key and arize_space_id)
+        arize_endpoint = f"{arize_collector_endpoint}/v1"
+        arize_headers = {
             "api_key": arize_api_key,
             "space_id": arize_space_id,
             "authorization": f"Bearer {arize_api_key}",
@@ -100,9 +96,9 @@ class ArizePhoenixTracer(BaseTracer):
         # Phoenix Config
         phoenix_api_key = os.getenv("PHOENIX_API_KEY", None)
         phoenix_collector_endpoint = os.getenv("PHOENIX_COLLECTOR_ENDPOINT", "https://app.phoenix.arize.com")
-        enable_phoenix_tracing = True if phoenix_api_key else False
-        PHOENIX_ENDPOINT = f"{phoenix_collector_endpoint}/v1/traces"
-        PHOENIX_HEADERS = {
+        enable_phoenix_tracing = bool(phoenix_api_key)
+        phoenix_endpoint = f"{phoenix_collector_endpoint}/v1/traces"
+        phoenix_headers = {
             "api_key": phoenix_api_key,
             "authorization": f"Bearer {phoenix_api_key}",
         }
@@ -130,7 +126,7 @@ class ArizePhoenixTracer(BaseTracer):
             if enable_arize_tracing:
                 tracer_provider.add_span_processor(
                     span_processor=span_processor(
-                        span_exporter=GRPCSpanExporter(endpoint=ARIZE_ENDPOINT, headers=ARIZE_HEADERS),
+                        span_exporter=GRPCSpanExporter(endpoint=arize_endpoint, headers=arize_headers),
                     )
                 )
 
@@ -138,8 +134,8 @@ class ArizePhoenixTracer(BaseTracer):
                 tracer_provider.add_span_processor(
                     span_processor=span_processor(
                         span_exporter=HTTPSpanExporter(
-                            endpoint=PHOENIX_ENDPOINT,
-                            headers=PHOENIX_HEADERS,
+                            endpoint=phoenix_endpoint,
+                            headers=phoenix_headers,
                         ),
                     )
                 )
@@ -157,7 +153,8 @@ class ArizePhoenixTracer(BaseTracer):
             LangChainInstrumentor().instrument(tracer_provider=self.tracer_provider, skip_dep_check=True)
         except ImportError:
             logger.exception(
-                "Could not import LangChainInstrumentor. Please install it with `pip install openinference-instrumentation-langchain`."
+                "Could not import LangChainInstrumentor."
+                "Please install it with `pip install openinference-instrumentation-langchain`."
             )
             return False
 
@@ -259,6 +256,7 @@ class ArizePhoenixTracer(BaseTracer):
         child_span.end(end_time=self._get_current_timestamp())
         self.child_spans.pop(trace_id)
 
+    @override
     def end(
         self,
         inputs: dict[str, Any],
@@ -290,13 +288,13 @@ class ArizePhoenixTracer(BaseTracer):
         elif isinstance(value, Data):
             value = value.get_text()
 
-        elif isinstance(value, (BaseMessage, HumanMessage, SystemMessage)):
+        elif isinstance(value, (BaseMessage | HumanMessage | SystemMessage)):
             value = value.content
 
         elif isinstance(value, Document):
             value = value.page_content
 
-        elif isinstance(value, (types.GeneratorType, types.NoneType)):
+        elif isinstance(value, (types.GeneratorType | types.NoneType)):
             value = str(value)
 
         elif isinstance(value, float) and not math.isfinite(value):
@@ -317,10 +315,7 @@ class ArizePhoenixTracer(BaseTracer):
         return int(datetime.now(timezone.utc).timestamp() * 1_000_000_000)
 
     def _safe_json_dumps(self, obj: Any, **kwargs: Any) -> str:
-        """A convenience wrapper around `json.dumps` that ensures that any object can
-        be safely encoded without a `TypeError` and that non-ASCII Unicode
-        characters are not escaped.
-        """
+        """A convenience wrapper around `json.dumps` that ensures that any object can be safely encoded."""
         return json.dumps(obj, default=str, ensure_ascii=False, **kwargs)
 
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
