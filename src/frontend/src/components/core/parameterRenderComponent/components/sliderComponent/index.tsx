@@ -1,13 +1,12 @@
-import IconComponent from "@/components/common/genericIconComponent";
 import { getMinOrMaxValue } from "@/components/core/parameterRenderComponent/components/sliderComponent/utils/get-min-max-value";
 import { InputProps } from "@/components/core/parameterRenderComponent/types";
-import { Input } from "@/components/ui/input";
 import { Case } from "@/shared/components/caseComponent";
 import { useDarkStore } from "@/stores/darkStore";
 import { SliderComponentType } from "@/types/components";
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
+import { SliderLabels } from "./components/slider-labels";
 
 const THRESHOLDS = [0.25, 0.5, 0.75, 1];
 const BACKGROUND_COLORS = ["#4f46e5", "#7c3aed", "#a21caf", "#c026d3"];
@@ -44,7 +43,6 @@ export default function SliderComponent({
   maxLabelIcon = MAX_LABEL_ICON,
   sliderButtons = false,
   sliderButtonsOptions = DEFAULT_SLIDER_BUTTONS_OPTIONS,
-  sliderInput = false,
   handleOnNewValue,
 }: InputProps<string[] | number[], SliderComponentType>): JSX.Element {
   const min = rangeSpec?.min ?? -2;
@@ -162,15 +160,18 @@ export default function SliderComponent({
     }
   };
 
+  const percentage = ((valueAsNumber - min) / (max - min)) * 100;
+
+  const ringClassInputClass = "ring-[1px] ring-[#D4D4D8]";
+
   return (
     <div className="w-full rounded-lg pb-2">
-      <Case condition={!sliderButtons && !sliderInput}>
+      <Case condition={!sliderButtons}>
         <div className="noflow nowheel nopan nodelete nodrag flex items-center justify-end">
           <div
             className={clsx(
-              "absolute bottom-[4.2rem] right-3 w-14 cursor-text rounded-sm px-2 py-[1px] text-center hover:ring-[1px] hover:ring-[#D4D4D8]",
-              isGrabbing && "ring-[1px] ring-[#D4D4D8]",
-              isEditing && "ring-[1px] ring-[#D4D4D8]",
+              "input-slider-text",
+              (isGrabbing || isEditing) && ringClassInputClass,
             )}
           >
             {isEditing ? (
@@ -180,7 +181,7 @@ export default function SliderComponent({
                 onChange={handleInputChange}
                 onBlur={handleInputBlur}
                 onKeyDown={handleKeyDown}
-                className="relative bottom-[1px] w-full cursor-text rounded-sm text-center font-mono text-[15px] arrow-hide"
+                className="relative bottom-[1px] w-full cursor-text rounded-sm bg-transparent text-center font-mono text-[0.88rem] arrow-hide"
                 autoFocus
               />
             ) : (
@@ -198,7 +199,7 @@ export default function SliderComponent({
           </div>
         </div>
       </Case>
-      <Case condition={sliderButtons && !sliderInput}>
+      <Case condition={sliderButtons}>
         <div className="relative bottom-1 flex items-center pb-2">
           <span
             data-testid={`button_slider_display_value${editNode ? "_advanced" : ""}`}
@@ -226,33 +227,22 @@ export default function SliderComponent({
               isDark ? "bg-muted" : "bg-border",
             )}
           >
-            <SliderPrimitive.Range className="absolute h-full rounded-full bg-gradient-to-r from-indigo-600 to-pink-500" />
+            <SliderPrimitive.Range
+              className="absolute h-full rounded-full bg-gradient-to-r from-accent-indigo-foreground to-accent-pink-foreground"
+              style={{ width: `${percentage}%` }}
+            />
           </SliderPrimitive.Track>
           <SliderPrimitive.Thumb
             data-testid={`slider_thumb${editNode ? "_advanced" : ""}`}
             className={clsx(
               "block h-6 w-6 rounded-full border-2 border-background bg-pink-500 shadow-lg",
               isGrabbing ? "cursor-grabbing" : "cursor-grab",
+              valueAsNumber === max && "relative left-1",
             )}
             onPointerDown={() => setIsGrabbing(true)}
             onPointerUp={() => setIsGrabbing(false)}
           />
         </SliderPrimitive.Root>
-        {sliderInput && (
-          <input
-            data-testid={`slider_input_value${editNode ? "_advanced" : ""}`}
-            type="number"
-            value={valueAsNumber.toFixed(2)}
-            onChange={(e) => handleChange([parseFloat(e.target.value)])}
-            className={clsx(
-              "primary-input ml-2 h-10 w-16 rounded-md border px-2 py-1 text-sm arrow-hide",
-            )}
-            min={min}
-            max={max}
-            step={step}
-            disabled={disabled}
-          />
-        )}
       </div>
 
       {sliderButtons && (
@@ -278,34 +268,12 @@ export default function SliderComponent({
         </div>
       )}
 
-      <div className="text mt-2 grid grid-cols-2 gap-x-2 text-sm">
-        <div className="flex items-center">
-          <IconComponent
-            className="mr-1 h-4 w-4 text-placeholder-foreground"
-            name={minLabelIcon}
-            aria-hidden="true"
-          />
-          <span
-            data-testid="min_label"
-            className="text-xs text-placeholder-foreground"
-          >
-            {minLabel}
-          </span>
-        </div>
-        <div className="flex items-center justify-end">
-          <span
-            data-testid="max_label"
-            className="text-xs text-placeholder-foreground"
-          >
-            {maxLabel}
-          </span>
-          <IconComponent
-            className="ml-1 h-4 w-4 text-placeholder-foreground"
-            name={maxLabelIcon}
-            aria-hidden="true"
-          />
-        </div>
-      </div>
+      <SliderLabels
+        minLabel={minLabel}
+        maxLabel={maxLabel}
+        minLabelIcon={minLabelIcon}
+        maxLabelIcon={maxLabelIcon}
+      />
     </div>
   );
 }
