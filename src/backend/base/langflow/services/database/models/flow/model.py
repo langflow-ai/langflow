@@ -37,6 +37,7 @@ class FlowBase(SQLModel):
     webhook: bool | None = Field(default=False, nullable=True, description="Can be used on the webhook endpoint")
     endpoint_name: str | None = Field(default=None, nullable=True, index=True)
     tags: list[str] | None = None
+    locked: bool | None = Field(default=False, nullable=True)
 
     @field_validator("endpoint_name")
     @classmethod
@@ -166,6 +167,7 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     messages: list["MessageTable"] = Relationship(back_populates="flow")
     transactions: list["TransactionTable"] = Relationship(back_populates="flow")
     vertex_builds: list["VertexBuildTable"] = Relationship(back_populates="flow")
+    locked: bool | None = Field(default=False, nullable=True)
 
     def to_data(self):
         serialized = self.model_dump()

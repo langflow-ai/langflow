@@ -1,5 +1,6 @@
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "@/utils/utils";
 import {
   ControlButton,
@@ -30,6 +31,10 @@ export const CustomControlButton = ({
   iconClasses,
   testId,
 }: CustomControlButtonProps): JSX.Element => {
+  const flowToCanvas = useFlowsManagerStore((state) => state.flowToCanvas);
+
+  console.log(flowToCanvas);
+
   return (
     <ControlButton
       data-testid={testId}
