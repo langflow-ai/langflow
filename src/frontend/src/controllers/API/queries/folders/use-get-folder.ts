@@ -30,9 +30,6 @@ export const useGetFolderQuery: useQueryFunctionType<
 
   const folders = useFolderStore((state) => state.folders);
   const latestIdRef = useRef("");
-  const setFlowsFromCurrentFolder = useFolderStore(
-    (state) => state.setFlowsFromCurrentFolder,
-  );
 
   const getFolderFn = async (
     params: IGetFolder,
@@ -56,8 +53,6 @@ export const useGetFolderQuery: useQueryFunctionType<
 
     const dataProcessed = cloneDeep(data);
     dataProcessed.flows.items = flows;
-
-    setFlowsFromCurrentFolder(flows);
 
     return dataProcessed;
   };

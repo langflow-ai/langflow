@@ -18,9 +18,8 @@ const useFileDrop = (folderId: string) => {
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const saveFlow = useSaveFlow();
-  const flowsFromCurrentFolder = useFolderStore(
-    (state) => state.flowsFromCurrentFolder,
-  );
+  const flows = useFlowsManagerStore((state) => state.flows);
+
   const { mutate: uploadFlowToFolder } = usePostUploadFlowToFolder();
   const handleFileDrop = async (e, folderId) => {
     if (e.dataTransfer.types.some((type) => type === "Files")) {
@@ -101,16 +100,14 @@ const useFileDrop = (folderId: string) => {
   };
 
   const uploadFromDragCard = (flowId, folderId) => {
-    const selectedFlow = flowsFromCurrentFolder?.find(
-      (flow) => flow.id === flowId,
-    );
+    const selectedFlow = flows?.find((flow) => flow.id === flowId);
 
     if (!selectedFlow) {
       throw new Error("Flow not found");
     }
     const updatedFlow = { ...selectedFlow, folder_id: folderId };
 
-    const flowsToCheckNames = flowsFromCurrentFolder?.filter(
+    const flowsToCheckNames = flows?.filter(
       (f) => f.folder_id === myCollectionId,
     );
 
