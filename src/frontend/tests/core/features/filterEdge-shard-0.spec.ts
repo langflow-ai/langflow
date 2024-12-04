@@ -65,7 +65,7 @@ test(
 
       await expect(
         page
-          .getByText("Select to filter compatible inputs and components")
+          .getByText("Click to filter compatible inputs and components")
           .first(),
       ).toBeVisible();
 
@@ -99,7 +99,7 @@ test(
 
       await expect(
         page
-          .getByText("Select to filter compatible outputs and components")
+          .getByText("Click to filter compatible outputs and components")
           .first(),
       ).toBeVisible();
 
@@ -132,7 +132,7 @@ test(
 
       await expect(
         page
-          .getByText("Select to filter compatible outputs and components")
+          .getByText("Click to filter compatible outputs and components")
           .first(),
       ).toBeVisible();
 
@@ -166,7 +166,7 @@ test(
 
       await expect(
         page
-          .getByText("Select to filter compatible outputs and components")
+          .getByText("Click to filter compatible outputs and components")
           .first(),
       ).toBeVisible();
 
