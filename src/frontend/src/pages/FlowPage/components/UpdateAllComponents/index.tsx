@@ -116,7 +116,7 @@ export default function UpdateAllComponents() {
         />
         <span>
           {componentsToUpdate.length} component
-          {componentsToUpdate.length > 1 ? "s" : ""} are ready to update
+          {componentsToUpdate.length > 1 ? "s are" : " is"} ready to update
         </span>
       </div>
       <div className="flex items-center gap-4">
