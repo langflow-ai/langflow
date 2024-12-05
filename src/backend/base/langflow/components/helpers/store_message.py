@@ -14,7 +14,7 @@ class StoreMessageComponent(Component):
     name = "StoreMessage"
 
     inputs = [
-        MessageInput(name="message", display_name="Message", info="The chat message to be stored.", required=True),
+        MessageTextInput(name="message", display_name="Message", info="The chat message to be stored.", required=True, tool_mode=True),
         HandleInput(
             name="memory",
             display_name="External Memory",
@@ -48,7 +48,10 @@ class StoreMessageComponent(Component):
     ]
 
     def store_message(self) -> Message:
-        message = self.message
+        if isinstance(self.message, str):
+            message = Message(text=self.message)
+        else:
+            message = self.message
 
         message.session_id = self.session_id or message.session_id
         message.sender = self.sender or message.sender or MESSAGE_SENDER_AI
