@@ -136,9 +136,7 @@ test("should see shortcuts", { tag: ["@release"] }, async ({ page }) => {
   await page.getByText("General").nth(2).isVisible();
   await page.getByText("Shortcuts").nth(0).click();
   await page.getByText("Shortcuts", { exact: true }).nth(1).isVisible();
-  await page
-    .getByText("Advanced Settings Component", { exact: true })
-    .isVisible();
+  await page.getByText("Controls Component", { exact: true }).isVisible();
   await page.getByText("Minimize Component", { exact: true }).isVisible();
   await page.getByText("Code Component", { exact: true }).isVisible();
   await page.getByText("Copy Component", { exact: true }).isVisible();
