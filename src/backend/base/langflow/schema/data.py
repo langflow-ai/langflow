@@ -130,7 +130,9 @@ class Data(BaseModel):
         """
         data_copy = self.data.copy()
         text = data_copy.pop(self.text_key, self.default_value)
-        return Document(page_content=text, metadata=data_copy)
+        if isinstance(text, str):
+            return Document(page_content=text, metadata=data_copy)
+        return Document(page_content=str(text), metadata=data_copy)
 
     def to_lc_message(
         self,
