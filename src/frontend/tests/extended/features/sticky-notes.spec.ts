@@ -57,8 +57,9 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
-      modalCount = await page.getByTestId("modal-title")?.count();
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });      modalCount = await page.getByTestId("modal-title")?.count();
     }
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -67,9 +68,8 @@ The future of AI is both exciting and uncertain. As the technology continues to 
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("add_note").click();
 
-    await page.waitForTimeout(1000);
 
-    const targetElement = await page.locator('//*[@id="react-flow-id"]');
+    const targetElement = page.locator('//*[@id="react-flow-id"]');
     await targetElement.click();
 
     await page.mouse.up();
@@ -116,6 +116,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
     await page.getByTestId("color_picker").click();
 
     await page.getByTestId("color_picker_button_rose").click();
+    //await for the  animation to complete
     await page.waitForTimeout(1000);
 
     await page.getByTestId("note_node").click();
@@ -145,30 +146,24 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
     await page.getByText("Copy").click();
 
-    await page.waitForTimeout(1000);
 
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
     await page.getByTestId("zoom_out").click();
 
-    targetElement.focus();
-    targetElement.click();
-    await page.waitForTimeout(1000);
-    targetElement.click();
-    await page.waitForTimeout(1000);
-    targetElement.click();
+    //double click
+    await targetElement.click();
+    await targetElement.click();
     await page.keyboard.press(`ControlOrMeta+v`);
 
-    await page.waitForTimeout(1000);
 
     titleNumber = await page.getByText(randomTitle).count();
     expect(titleNumber).toBe(3);
 
-    await page.getByTestId("note_node").nth(0).focus();
+    await page.getByTestId("note_node").last().click();
     await page.getByTestId("more-options-modal").click();
     await page.getByText("Delete").first().click();
 
-    await page.waitForTimeout(1000);
 
     titleNumber = await page.getByText(randomTitle).count();
 
