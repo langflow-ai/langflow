@@ -9,7 +9,6 @@ import useAddFlow from "./use-add-flow";
 const useUploadFlow = () => {
   const addFlow = useAddFlow();
   const paste = useFlowStore((state) => state.paste);
-  const { mutate: refreshFlows } = useGetRefreshFlows();
 
   const getFlowsFromFiles = async ({
     files,
