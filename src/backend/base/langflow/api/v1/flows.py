@@ -222,7 +222,13 @@ async def read_flows(
                 flows = [flow for flow in flows if flow.folder_id != starter_folder_id]
             if header_flows:
                 return [
-                    {"id": flow.id, "name": flow.name, "folder_id": flow.folder_id, "is_component": flow.is_component}
+                    {
+                        "id": flow.id,
+                        "name": flow.name,
+                        "folder_id": flow.folder_id,
+                        "is_component": flow.is_component,
+                        "description": flow.description,
+                    }
                     for flow in flows
                 ]
             return flows

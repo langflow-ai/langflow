@@ -17,8 +17,9 @@ const useFileDrop = (folderId: string) => {
 
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const flows = useFlowsManagerStore((state) => state.flows);
   const saveFlow = useSaveFlow();
+  const flows = useFlowsManagerStore((state) => state.flows);
+
   const { mutate: uploadFlowToFolder } = usePostUploadFlowToFolder();
   const handleFileDrop = async (e, folderId) => {
     if (e.dataTransfer.types.some((type) => type === "Files")) {
