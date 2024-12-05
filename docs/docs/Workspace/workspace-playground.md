@@ -1,6 +1,6 @@
 ---
 title: Playground
-sidebar_position: 1
+sidebar_position: 2
 slug: /workspace-playground
 ---
 
@@ -12,7 +12,7 @@ The **Playground** is a dynamic interface designed for real-time interaction w
 As long as you have an [Input or Output](/components-io) component working, you can open it up by clicking the **Playground** button.
 
 
-![](./1109547993.png)
+![](/img/playground.png)
 
 
 :::tip
@@ -22,26 +22,18 @@ Notice how the **Playground's** window arrangement changes depending on what com
 :::
 
 
-
-
-You can also open a flow's **Playground** without entering its workspace. From **My Collections** or **Langflow Store**, click the **Playground** in one of the projects card.
-
-
-<ReactPlayer controls url="https://youtu.be/guaN0DOTxfo" />
-
-
 ## Memory Management {#821a5ee2a8a44d35b49943cba630511c}
 
 
 ---
 
-Click the Memories tab to open a table of previous interactions for a specific flow.
+When you send a message from the **Playground** interface, the interactions for that session are stored in the **Message Logs**.
 
-Whenever you send a message from the **Playground** interface, under the **Memories** tab you'll see a table of previous interactions for that session.
-
-Langflow allows every chat message to be stored, and a single flow can have multiple memory sessions.
+Langflow allows every chat message to be stored, and a single flow can have multiple chat sessions.
 
 Chat conversations store messages categorized by a Session ID. A single flow can host multiple Session IDs, and different flows can share the same Session ID.
+
+To view messages by session ID, from the Playground, click the Options menu of any session, and then select Message Logs.
 
 Individual messages in chat memory can be edited or deleted. Modifying these memories will influence the behavior of the chatbot responses.
 
@@ -68,7 +60,7 @@ curl -X POST \
 }'
 ```
 
-Check your flow’s Memories tab. In addition to the messages stored for the Default Session, a new chat session is started with your new Session ID.
+Check your flow's **Playground**. In addition to the messages stored for the Default Session, a new session is started with your new Session ID.
 
 **Chat Input** and **Chat Output** components can also store a `session_id` parameter as a **Tweak** for specific sessions. The Playground will still display all available sessions, but the flow will use the value stored in the `session_id` tweak.
 

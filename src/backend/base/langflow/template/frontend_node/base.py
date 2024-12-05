@@ -57,6 +57,8 @@ class FrontendNode(BaseModel):
     """Whether the frontend node has been edited."""
     metadata: dict = {}
     """Metadata for the component node."""
+    tool_mode: bool = False
+    """Whether the frontend node is in tool mode."""
 
     def set_documentation(self, documentation: str) -> None:
         """Sets the documentation of the frontend node."""

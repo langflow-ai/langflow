@@ -72,7 +72,6 @@ export const useGetFolderQuery: useQueryFunctionType<
     () => getFolderFn(params),
     {
       refetchOnWindowFocus: false,
-      placeholderData: true,
       ...options,
     },
   );

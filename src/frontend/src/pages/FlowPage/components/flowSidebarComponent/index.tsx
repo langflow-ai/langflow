@@ -2,9 +2,8 @@ import Fuse from "fuse.js";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook"; // Import useHotkeys
 
-import ForwardedIconComponent from "@/components/genericIconComponent";
-import ShadTooltip from "@/components/shadTooltipComponent";
-import { Badge } from "@/components/ui/badge";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import {
   Disclosure,
@@ -25,9 +24,8 @@ import {
   SidebarMenuItem,
   SidebarMenuSkeleton,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
-import { Switch } from "@/components/ui/switch";
-import { CustomLink } from "@/customization/components/custom-link";
 import { useAddComponent } from "@/hooks/useAddComponent";
 import { useStoreStore } from "@/stores/storeStore";
 import { checkChatInput } from "@/utils/reactflowUtils";
@@ -36,7 +34,6 @@ import {
   SIDEBAR_BUNDLES,
   SIDEBAR_CATEGORIES,
 } from "@/utils/styleUtils";
-import { removeCountFromString } from "@/utils/utils";
 import { cloneDeep } from "lodash";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
@@ -47,7 +44,6 @@ import sensitiveSort from "../extraSidebarComponent/utils/sensitive-sort";
 import ShortcutDisplay from "../nodeToolbarComponent/shortcutDisplay";
 import NoResultsMessage from "./components/emptySearchComponent";
 import FeatureToggles from "./components/featureTogglesComponent";
-import SidebarDraggableComponent from "./components/sidebarDraggableComponent";
 import SidebarMenuButtons from "./components/sidebarFooterButtons";
 import SidebarItemsList from "./components/sidebarItemsList";
 import { applyBetaFilter } from "./helpers/apply-beta-filter";
@@ -85,9 +81,13 @@ export function FlowSidebarComponent() {
   const [showBeta, setShowBeta] = useState(true);
   const [showLegacy, setShowLegacy] = useState(false);
 
+  const { setOpen } = useSidebar();
+
   useHotkeys("/", (event) => {
     event.preventDefault();
     searchInputRef.current?.focus();
+
+    setOpen(true);
   });
 
   useHotkeys(
@@ -101,6 +101,12 @@ export function FlowSidebarComponent() {
       enabled: isInputFocused,
     },
   );
+
+  useEffect(() => {
+    if (filterType) {
+      setOpen(true);
+    }
+  }, [filterType]);
 
   useEffect(() => {
     filterComponents();
@@ -127,7 +133,8 @@ export function FlowSidebarComponent() {
   useEffect(() => {
     const options = {
       keys: ["display_name", "description", "type", "category"],
-      threshold: 0.3,
+      threshold: 0.2,
+      includeScore: true,
     };
 
     const fuseData = Object.entries(data).flatMap(([category, items]) =>
@@ -149,8 +156,11 @@ export function FlowSidebarComponent() {
   }, [search, getFilterEdge]);
 
   const hasResults = useMemo(() => {
-    return Object.values(dataFilter).some(
-      (category) => Object.keys(category).length > 0,
+    return Object.entries(dataFilter).some(
+      ([category, items]) =>
+        Object.keys(items).length > 0 &&
+        (CATEGORIES.find((c) => c.name === category) ||
+          BUNDLES.find((b) => b.name === category)),
     );
   }, [dataFilter]);
   const [sortedCategories, setSortedCategories] = useState<string[]>([]);
@@ -163,9 +173,14 @@ export function FlowSidebarComponent() {
       let combinedResults = {};
 
       if (fuse) {
-        const fuseResults = fuse.search(search);
-        setSortedCategories(fuseResults.map((result) => result.item.category));
-
+        const fuseResults = fuse.search(search).map((result) => ({
+          ...result,
+          item: { ...result.item, score: result.score },
+        }));
+        const fuseCategories = fuseResults.map(
+          (result) => result.item.category,
+        );
+        setSortedCategories(fuseCategories);
         combinedResults = combinedResultsFn(fuseResults, data);
 
         const traditionalResults = traditionalSearchMetadata(data, searchTerm);
@@ -177,9 +192,16 @@ export function FlowSidebarComponent() {
         );
 
         setSortedCategories(
-          Object.keys(filteredData).filter(
-            (category) => Object.keys(filteredData[category]).length > 0,
-          ),
+          Object.keys(filteredData)
+            .filter(
+              (category) =>
+                Object.keys(filteredData[category]).length > 0 &&
+                (CATEGORIES.find((c) => c.name === category) ||
+                  BUNDLES.find((b) => b.name === category)),
+            )
+            .toSorted((a, b) =>
+              fuseCategories.indexOf(b) < fuseCategories.indexOf(a) ? 1 : -1,
+            ),
         );
       }
     }
@@ -268,7 +290,11 @@ export function FlowSidebarComponent() {
   const chatInputAdded = checkChatInput(nodes);
 
   return (
-    <Sidebar collapsible="offcanvas" data-testid="shad-sidebar">
+    <Sidebar
+      collapsible="offcanvas"
+      data-testid="shad-sidebar"
+      className="noflow"
+    >
       <SidebarHeader className="flex w-full flex-col gap-4 p-4 pb-1">
         <Disclosure open={showConfig} onOpenChange={setShowConfig}>
           <div className="flex w-full items-center gap-2">
@@ -457,6 +483,7 @@ export function FlowSidebarComponent() {
                                       handleKeyDown(e, item.name)
                                     }
                                     className="flex cursor-pointer items-center gap-2"
+                                    data-testid={`disclosure-bundles-${item.display_name.toLocaleLowerCase()}`}
                                   >
                                     <ForwardedIconComponent
                                       name={item.icon}

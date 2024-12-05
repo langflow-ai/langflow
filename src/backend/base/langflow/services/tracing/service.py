@@ -58,6 +58,7 @@ class TracingService(Service):
         self.running = False
         self.worker_task: asyncio.Task | None = None
         self.end_trace_tasks: set[asyncio.Task] = set()
+        self.deactivated = self.settings_service.settings.deactivate_tracing
 
     async def log_worker(self) -> None:
         while self.running or not self.logs_queue.empty():
@@ -70,7 +71,7 @@ class TracingService(Service):
                 self.logs_queue.task_done()
 
     async def start(self) -> None:
-        if self.running:
+        if self.running or self.deactivated:
             return
         try:
             self.running = True
@@ -110,8 +111,8 @@ class TracingService(Service):
             await asyncio.to_thread(self._initialize_langsmith_tracer)
             await asyncio.to_thread(self._initialize_langwatch_tracer)
             await asyncio.to_thread(self._initialize_langfuse_tracer)
-        except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error initializing tracers")
+        except Exception as e:  # noqa: BLE001
+            logger.debug(f"Error initializing tracers: {e}")
 
     def _initialize_langsmith_tracer(self) -> None:
         project_name = os.getenv("LANGCHAIN_PROJECT", "Langflow")
@@ -183,6 +184,7 @@ class TracingService(Service):
                     )
                 except Exception:  # noqa: BLE001
                     logger.exception(f"Error ending trace {trace_name}")
+        self._reset_io()
 
     def _end_all_traces(self, outputs: dict, error: Exception | None = None) -> None:
         for tracer in self._tracers.values():
@@ -191,10 +193,10 @@ class TracingService(Service):
                     tracer.end(self.inputs, outputs=self.outputs, error=error, metadata=outputs)
                 except Exception:  # noqa: BLE001
                     logger.exception("Error ending all traces")
+        self._reset_io()
 
     async def end(self, outputs: dict, error: Exception | None = None) -> None:
         await asyncio.to_thread(self._end_all_traces, outputs, error)
-        self._reset_io()
         await self.stop()
 
     def add_log(self, trace_name: str, log: Log) -> None:
@@ -208,6 +210,9 @@ class TracingService(Service):
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
     ):
+        if self.deactivated:
+            yield self
+            return
         trace_id = trace_name
         if component._vertex:
             trace_id = component._vertex.id
@@ -232,7 +237,6 @@ class TracingService(Service):
         task = asyncio.create_task(asyncio.to_thread(self._end_traces, trace_id, trace_name, error))
         self.end_trace_tasks.add(task)
         task.add_done_callback(self.end_trace_tasks.discard)
-        self._reset_io()
 
     def set_outputs(
         self,
@@ -251,6 +255,8 @@ class TracingService(Service):
         return inputs
 
     def get_langchain_callbacks(self) -> list[BaseCallbackHandler]:
+        if self.deactivated:
+            return []
         callbacks = []
         for tracer in self._tracers.values():
             if not tracer.ready:  # type: ignore[truthy-function]

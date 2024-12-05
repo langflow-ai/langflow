@@ -32,13 +32,13 @@ import { FlowStoreType, VertexLayerElementType } from "../types/zustand/flow";
 import { buildFlowVerticesWithFallback } from "../utils/buildUtils";
 import {
   checkChatInput,
-  checkOldComponents,
   cleanEdges,
   detectBrokenEdgesEdges,
   getHandleId,
   getNodeId,
   scapeJSONParse,
   scapedJSONStringfy,
+  unselectAllNodesEdges,
   updateGroupRecursion,
   validateNodes,
 } from "../utils/reactflowUtils";
@@ -57,20 +57,27 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     }
   },
   autoSaveFlow: undefined,
-  componentsToUpdate: false,
+  componentsToUpdate: [],
+  setComponentsToUpdate: (change) => {
+    let newChange =
+      typeof change === "function" ? change(get().componentsToUpdate) : change;
+    set({ componentsToUpdate: newChange });
+  },
   updateComponentsToUpdate: (nodes) => {
-    let outdatedNodes = false;
+    let outdatedNodes: string[] = [];
     const templates = useTypesStore.getState().templates;
     for (let i = 0; i < nodes.length; i++) {
       const currentCode = templates[nodes[i].data?.type]?.template?.code?.value;
       const thisNodesCode = nodes[i].data?.node!.template?.code?.value;
-      outdatedNodes =
+      if (
         currentCode &&
         thisNodesCode &&
         currentCode !== thisNodesCode &&
         !nodes[i].data?.node?.edited &&
-        !componentsToIgnoreUpdate.includes(nodes[i].data?.type);
-      if (outdatedNodes) break;
+        !componentsToIgnoreUpdate.includes(nodes[i].data?.type)
+      ) {
+        outdatedNodes.push(nodes[i].id);
+      }
     }
     set({ componentsToUpdate: outdatedNodes });
   },
@@ -111,6 +118,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   hasIO: get()?.inputs?.length > 0 || get()?.outputs?.length > 0,
   setFlowPool: (flowPool) => {
     set({ flowPool });
+  },
+  updateToolMode: (nodeId: string, toolMode: boolean) => {
+    get().setNode(nodeId, (node) => ({
+      ...node,
+      data: { ...node.data, node: { ...node.data.node, tool_mode: toolMode } },
+    }));
   },
   updateFreezeStatus: (nodeIds: string[], freeze: boolean) => {
     get().setNodes((oldNodes) => {
@@ -180,6 +193,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     let newEdges = cleanEdges(nodes, edges);
     const { inputs, outputs } = getInputsAndOutputs(nodes);
     get().updateComponentsToUpdate(nodes);
+    unselectAllNodesEdges(nodes, edges);
     set({
       nodes,
       edges: newEdges,
@@ -206,7 +220,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   setReactFlowInstance: (newState) => {
     set({ reactFlowInstance: newState });
-    get().reactFlowInstance?.fitView();
   },
   onNodesChange: (changes: NodeChange[]) => {
     set({
@@ -251,13 +264,15 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     id: string,
     change: Node | ((oldState: Node) => Node),
     isUserChange: boolean = true,
+    callback?: () => void,
   ) => {
     let newChange =
       typeof change === "function"
         ? change(get().nodes.find((node) => node.id === id)!)
         : change;
-    get().setNodes((oldNodes) =>
-      oldNodes.map((node) => {
+
+    set((state) => {
+      const newNodes = state.nodes.map((node) => {
         if (node.id === id) {
           if (isUserChange) {
             if ((node.data as NodeDataType).node?.frozen) {
@@ -267,8 +282,21 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           return newChange;
         }
         return node;
-      }),
-    );
+      });
+
+      const newEdges = cleanEdges(newNodes, get().edges);
+
+      if (callback) {
+        // Defer the callback execution to ensure it runs after state updates are fully applied.
+        queueMicrotask(callback);
+      }
+
+      return {
+        ...state,
+        nodes: newNodes,
+        edges: newEdges,
+      };
+    });
   },
   getNode: (id: string) => {
     return get().nodes.find((node) => node.id === id);
@@ -328,14 +356,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           selection.nodes.some((node) => edge.target === node.id),
       );
     }
-    if (selection.nodes) {
-      if (checkOldComponents({ nodes: selection.nodes ?? [] })) {
-        useAlertStore.getState().setNoticeData({
-          title:
-            "Components created before Langflow 1.0 may be unstable. Ensure components are up to date.",
-        });
-      }
-    }
+
     let minimumX = Infinity;
     let minimumY = Infinity;
     let idsMap = {};
@@ -688,7 +709,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             ?.map((element) => element.id)
             .filter(Boolean) as string[]) ?? get().nodes.map((n) => n.id);
         useFlowStore.getState().updateBuildStatus(idList, BuildStatus.ERROR);
-        if (get().componentsToUpdate)
+        if (get().componentsToUpdate.length > 0)
           setErrorData({
             title:
               "There are outdated components in the flow. The error could be related to them.",

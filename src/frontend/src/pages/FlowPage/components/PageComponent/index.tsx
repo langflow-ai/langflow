@@ -1,12 +1,13 @@
 import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
+
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import LoadingComponent from "@/components/common/loadingComponent";
 import CanvasControls, {
   CustomControlButton,
-} from "@/components/canvasControlsComponent";
-import FlowToolbar from "@/components/flowToolbarComponent";
-import ForwardedIconComponent from "@/components/genericIconComponent";
-import LoadingComponent from "@/components/loadingComponent";
-import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+} from "@/components/core/canvasControlsComponent";
+import FlowToolbar from "@/components/core/flowToolbarComponent";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   COLOR_OPTIONS,
   NOTE_NODE_MIN_HEIGHT,
@@ -38,8 +39,6 @@ import ReactFlow, {
   Panel,
   SelectionDragHandler,
   updateEdge,
-  useReactFlow,
-  useViewport,
 } from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import {
@@ -56,7 +55,6 @@ import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
 import { NodeType } from "../../../../types/flow";
 import {
-  checkOldComponents,
   generateFlow,
   generateNodeFromFlow,
   getNodeId,
@@ -67,6 +65,7 @@ import {
 } from "../../../../utils/reactflowUtils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
+import UpdateAllComponents from "../UpdateAllComponents";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
 
@@ -93,6 +92,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   );
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
+  const isEmptyFlow = useRef(nodes.length === 0);
   const onNodesChange = useFlowStore((state) => state.onNodesChange);
   const onEdgesChange = useFlowStore((state) => state.onEdgesChange);
   const setNodes = useFlowStore((state) => state.setNodes);
@@ -122,74 +122,8 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
   const [isAddingNote, setIsAddingNote] = useState(false);
-  const [isHighlightingCursor, setIsHighlightingCursor] = useState(false);
 
   const addComponent = useAddComponent();
-
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        setIsHighlightingCursor(true);
-        setTimeout(() => setIsHighlightingCursor(false), 1000);
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (isHighlightingCursor) {
-      const cursor = document.body.style.cursor;
-      document.body.style.cursor = "none";
-      const highlightDiv = document.createElement("div");
-      highlightDiv.style.position = "fixed";
-      highlightDiv.style.width = "40px";
-      highlightDiv.style.height = "40px";
-      highlightDiv.style.borderRadius = "50%";
-      highlightDiv.style.background =
-        "radial-gradient(circle, rgba(135,206,250,0.7) 0%, rgba(135,206,250,0) 70%)";
-      highlightDiv.style.pointerEvents = "none";
-      highlightDiv.style.zIndex = "9999";
-      highlightDiv.style.filter = "blur(5px)";
-      document.body.appendChild(highlightDiv);
-
-      let scale = 1;
-      let increasing = true;
-
-      const blink = () => {
-        if (increasing) {
-          scale += 0.03;
-          if (scale >= 1.3) increasing = false;
-        } else {
-          scale -= 0.03;
-          if (scale <= 0.7) increasing = true;
-        }
-        highlightDiv.style.transform = `scale(${scale})`;
-      };
-
-      const blinkInterval = setInterval(blink, 50);
-
-      const moveHighlight = (e: MouseEvent) => {
-        highlightDiv.style.left = `${e.clientX - 20}px`;
-        highlightDiv.style.top = `${e.clientY - 20}px`;
-      };
-
-      //@ts-ignore
-      document.addEventListener("mousemove", moveHighlight);
-
-      return () => {
-        document.body.style.cursor = cursor;
-        document.body.removeChild(highlightDiv);
-        //@ts-ignore
-        document.removeEventListener("mousemove", moveHighlight);
-        clearInterval(blinkInterval);
-      };
-    }
-  }, [isHighlightingCursor]);
 
   const zoomLevel = reactFlowInstance?.getZoom();
   const shadowBoxWidth = NOTE_NODE_MIN_WIDTH * (zoomLevel || 1);
@@ -247,15 +181,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     Object.keys(templates).length > 0 &&
     Object.keys(types).length > 0 &&
     !isFetching;
-
-  useEffect(() => {
-    if (checkOldComponents({ nodes })) {
-      setNoticeData({
-        title:
-          "Components created before Langflow 1.0 may be unstable. Ensure components are up to date.",
-      });
-    }
-  }, [currentFlowId]);
 
   useEffect(() => {
     useFlowStore.setState({ autoSaveFlow });
@@ -565,14 +490,11 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
 
   const handleEdgeClick = (event, edge) => {
     const color =
-      nodeColorsName[edge?.data?.targetHandle?.inputTypes[0]] ||
-      "hsl(var(--foreground))";
+      nodeColorsName[edge?.data?.targetHandle?.inputTypes[0]] || "cyan";
 
-    const accentColor = `hsl(var(--accent-${color}-foreground))`;
-    document.documentElement.style.setProperty("--selected", accentColor);
+    const accentColor = `hsl(var(--datatype-${color}))`;
+    reactFlowWrapper.current?.style.setProperty("--selected", accentColor);
   };
-
-  const { open } = useSidebar();
 
   useEffect(() => {
     const handleGlobalMouseMove = (event) => {
@@ -592,6 +514,8 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
       document.removeEventListener("mousemove", handleGlobalMouseMove);
     };
   }, [isAddingNote, shadowBoxWidth, shadowBoxHeight]);
+
+  const componentsToUpdate = useFlowStore((state) => state.componentsToUpdate);
 
   return (
     <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
@@ -621,6 +545,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             onDrop={onDrop}
             onSelectionChange={onSelectionChange}
             deleteKeyCode={[]}
+            fitView={isEmptyFlow.current ? false : true}
             className="theme-attribution"
             minZoom={0.01}
             maxZoom={8}
@@ -658,9 +583,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             <Panel
               className={cn(
                 "react-flow__controls !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
-                open
-                  ? "pointer-events-none -translate-x-full opacity-0"
-                  : "pointer-events-auto opacity-100",
+                "pointer-events-auto opacity-100 group-data-[open=true]/sidebar-wrapper:pointer-events-none group-data-[open=true]/sidebar-wrapper:-translate-x-full group-data-[open=true]/sidebar-wrapper:opacity-0",
               )}
               position="top-left"
             >
@@ -669,9 +592,10 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
                   name="PanelRightClose"
                   className="h-4 w-4"
                 />
-                Components
+                <span className="text-foreground">Components</span>
               </SidebarTrigger>
             </Panel>
+            {componentsToUpdate.length > 0 && <UpdateAllComponents />}
             <SelectionMenu
               lastSelection={lastSelection}
               isVisible={selectionMenuVisible}

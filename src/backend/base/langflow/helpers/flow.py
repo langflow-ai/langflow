@@ -10,7 +10,7 @@ from sqlmodel import select
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.flow.model import FlowRead
-from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.deps import async_session_scope, get_settings_service, session_scope
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -53,13 +53,13 @@ async def load_flow(
         msg = "Flow ID or Flow Name is required"
         raise ValueError(msg)
     if not flow_id and flow_name:
-        flow_id = find_flow(flow_name, user_id)
+        flow_id = await find_flow(flow_name, user_id)
         if not flow_id:
             msg = f"Flow {flow_name} not found"
             raise ValueError(msg)
 
-    with session_scope() as session:
-        graph_data = flow.data if (flow := session.get(Flow, flow_id)) else None
+    async with async_session_scope() as session:
+        graph_data = flow.data if (flow := await session.get(Flow, flow_id)) else None
     if not graph_data:
         msg = f"Flow {flow_id} not found"
         raise ValueError(msg)
@@ -68,9 +68,10 @@ async def load_flow(
     return Graph.from_payload(graph_data, flow_id=flow_id, user_id=user_id)
 
 
-def find_flow(flow_name: str, user_id: str) -> str | None:
-    with session_scope() as session:
-        flow = session.exec(select(Flow).where(Flow.name == flow_name).where(Flow.user_id == user_id)).first()
+async def find_flow(flow_name: str, user_id: str) -> str | None:
+    async with async_session_scope() as session:
+        stmt = select(Flow).where(Flow.name == flow_name).where(Flow.user_id == user_id)
+        flow = (await session.exec(stmt)).first()
         return flow.id if flow else None
 
 
@@ -82,13 +83,20 @@ async def run_flow(
     output_type: str | None = "chat",
     user_id: str | None = None,
     run_id: str | None = None,
+    session_id: str | None = None,
+    graph: Graph | None = None,
 ) -> list[RunOutputs]:
     if user_id is None:
         msg = "Session is invalid"
         raise ValueError(msg)
-    graph = await load_flow(user_id, flow_id, flow_name, tweaks)
+    if graph is None:
+        graph = await load_flow(user_id, flow_id, flow_name, tweaks)
     if run_id:
         graph.set_run_id(UUID(run_id))
+    if session_id:
+        graph.session_id = session_id
+    if user_id:
+        graph.user_id = user_id
 
     if inputs is None:
         inputs = []
@@ -266,32 +274,34 @@ def get_arg_names(inputs: list[Vertex]) -> list[dict[str, str]]:
     ]
 
 
-def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: UUID | None = None) -> FlowRead | None:
-    with session_scope() as session:
+async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: UUID | None = None) -> FlowRead | None:
+    async with async_session_scope() as session:
         endpoint_name = None
         try:
             flow_id = UUID(flow_id_or_name)
-            flow = session.get(Flow, flow_id)
+            flow = await session.get(Flow, flow_id)
         except ValueError:
             endpoint_name = flow_id_or_name
             stmt = select(Flow).where(Flow.endpoint_name == endpoint_name)
             if user_id:
                 stmt = stmt.where(Flow.user_id == user_id)
-            flow = session.exec(stmt).first()
+            flow = (await session.exec(stmt)).first()
         if flow is None:
             raise HTTPException(status_code=404, detail=f"Flow identifier {flow_id_or_name} not found")
         return FlowRead.model_validate(flow, from_attributes=True)
 
 
-def generate_unique_flow_name(flow_name, user_id, session):
+async def generate_unique_flow_name(flow_name, user_id, session):
     original_name = flow_name
     n = 1
     while True:
         # Check if a flow with the given name exists
-        existing_flow = session.exec(
-            select(Flow).where(
-                Flow.name == flow_name,
-                Flow.user_id == user_id,
+        existing_flow = (
+            await session.exec(
+                select(Flow).where(
+                    Flow.name == flow_name,
+                    Flow.user_id == user_id,
+                )
             )
         ).first()
 

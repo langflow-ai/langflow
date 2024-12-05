@@ -7,6 +7,7 @@ import requests
 from astrapy.admin import parse_api_endpoint
 from langflow.api.v1.schemas import InputValueRequest
 from langflow.custom import Component
+from langflow.custom.eval import eval_custom_component_code
 from langflow.field_typing import Embeddings
 from langflow.graph import Graph
 from langflow.processing.process import run_graph_internal
@@ -105,6 +106,16 @@ def download_flow_from_github(name: str, version: str) -> JSONFlow:
     return JSONFlow(json=as_json)
 
 
+def download_component_from_github(module: str, file_name: str, version: str) -> Component:
+    version_string = f"v{version}" if version != "main" else version
+    response = requests.get(
+        f"https://raw.githubusercontent.com/langflow-ai/langflow/{version_string}/src/backend/base/langflow/components/{module}/{file_name}.py",
+        timeout=10,
+    )
+    response.raise_for_status()
+    return Component(_code=response.text)
+
+
 async def run_json_flow(
     json_flow: JSONFlow, run_input: Any | None = None, session_id: str | None = None
 ) -> dict[str, Any]:
@@ -170,3 +181,9 @@ async def run_single_component(
         graph, flow_id, session_id=session_id, inputs=graph_run_inputs, outputs=[component_id]
     )
     return graph.get_vertex(component_id).built_object
+
+
+def build_component_instance_for_tests(version: str, module: str, file_name: str, **kwargs):
+    component = download_component_from_github(module, file_name, version)
+    cc_class = eval_custom_component_code(component._code)
+    return cc_class(**kwargs), component._code

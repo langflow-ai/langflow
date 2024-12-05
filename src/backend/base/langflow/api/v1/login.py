@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from langflow.api.utils import DbSession
+from langflow.api.utils import AsyncDbSession
 from langflow.api.v1.schemas import Token
 from langflow.services.auth.utils import (
     authenticate_user,
@@ -21,14 +21,14 @@ router = APIRouter(tags=["Login"])
 
 
 @router.post("/login", response_model=Token)
-def login_to_get_access_token(
+async def login_to_get_access_token(
     response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    db: DbSession,
+    db: AsyncDbSession,
 ):
     auth_settings = get_settings_service().auth_settings
     try:
-        user = authenticate_user(form_data.username, form_data.password, db)
+        user = await authenticate_user(form_data.username, form_data.password, db)
     except Exception as exc:
         if isinstance(exc, HTTPException):
             raise
@@ -38,7 +38,7 @@ def login_to_get_access_token(
         ) from exc
 
     if user:
-        tokens = create_user_tokens(user_id=user.id, db=db, update_last_login=True)
+        tokens = await create_user_tokens(user_id=user.id, db=db, update_last_login=True)
         response.set_cookie(
             "refresh_token_lf",
             tokens["refresh_token"],
@@ -66,9 +66,9 @@ def login_to_get_access_token(
             expires=None,  # Set to None to make it a session cookie
             domain=auth_settings.COOKIE_DOMAIN,
         )
-        get_variable_service().initialize_user_variables(user.id, db)
+        await get_variable_service().initialize_user_variables(user.id, db)
         # Create default folder for user if it doesn't exist
-        create_default_folder_if_it_doesnt_exist(db, user.id)
+        await create_default_folder_if_it_doesnt_exist(db, user.id)
         return tokens
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -78,11 +78,11 @@ def login_to_get_access_token(
 
 
 @router.get("/auto_login")
-async def auto_login(response: Response, db: DbSession):
+async def auto_login(response: Response, db: AsyncDbSession):
     auth_settings = get_settings_service().auth_settings
 
     if auth_settings.AUTO_LOGIN:
-        user_id, tokens = create_user_longterm_token(db)
+        user_id, tokens = await create_user_longterm_token(db)
         response.set_cookie(
             "access_token_lf",
             tokens["access_token"],
@@ -93,7 +93,7 @@ async def auto_login(response: Response, db: DbSession):
             domain=auth_settings.COOKIE_DOMAIN,
         )
 
-        user = get_user_by_id(db, user_id)
+        user = await get_user_by_id(db, user_id)
 
         if user:
             if user.store_api_key is None:
@@ -124,14 +124,14 @@ async def auto_login(response: Response, db: DbSession):
 async def refresh_token(
     request: Request,
     response: Response,
-    db: DbSession,
+    db: AsyncDbSession,
 ):
     auth_settings = get_settings_service().auth_settings
 
     token = request.cookies.get("refresh_token_lf")
 
     if token:
-        tokens = create_refresh_token(token, db)
+        tokens = await create_refresh_token(token, db)
         response.set_cookie(
             "refresh_token_lf",
             tokens["refresh_token"],

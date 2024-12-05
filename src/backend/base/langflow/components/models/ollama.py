@@ -70,7 +70,6 @@ class ChatOllamaComponent(LCModelComponent):
             raise ValueError(msg) from e
 
     inputs = [
-        *LCModelComponent._base_inputs,
         StrInput(
             name="base_url",
             display_name="Base URL",
@@ -151,7 +150,7 @@ class ChatOllamaComponent(LCModelComponent):
             name="top_k", display_name="Top K", info="Limits token selection to top K. (Default: 40)", advanced=True
         ),
         FloatInput(name="top_p", display_name="Top P", info="Works together with top-k. (Default: 0.9)", advanced=True),
-        BoolInput(name="verbose", display_name="Verbose", info="Whether to print out response text."),
+        BoolInput(name="verbose", display_name="Verbose", info="Whether to print out response text.", advanced=True),
         StrInput(
             name="tags",
             display_name="Tags",
@@ -173,6 +172,7 @@ class ChatOllamaComponent(LCModelComponent):
             advanced=True,
             input_types=["OutputParser"],
         ),
+        *LCModelComponent._base_inputs,
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]

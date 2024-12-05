@@ -1,7 +1,7 @@
 import os
 
 import pytest
-from langflow.components.agents.tool_calling import ToolCallingAgentComponent
+from langflow.components.langchain_utilities import ToolCallingAgentComponent
 from langflow.components.models.openai import OpenAIModelComponent
 from langflow.components.tools.calculator import CalculatorToolComponent
 

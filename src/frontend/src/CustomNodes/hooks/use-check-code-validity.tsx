@@ -1,7 +1,6 @@
 import { componentsToIgnoreUpdate } from "@/constants/constants";
 import { useEffect } from "react";
 import { NodeDataType } from "../../types/flow";
-import { nodeNames } from "../../utils/styleUtils";
 
 const useCheckCodeValidity = (
   data: NodeDataType,

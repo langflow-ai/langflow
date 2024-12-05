@@ -5,29 +5,29 @@ import { VariantProps, cva } from "class-variance-authority";
 import { PanelLeft } from "lucide-react";
 import * as React from "react";
 
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useHotkeys } from "react-hotkeys-hook";
+import isWrappedWithClass from "../../pages/FlowPage/components/PageComponent/utils/is-wrapped-with-class";
+import { useShortcutsStore } from "../../stores/shortcuts";
 import { cn } from "../../utils/utils";
+import ShadTooltip from "../common/shadTooltipComponent";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Separator } from "./separator";
 import { Skeleton } from "./skeleton";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "./tooltip";
+import { TooltipProvider } from "./tooltip";
 
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = "19rem";
 const SIDEBAR_WIDTH_ICON = "4rem";
-const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
 type SidebarContext = {
   state: "expanded" | "collapsed";
   open: boolean;
   setOpen: (open: boolean) => void;
   toggleSidebar: () => void;
+  defaultOpen: boolean;
 };
 
 const SidebarContext = React.createContext<SidebarContext | null>(null);
@@ -86,23 +86,7 @@ const SidebarProvider = React.forwardRef<
     // Helper to toggle the sidebar.
     const toggleSidebar = React.useCallback(() => {
       return setOpen((open) => !open);
-    }, [setOpen]);
-
-    // Adds a keyboard shortcut to toggle the sidebar.
-    React.useEffect(() => {
-      const handleKeyDown = (event: KeyboardEvent) => {
-        if (
-          event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
-          (event.metaKey || event.ctrlKey)
-        ) {
-          event.preventDefault();
-          toggleSidebar();
-        }
-      };
-
-      window.addEventListener("keydown", handleKeyDown);
-      return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [toggleSidebar]);
+    }, [setOpen, open]);
 
     // We add a state so that we can do data-state="expanded" or "collapsed".
     // This makes it easier to style the sidebar with Tailwind classes.
@@ -114,8 +98,25 @@ const SidebarProvider = React.forwardRef<
         open,
         setOpen,
         toggleSidebar,
+        defaultOpen,
       }),
-      [state, open, setOpen, toggleSidebar],
+      [state, open, setOpen, toggleSidebar, defaultOpen],
+    );
+
+    const toggleSidebarShortcut = useShortcutsStore(
+      (state) => state.toggleSidebar,
+    );
+
+    useHotkeys(
+      toggleSidebarShortcut,
+      (e: KeyboardEvent) => {
+        if (isWrappedWithClass(e, "noflow")) return;
+        e.preventDefault();
+        toggleSidebar();
+      },
+      {
+        preventDefault: true,
+      },
     );
 
     return (
@@ -133,6 +134,7 @@ const SidebarProvider = React.forwardRef<
               "group/sidebar-wrapper flex h-full w-full text-foreground has-[[data-variant=inset]]:bg-background",
               className,
             )}
+            data-open={open}
             ref={ref}
             {...props}
           >
@@ -164,22 +166,41 @@ const Sidebar = React.forwardRef<
     },
     ref,
   ) => {
-    const { state } = useSidebar();
+    const { state, setOpen, defaultOpen } = useSidebar();
+    const isMobile = useIsMobile();
+
+    React.useEffect(() => {
+      if (collapsible === "none") {
+        setOpen(true);
+      } else {
+        setOpen(defaultOpen);
+      }
+    }, [collapsible]);
+
+    React.useEffect(() => {
+      if (collapsible !== "none") {
+        if (isMobile) {
+          setOpen(false);
+        } else {
+          setOpen(defaultOpen);
+        }
+      }
+    }, [isMobile]);
 
     if (collapsible === "none") {
       return (
         <div
-          className={cn(
-            "group flex h-full w-[--sidebar-width] flex-col bg-background text-foreground",
-            className,
-          )}
+          className={cn("group flex h-full flex-col")}
           data-side={side}
           ref={ref}
           {...props}
         >
           <div
             data-sidebar="sidebar"
-            className="flex h-full w-full flex-col group-data-[side=left]:border-r group-data-[side=right]:border-l"
+            className={cn(
+              "group flex h-full w-[--sidebar-width] flex-col bg-background text-foreground group-data-[side=left]:border-r group-data-[side=right]:border-l",
+              className,
+            )}
           >
             {children}
           </div>
@@ -260,7 +281,7 @@ const SidebarTrigger = React.forwardRef<
       data-sidebar="trigger"
       variant="ghost"
       size="icon"
-      className={cn("h-8 w-8", className)}
+      className={cn("h-7 w-7 text-muted-foreground", className)}
       onClick={(event) => {
         onClick?.(event);
         toggleSidebar();
@@ -435,7 +456,7 @@ const SidebarGroupLabel = React.forwardRef<
       data-sidebar="group-label"
       className={cn(
         "flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-semibold text-foreground/70 outline-none ring-ring transition-[margin,opa] duration-200 ease-linear focus-visible:ring-1 [&>svg]:size-4 [&>svg]:shrink-0",
-        "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
+        "group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
         className,
       )}
       {...props}
@@ -518,6 +539,7 @@ const sidebarMenuButtonVariants = cva(
       },
       size: {
         default: "h-8 text-sm",
+        md: "h-9 text-sm",
         sm: "h-7 text-xs",
         lg: "h-12 text-sm group-data-[collapsible=icon]:!p-0",
       },
@@ -534,7 +556,7 @@ const SidebarMenuButton = React.forwardRef<
   React.ComponentProps<"button"> & {
     asChild?: boolean;
     isActive?: boolean;
-    tooltip?: string | React.ComponentProps<typeof TooltipContent>;
+    tooltip?: string | React.ReactNode;
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
   (
@@ -567,22 +589,13 @@ const SidebarMenuButton = React.forwardRef<
       return button;
     }
 
-    if (typeof tooltip === "string") {
-      tooltip = {
-        children: tooltip,
-      };
-    }
-
     return (
-      <Tooltip>
-        <TooltipTrigger asChild>{button}</TooltipTrigger>
-        <TooltipContent
-          side="right"
-          align="center"
-          hidden={state !== "collapsed"}
-          {...tooltip}
-        />
-      </Tooltip>
+      <ShadTooltip
+        side="right"
+        content={state == "collapsed" ? tooltip : undefined}
+      >
+        {button}
+      </ShadTooltip>
     );
   },
 );

@@ -37,11 +37,11 @@ class PythonCodeStructuredTool(LCToolComponent):
         "_classes",
         "_functions",
     ]
-    display_name = "Python Code Structured Tool"
+    display_name = "Python Code Structured"
     description = "structuredtool dataclass code to tool"
     documentation = "https://python.langchain.com/docs/modules/tools/custom_tools/#structuredtool-dataclass"
     name = "PythonCodeStructuredTool"
-    icon = "🐍"
+    icon = "Python"
     field_order = ["name", "description", "tool_code", "return_direct", "tool_function"]
     legacy: bool = True
 

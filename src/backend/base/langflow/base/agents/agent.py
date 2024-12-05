@@ -1,4 +1,5 @@
 import asyncio
+import re
 from abc import abstractmethod
 from typing import TYPE_CHECKING, cast
 
@@ -10,7 +11,9 @@ from langflow.base.agents.callback import AgentAsyncHandler
 from langflow.base.agents.events import ExceptionWithMessageError, process_agent_events
 from langflow.base.agents.utils import data_to_messages
 from langflow.custom import Component
-from langflow.inputs.inputs import InputTypes
+from langflow.custom.custom_component.component import _get_component_toolkit
+from langflow.field_typing import Tool
+from langflow.inputs.inputs import InputTypes, MultilineInput
 from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
 from langflow.memory import delete_message
 from langflow.schema import Data
@@ -24,27 +27,43 @@ if TYPE_CHECKING:
     from langchain_core.messages import BaseMessage
 
 
+DEFAULT_TOOLS_DESCRIPTION = "A helpful assistant with access to the following tools:"
+DEFAULT_AGENT_NAME = "Agent ({tools_names})"
+
+
 class LCAgentComponent(Component):
     trace_type = "agent"
     _base_inputs: list[InputTypes] = [
-        MessageTextInput(name="input_value", display_name="Input"),
+        MessageTextInput(
+            name="input_value",
+            display_name="Input",
+            info="The input provided by the user for the agent to process.",
+            tool_mode=True,
+        ),
         BoolInput(
             name="handle_parsing_errors",
             display_name="Handle Parse Errors",
             value=True,
             advanced=True,
+            info="Should the Agent fix errors when reading user input for better processing?",
         ),
-        BoolInput(
-            name="verbose",
-            display_name="Verbose",
-            value=True,
-            advanced=True,
-        ),
+        BoolInput(name="verbose", display_name="Verbose", value=True, advanced=True),
         IntInput(
             name="max_iterations",
             display_name="Max Iterations",
             value=15,
             advanced=True,
+            info="The maximum number of attempts the agent can make to complete its task before it stops.",
+        ),
+        MultilineInput(
+            name="agent_description",
+            display_name="Agent Description",
+            info=(
+                "The description of the agent. This is only used when in Tool Mode. "
+                f"Defaults to '{DEFAULT_TOOLS_DESCRIPTION}' and tools are added dynamically."
+            ),
+            advanced=True,
+            value=DEFAULT_TOOLS_DESCRIPTION,
         ),
     ]
 
@@ -104,23 +123,36 @@ class LCAgentComponent(Component):
         if isinstance(agent, AgentExecutor):
             runnable = agent
         else:
+            if not hasattr(self, "tools") or not self.tools:
+                msg = "Tools are required to run the agent."
+                raise ValueError(msg)
+            handle_parsing_errors = hasattr(self, "handle_parsing_errors") and self.handle_parsing_errors
+            verbose = hasattr(self, "verbose") and self.verbose
+            max_iterations = hasattr(self, "max_iterations") and self.max_iterations
             runnable = AgentExecutor.from_agent_and_tools(
                 agent=agent,
                 tools=self.tools,
-                handle_parsing_errors=self.handle_parsing_errors,
-                verbose=self.verbose,
-                max_iterations=self.max_iterations,
+                handle_parsing_errors=handle_parsing_errors,
+                verbose=verbose,
+                max_iterations=max_iterations,
             )
         input_dict: dict[str, str | list[BaseMessage]] = {"input": self.input_value}
-        if self.chat_history:
+        if hasattr(self, "chat_history") and self.chat_history:
             input_dict["chat_history"] = data_to_messages(self.chat_history)
+
+        if hasattr(self, "graph"):
+            session_id = self.graph.session_id
+        elif hasattr(self, "_session_id"):
+            session_id = self._session_id
+        else:
+            session_id = None
 
         agent_message = Message(
             sender=MESSAGE_SENDER_AI,
-            sender_name="Agent",
+            sender_name=self.display_name or "Agent",
             properties={"icon": "Bot", "state": "partial"},
             content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
-            session_id=self.graph.session_id,
+            session_id=session_id,
         )
         try:
             result = await process_agent_events(
@@ -136,7 +168,7 @@ class LCAgentComponent(Component):
             msg_id = e.agent_message.id
             await asyncio.to_thread(delete_message, id_=msg_id)
             self._send_message_event(e.agent_message, category="remove_message")
-            raise e.exception  # noqa: B904
+            raise
         except Exception:
             raise
 
@@ -147,16 +179,34 @@ class LCAgentComponent(Component):
     def create_agent_runnable(self) -> Runnable:
         """Create the agent."""
 
+    def validate_tool_names(self) -> None:
+        """Validate tool names to ensure they match the required pattern."""
+        pattern = re.compile(r"^[a-zA-Z0-9_-]+$")
+        if hasattr(self, "tools") and self.tools:
+            for tool in self.tools:
+                if not pattern.match(tool.name):
+                    msg = (
+                        f"Invalid tool name '{tool.name}': must only contain letters, numbers, underscores, dashes,"
+                        " and cannot contain spaces."
+                    )
+                    raise ValueError(msg)
+
 
 class LCToolsAgentComponent(LCAgentComponent):
     _base_inputs = [
         HandleInput(
-            name="tools", display_name="Tools", input_types=["Tool", "BaseTool", "StructuredTool"], is_list=True
+            name="tools",
+            display_name="Tools",
+            input_types=["Tool", "BaseTool", "StructuredTool"],
+            is_list=True,
+            required=False,
+            info="These are the tools that the agent can use to help with tasks.",
         ),
         *LCAgentComponent._base_inputs,
     ]
 
     def build_agent(self) -> AgentExecutor:
+        self.validate_tool_names()
         agent = self.create_agent_runnable()
         return AgentExecutor.from_agent_and_tools(
             agent=RunnableAgent(runnable=agent, input_keys_arg=["input"], return_keys_arg=["output"]),
@@ -167,3 +217,28 @@ class LCToolsAgentComponent(LCAgentComponent):
     @abstractmethod
     def create_agent_runnable(self) -> Runnable:
         """Create the agent."""
+
+    def get_tool_name(self) -> str:
+        return self.display_name or "Agent"
+
+    def get_tool_description(self) -> str:
+        return self.agent_description or DEFAULT_TOOLS_DESCRIPTION
+
+    def _build_tools_names(self):
+        tools_names = ""
+        if self.tools:
+            tools_names = ", ".join([tool.name for tool in self.tools])
+        return tools_names
+
+    def to_toolkit(self) -> list[Tool]:
+        component_toolkit = _get_component_toolkit()
+        tools_names = self._build_tools_names()
+        agent_description = self.get_tool_description()
+        # Check if tools_description is the default value
+        if agent_description == DEFAULT_TOOLS_DESCRIPTION:
+            description = f"{agent_description}{tools_names}"
+        else:
+            description = agent_description
+        return component_toolkit(component=self).get_tools(
+            tool_name=self.get_tool_name(), tool_description=description, callbacks=self.get_langchain_callbacks()
+        )

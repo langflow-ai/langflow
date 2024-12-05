@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import time
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
@@ -19,7 +20,7 @@ from fastapi import (
 from loguru import logger
 from sqlmodel import select
 
-from langflow.api.utils import CurrentActiveUser, DbSession, parse_value
+from langflow.api.utils import AsyncDbSession, CurrentActiveUser, parse_value
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -378,7 +379,7 @@ async def webhook_run_flow(
 )
 async def experimental_run_flow(
     *,
-    session: DbSession,
+    session: AsyncDbSession,
     flow_id: UUID,
     inputs: list[InputValueRequest] | None = None,
     outputs: list[str] | None = None,
@@ -453,9 +454,8 @@ async def experimental_run_flow(
         try:
             # Get the flow that matches the flow_id and belongs to the user
             # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
-            flow = session.exec(
-                select(Flow).where(Flow.id == flow_id_str).where(Flow.user_id == api_key_user.id)
-            ).first()
+            stmt = select(Flow).where(Flow.id == flow_id_str).where(Flow.user_id == api_key_user.id)
+            flow = (await session.exec(stmt)).first()
         except sa.exc.StatementError as exc:
             # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
             if "badly formed hexadecimal UUID string" in str(exc):
@@ -544,14 +544,19 @@ async def get_task_status(task_id: str) -> TaskStatusResponse:
 @router.post(
     "/upload/{flow_id}",
     status_code=HTTPStatus.CREATED,
+    deprecated=True,
 )
 async def create_upload_file(
     file: UploadFile,
     flow_id: UUID,
 ) -> UploadFileResponse:
+    """Upload a file for a specific flow (Deprecated).
+
+    This endpoint is deprecated and will be removed in a future version.
+    """
     try:
         flow_id_str = str(flow_id)
-        file_path = save_uploaded_file(file, folder_name=flow_id_str)
+        file_path = await asyncio.to_thread(save_uploaded_file, file, folder_name=flow_id_str)
 
         return UploadFileResponse(
             flow_id=flow_id_str,
@@ -604,11 +609,13 @@ async def custom_component_update(
     """
     try:
         component = Component(_code=code_request.code)
-
         component_node, cc_instance = build_custom_component_template(
             component,
             user_id=user.id,
         )
+
+        component_node["tool_mode"] = code_request.tool_mode
+
         if hasattr(cc_instance, "set_attributes"):
             template = code_request.get_template()
             params = {}

@@ -100,8 +100,8 @@ class ChatOutput(ChatComponent):
         message.sender = self.sender
         message.sender_name = self.sender_name
         message.session_id = self.session_id
-        message.flow_id = self.graph.flow_id
-        message.properties.source = Source(id=_source_id, display_name=_display_name, source=_source)
+        message.flow_id = self.graph.flow_id if hasattr(self, "graph") else None
+        message.properties.source = self._build_source(_source_id, _display_name, _source)
         message.properties.icon = _icon
         message.properties.background_color = _background_color
         message.properties.text_color = _text_color

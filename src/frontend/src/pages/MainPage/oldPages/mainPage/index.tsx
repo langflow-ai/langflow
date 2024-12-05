@@ -1,4 +1,5 @@
-import FolderSidebarNav from "@/components/folderSidebarComponent";
+import FolderSidebarNav from "@/components/core/folderSidebarComponent";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { useDeleteFolders } from "@/controllers/API/queries/folders";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
@@ -6,8 +7,8 @@ import useAlertStore from "@/stores/alertStore";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import DropdownButton from "../../../../components/dropdownButtonComponent";
-import PageLayout from "../../../../components/pageLayout";
+import PageLayout from "../../../../components/common/pageLayout";
+import DropdownButton from "../../../../components/core/dropdownButtonComponent";
 import {
   MY_COLLECTION_DESC,
   USER_PROJECTS_HEADER,
@@ -80,41 +81,43 @@ export default function OldHomePage(): JSX.Element {
   return (
     <>
       <div className="flex h-full w-full space-y-8 md:flex-col lg:flex-row lg:space-y-0">
-        <aside className="hidden h-full w-fit flex-col space-y-6 border-r px-4 lg:flex">
-          <FolderSidebarNav
-            handleChangeFolder={(id: string) => {
-              navigate(`all/folder/${id}`);
-            }}
-            handleDeleteFolder={(item) => {
-              setFolderToEdit(item);
-              setOpenDeleteFolderModal(true);
-            }}
-            className="w-[20vw] max-w-[288px]"
-          />
-        </aside>
-        <PageLayout
-          title={USER_PROJECTS_HEADER}
-          description={MY_COLLECTION_DESC}
-          button={
-            <div className="flex gap-2">
-              <DropdownButton
-                firstButtonName="New Project"
-                onFirstBtnClick={() => {
-                  setOpenModal(true);
-                  track("New Project Button Clicked");
-                }}
-                options={dropdownOptions}
-                plusButton={true}
-                dropdownOptions={false}
-                isFetchingFolders={isLoadingFolder}
-              />
+        <SidebarProvider>
+          <aside className="hidden h-full w-fit flex-col space-y-6 px-4 lg:flex">
+            <FolderSidebarNav
+              handleChangeFolder={(id: string) => {
+                navigate(`all/folder/${id}`);
+              }}
+              handleDeleteFolder={(item) => {
+                setFolderToEdit(item);
+                setOpenDeleteFolderModal(true);
+              }}
+              className="w-[20vw] max-w-[288px]"
+            />
+          </aside>
+          <PageLayout
+            title={USER_PROJECTS_HEADER}
+            description={MY_COLLECTION_DESC}
+            button={
+              <div className="flex gap-2">
+                <DropdownButton
+                  firstButtonName="New Project"
+                  onFirstBtnClick={() => {
+                    setOpenModal(true);
+                    track("New Project Button Clicked");
+                  }}
+                  options={dropdownOptions}
+                  plusButton={true}
+                  dropdownOptions={false}
+                  isFetchingFolders={isLoadingFolder}
+                />
+              </div>
+            }
+          >
+            <div className="relative h-full w-full flex-1">
+              <Outlet />
             </div>
-          }
-        >
-          <div className="relative h-full w-full flex-1">
-            <Outlet />
-          </div>
-        </PageLayout>
+          </PageLayout>
+        </SidebarProvider>
       </div>
       <ModalsComponent
         openModal={openModal}

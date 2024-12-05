@@ -490,7 +490,8 @@ class Vertex:
             )
         else:
             custom_component = self.custom_component
-            self.custom_component.set_event_manager(event_manager)
+            if hasattr(self.custom_component, "set_event_manager"):
+                self.custom_component.set_event_manager(event_manager)
             custom_params = initialize.loading.get_params(self.params)
 
         await self._build_results(
@@ -844,16 +845,16 @@ class Vertex:
     def __repr__(self) -> str:
         return f"Vertex(display_name={self.display_name}, id={self.id}, data={self.data})"
 
-    def __eq__(self, __o: object) -> bool:
+    def __eq__(self, /, other: object) -> bool:
         try:
-            if not isinstance(__o, Vertex):
+            if not isinstance(other, Vertex):
                 return False
             # We should create a more robust comparison
             # for the Vertex class
-            ids_are_equal = self.id == __o.id
+            ids_are_equal = self.id == other.id
             # self.data is a dict and we need to compare them
             # to check if they are equal
-            data_are_equal = self.data == __o.data
+            data_are_equal = self.data == other.data
         except AttributeError:
             return False
         else:
@@ -871,4 +872,4 @@ class Vertex:
         if not self.custom_component or not self.custom_component.outputs:
             return
         # Apply the function to each output
-        [func(output) for output in self.custom_component.outputs]
+        [func(output) for output in self.custom_component._outputs_map.values()]

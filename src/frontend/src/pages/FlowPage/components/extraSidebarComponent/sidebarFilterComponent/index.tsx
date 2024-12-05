@@ -1,5 +1,5 @@
-import ForwardedIconComponent from "@/components/genericIconComponent";
-import ShadTooltip from "@/components/shadTooltipComponent";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 
 export function SidebarFilterComponent({
@@ -17,7 +17,7 @@ export function SidebarFilterComponent({
     <div
       className={`mb-0.5 flex w-full items-center justify-between rounded border p-2 text-sm text-foreground`}
       style={{
-        backgroundColor: `hsl(var(--accent-${color}-foreground))`,
+        backgroundColor: `hsl(var(--datatype-${color}-foreground))`,
       }}
     >
       <div className="flex flex-1 items-center gap-1.5">

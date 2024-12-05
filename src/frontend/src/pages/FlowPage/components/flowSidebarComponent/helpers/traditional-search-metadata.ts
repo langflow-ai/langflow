@@ -11,10 +11,7 @@ export const traditionalSearchMetadata = (
       const filteredItems = Object.fromEntries(
         Object.entries(items).filter(
           ([key, item]) =>
-            normalizeString(key).includes(searchTerm) ||
-            normalizeString(item.display_name).includes(searchTerm) ||
-            normalizeString(category).includes(searchTerm) ||
-            (item.metadata && searchInMetadata(item.metadata, searchTerm)),
+            item.metadata && searchInMetadata(item.metadata, searchTerm),
         ),
       );
       return [category, filteredItems];

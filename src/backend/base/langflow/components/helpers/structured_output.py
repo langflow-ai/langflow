@@ -16,6 +16,8 @@ class StructuredOutputComponent(Component):
         "Transforms LLM responses into **structured data formats**. Ideal for extracting specific information "
         "or creating consistent outputs."
     )
+    icon = "braces"
+
     inputs = [
         HandleInput(
             name="llm",
@@ -33,7 +35,7 @@ class StructuredOutputComponent(Component):
             name="output_schema",
             display_name="Output Schema",
             info="Define the structure and data types for the model's output.",
-            table_schema=[
+            value=[
                 {
                     "name": "name",
                     "display_name": "Name",

@@ -9,6 +9,7 @@ class CreateListComponent(Component):
     description = "Creates a list of texts."
     icon = "list"
     name = "CreateList"
+    legacy = True
 
     inputs = [
         StrInput(

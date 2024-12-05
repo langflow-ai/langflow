@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("IntComponent", async ({ page }) => {
+test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.goto("/");
   await page.waitForSelector('[data-testid="mainpage_title"]', {
     timeout: 30000,
@@ -22,7 +22,9 @@ test("IntComponent", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 3000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
   await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -32,7 +34,9 @@ test("IntComponent", async ({ page }) => {
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("openai");
 
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="modelsOpenAI"]', {
+    timeout: 3000,
+  });
 
   await page
     .getByTestId("modelsOpenAI")

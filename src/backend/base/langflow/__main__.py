@@ -1,6 +1,7 @@
 import asyncio
 import inspect
 import platform
+import signal
 import socket
 import sys
 import time
@@ -24,10 +25,8 @@ from sqlmodel import select
 
 from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
-from langflow.services.database.models.folder.utils import (
-    create_default_folder_if_it_doesnt_exist,
-)
-from langflow.services.database.utils import session_getter
+from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
+from langflow.services.database.utils import async_session_getter
 from langflow.services.deps import async_session_scope, get_db_service, get_settings_service
 from langflow.services.settings.constants import DEFAULT_SUPERUSER
 from langflow.services.utils import initialize_services
@@ -75,6 +74,13 @@ def set_var_for_macos_issue() -> None:
         # https://stackoverflow.com/questions/75747888/uwsgi-segmentation-fault-with-flask-python-app-behind-nginx-after-running-for-2 # noqa: E501
         os.environ["no_proxy"] = "*"  # to avoid error with gunicorn
         logger.debug("Set OBJC_DISABLE_INITIALIZE_FORK_SAFETY to YES to avoid error")
+
+
+def handle_sigterm(signum, frame):  # noqa: ARG001
+    """Handle SIGTERM signal gracefully."""
+    logger.info("Received SIGTERM signal. Performing graceful shutdown...")
+    # Raise SystemExit to trigger graceful shutdown
+    sys.exit(0)
 
 
 @app.command()
@@ -150,6 +156,9 @@ def run(
     ),
 ) -> None:
     """Run Langflow."""
+    # Register SIGTERM handler
+    signal.signal(signal.SIGTERM, handle_sigterm)
+
     if env_file:
         load_dotenv(env_file, override=True)
 
@@ -211,13 +220,20 @@ def run(
             click.launch(f"http://{host}:{port}")
         if process:
             process.join()
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, SystemExit) as e:
+        logger.info("Shutting down server...")
         if process is not None:
             process.terminate()
-        sys.exit(0)
-    except Exception as e:  # noqa: BLE001
+            process.join(timeout=15)  # Wait up to 15 seconds for process to terminate
+            if process.is_alive():
+                logger.warning("Process did not terminate gracefully, forcing...")
+                process.kill()
+        raise typer.Exit(0) from e
+    except Exception as e:
         logger.exception(e)
-        sys.exit(1)
+        if process is not None:
+            process.terminate()
+        raise typer.Exit(1) from e
 
 
 def wait_for_server_ready(host, port) -> None:
@@ -359,9 +375,6 @@ def print_banner(host: str, port: int) -> None:
 def run_langflow(host, port, log_level, options, app) -> None:
     """Run Langflow server on localhost."""
     if platform.system() == "Windows":
-        # Run using uvicorn on MacOS and Windows
-        # Windows doesn't support gunicorn
-        # MacOS requires an env variable to be set to use gunicorn
         import uvicorn
 
         uvicorn.run(
@@ -374,7 +387,28 @@ def run_langflow(host, port, log_level, options, app) -> None:
     else:
         from langflow.server import LangflowApplication
 
-        LangflowApplication(app, options).run()
+        server = LangflowApplication(app, options)
+
+        def graceful_shutdown(signum, frame):  # noqa: ARG001
+            """Gracefully shutdown the server when receiving SIGTERM."""
+            # Suppress click exceptions during shutdown
+            import click
+
+            click.echo = lambda *args, **kwargs: None  # noqa: ARG005
+
+            logger.info("Gracefully shutting down server...")
+            # For Gunicorn workers, we raise SystemExit to trigger graceful shutdown
+            raise SystemExit(0)
+
+        # Register signal handlers
+        signal.signal(signal.SIGTERM, graceful_shutdown)
+        signal.signal(signal.SIGINT, graceful_shutdown)
+
+        try:
+            server.run()
+        except (KeyboardInterrupt, SystemExit):
+            # Suppress the exception output
+            sys.exit(0)
 
 
 @app.command()
@@ -385,30 +419,35 @@ def superuser(
 ) -> None:
     """Create a superuser."""
     configure(log_level=log_level)
-    initialize_services()
     db_service = get_db_service()
-    with session_getter(db_service) as session:
-        from langflow.services.auth.utils import create_super_user
 
-        if create_super_user(db=session, username=username, password=password):
-            # Verify that the superuser was created
-            from langflow.services.database.models.user.model import User
+    async def _create_superuser():
+        await initialize_services()
+        async with async_session_getter(db_service) as session:
+            from langflow.services.auth.utils import create_super_user
 
-            user: User = session.exec(select(User).where(User.username == username)).first()
-            if user is None or not user.is_superuser:
-                typer.echo("Superuser creation failed.")
-                return
-            # Now create the first folder for the user
-            result = create_default_folder_if_it_doesnt_exist(session, user.id)
-            if result:
-                typer.echo("Default folder created successfully.")
+            if await create_super_user(db=session, username=username, password=password):
+                # Verify that the superuser was created
+                from langflow.services.database.models.user.model import User
+
+                stmt = select(User).where(User.username == username)
+                user: User = (await session.exec(stmt)).first()
+                if user is None or not user.is_superuser:
+                    typer.echo("Superuser creation failed.")
+                    return
+                # Now create the first folder for the user
+                result = await create_default_folder_if_it_doesnt_exist(session, user.id)
+                if result:
+                    typer.echo("Default folder created successfully.")
+                else:
+                    msg = "Could not create default folder."
+                    raise RuntimeError(msg)
+                typer.echo("Superuser created successfully.")
+
             else:
-                msg = "Could not create default folder."
-                raise RuntimeError(msg)
-            typer.echo("Superuser created successfully.")
+                typer.echo("Superuser creation failed.")
 
-        else:
-            typer.echo("Superuser creation failed.")
+    asyncio.run(_create_superuser())
 
 
 # command to copy the langflow database from the cache to the current directory
@@ -460,7 +499,7 @@ def migration(
     ):
         raise typer.Abort
 
-    initialize_services(fix_migration=fix)
+    asyncio.run(initialize_services(fix_migration=fix))
     db_service = get_db_service()
     if not test:
         db_service.run_migrations()
@@ -481,30 +520,30 @@ def api_key(
         None
     """
     configure(log_level=log_level)
-    initialize_services()
-    settings_service = get_settings_service()
-    auth_settings = settings_service.auth_settings
-    if not auth_settings.AUTO_LOGIN:
-        typer.echo("Auto login is disabled. API keys cannot be created through the CLI.")
-        return
 
     async def aapi_key():
+        await initialize_services()
+        settings_service = get_settings_service()
+        auth_settings = settings_service.auth_settings
+        if not auth_settings.AUTO_LOGIN:
+            typer.echo("Auto login is disabled. API keys cannot be created through the CLI.")
+            return None
+
         async with async_session_scope() as session:
             from langflow.services.database.models.user.model import User
 
-            superuser = (await session.exec(select(User).where(User.username == DEFAULT_SUPERUSER))).first()
+            stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
+            superuser = (await session.exec(stmt)).first()
             if not superuser:
                 typer.echo(
                     "Default superuser not found. This command requires a superuser and AUTO_LOGIN to be enabled."
                 )
                 return None
             from langflow.services.database.models.api_key import ApiKey, ApiKeyCreate
-            from langflow.services.database.models.api_key.crud import (
-                create_api_key,
-                delete_api_key,
-            )
+            from langflow.services.database.models.api_key.crud import create_api_key, delete_api_key
 
-            api_key = (await session.exec(select(ApiKey).where(ApiKey.user_id == superuser.id))).first()
+            stmt = select(ApiKey).where(ApiKey.user_id == superuser.id)
+            api_key = (await session.exec(stmt)).first()
             if api_key:
                 await delete_api_key(session, api_key.id)
 
@@ -568,4 +607,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        logger.exception(e)
+        raise typer.Exit(1) from e

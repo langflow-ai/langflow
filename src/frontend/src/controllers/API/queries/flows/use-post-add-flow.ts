@@ -13,6 +13,8 @@ interface IPostAddFlow {
   is_component: boolean;
   folder_id: string;
   endpoint_name: string | undefined;
+  icon: string | undefined;
+  gradient: string | undefined;
 }
 
 export const usePostAddFlow: useMutationFunctionType<
@@ -29,9 +31,10 @@ export const usePostAddFlow: useMutationFunctionType<
       description: payload.description,
       is_component: payload.is_component,
       folder_id: payload.folder_id || null,
+      icon: payload.icon || null,
+      gradient: payload.gradient || null,
       endpoint_name: payload.endpoint_name || null,
     });
-
     return response.data;
   };
 
@@ -41,9 +44,18 @@ export const usePostAddFlow: useMutationFunctionType<
     {
       ...options,
       onSettled: (response) => {
-        queryClient.refetchQueries({
-          queryKey: ["useGetFolder", response.folder_id ?? myCollectionId],
-        });
+        if (response) {
+          queryClient.refetchQueries({
+            queryKey: [
+              "useGetRefreshFlowsQuery",
+              { get_all: true, header_flows: true },
+            ],
+          });
+
+          queryClient.refetchQueries({
+            queryKey: ["useGetFolder", response.folder_id ?? myCollectionId],
+          });
+        }
       },
     },
   );

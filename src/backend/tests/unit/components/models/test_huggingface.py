@@ -1,6 +1,5 @@
+from langflow.components.models.huggingface import HuggingFaceEndpointsComponent
 from langflow.inputs.inputs import DictInput, DropdownInput, FloatInput, HandleInput, IntInput, SecretStrInput, StrInput
-
-from src.backend.base.langflow.components.models.huggingface import HuggingFaceEndpointsComponent
 
 
 def test_huggingface_inputs():

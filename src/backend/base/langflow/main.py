@@ -28,6 +28,7 @@ from langflow.initial_setup.setup import (
 from langflow.interface.types import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
 from langflow.logging.logger import configure
+from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.services.deps import get_settings_service, get_telemetry_service
 from langflow.services.utils import initialize_services, teardown_services
 
@@ -89,34 +90,36 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
 def get_lifespan(*, fix_migration=False, version=None):
     telemetry_service = get_telemetry_service()
 
-    def _initialize():
-        initialize_services(fix_migration=fix_migration)
-        setup_llm_caching()
-        initialize_super_user_if_needed()
-
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         configure(async_file=True)
+
         # Startup message
         if version:
             rprint(f"[bold green]Starting Langflow v{version}...[/bold green]")
         else:
             rprint("[bold green]Starting Langflow...[/bold green]")
         try:
-            await asyncio.to_thread(_initialize)
+            await initialize_services(fix_migration=fix_migration)
+            setup_llm_caching()
+            await initialize_super_user_if_needed()
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
             await asyncio.to_thread(create_or_update_starter_projects, all_types_dict)
             telemetry_service.start()
-            await asyncio.to_thread(load_flows_from_directory)
+            await load_flows_from_directory()
             yield
+
         except Exception as exc:
             if "langflow migration --fix" not in str(exc):
                 logger.exception(exc)
             raise
-        # Shutdown message
-        rprint("[bold red]Shutting down Langflow...[/bold red]")
-        await teardown_services()
-        await logger.complete()
+        finally:
+            # Clean shutdown
+            logger.info("Cleaning up resources...")
+            await teardown_services()
+            await logger.complete()
+            # Final message
+            rprint("[bold red]Langflow shutdown complete[/bold red]")
 
     return lifespan
 
@@ -130,6 +133,10 @@ def create_app():
     configure()
     lifespan = get_lifespan(version=__version__)
     app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__)
+    app.add_middleware(
+        ContentSizeLimitMiddleware,
+    )
+
     setup_sentry(app)
     origins = ["*"]
 

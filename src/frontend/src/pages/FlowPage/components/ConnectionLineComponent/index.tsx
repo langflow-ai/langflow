@@ -10,7 +10,7 @@ const ConnectionLineComponent = ({
 }: ConnectionLineComponentProps): JSX.Element => {
   const handleDragging = useFlowStore((state) => state.handleDragging);
   const color = handleDragging?.color;
-  const accentColor = `hsl(var(--accent-${color}))`;
+  const accentColor = `hsl(var(--datatype-${color}))`;
 
   return (
     <g>

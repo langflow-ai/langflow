@@ -28,8 +28,8 @@ export const usePostFolders: useMutationFunctionType<
 
   const mutation = mutate(["usePostFolders"], addFoldersFn, {
     ...options,
-    onSettled: () => {
-      queryClient.refetchQueries({ queryKey: ["useGetFolders"] });
+    onSuccess: () => {
+      return queryClient.refetchQueries({ queryKey: ["useGetFolders"] });
     },
   });
 

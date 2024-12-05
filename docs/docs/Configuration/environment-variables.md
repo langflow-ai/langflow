@@ -1,13 +1,11 @@
 ---
-title: Environment Variables
+title: Environment variables
 sidebar_position: 7
 slug: /environment-variables
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-
-# Environment Variables
 
 Langflow lets you configure a number of settings using environment variables.
 
@@ -119,12 +117,15 @@ The following table lists the environment variables supported by Langflow.
 | <a id="LANGFLOW_CONFIG_DIR"></a>`LANGFLOW_CONFIG_DIR` | String |  | Set the Langflow configuration directory where files, logs, and the Langflow database are stored. |
 | <a id="LANGFLOW_DATABASE_URL"></a>`LANGFLOW_DATABASE_URL` | String |  | Set the database URL for Langflow. If you don't provide one, Langflow uses an SQLite database. |
 | <a id="LANGFLOW_DEV"></a>`LANGFLOW_DEV` | Boolean | `false` | Run Langflow in development mode (may contain bugs).<br/>See [`--dev` option](./configuration-cli.md#run-dev). |
-| <a id="LANGFLOW_FALLBACK_TO_ENV_VAR"></a>`LANGFLOW_FALLBACK_TO_ENV_VAR` | Boolean | `true` | If enabled, [global variables](../Settings/settings-global-variables.md) set in the Langflow UI fall back to an environment variable with the same name when Langflow fails to retrieve the variable value. |
+| <a id="LANGFLOW_FALLBACK_TO_ENV_VAR"></a>`LANGFLOW_FALLBACK_TO_ENV_VAR` | Boolean | `true` | If enabled, [global variables](../Configuration/configuration-global-variables.md) set in the Langflow UI fall back to an environment variable with the same name when Langflow fails to retrieve the variable value. |
 | <a id="LANGFLOW_FRONTEND_PATH"></a>`LANGFLOW_FRONTEND_PATH` | String | `./frontend` | Path to the frontend directory containing build files. This is for development purposes only.<br/>See [`--frontend-path` option](./configuration-cli.md#run-frontend-path). |
 | <a id="LANGFLOW_HEALTH_CHECK_MAX_RETRIES"></a>`LANGFLOW_HEALTH_CHECK_MAX_RETRIES` | Integer | `5` | Set the maximum number of retries for the health check.<br/>See [`--health-check-max-retries` option](./configuration-cli.md#run-health-check-max-retries). |
 | <a id="LANGFLOW_HOST"></a>`LANGFLOW_HOST` | String | `127.0.0.1` | The host on which the Langflow server will run.<br/>See [`--host` option](./configuration-cli.md#run-host). |
 | <a id="LANGFLOW_LANGCHAIN_CACHE"></a>`LANGFLOW_LANGCHAIN_CACHE` | `InMemoryCache`<br/>`SQLiteCache` | `InMemoryCache` | Type of cache to use.<br/>See [`--cache` option](./configuration-cli.md#run-cache). |
+| <a id="LANGFLOW_MAX_FILE_SIZE_UPLOAD"></a>`LANGFLOW_MAX_FILE_SIZE_UPLOAD` | Integer | `100` | Set the maximum file size for the upload in megabytes.<br/>See [`--max-file-size-upload` option](./configuration-cli.md#run-max-file-size-upload). |
+| <a id="LANGFLOW_LOG_ENV"></a>`LANGFLOW_LOG_ENV` | `container_json`<br/>`container_csv`<br/> | Not set | Set the log environment. Default (Not set) is json with color. If not set a format string can be provided.<br/> See [`LANGFLOW_LOG_FORMAT`](#LANGFLOW_CACHE_TYPE) |
 | <a id="LANGFLOW_LOG_FILE"></a>`LANGFLOW_LOG_FILE` | String | `logs/langflow.log` | Set the path to the log file for Langflow.<br/>See [`--log-file` option](./configuration-cli.md#run-log-file). |
+| <a id="LANGFLOW_LOG_FORMAT"></a>`LANGFLOW_LOG_FORMAT` | String | `<green>{time:YYYY-MM-DD HH:mm:ss}</green> - <level>{level: <8}</level> - {module} - <level>{message}</level>` | Configure the logformat.<br/>For example without colors: `{time:YYYY-MM-DD HH:mm:ss.SSS} {level} {file} {line} {function} {message}` <br/> If [`LANGFLOW_LOG_ENV`](#LANGFLOW_LOG_ENV) is set this configuration will be ignored.
 | <a id="LANGFLOW_LOG_LEVEL"></a>`LANGFLOW_LOG_LEVEL` | `debug`<br/>`info`<br/>`warning`<br/>`error`<br/>`critical` | `critical` | Set the logging level.<br/>See [`--log-level` option](./configuration-cli.md#run-log-level). |
 | <a id="LANGFLOW_MAX_FILE_SIZE_UPLOAD"></a>`LANGFLOW_MAX_FILE_SIZE_UPLOAD` | Integer | `100` | Set the maximum file size for the upload in megabytes.<br/>See [`--max-file-size-upload` option](./configuration-cli.md#run-max-file-size-upload). |
 | <a id="LANGFLOW_OPEN_BROWSER"></a>`LANGFLOW_OPEN_BROWSER` | Boolean | `true` | Open the system web browser on startup.<br/> See [`--open-browser` option](./configuration-cli.md#run-open-browser). |
@@ -138,9 +139,9 @@ The following table lists the environment variables supported by Langflow.
 | <a id="LANGFLOW_REMOVE_API_KEYS"></a>`LANGFLOW_REMOVE_API_KEYS` | Boolean | `false` | Remove API keys from the projects saved in the database.<br/> See [`--remove-api-keys` option](./configuration-cli.md#run-remove-api-keys). |
 | <a id="LANGFLOW_SAVE_DB_IN_CONFIG_DIR"></a>`LANGFLOW_SAVE_DB_IN_CONFIG_DIR` | Boolean | `false` | Save the Langflow database in [`LANGFLOW_CONFIG_DIR`](#LANGFLOW_CONFIG_DIR) instead of in the Langflow package directory. Note, when this variable is set to default (`false`), the database isn't shared between different virtual environments and the database is deleted when you uninstall Langflow. |
 | <a id="LANGFLOW_STORE"></a>`LANGFLOW_STORE` | Boolean | `true` | Enable the Langflow Store.<br/>See [`--store` option](./configuration-cli.md#run-store). |
-| <a id="LANGFLOW_STORE_ENVIRONMENT_VARIABLES"></a>`LANGFLOW_STORE_ENVIRONMENT_VARIABLES` | Boolean | `true` | Store environment variables as [global variables](../Settings/settings-global-variables.md) in the database. |
+| <a id="LANGFLOW_STORE_ENVIRONMENT_VARIABLES"></a>`LANGFLOW_STORE_ENVIRONMENT_VARIABLES` | Boolean | `true` | Store environment variables as [global variables](../Configuration/configuration-global-variables.md) in the database. |
 | <a id="LANGFLOW_SUPERUSER"></a>`LANGFLOW_SUPERUSER` | String | Not set | Set the name for the superuser. Required if [`LANGFLOW_AUTO_LOGIN`](#LANGFLOW_AUTO_LOGIN) is set to `false`.<br/>See [`superuser --username` option](./configuration-cli.md#superuser-username). |
 | <a id="LANGFLOW_SUPERUSER_PASSWORD"></a>`LANGFLOW_SUPERUSER_PASSWORD` | String | Not set | Set the password for the superuser. Required if [`LANGFLOW_AUTO_LOGIN`](#LANGFLOW_AUTO_LOGIN) is set to `false`.<br/>See [`superuser --password` option](./configuration-cli.md#superuser-password).|
-| <a id="LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT"></a>`LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` | String | Not set | Comma-separated list of environment variables to get from the environment and store as [global variables](../Settings/settings-global-variables.md). |
+| <a id="LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT"></a>`LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` | String | Not set | Comma-separated list of environment variables to get from the environment and store as [global variables](../Configuration/configuration-global-variables.md). |
 | <a id="LANGFLOW_WORKER_TIMEOUT"></a>`LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds.<br/>See [`--worker-timeout` option](./configuration-cli.md#run-worker-timeout). |
 | <a id="LANGFLOW_WORKERS"></a>`LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes.<br/>See [`--workers` option](./configuration-cli.md#run-workers). |

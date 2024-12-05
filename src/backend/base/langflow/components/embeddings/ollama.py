@@ -2,7 +2,7 @@ from langchain_ollama import OllamaEmbeddings
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Embeddings
-from langflow.io import FloatInput, MessageTextInput, Output
+from langflow.io import MessageTextInput, Output
 
 
 class OllamaEmbeddingsComponent(LCModelComponent):
@@ -16,18 +16,12 @@ class OllamaEmbeddingsComponent(LCModelComponent):
         MessageTextInput(
             name="model",
             display_name="Ollama Model",
-            value="llama3.1",
+            value="nomic-embed-text",
         ),
         MessageTextInput(
             name="base_url",
             display_name="Ollama Base URL",
             value="http://localhost:11434",
-        ),
-        FloatInput(
-            name="temperature",
-            display_name="Model Temperature",
-            value=0.1,
-            advanced=True,
         ),
     ]
 
@@ -37,11 +31,7 @@ class OllamaEmbeddingsComponent(LCModelComponent):
 
     def build_embeddings(self) -> Embeddings:
         try:
-            output = OllamaEmbeddings(
-                model=self.model,
-                base_url=self.base_url,
-                temperature=self.temperature,
-            )
+            output = OllamaEmbeddings(model=self.model, base_url=self.base_url)
         except Exception as e:
             msg = "Could not connect to Ollama API."
             raise ValueError(msg) from e

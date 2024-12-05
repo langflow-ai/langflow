@@ -34,9 +34,9 @@ class MilvusVectorStoreComponent(LCVectorStoreComponent):
         ),
         SecretStrInput(
             name="password",
-            display_name="Connection Password",
+            display_name="Token",
             value="",
-            info="Ignore this field if no password is required to make connection.",
+            info="Ignore this field if no token is required to make connection.",
         ),
         DictInput(name="connection_args", display_name="Other Connection Arguments", advanced=True),
         StrInput(name="primary_field", display_name="Primary Field Name", value="pk"),
