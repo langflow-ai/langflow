@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { MessagesStoreType } from "../types/zustand/messages";
 
 export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
+  displayLoadingMessage: false,
   deleteSession: (id) => {
     set((state) => {
       const updatedMessages = state.messages.filter(
@@ -19,6 +20,10 @@ export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
     if (existingMessage) {
       get().updateMessagePartial(message);
       return;
+    }
+    console.log(message);
+    if (message.sender === "Machine") {
+      set(() => ({ displayLoadingMessage: false }));
     }
     set(() => ({ messages: [...get().messages, message] }));
   },
