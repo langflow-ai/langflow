@@ -6,9 +6,9 @@ import { cn } from "../../utils/utils";
 
 const Popover = PopoverPrimitive.Root;
 
-const PopoverAnchor = PopoverPrimitive.Anchor;
-
 const PopoverTrigger = PopoverPrimitive.Trigger;
+
+const PopoverAnchor = PopoverPrimitive.Anchor;
 
 const PopoverContent = React.forwardRef<
   React.ElementRef<typeof PopoverPrimitive.Content>,
