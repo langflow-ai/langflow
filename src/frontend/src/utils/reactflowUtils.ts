@@ -413,6 +413,7 @@ export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
   return Object.keys(template).reduce((errors: Array<string>, t) => {
     if (
       template[t].required &&
+      !(template[t].tool_mode && node?.data?.node?.tool_mode) &&
       template[t].show &&
       (template[t].value === undefined ||
         template[t].value === null ||
