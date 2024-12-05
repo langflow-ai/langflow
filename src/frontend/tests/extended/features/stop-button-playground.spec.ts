@@ -28,14 +28,18 @@ test(
       await page.getByText("New Flow", { exact: true }).click();
       await page.waitForSelector('[data-testid="modal-title"]', {
         timeout: 3000,
-      });      modalCount = await page.getByTestId("modal-title")?.count();
+      });
+      modalCount = await page.getByTestId("modal-title")?.count();
     }
 
     await page.getByTestId("blank-flow").click();
 
-    await page.waitForSelector('[data-testid="sidebar-custom-component-button"]', {
-      timeout: 3000,
-    });
+    await page.waitForSelector(
+      '[data-testid="sidebar-custom-component-button"]',
+      {
+        timeout: 3000,
+      },
+    );
 
     await page.getByTestId("sidebar-custom-component-button").click();
     await page.getByTitle("fit view").click();
@@ -124,9 +128,7 @@ class CustomComponent(Component):
 
     await page.getByTestId("button_run_chat output").click();
 
-
     await page.getByText("Playground", { exact: true }).last().click();
-
 
     await page.waitForSelector('[data-testid="button-stop"]', {
       timeout: 30000,
