@@ -1,4 +1,3 @@
-import asyncio
 import re
 from abc import abstractmethod
 from typing import TYPE_CHECKING, cast
@@ -166,7 +165,7 @@ class LCAgentComponent(Component):
             )
         except ExceptionWithMessageError as e:
             msg_id = e.agent_message.id
-            await asyncio.to_thread(delete_message, id_=msg_id)
+            await delete_message(id_=msg_id)
             self._send_message_event(e.agent_message, category="remove_message")
             raise
         except Exception:
