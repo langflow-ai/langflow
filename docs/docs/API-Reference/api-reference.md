@@ -35,6 +35,7 @@ The examples in this guide use environment variables for these values.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
+
 ```curl
 curl -X POST "$LANGFLOW_URL/api/v1/build/$FLOW_ID/vertices" \
   -H "Content-Type: application/json" \
@@ -47,11 +48,14 @@ curl -X POST "$LANGFLOW_URL/api/v1/build/$FLOW_ID/vertices" \
     "start_component_id": "component456"
   }'
 ```
+
   </TabItem>
   <TabItem value="result" label="Result">
+
 ```result
 text
 ```
+
   </TabItem>
 </Tabs>
 
@@ -60,16 +64,20 @@ text
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
+
 ```curl
 curl -X POST "$LANGFLOW_URL/api/v1/build/$FLOW_ID/vertices" \
   -H "Content-Type: application/json" \
-  -d '{
+  -d '{}'
 ```
+
   </TabItem>
   <TabItem value="result" label="Result">
+
 ```result
 text
 ```
+
   </TabItem>
 </Tabs>
 
@@ -79,16 +87,20 @@ Build a vertex instead of the entire graph.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
+
 ```curl
 curl -X POST "$LANGFLOW_URL/api/v1/build/$FLOW_ID/vertices/{vertex_id}" \
   -H "Content-Type: application/json" \
-  -d '{
+  -d '{}'
 ```
+
   </TabItem>
   <TabItem value="result" label="Result">
+
 ```result
 text
 ```
+
   </TabItem>
 </Tabs>
 
@@ -100,16 +112,20 @@ Returns: A StreamingResponse object with the streamed vertex data in text/event-
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
+
 ```curl
 curl -X POST "$LANGFLOW_URL/api/v1/build/$FLOW_ID/vertices/{vertex_id}" \
   -H "Content-Type: application/json" \
-  -d '{
+  -d '{}'
 ```
+
   </TabItem>
   <TabItem value="result" label="Result">
+
 ```result
 text
 ```
+
   </TabItem>
 </Tabs>
 
@@ -121,11 +137,13 @@ This operation returns a dictionary of all Langflow components.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
+
 ```curl
 curl -X 'GET' \
   '$LANGFLOW_URL/api/v1/all' \
   -H 'accept: application/json'
 ```
+
   </TabItem>
   <TabItem value="result" label="Result">
 ```result
