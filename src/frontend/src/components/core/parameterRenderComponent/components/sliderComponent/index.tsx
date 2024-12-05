@@ -1,4 +1,4 @@
-import { getMinOrMaxValue } from "@/components/core/parameterRenderComponent/components/sliderComponent/utils/get-min-max-value";
+import { getMinOrMaxValue } from "@/components/core/parameterRenderComponent/components/sliderComponent/helpers/get-min-max-value";
 import { InputProps } from "@/components/core/parameterRenderComponent/types";
 import { Case } from "@/shared/components/caseComponent";
 import { useDarkStore } from "@/stores/darkStore";
@@ -7,6 +7,7 @@ import * as SliderPrimitive from "@radix-ui/react-slider";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
 import { SliderLabels } from "./components/slider-labels";
+import { buildColorByName } from "./helpers/build-color-by-name";
 
 const THRESHOLDS = [0.25, 0.5, 0.75, 1];
 const BACKGROUND_COLORS = ["#4f46e5", "#7c3aed", "#a21caf", "#c026d3"];
@@ -29,6 +30,9 @@ const MIN_LABEL = "Precise";
 const MAX_LABEL = "Creative";
 const MIN_LABEL_ICON = "pencil-ruler";
 const MAX_LABEL_ICON = "palette";
+
+const DEFAULT_ACCENT_PINK_FOREGROUND_COLOR = "333 71% 51%";
+const DEFAULT_ACCENT_INDIGO_FOREGROUND_COLOR = "243 75% 59%";
 
 type ColorType = "background" | "text";
 
@@ -162,7 +166,36 @@ export default function SliderComponent({
 
   const percentage = ((valueAsNumber - min) / (max - min)) * 100;
 
-  const ringClassInputClass = "ring-[1px] ring-[#D4D4D8]";
+  if (isDark) {
+    document.documentElement.classList.add("dark");
+  } else {
+    document.documentElement.classList.remove("dark");
+  }
+
+  const accentIndigoForeground = getComputedStyle(
+    document.documentElement,
+  ).getPropertyValue("--accent-indigo-foreground");
+
+  const accentPinkForeground = getComputedStyle(
+    document.documentElement,
+  ).getPropertyValue("--accent-pink-foreground");
+
+  const getThumbColor = (percentage) => {
+    if (accentIndigoForeground && accentPinkForeground) {
+      return buildColorByName(
+        accentIndigoForeground,
+        accentPinkForeground,
+        percentage,
+      );
+    }
+    return buildColorByName(
+      DEFAULT_ACCENT_INDIGO_FOREGROUND_COLOR,
+      DEFAULT_ACCENT_PINK_FOREGROUND_COLOR,
+      percentage,
+    );
+  };
+
+  const ringClassInputClass = "ring-[1px] ring-slider-input-border";
 
   return (
     <div className="w-full rounded-lg pb-2">
@@ -229,18 +262,24 @@ export default function SliderComponent({
           >
             <SliderPrimitive.Range
               className="absolute h-full rounded-full bg-gradient-to-r from-accent-indigo-foreground to-accent-pink-foreground"
-              style={{ width: `${percentage}%` }}
+              style={{
+                width: `${percentage}%`,
+                background: `linear-gradient(to right, rgb(79, 70, 229) 0%, ${getThumbColor(percentage)} ${percentage}%)`,
+              }}
             />
           </SliderPrimitive.Track>
           <SliderPrimitive.Thumb
             data-testid={`slider_thumb${editNode ? "_advanced" : ""}`}
             className={clsx(
-              "block h-6 w-6 rounded-full border-2 border-background bg-pink-500 shadow-lg",
+              "block h-6 w-6 rounded-full border-2 border-background shadow-lg",
               isGrabbing ? "cursor-grabbing" : "cursor-grab",
               valueAsNumber === max && "relative left-1",
             )}
             onPointerDown={() => setIsGrabbing(true)}
             onPointerUp={() => setIsGrabbing(false)}
+            style={{
+              backgroundColor: getThumbColor(percentage),
+            }}
           />
         </SliderPrimitive.Root>
       </div>
