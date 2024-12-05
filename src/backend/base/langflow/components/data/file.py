@@ -2,7 +2,7 @@ from pathlib import Path
 from zipfile import ZipFile, is_zipfile
 import json
 import xml.etree.ElementTree as ET
-from typing import List, Union, Dict, Any
+from typing import List, Union, Dict, Any, Optional
 import tempfile
 import os
 import pandas as pd
@@ -83,13 +83,17 @@ class FileComponent(Component):
     def _normalize_data(self, data: Union[Dict[str, Any], Data]) -> Dict[str, Any]:
         if isinstance(data, Data):
             data = data.data
-        
+
         if isinstance(data, dict):
+            # Extrai apenas os parágrafos do conteúdo processado
+            if "paragraphs" in data:
+                return {"paragraphs": "\n".join(data["paragraphs"])}
             return self._flatten_dict(data)
         elif isinstance(data, str):
             return {"content": data}
         else:
             return {"content": str(data)}
+
 
     def _to_dataframe(self, data: Union[Data, List[Data]]) -> DataFrame:
         if isinstance(data, list):
@@ -114,9 +118,28 @@ class FileComponent(Component):
     def get_dataframe(self) -> DataFrame:
         self.log("Getting structured data")
         result = self._process_file(structured=True)
-        df = self._to_dataframe(result)
-        self.status = df
-        return df
+    
+        # Garantir que os dados estão no formato correto antes de criar o DataFrame
+        if isinstance(result, Data):
+            data = [self._normalize_data(result)]
+        elif isinstance(result, list):
+            data = [self._normalize_data(item) for item in result]
+        else:
+            self.log("Unexpected data format for structured data")
+            data = []
+    
+        # Criar o DataFrame de forma segura
+        if data:
+            df = pd.DataFrame(data)
+        else:
+            # Se a lista 'data' estiver vazia, criamos um DataFrame com uma coluna de erro
+            df = pd.DataFrame(columns=["Error"], data=["No data found"])
+    
+        # Change this line to avoid the ambiguous truth value error
+        self.status = df.to_dict(orient='records')  # Convert DataFrame to string
+        return DataFrame(df)
+
+
 
     def get_raw_data(self) -> Message:
         self.log("Getting raw data")
@@ -215,9 +238,6 @@ class FileComponent(Component):
             else:
                 with open(file_path, 'rb') as f:
                     content = f.read()
-                    if file_path.suffix.lower() == '.docx' and not structured:
-                        self.log("Processing DOCX file in raw mode")
-                        return content.decode('utf-8', errors='ignore')
                     return self._parse_file_content(file_path.name, content, structured)
         except Exception as e:
             self.log(f"Error processing file: {str(e)}")
@@ -237,6 +257,7 @@ class FileComponent(Component):
             '.xml': self._parse_xml,
             '.html': self._parse_html,
             '.htm': self._parse_html,
+            '.docx': self._parse_docx,
         }
 
         parser = parser_map.get(file_extension, self._parse_text)
@@ -259,19 +280,16 @@ class FileComponent(Component):
             raise
 
     def _parse_csv(self, content: bytes, structured: bool) -> Union[List[Data], str]:
-        """Process CSV content with proper column handling and type inference"""
         self.log("Parsing CSV content")
         try:
-            # Use pandas with smart type inference
             df = pd.read_csv(
                 io.StringIO(content.decode('utf-8')),
-                dtype_backend='numpy_nullable',  # Better NULL handling
-                parse_dates=True,  # Auto-detect dates
+                dtype_backend='numpy_nullable',
+                parse_dates=True,
                 infer_datetime_format=True
             )
             
             if structured:
-                # Process column types first
                 column_types = {}
                 for column in df.columns:
                     if df[column].dtype.name.startswith(('int', 'uint')):
@@ -284,19 +302,17 @@ class FileComponent(Component):
                         column_types[column] = 'datetime'
                     else:
                         column_types[column] = 'string'
-    
+
                 data = []
                 for _, row in df.iterrows():
                     processed_row = {}
                     for column in df.columns:
                         value = row[column]
                         
-                        # Handle null values
                         if pd.isna(value):
                             processed_row[column] = None
                             continue
-    
-                        # Process based on inferred column type
+
                         if column_types[column] == 'integer':
                             processed_row[column] = int(value)
                         elif column_types[column] == 'float':
@@ -306,16 +322,14 @@ class FileComponent(Component):
                         elif column_types[column] == 'datetime':
                             processed_row[column] = pd.Timestamp(value).isoformat()
                         else:
-                            # Try to detect JSON strings
                             if isinstance(value, str):
                                 try:
-                                    json_value = json.loads(value)
-                                    processed_row[column] = json_value
-                                    continue
+                                    processed_row[column] = json.loads(value)
                                 except (json.JSONDecodeError, TypeError):
-                                    pass
-                            processed_row[column] = str(value)
-    
+                                    processed_row[column] = str(value)
+                            else:
+                                processed_row[column] = str(value)
+
                     data.append(Data(data={
                         "values": processed_row,
                         "column_types": column_types
@@ -323,7 +337,7 @@ class FileComponent(Component):
                 return data
             else:
                 return df.to_csv(index=False)
-    
+
         except Exception as e:
             error_msg = f"CSV parsing error: {str(e)}"
             self.log(error_msg)
@@ -387,26 +401,191 @@ class FileComponent(Component):
 
     def _parse_html(self, content: bytes, structured: bool) -> Union[Data, str]:
         html_content = content.decode('utf-8')
-        if structured:
-            try:
-                from bs4 import BeautifulSoup
-                soup = BeautifulSoup(html_content, 'html.parser')
-                return Data(data={
-                    "title": soup.title.string if soup.title else None,
-                    "text": soup.get_text(),
-                    "html": html_content
-                })
-            except ImportError:
-                return Data(data={"text": html_content})
-        return html_content
+        if not structured:
+            return html_content
+
+        try:
+            root = ET.fromstring(html_content)
+            
+            title = None
+            title_elem = root.find('.//title')
+            if title_elem is not None:
+                title = title_elem.text
+                
+            def extract_text(element, exclude_tags={'script', 'style'}):
+                if element.tag in exclude_tags:
+                    return ''
+                text = (element.text or '').strip()
+                for child in element:
+                    text += ' ' + extract_text(child, exclude_tags)
+                    if child.tail:
+                        text += ' ' + child.tail.strip()
+                return text.strip()
+                
+            def extract_structured_data(element):
+                data = {
+                    'tag': element.tag,
+                    'attributes': dict(element.attrib),
+                    'text': (element.text or '').strip()
+                }
+                
+                children = []
+                for child in element:
+                    child_data = extract_structured_data(child)
+                    if child_data:
+                        children.append(child_data)
+                
+                if children:
+                    data['children'] = children
+                    
+                if element.tail:
+                    data['tail'] = element.tail.strip()
+                    
+                return data
+
+            structured_data = {
+                'title': title,
+                'text': extract_text(root),
+                'structure': extract_structured_data(root),
+                'metadata': {
+                    'links': [a.get('href') for a in root.findall('.//a') if a.get('href')],
+                    'images': [img.get('src') for img in root.findall('.//img') if img.get('src')],
+                    'headers': [h.text.strip() for h in root.findall('.//*') if h.tag in {'h1','h2','h3','h4','h5','h6'} and h.text]
+                }
+            }
+            
+            return Data(data=structured_data)
+            
+        except ET.ParseError:
+            return Data(data={"text": html_content})
+
+
+    def _strip_namespaces(self, data: dict) -> dict:
+        """Remove XML namespaces from the keys."""
+        def clean_key(key):
+            if isinstance(key, ET.QName):
+                return key.localname  # Remove namespace
+            if isinstance(key, str) and "}" in key:
+                return key.split("}", 1)[1]
+            return key
+
+        def clean_dict(d):
+            if isinstance(d, dict):
+                return {clean_key(k): clean_dict(v) for k, v in d.items()}
+            elif isinstance(d, list):
+                return [clean_dict(item) for item in d]
+            return d
+
+        return clean_dict(data)
+
+    def _parse_docx(self, content: bytes, structured: bool) -> Union[Data, str]:
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as temp_file:
+                temp_file.write(content)
+                temp_path = temp_file.name
+
+            paragraphs = []
+            with ZipFile(temp_path, "r") as docx:
+                if "word/document.xml" in docx.namelist():
+                    doc_xml = docx.read("word/document.xml")
+                    root = ET.fromstring(doc_xml)
+
+                    for p in root.findall(".//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}p"):
+                        paragraph_text = "".join(
+                            node.text.strip() if node.text else ""
+                            for node in p.findall(".//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t")
+                        )
+                        if paragraph_text:
+                            paragraphs.append(paragraph_text)
+
+            os.unlink(temp_path)
+
+            structured_data = {"paragraphs": paragraphs}
+
+            if structured:
+                return Data(data=structured_data)
+            return "\n".join(paragraphs)
+
+        except Exception as e:
+            error_msg = f"DOCX parsing error: {str(e)}"
+            self.log(error_msg)
+            if self.silent_errors:
+                return Data(data={"error": error_msg})
+            raise
+
+
+
+
+    def _process_docx_element(self, elem: ET.Element) -> Optional[Dict]:
+        tag = elem.tag.split('}')[-1]
+        
+        if tag == 'p':
+            return self._process_docx_paragraph(elem)
+        elif tag == 'tbl':
+            return self._process_docx_table(elem)
+        return None
+
+    def _process_docx_paragraph(self, p_elem: ET.Element) -> Dict:
+        p_data = {
+            'type': 'paragraph',
+            'style': p_elem.find('.//{*}pStyle').get('{*}val') if p_elem.find('.//{*}pStyle') is not None else 'normal',
+            'content': []
+        }
+        
+        for r in p_elem.findall('.//{*}r'):
+            run_data = {
+                'text': '',
+                'formatting': {},
+                'properties': {}
+            }
+            
+            rPr = r.find('.//{*}rPr')
+            if rPr is not None:
+                for prop in rPr:
+                    prop_name = prop.tag.split('}')[-1]
+                    run_data['formatting'][prop_name] = True
+            
+            for t in r.findall('.//{*}t'):
+                preserve = t.get('{http://www.w3.org/XML/1998/namespace}space') == 'preserve'
+                text = t.text or ''
+                run_data['text'] += text if preserve else text.strip()
+            
+            if run_data['text'] or run_data['formatting']:
+                p_data['content'].append(run_data)
+                
+        return p_data
+
+    def _process_docx_table(self, tbl_elem: ET.Element) -> Dict:
+        table_data = {
+            'type': 'table',
+            'properties': {},
+            'rows': []
+        }
+        
+        tblPr = tbl_elem.find('.//{*}tblPr')
+        if tblPr is not None:
+            for prop in tblPr:
+                prop_name = prop.tag.split('}')[-1]
+                table_data['properties'][prop_name] = True
+        
+        for tr in tbl_elem.findall('.//{*}tr'):
+            row = []
+            for tc in tr.findall('.//{*}tc'):
+                cell_content = []
+                for p in tc.findall('.//{*}p'):
+                    p_data = self._process_docx_paragraph(p)
+                    if p_data['content']:
+                        cell_content.append(p_data)
+                row.append(cell_content)
+            table_data['rows'].append(row)
+        
+        return table_data
 
     def _parse_text(self, content: bytes, structured: bool) -> Union[Data, str]:
-        try:
-            text_content = content.decode('utf-8')
-        except UnicodeDecodeError:
-            self.log("Falling back to latin-1 encoding")
-            text_content = content.decode('latin-1', errors='ignore')
-        return Data(data={"text": text_content}) if structured else text_content
+        text_content = content.decode('utf-8', errors='ignore')
+        if structured:
+            return Data(data={"text": text_content})
+        return text_content
 
     def log(self, message: str) -> None:
         print(f"[{self.display_name}] {message}")
