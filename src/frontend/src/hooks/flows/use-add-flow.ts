@@ -29,7 +29,6 @@ const useAddFlow = () => {
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
 
   const { mutate: postAddFlow } = usePostAddFlow();
-  const { mutate: refreshFlows } = useGetRefreshFlows();
 
   const addFlow = async (params?: {
     flow?: FlowType;
@@ -45,8 +44,6 @@ const useAddFlow = () => {
         updateGroupRecursion(node, flowData?.edges);
       });
       // Create a new flow with a default name if no flow is provided.
-      const folder_id = folderId ?? myCollectionId ?? "";
-
       if (params?.override && flow) {
         const flowId = flows?.find((f) => f.name === flow.name);
         if (flowId) {
@@ -54,12 +51,11 @@ const useAddFlow = () => {
         }
       }
 
+      const folder_id = folderId ?? myCollectionId ?? "";
       const flowsToCheckNames = flows?.filter(
         (f) => f.folder_id === myCollectionId,
       );
-
       const newFlow = createNewFlow(flowData!, folder_id, flow);
-
       const newName = addVersionToDuplicates(newFlow, flowsToCheckNames ?? []);
       newFlow.name = newName;
       newFlow.folder_id = folder_id;
@@ -79,11 +75,6 @@ const useAddFlow = () => {
               ["saved_components"]: data,
             }),
           }));
-
-          refreshFlows({
-            get_all: true,
-            header_flows: true,
-          });
 
           setFlowToCanvas(createdFlow);
           resolve(createdFlow.id);
