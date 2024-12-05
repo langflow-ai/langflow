@@ -15,3 +15,4 @@ TOOL_TABLE_SCHEMA = [
         "description": "Describe the purpose of the tool.",
     },
 ]
+TOOLS_METADATA_INFO = "You can change the Name and Description of the Tools here."
