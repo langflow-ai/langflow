@@ -80,7 +80,7 @@ export default function InputFileComponent({
             // Show an error if the file type is not allowed
             setErrorData({
               title: INVALID_FILE_ALERT,
-              list: fileTypes,
+              list: [fileTypes?.join(", ") || ""],
             });
           }
         }
