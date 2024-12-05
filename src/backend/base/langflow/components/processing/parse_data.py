@@ -11,24 +11,20 @@ class DataToMessageComponent(Component):
     name = "DataToMessage"
 
     inputs = [
-        DataInput(
-            name="data", 
-            display_name="Input Data", 
-            info="The structured data to be converted into a message."
-        ),
+        DataInput(name="data", display_name="Input Data", info="The structured data to be converted into a message."),
         MultilineInput(
             name="template",
             display_name="Message Template",
             info="The template used to format the data into a message. "
-                 "Use {text}, {data}, or any key from the input data structure.",
+            "Use {text}, {data}, or any key from the input data structure.",
             value="{text}",
         ),
         StrInput(
-            name="separator", 
-            display_name="Line Separator", 
-            advanced=True, 
+            name="separator",
+            display_name="Line Separator",
+            advanced=True,
             value="\n",
-            info="The string used to separate lines in the output message."
+            info="The string used to separate lines in the output message.",
         ),
     ]
 
