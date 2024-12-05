@@ -1,8 +1,9 @@
 from langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data, retrieve_file_paths
 from langflow.custom import Component
-from langflow.io import BoolInput, IntInput, MessageTextInput, DropdownInput
+from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput
 from langflow.schema import Data
 from langflow.template import Output
+
 
 class DirectoryComponent(Component):
     display_name = "Directory"
@@ -80,11 +81,7 @@ class DirectoryComponent(Component):
 
         resolved_path = self.resolve_path(path)
         file_paths = retrieve_file_paths(
-            resolved_path, 
-            load_hidden=load_hidden, 
-            recursive=recursive, 
-            depth=depth,
-            types=types
+            resolved_path, load_hidden=load_hidden, recursive=recursive, depth=depth, types=types
         )
 
         if types:
@@ -95,7 +92,7 @@ class DirectoryComponent(Component):
             loaded_data = parallel_load_data(file_paths, silent_errors=silent_errors, max_concurrency=max_concurrency)
         else:
             loaded_data = [parse_text_file_to_data(file_path, silent_errors=silent_errors) for file_path in file_paths]
-            
+
         loaded_data = list(filter(None, loaded_data))
         self.status = loaded_data
         return loaded_data
