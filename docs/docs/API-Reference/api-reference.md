@@ -347,7 +347,7 @@ curl -X 'POST' \
 
 ### Get Version
 
-Get the version of the API.
+Get the version of the Langflow API.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
@@ -363,7 +363,9 @@ curl -X 'GET' \
 
 ```result
 {
-  "version": "API version number"
+    "version": "1.1.1",
+    "main_version": "1.1.1",
+    "package": "Langflow"
 }
 ```
 
@@ -448,7 +450,14 @@ curl -X 'GET' \
 
 ```plain
 {
-  "config_data": "Configuration information"
+    "feature_flags": {
+        "mvp_components": false
+    },
+    "frontend_timeout": 0,
+    "auto_saving": true,
+    "auto_saving_interval": 1000,
+    "health_check_max_retries": 5,
+    "max_file_size_upload": 100
 }
 ```
 
@@ -536,7 +545,9 @@ curl -X 'GET' \
   <TabItem value="result" label="Result">
 
 ```plain
-true
+{
+    "enabled": true
+}
 ```
 
   </TabItem>
@@ -560,7 +571,10 @@ curl -X 'GET' \
   <TabItem value="result" label="Result">
 
 ```plain
-true
+{
+    "has_api_key": false,
+    "is_valid": false
+}
 ```
 
   </TabItem>
@@ -710,8 +724,29 @@ curl -X 'GET' \
    </TabItem>
    <TabItem value="result" label="Result">
 
-```plain
-
+```json
+[
+    {
+        "id": "ccabb590-c9e8-4e56-9d6c-309955936c6c",
+        "name": "Agent"
+    },
+    {
+        "id": "e660a9ea-35fb-4587-bfbd-13dba4c556d1",
+        "name": "Memory"
+    },
+    {
+        "id": "d442c88b-f8d0-4010-8752-16a644c7ac8e",
+        "name": "Chain"
+    },
+    {
+        "id": "cd614b49-dd57-4c8b-a5eb-f8bb5f957b9a",
+        "name": "Vector Store"
+    },
+    {
+        "id": "57f5c681-a1f5-4053-be33-e9525e7eb00a",
+        "name": "Prompt"
+    }
+]
 ```
 
    </TabItem>
@@ -735,6 +770,9 @@ curl -X 'GET' \
    <TabItem value="result" label="Result">
 
 ```plain
+{
+    "detail": "You must have a store API key set."
+}
 ```
 
    </TabItem>
@@ -1222,7 +1260,30 @@ curl -X 'GET' \
 
 ```plain
 {
-  // ApiKeysResponse object
+    "total_count": 2,
+    "user_id": "aa8ac16d-8400-459d-b683-f6ae72b22469",
+    "api_keys": [
+        {
+            "name": "test",
+            "last_used_at": null,
+            "total_uses": 0,
+            "is_active": true,
+            "id": "6a554940-bbb2-4108-81eb-995712d6d6de",
+            "api_key": "sk-bfAnq**************************************",
+            "user_id": "aa8ac16d-8400-459d-b683-f6ae72b22469",
+            "created_at": "2024-12-04T21:15:28.096576"
+        },
+        {
+            "name": "another-key",
+            "last_used_at": null,
+            "total_uses": 0,
+            "is_active": true,
+            "id": "f322a178-b808-42cf-b9fa-7564afc177cd",
+            "api_key": "sk-VVH6_**************************************",
+            "user_id": "aa8ac16d-8400-459d-b683-f6ae72b22469",
+            "created_at": "2024-12-04T22:13:09.128912"
+        }
+    ]
 }
 ```
 
@@ -1361,7 +1422,11 @@ curl -X 'GET' \
   <TabItem value="result" label="Result">
 
 ```plain
-// Response content
+{
+    "access_token": "ey...",
+    "refresh_token": null,
+    "token_type": "bearer"
+}
 ```
 
   </TabItem>
@@ -1407,7 +1472,9 @@ curl -X 'POST' \
   <TabItem value="result" label="Result">
 
 ```plain
-// Response content
+{
+    "message": "Logout successful"
+}
 ```
 
   </TabItem>
@@ -1592,7 +1659,14 @@ curl -X 'GET' \
   <TabItem value="result" label="Result">
 
 ```plain
-// List of profile pictures
+{
+    "files": [
+        "People/People Avatar-01-20.svg",
+        "People/People Avatar-01-08.svg",
+        "People/People Avatar-01-09.svg",
+    ...
+    ]
+}
 ```
 
   </TabItem>
@@ -1910,11 +1984,14 @@ curl -X 'GET' \
   <TabItem value="result" label="Result">
 
 ```plain
-{
-  "id": "folder_id",
-  "name": "Folder Name",
-  // Additional folder details
-}
+[
+    {
+        "name": "My Projects",
+        "description": "Manage your own projects. Download and upload folders.",
+        "id": "f1838e2e-f6a9-4f1f-be3f-3affc5ef1b4c",
+        "parent_id": null
+    }
+]
 ```
 
   </TabItem>
@@ -2116,7 +2193,7 @@ curl -X 'GET' \
   </TabItem>
 </Tabs>
 
-## Starter projects
+## Get starter projects
 
 Retrieve starter projects.
 
