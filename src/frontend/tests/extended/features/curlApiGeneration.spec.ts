@@ -17,12 +17,13 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.waitForTimeout(1000);
     await page.getByText("API", { exact: true }).click();
     await page.getByRole("tab", { name: "cURL" }).click();
     await page.getByTestId("icon-Copy").last().click();
