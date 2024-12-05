@@ -81,7 +81,8 @@ export function EditMessageButton({
                   name="ThumbsUp"
                   className={cn(
                     "h-4 w-4",
-                    evaluation === true && "text-status-green",
+                    evaluation === true &&
+                      "fill-current stroke-current",
                   )}
                 />
               </Button>
@@ -100,7 +101,8 @@ export function EditMessageButton({
                   name="ThumbsDown"
                   className={cn(
                     "h-4 w-4",
-                    evaluation === false && "text-status-red",
+                    evaluation === false &&
+                      "fill-current stroke-current",
                   )}
                 />
               </Button>
