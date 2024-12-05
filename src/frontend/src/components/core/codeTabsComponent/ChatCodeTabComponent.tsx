@@ -31,7 +31,10 @@ export default function SimplifiedCodeTabComponent({
   };
 
   return (
-    <div className="mt-2 flex w-full flex-col overflow-hidden rounded-md text-left dark">
+    <div
+      className="mt-2 flex w-full flex-col overflow-hidden rounded-md text-left dark"
+      data-testid="chat-code-tab"
+    >
       <div className="flex w-full items-center justify-between rounded-t-md border border-b-0 border-border bg-muted px-4 py-2">
         <span className="dar text-sm font-semibold text-white">{language}</span>
         <Button
