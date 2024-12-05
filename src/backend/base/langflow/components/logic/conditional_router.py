@@ -94,7 +94,7 @@ class ConditionalRouterComponent(Component):
                 route_to_stop = "true_result" if route_to_stop == "false_result" else "false_result"
             self.stop(route_to_stop)
 
-    def true_response(self) -> Message:
+    def true_response(self) -> Message | str:
         result = self.evaluate_condition(
             self.input_text, self.match_text, self.operator, case_sensitive=self.case_sensitive
         )
@@ -103,9 +103,9 @@ class ConditionalRouterComponent(Component):
             self.iterate_and_stop_once("false_result")
             return self.message
         self.iterate_and_stop_once("true_result")
-        return self.message
+        return ""
 
-    def false_response(self) -> Message:
+    def false_response(self) -> Message | str:
         result = self.evaluate_condition(
             self.input_text, self.match_text, self.operator, case_sensitive=self.case_sensitive
         )
@@ -114,4 +114,4 @@ class ConditionalRouterComponent(Component):
             self.iterate_and_stop_once("true_result")
             return self.message
         self.iterate_and_stop_once("false_result")
-        return self.message
+        return ""
