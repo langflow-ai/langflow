@@ -44,7 +44,7 @@ if TYPE_CHECKING:
 load_dotenv()
 
 
-@pytest.fixture(autouse=True)
+# @pytest.fixture(autouse=True)
 def blockbuster():
     with blockbuster_ctx() as bb:
         for func in [
