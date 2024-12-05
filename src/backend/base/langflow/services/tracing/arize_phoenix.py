@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from langchain.callbacks.base import BaseCallbackHandler
+    from opentelemetry.propagators.textmap import CarrierT
     from opentelemetry.util.types import AttributeValue
 
     from langflow.graph.vertex.base import Vertex
@@ -50,7 +51,7 @@ class ArizePhoenixTracer(BaseTracer):
 
             self.tracer = self.tracer_provider.get_tracer(__name__)
             self.propagator = TraceContextTextMapPropagator()
-            self.carrier = {}
+            self.carrier: dict[Any, CarrierT] = {}
 
             with self.tracer.start_as_current_span(
                 name=self.flow_id,
@@ -60,7 +61,7 @@ class ArizePhoenixTracer(BaseTracer):
                 root_span.set_status(Status(StatusCode.OK))
                 self.propagator.inject(carrier=self.carrier)
 
-            self.child_spans: dict[UUID, Span] = {}
+            self.child_spans: dict[str, Span] = {}
 
         except Exception:  # noqa: BLE001
             logger.opt(exception=True).debug("Error setting up Arize/Phoenix tracer")
