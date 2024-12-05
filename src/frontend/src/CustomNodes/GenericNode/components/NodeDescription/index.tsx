@@ -134,7 +134,7 @@ export default function NodeDescription({
           data-testid="generic-node-desc"
           ref={overflowRef}
           className={cn(
-            "nodoubleclick generic-node-desc-text h-full cursor-text whitespace-break-spaces text-[13px] text-muted-foreground word-break-break-word",
+            "nodoubleclick generic-node-desc-text h-full cursor-text text-[13px] text-muted-foreground word-break-break-word",
             description === "" || !description ? "font-light italic" : "",
             placeholderClassName,
           )}
