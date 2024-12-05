@@ -307,7 +307,7 @@ async def test_delete_flows_with_transaction_and_build(client: AsyncClient, logg
             "vertex_id": "vid",
             "flow_id": flow_id,
         }
-        log_vertex_build(
+        await log_vertex_build(
             flow_id=build["flow_id"],
             vertex_id=build["vertex_id"],
             valid=build["valid"],
@@ -376,7 +376,7 @@ async def test_delete_folder_with_flows_with_transaction_and_build(client: Async
             "vertex_id": "vid",
             "flow_id": flow_id,
         }
-        log_vertex_build(
+        await log_vertex_build(
             flow_id=build["flow_id"],
             vertex_id=build["vertex_id"],
             valid=build["valid"],
