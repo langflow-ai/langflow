@@ -4,7 +4,6 @@ from collections import defaultdict
 import orjson
 from astrapy import DataAPIClient
 from astrapy.admin import parse_api_endpoint
-from astrapy.exceptions import CollectionNotFoundException
 from langchain_astradb import AstraDBVectorStore
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
@@ -21,6 +20,7 @@ from langflow.io import (
     StrInput,
 )
 from langflow.schema import Data
+from langflow.utils.version import get_version_info
 
 
 class AstraDBVectorStoreComponent(LCVectorStoreComponent):
@@ -31,24 +31,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     icon: str = "AstraDB"
 
     _cached_vector_store: AstraDBVectorStore | None = None
-
-    def list_collections(self):
-        client = DataAPIClient(token=self.token)
-
-        database = client.get_database(
-            self.api_endpoint,
-            token=self.token,
-        )
-
-        return database.list_collections()
-
-    def _initialize_collection_options(self):
-        try:
-            collections = [collection.name for collection in self.list_collections()]
-        except (CollectionNotFoundException, ConnectionError, ValueError) as _:
-            collections = []
-
-        return [*collections, "+ Create new collection"]
 
     VECTORIZE_PROVIDERS_MAPPING = defaultdict(
         list,
@@ -98,6 +80,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             value="ASTRA_DB_APPLICATION_TOKEN",
             required=True,
             advanced=os.getenv("ASTRA_ENHANCED", "false").lower() == "true",
+            real_time_refresh=True,
         ),
         SecretStrInput(
             name="api_endpoint",
@@ -105,14 +88,15 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             info="API endpoint URL for the Astra DB service.",
             value="ASTRA_DB_API_ENDPOINT",
             required=True,
+            real_time_refresh=True,
         ),
         DropdownInput(
             name="collection_name",
             display_name="Collection",
             info="The name of the collection within Astra DB where the vectors will be stored.",
             required=True,
-            real_time_refresh=True,
             refresh_button=True,
+            real_time_refresh=True,
             options=["+ Create new collection"],
             value="+ Create new collection",
         ),
@@ -120,8 +104,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             name="collection_name_new",
             display_name="Collection Name",
             info="Name of the new collection to create.",
-            advanced=False,
-            required=True,
+            advanced=os.getenv("LANGFLOW_HOST") is not None,
+            required=os.getenv("LANGFLOW_HOST") is None,
         ),
         StrInput(
             name="keyspace",
@@ -318,22 +302,52 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             return self.VECTORIZE_PROVIDERS_MAPPING
 
-    def get_collection_options(self):
-        client = DataAPIClient(token=self.token)
-
-        database = client.get_database(
-            self.api_endpoint,
-            token=self.token,
-        )
-
-        collection = database.get_collection(self.collection_name)
-
-        # Only get the options if the collection exists
+    def get_database(self):
         try:
-            collection_options = collection.options()
-        except CollectionNotFoundException as e:
-            self.log(f"Collection not found: {e}")
+            client = DataAPIClient(token=self.token)
 
+            return client.get_database(
+                self.api_endpoint,
+                token=self.token,
+            )
+        except Exception as e:  # noqa: BLE001
+            self.log(f"Error getting database: {e}")
+
+            return None
+
+    def _initialize_collection_options(self):
+        database = self.get_database()
+        if database is None:
+            return ["+ Create new collection"]
+
+        try:
+            collections = [collection.name for collection in database.list_collections()]
+        except Exception as e:  # noqa: BLE001
+            self.log(f"Error fetching collections: {e}")
+
+            return ["+ Create new collection"]
+
+        return [*collections, "+ Create new collection"]
+
+    def get_collection_choice(self):
+        collection_name = self.collection_name
+        if collection_name == "+ Create new collection":
+            return self.collection_name_new
+
+        return collection_name
+
+    def get_collection_options(self):
+        # Only get the options if the collection exists
+        database = self.get_database()
+        if database is None:
+            return None
+
+        collection_name = self.get_collection_choice()
+
+        try:
+            collection = database.get_collection(collection_name)
+            collection_options = collection.options()
+        except Exception as _:  # noqa: BLE001
             return None
 
         return collection_options.vector
@@ -342,85 +356,53 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Refresh the collection name options
         build_config["collection_name"]["options"] = self._initialize_collection_options()
 
-        # If the collection name is set to "+ Create new collection", show the advanced options
+        # If the collection name is set to "+ Create new collection", show embedding choice
         if field_name == "collection_name" and field_value == "+ Create new collection":
             build_config["embedding_choice"]["advanced"] = False
             build_config["embedding_choice"]["value"] = "Embedding Model"
+            build_config["embedding_model"]["advanced"] = False
 
             build_config["collection_name_new"]["advanced"] = False
             build_config["collection_name_new"]["required"] = True
 
-            new_parameter = HandleInput(
-                name="embedding_model",
-                display_name="Embedding Model",
-                input_types=["Embeddings"],
-                info="Allows an embedding model configuration.",
-            ).to_dict()
-
-            self.insert_in_dict(build_config, "collection_name_new", {"embedding_model": new_parameter})
+        # But if it's not, hide embedding choice
         elif field_name == "collection_name" and field_value != "+ Create new collection":
+            build_config["embedding_choice"]["advanced"] = True
+
             build_config["collection_name_new"]["advanced"] = True
             build_config["collection_name_new"]["required"] = False
             build_config["collection_name_new"]["value"] = ""
 
-        # Get the collection options
+        # Get the collection options for the selected collection
         collection_options = self.get_collection_options()
 
-        # If the collection options are available, show the advanced options
+        # If the collection options are available (DB exists), show the advanced options
         if collection_options:
             build_config["embedding_choice"]["advanced"] = True
 
             if collection_options.service:
-                for input_field in [
-                    "embedding_provider",
-                    "z_01_model_parameters",
-                    "z_02_api_key_name",
-                    "z_03_provider_api_key",
-                    "z_04_authentication",
-                ]:
-                    build_config[input_field]["advanced"] = False
+                self.del_fields(
+                    build_config,
+                    [
+                        "embedding_provider",
+                        "model",
+                        "z_01_model_parameters",
+                        "z_02_api_key_name",
+                        "z_03_provider_api_key",
+                        "z_04_authentication",
+                    ],
+                )
 
                 build_config["embedding_model"]["advanced"] = True
-                build_config["embedding_provider"]["advanced"] = True
                 build_config["embedding_choice"]["value"] = "Astra Vectorize"
-                build_config["embedding_provider"]["value"] = collection_options.service.provider
-
-                build_config["model"]["value"] = collection_options.service.model_name
-                build_config["z_01_model_parameters"]["value"] = collection_options.service.parameters
-
-                if collection_options.service.authentication:
-                    build_config["z_02_api_key_name"]["value"] = collection_options.service.authentication.get(
-                        "providerKey"
-                    )
-                    build_config["z_03_provider_api_key"]["value"] = collection_options.service.authentication.get(
-                        "apiKey"
-                    )
-                build_config["z_04_authentication"]["value"] = collection_options.service.authentication
             else:
-                for input_field in [
-                    "z_01_model_parameters",
-                    "z_02_api_key_name",
-                    "z_03_provider_api_key",
-                    "z_04_authentication",
-                ]:
-                    build_config[input_field]["advanced"] = True
-
                 build_config["embedding_model"]["advanced"] = False
                 build_config["embedding_provider"]["advanced"] = False
                 build_config["embedding_choice"]["value"] = "Embedding Model"
 
-                new_parameter = HandleInput(
-                    name="embedding_model",
-                    display_name="Embedding Model",
-                    input_types=["Embeddings"],
-                    info="Allows an embedding model configuration.",
-                ).to_dict()
-
-                self.insert_in_dict(build_config, "embedding_choice", {"embedding_model": new_parameter})
-
         elif field_name == "embedding_choice":
             if field_value == "Astra Vectorize":
-                self.del_fields(build_config, ["embedding_model"])
+                build_config["embedding_model"]["advanced"] = True
 
                 # Update the providers mapping
                 vectorize_providers = self.update_providers_mapping()
@@ -436,6 +418,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
                 self.insert_in_dict(build_config, "embedding_choice", {"embedding_provider": new_parameter})
             else:
+                build_config["embedding_model"]["advanced"] = False
+
                 self.del_fields(
                     build_config,
                     [
@@ -447,15 +431,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                         "z_04_authentication",
                     ],
                 )
-
-                new_parameter = HandleInput(
-                    name="embedding_model",
-                    display_name="Embedding Model",
-                    input_types=["Embeddings"],
-                    info="Allows an embedding model configuration.",
-                ).to_dict()
-
-                self.insert_in_dict(build_config, "embedding_choice", {"embedding_model": new_parameter})
 
         elif field_name == "embedding_provider":
             self.del_fields(
@@ -615,7 +590,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             # Ensure collection_options and its nested attributes are handled safely
             authentication = getattr(self, "z_04_authentication", {}) or (
-                collection_options.service.authentication if collection_options and collection_options.service else {}
+                collection_options.service.authentication
+                if collection_options and collection_options.service and collection_options.service.authentication
+                else {}
             )
 
             # Build the vectorize options dictionary
@@ -663,12 +640,18 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 "collection_embedding_api_key": dict_options.get("collection_embedding_api_key"),
             }
 
+        # Get Langflow version and platform information
+        __version__ = get_version_info()["version"]
+        langflow_prefix = ""
+        if os.getenv("LANGFLOW_HOST") is not None:
+            langflow_prefix = "ds-"
+
         try:
             vector_store = AstraDBVectorStore(
                 token=self.token,
                 api_endpoint=self.api_endpoint,
                 namespace=self.keyspace or None,
-                collection_name=getattr(self, "collection_name_new", None) or self.collection_name,
+                collection_name=self.get_collection_choice(),
                 autodetect_collection=autodetect,
                 environment=(
                     parse_api_endpoint(getattr(self, "api_endpoint", None)).environment
@@ -687,6 +670,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 collection_indexing_policy=orjson.dumps(self.collection_indexing_policy)
                 if self.collection_indexing_policy
                 else None,
+                ext_callers=[(f"{langflow_prefix}langflow", __version__)],
                 **embedding_dict,
             )
         except Exception as e:

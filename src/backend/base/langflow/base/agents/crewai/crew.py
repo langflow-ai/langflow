@@ -70,6 +70,10 @@ def convert_llm(llm: Any, excluded_keys=None) -> LLM:
         msg = "Could not find model name in the LLM object"
         raise ValueError(msg)
 
+    # Normalize Ollama with prefix TODO: Handle all litellm supported models
+    if llm.dict().get("_type") == "chat-ollama":
+        model_name = f"ollama/{model_name}"
+
     # Retrieve the API Key from the LLM
     if excluded_keys is None:
         excluded_keys = {"model", "model_name", "_type", "api_key"}

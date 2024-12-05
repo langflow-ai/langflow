@@ -216,6 +216,23 @@ wheels = [
 ]
 
 [[package]]
+name = "arize-phoenix-otel"
+version = "0.6.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "openinference-semantic-conventions" },
+    { name = "opentelemetry-exporter-otlp" },
+    { name = "opentelemetry-proto" },
+    { name = "opentelemetry-sdk" },
+    { name = "opentelemetry-semantic-conventions" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b7/70/41eef869b46882aae54e9b8c757223da93160633bba82752158a77b1566a/arize_phoenix_otel-0.6.1.tar.gz", hash = "sha256:f5f7a257159f49b398dfe2ba45bb70e22766cdf61bb365c0c47dc55f329bfe95", size = 9691 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9c/f3/f2390a9d7b3ee46b28a8ccee6510a489ae0974f31b51c67d79cab4c45ef8/arize_phoenix_otel-0.6.1-py3-none-any.whl", hash = "sha256:fc00dd847a248cece5f20dffeb8fabfab72c1c38f198bcee4260618c6af1d8a5", size = 10783 },
+]
+
+[[package]]
 name = "asgi-lifespan"
 version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -461,14 +478,14 @@ wheels = [
 
 [[package]]
 name = "blockbuster"
-version = "1.1.1"
+version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "forbiddenfruit" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ec/75/b220b51bf86f0ac04c2d5d37c14bde16d2f88efaa2487cdfea89e9523c06/blockbuster-1.1.1.tar.gz", hash = "sha256:7b9adc2a6cff91d8e671458bf8fe24bd9b78472f28095d677666e178e3f4faef", size = 9080 }
+sdist = { url = "https://files.pythonhosted.org/packages/6a/8c/e7e61396951b9ab1c39c35fa3a9737270a62da41d0b3ff6a15207747e5eb/blockbuster-1.3.1.tar.gz", hash = "sha256:59984286e1cd274d406129f93a42bd62b98fe53f484d544e6e743a5d6d7e42d5", size = 9409 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7e/67/3fc297f8b3a1af3d43ec2252dbc59e710fb003427f63f2bfc9974fa68ccc/blockbuster-1.1.1-py3-none-any.whl", hash = "sha256:cf75011d3cb5266c618be292337f3f3ecbc00e0d056849a64a183ba1cb55518b", size = 7902 },
+    { url = "https://files.pythonhosted.org/packages/a2/de/28b5c37969037ad7dcf08c18dba255e1ba3a42539cf04cae3ef627f706ae/blockbuster-1.3.1-py3-none-any.whl", hash = "sha256:883292a02c1ae9dbd76d637ea8b604a1cc75aebb0544d566aed90491e056963e", size = 8111 },
 ]
 
 [[package]]
@@ -3522,6 +3539,7 @@ version = "1.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "aiofile" },
+    { name = "arize-phoenix-otel" },
     { name = "assemblyai" },
     { name = "astra-assistants", extra = ["tools"] },
     { name = "atlassian-python-api" },
@@ -3578,6 +3596,7 @@ dependencies = [
     { name = "networkx" },
     { name = "nltk" },
     { name = "numexpr" },
+    { name = "openinference-instrumentation-langchain" },
     { name = "opensearch-py" },
     { name = "pgvector" },
     { name = "pyarrow" },
@@ -3666,6 +3685,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
+    { name = "arize-phoenix-otel", specifier = ">=0.6.1" },
     { name = "assemblyai", specifier = ">=0.33.0,<1.0.0" },
     { name = "astra-assistants", extras = ["tools"], specifier = "~=2.2.6" },
     { name = "atlassian-python-api", specifier = ">=3.41.16,<4.0.0" },
@@ -3730,6 +3750,7 @@ requires-dist = [
     { name = "networkx", specifier = ">=3.1,<4.0.0" },
     { name = "nltk", specifier = ">=3.9.1,<4.0.0" },
     { name = "numexpr", specifier = ">=2.8.6,<3.0.0" },
+    { name = "openinference-instrumentation-langchain", specifier = ">=0.1.29" },
     { name = "opensearch-py", specifier = ">=2.7.1,<3.0.0" },
     { name = "pgvector", specifier = ">=0.2.3,<1.0.0" },
     { name = "pyarrow", specifier = ">=14.0.0,<18.0.0" },
@@ -3760,7 +3781,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
-    { name = "blockbuster", specifier = ">=1.1.1,<1.2" },
+    { name = "blockbuster", specifier = ">=1.3.1,<1.4" },
     { name = "dictdiffer", specifier = ">=0.9.0" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "ipykernel", specifier = ">=6.29.0" },
@@ -4932,6 +4953,46 @@ wheels = [
 ]
 
 [[package]]
+name = "openinference-instrumentation"
+version = "0.1.19"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "openinference-semantic-conventions" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-sdk" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f6/96/b2c98e52caf35d1f9f1e5499646498667afbf17155c7ea8e990956bca98b/openinference_instrumentation-0.1.19.tar.gz", hash = "sha256:48e91e655dfe49a320f898bb1ec9e68d919e2e222b152cd33366fc94502e9a27", size = 11801 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/dd/5c/5632de07c9ec5a18f9f16c1b50814cfee46cdefca9ff9417e859a42c38f8/openinference_instrumentation-0.1.19-py3-none-any.whl", hash = "sha256:f1a6e31c0c7668f5e3849f7d4a0156409456f35ea1cb19d7495b31f2f5b7d3e5", size = 14569 },
+]
+
+[[package]]
+name = "openinference-instrumentation-langchain"
+version = "0.1.29"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "openinference-instrumentation" },
+    { name = "openinference-semantic-conventions" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-instrumentation" },
+    { name = "opentelemetry-semantic-conventions" },
+    { name = "wrapt" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/10/d2/185e4dd18431f35faba90482f511328d283e71ed12737e050664f7b5efeb/openinference_instrumentation_langchain-0.1.29.tar.gz", hash = "sha256:f6c10079c91f810cff39ff24c278e41d16df0c3706b230e1859f46cad20f8e0b", size = 45868 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/eb/ba/b0855a5f9bb565e462d85ecfad63d108c4c4bc209a34850623273f7dbcef/openinference_instrumentation_langchain-0.1.29-py3-none-any.whl", hash = "sha256:9faaedb62f90ca8099b48c0b9ded97fe109a646b756f4bf7c98479b500a8446d", size = 17043 },
+]
+
+[[package]]
+name = "openinference-semantic-conventions"
+version = "0.1.12"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/5f/ae/0bf5e0dcda695fd66428da05880e137c67f6fcbc494b31edec72635dc9e1/openinference_semantic_conventions-0.1.12.tar.gz", hash = "sha256:f1a378429873128892f44505a994e2b29277a8dc1be9a56b1726b1069d70dcdc", size = 9240 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f0/fb/ea6c04bb12b2e5ade3faf32b24d45ffce9a21a1468ea179de96ceec1fb3d/openinference_semantic_conventions-0.1.12-py3-none-any.whl", hash = "sha256:3489262a148ba25b3203e500dedcf8955f0c68072f7e45db3a958c0d12585e62", size = 9061 },
+]
+
+[[package]]
 name = "opensearch-py"
 version = "2.7.1"
 source = { registry = "https://pypi.org/simple" }
@@ -4958,6 +5019,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/c9/83/93114b6de85a98963aec218a51509a52ed3f8de918fe91eb0f7299805c3f/opentelemetry_api-1.27.0.tar.gz", hash = "sha256:ed673583eaa5f81b5ce5e86ef7cdaf622f88ef65f0b9aab40b843dcae5bef342", size = 62693 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fb/1f/737dcdbc9fea2fa96c1b392ae47275165a7c641663fbb08a8d252968eed2/opentelemetry_api-1.27.0-py3-none-any.whl", hash = "sha256:953d5871815e7c30c81b56d910c707588000fff7a3ca1c73e6531911d53065e7", size = 63970 },
+]
+
+[[package]]
+name = "opentelemetry-exporter-otlp"
+version = "1.27.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "opentelemetry-exporter-otlp-proto-grpc" },
+    { name = "opentelemetry-exporter-otlp-proto-http" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fc/d3/8156cc14e8f4573a3572ee7f30badc7aabd02961a09acc72ab5f2c789ef1/opentelemetry_exporter_otlp-1.27.0.tar.gz", hash = "sha256:4a599459e623868cc95d933c301199c2367e530f089750e115599fccd67cb2a1", size = 6166 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/59/6d/95e1fc2c8d945a734db32e87a5aa7a804f847c1657a21351df9338bd1c9c/opentelemetry_exporter_otlp-1.27.0-py3-none-any.whl", hash = "sha256:7688791cbdd951d71eb6445951d1cfbb7b6b2d7ee5948fac805d404802931145", size = 7001 },
 ]
 
 [[package]]
