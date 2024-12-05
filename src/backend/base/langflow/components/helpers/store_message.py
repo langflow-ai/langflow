@@ -1,5 +1,5 @@
 from langflow.custom import Component
-from langflow.inputs import HandleInput, MessageInput
+from langflow.inputs import HandleInput
 from langflow.inputs.inputs import MessageTextInput
 from langflow.memory import get_messages, store_message
 from langflow.schema.message import Message
@@ -14,7 +14,9 @@ class StoreMessageComponent(Component):
     name = "StoreMessage"
 
     inputs = [
-        MessageTextInput(name="message", display_name="Message", info="The chat message to be stored.", required=True, tool_mode=True),
+        MessageTextInput(
+            name="message", display_name="Message", info="The chat message to be stored.", required=True, tool_mode=True
+        ),
         HandleInput(
             name="memory",
             display_name="External Memory",
