@@ -42,7 +42,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
@@ -55,7 +57,9 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("NVIDIA");
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="modelsNVIDIA"]', {
+      timeout: 3000,
+    });
 
     await page
       .getByTestId("modelsNVIDIA")
@@ -76,12 +80,12 @@ test(
       .first()
       .hover()
       .then(async () => {
-        await page.waitForTimeout(1000);
-        await page.getByText("Auto-saving is disabled").nth(0).isVisible();
-        await page
-          .getByText("Enable auto-saving to avoid losing progress.")
-          .nth(0)
-          .isVisible();
+        await expect(
+          page.getByText("Auto-saving is disabled").nth(0),
+        ).toBeVisible({ timeout: 5000 });
+        await expect(
+          page.getByText("Enable auto-saving to avoid losing progress.").nth(0),
+        ).toBeVisible({ timeout: 3000 });
       });
 
     expect(await page.getByTestId("save-flow-button").isEnabled()).toBeTruthy();
@@ -93,11 +97,9 @@ test(
 
     await page.getByTestId("icon-ChevronLeft").last().click();
 
-    expect(
-      await page
-        .getByText("Unsaved changes will be permanently lost.")
-        .isVisible(),
-    ).toBeTruthy();
+    await expect(
+      page.getByText("Unsaved changes will be permanently lost."),
+    ).toBeVisible();
 
     await page.getByText("Exit Anyway", { exact: true }).click();
 
@@ -112,7 +114,9 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("NVIDIA");
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="modelsNVIDIA"]', {
+      timeout: 3000,
+    });
 
     await page
       .getByTestId("modelsNVIDIA")
@@ -137,14 +141,16 @@ test(
       timeout: 5000,
     });
 
-    await page.waitForTimeout(5000);
-
-    expect(await page.getByTestId("title-NVIDIA").isVisible()).toBeTruthy();
+    await expect(page.getByTestId("title-NVIDIA")).toBeVisible({
+      timeout: 5000,
+    });
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("NVIDIA");
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="modelsNVIDIA"]', {
+      timeout: 3000,
+    });
 
     await page
       .getByTestId("modelsNVIDIA")
@@ -182,7 +188,9 @@ test(
       timeout: 5000,
     });
 
-    await page.waitForTimeout(5000);
+    await expect(page.getByTestId("title-NVIDIA").first()).toBeVisible({
+      timeout: 5000,
+    });
 
     const nvidiaNumber = await page.getByTestId("title-NVIDIA").count();
     expect(nvidiaNumber).toBe(2);
