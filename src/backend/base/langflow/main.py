@@ -101,7 +101,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             rprint("[bold green]Starting Langflow...[/bold green]")
         try:
             await initialize_services(fix_migration=fix_migration)
-            await asyncio.to_thread(setup_llm_caching)
+            setup_llm_caching()
             await initialize_super_user_if_needed()
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
             await asyncio.to_thread(create_or_update_starter_projects, all_types_dict)
