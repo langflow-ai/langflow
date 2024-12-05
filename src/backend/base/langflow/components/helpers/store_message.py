@@ -50,10 +50,7 @@ class StoreMessageComponent(Component):
     ]
 
     def store_message(self) -> Message:
-        if isinstance(self.message, str):
-            message = Message(text=self.message)
-        else:
-            message = self.message
+        message = Message(text=self.message) if isinstance(self.message, str) else self.message
 
         message.session_id = self.session_id or message.session_id
         message.sender = self.sender or message.sender or MESSAGE_SENDER_AI
