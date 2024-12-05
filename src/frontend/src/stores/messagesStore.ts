@@ -21,7 +21,6 @@ export const useMessagesStore = create<MessagesStoreType>((set, get) => ({
       get().updateMessagePartial(message);
       return;
     }
-    console.log(message);
     if (message.sender === "Machine") {
       set(() => ({ displayLoadingMessage: false }));
     }
