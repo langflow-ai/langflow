@@ -25,23 +25,23 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
-    await page.waitForTimeout(1000);
-
-    await page.getByTestId(
-      "input-list-plus-btn-edit_metadata_indexing_include-2",
-    );
 
     await page.getByTestId("blank-flow").click();
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="sidebar-options-trigger"]', {
+      timeout: 3000,
+    });
 
     await page.getByTestId("sidebar-options-trigger").click();
-    await page
-      .getByTestId("sidebar-legacy-switch")
-      .isVisible({ timeout: 5000 });
+
+    await expect(page.getByTestId("sidebar-legacy-switch")).toBeVisible({
+      timeout: 5000,
+    });
     await page.getByTestId("sidebar-legacy-switch").click();
     await expect(page.getByTestId("sidebar-legacy-switch")).toBeChecked();
     await page.getByTestId("sidebar-options-trigger").click();
@@ -49,7 +49,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("retrievalqa");
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector(
+      '[data-testid="langchain_utilitiesRetrieval QA"]',
+      {
+        timeout: 3000,
+      },
+    );
     await page
       .getByTestId("langchain_utilitiesRetrieval QA")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
@@ -59,7 +64,6 @@ test(
     await page.getByTestId("zoom_out").click();
     await page.getByTestId("zoom_out").click();
     await page.getByTestId("zoom_out").click();
-    await page.waitForTimeout(500);
 
     let visibleElementHandle;
 
