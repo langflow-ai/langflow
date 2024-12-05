@@ -59,7 +59,8 @@ The future of AI is both exciting and uncertain. As the technology continues to 
       await page.getByText("New Flow", { exact: true }).click();
       await page.waitForSelector('[data-testid="modal-title"]', {
         timeout: 3000,
-      });      modalCount = await page.getByTestId("modal-title")?.count();
+      });
+      modalCount = await page.getByTestId("modal-title")?.count();
     }
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -67,7 +68,6 @@ The future of AI is both exciting and uncertain. As the technology continues to 
     });
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("add_note").click();
-
 
     const targetElement = page.locator('//*[@id="react-flow-id"]');
     await targetElement.click();
@@ -146,7 +146,6 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
     await page.getByText("Copy").click();
 
-
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
     await page.getByTestId("zoom_out").click();
@@ -156,14 +155,12 @@ The future of AI is both exciting and uncertain. As the technology continues to 
     await targetElement.click();
     await page.keyboard.press(`ControlOrMeta+v`);
 
-
     titleNumber = await page.getByText(randomTitle).count();
     expect(titleNumber).toBe(3);
 
     await page.getByTestId("note_node").last().click();
     await page.getByTestId("more-options-modal").click();
     await page.getByText("Delete").first().click();
-
 
     titleNumber = await page.getByText(randomTitle).count();
 
