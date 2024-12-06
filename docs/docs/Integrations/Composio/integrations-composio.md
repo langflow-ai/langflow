@@ -10,25 +10,8 @@ Instead of juggling multiple integrations and components in your flow, connect t
 ## Prerequisites
 
 - [Composio API key created](https://app.composio.dev/)
-- [SerpApi API key created](https://serpapi.com/)
 - [OpenAI API key created](https://platform.openai.com/)
-
-## Create a Composio tool
-
-1. Navigate to the [Composio application](https://app.composio.dev/dashboard).
-In the **Integrations** tab, navigate to the tool you want integrate with Langflow.
-This example uses the SerpApi tool in Composio.
-Click **Setup Serpapi integration**.
-2. To connect Composio to your SerpApi account, in the **API Key** field, paste your SerpApi API key.
-3. In the **User ID** field, enter the email address you created your Composio API key with.
-You can also use the value `default` for testing.
-The **User ID** value will have to match the Langflow component's **Entity ID** value for authentication.
-4. Click the **Try connecting serpapi** button.
-The **Execute tools** pane opens. Here, you can test the connection to your API.
-5. In the **Query** field, enter a `string` to query SerpApi, and then click **Run**.
-A successful test returns a SerpApi data object that includes `successful=true`.
-Composio is now connected to your SerpApi account.
-If the test returns `401, message='Unauthorized`, check your API key and try again.
+- [A Gmail account created](mail.google.com)
 
 ## Connect Langflow to a Composio tool
 
@@ -37,23 +20,20 @@ If the test returns `401, message='Unauthorized`, check your API key and try aga
 3. Connect the **Agent** component's **Tools** port to the **Composio Tools** component's **Tools** port.
 4. In the **Composio API Key** field, paste your Composio API key.
 Alternatively, add the key as a [global variable](/configuration-global-variables).
-5. In the **App Name** field, select the tool you want your Agent to have access to.
-For this example, select **SerpApi**.
+5. In the **App Name** field, select the tool you want your agent to have access to.
+For this example, select the **GMAIL** tool, which allows your agent to control an email account with the Composio tool.
 6. Click **Refresh**.
 The component's fields change based on the tool you selected.
-7. In the **API Key** field, paste your SerpApi API key.
-Alternatively, add the key as a [global variable](/configuration-global-variables).
-8. Ensure the **Composio** component's **User ID** value matches the Langflow component's **Entity ID**.
-9. Click **Refresh**.
+The **Gmail** tool requires authentication with Google, so it presents an **Authentication Link** button.
+7. Click the link to authenticate.
+A new window opens.
+8. Enter the credentials for the Gmail account you want to control with Composio, and then click **Authenticate**.
+9. Return to Langflow.
+To update the Composio component, click **Refresh**.
 The **Auth Status** field changes to a ✅, which indicates the Langflow component is connected to your Composio account.
-
-:::important
-If you created your Composio component in Langflow **before** creating the tool in Composio, you have to refresh the component again for it to incorporate the changes in your account.
-:::
-
-10. In the **Actions to use** field, select the search action you want the **Agent** to take with the **SerpApi** tool.
-The **SerpApi** integration supports multiple actions, and also supports multiple actions within the same tool.
-The default value of **SERPAPI_DUCK_DUCK_GO_SEARCH** is OK for this example.
+10. In the **Actions to use** field, select the action you want the **Agent** to take with the **Gmail** tool.
+The **Gmail** tool supports multiple actions, and also supports multiple actions within the same tool.
+The default value of **GMAIL_CREATE_EMAIL_DRAFT** is OK for this example.
 For more information, see the [Composio documentation](https://docs.composio.dev/patterns/tools/use-tools/use-specific-actions).
 
 ## Create a Composio flow
@@ -74,40 +54,62 @@ The response should be similar to:
 
 ```plain
 I have access to the following tools:
-SERPAPI_SEARCH: This tool allows me to perform Google searches and retrieve relevant information based on a specified query.
-Current Date and Time: This tool provides the current date and time in various time zones.
+
+1. **GMAIL_CREATE_EMAIL_DRAFT**: This tool allows me to create a draft email using Gmail's API. I can specify the recipient's email address, subject, body content, and whether the body content is HTML.
+
+2. **CurrentDate-get_current_date**: This tool retrieves the current date and time in a specified timezone.
+
+If you have any specific tasks or questions related to these tools, feel free to ask!
 ```
 
 This confirms your **Agent** and **Composio** are communicating.
 
-6. Ask your AI another question about something you're interested in.
+6. Tell your AI to write a draft email.
 ```plain
-Please perform a SERPAPI search on unicorns.
+Create a draft email with the subject line "Greetings from Composio"
+recipient: "your.email@address.com"
+Body content: "Hello from composio!"
 ```
 
 Inspect the response to see how the agent used the attached tool to perform your search.
 The response should include a successful query, and useful information on the subject.
 This example response is abbreviated.
+
+```plain
+The draft email has been successfully created with the following details:
+Recipient: your.email@address.com
+Subject: Greetings from Composio
+Body: Hello from composio!
+```
+
 ```json
 {
-  "query": "unicorns"
+  "recipient_email": "your.email@address.com",
+  "subject": "Greetings from Composio",
+  "body": "Hello from composio!",
+  "is_html": false
 }
 
 {
   "successfull": true,
   "data": {
-    "results": {
-      "search_metadata": {
-        "id": "675226c41a5b5406f78646c9",
-        "status": "Success",
-        "json_endpoint": "https://serpapi.com/searches/ac6e045fbff6af64/675226c41a5b5406f78646c9.json",
-        "created_at": "2024-12-05 22:18:44 UTC",
-        "processed_at": "2024-12-05 22:18:44 UTC",
-        "google_url": "https://www.google.com/search?q=unicorns&oq=unicorns&sourceid=chrome&ie=UTF-8",
-        "raw_html_file": "https://serpapi.com/searches/ac6e045fbff6af64/675226c41a5b5406f78646c9.html",
-        "total_time_taken": 1.86
-      },
+    "response_data": {
+      "id": "r-7515791375860110875",
+      "message": {
+        "id": "1939d1830046d2cb",
+        "threadId": "1939d1830046d2cb",
+        "labelIds": [
+          "DRAFT"
+        ]
+      }
+    }
+  },
+  "error": null
+}
 ```
+
+7. To confirm further, navigate to the Gmail account you authenticated with Composio.
+Your email is visible in **Drafts**.
 
 You have successfully integrated your Langflow component with Composio.
 To add more tools, add another Composio component.
