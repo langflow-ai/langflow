@@ -23,7 +23,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title").count();
     }
 
@@ -34,7 +36,9 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("composio");
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="composioComposio Tools"]', {
+      timeout: 3000,
+    });
 
     const modelElement = await page.getByTestId("composioComposio Tools");
     const targetElement = await page.locator('//*[@id="react-flow-id"]');
@@ -47,9 +51,7 @@ test(
     await page.getByTestId("zoom_out").click();
     await page.getByTestId("zoom_out").click();
 
-    await page.waitForTimeout(1000);
-
-    expect(await page.getByText("api_key").isVisible()).toBe(false);
+    await expect(page.getByText("api_key")).toBeVisible({ timeout: 3000,visible: false });
   },
 );
 
@@ -76,7 +78,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title").count();
     }
 
@@ -87,7 +91,9 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("search api");
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="toolsSearch API"]', {
+      timeout: 3000,
+    });
 
     let modelElement = await page.getByTestId("toolsSearch API");
     let targetElement = await page.locator('//*[@id="react-flow-id"]');
@@ -100,14 +106,14 @@ test(
     await page.getByTestId("zoom_out").click();
     await page.getByTestId("zoom_out").click();
 
-    await page.waitForTimeout(1000);
-
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("tool calling agent");
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="langchain_utilitiesTool Calling Agent"]', {
+      timeout: 3000,
+    });
 
-    modelElement = await page.getByTestId(
+    modelElement = page.getByTestId(
       "langchain_utilitiesTool Calling Agent",
     );
     targetElement = await page.locator('//*[@id="react-flow-id"]');
@@ -132,7 +138,6 @@ test(
     await toolCallingAgentInput.hover();
     await page.mouse.up();
 
-    await page.waitForTimeout(1000);
 
     expect(await page.locator(".react-flow__edge-interaction").count()).toBe(1);
   },
