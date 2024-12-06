@@ -64,9 +64,26 @@ export default function DictAreaModal({
   };
 
   const IteractiveReader = () => {
-    return <span>Customize your dictionary, adding or editing key-value pairs as needed. Supports adding new <span onClick={() => handleChangeType("object")} className="cursor-pointer underline">objects &#123; &#125;</span> or <span onClick={() => handleChangeType("array")} className="cursor-pointer underline ">arrays [].</span></span>;
+    return (
+      <span>
+        Customize your dictionary, adding or editing key-value pairs as needed.
+        Supports adding new{" "}
+        <span
+          onClick={() => handleChangeType("object")}
+          className="cursor-pointer underline"
+        >
+          objects &#123; &#125;
+        </span>{" "}
+        or{" "}
+        <span
+          onClick={() => handleChangeType("array")}
+          className="cursor-pointer underline"
+        >
+          arrays [].
+        </span>
+      </span>
+    );
   };
-
 
   const renderHeader = () => (
     <BaseModal.Header description={onChange ? IteractiveReader() : null}>
