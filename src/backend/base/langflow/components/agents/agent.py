@@ -1,3 +1,5 @@
+from typing import override
+
 from langchain_core.tools import StructuredTool
 
 from langflow.base.agents.agent import LCToolsAgentComponent
@@ -8,12 +10,14 @@ from langflow.base.models.model_input_constants import (
 from langflow.base.models.model_utils import get_model_name
 from langflow.components.helpers import CurrentDateComponent
 from langflow.components.helpers.memory import MemoryComponent
+from langflow.components.helpers.store_message import StoreMessageComponent
 from langflow.components.langchain_utilities.tool_calling import (
     ToolCallingAgentComponent,
 )
 from langflow.io import BoolInput, DropdownInput, MultilineInput, Output
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
+from langflow.utils.constants import MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
 
 
 def set_advanced_true(component_input):
@@ -68,6 +72,15 @@ class AgentComponent(ToolCallingAgentComponent):
             raise ValueError(msg)
         self.chat_history = self.get_memory_data()
 
+        if self.input_value:
+            message = Message(
+                text=self.input_value,
+                sender=self.sender or MESSAGE_SENDER_USER,
+                sender_name=self.sender_name or MESSAGE_SENDER_NAME_USER,
+                session_id=self.session_id,
+            )
+            self.store_agent_history(message=message)
+
         if self.add_current_date_tool:
             if not isinstance(self.tools, list):  # type: ignore[has-type]
                 self.tools = []
@@ -90,14 +103,23 @@ class AgentComponent(ToolCallingAgentComponent):
             system_prompt=self.system_prompt,
         )
         agent = self.create_agent_runnable()
-        return await self.run_agent(agent)
+        message = await self.run_agent(agent)
+        self.store_agent_history(message=message)
+        return message
 
     def get_memory_data(self):
         memory_kwargs = {
             component_input.name: getattr(self, f"{component_input.name}") for component_input in self.memory_inputs
         }
-
         return MemoryComponent().set(**memory_kwargs).retrieve_messages()
+
+    @override
+    def store_agent_history(self, message: Message):
+        store_message_kwargs = {
+            "memory": self.memory,
+            "message": message,
+        }
+        return StoreMessageComponent().set(**store_message_kwargs).store_message()
 
     def get_llm(self):
         if isinstance(self.agent_llm, str):

@@ -80,9 +80,12 @@ class LCAgentComponent(Component):
         """Run the agent and return the response."""
         agent = self.build_agent()
         message = await self.run_agent(agent=agent)
-
         self.status = message
         return message
+
+    @abstractmethod
+    def store_agent_history(self, message: Message) -> Message:
+        """Store the message in the memory."""
 
     def _validate_outputs(self) -> None:
         required_output_methods = ["build_agent"]
