@@ -256,6 +256,7 @@ const config = {
         "holo-frost": "hsl(var(--holo-frost))",
         "terminal-green": "hsl(var(--terminal-green))",
         "cosmic-void": "hsl(var(--cosmic-void))",
+        "slider-input-border": "var(--slider-input-border)",
       },
       borderRadius: {
         lg: `var(--radius)`,

@@ -136,6 +136,8 @@ class LCAgentComponent(Component):
                 max_iterations=max_iterations,
             )
         input_dict: dict[str, str | list[BaseMessage]] = {"input": self.input_value}
+        if hasattr(self, "system_prompt"):
+            input_dict["system_prompt"] = self.system_prompt
         if hasattr(self, "chat_history") and self.chat_history:
             input_dict["chat_history"] = data_to_messages(self.chat_history)
 

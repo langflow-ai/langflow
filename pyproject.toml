@@ -112,6 +112,8 @@ dependencies = [
     "mem0ai>=0.1.26,<1.0.0",
     "aiofile>=3.9.0,<4.0.0",
     "sseclient-py==1.8.0",
+    "arize-phoenix-otel>=0.6.1",
+    "openinference-instrumentation-langchain>=0.1.29",
 ]
 
 [project.urls]
