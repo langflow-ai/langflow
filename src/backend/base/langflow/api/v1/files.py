@@ -254,13 +254,16 @@ async def list_profile_pictures():
     return {"files": files}
 
 
-@router.get("/list/{flow_id}")
+@router.get("/list/{flow_id_or_name}")
 async def list_files(
-    flow_id: Annotated[UUID, Depends(get_flow_id)],
+    flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
+    if not flow:
+        raise HTTPException(status_code=404, detail="Flow not found")
+
     try:
-        flow_id_str = str(flow_id)
+        flow_id_str = flow.id
         files = await storage_service.list_files(flow_id=flow_id_str)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
