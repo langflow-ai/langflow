@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from langflow.api.utils import AsyncDbSession, CurrentActiveUser, DbSession
+from langflow.api.utils import AsyncDbSession, CurrentActiveUser
 from langflow.api.v1.schemas import UsersResponse
 from langflow.services.auth.utils import (
     get_current_active_superuser,
@@ -127,7 +127,7 @@ async def reset_password(
 async def delete_user(
     user_id: UUID,
     current_user: Annotated[User, Depends(get_current_active_superuser)],
-    session: DbSession,
+    session: AsyncDbSession,
 ) -> dict:
     """Delete a user from the database."""
     if current_user.id == user_id:
@@ -135,11 +135,12 @@ async def delete_user(
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Permission denied")
 
-    user_db = session.exec(select(User).where(User.id == user_id)).first()
+    stmt = select(User).where(User.id == user_id)
+    user_db = (await session.exec(stmt)).first()
     if not user_db:
         raise HTTPException(status_code=404, detail="User not found")
 
-    session.delete(user_db)
-    session.commit()
+    await session.delete(user_db)
+    await session.commit()
 
     return {"detail": "User deleted"}
