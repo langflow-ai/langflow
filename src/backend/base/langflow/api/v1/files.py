@@ -263,7 +263,7 @@ async def list_files(
         raise HTTPException(status_code=404, detail="Flow not found")
 
     try:
-        flow_id_str = flow.id
+        flow_id_str = str(flow.id)
         files = await storage_service.list_files(flow_id=flow_id_str)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
