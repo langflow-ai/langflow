@@ -86,7 +86,7 @@ async def upload_file(
 
         await storage_service.save_file(flow_id=folder, file_name=full_file_name, data=file_content)
 
-        file_path = storage_service.build_full_path(folder, full_file_name)
+        file_path = Path(storage_service.build_full_path(folder, full_file_name))
 
         return UploadFileResponse(flow_id=flow_id_str, file_path=file_path)
     except Exception as e:
