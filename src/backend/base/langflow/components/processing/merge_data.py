@@ -1,9 +1,11 @@
 from enum import Enum
+
 import pandas as pd
 from loguru import logger
+
 from langflow.custom import Component
 from langflow.io import DataInput, DropdownInput, Output
-from langflow.schema import Data, DataFrame
+from langflow.schema import DataFrame
 
 
 class MergeOperation(str, Enum):
@@ -44,7 +46,7 @@ class DataMergerComponent(Component):
             merged_dataframe = DataFrame(merged_dataframe)
             self.status = merged_dataframe
         except Exception as e:
-            logger.error(f"Erro durante operação {operation}: {str(e)}")
+            logger.error(f"Erro durante operação {operation}: {e!s}")
             raise
         else:
             return merged_dataframe
