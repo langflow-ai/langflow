@@ -9,8 +9,8 @@ Instead of juggling multiple integrations and components in your flow, connect t
 
 ## Prerequisites
 
-- [Composio API key created](https://app.composio.dev/)
-- [OpenAI API key created](https://platform.openai.com/)
+- [A Composio API key created](https://app.composio.dev/)
+- [An OpenAI API key created](https://platform.openai.com/)
 - [A Gmail account created](mail.google.com)
 
 ## Connect Langflow to a Composio tool
