@@ -83,9 +83,7 @@ test(
       timeout: 30000,
     });
 
-
     await page.getByTestId("user-profile-settings").click();
-
 
     await page.waitForSelector('text="Settings"');
     await page.getByText("Settings").last().click();
@@ -96,10 +94,8 @@ test(
     await page.waitForSelector(".ag-checkbox-input");
     await page.locator(".ag-checkbox-input").first().click();
 
-
     await page.waitForSelector('[data-testid="icon-Trash2"]:first-child');
     await page.getByTestId("icon-Trash2").first().click();
-
 
     await page.waitForSelector("text=No Data Available", { timeout: 30000 });
     await page.getByText("No Data Available").isVisible();
