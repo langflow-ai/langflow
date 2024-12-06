@@ -98,9 +98,7 @@ const SelectItem = React.forwardRef<
     </span>
 
     <SelectPrimitive.ItemText>
-      <div>
-        {children}
-      </div>
+      <div>{children}</div>
     </SelectPrimitive.ItemText>
   </SelectPrimitive.Item>
 ));
