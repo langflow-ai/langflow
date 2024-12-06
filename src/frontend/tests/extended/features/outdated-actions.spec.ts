@@ -16,7 +16,9 @@ test("user must be able to update outdated components", async ({ page }) => {
 
   while (modalCount === 0) {
     await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
+    await page.waitForSelector('[data-testid="modal-title"]', {
+      timeout: 3000,
+    });
     modalCount = await page.getByTestId("modal-title")?.count();
   }
   await page.locator("span").filter({ hasText: "Close" }).first().click();
@@ -41,13 +43,14 @@ test("user must be able to update outdated components", async ({ page }) => {
     dataTransfer,
   });
 
-  await page.waitForTimeout(3000);
+  await page.waitForSelector("data-testid=list-card", {
+    timeout: 3000,
+  });
 
   await page.getByTestId("list-card").first().click();
 
-  await page.waitForSelector("text=components are ready to update", {
+  await expect(page.getByText("components are ready to update")).toBeVisible({
     timeout: 30000,
-    state: "visible",
   });
 
   let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
@@ -55,8 +58,7 @@ test("user must be able to update outdated components", async ({ page }) => {
 
   await page.getByText("Update All", { exact: true }).click();
 
-  await page.waitForTimeout(3000);
-
-  outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
-  expect(outdatedComponents).toBe(0);
+  await expect(page.getByTestId("icon-AlertTriangle")).toHaveCount(0, {
+    timeout: 5000,
+  });
 });
