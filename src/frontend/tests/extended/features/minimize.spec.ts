@@ -25,7 +25,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
@@ -33,7 +35,9 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text input");
-    await page.waitForTimeout(1000);
+    await page.waitForSelector("data-testid=inputsText Input", {
+      timeout: 3000,
+    });
 
     await page
       .getByTestId("inputsText Input")
@@ -56,15 +60,16 @@ test(
     await page.getByTestId("zoom_out").click();
 
     await page.getByTestId("more-options-modal").click();
-    await page.waitForTimeout(1000);
+
+    await page.waitForSelector("data-testid=minimize-button-modal", {
+      timeout: 3000,
+    });
 
     await page.getByTestId("minimize-button-modal").first().click();
 
-    await page.waitForTimeout(1000);
-
     await expect(
       page.locator(".react-flow__handle-left.no-show").first(),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 3000 });
 
     await expect(
       page.locator(".react-flow__handle-right.no-show").first(),
@@ -72,14 +77,15 @@ test(
 
     await page.getByTestId("more-options-modal").click();
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector("data-testid=expand-button-modal", {
+      timeout: 3000,
+    });
+
     await page.getByTestId("expand-button-modal").first().click();
 
-    await page.waitForTimeout(1000);
-
-    await expect(
-      page.locator(".react-flow__handle-left").first(),
-    ).toBeVisible();
+    await expect(page.locator(".react-flow__handle-left").first()).toBeVisible({
+      timeout: 3000,
+    });
 
     await expect(
       page.locator(".react-flow__handle-right").first(),
