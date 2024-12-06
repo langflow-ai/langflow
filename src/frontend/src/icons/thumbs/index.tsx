@@ -1,6 +1,6 @@
 import React, { forwardRef } from "react";
-import ThumbUpFilled from "./thumbUp";
 import ThumbDownFilled from "./thumbDown";
+import ThumbUpFilled from "./thumbUp";
 
 export const ThumbUpIconCustom = forwardRef<
   SVGSVGElement,
