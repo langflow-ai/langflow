@@ -1,11 +1,16 @@
 from langchain_core.tools import StructuredTool
 
 from langflow.base.agents.agent import LCToolsAgentComponent
-from langflow.base.models.model_input_constants import ALL_PROVIDER_FIELDS, MODEL_PROVIDERS_DICT
+from langflow.base.models.model_input_constants import (
+    ALL_PROVIDER_FIELDS,
+    MODEL_PROVIDERS_DICT,
+)
 from langflow.base.models.model_utils import get_model_name
 from langflow.components.helpers import CurrentDateComponent
 from langflow.components.helpers.memory import MemoryComponent
-from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
+from langflow.components.langchain_utilities.tool_calling import (
+    ToolCallingAgentComponent,
+)
 from langflow.io import BoolInput, DropdownInput, MultilineInput, Output
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
@@ -47,7 +52,7 @@ class AgentComponent(ToolCallingAgentComponent):
         *memory_inputs,
         BoolInput(
             name="add_current_date_tool",
-            display_name="Add tool Current Date",
+            display_name="Current Date",
             advanced=True,
             info="If true, will add a tool to the agent that returns the current date.",
             value=True,
@@ -103,7 +108,10 @@ class AgentComponent(ToolCallingAgentComponent):
                     display_name = component_class.display_name
                     inputs = provider_info.get("inputs")
                     prefix = provider_info.get("prefix", "")
-                    return self._build_llm_model(component_class, inputs, prefix), display_name
+                    return (
+                        self._build_llm_model(component_class, inputs, prefix),
+                        display_name,
+                    )
             except Exception as e:
                 msg = f"Error building {self.agent_llm} language model"
                 raise ValueError(msg) from e

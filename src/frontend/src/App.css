@@ -191,3 +191,9 @@ code {
 .ag-cell-wrapper > *:not(.ag-cell-value):not(.ag-group-value) {
   --ag-internal-calculated-line-height: none !important;
 }
+
+.arrow-hide::-webkit-inner-spin-button,
+.arrow-hide::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}

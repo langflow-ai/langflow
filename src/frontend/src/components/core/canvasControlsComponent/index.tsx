@@ -1,6 +1,11 @@
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import useSaveFlow from "@/hooks/flows/use-save-flow";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
+import { cloneDeep } from "lodash";
+import { useEffect } from "react";
 import {
   ControlButton,
   Panel,
@@ -64,6 +69,30 @@ const CanvasControls = ({ children }) => {
     selector,
     shallow,
   );
+  const saveFlow = useSaveFlow();
+  const currentFlow = useFlowStore((state) => state.currentFlow);
+  const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
+  const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
+
+  useEffect(() => {
+    const isLocked = currentFlow?.locked;
+    store.setState({
+      nodesDraggable: !isLocked,
+      nodesConnectable: !isLocked,
+      elementsSelectable: !isLocked,
+    });
+  }, [currentFlow?.locked]);
+
+  const handleSaveFlow = () => {
+    if (!currentFlow) return;
+    const newFlow = cloneDeep(currentFlow);
+    newFlow.locked = isInteractive;
+    if (autoSaving) {
+      saveFlow(newFlow);
+    } else {
+      setCurrentFlow(newFlow);
+    }
+  };
 
   const onToggleInteractivity = () => {
     store.setState({
@@ -71,6 +100,7 @@ const CanvasControls = ({ children }) => {
       nodesConnectable: !isInteractive,
       elementsSelectable: !isInteractive,
     });
+    handleSaveFlow();
   };
 
   return (

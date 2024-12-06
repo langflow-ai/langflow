@@ -365,6 +365,7 @@ export default function GenericNode({
               className="shrink-0 px-2.5 text-xs"
               onClick={handleUpdateCode}
               loading={loadingUpdate}
+              data-testid="update-button"
             >
               Update
             </Button>

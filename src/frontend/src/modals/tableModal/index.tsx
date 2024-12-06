@@ -36,13 +36,6 @@ const TableModal = forwardRef<
             {...props}
           ></TableComponent>
         </BaseModal.Content>
-        <BaseModal.Footer>
-          <DialogClose>
-            <div className="flex w-full justify-end gap-2 pt-2">
-              <Button>Close</Button>
-            </div>
-          </DialogClose>
-        </BaseModal.Footer>
       </BaseModal>
     );
   },

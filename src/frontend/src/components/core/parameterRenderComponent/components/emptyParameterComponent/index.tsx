@@ -7,5 +7,5 @@ export function EmptyParameterComponent({
   handleOnNewValue,
   disabled,
 }: InputProps) {
-  return <div id={id}>{String(value)}</div>;
+  return <div id={id}></div>;
 }

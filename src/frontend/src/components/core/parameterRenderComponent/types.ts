@@ -63,6 +63,7 @@ export type KeyPairListComponentType = {
 export type StrRenderComponentType = {
   templateData: Partial<InputFieldType>;
   name: string;
+  display_name: string;
 };
 
 export type InputListComponentType = {
@@ -84,6 +85,7 @@ export type TextAreaComponentType = {
 export type InputGlobalComponentType = {
   load_from_db: boolean | undefined;
   password: boolean | undefined;
+  display_name: string;
 };
 export type MultiselectComponentType = {
   options: string[];
