@@ -49,7 +49,6 @@ test(
     await page.getByTestId("zoom_out").click();
     await page.getByTestId("zoom_out").click();
 
-    await page.getByTestId("input-inspection-retriever").first().click();
     await page.getByText("Retriever", { exact: true }).first().isHidden();
     await page.getByTestId("icon-ChevronDown").last().isVisible();
     await page.getByTestId("icon-ChevronDown").last().click();
