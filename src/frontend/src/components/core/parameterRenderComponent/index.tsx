@@ -96,6 +96,7 @@ export function ParameterRenderComponent({
           {...baseInputProps}
           templateData={templateData}
           name={name}
+          display_name={templateData.display_name ?? ""}
           editNode={editNode}
         />
       );
