@@ -78,16 +78,15 @@ async def upload_file(
         flow_id_str = str(flow_obj.id)
 
         file_content = await file.read()
+
         timestamp = datetime.now(tz=timezone.utc).astimezone().strftime("%Y-%m-%d_%H-%M-%S")
         file_name = file.filename or hashlib.sha256(file_content).hexdigest()
         full_file_name = f"{timestamp}_{file_name}"
         folder = flow_id_str
+
         await storage_service.save_file(flow_id=folder, file_name=full_file_name, data=file_content)
-        try:
-            file_path = storage_service.build_full_path(folder, full_file_name)
-        except NotImplementedError:
-            # Fall back to prior behaviour
-            file_path = f"{folder}/{full_file_name}"
+
+        file_path = storage_service.build_full_path(folder, full_file_name)
 
         return UploadFileResponse(flow_id=flow_id_str, file_path=file_path)
     except Exception as e:
@@ -159,11 +158,16 @@ async def upload_and_run_file(
         return run_response
 
 
-@router.get("/download/{flow_id}/{file_name}")
+@router.get("/download/{flow_id_or_name}/{file_name}")
 async def download_file(
-    file_name: str, flow_id: UUID, storage_service: Annotated[StorageService, Depends(get_storage_service)]
+    file_name: str,
+    flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
+    storage_service: Annotated[StorageService, Depends(get_storage_service)]
 ):
-    flow_id_str = str(flow_id)
+    if not flow:
+        raise HTTPException(status_code=404, detail="Flow not found")
+
+    flow_id_str = str(flow.id)
     extension = file_name.split(".")[-1]
 
     if not extension:
@@ -188,11 +192,17 @@ async def download_file(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/images/{flow_id}/{file_name}")
-async def download_image(file_name: str, flow_id: UUID):
+@router.get("/images/{flow_id_or_name}/{file_name}")
+async def download_image(
+    file_name: str,
+    flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
+):
+    if not flow:
+        raise HTTPException(status_code=404, detail="Flow not found")
+
     storage_service = get_storage_service()
     extension = file_name.split(".")[-1]
-    flow_id_str = str(flow_id)
+    flow_id_str = str(flow.id)
 
     if not extension:
         raise HTTPException(status_code=500, detail=f"Extension not found for file {file_name}")
@@ -271,14 +281,17 @@ async def list_files(
     return {"files": files}
 
 
-@router.delete("/delete/{flow_id}/{file_name}")
+@router.delete("/delete/{flow_id_or_name}/{file_name}")
 async def delete_file(
     file_name: str,
-    flow_id: Annotated[UUID, Depends(get_flow_id)],
+    flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
+    if not flow:
+        raise HTTPException(status_code=404, detail="Flow not found")
+
     try:
-        flow_id_str = str(flow_id)
+        flow_id_str = str(flow.id)
         await storage_service.delete_file(flow_id=flow_id_str, file_name=file_name)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 from langflow.services.base import Service
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
 
@@ -18,11 +20,12 @@ class StorageService(Service):
         self.session_service = session_service
         self.set_ready()
 
-    def build_full_path(self, flow_id: str, file_name: str) -> str:
-        raise NotImplementedError
-
     def set_ready(self) -> None:
         self.ready = True
+
+    def build_full_path(self, flow_id: str, file_name: str) -> Path:
+        # TODO: Take into account storage service settings
+        return Path(f"{flow_id}/{file_name}")
 
     @abstractmethod
     async def save_file(self, flow_id: str, file_name: str, data) -> None:
