@@ -129,12 +129,8 @@ test(
       .nth(1)
       .fill(process.env.ASTRA_DB_API_ENDPOINT ?? "");
 
-    await page
-      .getByTestId("popover-anchor-input-collection_name")
-      .nth(0)
-      .fill("test");
     const fileChooserPromise = page.waitForEvent("filechooser");
-    await page.getByTestId("icon-Upload").last().click();
+    await page.getByTestId("input-file-component").last().click();
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles(
       path.join(__dirname, "../../assets/test_file.txt"),
@@ -155,13 +151,7 @@ test(
     await page.getByText("built successfully").last().click({
       timeout: 30000,
     });
-    await page.getByTestId("button_run_astra db").first().click();
-    await page.waitForSelector("text=built successfully", {
-      timeout: 60000 * 2,
-    });
-    await page.getByText("built successfully").last().click({
-      timeout: 30000,
-    });
+
     await page.getByText("Playground", { exact: true }).last().click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,

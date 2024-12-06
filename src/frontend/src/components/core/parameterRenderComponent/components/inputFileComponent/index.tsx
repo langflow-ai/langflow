@@ -97,6 +97,7 @@ export default function InputFileComponent({
           <div className="relative flex w-full">
             <div className="w-full">
               <input
+                data-testid="input-file-component"
                 type="text"
                 className={cn(
                   "primary-input h-9 w-full cursor-pointer rounded-r-none text-sm focus:border-border focus:outline-none focus:ring-0",
