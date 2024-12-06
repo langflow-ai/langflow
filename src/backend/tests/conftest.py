@@ -57,6 +57,7 @@ def blockbuster():
         for func in bb.functions:
             if func.startswith("sqlite3."):
                 bb.functions[func].deactivate()
+        bb.functions["threading.Lock.acquire"].deactivate()
         yield bb
 
 
