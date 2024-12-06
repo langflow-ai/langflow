@@ -162,7 +162,7 @@ async def upload_and_run_file(
 async def download_file(
     file_name: str,
     flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
-    storage_service: Annotated[StorageService, Depends(get_storage_service)]
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
