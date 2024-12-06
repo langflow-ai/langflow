@@ -25,14 +25,18 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
     await page.waitForSelector('[data-testid="blank-flow"]', {
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="flow_name"]', {
+      timeout: 3000,
+    });
 
     await page.getByTestId("flow_name").click();
     await page.getByText("Flow Settings").first().click();
