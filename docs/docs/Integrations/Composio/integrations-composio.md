@@ -47,9 +47,11 @@ For more information, see the [Composio documentation](https://docs.composio.dev
 Alternatively, add the key as a [global variable](/configuration-global-variables).
 4. To open the **Playground** pane, click **Playground**.
 5. Ask your AI:
+
 ```plain
 What tools are available to you?
 ```
+
 The response should be similar to:
 
 ```plain
@@ -58,21 +60,19 @@ I have access to the following tools:
 1. **GMAIL_CREATE_EMAIL_DRAFT**: This tool allows me to create a draft email using Gmail's API. I can specify the recipient's email address, subject, body content, and whether the body content is HTML.
 
 2. **CurrentDate-get_current_date**: This tool retrieves the current date and time in a specified timezone.
-
-If you have any specific tasks or questions related to these tools, feel free to ask!
 ```
 
 This confirms your **Agent** and **Composio** are communicating.
 
 6. Tell your AI to write a draft email.
+
 ```plain
 Create a draft email with the subject line "Greetings from Composio"
 recipient: "your.email@address.com"
 Body content: "Hello from composio!"
 ```
 
-Inspect the response to see how the agent used the attached tool to perform your search.
-The response should include a successful query, and useful information on the subject.
+Inspect the response to see how the agent used the attached tool to write an email.
 This example response is abbreviated.
 
 ```plain
