@@ -78,12 +78,9 @@ export function EditMessageButton({
                 className="h-8 w-8"
               >
                 <IconComponent
-                  name="ThumbsUp"
+                  name={evaluation === true ? "ThumbUpIconCustom" : "ThumbsUp"}
                   className={cn(
-                    "h-4 w-4",
-                    evaluation === true &&
-                      "fill-current stroke-current",
-                  )}
+                    "h-4 w-4")}
                 />
               </Button>
             </div>
@@ -98,11 +95,9 @@ export function EditMessageButton({
                 className="h-8 w-8"
               >
                 <IconComponent
-                  name="ThumbsDown"
+                  name={evaluation === false ? "ThumbDownIconCustom" : "ThumbsDown"}
                   className={cn(
-                    "h-4 w-4",
-                    evaluation === false &&
-                      "fill-current stroke-current",
+                    "h-4 w-4"
                   )}
                 />
               </Button>
