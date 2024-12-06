@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 
@@ -50,9 +50,9 @@ test(
 
     await page.getByTestId("api-key-save-button-store").click();
 
-
-    await expect(page.getByText("API key saved successfully")).toBeVisible({ timeout: 3000 });
-
+    await expect(page.getByText("API key saved successfully")).toBeVisible({
+      timeout: 3000,
+    });
 
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
       timeout: 100000,
@@ -60,7 +60,9 @@ test(
 
     await page.getByTestId("icon-ChevronLeft").first().click();
 
-    await expect(page.getByText("New Flow", { exact: true })).toBeVisible({ timeout: 3000 });
+    await expect(page.getByText("New Flow", { exact: true })).toBeVisible({
+      timeout: 3000,
+    });
 
     await page.getByText("New Flow", { exact: true }).click();
 
@@ -71,7 +73,6 @@ test(
     await page.waitForSelector("text=api", { timeout: 10000 });
 
     await page.getByTestId("shared-button-flow").click();
-
 
     await page.waitForSelector("text=Share Flow", {
       timeout: 10000,
@@ -93,13 +94,11 @@ test(
       timeout: 10000,
     });
 
-
     await page.waitForSelector("text=share", { timeout: 10000 });
     await page.waitForSelector("text=playground", { timeout: 10000 });
     await page.waitForSelector("text=api", { timeout: 10000 });
 
     await page.getByTestId("shared-button-flow").click();
-
 
     await page.waitForSelector("text=Publish workflow to the Langflow Store.", {
       timeout: 10000,
