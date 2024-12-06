@@ -5,16 +5,20 @@ from langflow.custom import Component
 from langflow.io import DataInput, DropdownInput, Output
 from langflow.schema import Data, DataFrame
 
+
 class MergeOperation(str, Enum):
     CONCATENATE = "concatenate"
-    APPEND = "append" 
+    APPEND = "append"
     MERGE = "merge"
     JOIN = "join"
+
 
 class DataMergerComponent(Component):
     display_name = "Data Merger"
     description = "Combina dados usando operações de merge"
     icon = "merge"
+
+    MIN_INPUTS_REQUIRED = 2
 
     inputs = [
         DataInput(name="data_inputs", display_name="Data Inputs", info="Dados para combinar", is_list=True),
@@ -29,20 +33,21 @@ class DataMergerComponent(Component):
     outputs = [Output(display_name="DataFrame", name="merged_data", method="merge_data")]
 
     def merge_data(self) -> DataFrame:
-        if not self.data_inputs or len(self.data_inputs) < 2:
-            df = DataFrame(pd.DataFrame())
-            self.status = df
-            return df
+        if not self.data_inputs or len(self.data_inputs) < self.MIN_INPUTS_REQUIRED:
+            empty_dataframe = DataFrame(pd.DataFrame())
+            self.status = empty_dataframe
+            return empty_dataframe
 
         operation = MergeOperation(self.operation)
         try:
-            df = self._process_operation(operation)
-            df = DataFrame(df)
-            self.status = df
-            return df
+            merged_dataframe = self._process_operation(operation)
+            merged_dataframe = DataFrame(merged_dataframe)
+            self.status = merged_dataframe
         except Exception as e:
             logger.error(f"Erro durante operação {operation}: {str(e)}")
             raise
+        else:
+            return merged_dataframe
 
     def _process_operation(self, operation: MergeOperation) -> pd.DataFrame:
         if operation == MergeOperation.CONCATENATE:
@@ -59,14 +64,12 @@ class DataMergerComponent(Component):
             return pd.DataFrame([combined_data])
 
         if operation == MergeOperation.APPEND:
-            rows = []
-            for data_input in self.data_inputs:
-                rows.append(data_input.data)
+            rows = [data_input.data for data_input in self.data_inputs]
             return pd.DataFrame(rows)
-        
+
         if operation == MergeOperation.MERGE:
             combined_data = {}
-            for idx, data_input in enumerate(self.data_inputs, 1):
+            for data_input in self.data_inputs:
                 for key, value in data_input.data.items():
                     if key in combined_data and isinstance(value, str):
                         if not isinstance(combined_data[key], list):
@@ -75,7 +78,7 @@ class DataMergerComponent(Component):
                     else:
                         combined_data[key] = value
             return pd.DataFrame([combined_data])
-        
+
         if operation == MergeOperation.JOIN:
             combined_data = {}
             for idx, data_input in enumerate(self.data_inputs, 1):
