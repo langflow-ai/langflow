@@ -29,7 +29,7 @@ def mock_storage_service():
     # Use side_effect to dynamically return values for build_full_path
     def build_full_path_side_effect(flow_id, file_name):
         # Mock behavior: Construct a path using flow_id and file_name
-        return Path(f"{flow_id}/{file_name}")
+        return f"{flow_id}/{file_name}"
 
     service.build_full_path.side_effect = build_full_path_side_effect
 
