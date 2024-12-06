@@ -17,7 +17,6 @@ test(
 
     await page.goto("/");
 
-    await page.waitForTimeout(1000);
 
     let modalCount = 0;
     try {
@@ -31,7 +30,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
@@ -42,8 +43,6 @@ test(
     await page.getByText("New Folder").last().click();
 
     await page.waitForSelector("text=new flow", { timeout: 30000 });
-
-    await page.waitForTimeout(1000);
 
     expect(
       (
@@ -61,19 +60,18 @@ test(
     await page.waitForSelector("text=api", { timeout: 30000 });
     await page.waitForSelector("text=share", { timeout: 30000 });
 
-    await page.waitForTimeout(1000);
 
-    expect(
-      await page.getByTestId("button_run_chat output").isVisible(),
-    ).toBeTruthy();
-    expect(
-      await page.getByTestId("button_run_openai").isVisible(),
-    ).toBeTruthy();
-    expect(
-      await page.getByTestId("button_run_prompt").isVisible(),
-    ).toBeTruthy();
-    expect(
-      await page.getByTestId("button_run_chat input").isVisible(),
-    ).toBeTruthy();
+    await expect(
+      page.getByTestId("button_run_chat output"),
+    ).toBeVisible({timeout: 30000});
+    await expect(
+      page.getByTestId("button_run_openai"),
+    ).toBeVisible({timeout: 30000});
+    await expect(
+      page.getByTestId("button_run_prompt"),
+    ).toBeVisible({timeout: 30000});
+    await expect(
+      page.getByTestId("button_run_chat input"),
+    ).toBeVisible({timeout: 30000});
   },
 );
