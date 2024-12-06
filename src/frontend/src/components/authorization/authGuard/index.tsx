@@ -31,7 +31,18 @@ export const ProtectedRoute = ({ children }) => {
     }
   }, [isAuthenticated]);
   if (!isAuthenticated && autoLogin !== undefined && !autoLogin) {
-    return <CustomNavigate to="/login" replace />;
+    const currentPath = window.location.pathname;
+    const isHomePath = currentPath === "/" || currentPath === "/flows";
+    const isLoginPage = location.pathname.includes("login");
+    return (
+      <CustomNavigate
+        to={
+          "/login" +
+          (!isHomePath && !isLoginPage ? "?redirect=" + currentPath : "")
+        }
+        replace
+      />
+    );
   } else {
     return children;
   }
