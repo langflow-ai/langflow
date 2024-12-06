@@ -82,12 +82,9 @@ test(
 
     await page.keyboard.press("ControlOrMeta+a");
 
-
     await page.keyboard.press("ControlOrMeta+c");
 
-
     await page.getByPlaceholder("Type something...").nth(2).click();
-
 
     await page.keyboard.press("ControlOrMeta+a");
 
