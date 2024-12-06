@@ -56,7 +56,7 @@ def build_description(component: Component, output: Output) -> str:
     return f"{output.method}({args}) - {component.description}"
 
 
-def send_message_noop(
+async def send_message_noop(
     message: Message,
     text: str | None = None,  # noqa: ARG001
     background_color: str | None = None,  # noqa: ARG001

@@ -14,7 +14,7 @@ class LogFunctionType(Protocol):
 
 
 class SendMessageFunctionType(Protocol):
-    def __call__(
+    async def __call__(
         self,
         message: Message | None = None,
         text: str | None = None,

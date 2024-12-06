@@ -2,7 +2,7 @@ import json
 from uuid import UUID
 
 import pytest
-from langflow.memory import get_messages
+from langflow.memory import aget_messages
 from langflow.services.database.models.flow import FlowCreate, FlowUpdate
 from orjson import orjson
 
@@ -14,7 +14,7 @@ async def test_build_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
     async with client.stream("POST", f"api/v1/build/{flow_id}/flow", json={}, headers=logged_in_headers) as r:
         await consume_and_assert_stream(r)
 
-    check_messages(flow_id)
+    await check_messages(flow_id)
 
 
 @pytest.mark.benchmark
@@ -28,7 +28,7 @@ async def test_build_flow_from_request_data(client, json_memory_chatbot_no_llm, 
     ) as r:
         await consume_and_assert_stream(r)
 
-    check_messages(flow_id)
+    await check_messages(flow_id)
 
 
 async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, logged_in_headers):
@@ -47,11 +47,11 @@ async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, l
     async with client.stream("POST", f"api/v1/build/{flow_id}/flow", json={}, headers=logged_in_headers) as r:
         await consume_and_assert_stream(r)
 
-    check_messages(flow_id)
+    await check_messages(flow_id)
 
 
-def check_messages(flow_id):
-    messages = get_messages(flow_id=UUID(flow_id), order="ASC")
+async def check_messages(flow_id):
+    messages = await aget_messages(flow_id=UUID(flow_id), order="ASC")
     assert len(messages) == 2
     assert messages[0].session_id == flow_id
     assert messages[0].sender == "User"

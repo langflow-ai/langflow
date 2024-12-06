@@ -55,6 +55,7 @@ async def test_graph_with_edge():
 
 async def test_graph_functional():
     chat_input = ChatInput(_id="chat_input")
+    chat_input.set(should_store_message=False)
     chat_output = ChatOutput(input_value="test", _id="chat_output")
     chat_output.set(sender_name=chat_input.message_response)
     graph = await asyncio.to_thread(Graph, chat_input, chat_output)
