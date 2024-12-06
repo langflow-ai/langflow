@@ -29,6 +29,7 @@ from langflow.services.database.models.vertex_builds.crud import delete_vertex_b
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
 from loguru import logger
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -57,6 +58,7 @@ def blockbuster():
         for func in bb.functions:
             if func.startswith("sqlite3."):
                 bb.functions[func].deactivate()
+        bb.functions["threading.Lock.acquire"].deactivate()
         yield bb
 
 
@@ -148,6 +150,17 @@ def session_fixture():
     with Session(engine) as session:
         yield session
     SQLModel.metadata.drop_all(engine)  # Add this line to clean up tables
+
+
+@pytest.fixture
+async def async_session():
+    engine = create_async_engine("sqlite+aiosqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+    async with AsyncSession(engine) as session:
+        yield session
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.drop_all)
 
 
 class Config:

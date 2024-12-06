@@ -401,7 +401,7 @@ class InterfaceVertex(ComponentVertex):
             type=ArtifactType.OBJECT.value,
         ).model_dump()
 
-        message = Message(
+        message = await Message.create(
             text=complete_message,
             sender=self.params.get("sender", ""),
             sender_name=self.params.get("sender_name", ""),
@@ -434,8 +434,8 @@ class InterfaceVertex(ComponentVertex):
             and hasattr(self.custom_component, "should_store_message")
             and hasattr(self.custom_component, "store_message")
         ):
-            self.custom_component.store_message(message)
-        log_vertex_build(
+            await self.custom_component.store_message(message)
+        await log_vertex_build(
             flow_id=self.graph.flow_id,
             vertex_id=self.id,
             valid=True,

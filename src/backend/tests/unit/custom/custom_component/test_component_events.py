@@ -52,7 +52,7 @@ async def test_component_message_sending():
     )
 
     # Send the message
-    sent_message = await asyncio.to_thread(component.send_message, message)
+    sent_message = await component.send_message(message)
 
     # Verify the message was sent
     assert sent_message.id is not None
@@ -85,7 +85,7 @@ async def test_component_tool_output():
     )
 
     # Send the message
-    sent_message = await asyncio.to_thread(component.send_message, message)
+    sent_message = await component.send_message(message)
 
     # Verify the message was stored and processed
     assert sent_message.id is not None
@@ -112,8 +112,7 @@ async def test_component_error_handling():
         msg = "Test error"
         raise CustomError(msg)
     except CustomError as e:
-        sent_message = await asyncio.to_thread(
-            component.send_error,
+        sent_message = await component.send_error(
             exception=e,
             session_id="test_session",
             trace_name="test_trace",
@@ -227,7 +226,7 @@ async def test_component_streaming_message():
     )
 
     # Send the streaming message
-    sent_message = await asyncio.to_thread(component.send_message, message)
+    sent_message = await component.send_message(message)
 
     # Verify the message
     assert sent_message.id is not None
