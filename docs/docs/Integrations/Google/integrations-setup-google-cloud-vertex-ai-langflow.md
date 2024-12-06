@@ -22,6 +22,7 @@ For more information, see [Vertex AI access control with IAM](https://cloud.goog
 5. Click **Add Key**, and then click **Create new key**.
 6. Under **Key type**, select **JSON**, and then click **Create**.
 A JSON private key file is downloaded.
+Now that you have a service account and a JSON private key, you need to configure the credentials in Langflow components.
 
 ## Configure credentials in Langflow components
 
