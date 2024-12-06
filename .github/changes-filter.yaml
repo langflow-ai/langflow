@@ -20,6 +20,7 @@ docs:
 # Test categories and their associated paths
 starter-projects:
   - "src/backend/base/langflow/initial_setup/**"
+  - "src/backend/base/langflow/components/**"
   - "src/frontend/src/pages/MainPage/**"
   - "src/frontend/src/utils/reactflowUtils.ts"
   - "src/frontend/tests/extended/features/**"

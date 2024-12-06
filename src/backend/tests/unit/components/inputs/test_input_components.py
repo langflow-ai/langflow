@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from langflow.components.inputs import ChatInput, TextInputComponent
 from langflow.schema.message import Message
@@ -36,10 +38,10 @@ class TestChatInput(ComponentTestBaseWithClient):
             {"version": "1.0.19", "module": "inputs", "file_name": "ChatInput"},
         ]
 
-    def test_message_response(self, component_class, default_kwargs):
+    async def test_message_response(self, component_class, default_kwargs):
         """Test that the message_response method returns a valid Message object."""
         component = component_class(**default_kwargs)
-        message = component.message_response()
+        message = await component.message_response()
 
         assert isinstance(message, Message)
         assert message.text == default_kwargs["input_value"]
@@ -58,7 +60,7 @@ class TestChatInput(ComponentTestBaseWithClient):
             "targets": [],
         }
 
-    def test_message_response_ai_sender(self, component_class):
+    async def test_message_response_ai_sender(self, component_class):
         """Test message response with AI sender type."""
         kwargs = {
             "input_value": "I am an AI assistant",
@@ -67,13 +69,13 @@ class TestChatInput(ComponentTestBaseWithClient):
             "session_id": "test_session_123",
         }
         component = component_class(**kwargs)
-        message = component.message_response()
+        message = await component.message_response()
 
         assert isinstance(message, Message)
         assert message.sender == MESSAGE_SENDER_AI
         assert message.sender_name == "AI Assistant"
 
-    def test_message_response_without_session(self, component_class):
+    async def test_message_response_without_session(self, component_class):
         """Test message response without session ID."""
         kwargs = {
             "input_value": "Test message",
@@ -82,16 +84,16 @@ class TestChatInput(ComponentTestBaseWithClient):
             "session_id": "",  # Empty session ID
         }
         component = component_class(**kwargs)
-        message = component.message_response()
+        message = await component.message_response()
 
         assert isinstance(message, Message)
         assert message.session_id == ""
 
-    def test_message_response_with_files(self, component_class, tmp_path):
+    async def test_message_response_with_files(self, component_class, tmp_path):
         """Test message response with file attachments."""
         # Create a temporary test file
         test_file = tmp_path / "test.txt"
-        test_file.write_text("Test content")
+        await asyncio.to_thread(test_file.write_text, "Test content")
 
         kwargs = {
             "input_value": "Message with file",
@@ -101,13 +103,13 @@ class TestChatInput(ComponentTestBaseWithClient):
             "files": [str(test_file)],
         }
         component = component_class(**kwargs)
-        message = component.message_response()
+        message = await component.message_response()
 
         assert isinstance(message, Message)
         assert len(message.files) == 1
         assert message.files[0] == str(test_file)
 
-    def test_message_storage_disabled(self, component_class):
+    async def test_message_storage_disabled(self, component_class):
         """Test message response when storage is disabled."""
         kwargs = {
             "input_value": "Test message",
@@ -117,7 +119,7 @@ class TestChatInput(ComponentTestBaseWithClient):
             "session_id": "test_session_123",
         }
         component = component_class(**kwargs)
-        message = component.message_response()
+        message = await component.message_response()
 
         assert isinstance(message, Message)
         # The message should still be created but not stored
