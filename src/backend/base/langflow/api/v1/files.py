@@ -30,17 +30,25 @@ router = APIRouter(tags=["Files"], prefix="/files")
 # then finds it in the database and returns it while
 # using the current user as the owner
 async def get_valid_flow_obj(
-    flow: FlowRead,
-    user: UserRead,
+    flow: FlowRead | None,
+    user: UserRead | None,
     session: AsyncDbSession,
 ) -> Flow:
+    if not flow:
+        raise HTTPException(status_code=404, detail="Flow not found")
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
     flow_id_str = str(flow.id)
     # AttributeError: 'SelectOfScalar' object has no attribute 'first'
     flow = await session.get(Flow, flow_id_str)
+
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
     if flow.user_id != user.id:
         raise HTTPException(status_code=403, detail="You don't have access to this flow")
+
     return flow
 
 
