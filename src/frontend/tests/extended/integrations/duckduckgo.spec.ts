@@ -35,10 +35,9 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("duck");
 
-    await page
-      .waitForSelector('//*[@id="toolsDuckDuckGo Search"]', {
-        timeout: 3000,
-      });
+    await page.waitForSelector('//*[@id="toolsDuckDuckGo Search"]', {
+      timeout: 3000,
+    });
 
     await page
       .locator('//*[@id="toolsDuckDuckGo Search"]')
