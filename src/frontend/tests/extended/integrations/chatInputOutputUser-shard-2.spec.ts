@@ -17,7 +17,6 @@ test(
 
     await page.goto("/");
 
-
     let modalCount = 0;
     try {
       const modalTitleElement = await page?.getByTestId("modal-title");
