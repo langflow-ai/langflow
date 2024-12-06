@@ -17,7 +17,6 @@ test(
 
     await page.goto("/");
 
-
     let modalCount = 0;
     try {
       const modalTitleElement = await page?.getByTestId("modal-title");
@@ -80,7 +79,6 @@ test(
     await page.getByTestId("showfiles").click();
     await page.getByText("Close").last().click();
 
-
     const userQuestion = "What is this image?";
     await page.getByTestId("textarea_str_input_value").fill(userQuestion);
 
@@ -103,7 +101,6 @@ test(
     });
 
     await page.getByText("Playground", { exact: true }).last().click();
-
 
     await page.waitForSelector('[data-testid="button-send"]', {
       timeout: 100000,
