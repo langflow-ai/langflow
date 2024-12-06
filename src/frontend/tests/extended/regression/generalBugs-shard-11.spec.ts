@@ -51,7 +51,10 @@ test(
     await page.getByTestId("zoom_out").click();
     await page.getByTestId("zoom_out").click();
 
-    await expect(page.getByText("api_key")).toBeVisible({ timeout: 3000,visible: false });
+    await expect(page.getByText("api_key")).toBeVisible({
+      timeout: 3000,
+      visible: false,
+    });
   },
 );
 
@@ -109,13 +112,14 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("tool calling agent");
 
-    await page.waitForSelector('[data-testid="langchain_utilitiesTool Calling Agent"]', {
-      timeout: 3000,
-    });
-
-    modelElement = page.getByTestId(
-      "langchain_utilitiesTool Calling Agent",
+    await page.waitForSelector(
+      '[data-testid="langchain_utilitiesTool Calling Agent"]',
+      {
+        timeout: 3000,
+      },
     );
+
+    modelElement = page.getByTestId("langchain_utilitiesTool Calling Agent");
     targetElement = await page.locator('//*[@id="react-flow-id"]');
     await modelElement.dragTo(targetElement);
 
@@ -137,7 +141,6 @@ test(
       .nth(0);
     await toolCallingAgentInput.hover();
     await page.mouse.up();
-
 
     expect(await page.locator(".react-flow__edge-interaction").count()).toBe(1);
   },
