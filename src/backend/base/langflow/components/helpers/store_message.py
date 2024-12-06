@@ -1,7 +1,7 @@
 from langflow.custom import Component
 from langflow.inputs import HandleInput, MessageInput
 from langflow.inputs.inputs import MessageTextInput
-from langflow.memory import get_messages, store_message
+from langflow.memory import aget_messages, astore_message
 from langflow.schema.message import Message
 from langflow.template import Output
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
@@ -47,7 +47,7 @@ class StoreMessageComponent(Component):
         Output(display_name="Stored Messages", name="stored_messages", method="store_message"),
     ]
 
-    def store_message(self) -> Message:
+    async def store_message(self) -> Message:
         message = self.message
 
         message.session_id = self.session_id or message.session_id
@@ -58,13 +58,15 @@ class StoreMessageComponent(Component):
             # override session_id
             self.memory.session_id = message.session_id
             lc_message = message.to_lc_message()
-            self.memory.add_messages([lc_message])
-            stored = self.memory.messages
+            await self.memory.aadd_messages([lc_message])
+            stored = await self.memory.aget_messages()
             stored = [Message.from_lc_message(m) for m in stored]
             if message.sender:
                 stored = [m for m in stored if m.sender == message.sender]
         else:
-            store_message(message, flow_id=self.graph.flow_id)
-            stored = get_messages(session_id=message.session_id, sender_name=message.sender_name, sender=message.sender)
+            await astore_message(message, flow_id=self.graph.flow_id)
+            stored = await aget_messages(
+                session_id=message.session_id, sender_name=message.sender_name, sender=message.sender
+            )
         self.status = stored
         return stored
