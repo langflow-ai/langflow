@@ -70,7 +70,7 @@ test(
       const getUA = await page.evaluate(() => navigator.userAgent);
       await page.getByTestId("title-Astra DB").first().click();
       await page.getByTestId("code-button-modal").click();
-      await page.waitForSelector('text=Edit Code', {
+      await page.waitForSelector("text=Edit Code", {
         timeout: 3000,
       });
       let cleanCode = await extractAndCleanCode(page);
