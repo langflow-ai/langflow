@@ -1,4 +1,4 @@
-import { test,expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 test(
   "should see general profile gradient",
@@ -17,7 +17,9 @@ test(
 
     await page.getByText("Settings").click();
 
-    await expect(page.getByText("General").nth(2)).toBeVisible({ timeout: 4000 });
+    await expect(page.getByText("General").nth(2)).toBeVisible({
+      timeout: 4000,
+    });
     await page.getByText("Profile Gradient").isVisible();
   },
 );
@@ -60,16 +62,13 @@ test(
 
     await page.getByPlaceholder("Search options...").fill("System");
 
-
     await page.waitForSelector("text=System", { timeout: 30000 });
-
 
     await page.getByText("System").last().click();
 
     await page.getByPlaceholder("Search options...").fill("openAI");
 
     await page.waitForSelector("text=openai", { timeout: 30000 });
-
 
     await page.getByText("openai").last().click();
 
@@ -93,7 +92,6 @@ test(
       timeout: 30000,
     });
 
-
     await page
       .getByPlaceholder("Insert a name for the variable...")
       .fill(randomName2);
@@ -116,7 +114,6 @@ test(
     await page.getByText("Update Variable", { exact: true }).last().click();
 
     await page.getByText(randomName3).last().isVisible();
-
 
     await page.locator(".ag-checkbox-input").first().click();
     await page.getByTestId("icon-Trash2").click();
@@ -182,7 +179,9 @@ test(
     await page.getByText("Create Secret Key", { exact: true }).click();
     await page.getByText("Please save").isVisible();
     await page.getByTestId("icon-Copy").click();
-    await expect(page.getByText("Api Key Copied!")).toBeVisible({ timeout: 3000 });
+    await expect(page.getByText("Api Key Copied!")).toBeVisible({
+      timeout: 3000,
+    });
     await page.getByText(randomName).isVisible();
   },
 );
