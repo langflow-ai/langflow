@@ -6,7 +6,6 @@ test(
   { tag: ["@release", "@components"] },
   async ({ page }) => {
     await page.goto("/");
-    await page.waitForTimeout(1000);
     let modalCount = 0;
     try {
       const modalTitleElement = await page?.getByTestId("modal-title");
