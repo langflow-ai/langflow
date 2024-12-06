@@ -17,7 +17,6 @@ test(
 
     await page.goto("/");
 
-
     let modalCount = 0;
     try {
       const modalTitleElement = await page?.getByTestId("modal-title");
@@ -60,18 +59,17 @@ test(
     await page.waitForSelector("text=api", { timeout: 30000 });
     await page.waitForSelector("text=share", { timeout: 30000 });
 
-
-    await expect(
-      page.getByTestId("button_run_chat output"),
-    ).toBeVisible({timeout: 30000});
-    await expect(
-      page.getByTestId("button_run_openai"),
-    ).toBeVisible({timeout: 30000});
-    await expect(
-      page.getByTestId("button_run_prompt"),
-    ).toBeVisible({timeout: 30000});
-    await expect(
-      page.getByTestId("button_run_chat input"),
-    ).toBeVisible({timeout: 30000});
+    await expect(page.getByTestId("button_run_chat output")).toBeVisible({
+      timeout: 30000,
+    });
+    await expect(page.getByTestId("button_run_openai")).toBeVisible({
+      timeout: 30000,
+    });
+    await expect(page.getByTestId("button_run_prompt")).toBeVisible({
+      timeout: 30000,
+    });
+    await expect(page.getByTestId("button_run_chat input")).toBeVisible({
+      timeout: 30000,
+    });
   },
 );
