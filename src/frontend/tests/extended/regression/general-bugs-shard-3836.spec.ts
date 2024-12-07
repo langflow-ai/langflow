@@ -17,8 +17,6 @@ test(
 
     await page.goto("/");
 
-    await page.waitForTimeout(1000);
-
     let modalCount = 0;
     try {
       const modalTitleElement = await page?.getByTestId("modal-title");
@@ -31,7 +29,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
@@ -52,14 +52,12 @@ test(
 
     while (outdatedComponents > 0) {
       await page.getByTestId("icon-AlertTriangle").first().click();
-      await page.waitForTimeout(1000);
       outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
     }
 
     let filledApiKey = await page.getByTestId("remove-icon-badge").count();
     while (filledApiKey > 0) {
       await page.getByTestId("remove-icon-badge").first().click();
-      await page.waitForTimeout(1000);
       filledApiKey = await page.getByTestId("remove-icon-badge").count();
     }
 
@@ -80,8 +78,6 @@ test(
     await page.getByTestId("advanced-button-modal").click();
     await page.getByTestId("showfiles").click();
     await page.getByText("Close").last().click();
-
-    await page.waitForTimeout(500);
 
     const userQuestion = "What is this image?";
     await page.getByTestId("textarea_str_input_value").fill(userQuestion);
@@ -105,8 +101,6 @@ test(
     });
 
     await page.getByText("Playground", { exact: true }).last().click();
-
-    await page.waitForTimeout(500);
 
     await page.waitForSelector('[data-testid="button-send"]', {
       timeout: 100000,
