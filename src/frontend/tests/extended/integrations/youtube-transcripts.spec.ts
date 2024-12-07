@@ -25,7 +25,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
@@ -33,7 +35,9 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("youtube");
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[id="toolsYouTube Transcripts"]', {
+      timeout: 3000,
+    });
 
     await page
       .locator('//*[@id="toolsYouTube Transcripts"]')
@@ -48,7 +52,6 @@ test(
 
     while (outdatedComponents > 0) {
       await page.getByTestId("icon-AlertTriangle").first().click();
-      await page.waitForTimeout(1000);
       outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
     }
 
@@ -62,11 +65,9 @@ test(
 
     await page.getByTestId("output-inspection-data").first().click();
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector("text=Component Output", { timeout: 30000 });
 
     await page.getByRole("gridcell").first().click();
-
-    await page.waitForTimeout(1000);
 
     const value = await page.getByPlaceholder("Empty").inputValue();
     expect(value.length).toBeGreaterThan(10);
