@@ -9,7 +9,7 @@ export function AppWrapperPage() {
   const { healthCheckTimeout, fetchingHealth, refetch } = useHealthCheck();
 
   return (
-    <div className="flex flex-col">
+    <div className="flex h-full w-full flex-col">
       <ErrorBoundary
         onReset={() => {
           // any reset function
