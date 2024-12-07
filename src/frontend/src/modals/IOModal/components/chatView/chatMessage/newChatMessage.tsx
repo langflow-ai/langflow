@@ -1,7 +1,9 @@
-import { ProfileIcon } from "@/components/appHeaderComponent/components/ProfileIcon";
-import { ContentBlockDisplay } from "@/components/chatComponents/ContentBlockDisplay";
+import { ProfileIcon } from "@/components/core/appHeaderComponent/components/ProfileIcon";
+import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
 import { TextShimmer } from "@/components/ui/TextShimmer";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
+import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -12,11 +14,11 @@ import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
 import Robot from "../../../../../assets/robot.png";
-import CodeTabsComponent from "../../../../../components/codeTabsComponent/ChatCodeTabComponent";
 import IconComponent, {
   ForwardedIconComponent,
-} from "../../../../../components/genericIconComponent";
-import SanitizedHTMLWrapper from "../../../../../components/sanitizedHTMLWrapper";
+} from "../../../../../components/common/genericIconComponent";
+import SanitizedHTMLWrapper from "../../../../../components/common/sanitizedHTMLWrapper";
+import CodeTabsComponent from "../../../../../components/core/codeTabsComponent/ChatCodeTabComponent";
 import {
   EMPTY_INPUT_SEND_MESSAGE,
   EMPTY_OUTPUT_SEND_MESSAGE,
@@ -264,7 +266,7 @@ export default function ChatMessage({
                                   <span
                                     className={cn(
                                       closeChat
-                                        ? "cursor-pointer hover:underline"
+                                        ? "cursor-pointer underline"
                                         : "",
                                     )}
                                     onClick={() => {
@@ -441,8 +443,10 @@ export default function ChatMessage({
                   ) : (
                     <ForwardedIconComponent name={chat.properties.icon} />
                   )
-                ) : (
+                ) : !ENABLE_DATASTAX_LANGFLOW ? (
                   <ProfileIcon />
+                ) : (
+                  <CustomProfileIcon />
                 )}
               </div>
             )}
@@ -550,6 +554,20 @@ export default function ChatMessage({
                                           <span className="inline-block w-fit max-w-full">
                                             {props.children}
                                           </span>
+                                        );
+                                      },
+                                      ol({ node, ...props }) {
+                                        return (
+                                          <ol className="max-w-full">
+                                            {props.children}
+                                          </ol>
+                                        );
+                                      },
+                                      ul({ node, ...props }) {
+                                        return (
+                                          <ul className="max-w-full">
+                                            {props.children}
+                                          </ul>
                                         );
                                       },
                                       pre({ node, ...props }) {

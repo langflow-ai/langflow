@@ -1,3 +1,8 @@
+---
+title: Logic
+sidebar_position: 13
+slug: /components-logic
+---
 # Logic components in Langflow
 
 Logic components provide functionalities for routing, conditional processing, and flow management.
@@ -50,7 +55,7 @@ This component is particularly useful in workflows that require conditional rout
 | false_output | Data/List   | Output when the condition is not met.                |
 
 
-## Flow as Tool
+## Flow as Tool {#flow-as-tool}
 
 This component constructs a tool from a function that runs a loaded flow.
 

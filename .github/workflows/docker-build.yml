@@ -1,4 +1,5 @@
 name: Docker Build and Push
+run-name: Docker Build and Push @${{ inputs.release_type }} by @${{ github.actor }}
 on:
   workflow_call:
     inputs:
@@ -61,7 +62,7 @@ jobs:
       - name: Verify a main version exists
         if: ${{ inputs.main_version == '' }}
         run: |
-          # due to our how we split packages, we need to have a main version to check out. 
+          # due to our how we split packages, we need to have a main version to check out.
           echo "Must specify a main version to check out."
           exit 1
 
@@ -202,6 +203,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Build and Push to Docker Hub
         uses: docker/build-push-action@v6
         with:
@@ -209,8 +211,9 @@ jobs:
           push: true
           file: ${{ needs.setup.outputs.file }}
           tags: ${{ needs.setup.outputs.docker_tags }}
-          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
-          provenance: false
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Login to Github Container Registry
         uses: docker/login-action@v3
@@ -218,6 +221,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.TEMP_GHCR_TOKEN}}
+
       - name: Build and push to Github Container Registry
         uses: docker/build-push-action@v6
         with:
@@ -225,8 +229,9 @@ jobs:
           push: true
           file: ${{ needs.setup.outputs.file }}
           tags: ${{ needs.setup.outputs.ghcr_tags }}
-          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
-          provenance: false
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   build_components:
     if: ${{ inputs.release_type == 'main' }}

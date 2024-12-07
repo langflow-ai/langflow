@@ -1,10 +1,23 @@
 from crewai import Agent
 
+from langflow.base.agents.crewai.crew import convert_llm, convert_tools
 from langflow.custom import Component
 from langflow.io import BoolInput, DictInput, HandleInput, MultilineInput, Output
 
 
 class CrewAIAgentComponent(Component):
+    """Component for creating a CrewAI agent.
+
+    This component allows you to create a CrewAI agent with the specified role, goal, backstory, tools,
+    and language model.
+
+    Args:
+        Component (Component): Base class for all components.
+
+    Returns:
+        Agent: CrewAI agent.
+    """
+
     display_name = "CrewAI Agent"
     description = "Represents an agent of CrewAI."
     documentation: str = "https://docs.crewai.com/how-to/LLM-Connections/"
@@ -69,17 +82,21 @@ class CrewAIAgentComponent(Component):
 
     def build_output(self) -> Agent:
         kwargs = self.kwargs or {}
+
+        # Define the Agent
         agent = Agent(
             role=self.role,
             goal=self.goal,
             backstory=self.backstory,
-            llm=self.llm,
+            llm=convert_llm(self.llm),
             verbose=self.verbose,
             memory=self.memory,
-            tools=self.tools or [],
+            tools=convert_tools(self.tools),
             allow_delegation=self.allow_delegation,
             allow_code_execution=self.allow_code_execution,
             **kwargs,
         )
+
         self.status = repr(agent)
+
         return agent

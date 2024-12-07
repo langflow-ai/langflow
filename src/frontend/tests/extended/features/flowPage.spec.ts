@@ -1,7 +1,7 @@
 import { test } from "@playwright/test";
 
 test.describe("Flow Page tests", () => {
-  test("save", async ({ page }) => {
+  test("save", { tag: ["@release"] }, async ({ page }) => {
     await page.goto("/");
     await page.waitForSelector('[data-testid="mainpage_title"]', {
       timeout: 30000,
@@ -23,13 +23,20 @@ test.describe("Flow Page tests", () => {
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
     await page.getByTestId("blank-flow").click();
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector(
+      '[data-testid="sidebar-custom-component-button"]',
+      {
+        timeout: 3000,
+      },
+    );
 
     await page.getByTestId("sidebar-custom-component-button").click();
 

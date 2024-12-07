@@ -1,6 +1,6 @@
 import { CustomLink } from "@/customization/components/custom-link";
 import { useState } from "react";
-import IconComponent from "../../../../components/genericIconComponent";
+import IconComponent from "../../../../components/common/genericIconComponent";
 import { SingleAlertComponentType } from "../../../../types/alerts";
 
 export default function SingleAlert({

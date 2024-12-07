@@ -4,7 +4,7 @@ import pytest
 from astrapy.db import AstraDB
 from langchain_core.documents import Document
 from langflow.components.embeddings import OpenAIEmbeddingsComponent
-from langflow.components.vectorstores import AstraVectorStoreComponent
+from langflow.components.vectorstores import AstraDBVectorStoreComponent
 from langflow.schema.data import Data
 
 from tests.api_keys import get_astradb_api_endpoint, get_astradb_application_token, get_openai_api_key
@@ -43,21 +43,19 @@ async def test_base(astradb_client: AstraDB):
     api_endpoint = get_astradb_api_endpoint()
 
     results = await run_single_component(
-        AstraVectorStoreComponent,
+        AstraDBVectorStoreComponent,
         inputs={
             "token": application_token,
             "api_endpoint": api_endpoint,
             "collection_name": BASIC_COLLECTION,
-            "embedding": ComponentInputHandle(
+            "embedding_model": ComponentInputHandle(
                 clazz=OpenAIEmbeddingsComponent,
                 inputs={"openai_api_key": get_openai_api_key()},
                 output_name="embeddings",
             ),
         },
     )
-    from langchain_core.vectorstores import VectorStoreRetriever
 
-    assert isinstance(results["base_retriever"], VectorStoreRetriever)
     assert results["vector_store"] is not None
     assert results["search_results"] == []
     assert astradb_client.collection(BASIC_COLLECTION)
@@ -69,7 +67,7 @@ async def test_astra_embeds_and_search():
     api_endpoint = get_astradb_api_endpoint()
 
     results = await run_single_component(
-        AstraVectorStoreComponent,
+        AstraDBVectorStoreComponent,
         inputs={
             "token": application_token,
             "api_endpoint": api_endpoint,
@@ -79,7 +77,7 @@ async def test_astra_embeds_and_search():
             "ingest_data": ComponentInputHandle(
                 clazz=TextToData, inputs={"text_data": ["test1", "test2"]}, output_name="from_text"
             ),
-            "embedding": ComponentInputHandle(
+            "embedding_model": ComponentInputHandle(
                 clazz=OpenAIEmbeddingsComponent,
                 inputs={"openai_api_key": get_openai_api_key()},
                 output_name="embeddings",
@@ -111,7 +109,7 @@ def test_astra_vectorize():
         documents = [Document(page_content="test1"), Document(page_content="test2")]
         records = [Data.from_document(d) for d in documents]
 
-        component = AstraVectorStoreComponent()
+        component = AstraDBVectorStoreComponent()
         vectorize_options = component.build_vectorize_options(**options_comp)
 
         component.build(
@@ -167,7 +165,7 @@ def test_astra_vectorize_with_provider_api_key():
         documents = [Document(page_content="test1"), Document(page_content="test2")]
         records = [Data.from_document(d) for d in documents]
 
-        component = AstraVectorStoreComponent()
+        component = AstraDBVectorStoreComponent()
         vectorize_options = component.build_vectorize_options(**options_comp)
 
         component.build(
@@ -222,7 +220,7 @@ def test_astra_vectorize_passes_authentication():
         documents = [Document(page_content="test1"), Document(page_content="test2")]
         records = [Data.from_document(d) for d in documents]
 
-        component = AstraVectorStoreComponent()
+        component = AstraDBVectorStoreComponent()
         vectorize_options = component.build_vectorize_options(**options_comp)
 
         component.build(

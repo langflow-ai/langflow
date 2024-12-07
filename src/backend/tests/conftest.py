@@ -13,11 +13,12 @@ from uuid import UUID
 import orjson
 import pytest
 from asgi_lifespan import LifespanManager
+from blockbuster import blockbuster_ctx
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 from langflow.graph import Graph
-from langflow.initial_setup.setup import STARTER_FOLDER_NAME
+from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow, FlowCreate
@@ -28,13 +29,13 @@ from langflow.services.database.models.vertex_builds.crud import delete_vertex_b
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
 from loguru import logger
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel.pool import StaticPool
 from typer.testing import CliRunner
 
-from tests import blockbuster
 from tests.api_keys import get_openai_api_key
 
 if TYPE_CHECKING:
@@ -42,7 +43,23 @@ if TYPE_CHECKING:
 
 
 load_dotenv()
-blockbuster.init()
+
+
+@pytest.fixture(autouse=True)
+def blockbuster():
+    with blockbuster_ctx() as bb:
+        for func in [
+            "io.BufferedReader.read",
+            "io.BufferedWriter.write",
+            "io.TextIOWrapper.read",
+            "io.TextIOWrapper.write",
+        ]:
+            bb.functions[func].can_block_functions.append(("settings/service.py", {"initialize"}))
+        for func in bb.functions:
+            if func.startswith("sqlite3."):
+                bb.functions[func].deactivate()
+        bb.functions["threading.Lock.acquire"].deactivate()
+        yield bb
 
 
 def pytest_configure(config):
@@ -133,6 +150,17 @@ def session_fixture():
     with Session(engine) as session:
         yield session
     SQLModel.metadata.drop_all(engine)  # Add this line to clean up tables
+
+
+@pytest.fixture
+async def async_session():
+    engine = create_async_engine("sqlite+aiosqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+    async with AsyncSession(engine) as session:
+        yield session
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.drop_all)
 
 
 class Config:

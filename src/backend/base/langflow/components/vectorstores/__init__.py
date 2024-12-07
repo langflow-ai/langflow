@@ -1,5 +1,5 @@
-from .astradb import AstraVectorStoreComponent
-from .astradb_graph import AstraGraphVectorStoreComponent
+from .astradb import AstraDBVectorStoreComponent
+from .astradb_graph import AstraDBGraphVectorStoreComponent
 from .cassandra import CassandraVectorStoreComponent
 from .cassandra_graph import CassandraGraphVectorStoreComponent
 from .chroma import ChromaVectorStoreComponent
@@ -23,8 +23,8 @@ from .vectara_self_query import VectaraSelfQueryRetriverComponent
 from .weaviate import WeaviateVectorStoreComponent
 
 __all__ = [
-    "AstraGraphVectorStoreComponent",
-    "AstraVectorStoreComponent",
+    "AstraDBGraphVectorStoreComponent",
+    "AstraDBVectorStoreComponent",
     "CassandraGraphVectorStoreComponent",
     "CassandraVectorStoreComponent",
     "ChromaVectorStoreComponent",
@@ -42,8 +42,8 @@ __all__ = [
     "RedisVectorStoreComponent",
     "SupabaseVectorStoreComponent",
     "UpstashVectorStoreComponent",
-    "VectaraVectorStoreComponent",
     "VectaraRagComponent",
     "VectaraSelfQueryRetriverComponent",
+    "VectaraVectorStoreComponent",
     "WeaviateVectorStoreComponent",
 ]

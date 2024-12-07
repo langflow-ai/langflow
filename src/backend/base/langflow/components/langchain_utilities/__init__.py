@@ -1,6 +1,7 @@
 from .character import CharacterTextSplitterComponent
 from .conversation import ConversationChainComponent
 from .csv import CSVAgentComponent
+from .fake_embeddings import FakeEmbeddingsComponent
 from .html_link_extractor import HtmlLinkExtractorComponent
 from .json import JsonAgentComponent
 from .json_document_builder import JSONDocumentBuilder
@@ -14,6 +15,7 @@ from .openai_tools import OpenAIToolsAgentComponent
 from .openapi import OpenAPIAgentComponent
 from .recursive_character import RecursiveCharacterTextSplitterComponent
 from .retrieval_qa import RetrievalQAComponent
+from .retriever import RetrieverToolComponent
 from .runnable_executor import RunnableExecComponent
 from .self_query import SelfQueryRetrieverComponent
 from .spider import SpiderTool
@@ -27,31 +29,33 @@ from .vector_store_router import VectorStoreRouterAgentComponent
 from .xml import XMLAgentComponent
 
 __all__ = [
+    "CSVAgentComponent",
     "CharacterTextSplitterComponent",
     "ConversationChainComponent",
-    "CSVAgentComponent",
+    "FakeEmbeddingsComponent",
     "HtmlLinkExtractorComponent",
     "JSONDocumentBuilder",
     "JsonAgentComponent",
-    "LangChainHubPromptComponent",
-    "LanguageRecursiveTextSplitterComponent",
     "LLMCheckerChainComponent",
     "LLMMathChainComponent",
+    "LangChainHubPromptComponent",
+    "LanguageRecursiveTextSplitterComponent",
     "NaturalLanguageTextSplitterComponent",
     "OpenAIToolsAgentComponent",
     "OpenAPIAgentComponent",
     "RecursiveCharacterTextSplitterComponent",
     "RetrievalQAComponent",
     "RunnableExecComponent",
-    "SelfQueryRetrieverComponent",
-    "SpiderTool",
     "SQLAgentComponent",
     "SQLDatabaseComponent",
     "SQLGeneratorComponent",
+    "SelfQueryRetrieverComponent",
+    "SemanticTextSplitterComponent",
+    "SpiderTool",
     "ToolCallingAgentComponent",
     "VectoStoreRetrieverComponent",
     "VectorStoreInfoComponent",
     "VectorStoreRouterAgentComponent",
     "XMLAgentComponent",
-    "SemanticTextSplitterComponent",
+    "RetrieverToolComponent",
 ]

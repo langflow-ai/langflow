@@ -28,6 +28,7 @@ from langflow.initial_setup.setup import (
 from langflow.interface.types import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
 from langflow.logging.logger import configure
+from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.services.deps import get_settings_service, get_telemetry_service
 from langflow.services.utils import initialize_services, teardown_services
 
@@ -100,7 +101,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             rprint("[bold green]Starting Langflow...[/bold green]")
         try:
             await initialize_services(fix_migration=fix_migration)
-            await asyncio.to_thread(setup_llm_caching)
+            setup_llm_caching()
             await initialize_super_user_if_needed()
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
             await asyncio.to_thread(create_or_update_starter_projects, all_types_dict)
@@ -132,6 +133,10 @@ def create_app():
     configure()
     lifespan = get_lifespan(version=__version__)
     app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__)
+    app.add_middleware(
+        ContentSizeLimitMiddleware,
+    )
+
     setup_sentry(app)
     origins = ["*"]
 

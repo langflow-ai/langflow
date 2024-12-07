@@ -1,11 +1,15 @@
 import { AIMLIcon } from "@/icons/AIML";
 import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
 import { ExaIcon } from "@/icons/Exa";
+import { GleanIcon } from "@/icons/Glean";
 import { LangwatchIcon } from "@/icons/Langwatch";
 import { MilvusIcon } from "@/icons/Milvus";
 import Perplexity from "@/icons/Perplexity/Perplexity";
+import { SearchAPIIcon } from "@/icons/SearchAPI";
+import { SerpSearchIcon } from "@/icons/SerpSearch";
 import { TavilyIcon } from "@/icons/Tavily";
 import { UnstructuredIcon } from "@/icons/Unstructured";
+import { WikipediaIcon } from "@/icons/Wikipedia";
 import YouTubeIcon from "@/icons/Youtube/youtube";
 import { ZepMemoryIcon } from "@/icons/ZepMemory";
 import { AthenaIcon } from "@/icons/athena/index";
@@ -88,6 +92,7 @@ import {
   FolderIcon,
   FolderPlus,
   FolderPlusIcon,
+  FolderSync,
   FolderUp,
   FormInput,
   Forward,
@@ -228,6 +233,7 @@ import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
+import { ArizeIcon } from "../icons/Arize";
 import { AssemblyAIIcon } from "../icons/AssemblyAI";
 import { AstraDBIcon } from "../icons/AstraDB";
 import { AzureIcon } from "../icons/Azure";
@@ -236,6 +242,7 @@ import { BotMessageSquareIcon } from "../icons/BotMessageSquare";
 import { CassandraIcon } from "../icons/Cassandra";
 import { ChromaIcon } from "../icons/ChromaIcon";
 import { ClickhouseIcon } from "../icons/Clickhouse";
+import { CloudflareIcon } from "../icons/Cloudflare";
 import { CohereIcon } from "../icons/Cohere";
 import { ComposioIcon } from "../icons/Composio";
 import { ConfluenceIcon } from "../icons/Confluence";
@@ -258,6 +265,7 @@ import { GroqIcon } from "../icons/Groq";
 import { HCDIcon } from "../icons/HCD";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
 import { IFixIcon } from "../icons/IFixIt";
+import { IcosaIcon } from "../icons/Icosa";
 import { LMStudioIcon } from "../icons/LMStudio";
 import { LangChainIcon } from "../icons/LangChain";
 import { MaritalkIcon } from "../icons/Maritalk";
@@ -265,6 +273,7 @@ import { Mem0 } from "../icons/Mem0";
 import { MetaIcon } from "../icons/Meta";
 import { MidjourneyIcon } from "../icons/Midjorney";
 import { MongoDBIcon } from "../icons/MongoDB";
+import { NotDiamondIcon } from "../icons/NotDiamond";
 import { NotionIcon } from "../icons/Notion";
 import { NeedleIcon } from "../icons/Needle";
 import { NvidiaIcon } from "../icons/Nvidia";
@@ -277,6 +286,7 @@ import { PythonIcon } from "../icons/Python";
 import { QDrantIcon } from "../icons/QDrant";
 import { QianFanChatIcon } from "../icons/QianFanChat";
 import { RedisIcon } from "../icons/Redis";
+import { SambaNovaIcon } from "../icons/SambaNova";
 import { SearxIcon } from "../icons/Searx";
 import { ShareIcon } from "../icons/Share";
 import { Share2Icon } from "../icons/Share2";
@@ -502,8 +512,10 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Needle", name: "needle", icon: "Needle" },
   { display_name: "NVIDIA", name: "nvidia", icon: "NVIDIA" },
   { display_name: "Vectara", name: "vectara", icon: "Vectara" },
+  { display_name: "Icosa Computing", name: "icosacomputing", icon: "Icosa" },
   { display_name: "Google", name: "google", icon: "Google" },
   { display_name: "CrewAI", name: "crewai", icon: "CrewAI" },
+  { display_name: "NotDiamond", name: "notdiamond", icon: "NotDiamond" },
   { display_name: "Composio", name: "composio", icon: "Composio" },
   { display_name: "Cohere", name: "cohere", icon: "Cohere" },
   { display_name: "Firecrawl", name: "firecrawl", icon: "FirecrawlCrawlApi" },
@@ -594,6 +606,7 @@ export const nodeIconsLucide: iconsType = {
   Chroma: ChromaIcon,
   Couchbase: CouchbaseIcon,
   Clickhouse: ClickhouseIcon,
+  Cloudflare: CloudflareIcon,
   AirbyteJSONLoader: AirbyteIcon,
   AmazonBedrockEmbeddings: AWSIcon,
   Amazon: AWSIcon,
@@ -604,6 +617,7 @@ export const nodeIconsLucide: iconsType = {
   AstraDB: AstraDBIcon,
   BingSearchAPIWrapper: BingIcon,
   BingSearchRun: BingIcon,
+  Bing: BingIcon,
   Cohere: CohereIcon,
   ChevronsUpDownIcon,
   CohereEmbeddings: CohereIcon,
@@ -615,6 +629,8 @@ export const nodeIconsLucide: iconsType = {
   GoogleSearchAPIWrapper: GoogleIcon,
   GoogleSearchResults: GoogleIcon,
   GoogleSearchRun: GoogleIcon,
+  GoogleSearchAPI: GoogleIcon,
+  GoogleSerperAPI: GoogleIcon,
   Google: GoogleIcon,
   GoogleGenerativeAI: GoogleGenerativeAIIcon,
   Groq: GroqIcon,
@@ -625,8 +641,10 @@ export const nodeIconsLucide: iconsType = {
   HuggingFaceHub: HuggingFaceIcon,
   HuggingFace: HuggingFaceIcon,
   HuggingFaceEmbeddings: HuggingFaceIcon,
+  Icosa: IcosaIcon,
   IFixitLoader: IFixIcon,
   CrewAI: CrewAiIcon,
+  NotDiamond: NotDiamondIcon,
   Composio: ComposioIcon,
   Meta: MetaIcon,
   Midjorney: MidjourneyIcon,
@@ -646,6 +664,7 @@ export const nodeIconsLucide: iconsType = {
   Qdrant: QDrantIcon,
   ElasticsearchStore: ElasticsearchIcon,
   Weaviate: WeaviateIcon,
+  SambaNova: SambaNovaIcon,
   Searx: SearxIcon,
   SlackDirectoryLoader: SvgSlackIcon,
   SpiderTool: SpiderIcon,
@@ -666,7 +685,6 @@ export const nodeIconsLucide: iconsType = {
   Discord: FaDiscord,
   MistralAI: MistralIcon,
   Upstash: UpstashSvgIcon,
-  PGVector: CpuIcon,
   Confluence: ConfluenceIcon,
   AIML: AIMLIcon,
   "AI/ML": AIMLIcon,
@@ -685,6 +703,12 @@ export const nodeIconsLucide: iconsType = {
   ZepMemory: ZepMemoryIcon,
   Langwatch: LangwatchIcon,
   Mem0,
+  Glean: GleanIcon,
+  GleanAPI: GleanIcon,
+  SerpSearch: SerpSearchIcon,
+  SearchAPI: SearchAPIIcon,
+  Wikipedia: WikipediaIcon,
+  Arize: ArizeIcon,
 
   //Node Icons
   model_specs: FileSliders,
@@ -899,4 +923,5 @@ export const nodeIconsLucide: iconsType = {
   DatabaseZap,
   Cog,
   ArrowRightLeft,
+  FolderSync,
 };

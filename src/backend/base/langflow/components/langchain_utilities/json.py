@@ -34,7 +34,7 @@ class JsonAgentComponent(LCAgentComponent):
 
     def build_agent(self) -> AgentExecutor:
         path = Path(self.path)
-        if path.suffix in ("yaml", "yml"):
+        if path.suffix in {"yaml", "yml"}:
             with path.open(encoding="utf-8") as file:
                 yaml_dict = yaml.safe_load(file)
             spec = JsonSpec(dict_=yaml_dict)

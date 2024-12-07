@@ -5,8 +5,8 @@ import {
 } from "@/controllers/API/queries/messages";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useEffect, useState } from "react";
-import IconComponent from "../../components/genericIconComponent";
-import ShadTooltip from "../../components/shadTooltipComponent";
+import IconComponent from "../../components/common/genericIconComponent";
+import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
 import { InputOutput } from "../../constants/enums";
 import useAlertStore from "../../stores/alertStore";
@@ -132,7 +132,7 @@ export default function IOModal({
   );
   const flowPool = useFlowStore((state) => state.flowPool);
   const [sessionId, setSessionId] = useState<string>(currentFlowId);
-  useGetMessagesQuery(
+  const { isFetched: messagesFetched } = useGetMessagesQuery(
     {
       mode: "union",
       id: currentFlowId,
@@ -252,14 +252,14 @@ export default function IOModal({
       open={open}
       setOpen={setOpen}
       disable={disable}
-      type={isPlayground ? "modal" : undefined}
+      type={isPlayground ? "full-screen" : undefined}
       onSubmit={() => sendMessage({ repeat: 1 })}
       size="x-large"
       className="!rounded-[12px] p-0"
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
-      <BaseModal.Content overflowHidden>
+      <BaseModal.Content overflowHidden className="h-full">
         <div className="flex-max-width h-full">
           <div
             className={cn(
@@ -440,10 +440,15 @@ export default function IOModal({
                 <div
                   className={cn(
                     sidebarOpen ? "pointer-events-none opacity-0" : "",
-                    "absolute right-12 top-2 flex h-8 items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                    "absolute flex h-8 items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                    isPlayground ? "right-2 top-4" : "right-12 top-2",
                   )}
                 >
-                  <ShadTooltip styleClasses="z-50" content="New Chat">
+                  <ShadTooltip
+                    side="bottom"
+                    styleClasses="z-50"
+                    content="New Chat"
+                  >
                     <Button
                       className="mr-2 h-[32px] w-[32px] hover:bg-secondary-hover"
                       variant="ghost"
@@ -459,7 +464,7 @@ export default function IOModal({
                       />
                     </Button>
                   </ShadTooltip>
-                  <Separator orientation="vertical" />
+                  {!isPlayground && <Separator orientation="vertical" />}
                 </div>
               </div>
               {haveChat ? (
@@ -471,22 +476,24 @@ export default function IOModal({
                       : "",
                   )}
                 >
-                  <ChatView
-                    focusChat={sessionId}
-                    sendMessage={sendMessage}
-                    chatValue={chatValue}
-                    setChatValue={setChatValue}
-                    lockChat={lockChat}
-                    setLockChat={setLockChat}
-                    visibleSession={visibleSession}
-                    closeChat={
-                      !canvasOpen
-                        ? undefined
-                        : () => {
-                            setOpen(false);
-                          }
-                    }
-                  />
+                  {messagesFetched && (
+                    <ChatView
+                      focusChat={sessionId}
+                      sendMessage={sendMessage}
+                      chatValue={chatValue}
+                      setChatValue={setChatValue}
+                      lockChat={lockChat}
+                      setLockChat={setLockChat}
+                      visibleSession={visibleSession}
+                      closeChat={
+                        !canvasOpen
+                          ? undefined
+                          : () => {
+                              setOpen(false);
+                            }
+                      }
+                    />
+                  )}
                 </div>
               ) : (
                 <span className="flex h-full w-full items-center justify-center font-thin text-muted-foreground">
@@ -497,26 +504,6 @@ export default function IOModal({
           </div>
         </div>
       </BaseModal.Content>
-      {!haveChat ? (
-        <BaseModal.Footer
-          submit={{
-            label: "Run Flow",
-            icon: (
-              <IconComponent
-                name={isBuilding ? "Loader2" : "Zap"}
-                className={cn(
-                  "h-4 w-4",
-                  isBuilding
-                    ? "animate-spin"
-                    : "fill-current text-medium-indigo",
-                )}
-              />
-            ),
-          }}
-        />
-      ) : (
-        <></>
-      )}
     </BaseModal>
   );
 }
