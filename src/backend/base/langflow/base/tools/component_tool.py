@@ -134,11 +134,11 @@ def _build_output_async_function(
     async def output_function(*args, **kwargs):
         try:
             if event_manager:
-                event_manager.on_build_start(data={"id": component._id})
+                await asyncio.to_thread(event_manager.on_build_start, data={"id": component._id})
             component.set(*args, **kwargs)
             result = await output_method()
             if event_manager:
-                event_manager.on_build_end(data={"id": component._id})
+                await asyncio.to_thread(event_manager.on_build_end, data={"id": component._id})
         except Exception as e:
             raise ToolException(e) from e
         if isinstance(result, Message):
