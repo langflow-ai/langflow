@@ -25,13 +25,13 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
-    await page.waitForTimeout(1000);
 
     await page.getByText("Vector Store RAG", { exact: true }).last().click();
-    await page.waitForTimeout(3000);
     await page.getByText("Retriever", { exact: true }).first().isVisible();
     await page.getByText("Search Results", { exact: true }).first().isVisible();
 

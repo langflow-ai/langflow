@@ -24,7 +24,7 @@ from langflow.exceptions.component import StreamingError
 from langflow.field_typing import Tool  # noqa: TCH001 Needed by _add_toolkit_output
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
-from langflow.memory import delete_message, store_message, update_messages
+from langflow.memory import astore_message, aupdate_messages, delete_message
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import ErrorMessage, Message
@@ -847,7 +847,7 @@ class Component(CustomComponent):
                 return await self._build_with_tracing()
             return await self._build_without_tracing()
         except StreamingError as e:
-            self.send_error(
+            await self.send_error(
                 exception=e.cause,
                 session_id=session_id,
                 trace_name=getattr(self, "trace_name", None),
@@ -855,7 +855,7 @@ class Component(CustomComponent):
             )
             raise e.cause  # noqa: B904
         except Exception as e:
-            self.send_error(
+            await self.send_error(
                 exception=e,
                 session_id=session_id,
                 source=Source(id=self._id, display_name=self.display_name, source=self.display_name),
@@ -1016,10 +1016,10 @@ class Component(CustomComponent):
                 )
             )
 
-    def send_message(self, message: Message, id_: str | None = None):
+    async def send_message(self, message: Message, id_: str | None = None):
         if (hasattr(self, "graph") and self.graph.session_id) and (message is not None and not message.session_id):
             message.session_id = self.graph.session_id
-        stored_message = self._store_message(message)
+        stored_message = await self._store_message(message)
 
         self._stored_message_id = stored_message.id
         try:
@@ -1029,22 +1029,22 @@ class Component(CustomComponent):
                 and message is not None
                 and isinstance(message.text, AsyncIterator | Iterator)
             ):
-                complete_message = self._stream_message(message.text, stored_message)
+                complete_message = await self._stream_message(message.text, stored_message)
                 stored_message.text = complete_message
-                stored_message = self._update_stored_message(stored_message)
+                stored_message = await self._update_stored_message(stored_message)
             else:
                 # Only send message event for non-streaming messages
                 self._send_message_event(stored_message, id_=id_)
         except Exception:
             # remove the message from the database
-            delete_message(stored_message.id)
+            await delete_message(stored_message.id)
             raise
         self.status = stored_message
         return stored_message
 
-    def _store_message(self, message: Message) -> Message:
+    async def _store_message(self, message: Message) -> Message:
         flow_id = self.graph.flow_id if hasattr(self, "graph") else None
-        messages = store_message(message, flow_id=flow_id)
+        messages = await astore_message(message, flow_id=flow_id)
         if len(messages) != 1:
             msg = "Only one message can be stored at a time."
             raise ValueError(msg)
@@ -1073,21 +1073,21 @@ class Component(CustomComponent):
             and not isinstance(original_message.text, str)
         )
 
-    def _update_stored_message(self, stored_message: Message) -> Message:
-        message_tables = update_messages(stored_message)
+    async def _update_stored_message(self, stored_message: Message) -> Message:
+        message_tables = await aupdate_messages(stored_message)
         if len(message_tables) != 1:
             msg = "Only one message can be updated at a time."
             raise ValueError(msg)
         message_table = message_tables[0]
-        return Message(**message_table.model_dump())
+        return await Message.create(**message_table.model_dump())
 
-    def _stream_message(self, iterator: AsyncIterator | Iterator, message: Message) -> str:
+    async def _stream_message(self, iterator: AsyncIterator | Iterator, message: Message) -> str:
         if not isinstance(iterator, AsyncIterator | Iterator):
             msg = "The message must be an iterator or an async iterator."
             raise TypeError(msg)
 
         if isinstance(iterator, AsyncIterator):
-            return run_until_complete(self._handle_async_iterator(iterator, message.id, message))
+            return await self._handle_async_iterator(iterator, message.id, message)
         try:
             complete_message = ""
             first_chunk = True
@@ -1129,7 +1129,7 @@ class Component(CustomComponent):
             )
         return complete_message
 
-    def send_error(
+    async def send_error(
         self,
         exception: Exception,
         session_id: str,
@@ -1145,7 +1145,7 @@ class Component(CustomComponent):
             trace_name=trace_name,
             source=source,
         )
-        self.send_message(error_message)
+        await self.send_message(error_message)
         return error_message
 
     def _append_tool_to_outputs_map(self):
