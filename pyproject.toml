@@ -6,7 +6,10 @@ langflow = { workspace = true }
 members = ["src/backend/base", "."]
 
 [tool.poetry]
-name = "langflow" 
+name = "langflow"
+version = "0.1.0" # Or your actual version
+description = "A low-code app builder for RAG and multi-agent AI applications."
+authors = ["NoeliaIm"]
 
 [tool.poetry.dev-dependencies]
 hatch = "*"
