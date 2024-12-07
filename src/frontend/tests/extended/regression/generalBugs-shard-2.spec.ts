@@ -36,7 +36,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
@@ -45,7 +47,9 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("webhook");
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="dataWebhook"]', {
+      timeout: 3000,
+    });
 
     await page
       .getByTestId("dataWebhook")
@@ -62,7 +66,9 @@ test(
     await page.getByTestId("zoom_out").click();
     await page.getByTestId("zoom_out").click();
 
+    // wait for the update to be applied
     await page.waitForTimeout(1000);
+
     await page.getByText("API", { exact: true }).click();
 
     await page.getByText("Webhook cURL", { exact: true }).click();
