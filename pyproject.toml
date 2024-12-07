@@ -5,8 +5,8 @@ langflow = { workspace = true }
 [tool.uv.workspace]
 members = ["src/backend/base", "."]
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/backend/langflow"]
+[tool.poetry]
+name = "langflow" 
 
 [tool.poetry.dev-dependencies]
 hatch = "*"
