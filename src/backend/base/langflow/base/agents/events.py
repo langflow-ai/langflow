@@ -1,5 +1,4 @@
 # Add helper functions for each event type
-import asyncio
 from collections.abc import AsyncIterator
 from time import perf_counter
 from typing import Any, Protocol
@@ -53,7 +52,7 @@ def _calculate_duration(start_time: float) -> int:
     return result
 
 
-def handle_on_chain_start(
+async def handle_on_chain_start(
     event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType, start_time: float
 ) -> tuple[Message, float]:
     # Create content blocks if they don't exist
@@ -75,7 +74,7 @@ def handle_on_chain_start(
                 header={"title": "Input", "icon": "MessageSquare"},
             )
             agent_message.content_blocks[0].contents.append(text_content)
-            agent_message = send_message_method(message=agent_message)
+            agent_message = await send_message_method(message=agent_message)
             start_time = perf_counter()
     return agent_message, start_time
 
@@ -91,7 +90,7 @@ def _extract_output_text(output: str | list) -> str:
     return text
 
 
-def handle_on_chain_end(
+async def handle_on_chain_end(
     event: dict[str, Any], agent_message: Message, send_message_method: SendMessageFunctionType, start_time: float
 ) -> tuple[Message, float]:
     data_output = event["data"].get("output")
@@ -110,12 +109,12 @@ def handle_on_chain_end(
                 header={"title": "Output", "icon": "MessageSquare"},
             )
             agent_message.content_blocks[0].contents.append(text_content)
-        agent_message = send_message_method(message=agent_message)
+        agent_message = await send_message_method(message=agent_message)
         start_time = perf_counter()
     return agent_message, start_time
 
 
-def handle_on_tool_start(
+async def handle_on_tool_start(
     event: dict[str, Any],
     agent_message: Message,
     tool_blocks_map: dict[str, ToolContent],
@@ -149,12 +148,12 @@ def handle_on_tool_start(
     tool_blocks_map[tool_key] = tool_content
     agent_message.content_blocks[0].contents.append(tool_content)
 
-    agent_message = send_message_method(message=agent_message)
+    agent_message = await send_message_method(message=agent_message)
     tool_blocks_map[tool_key] = agent_message.content_blocks[0].contents[-1]
     return agent_message, new_start_time
 
 
-def handle_on_tool_end(
+async def handle_on_tool_end(
     event: dict[str, Any],
     agent_message: Message,
     tool_blocks_map: dict[str, ToolContent],
@@ -172,13 +171,13 @@ def handle_on_tool_end(
         tool_content.duration = duration
         tool_content.header = {"title": f"Executed **{tool_content.name}**", "icon": "Hammer"}
 
-        agent_message = send_message_method(message=agent_message)
+        agent_message = await send_message_method(message=agent_message)
         new_start_time = perf_counter()  # Get new start time for next operation
         return agent_message, new_start_time
     return agent_message, start_time
 
 
-def handle_on_tool_error(
+async def handle_on_tool_error(
     event: dict[str, Any],
     agent_message: Message,
     tool_blocks_map: dict[str, ToolContent],
@@ -194,12 +193,12 @@ def handle_on_tool_error(
         tool_content.error = event["data"].get("error", "Unknown error")
         tool_content.duration = _calculate_duration(start_time)
         tool_content.header = {"title": f"Error using **{tool_content.name}**", "icon": "Hammer"}
-        agent_message = send_message_method(message=agent_message)
+        agent_message = await send_message_method(message=agent_message)
         start_time = perf_counter()
     return agent_message, start_time
 
 
-def handle_on_chain_stream(
+async def handle_on_chain_stream(
     event: dict[str, Any],
     agent_message: Message,
     send_message_method: SendMessageFunctionType,
@@ -211,13 +210,13 @@ def handle_on_chain_stream(
         if output and isinstance(output, str | list):
             agent_message.text = _extract_output_text(output)
         agent_message.properties.state = "complete"
-        agent_message = send_message_method(message=agent_message)
+        agent_message = await send_message_method(message=agent_message)
         start_time = perf_counter()
     return agent_message, start_time
 
 
 class ToolEventHandler(Protocol):
-    def __call__(
+    async def __call__(
         self,
         event: dict[str, Any],
         agent_message: Message,
@@ -228,7 +227,7 @@ class ToolEventHandler(Protocol):
 
 
 class ChainEventHandler(Protocol):
-    def __call__(
+    async def __call__(
         self,
         event: dict[str, Any],
         agent_message: Message,
@@ -265,7 +264,7 @@ async def process_agent_events(
         agent_message.properties.icon = "Bot"
         agent_message.properties.state = "partial"
     # Store the initial message
-    agent_message = await asyncio.to_thread(send_message_method, message=agent_message)
+    agent_message = await send_message_method(message=agent_message)
     try:
         # Create a mapping of run_ids to tool contents
         tool_blocks_map: dict[str, ToolContent] = {}
@@ -273,14 +272,14 @@ async def process_agent_events(
         async for event in agent_executor:
             if event["event"] in TOOL_EVENT_HANDLERS:
                 tool_handler = TOOL_EVENT_HANDLERS[event["event"]]
-                agent_message, start_time = tool_handler(
+                agent_message, start_time = await tool_handler(
                     event, agent_message, tool_blocks_map, send_message_method, start_time
                 )
             elif event["event"] in CHAIN_EVENT_HANDLERS:
                 chain_handler = CHAIN_EVENT_HANDLERS[event["event"]]
-                agent_message, start_time = chain_handler(event, agent_message, send_message_method, start_time)
+                agent_message, start_time = await chain_handler(event, agent_message, send_message_method, start_time)
         agent_message.properties.state = "complete"
     except Exception as e:
         raise ExceptionWithMessageError(agent_message) from e
 
-    return Message(**agent_message.model_dump())
+    return await Message.create(**agent_message.model_dump())
