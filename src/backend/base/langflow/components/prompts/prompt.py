@@ -1,7 +1,7 @@
 from langflow.base.prompts.api_utils import process_prompt_template
 from langflow.custom import Component
 from langflow.inputs.inputs import DefaultPromptField
-from langflow.io import Output, PromptInput
+from langflow.io import MessageTextInput, Output, PromptInput
 from langflow.schema.message import Message
 from langflow.template.utils import update_template_values
 
@@ -15,6 +15,13 @@ class PromptComponent(Component):
 
     inputs = [
         PromptInput(name="template", display_name="Template"),
+        MessageTextInput(
+            name="tool_placeholder",
+            display_name="Tool Placeholder",
+            tool_mode=True,
+            advanced=True,
+            info="A placeholder input for tool mode.",
+        ),
     ]
 
     outputs = [
