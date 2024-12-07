@@ -58,8 +58,6 @@ test(
       .first()
       .fill(process.env.SEARCH_API_KEY ?? "");
 
-    await page.waitForTimeout(1000);
-
     await page.getByTestId("button_run_chat output").click();
 
     await page.getByTestId("button_run_chat output").last().click();
@@ -82,8 +80,6 @@ test(
     await page.waitForSelector("text=default session", {
       timeout: 30000,
     });
-
-    await page.waitForTimeout(1000);
 
     const output = await page.getByTestId("div-chat-message").allTextContents();
     const outputText = output.join("\n");
