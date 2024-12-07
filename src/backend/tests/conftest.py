@@ -55,6 +55,11 @@ def blockbuster():
             "io.TextIOWrapper.write",
         ]:
             bb.functions[func].can_block_functions.append(("settings/service.py", {"initialize"}))
+        for func in [
+            "io.BufferedReader.read",
+            "io.TextIOWrapper.read",
+        ]:
+            bb.functions[func].can_block_functions.append(("importlib_metadata/__init__.py", {"metadata"}))
         for func in bb.functions:
             if func.startswith("sqlite3."):
                 bb.functions[func].deactivate()
