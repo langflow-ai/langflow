@@ -1,0 +1,213 @@
+import asyncio
+import logging
+import traceback
+import json
+from typing import Annotated
+from uuid import UUID, uuid4
+from contextvars import ContextVar
+
+from fastapi import APIRouter, Request, Depends
+from fastapi.responses import StreamingResponse
+from pydantic_core import ValidationError
+from starlette.background import BackgroundTasks
+
+from langflow.api.v1.chat import build_flow
+from mcp.server import Server
+from mcp.server.sse import SseServerTransport
+import mcp.types as types
+
+from langflow.api.v1.schemas import InputValueRequest
+from langflow.graph import Graph
+from langflow.services.auth.utils import get_current_active_user
+from langflow.services.database.models import Flow, User
+from langflow.services.deps import get_session, get_async_session, get_db_service
+from sqlmodel import select
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/mcp", tags=["mcp"])
+
+server = Server("langflow-mcp-server")
+
+# Create a context variable to store the current user
+current_user_ctx: ContextVar[User] = ContextVar("current_user_ctx")
+
+
+def json_schema_from_flow(flow: Flow) -> dict:
+    """Generate JSON schema from flow input nodes."""
+    # Get the flow's data which contains the nodes and their configurations
+    flow_data = flow.data if flow.data else {}
+
+    graph = Graph.from_payload(flow_data)
+    input_nodes = [vertex for vertex in graph.vertices if vertex.is_input]
+
+    properties = {}
+    required = []
+    for node in input_nodes:
+        node_data = node.data["node"]
+        template = node_data["template"]
+
+        for field_name, field_data in template.items():
+            if field_data != "Component" and field_data.get("show", False) and not field_data.get("advanced", False):
+                field_type = field_data.get("type", "string")
+                properties[field_name] = {
+                    "type": field_type,
+                    "description": field_data.get("info", f"Input for {field_name}"),
+                }
+
+                if field_data.get("required", False):
+                    required.append(field_name)
+
+    return {"type": "object", "properties": properties, "required": required}
+
+
+@server.list_tools()
+async def handle_list_tools():
+    try:
+        session = next(get_session())
+        flows = session.exec(select(Flow)).all()
+        tools = []
+        name_count = {}  # Track name occurrences
+
+        for flow in flows:
+            # Generate unique name by appending _N if needed
+            base_name = flow.name
+            if base_name in name_count:
+                name_count[base_name] += 1
+                unique_name = f"{base_name}_{name_count[base_name]}"
+            else:
+                name_count[base_name] = 0
+                unique_name = base_name
+
+            tool = types.Tool(
+                name=str(flow.id),  # Use flow.id instead of name
+                description=f"{unique_name}: {flow.description}"
+                if flow.description
+                else f"Tool generated from flow: {unique_name}",
+                inputSchema=json_schema_from_flow(flow),
+            )
+            tools.append(tool)
+
+        return tools
+    except Exception as e:
+        logger.error(f"Error in listing tools: {str(e)}")
+        trace = traceback.format_exc()
+        logger.error(trace)
+        raise e
+
+
+@server.call_tool()
+async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent]:
+    """Handle tool execution requests."""
+    try:
+        session = next(get_session())
+        background_tasks = BackgroundTasks()
+
+        try:
+            current_user = current_user_ctx.get()
+        except LookupError:
+            raise ValueError("No authenticated user found in context")
+
+        flow = session.exec(select(Flow).where(Flow.id == UUID(name))).first()
+
+        if not flow:
+            raise ValueError(f"Flow with id '{name}' not found")
+
+        # Process inputs
+        processed_inputs = {}
+        for key, value in arguments.items():
+            processed_inputs[key] = value
+
+        # Send initial progress notification
+        # if progress_token := context.meta.progressToken:
+        #    await context.session.send_progress_notification(
+        #        progress_token=progress_token,
+        #        progress=0.5,
+        #        total=1.0
+        #    )
+
+        conversation_id = str(uuid4())
+        input_request = InputValueRequest(
+            input_value=processed_inputs["input_value"], components=[], type="chat", session=conversation_id
+        )
+
+        result = ""
+        db_service = get_db_service()
+        async with db_service.with_async_session() as async_session:
+            try:
+                response = await build_flow(
+                    flow_id=UUID(name),
+                    inputs=input_request,
+                    background_tasks=background_tasks,
+                    current_user=current_user,
+                    session=async_session,
+                )
+
+                async for line in response.body_iterator:
+                    if not line:
+                        continue
+                    try:
+                        event_data = json.loads(line)
+                        if event_data.get("event") == "end_vertex":
+                            result += (
+                                event_data.get("data", {})
+                                .get("build_data", {})
+                                .get("data", {})
+                                .get("results", {})
+                                .get("message", {})
+                                .get("text", "")
+                            )
+                    except json.JSONDecodeError:
+                        logger.warning(f"Failed to parse event data: {line}")
+                        continue
+            except asyncio.CancelledError as e:
+                logger.info(f"Request was cancelled {e}")
+                trace = traceback.format_exc()
+                logger.info(trace)
+                return [types.TextContent(type="text", text="Request was cancelled")]
+
+        # Send final progress notification
+        # if progress_token:
+        #    await context.session.send_progress_notification(
+        #        progress_token=progress_token,
+        #        progress=1.0,
+        #        total=1.0
+        #    )
+        print(result)
+
+        return [types.TextContent(type="text", text=result)]
+
+    except Exception as e:
+        logger.error(f"Error executing tool {name}: {str(e)}")
+        trace = traceback.format_exc()
+        logger.error(trace)
+        raise
+
+
+sse = SseServerTransport("/api/v1/mcp")
+
+
+@router.get("/sse", response_class=StreamingResponse)
+async def handle_sse(request: Request, current_user: Annotated[User, Depends(get_current_active_user)]):
+    # Store the current user in context
+    token = current_user_ctx.set(current_user)
+    try:
+        async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
+            try:
+                await server.run(streams[0], streams[1], server.create_initialization_options())
+            except ValidationError as e:
+                logger.warning(f"Validation error in MCP: {e}")
+            except asyncio.CancelledError as e:
+                logger.info(f"SSE connection was cancelled {e}")
+            except Exception as e:
+                logger.error(f"Error in MCP: {str(e)}")
+                trace = traceback.format_exc()
+                logger.error(trace)
+                raise
+    finally:
+        current_user_ctx.reset(token)
+
+
+@router.post("/")
+async def handle_messages(request: Request, current_user: Annotated[User, Depends(get_current_active_user)]):
+    await sse.handle_post_message(request.scope, request.receive, request._send)
