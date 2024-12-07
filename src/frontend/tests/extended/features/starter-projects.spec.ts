@@ -17,7 +17,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
@@ -25,14 +27,15 @@ test(
     expect(page.getByRole("button", { name: "Blank Flow" })).toBeVisible();
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.waitForTimeout(500);
+    await page.waitForSelector('[data-testid="search-input-template"]', {
+      timeout: 3000,
+    });
 
-    await page.getByPlaceholder("Search...").fill("Document");
-    await page.waitForTimeout(500);
+    await page.getByTestId("search-input-template").fill("Document");
 
     expect(
       page.getByTestId("template_basic-prompting-(hello,-world)"),
-    ).not.toBeVisible();
+    ).toBeVisible({ visible: false, timeout: 3000 });
 
     expect(page.getByTestId("template_document-q&a").first()).toBeVisible();
     expect(
@@ -46,16 +49,16 @@ test(
       page.getByTestId(`template_hierarchical-tasks-agent`),
     ).not.toBeVisible();
 
-    await page.waitForTimeout(500);
-
     await page.getByTestId(`side_nav_options_prompting`).click();
-    await page.waitForTimeout(500);
-    expect(page.getByTestId(`category_title_prompting`)).toBeVisible();
+    expect(page.getByTestId(`category_title_prompting`)).toBeVisible({
+      timeout: 3000,
+    });
 
     await page.getByTestId(`side_nav_options_rag`).click();
-    await page.waitForTimeout(500);
 
-    expect(page.getByTestId(`category_title_rag`)).toBeVisible();
+    expect(page.getByTestId(`category_title_rag`)).toBeVisible({
+      timeout: 3000,
+    });
     expect(page.getByTestId(`template_vector-store-rag`)).toBeVisible();
 
     expect(
@@ -64,19 +67,15 @@ test(
     expect(page.getByTestId(`template_document-qa`)).not.toBeVisible();
 
     await page.getByTestId(`side_nav_options_agents`).click();
-    await page.waitForTimeout(500);
 
-    expect(page.getByTestId(`category_title_agents`)).toBeVisible();
-
-    await page.waitForTimeout(500);
-
+    expect(page.getByTestId(`category_title_agents`)).toBeVisible({
+      timeout: 3000,
+    });
     expect(
       page.getByTestId(`template_basic-prompting-(hello,-world)`),
-    ).not.toBeVisible();
+    ).toBeVisible({ visible: false, timeout: 3000 });
     expect(page.getByTestId(`template_document-qa`)).not.toBeVisible();
     expect(page.getByTestId(`template_vector-store-rag`)).not.toBeVisible();
-
-    await page.waitForTimeout(500);
 
     await waitForTemplateVisibility(page, templateIds);
   },
