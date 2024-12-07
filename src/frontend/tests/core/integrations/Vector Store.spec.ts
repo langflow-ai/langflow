@@ -37,7 +37,9 @@ test(
     }
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
     await page.getByTestId("side_nav_options_all-templates").click();
@@ -57,22 +59,20 @@ test(
       .count();
     while (outdatedComponents > 0) {
       await page.getByTestId("icon-AlertTriangle").first().click();
-      await page.waitForTimeout(1000);
       outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
     }
     let filledApiKey = await page.getByTestId("remove-icon-badge").count();
     while (filledApiKey > 0) {
       await page.getByTestId("remove-icon-badge").first().click();
-      await page.waitForTimeout(1000);
       filledApiKey = await page.getByTestId("remove-icon-badge").count();
     }
     if (process?.env?.ASTRA_DB_API_ENDPOINT?.includes("astra-dev")) {
       const getUA = await page.evaluate(() => navigator.userAgent);
-      const userAgentInfo = uaParser(getUA);
       await page.getByTestId("title-Astra DB").first().click();
-      await page.waitForTimeout(500);
       await page.getByTestId("code-button-modal").click();
-      await page.waitForTimeout(500);
+      await page.waitForSelector("text=Edit Code", {
+        timeout: 3000,
+      });
       let cleanCode = await extractAndCleanCode(page);
       cleanCode = cleanCode!.replace(
         '"pre_delete_collection": self.pre_delete_collection or False,',
@@ -82,16 +82,18 @@ test(
       await page.keyboard.press("Backspace");
       await page.locator("textarea").last().fill(cleanCode);
       await page.locator('//*[@id="checkAndSaveBtn"]').click();
-      await page.waitForTimeout(500);
+      await page.waitForSelector('[data-testid="title-Astra DB"]', {
+        timeout: 3000,
+      });
       await page.getByTestId("title-Astra DB").last().click();
-      await page.waitForTimeout(500);
       await page.getByTestId("code-button-modal").click();
-      await page.waitForTimeout(500);
+      await page.waitForSelector("text=Edit Code", {
+        timeout: 3000,
+      });
       await page.locator("textarea").last().press(`ControlOrMeta+a`);
       await page.keyboard.press("Backspace");
       await page.locator("textarea").last().fill(cleanCode);
       await page.locator('//*[@id="checkAndSaveBtn"]').click();
-      await page.waitForTimeout(500);
     }
     const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
     const isApiKeyInputVisible = await apiKeyInput.isVisible();
@@ -136,7 +138,6 @@ test(
       path.join(__dirname, "../../assets/test_file.txt"),
     );
     await page.getByText("test_file.txt").isVisible();
-    await page.waitForTimeout(1000);
     await page.getByTestId("button_run_astra db").last().click();
     await page.waitForSelector("text=built successfully", {
       timeout: 60000 * 2,
