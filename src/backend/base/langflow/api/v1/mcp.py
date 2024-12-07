@@ -1,27 +1,26 @@
 import asyncio
+import json
 import logging
 import traceback
-import json
+from contextvars import ContextVar
 from typing import Annotated
 from uuid import UUID, uuid4
-from contextvars import ContextVar
 
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
+from mcp import types
+from mcp.server import Server
+from mcp.server.sse import SseServerTransport
 from pydantic_core import ValidationError
+from sqlmodel import select
 from starlette.background import BackgroundTasks
 
 from langflow.api.v1.chat import build_flow
-from mcp.server import Server
-from mcp.server.sse import SseServerTransport
-import mcp.types as types
-
 from langflow.api.v1.schemas import InputValueRequest
 from langflow.graph import Graph
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models import Flow, User
-from langflow.services.deps import get_session, get_async_session, get_db_service
-from sqlmodel import select
+from langflow.services.deps import get_db_service, get_session
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +89,7 @@ async def handle_list_tools():
 
         return tools
     except Exception as e:
-        logger.error(f"Error in listing tools: {str(e)}")
+        logger.error(f"Error in listing tools: {e!s}")
         trace = traceback.format_exc()
         logger.error(trace)
         raise e
@@ -178,7 +177,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
         return [types.TextContent(type="text", text=result)]
 
     except Exception as e:
-        logger.error(f"Error executing tool {name}: {str(e)}")
+        logger.error(f"Error executing tool {name}: {e!s}")
         trace = traceback.format_exc()
         logger.error(trace)
         raise
@@ -200,7 +199,7 @@ async def handle_sse(request: Request, current_user: Annotated[User, Depends(get
             except asyncio.CancelledError as e:
                 logger.info(f"SSE connection was cancelled {e}")
             except Exception as e:
-                logger.error(f"Error in MCP: {str(e)}")
+                logger.error(f"Error in MCP: {e!s}")
                 trace = traceback.format_exc()
                 logger.error(trace)
                 raise

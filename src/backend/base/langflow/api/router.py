@@ -9,13 +9,13 @@ from langflow.api.v1 import (
     flows_router,
     folders_router,
     login_router,
+    mcp_router,
     monitor_router,
     starter_projects_router,
     store_router,
     users_router,
     validate_router,
     variables_router,
-    mcp_router,
 )
 
 router = APIRouter(
