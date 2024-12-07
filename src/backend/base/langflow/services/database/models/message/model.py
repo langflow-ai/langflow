@@ -150,3 +150,4 @@ class MessageUpdate(SQLModel):
     files: list[str] | None = None
     edit: bool | None = None
     error: bool | None = None
+    properties: Properties | None = None
