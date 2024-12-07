@@ -9,11 +9,12 @@ from langflow.template import Output
 
 
 class NeedleComponent(Component):
-    display_name = "Needle Retriever"
+    display_name = "Needle"
+    bundle_name: str = "needle"
     description = "A retriever that uses the Needle API to search collections."
     documentation: str = "https://docs.needle.api/"
     icon = "search"
-    name = "NeedleRetriever"
+    name = "needle"
 
     inputs = [
         SecretStrInput(
