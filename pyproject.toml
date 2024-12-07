@@ -8,6 +8,9 @@ members = ["src/backend/base", "."]
 [tool.hatch.build.targets.wheel]
 packages = ["src/backend/langflow"]
 
+[tool.poetry.dev-dependencies]
+hatch = "*"
+
 [project]
 name = "langflow"
 version = "1.1.1"
