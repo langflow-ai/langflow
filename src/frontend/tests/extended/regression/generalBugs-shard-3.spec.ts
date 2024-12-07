@@ -39,7 +39,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
@@ -48,9 +50,15 @@ test(
     });
 
     await page.getByTestId("blank-flow").click();
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
+      timeout: 30000,
+    });
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
-    await page.waitForTimeout(1000);
+
+    await page.waitForSelector('[data-testid="outputsChat Output"]', {
+      timeout: 30000,
+    });
 
     await page
       .getByTestId("outputsChat Output")
@@ -65,7 +73,9 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat input");
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="inputsChat Input"]', {
+      timeout: 30000,
+    });
 
     await page
       .getByTestId("inputsChat Input")
@@ -75,7 +85,6 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai");
-    await page.waitForTimeout(1000);
 
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
@@ -104,14 +113,12 @@ test(
 
     while (outdatedComponents > 0) {
       await page.getByTestId("icon-AlertTriangle").first().click();
-      await page.waitForTimeout(1000);
       outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
     }
 
     let filledApiKey = await page.getByTestId("remove-icon-badge").count();
     while (filledApiKey > 0) {
       await page.getByTestId("remove-icon-badge").first().click();
-      await page.waitForTimeout(1000);
       filledApiKey = await page.getByTestId("remove-icon-badge").count();
     }
 
@@ -218,7 +225,6 @@ test(
       timeout: 30000,
     });
 
-    await page.waitForTimeout(1000);
     await page.getByTestId("copy-code-button").last().click();
 
     const handle = await page.evaluateHandle(() =>
@@ -256,7 +262,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
@@ -273,8 +281,9 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
 
-    await page.waitForTimeout(1000);
-
+    await page.waitForSelector('[data-testid="outputsChat Output"]', {
+      timeout: 30000,
+    });
     await page
       .locator('//*[@id="outputsChat Output"]')
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
@@ -283,8 +292,6 @@ test(
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
     });
-
-    await page.waitForTimeout(1000);
 
     await page.getByTestId("playground-btn-flow-io").click({ force: true });
 
