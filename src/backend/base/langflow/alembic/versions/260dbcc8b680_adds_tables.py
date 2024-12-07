@@ -112,7 +112,7 @@ def upgrade() -> None:
         if "user.id" not in existing_fks_flow:
             batch_op.create_foreign_key("fk_flow_user_id", "user", ["user_id"], ["id"])
         if "ix_flow_description" not in existing_indices_flow:
-            batch_op.create_index(batch_op.f("ix_flow_description"), ["description"], unique=False)
+            batch_op.create_index(batch_op.f("ix_flow_description"), ["description"], unique=False, mysql_length=255)
         if "ix_flow_name" not in existing_indices_flow:
             batch_op.create_index(batch_op.f("ix_flow_name"), ["name"], unique=False)
     with op.batch_alter_table("flow", schema=None) as batch_op:
