@@ -83,6 +83,7 @@ export default function TemplateContentComponent({
         <Input
           type="search"
           placeholder="Search..."
+          data-testid="search-input-template"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           ref={searchInputRef}
