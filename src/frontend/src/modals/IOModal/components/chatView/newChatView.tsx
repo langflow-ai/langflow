@@ -83,7 +83,7 @@ export default function ChatView({
       return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
     });
 
-    if (finalChatHistory.length === 0 && !lockChat && chatInputNode)
+    if (messages.length === 0 && !lockChat && chatInputNode)
       setChatValue(chatInputNode.data.node.template["input_value"].value ?? "");
     else setChatValue("");
 
