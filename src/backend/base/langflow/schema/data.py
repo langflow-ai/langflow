@@ -97,7 +97,7 @@ class Data(BaseModel):
             Data: The converted Data.
         """
         data: dict = {"text": message.content}
-        data["metadata"] = cast(dict, message.to_json())
+        data["metadata"] = cast("dict", message.to_json())
         return cls(data=data, text_key="text")
 
     def __add__(self, other: "Data") -> "Data":
