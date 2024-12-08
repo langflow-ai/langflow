@@ -31,7 +31,7 @@ class ChatComponent(Component):
             self.status = messages
             self._send_messages_events(messages)
 
-        return cast(str | Message, message_text)
+        return cast("str | Message", message_text)
 
     def _create_message(self, input_value, sender, sender_name, files, session_id) -> Message:
         if isinstance(input_value, Data):
