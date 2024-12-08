@@ -1,62 +1,124 @@
-from typing import cast
-
+from typing import cast, Dict, Any, List
 from langchain_community.retrievers.needle import NeedleRetriever
-
-from langflow.custom import Component
+from langchain_openai import ChatOpenAI
+from langchain.chains import ConversationalRetrievalChain
+from langflow.custom import CustomComponent
 from langflow.field_typing import Retriever
-from langflow.inputs import IntInput, SecretStrInput, StrInput
-from langflow.template import Output
 
 
-class NeedleComponent(Component):
-    display_name = "Needle"
-    bundle_name: str = "needle"
-    description = "A retriever that uses the Needle API to search collections."
-    documentation: str = "https://docs.needle.api/"
+class NeedleComponent(CustomComponent):
+    display_name = "Needle Retriever"
+    description = "A retriever that uses the Needle API to search collections and generates responses using OpenAI."
+    documentation = "https://docs.needle-ai.com"
     icon = "search"
     name = "needle"
 
-    inputs = [
-        SecretStrInput(
-            name="needle_api_key",
-            display_name="Needle API Key",
-            info="The API key to authenticate with the Needle API.",
-        ),
-        StrInput(
-            name="collection_id",
-            display_name="Collection ID",
-            info="The ID of the Needle collection to search.",
-        ),
-        IntInput(
-            name="top_k",
-            display_name="Top K",
-            info="The number of results to retrieve.",
-            value=10,  # Default value
-        ),
-    ]
+    def build_config(self) -> Dict[str, Any]:
+        """Build the UI configuration for the component."""
+        return {
+            "needle_api_key": {
+                "display_name": "Needle API Key",
+                "field_type": "password",
+                "required": True,
+            },
+            "openai_api_key": {
+                "display_name": "OpenAI API Key",
+                "field_type": "password",
+                "required": True,
+            },
+            "collection_id": {
+                "display_name": "Collection ID",
+                "required": True,
+            },
+            "query": {
+                "display_name": "User Query",
+                "field_type": "str",
+                "required": True,
+                "placeholder": "Enter your question here",
+            },
+            "output_type": {
+                "display_name": "Output Type",
+                "field_type": "select",
+                "required": True,
+                "options": ["answer", "chunks"],
+                "value": "answer",
+                "is_multi": False,
+            },
+            "top_k": {
+                "display_name": "Top K",
+                "field_type": "int",
+                "value": 10,
+                "required": False,
+            },
+            "code": {
+                "show": False,
+                "required": False,
+            }
+        }
 
-    outputs = [
-        Output(display_name="Needle Retriever", name="retriever", method="build_retriever"),
-    ]
+    def build(
+        self,
+        needle_api_key: str,
+        openai_api_key: str,
+        collection_id: str,
+        query: str,
+        output_type: str = "answer",
+        top_k: int = 10,
+        **kwargs,
+    ) -> str:
+        """Build the NeedleRetriever component and process the query."""
+        # Validate inputs
+        if not needle_api_key.strip():
+            raise ValueError("The Needle API key cannot be empty.")
+        if not openai_api_key.strip():
+            raise ValueError("The OpenAI API key cannot be empty.")
+        if not collection_id.strip():
+            raise ValueError("The Collection ID cannot be empty.")
+        if not query.strip():
+            raise ValueError("The query cannot be empty.")
+        if top_k <= 0:
+            raise ValueError("Top K must be a positive integer.")
 
-    def build_retriever(self, needle_api_key: str, collection_id: str, top_k: int = 10) -> Retriever:
-        """Build and return the NeedleRetriever using the provided inputs.
+        # Handle output_type if it's a list
+        if isinstance(output_type, list):
+            output_type = output_type[0]
+        
+        print(f"Debug - Output Type Selected: {output_type}")  # Debug print
 
-        Args:
-            needle_api_key (str): API key for the Needle API.
-            collection_id (str): Collection ID to search in Needle.
-            top_k (int): The number of top results to fetch.
-
-        Returns:
-            Retriever: A configured NeedleRetriever instance.
-        """
         try:
+            # Initialize the retriever
             retriever = NeedleRetriever(
                 needle_api_key=needle_api_key,
                 collection_id=collection_id,
                 top_k=top_k,
             )
-        except Exception as e:
-            raise ValueError(f"Error initializing NeedleRetriever: {e!s}")
+            
+            # Create the chain
+            llm = ChatOpenAI(
+                temperature=0.7,
+                api_key=openai_api_key,
+            )
 
-        return cast(Retriever, retriever)
+            qa_chain = ConversationalRetrievalChain.from_llm(
+                llm=llm,
+                retriever=retriever,
+                return_source_documents=True,
+            )
+
+            # Process the query
+            result = qa_chain({"question": query, "chat_history": []})
+            
+            # Return based on output type
+            if str(output_type).lower().strip() == "chunks":
+                print("Debug - Returning chunks")  # Debug print
+                # Format the source documents for better readability
+                docs = result["source_documents"]
+                formatted_chunks = [f"Chunk {i+1}:\n{doc.page_content}\n" 
+                                  for i, doc in enumerate(docs)]
+                return "\n".join(formatted_chunks)
+            
+            print("Debug - Returning answer")  # Debug print
+            return result["answer"]
+        except Exception as e:
+            print(f"Debug - Error: {str(e)}")  # Debug print
+            raise ValueError(f"Error processing query: {str(e)}")
