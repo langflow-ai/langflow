@@ -20,7 +20,7 @@ from fastapi import (
 from loguru import logger
 from sqlmodel import select
 
-from langflow.api.utils import AsyncDbSession, CurrentActiveUser, parse_value
+from langflow.api.utils import CurrentActiveUser, DbSession, parse_value
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -379,7 +379,7 @@ async def webhook_run_flow(
 )
 async def experimental_run_flow(
     *,
-    session: AsyncDbSession,
+    session: DbSession,
     flow_id: UUID,
     inputs: list[InputValueRequest] | None = None,
     outputs: list[str] | None = None,
