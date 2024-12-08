@@ -12,7 +12,7 @@ from langflow.initial_setup.setup import load_starter_projects
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
 from langflow.services.database.models.folder.model import FolderCreate
-from langflow.services.database.utils import session_getter
+from langflow.services.database.utils import async_session_getter
 from langflow.services.deps import get_db_service
 
 
@@ -530,14 +530,14 @@ async def test_download_file(
         ]
     )
     db_manager = get_db_service()
-    with session_getter(db_manager) as _session:
+    async with async_session_getter(db_manager) as _session:
         saved_flows = []
         for flow in flow_list.flows:
             flow.user_id = active_user.id
             db_flow = Flow.model_validate(flow, from_attributes=True)
             _session.add(db_flow)
             saved_flows.append(db_flow)
-        _session.commit()
+        await _session.commit()
         # Make request to endpoint inside the session context
         flow_ids = [str(db_flow.id) for db_flow in saved_flows]  # Convert UUIDs to strings
         flow_ids_json = json.dumps(flow_ids)

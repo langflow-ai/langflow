@@ -9,7 +9,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 
-from langflow.api.utils import AsyncDbSession, CurrentActiveUser
+from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.database.models.flow import Flow
 from langflow.services.deps import get_storage_service
@@ -25,7 +25,7 @@ router = APIRouter(tags=["Files"], prefix="/files")
 async def get_flow_id(
     flow_id: UUID,
     current_user: CurrentActiveUser,
-    session: AsyncDbSession,
+    session: DbSession,
 ):
     flow_id_str = str(flow_id)
     # AttributeError: 'SelectOfScalar' object has no attribute 'first'
@@ -43,7 +43,7 @@ async def upload_file(
     file: UploadFile,
     flow_id: Annotated[UUID, Depends(get_flow_id)],
     current_user: CurrentActiveUser,
-    session: AsyncDbSession,
+    session: DbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ) -> UploadFileResponse:
     try:
