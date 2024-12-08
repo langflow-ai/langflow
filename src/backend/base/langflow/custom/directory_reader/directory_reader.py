@@ -296,9 +296,6 @@ class DirectoryReader:
             file_content = str(StringCompressor(file_content).compress_string())
         return True, file_content
 
-    async def get_output_types_from_code_async(self, code: str):
-        return await asyncio.to_thread(self.get_output_types_from_code, code)
-
     async def abuild_component_menu_list(self, file_paths):
         response = {"menu": []}
         logger.debug("-------------------- Async Building component menu list --------------------")
@@ -328,7 +325,7 @@ class DirectoryReader:
 
             if validation_result:
                 try:
-                    output_types = await self.get_output_types_from_code_async(result_content)
+                    output_types = await asyncio.to_thread(self.get_output_types_from_code, result_content)
                 except Exception:  # noqa: BLE001
                     logger.exception("Error while getting output types from code")
                     output_types = [component_name_camelcase]

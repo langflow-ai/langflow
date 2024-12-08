@@ -1,55 +1,9 @@
-import asyncio
-from typing import cast
-
 from langflow.custom import Component
-from langflow.memory import astore_message
-from langflow.schema import Data
-from langflow.schema.message import Message
 
 
 class ChatComponent(Component):
     display_name = "Chat Component"
     description = "Use as base for chat components."
-
-    async def build_with_data(
-        self,
-        *,
-        sender: str | None = "User",
-        sender_name: str | None = "User",
-        input_value: str | Data | Message | None = None,
-        files: list[str] | None = None,
-        session_id: str | None = None,
-        return_message: bool = False,
-    ) -> str | Message:
-        message = await asyncio.to_thread(self._create_message, input_value, sender, sender_name, files, session_id)
-        message_text = message.text if not return_message else message
-
-        self.status = message_text
-        if session_id and isinstance(message, Message) and isinstance(message.text, str):
-            flow_id = self.graph.flow_id if hasattr(self, "graph") else None
-            messages = await astore_message(message, flow_id=flow_id)
-            self.status = messages
-            self._send_messages_events(messages)
-
-        return cast("str | Message", message_text)
-
-    def _create_message(self, input_value, sender, sender_name, files, session_id) -> Message:
-        if isinstance(input_value, Data):
-            return Message.from_data(input_value)
-        return Message(
-            text=input_value,
-            sender=sender,
-            sender_name=sender_name,
-            files=files,
-            session_id=session_id,
-            category="message",
-        )
-
-    def _send_messages_events(self, messages) -> None:
-        if hasattr(self, "_event_manager") and self._event_manager:
-            for stored_message in messages:
-                id_ = stored_message.id
-                self._send_message_event(message=stored_message, id_=id_)
 
     def get_properties_from_source_component(self):
         if hasattr(self, "_vertex") and hasattr(self._vertex, "incoming_edges") and self._vertex.incoming_edges:

@@ -1,16 +1,9 @@
-import asyncio
-from pathlib import Path
 from typing import Any
 
+from aiofile import async_open
 from fastapi import status
 from httpx import AsyncClient
 from langflow.api.v1.schemas import UpdateCustomComponentRequest
-
-
-async def get_dynamic_output_component_code():
-    return await asyncio.to_thread(
-        Path("src/backend/tests/data/dynamic_output_component.py").read_text, encoding="utf-8"
-    )
 
 
 async def test_get_version(client: AsyncClient):
@@ -37,7 +30,8 @@ async def test_get_config(client: AsyncClient):
 
 
 async def test_update_component_outputs(client: AsyncClient, logged_in_headers: dict):
-    code = await get_dynamic_output_component_code()
+    async with async_open("src/backend/tests/data/dynamic_output_component.py", encoding="utf-8") as f:
+        code = await f.read()
     frontend_node: dict[str, Any] = {"outputs": []}
     request = UpdateCustomComponentRequest(
         code=code,

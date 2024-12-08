@@ -46,20 +46,28 @@ load_dotenv()
 
 
 @pytest.fixture(autouse=True)
-def blockbuster():
-    with blockbuster_ctx() as bb:
-        for func in [
-            "io.BufferedReader.read",
-            "io.BufferedWriter.write",
-            "io.TextIOWrapper.read",
-            "io.TextIOWrapper.write",
-        ]:
-            bb.functions[func].can_block_functions.append(("settings/service.py", {"initialize"}))
-        for func in bb.functions:
-            if func.startswith("sqlite3."):
-                bb.functions[func].deactivate()
-        bb.functions["threading.Lock.acquire"].deactivate()
-        yield bb
+def blockbuster(request):
+    if "benchmark" in request.keywords:
+        yield
+    else:
+        with blockbuster_ctx() as bb:
+            for func in [
+                "io.BufferedReader.read",
+                "io.BufferedWriter.write",
+                "io.TextIOWrapper.read",
+                "io.TextIOWrapper.write",
+            ]:
+                bb.functions[func].can_block_functions.append(("settings/service.py", {"initialize"}))
+            for func in [
+                "io.BufferedReader.read",
+                "io.TextIOWrapper.read",
+            ]:
+                bb.functions[func].can_block_functions.append(("importlib_metadata/__init__.py", {"metadata"}))
+            for func in bb.functions:
+                if func.startswith("sqlite3."):
+                    bb.functions[func].deactivate()
+            bb.functions["threading.Lock.acquire"].deactivate()
+            yield bb
 
 
 def pytest_configure(config):
