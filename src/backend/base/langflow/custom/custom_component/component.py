@@ -21,7 +21,7 @@ from langflow.base.tools.constants import (
 )
 from langflow.custom.tree_visitor import RequiredInputsVisitor
 from langflow.exceptions.component import StreamingError
-from langflow.field_typing import Tool  # noqa: TCH001 Needed by _add_toolkit_output
+from langflow.field_typing import Tool  # noqa: TC001 Needed by _add_toolkit_output
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
 from langflow.memory import astore_message, aupdate_messages, delete_message
