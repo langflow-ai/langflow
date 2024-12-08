@@ -116,6 +116,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         MultilineInput(
             name="search_input",
             display_name="Search Input",
+            tool_mode=True,
         ),
         IntInput(
             name="number_of_results",
