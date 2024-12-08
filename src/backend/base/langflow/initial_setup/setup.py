@@ -165,8 +165,8 @@ def update_new_output(data):
         if "sourceHandle" in edge and "targetHandle" in edge:
             new_source_handle = scape_json_parse(edge["sourceHandle"])
             new_target_handle = scape_json_parse(edge["targetHandle"])
-            _id = new_source_handle["id"]
-            source_node_index = next((index for (index, d) in enumerate(nodes) if d["id"] == _id), -1)
+            id_ = new_source_handle["id"]
+            source_node_index = next((index for (index, d) in enumerate(nodes) if d["id"] == id_), -1)
             source_node = nodes[source_node_index] if source_node_index != -1 else None
 
             if "baseClasses" in new_source_handle:
@@ -544,8 +544,8 @@ async def load_flows_from_directory() -> None:
             msg = "Superuser not found in the database"
             raise NoResultFound(msg)
         user_id = user.id
-        _flows_path = Path(flows_path)
-        files = [f for f in _flows_path.iterdir() if f.is_file()]
+        flows_path_ = Path(flows_path)
+        files = [f for f in flows_path_.iterdir() if f.is_file()]
         for file_path in files:
             if file_path.suffix != ".json":
                 continue

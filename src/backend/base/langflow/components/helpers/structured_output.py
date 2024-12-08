@@ -87,14 +87,14 @@ class StructuredOutputComponent(Component):
             msg = "Output schema cannot be empty"
             raise ValueError(msg)
 
-        _output_model = build_model_from_schema(self.output_schema)
+        output_model_ = build_model_from_schema(self.output_schema)
         if self.multiple:
             output_model = create_model(
                 self.schema_name,
-                objects=(list[_output_model], Field(description=f"A list of {self.schema_name}.")),  # type: ignore[valid-type]
+                objects=(list[output_model_], Field(description=f"A list of {self.schema_name}.")),  # type: ignore[valid-type]
             )
         else:
-            output_model = _output_model
+            output_model = output_model_
         try:
             llm_with_structured_output = cast("LanguageModel", self.llm).with_structured_output(schema=output_model)  # type: ignore[valid-type, attr-defined]
 

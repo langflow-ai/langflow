@@ -148,8 +148,8 @@ def apply_tweaks(node: dict[str, Any], node_tweaks: dict[str, Any]) -> None:
                 template_data[tweak_name]["value"] = value
             elif isinstance(tweak_value, dict):
                 for k, v in tweak_value.items():
-                    _k = "file_path" if template_data[tweak_name]["type"] == "file" else k
-                    template_data[tweak_name][_k] = v
+                    k_ = "file_path" if template_data[tweak_name]["type"] == "file" else k
+                    template_data[tweak_name][k_] = v
             else:
                 key = "file_path" if template_data[tweak_name]["type"] == "file" else "value"
                 template_data[tweak_name][key] = tweak_value

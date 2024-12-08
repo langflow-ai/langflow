@@ -54,8 +54,8 @@ class ChatComponent(Component):
     def get_properties_from_source_component(self):
         if hasattr(self, "_vertex") and hasattr(self._vertex, "incoming_edges") and self._vertex.incoming_edges:
             source_id = self._vertex.incoming_edges[0].source_id
-            _source_vertex = self.graph.get_vertex(source_id)
-            component = _source_vertex.custom_component
+            source_vertex = self.graph.get_vertex(source_id)
+            component = source_vertex.custom_component
             source = component.display_name
             icon = component.icon
             possible_attributes = ["model_name", "model_id", "model"]
