@@ -5,7 +5,7 @@ from .needle import NeedleRetriever
 
 __all__ = [
     "AmazonKendraRetrieverComponent",
-    "NeedleRetriever",
     "MetalRetrieverComponent",
     "MultiQueryRetrieverComponent",
+    "NeedleRetriever",
 ]
