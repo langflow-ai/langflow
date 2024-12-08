@@ -1,7 +1,8 @@
+import asyncio
 from typing import cast
 
 from langflow.custom import Component
-from langflow.memory import store_message
+from langflow.memory import astore_message
 from langflow.schema import Data
 from langflow.schema.message import Message
 
@@ -10,7 +11,7 @@ class ChatComponent(Component):
     display_name = "Chat Component"
     description = "Use as base for chat components."
 
-    def build_with_data(
+    async def build_with_data(
         self,
         *,
         sender: str | None = "User",
@@ -20,17 +21,17 @@ class ChatComponent(Component):
         session_id: str | None = None,
         return_message: bool = False,
     ) -> str | Message:
-        message = self._create_message(input_value, sender, sender_name, files, session_id)
+        message = await asyncio.to_thread(self._create_message, input_value, sender, sender_name, files, session_id)
         message_text = message.text if not return_message else message
 
         self.status = message_text
         if session_id and isinstance(message, Message) and isinstance(message.text, str):
             flow_id = self.graph.flow_id if hasattr(self, "graph") else None
-            messages = store_message(message, flow_id=flow_id)
+            messages = await astore_message(message, flow_id=flow_id)
             self.status = messages
             self._send_messages_events(messages)
 
-        return cast(str | Message, message_text)
+        return cast("str | Message", message_text)
 
     def _create_message(self, input_value, sender, sender_name, files, session_id) -> Message:
         if isinstance(input_value, Data):
@@ -53,8 +54,8 @@ class ChatComponent(Component):
     def get_properties_from_source_component(self):
         if hasattr(self, "_vertex") and hasattr(self._vertex, "incoming_edges") and self._vertex.incoming_edges:
             source_id = self._vertex.incoming_edges[0].source_id
-            _source_vertex = self.graph.get_vertex(source_id)
-            component = _source_vertex.custom_component
+            source_vertex = self.graph.get_vertex(source_id)
+            component = source_vertex.custom_component
             source = component.display_name
             icon = component.icon
             possible_attributes = ["model_name", "model_id", "model"]

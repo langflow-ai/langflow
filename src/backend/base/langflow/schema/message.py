@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 import traceback
@@ -21,7 +22,7 @@ from langflow.schema.content_types import ErrorContent
 from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
 from langflow.schema.properties import Properties, Source
-from langflow.schema.validators import timestamp_to_str_validator  # noqa: TCH001
+from langflow.schema.validators import timestamp_to_str_validator
 from langflow.utils.constants import (
     MESSAGE_SENDER_AI,
     MESSAGE_SENDER_NAME_AI,
@@ -266,6 +267,13 @@ class Message(Data):
         instance.prompt = jsonable_encoder(prompt_template.to_json())
         instance.messages = instance.prompt.get("kwargs", {}).get("messages", [])
         return instance
+
+    @classmethod
+    async def create(cls, **kwargs):
+        """If files are present, create the message in a separate thread as is_image_file is blocking."""
+        if "files" in kwargs:
+            return await asyncio.to_thread(cls, **kwargs)
+        return cls(**kwargs)
 
 
 class DefaultModel(BaseModel):
