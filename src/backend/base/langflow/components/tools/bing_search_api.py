@@ -44,4 +44,4 @@ class BingSearchAPIComponent(LCToolComponent):
             )
         else:
             wrapper = BingSearchAPIWrapper(bing_subscription_key=self.bing_subscription_key)
-        return cast(Tool, BingSearchResults(api_wrapper=wrapper, num_results=self.k))
+        return cast("Tool", BingSearchResults(api_wrapper=wrapper, num_results=self.k))

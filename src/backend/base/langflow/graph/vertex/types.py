@@ -129,7 +129,7 @@ class ComponentVertex(Vertex):
                     if output.value is UNDEFINED:
                         result = self.results[edge.source_handle.name]
                     else:
-                        result = cast(Any, output.value)
+                        result = cast("Any", output.value)
                 except NoComponentInstanceError:
                     result = self.results[edge.source_handle.name]
                 break

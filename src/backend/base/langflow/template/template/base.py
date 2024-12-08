@@ -80,7 +80,7 @@ class Template(BaseModel):
         if field is None:
             msg = f"Field {field_name} not found in template {self.type_name}"
             raise ValueError(msg)
-        return cast(Input, field)
+        return cast("Input", field)
 
     def update_field(self, field_name: str, field: Input) -> None:
         """Updates the field with the given name."""

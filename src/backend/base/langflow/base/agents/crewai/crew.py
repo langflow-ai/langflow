@@ -177,7 +177,7 @@ class BaseCrewComponent(Component):
             _id = self._vertex.id if self._vertex else self.display_name
             if isinstance(agent_output, AgentFinish):
                 messages = agent_output.messages
-                self.log(cast(dict, messages[0].to_json()), name=f"Finish (Agent: {_id})")
+                self.log(cast("dict", messages[0].to_json()), name=f"Finish (Agent: {_id})")
             elif isinstance(agent_output, list):
                 _messages_dict = {f"Action {i}": action.messages for i, (action, _) in enumerate(agent_output)}
                 # Serialize the messages with to_json() to avoid issues with circular references

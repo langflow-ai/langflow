@@ -51,4 +51,4 @@ class AmazonKendraRetrieverComponent(CustomComponent):
         except Exception as e:
             msg = "Could not connect to AmazonKendra API."
             raise ValueError(msg) from e
-        return cast(Retriever, output)
+        return cast("Retriever", output)

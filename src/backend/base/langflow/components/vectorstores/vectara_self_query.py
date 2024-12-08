@@ -60,7 +60,7 @@ class VectaraSelfQueryRetriverComponent(CustomComponent):
             metadata_field_obj.append(attribute_info)
 
         return cast(
-            Retriever,
+            "Retriever",
             SelfQueryRetriever.from_llm(
                 llm, vectorstore, document_content_description, metadata_field_obj, verbose=True
             ),

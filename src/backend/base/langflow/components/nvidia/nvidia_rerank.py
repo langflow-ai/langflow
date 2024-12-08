@@ -83,7 +83,7 @@ class NvidiaRerankComponent(LCVectorStoreComponent):
     def build_base_retriever(self) -> Retriever:  # type: ignore[type-var]
         nvidia_reranker = self.build_model()
         retriever = ContextualCompressionRetriever(base_compressor=nvidia_reranker, base_retriever=self.retriever)
-        return cast(Retriever, retriever)
+        return cast("Retriever", retriever)
 
     async def search_documents(self) -> list[Data]:  # type: ignore[override]
         retriever = self.build_base_retriever()

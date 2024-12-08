@@ -8,7 +8,6 @@ import queue
 import threading
 import uuid
 from collections import defaultdict, deque
-from collections.abc import Generator, Iterable
 from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
@@ -43,6 +42,8 @@ from langflow.services.deps import get_chat_service, get_tracing_service
 from langflow.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
+    from collections.abc import Generator, Iterable
+
     from langflow.api.v1.schemas import InputValueRequest
     from langflow.custom.custom_component.component import Component
     from langflow.events.event_manager import EventManager
@@ -1728,7 +1729,7 @@ class Graph:
             edges.add(new_edge)
         if self.vertices and not edges:
             logger.warning("Graph has vertices but no edges")
-        return list(cast(Iterable[CycleEdge], edges))
+        return list(cast("Iterable[CycleEdge]", edges))
 
     def build_edge(self, edge: EdgeData) -> CycleEdge | Edge:
         source = self.get_vertex(edge["source"])
