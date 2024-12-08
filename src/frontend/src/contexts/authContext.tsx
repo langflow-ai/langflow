@@ -6,6 +6,7 @@ import {
 } from "@/constants/constants";
 import { useGetUserData } from "@/controllers/API/queries/auth";
 import { useGetGlobalVariablesMutation } from "@/controllers/API/queries/variables/use-get-mutation-global-variables";
+import { useCustomTokenRefresh } from "@/customization/hooks/use-custom-token-refresh";
 import useAuthStore from "@/stores/authStore";
 import { createContext, useEffect, useState } from "react";
 import { Cookies } from "react-cookie";
@@ -43,6 +44,8 @@ export function AuthProvider({ children }): React.ReactElement {
 
   const { mutate: mutateLoggedUser } = useGetUserData();
   const { mutate: mutateGetGlobalVariables } = useGetGlobalVariablesMutation();
+
+  useCustomTokenRefresh(getUser);
 
   useEffect(() => {
     const storedAccessToken = cookies.get(LANGFLOW_ACCESS_TOKEN);
