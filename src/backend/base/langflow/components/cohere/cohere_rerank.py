@@ -75,7 +75,7 @@ class CohereRerankComponent(LCVectorStoreComponent):
             user_agent=self.user_agent,
         )
         retriever = ContextualCompressionRetriever(base_compressor=cohere_reranker, base_retriever=self.retriever)
-        return cast(Retriever, retriever)
+        return cast("Retriever", retriever)
 
     async def search_documents(self) -> list[Data]:  # type: ignore[override]
         retriever = self.build_base_retriever()

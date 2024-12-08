@@ -26,7 +26,7 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User, UserCreate, UserRead
 from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id
-from langflow.services.database.utils import session_getter
+from langflow.services.database.utils import async_session_getter
 from langflow.services.deps import get_db_service
 from loguru import logger
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -157,7 +157,7 @@ async def async_session():
     engine = create_async_engine("sqlite+aiosqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
-    async with AsyncSession(engine) as session:
+    async with AsyncSession(engine, expire_on_commit=False) as session:
         yield session
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.drop_all)
@@ -222,13 +222,13 @@ def distributed_client_fixture(
     monkeypatch.undo()
 
 
-def get_graph(_type="basic"):
+def get_graph(type_="basic"):
     """Get a graph from a json file."""
-    if _type == "basic":
+    if type_ == "basic":
         path = pytest.BASIC_EXAMPLE_PATH
-    elif _type == "complex":
+    elif type_ == "complex":
         path = pytest.COMPLEX_EXAMPLE_PATH
-    elif _type == "openapi":
+    elif type_ == "openapi":
         path = pytest.OPENAPI_EXAMPLE_PATH
 
     with path.open(encoding="utf-8") as f:
@@ -469,7 +469,7 @@ async def logged_in_headers_super_user(client, active_super_user):
 
 
 @pytest.fixture
-def flow(
+async def flow(
     client,  # noqa: ARG001
     json_flow: str,
     active_user,
@@ -480,14 +480,14 @@ def flow(
     flow_data = FlowCreate(name="test_flow", data=loaded_json.get("data"), user_id=active_user.id)
 
     flow = Flow.model_validate(flow_data)
-    with session_getter(get_db_service()) as session:
+    async with async_session_getter(get_db_service()) as session:
         session.add(flow)
-        session.commit()
-        session.refresh(flow)
+        await session.commit()
+        await session.refresh(flow)
         yield flow
         # Clean up
-        session.delete(flow)
-        session.commit()
+        await session.delete(flow)
+        await session.commit()
 
 
 @pytest.fixture
@@ -582,7 +582,7 @@ async def flow_component(client: AsyncClient, logged_in_headers):
 
 
 @pytest.fixture
-def created_api_key(active_user):
+async def created_api_key(active_user):
     hashed = get_password_hash("random_key")
     api_key = ApiKey(
         name="test_api_key",
@@ -591,17 +591,18 @@ def created_api_key(active_user):
         hashed_api_key=hashed,
     )
     db_manager = get_db_service()
-    with session_getter(db_manager) as session:
-        if existing_api_key := session.exec(select(ApiKey).where(ApiKey.api_key == api_key.api_key)).first():
+    async with async_session_getter(db_manager) as session:
+        stmt = select(ApiKey).where(ApiKey.api_key == api_key.api_key)
+        if existing_api_key := (await session.exec(stmt)).first():
             yield existing_api_key
             return
         session.add(api_key)
-        session.commit()
-        session.refresh(api_key)
+        await session.commit()
+        await session.refresh(api_key)
         yield api_key
         # Clean up
-        session.delete(api_key)
-        session.commit()
+        await session.delete(api_key)
+        await session.commit()
 
 
 @pytest.fixture(name="simple_api_test")
@@ -618,14 +619,15 @@ async def get_simple_api_test(client, logged_in_headers, json_simple_api_test):
 
 
 @pytest.fixture(name="starter_project")
-def get_starter_project(active_user):
+async def get_starter_project(active_user):
     # once the client is created, we can get the starter project
-    with session_getter(get_db_service()) as session:
-        flow = session.exec(
+    async with async_session_getter(get_db_service()) as session:
+        stmt = (
             select(Flow)
             .where(Flow.folder.has(Folder.name == STARTER_FOLDER_NAME))
             .where(Flow.name == "Basic Prompting (Hello, World)")
-        ).first()
+        )
+        flow = (await session.exec(stmt)).first()
         if not flow:
             msg = "No starter project found"
             raise ValueError(msg)
@@ -640,10 +642,10 @@ def get_starter_project(active_user):
         )
         new_flow = Flow.model_validate(new_flow_create, from_attributes=True)
         session.add(new_flow)
-        session.commit()
-        session.refresh(new_flow)
+        await session.commit()
+        await session.refresh(new_flow)
         new_flow_dict = new_flow.model_dump()
         yield new_flow_dict
         # Clean up
-        session.delete(new_flow)
-        session.commit()
+        await session.delete(new_flow)
+        await session.commit()
