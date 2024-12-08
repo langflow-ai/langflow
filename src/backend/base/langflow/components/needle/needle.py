@@ -65,9 +65,9 @@ class NeedleComponent(CustomComponent):
         query: str,
         output_type: str = "answer",
         top_k: int = 10,
+        **kwargs,  # noqa: ARG002
     ) -> str:
         """Build the NeedleRetriever component and process the query."""
-        # Validate inputs
         if not needle_api_key.strip():
             msg = "The Needle API key cannot be empty."
             raise ValueError(msg)
@@ -119,7 +119,6 @@ class NeedleComponent(CustomComponent):
                 return "\n".join(formatted_chunks)
 
             return result["answer"]
-
         except Exception as e:
-            msg = f"Error processing query: {e!s}"
+            msg = "Error processing query: " + str(e)
             raise ValueError(msg) from e
