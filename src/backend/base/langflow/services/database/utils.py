@@ -74,7 +74,7 @@ def session_getter(db_service: DatabaseService):
 @asynccontextmanager
 async def async_session_getter(db_service: DatabaseService):
     try:
-        session = AsyncSession(db_service.async_engine)
+        session = AsyncSession(db_service.async_engine, expire_on_commit=False)
         yield session
     except Exception:
         logger.exception("Session rollback because of exception")
