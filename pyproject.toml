@@ -110,6 +110,7 @@ dependencies = [
     "sqlalchemy[aiosqlite,postgresql_psycopg2binary,postgresql_psycopgbinary]>=2.0.36,<3.0.0",
     "atlassian-python-api>=3.41.16,<4.0.0",
     "mem0ai>=0.1.26,<1.0.0",
+    "needle-python>=0.4.0",
     "aiofile>=3.9.0,<4.0.0",
     "sseclient-py==1.8.0",
     "arize-phoenix-otel>=0.6.1",

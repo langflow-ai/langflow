@@ -1,9 +1,10 @@
-from typing import cast, Dict, Any, List
+from typing import Any
+
+from langchain.chains import ConversationalRetrievalChain
 from langchain_community.retrievers.needle import NeedleRetriever
 from langchain_openai import ChatOpenAI
-from langchain.chains import ConversationalRetrievalChain
+
 from langflow.custom import CustomComponent
-from langflow.field_typing import Retriever
 
 
 class NeedleComponent(CustomComponent):
@@ -13,7 +14,7 @@ class NeedleComponent(CustomComponent):
     icon = "search"
     name = "needle"
 
-    def build_config(self) -> Dict[str, Any]:
+    def build_config(self) -> dict[str, Any]:
         """Build the UI configuration for the component."""
         return {
             "needle_api_key": {
@@ -53,7 +54,7 @@ class NeedleComponent(CustomComponent):
             "code": {
                 "show": False,
                 "required": False,
-            }
+            },
         }
 
     def build(
@@ -64,26 +65,28 @@ class NeedleComponent(CustomComponent):
         query: str,
         output_type: str = "answer",
         top_k: int = 10,
-        **kwargs,
     ) -> str:
         """Build the NeedleRetriever component and process the query."""
         # Validate inputs
         if not needle_api_key.strip():
-            raise ValueError("The Needle API key cannot be empty.")
+            msg = "The Needle API key cannot be empty."
+            raise ValueError(msg)
         if not openai_api_key.strip():
-            raise ValueError("The OpenAI API key cannot be empty.")
+            msg = "The OpenAI API key cannot be empty."
+            raise ValueError(msg)
         if not collection_id.strip():
-            raise ValueError("The Collection ID cannot be empty.")
+            msg = "The Collection ID cannot be empty."
+            raise ValueError(msg)
         if not query.strip():
-            raise ValueError("The query cannot be empty.")
+            msg = "The query cannot be empty."
+            raise ValueError(msg)
         if top_k <= 0:
-            raise ValueError("Top K must be a positive integer.")
+            msg = "Top K must be a positive integer."
+            raise ValueError(msg)
 
         # Handle output_type if it's a list
         if isinstance(output_type, list):
             output_type = output_type[0]
-        
-        print(f"Debug - Output Type Selected: {output_type}")  # Debug print
 
         try:
             # Initialize the retriever
@@ -92,7 +95,7 @@ class NeedleComponent(CustomComponent):
                 collection_id=collection_id,
                 top_k=top_k,
             )
-            
+
             # Create the chain
             llm = ChatOpenAI(
                 temperature=0.7,
@@ -107,18 +110,16 @@ class NeedleComponent(CustomComponent):
 
             # Process the query
             result = qa_chain({"question": query, "chat_history": []})
-            
+
             # Return based on output type
             if str(output_type).lower().strip() == "chunks":
-                print("Debug - Returning chunks")  # Debug print
                 # Format the source documents for better readability
                 docs = result["source_documents"]
-                formatted_chunks = [f"Chunk {i+1}:\n{doc.page_content}\n" 
-                                  for i, doc in enumerate(docs)]
+                formatted_chunks = [f"Chunk {i+1}:\n{doc.page_content}\n" for i, doc in enumerate(docs)]
                 return "\n".join(formatted_chunks)
-            
-            print("Debug - Returning answer")  # Debug print
+
             return result["answer"]
+
         except Exception as e:
-            print(f"Debug - Error: {str(e)}")  # Debug print
-            raise ValueError(f"Error processing query: {str(e)}")
+            msg = f"Error processing query: {e!s}"
+            raise ValueError(msg) from e

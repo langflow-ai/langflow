@@ -3605,6 +3605,7 @@ dependencies = [
     { name = "mem0ai" },
     { name = "metal-sdk" },
     { name = "metaphor-python" },
+    { name = "needle-python" },
     { name = "networkx" },
     { name = "nltk" },
     { name = "numexpr" },
@@ -3760,6 +3761,7 @@ requires-dist = [
     { name = "mem0ai", specifier = ">=0.1.26,<1.0.0" },
     { name = "metal-sdk", specifier = ">=2.5.0,<3.0.0" },
     { name = "metaphor-python", specifier = ">=0.1.11,<1.0.0" },
+    { name = "needle-python", specifier = ">=0.4.0" },
     { name = "networkx", specifier = ">=3.1,<4.0.0" },
     { name = "nltk", specifier = ">=3.9.1,<4.0.0" },
     { name = "numexpr", specifier = ">=2.8.6,<3.0.0" },
@@ -3866,6 +3868,7 @@ dependencies = [
     { name = "loguru" },
     { name = "multiprocess" },
     { name = "nanoid" },
+    { name = "needle-python" },
     { name = "nest-asyncio" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-prometheus" },
@@ -4001,6 +4004,7 @@ requires-dist = [
     { name = "multiprocess", specifier = ">=0.70.14,<1.0.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11.0" },
     { name = "nanoid", specifier = ">=2.0.0,<3.0.0" },
+    { name = "needle-python", specifier = ">=0.4.0" },
     { name = "nest-asyncio", specifier = ">=1.6.0,<2.0.0" },
     { name = "opentelemetry-api", specifier = ">=1.25.0,<2.0.0" },
     { name = "opentelemetry-exporter-prometheus", specifier = ">=0.46b0,<1.0.0" },
@@ -4666,6 +4670,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/b7/9d/0250bf5935d88e214df469d35eccc0f6ff7e9db046fc8a9aeb4b2a192775/nanoid-2.0.0.tar.gz", hash = "sha256:5a80cad5e9c6e9ae3a41fa2fb34ae189f7cb420b2a5d8f82bd9d23466e4efa68", size = 3290 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2e/0d/8630f13998638dc01e187fadd2e5c6d42d127d08aeb4943d231664d6e539/nanoid-2.0.0-py3-none-any.whl", hash = "sha256:90aefa650e328cffb0893bbd4c236cfd44c48bc1f2d0b525ecc53c3187b653bb", size = 5844 },
+]
+
+[[package]]
+name = "needle-python"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ed/7e/9df82b2d79f0d4ccc71f93fc1d716877c9bf028b808b5bdf4cc503f3e3b6/needle_python-0.4.0.tar.gz", hash = "sha256:471b5ae639afcdc8eaa84f59296cb87059ea5846f09810cab7eff1d20cb91d09", size = 8524 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/30/b6/66d5f63f01b5b51bf98422eed5628bfdcf2ff9eea55cac57327cde77faac/needle_python-0.4.0-py3-none-any.whl", hash = "sha256:373fc86e3e8f56636d69219ec8d5275bbb696622666cdad66a8f1f158e51edb5", size = 9604 },
 ]
 
 [[package]]
