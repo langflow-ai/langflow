@@ -45,6 +45,7 @@ __all__ = [
     "OpenAPIAgentComponent",
     "RecursiveCharacterTextSplitterComponent",
     "RetrievalQAComponent",
+    "RetrieverToolComponent",
     "RunnableExecComponent",
     "SQLAgentComponent",
     "SQLDatabaseComponent",
@@ -57,5 +58,4 @@ __all__ = [
     "VectorStoreInfoComponent",
     "VectorStoreRouterAgentComponent",
     "XMLAgentComponent",
-    "RetrieverToolComponent",
 ]

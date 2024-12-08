@@ -5,7 +5,7 @@ from pathlib import Path
 import httpx
 import orjson
 from locust import FastHttpUser, between, task
-from rich import print
+from rich import print  # noqa: A004
 
 
 class NameTest(FastHttpUser):
