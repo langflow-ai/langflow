@@ -38,7 +38,7 @@ async def create_variable(
             name=variable.name,
             value=variable.value,
             default_fields=variable.default_fields or [],
-            _type=variable.type or GENERIC_TYPE,
+            type_=variable.type or GENERIC_TYPE,
             session=session,
         )
     except Exception as e:

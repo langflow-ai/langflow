@@ -108,15 +108,15 @@ def partition_file_to_data(file_path: str, *, silent_errors: bool) -> Data | Non
 
 
 def read_text_file(file_path: str) -> str:
-    _file_path = Path(file_path)
-    raw_data = _file_path.read_bytes()
+    file_path_ = Path(file_path)
+    raw_data = file_path_.read_bytes()
     result = chardet.detect(raw_data)
     encoding = result["encoding"]
 
     if encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:
         encoding = "utf-8"
 
-    return _file_path.read_text(encoding=encoding)
+    return file_path_.read_text(encoding=encoding)
 
 
 def read_docx_file(file_path: str) -> str:

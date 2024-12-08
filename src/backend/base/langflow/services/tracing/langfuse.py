@@ -78,15 +78,15 @@ class LangFuseTracer(BaseTracer):
         if not self._ready:
             return
 
-        _metadata: dict = {}
-        _metadata |= {"trace_type": trace_type} if trace_type else {}
-        _metadata |= metadata or {}
+        metadata_: dict = {}
+        metadata_ |= {"trace_type": trace_type} if trace_type else {}
+        metadata_ |= metadata or {}
 
-        _name = trace_name.removesuffix(f" ({trace_id})")
+        name = trace_name.removesuffix(f" ({trace_id})")
         content_span = {
-            "name": _name,
+            "name": name,
             "input": inputs,
-            "metadata": _metadata,
+            "metadata": metadata_,
             "start_time": start_time,
         }
 
@@ -110,11 +110,11 @@ class LangFuseTracer(BaseTracer):
 
         span = self.spans.get(trace_id, None)
         if span:
-            _output: dict = {}
-            _output |= outputs or {}
-            _output |= {"error": str(error)} if error else {}
-            _output |= {"logs": list(logs)} if logs else {}
-            content = {"output": _output, "end_time": end_time}
+            output: dict = {}
+            output |= outputs or {}
+            output |= {"error": str(error)} if error else {}
+            output |= {"logs": list(logs)} if logs else {}
+            content = {"output": output, "end_time": end_time}
             span.update(**content)
 
     @override

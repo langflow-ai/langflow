@@ -50,14 +50,14 @@ class Template(BaseModel):
                 input_type = value.pop("_input_type", None)
                 if input_type:
                     try:
-                        _input = instantiate_input(input_type, value)
+                        input_ = instantiate_input(input_type, value)
                     except Exception as e:
                         msg = f"Error instantiating input {input_type}: {e}"
                         raise ValueError(msg) from e
                 else:
-                    _input = Input(**value)
+                    input_ = Input(**value)
 
-                data["fields"].append(_input)
+                data["fields"].append(input_)
 
         # Necessary for components with no inputs(?)
         if "fields" not in data:
