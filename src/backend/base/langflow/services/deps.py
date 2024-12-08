@@ -142,22 +142,11 @@ def get_db_service() -> DatabaseService:
     return get_service(ServiceType.DATABASE_SERVICE, DatabaseServiceFactory())
 
 
-def get_session() -> Generator[Session, None, None]:
-    """Retrieves a session from the database service.
-
-    Yields:
-        Session: A session object.
-
-    """
-    with get_db_service().with_session() as session:
-        yield session
-
-
-async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """Retrieves an async session from the database service.
 
     Yields:
-        Session: An async session object.
+        AsyncSession: An async session object.
 
     """
     async with get_db_service().with_async_session() as session:
@@ -173,7 +162,7 @@ def session_scope() -> Generator[Session, None, None]:
     and rolled back if an exception is raised.
 
     Yields:
-        session: The session object.
+        Session: The session object.
 
     Raises:
         Exception: If an error occurs during the session scope.
@@ -199,7 +188,7 @@ async def async_session_scope() -> AsyncGenerator[AsyncSession, None]:
     and rolled back if an exception is raised.
 
     Yields:
-        session: The async session object.
+        AsyncSession: The async session object.
 
     Raises:
         Exception: If an error occurs during the session scope.

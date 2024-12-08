@@ -17,8 +17,8 @@ from starlette.responses import ContentStream
 from starlette.types import Receive
 
 from langflow.api.utils import (
-    AsyncDbSession,
     CurrentActiveUser,
+    DbSession,
     build_and_cache_graph_from_data,
     build_graph_from_data,
     build_graph_from_db,
@@ -44,7 +44,7 @@ from langflow.schema.schema import OutputValue
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.chat.service import ChatService
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.deps import async_session_scope, get_async_session, get_chat_service, get_telemetry_service
+from langflow.services.deps import async_session_scope, get_chat_service, get_session, get_telemetry_service
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
 if TYPE_CHECKING:
@@ -77,7 +77,7 @@ async def retrieve_vertices_order(
     data: Annotated[FlowDataRequest | None, Body(embed=True)] | None = None,
     stop_component_id: str | None = None,
     start_component_id: str | None = None,
-    session: AsyncDbSession,
+    session: DbSession,
 ) -> VerticesOrderResponse:
     """Retrieve the vertices order for a given flow.
 
@@ -153,7 +153,7 @@ async def build_flow(
     start_component_id: str | None = None,
     log_builds: bool | None = True,
     current_user: CurrentActiveUser,
-    session: AsyncDbSession,
+    session: DbSession,
 ):
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
@@ -512,7 +512,7 @@ async def build_vertex(
             # If there's no cache
             logger.warning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
             graph: Graph = await build_graph_from_db(
-                flow_id=flow_id_str, session=await anext(get_async_session()), chat_service=chat_service
+                flow_id=flow_id_str, session=await anext(get_session()), chat_service=chat_service
             )
         else:
             graph = cache.get("result")
