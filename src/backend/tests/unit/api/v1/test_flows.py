@@ -69,9 +69,9 @@ async def test_read_flow(client: AsyncClient, logged_in_headers):
         "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
         "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
     }
-    _response = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
-    _id = _response.json()["id"]
-    response = await client.get(f"api/v1/flows/{_id}", headers=logged_in_headers)
+    response_ = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
+    id_ = response_.json()["id"]
+    response = await client.get(f"api/v1/flows/{id_}", headers=logged_in_headers)
     result = response.json()
 
     assert response.status_code == status.HTTP_200_OK
@@ -109,11 +109,11 @@ async def test_update_flow(client: AsyncClient, logged_in_headers):
         "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
     }
     basic_case["name"] = name
-    _response = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
-    _id = _response.json()["id"]
+    response_ = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
+    id_ = response_.json()["id"]
 
     basic_case["name"] = updated_name
-    response = await client.patch(f"api/v1/flows/{_id}", json=basic_case, headers=logged_in_headers)
+    response = await client.patch(f"api/v1/flows/{id_}", json=basic_case, headers=logged_in_headers)
     result = response.json()
 
     assert isinstance(result, dict), "The result must be a dictionary"

@@ -79,9 +79,9 @@ class ChatInput(ChatComponent):
     ]
 
     async def message_response(self) -> Message:
-        _background_color = self.background_color
-        _text_color = self.text_color
-        _icon = self.chat_icon
+        background_color = self.background_color
+        text_color = self.text_color
+        icon = self.chat_icon
 
         message = await Message.create(
             text=self.input_value,
@@ -89,7 +89,7 @@ class ChatInput(ChatComponent):
             sender_name=self.sender_name,
             session_id=self.session_id,
             files=self.files,
-            properties={"background_color": _background_color, "text_color": _text_color, "icon": _icon},
+            properties={"background_color": background_color, "text_color": text_color, "icon": icon},
         )
         if self.session_id and isinstance(message, Message) and self.should_store_message:
             stored_message = await self.send_message(

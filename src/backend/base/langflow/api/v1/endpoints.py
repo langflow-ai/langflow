@@ -584,8 +584,8 @@ async def custom_component(
     if raw_code.frontend_node is not None:
         built_frontend_node = component_instance.post_code_processing(built_frontend_node, raw_code.frontend_node)
 
-    _type = get_instance_name(component_instance)
-    return CustomComponentResponse(data=built_frontend_node, type=_type)
+    type_ = get_instance_name(component_instance)
+    return CustomComponentResponse(data=built_frontend_node, type=type_)
 
 
 @router.post("/custom_component/update", status_code=HTTPStatus.OK)

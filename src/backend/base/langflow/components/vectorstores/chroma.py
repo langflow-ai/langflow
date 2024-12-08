@@ -134,19 +134,19 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             self.status = ""
             return
 
-        _stored_documents_without_id = []
+        stored_documents_without_id = []
         if self.allow_duplicates:
             stored_data = []
         else:
             stored_data = chroma_collection_to_data(vector_store.get(limit=self.limit))
             for value in deepcopy(stored_data):
                 del value.id
-                _stored_documents_without_id.append(value)
+                stored_documents_without_id.append(value)
 
         documents = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):
-                if _input not in _stored_documents_without_id:
+                if _input not in stored_documents_without_id:
                     documents.append(_input.to_lc_document())
             else:
                 msg = "Vector Store Inputs must be Data objects."

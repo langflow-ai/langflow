@@ -60,8 +60,8 @@ class SourceHandle(BaseModel):
 
     @field_validator("name", mode="before")
     @classmethod
-    def validate_name(cls, v, _info):
-        if _info.data["data_type"] == "GroupNode":
+    def validate_name(cls, v, info):
+        if info.data["data_type"] == "GroupNode":
             # 'OpenAIModel-u4iGV_text_output'
             splits = v.split("_", 1)
             if len(splits) != 2:  # noqa: PLR2004

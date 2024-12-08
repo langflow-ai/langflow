@@ -44,14 +44,14 @@ def data_to_text_list(template: str, data: Data | list[Data]) -> tuple[list[str]
     if isinstance(data, (Data)):
         data = [data]
     # Check if there are any format strings in the template
-    _data = [
+    data_ = [
         # If it is not a record, create one with the key "text"
         Data(text=value) if not isinstance(value, Data) else value
         for value in data
     ]
 
-    formatted_text = [template.format(data=value.data, **value.data) for value in _data]
-    return formatted_text, _data
+    formatted_text = [template.format(data=value.data, **value.data) for value in data_]
+    return formatted_text, data_
 
 
 def data_to_text(template: str, data: Data | list[Data], sep: str = "\n") -> str:
@@ -83,13 +83,13 @@ def messages_to_text(template: str, messages: Message | list[Message]) -> str:
     if isinstance(messages, (Message)):
         messages = [messages]
     # Check if there are any format strings in the template
-    _messages = []
+    messages_ = []
     for message in messages:
         # If it is not a message, create one with the key "text"
         if not isinstance(message, Message):
             msg = "All elements in the list must be of type Message."
             raise TypeError(msg)
-        _messages.append(message)
+        messages_.append(message)
 
-    formated_messages = [template.format(data=message.model_dump(), **message.model_dump()) for message in _messages]
+    formated_messages = [template.format(data=message.model_dump(), **message.model_dump()) for message in messages_]
     return "\n".join(formated_messages)

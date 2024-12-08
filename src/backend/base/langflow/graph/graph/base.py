@@ -1183,9 +1183,9 @@ class Graph:
         for edge in vertex.edges:
             for vid in [edge.source_id, edge.target_id]:
                 if vid in self.vertex_map:
-                    _vertex = self.vertex_map[vid]
-                    if not _vertex.frozen:
-                        _vertex.build_params()
+                    vertex_ = self.vertex_map[vid]
+                    if not vertex_.frozen:
+                        vertex_.build_params()
 
     def _add_vertex(self, vertex: Vertex) -> None:
         """Adds a vertex to the graph."""
@@ -1794,10 +1794,10 @@ class Graph:
 
     def assert_streaming_sequence(self) -> None:
         for i in self.edges:
-            _source = self.get_vertex(i.source_id)
-            if "stream" in _source.params and _source.params["stream"] is True:
-                _target = self.get_vertex(i.target_id)
-                if _target.vertex_type != "ChatOutput":
+            source = self.get_vertex(i.source_id)
+            if "stream" in source.params and source.params["stream"] is True:
+                target = self.get_vertex(i.target_id)
+                if target.vertex_type != "ChatOutput":
                     msg = (
                         "Error: A 'streaming' vertex cannot be followed by a non-'chat output' vertex."
                         "Disable streaming to run the flow."

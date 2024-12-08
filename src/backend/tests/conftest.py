@@ -222,13 +222,13 @@ def distributed_client_fixture(
     monkeypatch.undo()
 
 
-def get_graph(_type="basic"):
+def get_graph(type_="basic"):
     """Get a graph from a json file."""
-    if _type == "basic":
+    if type_ == "basic":
         path = pytest.BASIC_EXAMPLE_PATH
-    elif _type == "complex":
+    elif type_ == "complex":
         path = pytest.COMPLEX_EXAMPLE_PATH
-    elif _type == "openapi":
+    elif type_ == "openapi":
         path = pytest.OPENAPI_EXAMPLE_PATH
 
     with path.open(encoding="utf-8") as f:

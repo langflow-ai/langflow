@@ -80,10 +80,10 @@ class ChatOutput(ChatComponent):
         ),
     ]
 
-    def _build_source(self, _id: str | None, display_name: str | None, source: str | None) -> Source:
+    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:
         source_dict = {}
-        if _id:
-            source_dict["id"] = _id
+        if id_:
+            source_dict["id"] = id_
         if display_name:
             source_dict["display_name"] = display_name
         if source:
@@ -91,20 +91,20 @@ class ChatOutput(ChatComponent):
         return Source(**source_dict)
 
     async def message_response(self) -> Message:
-        _source, _icon, _display_name, _source_id = self.get_properties_from_source_component()
-        _background_color = self.background_color
-        _text_color = self.text_color
+        source, icon, display_name, source_id = self.get_properties_from_source_component()
+        background_color = self.background_color
+        text_color = self.text_color
         if self.chat_icon:
-            _icon = self.chat_icon
+            icon = self.chat_icon
         message = self.input_value if isinstance(self.input_value, Message) else Message(text=self.input_value)
         message.sender = self.sender
         message.sender_name = self.sender_name
         message.session_id = self.session_id
         message.flow_id = self.graph.flow_id if hasattr(self, "graph") else None
-        message.properties.source = self._build_source(_source_id, _display_name, _source)
-        message.properties.icon = _icon
-        message.properties.background_color = _background_color
-        message.properties.text_color = _text_color
+        message.properties.source = self._build_source(source_id, display_name, source)
+        message.properties.icon = icon
+        message.properties.background_color = background_color
+        message.properties.text_color = text_color
         if self.session_id and isinstance(message, Message) and self.should_store_message:
             stored_message = await self.send_message(
                 message,
