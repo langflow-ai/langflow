@@ -7,18 +7,15 @@ events {
 http {
     # Set the default type to text/plain
     default_type text/plain;
+    include /etc/nginx/mime.types;
+
+    types {
+        text/html html;
+        text/css css;
+        application/javascript js;
+    }
 
     server {
-        # Override the default type for CSS files
-        location ~* \.css$ {
-            types { text/css css; }
-        }
-
-        # Add MIME type for JavaScript files
-        location ~* \.js$ {
-            types { application/javascript js; }
-        }
-
         gzip on;
         gzip_comp_level 2;
         gzip_min_length 1000;
