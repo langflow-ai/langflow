@@ -74,13 +74,13 @@ class ArizePhoenixTracer(BaseTracer):
 
     def setup_arize_phoenix(self) -> bool:
         """Configures Arize/Phoenix specific environment variables and registers the tracer provider."""
-        arize_phoenix_batch = os.getenv("ARIZE_PHOENIX_BATCH", "False").lower() in (
+        arize_phoenix_batch = os.getenv("ARIZE_PHOENIX_BATCH", "False").lower() in {
             "true",
             "t",
             "yes",
             "y",
             "1",
-        )
+        }
 
         # Arize Config
         arize_api_key = os.getenv("ARIZE_API_KEY", None)
