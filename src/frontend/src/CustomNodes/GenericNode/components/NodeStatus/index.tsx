@@ -25,6 +25,7 @@ import { Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import IconComponent from "../../../../components/common/genericIconComponent";
+import BuildStatusDisplay from "./components/build-status-display";
 import { normalizeTimeString } from "./utils/format-run-time";
 
 export default function NodeStatus({
@@ -199,43 +200,12 @@ export default function NodeStatus({
                 : "border-destructive bg-error-background",
             )}
             content={
-              buildStatus === BuildStatus.BUILDING ? (
-                <span className="flex text-foreground">
-                  {" "}
-                  {STATUS_BUILDING}{" "}
-                </span>
-              ) : buildStatus === BuildStatus.INACTIVE ? (
-                <span className="flex text-foreground">
-                  {" "}
-                  {STATUS_INACTIVE}{" "}
-                </span>
-              ) : !validationStatus ? (
-                <span className="flex text-foreground">{STATUS_BUILD}</span>
-              ) : (
-                <div className="max-h-100 px-1 py-2.5">
-                  <div className="flex max-h-80 flex-col gap-2 overflow-auto">
-                    {validationString && (
-                      <div className="text-sm text-foreground">
-                        {validationString}
-                      </div>
-                    )}
-                    {lastRunTime && (
-                      <div className="flex items-center text-sm text-secondary-foreground">
-                        <div>{RUN_TIMESTAMP_PREFIX}</div>
-                        <div className="ml-1 text-secondary-foreground">
-                          {lastRunTime}
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex items-center text-secondary-foreground">
-                      <div>Duration:</div>
-                      <div className="ml-1">
-                        {validationStatus?.data.duration}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
+              <BuildStatusDisplay
+                buildStatus={buildStatus}
+                validationStatus={validationStatus}
+                validationString={validationString}
+                lastRunTime={lastRunTime}
+              />
             }
             side="bottom"
           >
