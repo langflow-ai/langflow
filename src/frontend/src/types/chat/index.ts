@@ -37,6 +37,7 @@ export type PropertiesType = {
   edited?: boolean;
   allow_markdown?: boolean;
   state?: string;
+  good_answer?: boolean | null;
 };
 
 export type ChatOutputType = {
