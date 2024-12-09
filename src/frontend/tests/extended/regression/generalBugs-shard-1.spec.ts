@@ -34,7 +34,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
@@ -55,14 +57,12 @@ test(
 
     while (outdatedComponents > 0) {
       await page.getByTestId("icon-AlertTriangle").first().click();
-      await page.waitForTimeout(1000);
       outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
     }
 
     let filledApiKey = await page.getByTestId("remove-icon-badge").count();
     while (filledApiKey > 0) {
       await page.getByTestId("remove-icon-badge").first().click();
-      await page.waitForTimeout(1000);
       filledApiKey = await page.getByTestId("remove-icon-badge").count();
     }
 
@@ -76,8 +76,6 @@ test(
     await page.getByTestId("dropdown_str_model_name").click();
     await page.getByTestId("gpt-4o-1-option").click();
 
-    await page.waitForTimeout(1000);
-
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
@@ -85,11 +83,7 @@ test(
       timeout: 30000,
     });
 
-    await page.waitForTimeout(2000);
-
     await page.getByTestId("user-profile-settings").click();
-
-    await page.waitForTimeout(500);
 
     await page.waitForSelector('text="Settings"');
     await page.getByText("Settings").last().click();
@@ -100,12 +94,8 @@ test(
     await page.waitForSelector(".ag-checkbox-input");
     await page.locator(".ag-checkbox-input").first().click();
 
-    await page.waitForTimeout(500);
-
     await page.waitForSelector('[data-testid="icon-Trash2"]:first-child');
     await page.getByTestId("icon-Trash2").first().click();
-
-    await page.waitForTimeout(500);
 
     await page.waitForSelector("text=No Data Available", { timeout: 30000 });
     await page.getByText("No Data Available").isVisible();
