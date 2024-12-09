@@ -32,7 +32,7 @@ router = APIRouter(tags=["Files"], prefix="/files")
 async def get_valid_flow_obj(
     flow: FlowRead | None,
     user: UserRead | None,
-    session: AsyncDbSession,
+    session: DbSession,
 ) -> Flow:
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
@@ -55,7 +55,7 @@ async def get_valid_flow_obj(
 async def get_flow_id(
     flow_id: UUID,
     current_user: CurrentActiveUser,
-    session: AsyncDbSession,
+    session: DbSession,
 ) -> str:
     user = UserRead(id=current_user.id)
     flow = FlowRead(id=flow_id, user_id=current_user.id)
@@ -69,7 +69,7 @@ async def upload_file(
     file: UploadFile,
     api_key_user: Annotated[UserRead | None, Depends(api_key_security)],
     flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
-    session: AsyncDbSession,
+    session: DbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ) -> UploadFileResponse:
     """Handles file uploads to a specific flow."""
@@ -99,7 +99,7 @@ async def upload_and_run_file(
     file: UploadFile,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
     flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
-    session: AsyncDbSession,
+    session: DbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     input_request: SimplifiedAPIRequest | None = None,
     file_path_field: str = Query("input_value"),
