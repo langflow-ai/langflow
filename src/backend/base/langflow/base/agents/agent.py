@@ -169,7 +169,7 @@ class LCAgentComponent(Component):
         except ExceptionWithMessageError as e:
             msg_id = e.agent_message.id
             await delete_message(id_=msg_id)
-            self._send_message_event(e.agent_message, category="remove_message")
+            await self._send_message_event(e.agent_message, category="remove_message")
             raise
         except Exception:
             raise
