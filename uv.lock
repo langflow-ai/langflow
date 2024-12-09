@@ -3594,6 +3594,7 @@ dependencies = [
     { name = "metal-sdk" },
     { name = "metaphor-python" },
     { name = "networkx" },
+    { name = "ngrok" },
     { name = "nltk" },
     { name = "numexpr" },
     { name = "openinference-instrumentation-langchain" },
@@ -3748,6 +3749,7 @@ requires-dist = [
     { name = "metal-sdk", specifier = ">=2.5.0,<3.0.0" },
     { name = "metaphor-python", specifier = ">=0.1.11,<1.0.0" },
     { name = "networkx", specifier = ">=3.1,<4.0.0" },
+    { name = "ngrok", specifier = ">=1.4.0" },
     { name = "nltk", specifier = ">=3.9.1,<4.0.0" },
     { name = "numexpr", specifier = ">=2.8.6,<3.0.0" },
     { name = "openinference-instrumentation-langchain", specifier = ">=0.1.29" },
@@ -4683,6 +4685,23 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/04/e7/2861289b4545178e2de30789c2ac9c260e334d3555837a959225e6909b86/networkx-3.4.tar.gz", hash = "sha256:1269b90f8f0d3a4095f016f49650f35ac169729f49b69d0572b2bb142748162b", size = 2151262 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fd/81/fc591ae6a55b34bcffde396fc29769095148711ae19b9932e139442c8a37/networkx-3.4-py3-none-any.whl", hash = "sha256:46dad0ec74a825a968e2b36c37ef5b91faa3868f017b2283d9cbff33112222ce", size = 1723551 },
+]
+
+[[package]]
+name = "ngrok"
+version = "1.4.0"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/31/28/2548a64e673334b804affbf994184896e19c0d0cadb2602c5395d9cb263b/ngrok-1.4.0-cp37-abi3-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl", hash = "sha256:05a86cf684120c27d1f10c9a3a5320c7243a89a9f93e58c027dc3916bdeeade9", size = 5278409 },
+    { url = "https://files.pythonhosted.org/packages/b4/00/dd366c0db00771bf3ff270887f8aa753bd35cc61fc40cbfa4d626d088c07/ngrok-1.4.0-cp37-abi3-macosx_10_12_x86_64.whl", hash = "sha256:166aa4ad1911564e8028436b4c0cc5401f846f79176c97bc84726d417f5483eb", size = 2731980 },
+    { url = "https://files.pythonhosted.org/packages/e3/37/f057c62a81310614381d84ee3cb55badf1f61ba47b35ca15994f1d7e7120/ngrok-1.4.0-cp37-abi3-macosx_11_0_arm64.whl", hash = "sha256:2a9bd2fbf3bf2ed8bdc668d20da9f961207ffe8795320598ca2747463c5f980d", size = 2563059 },
+    { url = "https://files.pythonhosted.org/packages/10/47/55932abe32af0a3e2ae7a9d4027d76de44095f4f40b9f656495943e4ecb9/ngrok-1.4.0-cp37-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:60a6fdaa08c7bcff6b208fb2d1d7d3065ab7bf99a1dfc6e9c4f4535dbbe2e0f6", size = 4587491 },
+    { url = "https://files.pythonhosted.org/packages/90/a1/4cd711790e4e3cf37150f55c7d05ee0d42f6fe2132c99f48d4b524428517/ngrok-1.4.0-cp37-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:381a455b527a4c25e9aa5da231db2f836c243ae46b479f9a4af2b54fadfde906", size = 3002021 },
+    { url = "https://files.pythonhosted.org/packages/33/89/05064d76138a58fe1929523035009ca02ae93631c933c660c9bd7fbf18e9/ngrok-1.4.0-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8660b535a3b1593c80868c80dd2f7b480fcb075ec807ba727868348d037adea3", size = 3137710 },
+    { url = "https://files.pythonhosted.org/packages/5a/99/d99ce25e6b9944b4bb9947c3a0cd7097e8ed7c34d4ecf1123d7ae93593a0/ngrok-1.4.0-cp37-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:0f31c5f7a3d93011a08d01ccd38c66b1febec3efe776b301ea677061d56561b1", size = 3270265 },
+    { url = "https://files.pythonhosted.org/packages/4a/c8/d1f85d21156eac54ccb9536d0d9d1032f4d34b28f61db06d8af330768e3a/ngrok-1.4.0-cp37-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:77aeac9d9e1a425c65fad10c7996279ba4099c68af6e18d66d0e9d96f2eef31b", size = 3211451 },
+    { url = "https://files.pythonhosted.org/packages/1b/b8/eddd57785460d7031792ea64a847ae3cb17ec1602089ae2a945de0ebeefa/ngrok-1.4.0-cp37-abi3-win32.whl", hash = "sha256:0b2a29f4a98ce62366262fc4906dfb0dfe28a9ec7114dc9e7cbe2d75f923fc00", size = 2473067 },
+    { url = "https://files.pythonhosted.org/packages/64/fa/4dd4b195b7d5702ee2967aa318310f54efa5976cfc9b52cda7ea7bd01270/ngrok-1.4.0-cp37-abi3-win_amd64.whl", hash = "sha256:1ff615ab7709976664730b80e4345d4bf7816b864f990bdf2b6529c7e7f9106d", size = 3003631 },
 ]
 
 [[package]]

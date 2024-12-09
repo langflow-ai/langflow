@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
+import os
 import time
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
+from langflow.helpers.base_model import BaseModel
 import sqlalchemy as sa
 from fastapi import (
     APIRouter,
@@ -54,6 +57,7 @@ from langflow.services.deps import get_session_service, get_settings_service, ge
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.version import get_version_info
+import ngrok
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -665,3 +669,38 @@ async def get_config():
         }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+class NgrokResponse(BaseModel):
+    url: str
+    status: str
+
+
+@router.post("/deploy", response_model=NgrokResponse)
+async def create_tunnel():
+    try:
+        auth_token = "2pzX5glHhcEf13iDh42EpyZWaN4_4k2M22NdETNz6pTahZj9E"
+        
+        # Initialize ngrok with the auth token
+        ngrok.set_auth_token(auth_token)
+        
+        # Create the tunnel
+        listener = await ngrok.connect(7860)
+        
+        # Get the public URL using the correct attribute
+        public_url = listener.url()  # Using url() method instead of public_url attribute
+        
+        return NgrokResponse(
+            url=public_url,
+            status="success"
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ngrok connection failed: {str(e)}"
+        )
+
+@asynccontextmanager
+async def lifespan():
+    yield
+    await ngrok.disconnect()
