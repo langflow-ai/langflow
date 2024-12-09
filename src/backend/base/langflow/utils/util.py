@@ -35,13 +35,13 @@ def build_template_from_function(name: str, type_to_loader_dict: dict, *, add_fu
 
     for _type, v in type_to_loader_dict.items():
         if v.__annotations__["return"].__name__ == name:
-            _class = v.__annotations__["return"]
+            class_ = v.__annotations__["return"]
 
             # Get the docstring
-            docs = parse(_class.__doc__)
+            docs = parse(class_.__doc__)
 
             variables = {"_type": _type}
-            for class_field_items, value in _class.model_fields.items():
+            for class_field_items, value in class_.model_fields.items():
                 if class_field_items == "callback_manager":
                     continue
                 variables[class_field_items] = {}
@@ -49,7 +49,7 @@ def build_template_from_function(name: str, type_to_loader_dict: dict, *, add_fu
                     if name_ == "default_factory":
                         try:
                             variables[class_field_items]["default"] = get_default_factory(
-                                module=_class.__base__.__module__, function=value_
+                                module=class_.__base__.__module__, function=value_
                             )
                         except Exception:  # noqa: BLE001
                             logger.opt(exception=True).debug(f"Error getting default factory for {value_}")
@@ -60,7 +60,7 @@ def build_template_from_function(name: str, type_to_loader_dict: dict, *, add_fu
                 variables[class_field_items]["placeholder"] = docs.params.get(class_field_items, "")
             # Adding function to base classes to allow
             # the output to be a function
-            base_classes = get_base_classes(_class)
+            base_classes = get_base_classes(class_)
             if add_function:
                 base_classes.append("Callable")
 
@@ -88,15 +88,15 @@ def build_template_from_method(
 
     for _type, v in type_to_cls_dict.items():
         if v.__name__ == class_name:
-            _class = v
+            class_ = v
 
             # Check if the method exists in this class
-            if not hasattr(_class, method_name):
+            if not hasattr(class_, method_name):
                 msg = f"Method {method_name} not found in class {class_name}"
                 raise ValueError(msg)
 
             # Get the method
-            method = getattr(_class, method_name)
+            method = getattr(class_, method_name)
 
             # Get the docstring
             docs = parse(method.__doc__)
@@ -121,7 +121,7 @@ def build_template_from_method(
                 },
             }
 
-            base_classes = get_base_classes(_class)
+            base_classes = get_base_classes(class_)
 
             # Adding function to base classes to allow the output to be a function
             if add_function:
@@ -207,17 +207,17 @@ def format_dict(dictionary: dict[str, Any], class_name: str | None = None) -> di
         if key == "_type":
             continue
 
-        _type: str | type = get_type(value)
+        type_: str | type = get_type(value)
 
-        if "BaseModel" in str(_type):
+        if "BaseModel" in str(type_):
             continue
 
-        _type = remove_optional_wrapper(_type)
-        _type = check_list_type(_type, value)
-        _type = replace_mapping_with_dict(_type)
-        _type = get_type_from_union_literal(_type)
+        type_ = remove_optional_wrapper(type_)
+        type_ = check_list_type(type_, value)
+        type_ = replace_mapping_with_dict(type_)
+        type_ = get_type_from_union_literal(type_)
 
-        value["type"] = get_formatted_type(key, _type)
+        value["type"] = get_formatted_type(key, type_)
         value["show"] = should_show_field(value, key)
         value["password"] = is_password_field(key)
         value["multiline"] = is_multiline_field(key)
@@ -251,53 +251,53 @@ def get_type(value: Any) -> str | type:
         The type value.
     """
     # get "type" or "annotation" from the value
-    _type = value.get("type") or value.get("annotation")
+    type_ = value.get("type") or value.get("annotation")
 
-    return _type if isinstance(_type, str) else _type.__name__
+    return type_ if isinstance(type_, str) else type_.__name__
 
 
-def remove_optional_wrapper(_type: str | type) -> str:
+def remove_optional_wrapper(type_: str | type) -> str:
     """Removes the 'Optional' wrapper from the type string.
 
     Returns:
         The type string with the 'Optional' wrapper removed.
     """
-    if isinstance(_type, type):
-        _type = str(_type)
-    if "Optional" in _type:
-        _type = _type.replace("Optional[", "")[:-1]
+    if isinstance(type_, type):
+        type_ = str(type_)
+    if "Optional" in type_:
+        type_ = type_.replace("Optional[", "")[:-1]
 
-    return _type
+    return type_
 
 
-def check_list_type(_type: str, value: dict[str, Any]) -> str:
+def check_list_type(type_: str, value: dict[str, Any]) -> str:
     """Checks if the type is a list type and modifies the value accordingly.
 
     Returns:
         The modified type string.
     """
-    if any(list_type in _type for list_type in ["List", "Sequence", "Set"]):
-        _type = _type.replace("List[", "").replace("Sequence[", "").replace("Set[", "")[:-1]
+    if any(list_type in type_ for list_type in ["List", "Sequence", "Set"]):
+        type_ = type_.replace("List[", "").replace("Sequence[", "").replace("Set[", "")[:-1]
         value["list"] = True
     else:
         value["list"] = False
 
-    return _type
+    return type_
 
 
-def replace_mapping_with_dict(_type: str) -> str:
+def replace_mapping_with_dict(type_: str) -> str:
     """Replaces 'Mapping' with 'dict' in the type string.
 
     Returns:
         The modified type string.
     """
-    if "Mapping" in _type:
-        _type = _type.replace("Mapping", "dict")
+    if "Mapping" in type_:
+        type_ = type_.replace("Mapping", "dict")
 
-    return _type
+    return type_
 
 
-def get_formatted_type(key: str, _type: str) -> str:
+def get_formatted_type(key: str, type_: str) -> str:
     """Formats the type value based on the given key.
 
     Returns:
@@ -309,7 +309,7 @@ def get_formatted_type(key: str, _type: str) -> str:
     if key == "max_value_length":
         return "int"
 
-    return _type
+    return type_
 
 
 def should_show_field(value: dict[str, Any], key: str) -> bool:
