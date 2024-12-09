@@ -37,7 +37,7 @@ class WikipediaAPIComponent(LCToolComponent):
 
     def build_tool(self) -> Tool:
         wrapper = self._build_wrapper()
-        return cast(Tool, WikipediaQueryRun(api_wrapper=wrapper))
+        return cast("Tool", WikipediaQueryRun(api_wrapper=wrapper))
 
     def _build_wrapper(self) -> WikipediaAPIWrapper:
         return WikipediaAPIWrapper(
