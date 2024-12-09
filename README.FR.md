@@ -89,7 +89,7 @@ Charger le flux avec:
 ```python
 from langflow.load import run_flow_from_json
 
-results = run_flow_from_json("chemin/vers/fichier.json", input_value="Hello, World!")
+results = run_flow_from_json("chemin/vers/le/fichier.json", input_value="Hello, World!")
 ```
 
 # Déploiement
