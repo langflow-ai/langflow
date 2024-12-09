@@ -233,7 +233,7 @@ class ComposioAPIComponent(LCToolComponent):
                     build_config[field]["show"] = True
                     build_config[field]["advanced"] = False
 
-        if field_name in {"app_names"} and hasattr(self, "api_key") and self.api_key != "":
+        if field_name == "app_names" and hasattr(self, "api_key") and self.api_key != "":
             # app_name = self._get_normalized_app_name()
             app_name = self.app_names
             try:

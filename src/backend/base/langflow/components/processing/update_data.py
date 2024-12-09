@@ -78,7 +78,7 @@ class UpdateDataComponent(Component):
 
             if field_value_int > self.MAX_FIELDS:
                 build_config["number_of_fields"]["value"] = self.MAX_FIELDS
-                msg = f"Number of fields cannot exceed {self.MAX_FIELDS}. " "Try using a Component to combine two Data."
+                msg = f"Number of fields cannot exceed {self.MAX_FIELDS}. Try using a Component to combine two Data."
                 raise ValueError(msg)
 
             existing_fields = {}
@@ -154,5 +154,5 @@ class UpdateDataComponent(Component):
         """This function validates that the Text Key is one of the keys in the Data."""
         data_keys = data.data.keys()
         if self.text_key and self.text_key not in data_keys:
-            msg = f"Text Key: '{self.text_key}' not found in the Data keys: " f"{', '.join(data_keys)}"
+            msg = f"Text Key: '{self.text_key}' not found in the Data keys: {', '.join(data_keys)}"
             raise ValueError(msg)
