@@ -1,4 +1,5 @@
 import asyncio
+import time
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -15,6 +16,11 @@ from langflow.template.field.base import Output
 async def create_event_queue():
     """Create a queue for testing events."""
     return asyncio.Queue()
+
+
+def blocking_cb(manager, event_type, data):
+    time.sleep(0.01)
+    manager.send_event(event_type=event_type, data=data)
 
 
 class ComponentForTesting(Component):
@@ -38,6 +44,8 @@ async def test_component_message_sending():
     # Create event queue and manager
     queue = await create_event_queue()
     event_manager = EventManager(queue)
+
+    event_manager.register_event("on_message", "message", callback=blocking_cb)
 
     # Create component
     component = ComponentForTesting()
@@ -196,7 +204,8 @@ async def test_component_streaming_message():
     """Test component's streaming message functionality."""
     queue = await create_event_queue()
     event_manager = EventManager(queue)
-    event_manager.register_event("on_token", "token")
+
+    event_manager.register_event("on_token", "token", blocking_cb)
 
     # Create a proper mock vertex with graph and flow_id
     vertex = MagicMock()
