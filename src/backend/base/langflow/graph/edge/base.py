@@ -22,7 +22,7 @@ class Edge:
         self.is_cycle = False
         if data := edge.get("data", {}):
             self._source_handle = data.get("sourceHandle", {})
-            self._target_handle = cast(TargetHandleDict, data.get("targetHandle", {}))
+            self._target_handle = cast("TargetHandleDict", data.get("targetHandle", {}))
             self.source_handle: SourceHandle = SourceHandle(**self._source_handle)
             if isinstance(self._target_handle, dict):
                 try:

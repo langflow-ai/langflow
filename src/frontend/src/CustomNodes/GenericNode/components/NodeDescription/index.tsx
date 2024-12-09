@@ -93,12 +93,7 @@ export default function NodeDescription({
             onChange={(e) => setNodeDescription(e.target.value)}
             onKeyDown={(e) => {
               handleKeyDown(e, nodeDescription, "");
-              if (
-                e.key === "Enter" &&
-                e.shiftKey === false &&
-                e.ctrlKey === false &&
-                e.altKey === false
-              ) {
+              if (e.key === "Escape") {
                 setInputDescription(false);
                 setNodeDescription(nodeDescription);
                 setNode(nodeId, (old) => ({
