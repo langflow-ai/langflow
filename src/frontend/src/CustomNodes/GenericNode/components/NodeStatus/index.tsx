@@ -200,9 +200,15 @@ export default function NodeStatus({
             )}
             content={
               buildStatus === BuildStatus.BUILDING ? (
-                <span> {STATUS_BUILDING} </span>
+                <span className="flex text-foreground">
+                  {" "}
+                  {STATUS_BUILDING}{" "}
+                </span>
               ) : buildStatus === BuildStatus.INACTIVE ? (
-                <span> {STATUS_INACTIVE} </span>
+                <span className="flex text-foreground">
+                  {" "}
+                  {STATUS_INACTIVE}{" "}
+                </span>
               ) : !validationStatus ? (
                 <span className="flex text-foreground">{STATUS_BUILD}</span>
               ) : (
