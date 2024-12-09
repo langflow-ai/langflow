@@ -204,7 +204,7 @@ export default function NodeStatus({
               ) : buildStatus === BuildStatus.INACTIVE ? (
                 <span> {STATUS_INACTIVE} </span>
               ) : !validationStatus ? (
-                <span className="flex">{STATUS_BUILD}</span>
+                <span className="flex text-foreground">{STATUS_BUILD}</span>
               ) : (
                 <div className="max-h-100 px-1 py-2.5">
                   <div className="flex max-h-80 flex-col gap-2 overflow-auto">
