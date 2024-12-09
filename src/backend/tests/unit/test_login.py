@@ -1,7 +1,7 @@
 import pytest
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.user import User
-from langflow.services.deps import session_scope
+from langflow.services.deps import async_session_scope
 from sqlalchemy.exc import IntegrityError
 
 
@@ -18,9 +18,9 @@ def test_user():
 async def test_login_successful(client, test_user):
     # Adding the test user to the database
     try:
-        with session_scope() as session:
+        async with async_session_scope() as session:
             session.add(test_user)
-            session.commit()
+            await session.commit()
     except IntegrityError:
         pass
 
