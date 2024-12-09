@@ -1,13 +1,10 @@
 worker_processes auto;
 pid /tmp/nginx.pid;
-events {
-    # You can add specific directives here if needed, or leave it empty
-}
+events {}
 
 http {
-    # Set the default type to text/plain
-    default_type text/plain;
     include /etc/nginx/mime.types;
+    default_type text/plain;
 
     types {
         text/html html;
