@@ -176,6 +176,8 @@ test(
       .fill(randomName);
     await page.getByText("Create Secret Key", { exact: true }).click();
 
+    await page.waitForTimeout(1000);
+
     await page.waitForSelector("text=Please save", { timeout: 30000 });
     await page.waitForSelector('[data-testid="btn-copy-api-key"]', {
       timeout: 3000,
