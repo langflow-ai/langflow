@@ -191,8 +191,6 @@ test(
 
     await awaitBootstrapTest(page, { skipGoto: true });
 
-    await page.getByText("New Flow", { exact: true }).click();
-
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
