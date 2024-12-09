@@ -49,10 +49,10 @@ async def test_patch_user(client: AsyncClient, logged_in_headers_super_user):
     name = "string"
     updated_name = "string2"
     basic_case = {"username": name, "password": "string"}
-    _response = await client.post("api/v1/users/", json=basic_case)
-    _id = _response.json()["id"]
+    response_ = await client.post("api/v1/users/", json=basic_case)
+    id_ = response_.json()["id"]
     basic_case["username"] = updated_name
-    response = await client.patch(f"api/v1/users/{_id}", json=basic_case, headers=logged_in_headers_super_user)
+    response = await client.patch(f"api/v1/users/{id_}", json=basic_case, headers=logged_in_headers_super_user)
     result = response.json()
 
     assert response.status_code == status.HTTP_200_OK
@@ -69,9 +69,9 @@ async def test_patch_user(client: AsyncClient, logged_in_headers_super_user):
 
 
 async def test_reset_password(client: AsyncClient, logged_in_headers, active_user):
-    _id = str(active_user.id)
+    id_ = str(active_user.id)
     basic_case = {"username": "string", "password": "new_password"}
-    response = await client.patch(f"api/v1/users/{_id}/reset-password", json=basic_case, headers=logged_in_headers)
+    response = await client.patch(f"api/v1/users/{id_}/reset-password", json=basic_case, headers=logged_in_headers)
     result = response.json()
 
     assert response.status_code == status.HTTP_200_OK
@@ -88,9 +88,9 @@ async def test_reset_password(client: AsyncClient, logged_in_headers, active_use
 
 async def test_delete_user(client: AsyncClient, logged_in_headers_super_user):
     basic_case = {"username": "string", "password": "string"}
-    _response = await client.post("api/v1/users/", json=basic_case)
-    _id = _response.json()["id"]
-    response = await client.delete(f"api/v1/users/{_id}", headers=logged_in_headers_super_user)
+    response_ = await client.post("api/v1/users/", json=basic_case)
+    id_ = response_.json()["id"]
+    response = await client.delete(f"api/v1/users/{id_}", headers=logged_in_headers_super_user)
     result = response.json()
 
     assert response.status_code == status.HTTP_200_OK

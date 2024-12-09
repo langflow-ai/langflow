@@ -17,7 +17,7 @@ from starlette.websockets import WebSocket
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_async_session, get_db_service, get_settings_service
+from langflow.services.deps import get_db_service, get_session, get_settings_service
 from langflow.services.settings.service import SettingsService
 
 if TYPE_CHECKING:
@@ -79,7 +79,7 @@ async def get_current_user(
     token: Annotated[str, Security(oauth2_login)],
     query_param: Annotated[str, Security(api_key_query)],
     header_param: Annotated[str, Security(api_key_header)],
-    db: Annotated[AsyncSession, Depends(get_async_session)],
+    db: Annotated[AsyncSession, Depends(get_session)],
 ) -> User:
     if token:
         return await get_current_user_by_jwt(token, db)
@@ -156,7 +156,7 @@ async def get_current_user_by_jwt(
 
 async def get_current_user_for_websocket(
     websocket: WebSocket,
-    db: Annotated[AsyncSession, Depends(get_async_session)],
+    db: Annotated[AsyncSession, Depends(get_session)],
     query_param: Annotated[str, Security(api_key_query)],
 ) -> User | None:
     token = websocket.query_params.get("token")
