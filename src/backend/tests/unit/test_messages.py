@@ -38,7 +38,7 @@ async def created_message():
 
 
 @pytest.fixture
-async def created_messages(session):  # noqa: ARG001
+async def created_messages(async_session):  # noqa: ARG001
     async with async_session_scope() as _session:
         messages = [
             MessageCreate(text="Test message 1", sender="User", sender_name="User", session_id="session_id2"),
