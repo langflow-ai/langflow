@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test.describe("save component tests", () => {
   /// <reference lib="dom"/>
@@ -8,24 +9,8 @@ test.describe("save component tests", () => {
     { tag: ["@release", "@workspace", "@api"] },
 
     async ({ page }) => {
-      await page.goto("/");
-      let modalCount = 0;
-      try {
-        const modalTitleElement = await page?.getByTestId("modal-title");
-        if (modalTitleElement) {
-          modalCount = await modalTitleElement.count();
-        }
-      } catch (error) {
-        modalCount = 0;
-      }
+      await awaitBootstrapTest(page);
 
-      while (modalCount === 0) {
-        await page.getByText("New Flow", { exact: true }).click();
-        await page.waitForSelector('[data-testid="modal-title"]', {
-          timeout: 3000,
-        });
-        modalCount = await page.getByTestId("modal-title")?.count();
-      }
       await page.waitForSelector('[data-testid="blank-flow"]', {
         timeout: 30000,
       });

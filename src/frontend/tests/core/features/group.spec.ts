@@ -1,4 +1,5 @@
 import { test } from "@playwright/test";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test.describe("group node test", () => {
   /// <reference lib="dom"/>
@@ -6,22 +7,7 @@ test.describe("group node test", () => {
     "group and ungroup updating values",
     { tag: ["@release", "@workspace"] },
     async ({ page }) => {
-      await page.goto("/");
-
-      let modalCount = 0;
-      try {
-        const modalTitleElement = await page?.getByTestId("modal-title");
-        if (modalTitleElement) {
-          modalCount = await modalTitleElement.count();
-        }
-      } catch (error) {
-        modalCount = 0;
-      }
-
-      while (modalCount === 0) {
-        await page.getByText("New Flow", { exact: true }).click();
-        modalCount = await page.getByTestId("modal-title")?.count();
-      }
+      await awaitBootstrapTest(page);
 
       await page.getByTestId("side_nav_options_all-templates").click();
       await page

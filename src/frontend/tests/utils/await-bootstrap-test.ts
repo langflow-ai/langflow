@@ -1,6 +1,15 @@
 import { Page } from "playwright/test";
 
-export const awaitBootstrapTest = async (page: Page) => {
+export const awaitBootstrapTest = async (
+  page: Page,
+  options?: {
+    skipGoto?: boolean;
+  },
+) => {
+  if (!options?.skipGoto) {
+    await page.goto("/");
+  }
+
   await page.waitForSelector('[data-testid="mainpage_title"]', {
     timeout: 30000,
   });

@@ -336,7 +336,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               </div>
             </div>
             <button
-              data-testid="stop_building_button "
+              data-testid="stop_building_button"
               disabled={!isBuilding}
               onClick={(_) => {
                 if (isBuilding) {
