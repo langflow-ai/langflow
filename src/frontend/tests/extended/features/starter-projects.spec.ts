@@ -1,27 +1,11 @@
 import { expect, Page, test } from "@playwright/test";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "user must be able to interact with starter projects",
   { tag: ["@release", "@starter-projects"] },
   async ({ page, context }) => {
-    await page.goto("/");
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForSelector('[data-testid="modal-title"]', {
-        timeout: 3000,
-      });
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
+    await awaitBootstrapTest(page);
 
     expect(page.getByText("Start from scratch", { exact: true })).toBeVisible();
     expect(page.getByRole("button", { name: "Blank Flow" })).toBeVisible();
