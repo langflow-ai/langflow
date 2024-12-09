@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
-import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
   "user must be able to freeze a path",
@@ -23,31 +23,7 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-    await adjustScreenView(page);
-
-    let outdatedComponents = await page
-      .getByTestId("icon-AlertTriangle")
-      .count();
-
-    while (outdatedComponents > 0) {
-      await page.getByTestId("icon-AlertTriangle").first().click();
-      await page.waitForTimeout(1000);
-      outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
-    }
-
-    //remove all saved api keys
-    let filledApiKey = await page.getByTestId("remove-icon-badge").count();
-    while (filledApiKey > 0) {
-      await page.getByTestId("remove-icon-badge").first().click();
-      filledApiKey = await page.getByTestId("remove-icon-badge").count();
-    }
-
-    const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
-    const isApiKeyInputVisible = await apiKeyInput.isVisible();
-
-    if (isApiKeyInputVisible) {
-      await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
-    }
+    await initialGPTsetup(page);
 
     await page
       .getByTestId("textarea_str_input_value")
