@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
-import uaParser from "ua-parser-js";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
@@ -19,9 +18,6 @@ test.skip(
     }
 
     await awaitBootstrapTest(page);
-
-    const getUA = await page.evaluate(() => navigator.userAgent);
-    const userAgentInfo = uaParser(getUA);
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page

@@ -226,8 +226,7 @@ test(
       .getByPlaceholder("Empty")
       .textContent();
 
-    await page.getByText("Close").last().click();
-    await page.getByText("Close").last().click();
+    await page.getByTestId("btn-close-modal").click();
 
     await page.getByTestId("textarea_str_input_value").first().fill(",");
 

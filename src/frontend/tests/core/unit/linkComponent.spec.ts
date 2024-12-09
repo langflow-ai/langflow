@@ -1,5 +1,4 @@
 import { expect, Page, test } from "@playwright/test";
-import uaParser from "ua-parser-js";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 // TODO: This test might not be needed anymore
@@ -8,9 +7,6 @@ test(
   { tag: ["@release", "@workspace"] },
   async ({ context, page }) => {
     await awaitBootstrapTest(page);
-
-    const getUA = await page.evaluate(() => navigator.userAgent);
-    const userAgentInfo = uaParser(getUA);
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
       timeout: 30000,

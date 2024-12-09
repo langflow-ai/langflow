@@ -1,5 +1,5 @@
 import { expect, Page, test } from "@playwright/test";
-import uaParser from "ua-parser-js";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -7,9 +7,6 @@ test(
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
-
-    const getUA = await page.evaluate(() => navigator.userAgent);
-    const userAgentInfo = uaParser(getUA);
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
       timeout: 30000,
@@ -97,6 +94,3 @@ test(
     expect(numberOfNodes).toBe(0);
   },
 );
-function adjustScreenView(page: Page) {
-  throw new Error("Function not implemented.");
-}

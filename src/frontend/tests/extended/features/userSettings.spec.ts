@@ -175,11 +175,17 @@ test(
       .getByPlaceholder("Insert a name for your API Key")
       .fill(randomName);
     await page.getByText("Create Secret Key", { exact: true }).click();
-    await page.getByText("Please save").isVisible();
-    await page.getByTestId("icon-Copy").click();
-    await expect(page.getByText("Api Key Copied!")).toBeVisible({
+
+    await page.waitForSelector("text=Please save", { timeout: 30000 });
+    await page.waitForSelector('[data-testid="btn-copy-api-key"]', {
       timeout: 3000,
+      state: "visible",
     });
+
+    await page.getByTestId("btn-copy-api-key").click();
+
+    await page.waitForSelector("text=Api Key Copied!", { timeout: 30000 });
+
     await page.getByText(randomName).isVisible();
   },
 );

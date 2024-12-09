@@ -1,6 +1,5 @@
 import { Page, test } from "@playwright/test";
 import path from "path";
-import uaParser from "ua-parser-js";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 
@@ -47,7 +46,6 @@ test(
       filledApiKey = await page.getByTestId("remove-icon-badge").count();
     }
     if (process?.env?.ASTRA_DB_API_ENDPOINT?.includes("astra-dev")) {
-      const getUA = await page.evaluate(() => navigator.userAgent);
       await page.getByTestId("title-Astra DB").first().click();
       await page.getByTestId("code-button-modal").click();
       await page.waitForSelector("text=Edit Code", {

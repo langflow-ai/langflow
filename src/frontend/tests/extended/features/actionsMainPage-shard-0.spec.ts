@@ -58,8 +58,10 @@ test(
   "user should be able to upload a flow or a component",
   { tag: ["@release", "@api", "@workspace"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page, { skipNewFlow: true });
-
+    await page.goto("/");
+    await page.waitForSelector('[data-testid="mainpage_title"]', {
+      timeout: 30000,
+    });
     await page.getByTestId("upload-folder-button").last().click();
   },
 );

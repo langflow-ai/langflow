@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 
 test(

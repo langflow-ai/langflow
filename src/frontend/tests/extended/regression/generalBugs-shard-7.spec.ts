@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import uaParser from "ua-parser-js";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 // TODO: This test might not be needed anymore
@@ -28,9 +27,6 @@ test(
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
     await page.getByTestId("zoom_out").click();
-
-    const getUA = await page.evaluate(() => navigator.userAgent);
-    const userAgentInfo = uaParser(getUA);
 
     await page.getByTestId("div-generic-node").click();
 

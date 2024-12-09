@@ -4,7 +4,6 @@ export const awaitBootstrapTest = async (
   page: Page,
   options?: {
     skipGoto?: boolean;
-    skipNewFlow?: boolean;
   },
 ) => {
   if (!options?.skipGoto) {
@@ -30,9 +29,7 @@ export const awaitBootstrapTest = async (
   }
 
   while (modalCount === 0) {
-    if (!options?.skipNewFlow) {
-      await page.getByText("New Flow", { exact: true }).click();
-    }
+    await page.getByText("New Flow", { exact: true }).click();
     await page.waitForSelector('[data-testid="modal-title"]', {
       timeout: 3000,
     });

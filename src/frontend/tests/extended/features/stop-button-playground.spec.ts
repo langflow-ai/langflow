@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import uaParser from "ua-parser-js";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
@@ -69,9 +68,6 @@ class CustomComponent(Component):
         self.status = data
         sleep(60)
         return data`;
-
-    const getUA = await page.evaluate(() => navigator.userAgent);
-    const userAgentInfo = uaParser(getUA);
 
     await page.locator(".ace_content").click();
     await page.keyboard.press(`ControlOrMeta+A`);

@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import uaParser from "ua-parser-js";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -12,8 +11,6 @@ test(
     const secondRandomText = Math.random().toString(36).substring(7);
     const thirdRandomText = Math.random().toString(36).substring(7);
 
-    const getUA = await page.evaluate(() => navigator.userAgent);
-    const userAgentInfo = uaParser(getUA);
     await awaitBootstrapTest(page);
 
     await page.waitForSelector('[data-testid="blank-flow"]', {

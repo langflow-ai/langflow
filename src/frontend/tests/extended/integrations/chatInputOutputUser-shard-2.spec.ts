@@ -2,6 +2,7 @@ import { expect, Page, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
   "user must interact with chat with Input/Output",
@@ -110,6 +111,3 @@ test(
     );
   },
 );
-function initialGPTsetup(page: Page) {
-  throw new Error("Function not implemented.");
-}

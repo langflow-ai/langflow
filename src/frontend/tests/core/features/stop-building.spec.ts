@@ -1,5 +1,4 @@
 import { test } from "@playwright/test";
-import uaParser from "ua-parser-js";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 // TODO: fix this test
@@ -8,10 +7,6 @@ test(
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
-
-    const getUA = await page.evaluate(() => navigator.userAgent);
-    const userAgentInfo = uaParser(getUA);
-
     await page.getByTestId("blank-flow").click();
 
     //first component

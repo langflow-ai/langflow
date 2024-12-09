@@ -1,4 +1,5 @@
 import { expect, Page, test } from "@playwright/test";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "user must be able to interact with starter projects",

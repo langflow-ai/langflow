@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import uaParser from "ua-parser-js";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -7,9 +6,6 @@ test(
   { tag: ["@release", "@workspace"] },
 
   async ({ page }) => {
-    const getUA = await page.evaluate(() => navigator.userAgent);
-    const userAgentInfo = uaParser(getUA);
-
     const randomTitle = Math.random()
       .toString(36)
       .substring(7)
