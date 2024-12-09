@@ -21,7 +21,7 @@ from langflow.base.tools.constants import (
 )
 from langflow.custom.tree_visitor import RequiredInputsVisitor
 from langflow.exceptions.component import StreamingError
-from langflow.field_typing import Tool  # noqa: TCH001 Needed by _add_toolkit_output
+from langflow.field_typing import Tool  # noqa: TC001 Needed by _add_toolkit_output
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
 from langflow.memory import astore_message, aupdate_messages, delete_message
@@ -417,20 +417,20 @@ class Component(CustomComponent):
         for index, output in enumerate(frontend_node["outputs"]):
             if isinstance(output, dict):
                 try:
-                    _output = Output(**output)
-                    self._set_output_return_type(_output)
-                    _output_dict = _output.model_dump()
+                    output_ = Output(**output)
+                    self._set_output_return_type(output_)
+                    output_dict = output_.model_dump()
                 except ValidationError as e:
                     msg = f"Invalid output: {e}"
                     raise ValueError(msg) from e
             elif isinstance(output, Output):
                 # we need to serialize it
                 self._set_output_return_type(output)
-                _output_dict = output.model_dump()
+                output_dict = output.model_dump()
             else:
                 msg = f"Invalid output type: {type(output)}"
                 raise TypeError(msg)
-            frontend_node["outputs"][index] = _output_dict
+            frontend_node["outputs"][index] = output_dict
         return frontend_node
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:  # noqa: ARG002
@@ -557,7 +557,7 @@ class Component(CustomComponent):
         return getattr(value, output.method)
 
     def _process_connection_or_parameter(self, key, value) -> None:
-        _input = self._get_or_create_input(key)
+        input_ = self._get_or_create_input(key)
         # We need to check if callable AND if it is a method from a class that inherits from Component
         if isinstance(value, Component):
             # We need to find the Output that can connect to an input of the current component
@@ -570,7 +570,7 @@ class Component(CustomComponent):
             except ValueError as e:
                 msg = f"Method {value.__name__} is not a valid output of {value.__self__.__class__.__name__}"
                 raise ValueError(msg) from e
-            self._connect_to_component(key, value, _input)
+            self._connect_to_component(key, value, input_)
         else:
             self._set_parameter_or_attribute(key, value)
 
@@ -589,18 +589,18 @@ class Component(CustomComponent):
         try:
             return self._inputs[key]
         except KeyError:
-            _input = self._get_fallback_input(name=key, display_name=key)
-            self._inputs[key] = _input
-            self.inputs.append(_input)
-            return _input
+            input_ = self._get_fallback_input(name=key, display_name=key)
+            self._inputs[key] = input_
+            self.inputs.append(input_)
+            return input_
 
-    def _connect_to_component(self, key, value, _input) -> None:
+    def _connect_to_component(self, key, value, input_) -> None:
         component = value.__self__
         self._components.append(component)
         output = component.get_output_by_method(value)
-        self._add_edge(component, key, output, _input)
+        self._add_edge(component, key, output, input_)
 
-    def _add_edge(self, component, key, output, _input) -> None:
+    def _add_edge(self, component, key, output, input_) -> None:
         self._edges.append(
             {
                 "source": component._id,
@@ -615,8 +615,8 @@ class Component(CustomComponent):
                     "targetHandle": {
                         "fieldName": key,
                         "id": self._id,
-                        "inputTypes": _input.input_types,
-                        "type": _input.field_type,
+                        "inputTypes": input_.input_types,
+                        "type": input_.field_type,
                     },
                 },
             }
@@ -785,7 +785,7 @@ class Component(CustomComponent):
 
     def set_attributes(self, params: dict) -> None:
         self._validate_inputs(params)
-        _attributes = {}
+        attributes = {}
         for key, value in params.items():
             if key in self.__dict__ and value != getattr(self, key):
                 msg = (
@@ -793,11 +793,11 @@ class Component(CustomComponent):
                     f"that is a reserved word and cannot be used."
                 )
                 raise ValueError(msg)
-            _attributes[key] = value
+            attributes[key] = value
         for key, input_obj in self._inputs.items():
-            if key not in _attributes and key not in self._attributes:
-                _attributes[key] = input_obj.value or None
-        self._attributes.update(_attributes)
+            if key not in attributes and key not in self._attributes:
+                attributes[key] = input_obj.value or None
+        self._attributes.update(attributes)
 
     def _set_outputs(self, outputs: list[dict]) -> None:
         self.outputs = [Output(**output) for output in outputs]
@@ -826,10 +826,10 @@ class Component(CustomComponent):
         inputs = self.get_trace_as_inputs()
         metadata = self.get_trace_as_metadata()
         async with self._tracing_service.trace_context(self, self.trace_name, inputs, metadata):
-            _results, _artifacts = await self._build_results()
-            self._tracing_service.set_outputs(self.trace_name, _results)
+            results, artifacts = await self._build_results()
+            self._tracing_service.set_outputs(self.trace_name, results)
 
-        return _results, _artifacts
+        return results, artifacts
 
     async def _build_without_tracing(self):
         return await self._build_results()
@@ -864,8 +864,8 @@ class Component(CustomComponent):
             raise
 
     async def _build_results(self) -> tuple[dict, dict]:
-        _results = {}
-        _artifacts = {}
+        results = {}
+        artifacts = {}
         if hasattr(self, "_pre_run_setup"):
             self._pre_run_setup()
         if hasattr(self, "outputs"):
@@ -885,7 +885,7 @@ class Component(CustomComponent):
                     self._current_output = output.name
                     method: Callable = getattr(self, output.method)
                     if output.cache and output.value != UNDEFINED:
-                        _results[output.name] = output.value
+                        results[output.name] = output.value
                         result = output.value
                     else:
                         # If the method is asynchronous, we need to await it
@@ -900,7 +900,7 @@ class Component(CustomComponent):
                             and self._vertex.graph.flow_id is not None
                         ):
                             result.set_flow_id(self._vertex.graph.flow_id)
-                        _results[output.name] = result
+                        results[output.name] = result
                         output.value = result
 
                     custom_repr = self.custom_repr()
@@ -927,15 +927,15 @@ class Component(CustomComponent):
                     artifact_type = get_artifact_type(artifact_value, result)
                     raw, artifact_type = post_process_raw(raw, artifact_type)
                     artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
-                    _artifacts[output.name] = artifact
+                    artifacts[output.name] = artifact
                     self._output_logs[output.name] = self._logs
                     self._logs = []
                     self._current_output = ""
-        self._artifacts = _artifacts
-        self._results = _results
+        self._artifacts = artifacts
+        self._results = results
         if self._tracing_service:
-            self._tracing_service.set_outputs(self.trace_name, _results)
-        return _results, _artifacts
+            self._tracing_service.set_outputs(self.trace_name, results)
+        return results, artifacts
 
     def custom_repr(self):
         if self.repr_value == "":

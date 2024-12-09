@@ -94,9 +94,9 @@ class AstraDBToolComponent(LCToolComponent):
         if self._cached_collection:
             return self._cached_collection
 
-        _cached_client = DataAPIClient(self.token)
-        _cached_db = _cached_client.get_database(self.api_endpoint, namespace=self.namespace)
-        self._cached_collection = _cached_db.get_collection(self.collection_name)
+        cached_client = DataAPIClient(self.token)
+        cached_db = cached_client.get_database(self.api_endpoint, namespace=self.namespace)
+        self._cached_collection = cached_db.get_collection(self.collection_name)
         return self._cached_collection
 
     def create_args_schema(self) -> dict[str, BaseModel]:
