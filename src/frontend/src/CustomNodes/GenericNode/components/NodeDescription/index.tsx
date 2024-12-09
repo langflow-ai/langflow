@@ -93,12 +93,7 @@ export default function NodeDescription({
             onChange={(e) => setNodeDescription(e.target.value)}
             onKeyDown={(e) => {
               handleKeyDown(e, nodeDescription, "");
-              if (
-                e.key === "Enter" &&
-                e.shiftKey === false &&
-                e.ctrlKey === false &&
-                e.altKey === false
-              ) {
+              if (e.key === "Escape") {
                 setInputDescription(false);
                 setNodeDescription(nodeDescription);
                 setNode(nodeId, (old) => ({
@@ -114,7 +109,7 @@ export default function NodeDescription({
               }
             }}
           />
-          {charLimit && (
+          {charLimit && (nodeDescription?.length ?? 0) >= charLimit - 100 && (
             <div
               className={cn(
                 "pt-1 text-left text-[13px]",
