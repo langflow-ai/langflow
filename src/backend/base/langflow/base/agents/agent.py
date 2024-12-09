@@ -47,7 +47,6 @@ class LCAgentComponent(Component):
             advanced=True,
             info="Should the Agent fix errors when reading user input for better processing?",
         ),
-        BoolInput(name="verbose", display_name="Verbose", value=True, advanced=True),
         IntInput(
             name="max_iterations",
             display_name="Max Iterations",
@@ -98,7 +97,6 @@ class LCAgentComponent(Component):
     def get_agent_kwargs(self, *, flatten: bool = False) -> dict:
         base = {
             "handle_parsing_errors": self.handle_parsing_errors,
-            "verbose": self.verbose,
             "allow_dangerous_code": True,
         }
         agent_kwargs = {
@@ -127,13 +125,11 @@ class LCAgentComponent(Component):
                 msg = "Tools are required to run the agent."
                 raise ValueError(msg)
             handle_parsing_errors = hasattr(self, "handle_parsing_errors") and self.handle_parsing_errors
-            verbose = hasattr(self, "verbose") and self.verbose
             max_iterations = hasattr(self, "max_iterations") and self.max_iterations
             runnable = AgentExecutor.from_agent_and_tools(
                 agent=agent,
                 tools=self.tools,
                 handle_parsing_errors=handle_parsing_errors,
-                verbose=verbose,
                 max_iterations=max_iterations,
             )
         input_dict: dict[str, str | list[BaseMessage]] = {"input": self.input_value}
