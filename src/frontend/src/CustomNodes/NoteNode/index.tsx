@@ -85,7 +85,7 @@ function NoteNode({
         >
           <NodeDescription
             inputClassName={cn(
-              "border-0 ring-transparent resize-none shadow-none rounded-sm h-full w-full",
+              "border-0 ring-0 focus:ring-0 resize-none shadow-none rounded-sm h-full w-full",
               COLOR_OPTIONS[bgColor] === null
                 ? ""
                 : "dark:!ring-background dark:text-background",

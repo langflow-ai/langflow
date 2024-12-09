@@ -21,7 +21,9 @@ test(
 
     while (modalCount === 0) {
       await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 3000,
+      });
       modalCount = await page.getByTestId("modal-title")?.count();
     }
 
@@ -33,7 +35,9 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("ollama");
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="embeddingsOllama Embeddings"]', {
+      timeout: 3000,
+    });
 
     await page
       .getByTestId("embeddingsOllama Embeddings")
@@ -50,7 +54,9 @@ test(
 
     await page.keyboard.press(`ControlOrMeta+Shift+A`);
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="node-modal-title"]', {
+      timeout: 3000,
+    });
 
     await page
       .getByPlaceholder("Type something...")
@@ -73,23 +79,14 @@ test(
     expect(secondValue).toBe("ollama_test_ctrl_a_second_input");
 
     await page.getByPlaceholder("Type something...").last().click();
-    await page.waitForTimeout(1000);
 
     await page.keyboard.press("ControlOrMeta+a");
-
-    await page.waitForTimeout(1000);
 
     await page.keyboard.press("ControlOrMeta+c");
 
-    await page.waitForTimeout(1000);
-
     await page.getByPlaceholder("Type something...").nth(2).click();
 
-    await page.waitForTimeout(1000);
-
     await page.keyboard.press("ControlOrMeta+a");
-
-    await page.waitForTimeout(1000);
 
     await page.keyboard.press("ControlOrMeta+v");
 

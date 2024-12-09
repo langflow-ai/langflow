@@ -106,7 +106,7 @@ async def run_flow(
     inputs_components = []
     types = []
     for input_dict in inputs:
-        inputs_list.append({INPUT_FIELD_NAME: cast(str, input_dict.get("input_value"))})
+        inputs_list.append({INPUT_FIELD_NAME: cast("str", input_dict.get("input_value"))})
         inputs_components.append(input_dict.get("components", []))
         types.append(input_dict.get("type", "chat"))
 
