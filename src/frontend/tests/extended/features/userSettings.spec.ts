@@ -159,7 +159,6 @@ test("should see shortcuts", { tag: ["@release"] }, async ({ page }) => {
 test(
   "should interact with API Keys",
   { tag: ["@release", "@api"] },
-
   async ({ page }) => {
     await page.goto("/");
     await page.getByTestId("user-profile-settings").click();
@@ -176,6 +175,7 @@ test(
       .fill(randomName);
     await page.getByText("Create Secret Key", { exact: true }).click();
 
+    // Wait for api key creation to complete and render the next form element
     await page.waitForTimeout(1000);
 
     await page.waitForSelector("text=Please save", { timeout: 30000 });
