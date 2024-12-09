@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID
 
+import anyio
 import orjson
 from aiofile import async_open
 from emoji import demojize, purely_emoji
@@ -544,13 +545,13 @@ async def load_flows_from_directory() -> None:
             msg = "Superuser not found in the database"
             raise NoResultFound(msg)
         user_id = user.id
-        flows_path_ = Path(flows_path)
-        files = [f for f in flows_path_.iterdir() if f.is_file()]
+        flows_path_ = anyio.Path(flows_path)
+        files = [f async for f in flows_path_.iterdir() if await f.is_file()]
         for file_path in files:
             if file_path.suffix != ".json":
                 continue
             logger.info(f"Loading flow from file: {file_path.name}")
-            async with async_open(file_path, "r", encoding="utf-8") as f:
+            async with async_open(str(file_path), "r", encoding="utf-8") as f:
                 content = await f.read()
             flow = orjson.loads(content)
             no_json_name = file_path.stem
