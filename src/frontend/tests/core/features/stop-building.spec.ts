@@ -1,30 +1,13 @@
 import { test } from "@playwright/test";
 import uaParser from "ua-parser-js";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 // TODO: fix this test
 test(
   "user must be able to stop a building",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    test.skip(true, "Test is flaky");
-    await page.goto("/");
-    // await page.waitForTimeout(2000);
-
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
+    await awaitBootstrapTest(page);
 
     const getUA = await page.evaluate(() => navigator.userAgent);
     const userAgentInfo = uaParser(getUA);
@@ -35,7 +18,6 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text input");
-    // await page.waitForTimeout(1000);
 
     await page
       .getByTestId("inputsText Input")
@@ -56,7 +38,6 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("url");
-    // await page.waitForTimeout(1000);
 
     await page
       .getByTestId("dataURL")
@@ -77,7 +58,6 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("split text");
-    // await page.waitForTimeout(1000);
 
     await page
       .getByTestId("processingSplit Text")
@@ -98,7 +78,6 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("parse data");
-    // await page.waitForTimeout(1000);
 
     await page
       .getByTestId("processingParse Data")
@@ -119,7 +98,6 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
-    // await page.waitForTimeout(1000);
 
     await page
       .getByTestId("outputsChat Output")
@@ -142,7 +120,6 @@ test(
 
     while (outdatedComponents > 0) {
       await page.getByTestId("icon-AlertTriangle").first().click();
-      // await page.waitForTimeout(1000);
       outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
     }
 
@@ -251,9 +228,15 @@ class CustomComponent(Component):
 
     await page.getByTestId("title-Custom Component").first().click();
 
-    await page.waitForTimeout(500);
+    await page.waitForSelector('[data-testid="code-button-modal"]', {
+      timeout: 3000,
+    });
+
     await page.getByTestId("code-button-modal").click();
-    await page.waitForTimeout(500);
+
+    await page.waitForSelector('[id="checkAndSaveBtn"]', {
+      timeout: 3000,
+    });
 
     await page.locator("textarea").last().press(`ControlOrMeta+a`);
     await page.keyboard.press("Backspace");
@@ -263,53 +246,17 @@ class CustomComponent(Component):
 
     await page.getByTestId("button_run_custom component").click();
 
-    await page.waitForSelector("text=Building", {
+    await page.waitForSelector("text=running", {
       timeout: 100000,
     });
 
-    await page.waitForSelector('div[class*="animate-border-beam"]', {
-      state: "visible",
-      timeout: 5000,
-    });
-
-    await page.waitForTimeout(1000);
-
-    await page.waitForSelector('div[class*="animate-border-beam"]', {
-      state: "hidden",
-      timeout: 5000,
-    });
-
-    await page.waitForSelector("text=Saved", {
+    await page.waitForSelector('[data-testid="stop_building_button"]', {
       timeout: 100000,
     });
 
-    await page.getByTestId("button_run_custom component").click();
+    await page.getByTestId("stop_building_button").last().click();
 
-    await page.waitForSelector("text=Building", {
-      timeout: 100000,
-    });
-
-    await page.waitForSelector('div[class*="animate-border-beam"]', {
-      state: "visible",
-      timeout: 5000,
-    });
-
-    await page.waitForSelector("text=Building", {
-      timeout: 100000,
-    });
-
-    await page.waitForSelector("text=Saved", {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("button_run_custom component").click();
-
-    await page.waitForSelector('div[class*="animate-border-beam"]', {
-      state: "visible",
-      timeout: 5000,
-    });
-
-    await page.waitForSelector("text=Saved", {
+    await page.waitForSelector("text=build stopped", {
       timeout: 100000,
     });
   },

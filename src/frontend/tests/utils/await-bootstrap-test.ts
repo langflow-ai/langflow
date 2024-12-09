@@ -1,6 +1,16 @@
 import { Page } from "playwright/test";
 
-export const awaitBootstrapTest = async (page: Page) => {
+export const awaitBootstrapTest = async (
+  page: Page,
+  options?: {
+    skipGoto?: boolean;
+    skipNewFlow?: boolean;
+  },
+) => {
+  if (!options?.skipGoto) {
+    await page.goto("/");
+  }
+
   await page.waitForSelector('[data-testid="mainpage_title"]', {
     timeout: 30000,
   });
@@ -20,7 +30,9 @@ export const awaitBootstrapTest = async (page: Page) => {
   }
 
   while (modalCount === 0) {
-    await page.getByText("New Flow", { exact: true }).click();
+    if (!options?.skipNewFlow) {
+      await page.getByText("New Flow", { exact: true }).click();
+    }
     await page.waitForSelector('[data-testid="modal-title"]', {
       timeout: 3000,
     });

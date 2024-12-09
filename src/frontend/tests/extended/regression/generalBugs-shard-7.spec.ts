@@ -1,29 +1,13 @@
 import { expect, test } from "@playwright/test";
 import uaParser from "ua-parser-js";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 // TODO: This test might not be needed anymore
 test(
   "should be able to select all with ctrl + A on advanced modal",
   { tag: ["@release"] },
   async ({ page }) => {
-    await page.goto("/");
-
-    let modalCount = 0;
-
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
+    await awaitBootstrapTest(page);
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
       timeout: 30000,
