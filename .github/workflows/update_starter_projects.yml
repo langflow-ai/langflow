@@ -1,0 +1,41 @@
+name: Update Starter Projects
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "(Optional) Branch to checkout"
+        required: false
+        type: string
+
+jobs:
+  update-starter-projects:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.branch || github.ref }}
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        enable-cache: true
+        cache-dependency-glob: "uv.lock"
+    - name: "Set up Python"
+      uses: actions/setup-python@v5
+      with:
+        python-version-file: "pyproject.toml"
+    - name: Restore uv cache
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.uv-cache
+        key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+        restore-keys: |
+          uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          uv-${{ runner.os }}
+    - name: Install the project
+      run: uv sync --dev
+
+    - name: Run starter projects update
+      run: python .github/update_starter_projects.py
