@@ -670,6 +670,7 @@ async def get_config():
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
+
 class NgrokResponse(BaseModel):
     url: str
     status: str
@@ -678,27 +679,18 @@ class NgrokResponse(BaseModel):
 @router.post("/deploy", response_model=NgrokResponse)
 async def create_tunnel():
     try:
-        auth_token = "2pzX5glHhcEf13iDh42EpyZWaN4_4k2M22NdETNz6pTahZj9E"
-        
-        # Initialize ngrok with the auth token
+        auth_token = os.getenv("NGROK_AUTH_TOKEN")
+
         ngrok.set_auth_token(auth_token)
-        
-        # Create the tunnel
         listener = await ngrok.connect(7860)
-        
-        # Get the public URL using the correct attribute
-        public_url = listener.url()  # Using url() method instead of public_url attribute
-        
-        return NgrokResponse(
-            url=public_url,
-            status="success"
-        )
-        
+
+        public_url = listener.url()
+
+        return NgrokResponse(url=public_url, status="success")
+
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Ngrok connection failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Ngrok connection failed: {str(e)}")
+
 
 @asynccontextmanager
 async def lifespan():

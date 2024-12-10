@@ -95,6 +95,7 @@ module.exports = {
         "Deployment/deployment-kubernetes",
         "Deployment/deployment-railway",
         "Deployment/deployment-render",
+        "Deployment/deployment-ngrok",
       ],
     },
     {
