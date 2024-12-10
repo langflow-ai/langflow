@@ -48,3 +48,32 @@ class Column(BaseModel):
 
 class TableSchema(BaseModel):
     columns: list[Column]
+
+
+class FieldValidatorType(str, Enum):
+    """Enum for field validation types."""
+
+    NO_SPACES = "no_spaces"  # Prevents spaces in input
+    LOWERCASE = "lowercase"  # Forces lowercase
+    UPPERCASE = "uppercase"  # Forces uppercase
+    EMAIL = "email"  # Validates email format
+    URL = "url"  # Validates URL format
+    ALPHANUMERIC = "alphanumeric"  # Only letters and numbers
+    NUMERIC = "numeric"  # Only numbers
+    ALPHA = "alpha"  # Only letters
+    PHONE = "phone"  # Phone number format
+    SLUG = "slug"  # URL slug format (lowercase, hyphens)
+    USERNAME = "username"  # Alphanumeric with underscores
+    PASSWORD = "password"  # Minimum security requirements  # noqa: S105
+
+
+class TableOptions(BaseModel):
+    allow_add: bool = Field(default=True)
+    allow_delete: bool = Field(default=True)
+    allow_edit: bool = Field(default=True)
+    allow_sort: bool = Field(default=True)
+    allow_filter: bool = Field(default=True)
+    allow_hide: bool = Field(default=True)
+    allow_select: bool = Field(default=True)
+    hide_options: bool = Field(default=False)
+    field_validators: list[FieldValidatorType | dict[str, FieldValidatorType]] = Field(default=[])
