@@ -2,6 +2,7 @@ import asyncio
 from datetime import datetime
 from pathlib import Path
 
+import anyio
 import pytest
 from langflow.custom.directory_reader.utils import abuild_custom_component_list_from_path
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
@@ -12,7 +13,8 @@ from langflow.initial_setup.setup import (
 )
 from langflow.interface.types import aget_all_types_dict
 from langflow.services.database.models.folder.model import Folder
-from langflow.services.deps import session_scope
+from langflow.services.deps import async_session_scope
+from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 
@@ -52,12 +54,13 @@ def test_get_project_data():
 
 @pytest.mark.usefixtures("client")
 async def test_create_or_update_starter_projects():
-    with session_scope() as session:
+    async with async_session_scope() as session:
         # Get the number of projects returned by load_starter_projects
         num_projects = len(await asyncio.to_thread(load_starter_projects))
 
         # Get the number of projects in the database
-        folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
+        stmt = select(Folder).options(selectinload(Folder.flows)).where(Folder.name == STARTER_FOLDER_NAME)
+        folder = (await session.exec(stmt)).first()
         assert folder is not None
         num_db_projects = len(folder.flows)
 
@@ -130,7 +133,7 @@ def add_edge(source, target, from_output, to_input):
 
 
 async def test_refresh_starter_projects():
-    data_path = str(Path(__file__).parent.parent.parent.absolute() / "base" / "langflow" / "components")
+    data_path = str(await anyio.Path(__file__).parent.parent.parent.absolute() / "base" / "langflow" / "components")
     components = await abuild_custom_component_list_from_path(data_path)
 
     chat_input = find_component_by_name(components, "ChatInput")

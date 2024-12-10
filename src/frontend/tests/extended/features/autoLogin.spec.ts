@@ -20,19 +20,26 @@ test.describe(
       async ({ page }) => {
         await page.goto("/");
         await page.getByText("New Flow", { exact: true }).click();
-        await page.waitForTimeout(5000);
+        await page.waitForSelector('[data-testid="modal-title"]', {
+          timeout: 5000,
+        });
 
         await page.goto("/login");
         await page.getByText("New Flow", { exact: true }).click();
-        await page.waitForTimeout(5000);
-
+        await page.waitForSelector('[data-testid="modal-title"]', {
+          timeout: 5000,
+        });
         await page.goto("/admin");
         await page.getByText("New Flow", { exact: true }).click();
-        await page.waitForTimeout(5000);
+        await page.waitForSelector('[data-testid="modal-title"]', {
+          timeout: 5000,
+        });
 
         await page.goto("/admin/login");
         await page.getByText("New Flow", { exact: true }).click();
-        await page.waitForTimeout(5000);
+        await page.waitForSelector('[data-testid="modal-title"]', {
+          timeout: 5000,
+        });
       },
     );
   },

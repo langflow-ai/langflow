@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 import validators
+from aiofile import async_open
 
 from langflow.custom import Component
 from langflow.io import (
@@ -207,8 +208,8 @@ class APIRequestComponent(Component):
                 mode = "wb" if is_binary else "w"
                 encoding = response.encoding if mode == "w" else None
                 if file_path:
-                    with file_path.open(mode, encoding=encoding) as f:
-                        f.write(response.content if is_binary else response.text)
+                    async with async_open(file_path, mode, encoding=encoding) as f:
+                        await f.write(response.content if is_binary else response.text)
 
                 if include_httpx_metadata:
                     metadata.update(
