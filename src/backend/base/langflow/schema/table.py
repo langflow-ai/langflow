@@ -13,11 +13,6 @@ class FormatterType(str, Enum):
     boolean = "boolean"
 
 
-class EditMode(str, Enum):
-    MODAL = "modal"
-    INLINE = "inline"
-
-
 class Column(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     name: str
@@ -27,8 +22,6 @@ class Column(BaseModel):
     formatter: FormatterType | str | None = Field(default=None, alias="type")
     description: str | None = None
     default: str | None = None
-    disable_edit: bool = Field(default=False)
-    edit_mode: EditMode | None = Field(default=EditMode.MODAL)
 
     @model_validator(mode="after")
     def set_display_name(self):
@@ -74,25 +67,13 @@ class FieldValidatorType(str, Enum):
     PASSWORD = "password"  # Minimum security requirements  # noqa: S105
 
 
-class FieldParserType(str, Enum):
-    """Enum for field parser types."""
-
-    SNAKE_CASE = "snake_case"
-    CAMEL_CASE = "camel_case"
-    PASCAL_CASE = "pascal_case"
-    KEBAB_CASE = "kebab_case"
-    LOWERCASE = "lowercase"
-    UPPERCASE = "uppercase"
-
-
 class TableOptions(BaseModel):
-    block_add: bool = Field(default=False)
-    block_delete: bool = Field(default=False)
-    block_edit: bool = Field(default=False)
-    block_sort: bool = Field(default=False)
-    block_filter: bool = Field(default=False)
-    block_hide: bool | list[str] = Field(default=False)
-    block_select: bool = Field(default=False)
+    allow_add: bool = Field(default=True)
+    allow_delete: bool = Field(default=True)
+    allow_edit: bool = Field(default=True)
+    allow_sort: bool = Field(default=True)
+    allow_filter: bool = Field(default=True)
+    allow_hide: bool = Field(default=True)
+    allow_select: bool = Field(default=True)
     hide_options: bool = Field(default=False)
-    field_validators: dict[str, list[FieldValidatorType] | FieldValidatorType] | None = Field(default=None)
-    field_parsers: dict[str, list[FieldParserType] | FieldParserType] | None = Field(default=None)
+    field_validators: list[FieldValidatorType | dict[str, FieldValidatorType]] = Field(default=[])
