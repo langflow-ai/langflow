@@ -20,7 +20,7 @@ from fastapi import (
 from loguru import logger
 from sqlmodel import select
 
-from langflow.api.utils import AsyncDbSession, CurrentActiveUser, parse_value
+from langflow.api.utils import CurrentActiveUser, DbSession, parse_value
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -379,7 +379,7 @@ async def webhook_run_flow(
 )
 async def experimental_run_flow(
     *,
-    session: AsyncDbSession,
+    session: DbSession,
     flow_id: UUID,
     inputs: list[InputValueRequest] | None = None,
     outputs: list[str] | None = None,
@@ -584,8 +584,8 @@ async def custom_component(
     if raw_code.frontend_node is not None:
         built_frontend_node = component_instance.post_code_processing(built_frontend_node, raw_code.frontend_node)
 
-    _type = get_instance_name(component_instance)
-    return CustomComponentResponse(data=built_frontend_node, type=_type)
+    type_ = get_instance_name(component_instance)
+    return CustomComponentResponse(data=built_frontend_node, type=type_)
 
 
 @router.post("/custom_component/update", status_code=HTTPStatus.OK)

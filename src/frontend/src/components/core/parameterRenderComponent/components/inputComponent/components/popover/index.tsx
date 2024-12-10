@@ -129,12 +129,12 @@ const CustomInputPopover = ({
               disabled={disabled}
               required={required}
               className={cn(
-                "popover-input nodrag truncate px-1 pr-4",
+                "popover-input nodrag w-full truncate px-1 pr-4",
                 editNode && "px-2",
                 editNode && disabled && "h-fit w-fit",
                 disabled &&
                   "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
-                password && "max-w-64 text-clip pr-14",
+                password && "text-clip pr-14",
               )}
               placeholder={
                 selectedOptions?.length > 0 || selectedOption ? "" : placeholder

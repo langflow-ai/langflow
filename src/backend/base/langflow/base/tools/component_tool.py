@@ -30,12 +30,12 @@ if TYPE_CHECKING:
 TOOL_TYPES_SET = {"Tool", "BaseTool", "StructuredTool"}
 
 
-def _get_input_type(_input: InputTypes):
-    if _input.input_types:
-        if len(_input.input_types) == 1:
-            return _input.input_types[0]
-        return " | ".join(_input.input_types)
-    return _input.field_type
+def _get_input_type(input_: InputTypes):
+    if input_.input_types:
+        if len(input_.input_types) == 1:
+            return input_.input_types[0]
+        return " | ".join(input_.input_types)
+    return input_.field_type
 
 
 def build_description(component: Component, output: Output) -> str:
@@ -56,7 +56,7 @@ def build_description(component: Component, output: Output) -> str:
     return f"{output.method}({args}) - {component.description}"
 
 
-def send_message_noop(
+async def send_message_noop(
     message: Message,
     text: str | None = None,  # noqa: ARG001
     background_color: str | None = None,  # noqa: ARG001
@@ -134,11 +134,11 @@ def _build_output_async_function(
     async def output_function(*args, **kwargs):
         try:
             if event_manager:
-                event_manager.on_build_start(data={"id": component._id})
+                await asyncio.to_thread(event_manager.on_build_start, data={"id": component._id})
             component.set(*args, **kwargs)
             result = await output_method()
             if event_manager:
-                event_manager.on_build_end(data={"id": component._id})
+                await asyncio.to_thread(event_manager.on_build_end, data={"id": component._id})
         except Exception as e:
             raise ToolException(e) from e
         if isinstance(result, Message):

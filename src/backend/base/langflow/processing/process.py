@@ -148,8 +148,8 @@ def apply_tweaks(node: dict[str, Any], node_tweaks: dict[str, Any]) -> None:
                 template_data[tweak_name]["value"] = value
             elif isinstance(tweak_value, dict):
                 for k, v in tweak_value.items():
-                    _k = "file_path" if template_data[tweak_name]["type"] == "file" else k
-                    template_data[tweak_name][_k] = v
+                    k_ = "file_path" if template_data[tweak_name]["type"] == "file" else k
+                    template_data[tweak_name][k_] = v
             else:
                 key = "file_path" if template_data[tweak_name]["type"] == "file" else "value"
                 template_data[tweak_name][key] = tweak_value
@@ -175,10 +175,10 @@ def process_tweaks(
     :return: The modified graph_data dictionary.
     :raises ValueError: If the input is not in the expected format.
     """
-    tweaks_dict = cast(dict[str, Any], tweaks.model_dump()) if not isinstance(tweaks, dict) else tweaks
+    tweaks_dict = cast("dict[str, Any]", tweaks.model_dump()) if not isinstance(tweaks, dict) else tweaks
     if "stream" not in tweaks_dict:
         tweaks_dict |= {"stream": stream}
-    nodes = validate_input(graph_data, cast(dict[str, str | dict[str, Any]], tweaks_dict))
+    nodes = validate_input(graph_data, cast("dict[str, str | dict[str, Any]]", tweaks_dict))
     nodes_map = {node.get("id"): node for node in nodes}
     nodes_display_name_map = {node.get("data", {}).get("node", {}).get("display_name"): node for node in nodes}
 
