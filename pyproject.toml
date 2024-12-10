@@ -116,7 +116,8 @@ dependencies = [
     "aiofile>=3.9.0,<4.0.0",
     "sseclient-py==1.8.0",
     "arize-phoenix-otel>=0.6.1",
-    "openinference-instrumentation-langchain==0.1.29",
+    "openinference-instrumentation-langchain>=0.1.29",
+    "ngrok>=1.4.0",
 ]
 
 [project.urls]

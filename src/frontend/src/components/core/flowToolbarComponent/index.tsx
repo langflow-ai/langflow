@@ -1,5 +1,6 @@
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import PlaygroundButton from "@/components/core/flowToolbarComponent/components/playground-button";
+import { useDeployNgrok } from "@/controllers/API/queries/ngrok/use-post-deploy-ngrok";
 import {
   ENABLE_API,
   ENABLE_LANGFLOW_STORE,
@@ -115,6 +116,27 @@ export default function FlowToolbar(): JSX.Element {
     ],
   );
 
+  const { mutate: deployNgrok } = useDeployNgrok({
+    onSuccess: (data) => {
+      window.alert(data.url);
+    },
+  });
+
+  const handleDeploy = () => {
+    deployNgrok();
+  };
+
+  const DeployLabel = () => (
+    <span onClick={handleDeploy} className="hidden md:block">
+      Deploy 🚀
+    </span>
+  );
+  const DeployButton = () => (
+    <div className="playground-btn-flow-toolbar cursor-pointer hover:bg-accent">
+      <DeployLabel />
+    </div>
+  );
+
   return (
     <>
       <Panel className="!m-2" position="top-right">
@@ -131,6 +153,8 @@ export default function FlowToolbar(): JSX.Element {
                 setOpen={setOpen}
                 canvasOpen
               />
+
+              <DeployButton />
             </div>
             {ENABLE_API && (
               <>

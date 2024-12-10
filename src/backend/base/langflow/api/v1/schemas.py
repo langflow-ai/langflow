@@ -369,3 +369,8 @@ class ConfigResponse(BaseModel):
     auto_saving_interval: int
     health_check_max_retries: int
     max_file_size_upload: int
+
+
+class NgrokResponse(BaseModel):
+    url: str
+    status: str
