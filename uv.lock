@@ -3751,7 +3751,7 @@ requires-dist = [
     { name = "wolframalpha", specifier = ">=5.1.3,<6.0.0" },
     { name = "yfinance", specifier = ">=0.2.40,<1.0.0" },
     { name = "youtube-transcript-api", specifier = ">=0.6.2,<1.0.0" },
-    { name = "zep-python", specifier = ">=2.0.0,<3.0.0" },
+    { name = "zep-python", specifier = ">=2.0.2" },
 ]
 
 [package.metadata.requires-dev]
