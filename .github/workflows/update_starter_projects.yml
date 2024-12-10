@@ -1,0 +1,25 @@
+name: Update Starter Projects
+on:
+  pull_request:
+    paths:
+      - "**/*.py"
+env:
+  POETRY_VERSION: "1.8.2"
+
+jobs:
+  update-starter-projects:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Setup Environment"
+        uses: ./.github/actions/setup-uv
+
+      - name: Run starter projects update
+        run: python .github/update_starter_projects.py
+
+      - uses: autofix-ci/action@ff86a557419858bb967097bfc916833f5647fa8c
+
+      - name: Minimize uv cache
+        run: uv cache prune --ci
+

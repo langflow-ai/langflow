@@ -1013,41 +1013,6 @@
                 "type": "str",
                 "value": "Ascending"
               },
-              "output_parser": {
-                "_input_type": "HandleInput",
-                "advanced": true,
-                "display_name": "Output Parser",
-                "dynamic": false,
-                "info": "The parser to use to parse the output of the model",
-                "input_types": [
-                  "OutputParser"
-                ],
-                "list": false,
-                "name": "output_parser",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "output_schema": {
-                "_input_type": "DictInput",
-                "advanced": true,
-                "display_name": "Schema",
-                "dynamic": false,
-                "info": "The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled. [DEPRECATED]",
-                "list": true,
-                "name": "output_schema",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "type": "dict",
-                "value": {}
-              },
               "seed": {
                 "_input_type": "IntInput",
                 "advanced": true,
