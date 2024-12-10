@@ -34,6 +34,6 @@ __all__ = [
     "NVIDIAModelComponent",
     "OpenAIModelComponent",
     "PerplexityComponent",
-    "SambaNovaComponent",
     "QianfanChatEndpointComponent",
+    "SambaNovaComponent",
 ]

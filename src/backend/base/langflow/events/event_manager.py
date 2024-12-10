@@ -55,10 +55,10 @@ class EventManager:
             msg = "Event name must start with 'on_'"
             raise ValueError(msg)
         if callback is None:
-            _callback = partial(self.send_event, event_type=event_type)
+            callback_ = partial(self.send_event, event_type=event_type)
         else:
-            _callback = partial(callback, manager=self, event_type=event_type)
-        self.events[name] = _callback
+            callback_ = partial(callback, manager=self, event_type=event_type)
+        self.events[name] = callback_
 
     def send_event(self, *, event_type: Literal["message", "error", "warning", "info", "token"], data: LoggableType):
         try:

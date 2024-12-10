@@ -95,10 +95,10 @@ class CreateDataComponent(Component):
         for value_dict in self._attributes.values():
             if isinstance(value_dict, dict):
                 # Check if the value of the value_dict is a Data
-                _value_dict = {
+                value_dict_ = {
                     key: value.get_text() if isinstance(value, Data) else value for key, value in value_dict.items()
                 }
-                data.update(_value_dict)
+                data.update(value_dict_)
         return data
 
     def validate_text_key(self) -> None:

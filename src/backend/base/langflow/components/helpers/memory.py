@@ -5,7 +5,7 @@ from langflow.field_typing import BaseChatMemory
 from langflow.helpers.data import data_to_text
 from langflow.inputs import HandleInput
 from langflow.io import DropdownInput, IntInput, MessageTextInput, MultilineInput, Output
-from langflow.memory import LCBuiltinChatMemory, get_messages
+from langflow.memory import LCBuiltinChatMemory, aget_messages
 from langflow.schema import Data
 from langflow.schema.message import Message
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
@@ -58,6 +58,7 @@ class MemoryComponent(Component):
             value="Ascending",
             info="Order of the messages.",
             advanced=True,
+            tool_mode=True,
         ),
         MultilineInput(
             name="template",
@@ -74,7 +75,7 @@ class MemoryComponent(Component):
         Output(display_name="Text", name="messages_text", method="retrieve_messages_as_text"),
     ]
 
-    def retrieve_messages(self) -> Data:
+    async def retrieve_messages(self) -> Data:
         sender = self.sender
         sender_name = self.sender_name
         session_id = self.session_id
@@ -88,7 +89,7 @@ class MemoryComponent(Component):
             # override session_id
             self.memory.session_id = session_id
 
-            stored = self.memory.messages
+            stored = await self.memory.aget_messages()
             # langchain memories are supposed to return messages in ascending order
             if order == "DESC":
                 stored = stored[::-1]
@@ -99,7 +100,7 @@ class MemoryComponent(Component):
                 expected_type = MESSAGE_SENDER_AI if sender == MESSAGE_SENDER_AI else MESSAGE_SENDER_USER
                 stored = [m for m in stored if m.type == expected_type]
         else:
-            stored = get_messages(
+            stored = await aget_messages(
                 sender=sender,
                 sender_name=sender_name,
                 session_id=session_id,
@@ -109,8 +110,8 @@ class MemoryComponent(Component):
         self.status = stored
         return stored
 
-    def retrieve_messages_as_text(self) -> Message:
-        stored_text = data_to_text(self.template, self.retrieve_messages())
+    async def retrieve_messages_as_text(self) -> Message:
+        stored_text = data_to_text(self.template, await self.retrieve_messages())
         self.status = stored_text
         return Message(text=stored_text)
 

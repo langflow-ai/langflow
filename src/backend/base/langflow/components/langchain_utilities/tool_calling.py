@@ -42,9 +42,9 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
 
     def create_agent_runnable(self):
         messages = [
-            ("system", self.system_prompt),
+            ("system", "{system_prompt}"),
             ("placeholder", "{chat_history}"),
-            ("human", self.input_value),
+            ("human", "{input}"),
             ("placeholder", "{agent_scratchpad}"),
         ]
         prompt = ChatPromptTemplate.from_messages(messages)

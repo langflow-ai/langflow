@@ -8,7 +8,7 @@ from langflow.components.outputs import ChatOutput
 from langflow.components.processing import ParseDataComponent
 from langflow.components.processing.split_text import SplitTextComponent
 from langflow.components.prompts import PromptComponent
-from langflow.components.vectorstores import AstraVectorStoreComponent
+from langflow.components.vectorstores import AstraDBVectorStoreComponent
 from langflow.graph import Graph
 
 
@@ -18,7 +18,7 @@ def ingestion_graph():
     text_splitter = SplitTextComponent()
     text_splitter.set(data_inputs=file_component.load_files)
     openai_embeddings = OpenAIEmbeddingsComponent()
-    vector_store = AstraVectorStoreComponent()
+    vector_store = AstraDBVectorStoreComponent()
     vector_store.set(
         embedding_model=openai_embeddings.build_embeddings,
         ingest_data=text_splitter.split_text,
@@ -31,7 +31,7 @@ def rag_graph():
     # RAG Graph
     openai_embeddings = OpenAIEmbeddingsComponent()
     chat_input = ChatInput()
-    rag_vector_store = AstraVectorStoreComponent()
+    rag_vector_store = AstraDBVectorStoreComponent()
     rag_vector_store.set(
         search_input=chat_input.message_response,
         embedding_model=openai_embeddings.build_embeddings,

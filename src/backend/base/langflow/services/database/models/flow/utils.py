@@ -1,21 +1,6 @@
-from typing import Annotated
-
-from fastapi import Depends
-from sqlmodel import Session
-
-from langflow.services.deps import get_session
 from langflow.utils.version import get_version_info
 
 from .model import Flow
-
-
-def get_flow_by_id(session: Annotated[Session, Depends(get_session)], flow_id: str | None = None) -> Flow | None:
-    """Get flow by id."""
-    if flow_id is None:
-        msg = "Flow id is required."
-        raise ValueError(msg)
-
-    return session.get(Flow, flow_id)
 
 
 def get_webhook_component_in_flow(flow_data: dict):

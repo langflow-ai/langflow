@@ -105,7 +105,8 @@ export default function TableOptions({
                 name="RotateCcw"
                 strokeWidth={2}
                 className={cn(
-                  "h-5 w-5 text-primary transition-all hover:text-accent-foreground",
+                  "h-5 w-5 transition-all",
+                  !stateChange ? "text-muted-foreground" : "text-primary",
                 )}
               />
             </Button>

@@ -1,6 +1,6 @@
 import cloneDeep from "lodash/cloneDeep";
 import { useEffect } from "react";
-import { FlowType } from "../../../../../types/flow";
+import { FlowType } from "../../../types/flow";
 
 const useFilteredFlows = (
   flowsFromFolder: FlowType[],

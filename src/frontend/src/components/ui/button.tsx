@@ -5,7 +5,7 @@ import { cn } from "../../utils/utils";
 import ForwardedIconComponent from "../common/genericIconComponent";
 
 const buttonVariants = cva(
-  "noflow nowheel nopan nodelete nodrag inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-100 disabled:disabled-state [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "noflow nopan nodelete nodrag inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-100 disabled:disabled-state [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -53,6 +53,7 @@ export interface ButtonProps
   asChild?: boolean;
   loading?: boolean;
   unstyled?: boolean;
+  ignoreTitleCase?: boolean;
 }
 
 function toTitleCase(text: string) {
@@ -74,6 +75,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       disabled,
       asChild = false,
       children,
+      ignoreTitleCase = false,
       ...props
     },
     ref,
@@ -81,7 +83,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const Comp = asChild ? Slot : "button";
     let newChildren = children;
     if (typeof children === "string") {
-      newChildren = toTitleCase(children);
+      newChildren = ignoreTitleCase ? children : toTitleCase(children);
     }
     return (
       <>
@@ -89,7 +91,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           className={
             !unstyled
               ? buttonVariants({ variant, size, className })
-              : cn(className, "noflow nowheel nopan nodelete nodrag")
+              : cn(className)
           }
           disabled={loading || disabled}
           {...(asChild ? {} : { type: type || "button" })}

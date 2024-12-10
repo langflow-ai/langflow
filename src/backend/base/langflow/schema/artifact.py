@@ -53,13 +53,13 @@ def get_artifact_type(value, build_result=None) -> str:
 
 
 def _to_list_of_dicts(raw):
-    _raw = []
+    raw_ = []
     for item in raw:
         if hasattr(item, "dict") or hasattr(item, "model_dump"):
-            _raw.append(recursive_serialize_or_str(item))
+            raw_.append(recursive_serialize_or_str(item))
         else:
-            _raw.append(str(item))
-    return _raw
+            raw_.append(str(item))
+    return raw_
 
 
 def post_process_raw(raw, artifact_type: str):

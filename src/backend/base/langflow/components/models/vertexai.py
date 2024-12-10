@@ -63,7 +63,7 @@ class ChatVertexAIComponent(LCModelComponent):
             credentials = None
 
         return cast(
-            LanguageModel,
+            "LanguageModel",
             ChatVertexAI(
                 credentials=credentials,
                 location=location,

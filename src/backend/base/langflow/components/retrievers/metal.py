@@ -28,4 +28,4 @@ class MetalRetrieverComponent(CustomComponent):
         except Exception as e:
             msg = "Could not connect to Metal API."
             raise ValueError(msg) from e
-        return cast(Retriever, MetalRetriever(client=metal, params=params or {}))
+        return cast("Retriever", MetalRetriever(client=metal, params=params or {}))

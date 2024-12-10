@@ -2,6 +2,7 @@ import {
   useDeleteGlobalVariables,
   useGetGlobalVariables,
 } from "@/controllers/API/queries/variables";
+import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useEffect } from "react";
 import DeleteConfirmationModal from "../../../../../modals/deleteConfirmationModal";
 import useAlertStore from "../../../../../stores/alertStore";
@@ -14,6 +15,7 @@ import { InputGlobalComponentType, InputProps } from "../../types";
 import InputComponent from "../inputComponent";
 
 export default function InputGlobalComponent({
+  display_name,
   disabled,
   handleOnNewValue,
   value,
@@ -28,9 +30,12 @@ export default function InputGlobalComponent({
 
   const { data: globalVariables } = useGetGlobalVariables();
   const { mutate: mutateDeleteGlobalVariable } = useDeleteGlobalVariables();
+  const unavailableFields = useGlobalVariablesStore(
+    (state) => state.unavailableFields,
+  );
 
   useEffect(() => {
-    if (globalVariables)
+    if (globalVariables) {
       if (
         load_from_db &&
         !globalVariables.find((variable) => variable.name === value)
@@ -40,7 +45,19 @@ export default function InputGlobalComponent({
           { skipSnapshot: true },
         );
       }
-  }, [globalVariables]);
+      if (
+        !load_from_db &&
+        value === "" &&
+        unavailableFields &&
+        Object.keys(unavailableFields).includes(display_name ?? "")
+      ) {
+        handleOnNewValue(
+          { value: unavailableFields[display_name ?? ""], load_from_db: true },
+          { skipSnapshot: true },
+        );
+      }
+    }
+  }, [globalVariables, unavailableFields]);
 
   async function handleDelete(key: string) {
     if (!globalVariables) return;
@@ -69,6 +86,7 @@ export default function InputGlobalComponent({
       });
     }
   }
+
   return (
     <InputComponent
       nodeStyle

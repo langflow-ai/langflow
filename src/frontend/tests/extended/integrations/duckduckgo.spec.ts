@@ -1,39 +1,19 @@
 import { expect, test } from "@playwright/test";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "user should be able to use duckduckgo search component",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
-    await page.goto("/");
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
-
-    await page.waitForSelector('[id="new-project-btn"]', {
-      timeout: 30000,
-    });
-
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
+    await awaitBootstrapTest(page);
 
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("duck");
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('//*[@id="toolsDuckDuckGo Search"]', {
+      timeout: 3000,
+    });
 
     await page
       .locator('//*[@id="toolsDuckDuckGo Search"]')
@@ -61,9 +41,7 @@ test(
           "built successfully",
         ) ?? false;
 
-      await page.waitForTimeout(500);
       await page.getByTestId("output-inspection-data").first().click();
-      await page.waitForTimeout(1000);
 
       if (isBuiltSuccessfully) {
         await page.getByRole("gridcell").first().click();

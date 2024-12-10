@@ -6,11 +6,11 @@ import TextAreaComponent from "../textAreaComponent";
 export function StrRenderComponent({
   templateData,
   name,
+  display_name,
   placeholder,
   ...baseInputProps
 }: InputProps<string, StrRenderComponentType>) {
-  const { handleOnNewValue, id, disabled, editNode, value, isToolMode } =
-    baseInputProps;
+  const { handleOnNewValue, id, isToolMode } = baseInputProps;
 
   if (!templateData.options) {
     return templateData.multiline ? (
@@ -34,7 +34,8 @@ export function StrRenderComponent({
         password={templateData.password}
         load_from_db={templateData.load_from_db}
         placeholder={placeholder}
-        id={"input-" + name}
+        display_name={display_name}
+        id={`input-${name}`}
         isToolMode={isToolMode}
       />
     );

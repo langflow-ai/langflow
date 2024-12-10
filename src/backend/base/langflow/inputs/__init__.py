@@ -28,6 +28,7 @@ from .inputs import (
 __all__ = [
     "BoolInput",
     "CodeInput",
+    "DataFrameInput",
     "DataInput",
     "DefaultPromptField",
     "DefaultPromptField",
@@ -52,5 +53,4 @@ __all__ = [
     "SliderInput",
     "StrInput",
     "TableInput",
-    "DataFrameInput",
 ]

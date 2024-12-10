@@ -70,7 +70,9 @@ class OpenAIModelComponent(LCModelComponent):
             advanced=False,
             value="OPENAI_API_KEY",
         ),
-        SliderInput(name="temperature", display_name="Temperature", value=0.1, range_spec=RangeSpec(min=0, max=1)),
+        SliderInput(
+            name="temperature", display_name="Temperature", value=0.1, range_spec=RangeSpec(min=0, max=2, step=0.01)
+        ),
         IntInput(
             name="seed",
             display_name="Seed",

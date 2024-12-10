@@ -3,7 +3,6 @@ import { usePostAddFlow } from "@/controllers/API/queries/flows/use-post-add-flo
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
-import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useTypesStore } from "@/stores/typesStore";
 import { FlowType } from "@/types/flow";
 import {
@@ -19,12 +18,6 @@ import { useParams } from "react-router-dom";
 import useDeleteFlow from "./use-delete-flow";
 
 const useAddFlow = () => {
-  const unavaliableFields = useGlobalVariablesStore(
-    (state) => state.unavailableFields,
-  );
-  const globalVariablesEntries = useGlobalVariablesStore(
-    (state) => state.globalVariablesEntries,
-  );
   const flows = useFlowsManagerStore((state) => state.flows);
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const { deleteFlow } = useDeleteFlow();
@@ -36,7 +29,6 @@ const useAddFlow = () => {
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
 
   const { mutate: postAddFlow } = usePostAddFlow();
-  const { mutate: refreshFlows } = useGetRefreshFlows();
 
   const addFlow = async (params?: {
     flow?: FlowType;
@@ -49,16 +41,9 @@ const useAddFlow = () => {
         ? await processDataFromFlow(flow)
         : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
       flowData?.nodes.forEach((node) => {
-        updateGroupRecursion(
-          node,
-          flowData?.edges,
-          unavaliableFields,
-          globalVariablesEntries,
-        );
+        updateGroupRecursion(node, flowData?.edges);
       });
       // Create a new flow with a default name if no flow is provided.
-      const folder_id = folderId ?? myCollectionId ?? "";
-
       if (params?.override && flow) {
         const flowId = flows?.find((f) => f.name === flow.name);
         if (flowId) {
@@ -66,12 +51,11 @@ const useAddFlow = () => {
         }
       }
 
+      const folder_id = folderId ?? myCollectionId ?? "";
       const flowsToCheckNames = flows?.filter(
         (f) => f.folder_id === myCollectionId,
       );
-
       const newFlow = createNewFlow(flowData!, folder_id, flow);
-
       const newName = addVersionToDuplicates(newFlow, flowsToCheckNames ?? []);
       newFlow.name = newName;
       newFlow.folder_id = folder_id;
@@ -91,11 +75,6 @@ const useAddFlow = () => {
               ["saved_components"]: data,
             }),
           }));
-
-          refreshFlows({
-            get_all: true,
-            header_flows: true,
-          });
 
           setFlowToCanvas(createdFlow);
           resolve(createdFlow.id);

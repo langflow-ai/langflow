@@ -41,6 +41,7 @@ const useHandleOnNewValue = ({
     parameterId: name,
     nodeId: nodeId,
     node: node,
+    tool_mode: node.tool_mode ?? false,
   });
 
   const handleOnNewValue: handleOnNewValueType = async (changes, options?) => {

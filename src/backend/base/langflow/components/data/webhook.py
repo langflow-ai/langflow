@@ -9,6 +9,7 @@ class WebhookComponent(Component):
     display_name = "Webhook"
     description = "Defines a webhook input for the flow."
     name = "Webhook"
+    icon = "webhook"
 
     inputs = [
         MultilineInput(

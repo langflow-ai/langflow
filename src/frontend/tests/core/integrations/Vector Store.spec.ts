@@ -1,6 +1,6 @@
 import { Page, test } from "@playwright/test";
 import path from "path";
-import uaParser from "ua-parser-js";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 
 test(
@@ -19,27 +19,8 @@ test(
       !process?.env?.ASTRA_DB_APPLICATION_TOKEN,
       "ASTRA_DB_APPLICATION_TOKEN required to run this test",
     );
-    await page.goto("/");
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
-    await page.waitForSelector('[id="new-project-btn"]', {
-      timeout: 30000,
-    });
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
+    await awaitBootstrapTest(page);
+
     await page.getByTestId("side_nav_options_all-templates").click();
     await page
       .getByRole("heading", { name: "Vector Store RAG" })
@@ -57,22 +38,19 @@ test(
       .count();
     while (outdatedComponents > 0) {
       await page.getByTestId("icon-AlertTriangle").first().click();
-      await page.waitForTimeout(1000);
       outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
     }
     let filledApiKey = await page.getByTestId("remove-icon-badge").count();
     while (filledApiKey > 0) {
       await page.getByTestId("remove-icon-badge").first().click();
-      await page.waitForTimeout(1000);
       filledApiKey = await page.getByTestId("remove-icon-badge").count();
     }
     if (process?.env?.ASTRA_DB_API_ENDPOINT?.includes("astra-dev")) {
-      const getUA = await page.evaluate(() => navigator.userAgent);
-      const userAgentInfo = uaParser(getUA);
       await page.getByTestId("title-Astra DB").first().click();
-      await page.waitForTimeout(500);
       await page.getByTestId("code-button-modal").click();
-      await page.waitForTimeout(500);
+      await page.waitForSelector("text=Edit Code", {
+        timeout: 3000,
+      });
       let cleanCode = await extractAndCleanCode(page);
       cleanCode = cleanCode!.replace(
         '"pre_delete_collection": self.pre_delete_collection or False,',
@@ -82,16 +60,18 @@ test(
       await page.keyboard.press("Backspace");
       await page.locator("textarea").last().fill(cleanCode);
       await page.locator('//*[@id="checkAndSaveBtn"]').click();
-      await page.waitForTimeout(500);
+      await page.waitForSelector('[data-testid="title-Astra DB"]', {
+        timeout: 3000,
+      });
       await page.getByTestId("title-Astra DB").last().click();
-      await page.waitForTimeout(500);
       await page.getByTestId("code-button-modal").click();
-      await page.waitForTimeout(500);
+      await page.waitForSelector("text=Edit Code", {
+        timeout: 3000,
+      });
       await page.locator("textarea").last().press(`ControlOrMeta+a`);
       await page.keyboard.press("Backspace");
       await page.locator("textarea").last().fill(cleanCode);
       await page.locator('//*[@id="checkAndSaveBtn"]').click();
-      await page.waitForTimeout(500);
     }
     const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
     const isApiKeyInputVisible = await apiKeyInput.isVisible();
@@ -129,18 +109,13 @@ test(
       .nth(1)
       .fill(process.env.ASTRA_DB_API_ENDPOINT ?? "");
 
-    await page
-      .getByTestId("popover-anchor-input-collection_name")
-      .nth(0)
-      .fill("test");
     const fileChooserPromise = page.waitForEvent("filechooser");
-    await page.getByTestId("icon-Upload").last().click();
+    await page.getByTestId("input-file-component").last().click();
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles(
       path.join(__dirname, "../../assets/test_file.txt"),
     );
     await page.getByText("test_file.txt").isVisible();
-    await page.waitForTimeout(1000);
     await page.getByTestId("button_run_astra db").last().click();
     await page.waitForSelector("text=built successfully", {
       timeout: 60000 * 2,
@@ -155,13 +130,7 @@ test(
     await page.getByText("built successfully").last().click({
       timeout: 30000,
     });
-    await page.getByTestId("button_run_astra db").first().click();
-    await page.waitForSelector("text=built successfully", {
-      timeout: 60000 * 2,
-    });
-    await page.getByText("built successfully").last().click({
-      timeout: 30000,
-    });
+
     await page.getByText("Playground", { exact: true }).last().click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,

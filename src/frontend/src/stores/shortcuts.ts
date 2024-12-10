@@ -15,7 +15,7 @@ export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
   redo: "mod+y",
   openPlayground: "mod+k",
   advancedSettings: "mod+shift+a",
-  minimize: "mod+shift+q",
+  minimize: "mod+.",
   code: "space",
   copy: "mod+c",
   duplicate: "mod+d",

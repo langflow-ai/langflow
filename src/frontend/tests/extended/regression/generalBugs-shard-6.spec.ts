@@ -1,27 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "should be able to see error when something goes wrong on Code Modal",
   { tag: ["@release"] },
   async ({ page }) => {
-    await page.goto("/");
-
-    let modalCount = 0;
-
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
+    await awaitBootstrapTest(page);
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
       timeout: 30000,
@@ -29,7 +13,12 @@ test(
 
     await page.getByTestId("blank-flow").click();
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector(
+      '[data-testid="sidebar-custom-component-button"]',
+      {
+        timeout: 30000,
+      },
+    );
 
     await page.getByTestId("sidebar-custom-component-button").click();
 
@@ -72,6 +61,7 @@ class CustomComponent(Component):
 
     await page.getByText("Check & Save").last().click();
 
+    //wait for the animation to propagate
     await page.waitForTimeout(1000);
 
     const error = await page

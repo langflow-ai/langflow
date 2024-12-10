@@ -6,7 +6,7 @@
 ################################
 
 # 1. force platform to the current architecture to increase build speed time on multi-platform builds
-FROM --platform=$BUILDPLATFORM node:lts-bookworm-slim as builder-base
+FROM --platform=$BUILDPLATFORM node:lts-bookworm-slim AS builder-base
 COPY src/frontend /frontend
 
 RUN cd /frontend && npm install && npm run build
@@ -14,7 +14,7 @@ RUN cd /frontend && npm install && npm run build
 ################################
 # RUNTIME
 ################################
-FROM nginxinc/nginx-unprivileged:stable-bookworm-perl as runtime
+FROM nginxinc/nginx-unprivileged:stable-bookworm-perl AS runtime
 
 LABEL org.opencontainers.image.title=langflow-frontend
 LABEL org.opencontainers.image.authors=['Langflow']

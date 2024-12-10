@@ -349,19 +349,19 @@ class Settings(BaseSettings):
             logger.debug(f"Updating {key}")
             if isinstance(getattr(self, key), list):
                 # value might be a '[something]' string
-                _value = value
+                value_ = value
                 with contextlib.suppress(json.decoder.JSONDecodeError):
-                    _value = orjson.loads(str(value))
-                if isinstance(_value, list):
-                    for item in _value:
-                        _item = str(item) if isinstance(item, Path) else item
-                        if _item not in getattr(self, key):
-                            getattr(self, key).append(_item)
+                    value_ = orjson.loads(str(value))
+                if isinstance(value_, list):
+                    for item in value_:
+                        item_ = str(item) if isinstance(item, Path) else item
+                        if item_ not in getattr(self, key):
+                            getattr(self, key).append(item_)
                     logger.debug(f"Extended {key}")
                 else:
-                    _value = str(_value) if isinstance(_value, Path) else _value
-                    if _value not in getattr(self, key):
-                        getattr(self, key).append(_value)
+                    value_ = str(value_) if isinstance(value_, Path) else value_
+                    if value_ not in getattr(self, key):
+                        getattr(self, key).append(value_)
                         logger.debug(f"Appended {key}")
 
             else:
@@ -393,11 +393,11 @@ def load_settings_from_yaml(file_path: str) -> Settings:
     if "/" not in file_path:
         # Get current path
         current_path = Path(__file__).resolve().parent
-        _file_path = Path(current_path) / file_path
+        file_path_ = Path(current_path) / file_path
     else:
-        _file_path = Path(file_path)
+        file_path_ = Path(file_path)
 
-    with _file_path.open(encoding="utf-8") as f:
+    with file_path_.open(encoding="utf-8") as f:
         settings_dict = yaml.safe_load(f)
         settings_dict = {k.upper(): v for k, v in settings_dict.items()}
 

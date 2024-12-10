@@ -20,7 +20,7 @@ class GitLoaderComponent(Component):
         MessageTextInput(
             name="repo_path",
             display_name="Repository Path",
-            required=True,
+            required=False,
             info="The local path to the Git repository.",
         ),
         MessageTextInput(

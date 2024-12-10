@@ -2,11 +2,11 @@ import RenderIcons from "@/components/common/renderIconComponent";
 import { cn } from "@/utils/utils";
 
 export default function ShortcutDisplay({
-  name,
+  display_name,
   shortcut,
   sidebar = false,
 }: {
-  name?: string;
+  display_name?: string;
   shortcut: string;
   sidebar?: boolean;
 }): JSX.Element {
@@ -15,11 +15,11 @@ export default function ShortcutDisplay({
     <>
       {sidebar ? (
         <div className="flex justify-center">
-          {name && <span> {name} </span>}
+          {display_name && <span> {display_name} </span>}
           <span
             className={cn(
               "flex h-[16px] w-[16px] items-center justify-center rounded-sm bg-muted text-muted-foreground",
-              name && "ml-3",
+              display_name && "ml-3",
             )}
           >
             <RenderIcons filteredShortcut={fixedShortcut} />
@@ -27,7 +27,7 @@ export default function ShortcutDisplay({
         </div>
       ) : (
         <div className="flex content-center items-center justify-center self-center text-[12px]">
-          <span> {name} </span>
+          <span> {display_name} </span>
           <span
             className={`ml-3 flex items-center rounded-sm bg-primary-hover px-1.5 py-[0.1em] text-muted`}
           >

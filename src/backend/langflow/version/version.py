@@ -22,16 +22,16 @@ def get_version() -> str:
         "langflow-nightly",
         "langflow-base-nightly",
     ]
-    _version = None
+    version = None
     for pkg_name in pkg_names:
         with contextlib.suppress(ImportError, metadata.PackageNotFoundError):
-            _version = metadata.version(pkg_name)
+            version = metadata.version(pkg_name)
 
-    if _version is None:
+    if version is None:
         msg = f"Package not found from options {pkg_names}"
         raise ValueError(msg)
 
-    return _version
+    return version
 
 
 def is_pre_release(v: str) -> bool:

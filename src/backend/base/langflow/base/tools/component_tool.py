@@ -4,7 +4,8 @@ import asyncio
 import re
 from typing import TYPE_CHECKING, Literal
 
-from langchain_core.tools import ToolException
+import pandas as pd
+from langchain_core.tools import BaseTool, ToolException
 from langchain_core.tools.structured import StructuredTool
 from loguru import logger
 from pydantic import BaseModel
@@ -18,7 +19,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from langchain_core.callbacks import Callbacks
-    from langchain_core.tools import BaseTool
 
     from langflow.custom.custom_component.component import Component
     from langflow.events.event_manager import EventManager
@@ -30,12 +30,12 @@ if TYPE_CHECKING:
 TOOL_TYPES_SET = {"Tool", "BaseTool", "StructuredTool"}
 
 
-def _get_input_type(_input: InputTypes):
-    if _input.input_types:
-        if len(_input.input_types) == 1:
-            return _input.input_types[0]
-        return " | ".join(_input.input_types)
-    return _input.field_type
+def _get_input_type(input_: InputTypes):
+    if input_.input_types:
+        if len(input_.input_types) == 1:
+            return input_.input_types[0]
+        return " | ".join(input_.input_types)
+    return input_.field_type
 
 
 def build_description(component: Component, output: Output) -> str:
@@ -56,7 +56,7 @@ def build_description(component: Component, output: Output) -> str:
     return f"{output.method}({args}) - {component.description}"
 
 
-def send_message_noop(
+async def send_message_noop(
     message: Message,
     text: str | None = None,  # noqa: ARG001
     background_color: str | None = None,  # noqa: ARG001
@@ -134,11 +134,11 @@ def _build_output_async_function(
     async def output_function(*args, **kwargs):
         try:
             if event_manager:
-                event_manager.on_build_start(data={"id": component._id})
+                await asyncio.to_thread(event_manager.on_build_start, data={"id": component._id})
             component.set(*args, **kwargs)
             result = await output_method()
             if event_manager:
-                event_manager.on_build_end(data={"id": component._id})
+                await asyncio.to_thread(event_manager.on_build_end, data={"id": component._id})
         except Exception as e:
             raise ToolException(e) from e
         if isinstance(result, Message):
@@ -160,8 +160,9 @@ def _format_tool_name(name: str):
 
 
 class ComponentToolkit:
-    def __init__(self, component: Component):
+    def __init__(self, component: Component, metadata: pd.DataFrame | None = None):
         self.component = component
+        self.metadata = metadata
 
     def get_tools(
         self, tool_name: str | None = None, tool_description: str | None = None, callbacks: Callbacks | None = None
@@ -240,4 +241,20 @@ class ComponentToolkit:
                 f"but {len(tools)} tools were found."
             )
             raise ValueError(msg)
+        return tools
+
+    def update_tools_metadata(
+        self,
+        tools: list[BaseTool | StructuredTool],
+    ) -> list[BaseTool]:
+        # update the tool_name and description according to the name and secriotion mentioned in the list
+        if isinstance(self.metadata, pd.DataFrame):
+            metadata_dict = self.metadata.to_dict(orient="records")
+            for tool, metadata in zip(tools, metadata_dict, strict=False):
+                if isinstance(tool, StructuredTool | BaseTool):
+                    tool.name = metadata.get("name", tool.name)
+                    tool.description = metadata.get("description", tool.description)
+                else:
+                    msg = f"Expected a StructuredTool or BaseTool, got {type(tool)}"
+                    raise TypeError(msg)
         return tools

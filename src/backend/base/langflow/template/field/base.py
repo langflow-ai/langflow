@@ -192,10 +192,10 @@ class Output(BaseModel):
     def to_dict(self):
         return self.model_dump(by_alias=True, exclude_none=True)
 
-    def add_types(self, _type: list[Any]) -> None:
+    def add_types(self, type_: list[Any]) -> None:
         if self.types is None:
             self.types = []
-        self.types.extend([t for t in _type if t not in self.types])
+        self.types.extend([t for t in type_ if t not in self.types])
 
     def set_selected(self) -> None:
         if not self.selected and self.types:

@@ -9,7 +9,7 @@ import argparse
 import sys
 
 from huggingface_hub import HfApi, list_models
-from rich import print
+from rich import print  # noqa: A004
 
 # Use root method
 models = list_models()

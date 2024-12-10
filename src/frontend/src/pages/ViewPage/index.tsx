@@ -14,9 +14,6 @@ export default function ViewPage() {
 
   const flows = useFlowsManagerStore((state) => state.flows);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const { mutateAsync: refreshFlows } = useGetRefreshFlows();
-  const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
-  const types = useTypesStore((state) => state.types);
 
   // Set flow tab id
   useEffect(() => {
@@ -30,10 +27,6 @@ export default function ViewPage() {
         }
 
         setCurrentFlow(isAnExistingFlow);
-      } else if (!flows) {
-        setIsLoading(true);
-        await refreshFlows({ get_all: true, header_flows: true });
-        setIsLoading(false);
       }
     };
     awaitgetTypes();

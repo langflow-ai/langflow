@@ -1,5 +1,3 @@
-import asyncio
-
 from langflow.processing.process import process_tweaks
 from langflow.services.deps import get_session_service
 
@@ -265,7 +263,7 @@ def test_tweak_not_in_template():
 
 async def test_load_langchain_object_with_cached_session(basic_graph_data):
     # Provide a non-existent session_id
-    session_service = await asyncio.to_thread(get_session_service)
+    session_service = get_session_service()
     session_id1 = "non-existent-session-id"
     graph1, artifacts1 = await session_service.load_session(session_id1, basic_graph_data)
     # Use the new session_id to get the langchain_object again

@@ -413,6 +413,7 @@ export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
   return Object.keys(template).reduce((errors: Array<string>, t) => {
     if (
       template[t].required &&
+      !(template[t].tool_mode && node?.data?.node?.tool_mode) &&
       template[t].show &&
       (template[t].value === undefined ||
         template[t].value === null ||
@@ -1624,30 +1625,11 @@ export function isOutputType(type: string): boolean {
   return OUTPUT_TYPES.has(type);
 }
 
-export function updateGroupRecursion(
-  groupNode: NodeType,
-  edges: Edge[],
-  unavailableFields:
-    | {
-        [name: string]: string;
-      }
-    | undefined,
-  globalVariablesEntries: string[] | undefined,
-) {
-  updateGlobalVariables(
-    groupNode.data.node,
-    unavailableFields,
-    globalVariablesEntries,
-  );
+export function updateGroupRecursion(groupNode: NodeType, edges: Edge[]) {
   if (groupNode.data.node?.flow) {
     groupNode.data.node.flow.data!.nodes.forEach((node) => {
       if (node.data.node?.flow) {
-        updateGroupRecursion(
-          node,
-          node.data.node.flow.data!.edges,
-          unavailableFields,
-          globalVariablesEntries,
-        );
+        updateGroupRecursion(node, node.data.node.flow.data!.edges);
       }
     });
     let newFlow = groupNode.data.node!.flow;
@@ -1656,41 +1638,6 @@ export function updateGroupRecursion(
     updateProxyIdsOnOutputs(groupNode.data.node.outputs, idsMap);
     let flowEdges = edges;
     updateEdgesIds(flowEdges, idsMap);
-  }
-}
-
-export function updateGlobalVariables(
-  node: APIClassType | undefined,
-  unavailableFields:
-    | {
-        [name: string]: string;
-      }
-    | undefined,
-  globalVariablesEntries: string[] | undefined,
-) {
-  if (node && node.template) {
-    Object.keys(node.template).forEach((field) => {
-      if (
-        globalVariablesEntries &&
-        node!.template[field].load_from_db &&
-        !globalVariablesEntries.includes(node!.template[field].value)
-      ) {
-        node!.template[field].value = "";
-        node!.template[field].load_from_db = false;
-      }
-      if (
-        !node!.template[field].load_from_db &&
-        node!.template[field].value === "" &&
-        unavailableFields &&
-        Object.keys(unavailableFields).includes(
-          node!.template[field].display_name ?? "",
-        )
-      ) {
-        node!.template[field].value =
-          unavailableFields[node!.template[field].display_name ?? ""];
-        node!.template[field].load_from_db = true;
-      }
-    });
   }
 }
 
@@ -1735,4 +1682,8 @@ export function someFlowTemplateFields(
       return validateFn((node.data.node?.template ?? {})[field]);
     });
   });
+}
+
+export function checkHasToolMode(template: APITemplateType) {
+  return template && Object.values(template).some((field) => field.tool_mode);
 }

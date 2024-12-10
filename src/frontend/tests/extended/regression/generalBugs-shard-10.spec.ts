@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "freeze must work correctly",
@@ -15,31 +16,16 @@ test(
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
 
-    await page.goto("/");
-    await page.waitForTimeout(1000);
-
     const promptText = "answer as you are a dog";
     const newPromptText = "answer as you are a bird";
 
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
+    await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 3000,
+    });
 
     await page.getByTestId("fit_view").click();
 
@@ -70,8 +56,6 @@ test(
 
     await page.getByText("Check & Save").click();
 
-    await page.waitForTimeout(1000);
-
     await page.getByTestId("button_run_chat output").click();
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
@@ -84,7 +68,6 @@ test(
 
     const concatAllText = textContents.join(" ");
 
-    await page.waitForTimeout(1000);
     await page.getByText("Close").last().click();
 
     await page.getByText("Prompt", { exact: true }).click();
@@ -92,7 +75,6 @@ test(
 
     await page.getByText("Freeze", { exact: true }).last().click();
 
-    await page.waitForTimeout(1000);
     await page.locator('//*[@id="react-flow-id"]').click();
 
     expect(page.getByTestId("icon-Snowflake").first()).toBeVisible();

@@ -136,6 +136,8 @@ jobs:
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
 
   backend-unit-tests:
     if: github.repository == 'langflow-ai/langflow'

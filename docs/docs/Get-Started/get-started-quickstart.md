@@ -10,8 +10,8 @@ slug: /get-started-quickstart
 
 
 * [Python 3.10 to 3.12](https://www.python.org/downloads/release/python-3100/) installed
-* [pip](https://pypi.org/project/pip/) or [pipx](https://pipx.pypa.io/stable/installation/) installed
-* Before installing Langflow, we recommend creating a virtual environment to isolate your Python dependencies with [venv](https://docs.python.org/3/library/venv.html) or [conda](https://anaconda.org/anaconda/conda)
+* [pip](https://pypi.org/project/pip/), [uv](https://docs.astral.sh/uv/getting-started/installation/), or [pipx](https://pipx.pypa.io/stable/installation/) installed
+* Before installing Langflow, we recommend creating a virtual environment to isolate your Python dependencies with [venv](https://docs.python.org/3/library/venv.html), [uv](https://docs.astral.sh/uv/pip/environments), or [conda](https://anaconda.org/anaconda/conda)
 
 ## Create the basic prompting flow
 

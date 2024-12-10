@@ -24,7 +24,7 @@ async def session():
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
-    async with AsyncSession(engine) as session:
+    async with AsyncSession(engine, expire_on_commit=False) as session:
         yield session
 
 
@@ -99,8 +99,8 @@ async def test_get_variable__typeerror(service, session: AsyncSession):
     name = "name"
     value = "value"
     field = "session_id"
-    _type = CREDENTIAL_TYPE
-    await service.create_variable(user_id, name, value, _type=_type, session=session)
+    type_ = CREDENTIAL_TYPE
+    await service.create_variable(user_id, name, value, type_=type_, session=session)
 
     with pytest.raises(TypeError) as exc:
         await session.run_sync(_get_variable, service, user_id, name, field)

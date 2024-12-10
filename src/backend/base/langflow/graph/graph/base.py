@@ -8,7 +8,6 @@ import queue
 import threading
 import uuid
 from collections import defaultdict, deque
-from collections.abc import Generator, Iterable
 from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
@@ -43,6 +42,8 @@ from langflow.services.deps import get_chat_service, get_tracing_service
 from langflow.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
+    from collections.abc import Generator, Iterable
+
     from langflow.api.v1.schemas import InputValueRequest
     from langflow.custom.custom_component.component import Component
     from langflow.events.event_manager import EventManager
@@ -1182,9 +1183,9 @@ class Graph:
         for edge in vertex.edges:
             for vid in [edge.source_id, edge.target_id]:
                 if vid in self.vertex_map:
-                    _vertex = self.vertex_map[vid]
-                    if not _vertex.frozen:
-                        _vertex.build_params()
+                    vertex_ = self.vertex_map[vid]
+                    if not vertex_.frozen:
+                        vertex_.build_params()
 
     def _add_vertex(self, vertex: Vertex) -> None:
         """Adds a vertex to the graph."""
@@ -1217,6 +1218,8 @@ class Graph:
         for vertex in self.vertices:
             if vertex.id in self.cycle_vertices:
                 self.run_manager.add_to_cycle_vertices(vertex.id)
+
+        self.assert_streaming_sequence()
 
     def _get_edges_as_list_of_tuples(self) -> list[tuple[str, str]]:
         """Returns the edges of the graph as a list of tuples."""
@@ -1726,7 +1729,7 @@ class Graph:
             edges.add(new_edge)
         if self.vertices and not edges:
             logger.warning("Graph has vertices but no edges")
-        return list(cast(Iterable[CycleEdge], edges))
+        return list(cast("Iterable[CycleEdge]", edges))
 
     def build_edge(self, edge: EdgeData) -> CycleEdge | Edge:
         source = self.get_vertex(edge["source"])
@@ -1788,6 +1791,18 @@ class Graph:
         vertex_instance = vertex_class(frontend_data, graph=self)
         vertex_instance.set_top_level(self.top_level_vertices)
         return vertex_instance
+
+    def assert_streaming_sequence(self) -> None:
+        for i in self.edges:
+            source = self.get_vertex(i.source_id)
+            if "stream" in source.params and source.params["stream"] is True:
+                target = self.get_vertex(i.target_id)
+                if target.vertex_type != "ChatOutput":
+                    msg = (
+                        "Error: A 'streaming' vertex cannot be followed by a non-'chat output' vertex."
+                        "Disable streaming to run the flow."
+                    )
+                    raise Exception(msg)  # noqa: TRY002
 
     def prepare(self, stop_component_id: str | None = None, start_component_id: str | None = None):
         self.initialize()

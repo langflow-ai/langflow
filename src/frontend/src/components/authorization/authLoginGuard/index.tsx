@@ -5,12 +5,14 @@ export const ProtectedLoginRoute = ({ children }) => {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
-  if (autoLogin === true) {
-    return <CustomNavigate to="/" replace />;
-  }
+  if (autoLogin === true || isAuthenticated) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirectPath = urlParams.get("redirect");
 
-  if (isAuthenticated) {
-    return <CustomNavigate to="/" replace />;
+    if (redirectPath) {
+      return <CustomNavigate to={redirectPath} replace />;
+    }
+    return <CustomNavigate to="/home" replace />;
   }
 
   return children;

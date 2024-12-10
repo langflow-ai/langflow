@@ -14,7 +14,7 @@ from sqlalchemy import or_, update
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
-from langflow.api.utils import AsyncDbSession, CurrentActiveUser, cascade_delete_flow, custom_params, remove_api_keys
+from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, custom_params, remove_api_keys
 from langflow.api.v1.flows import create_flows
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.flow import generate_unique_flow_name
@@ -37,7 +37,7 @@ router = APIRouter(prefix="/folders", tags=["Folders"])
 @router.post("/", response_model=FolderRead, status_code=201)
 async def create_folder(
     *,
-    session: AsyncDbSession,
+    session: DbSession,
     folder: FolderCreate,
     current_user: CurrentActiveUser,
 ):
@@ -93,7 +93,7 @@ async def create_folder(
 @router.get("/", response_model=list[FolderRead], status_code=200)
 async def read_folders(
     *,
-    session: AsyncDbSession,
+    session: DbSession,
     current_user: CurrentActiveUser,
 ):
     try:
@@ -113,7 +113,7 @@ async def read_folders(
 @router.get("/{folder_id}", response_model=FolderWithPaginatedFlows | FolderReadWithFlows, status_code=200)
 async def read_folder(
     *,
-    session: AsyncDbSession,
+    session: DbSession,
     folder_id: str,
     current_user: CurrentActiveUser,
     params: Annotated[Params | None, Depends(custom_params)],
@@ -164,7 +164,7 @@ async def read_folder(
 @router.patch("/{folder_id}", response_model=FolderRead, status_code=200)
 async def update_folder(
     *,
-    session: AsyncDbSession,
+    session: DbSession,
     folder_id: str,
     folder: FolderUpdate,  # Assuming FolderUpdate is a Pydantic model defining updatable fields
     current_user: CurrentActiveUser,
@@ -225,7 +225,7 @@ async def update_folder(
 @router.delete("/{folder_id}", status_code=204)
 async def delete_folder(
     *,
-    session: AsyncDbSession,
+    session: DbSession,
     folder_id: str,
     current_user: CurrentActiveUser,
 ):
@@ -257,7 +257,7 @@ async def delete_folder(
 @router.get("/download/{folder_id}", status_code=200)
 async def download_file(
     *,
-    session: AsyncDbSession,
+    session: DbSession,
     folder_id: str,
     current_user: CurrentActiveUser,
 ):
@@ -305,7 +305,7 @@ async def download_file(
 @router.post("/upload/", response_model=list[FlowRead], status_code=201)
 async def upload_file(
     *,
-    session: AsyncDbSession,
+    session: DbSession,
     file: Annotated[UploadFile, File(...)],
     current_user: CurrentActiveUser,
 ):

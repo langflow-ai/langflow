@@ -1,28 +1,12 @@
 import { expect, test } from "@playwright/test";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "InputListComponent",
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
-    await page.goto("/");
-
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForSelector('[data-testid="modal-title"]', {
-        timeout: 3000,
-      });
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
+    await awaitBootstrapTest(page);
 
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-search-input").click();
@@ -36,10 +20,7 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
+    await adjustScreenView(page);
 
     await page.getByTestId("inputlist_str_urls_0").fill("test test test test");
 

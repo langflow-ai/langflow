@@ -1,4 +1,5 @@
 import asyncio
+import time
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -15,6 +16,11 @@ from langflow.template.field.base import Output
 async def create_event_queue():
     """Create a queue for testing events."""
     return asyncio.Queue()
+
+
+def blocking_cb(manager, event_type, data):
+    time.sleep(0.01)
+    manager.send_event(event_type=event_type, data=data)
 
 
 class ComponentForTesting(Component):
@@ -39,6 +45,8 @@ async def test_component_message_sending():
     queue = await create_event_queue()
     event_manager = EventManager(queue)
 
+    event_manager.register_event("on_message", "message", callback=blocking_cb)
+
     # Create component
     component = ComponentForTesting()
     component.set_event_manager(event_manager)
@@ -52,7 +60,7 @@ async def test_component_message_sending():
     )
 
     # Send the message
-    sent_message = await asyncio.to_thread(component.send_message, message)
+    sent_message = await component.send_message(message)
 
     # Verify the message was sent
     assert sent_message.id is not None
@@ -85,7 +93,7 @@ async def test_component_tool_output():
     )
 
     # Send the message
-    sent_message = await asyncio.to_thread(component.send_message, message)
+    sent_message = await component.send_message(message)
 
     # Verify the message was stored and processed
     assert sent_message.id is not None
@@ -112,8 +120,7 @@ async def test_component_error_handling():
         msg = "Test error"
         raise CustomError(msg)
     except CustomError as e:
-        sent_message = await asyncio.to_thread(
-            component.send_error,
+        sent_message = await component.send_error(
             exception=e,
             session_id="test_session",
             trace_name="test_trace",
@@ -197,7 +204,8 @@ async def test_component_streaming_message():
     """Test component's streaming message functionality."""
     queue = await create_event_queue()
     event_manager = EventManager(queue)
-    event_manager.register_event("on_token", "token")
+
+    event_manager.register_event("on_token", "token", blocking_cb)
 
     # Create a proper mock vertex with graph and flow_id
     vertex = MagicMock()
@@ -227,7 +235,7 @@ async def test_component_streaming_message():
     )
 
     # Send the streaming message
-    sent_message = await asyncio.to_thread(component.send_message, message)
+    sent_message = await component.send_message(message)
 
     # Verify the message
     assert sent_message.id is not None

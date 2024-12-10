@@ -6,7 +6,7 @@ export type ErrorAlertType = {
 };
 export type NoticeAlertType = {
   title: string;
-  link: string | undefined;
+  link?: string;
   id: string;
   removeAlert: (id: string) => void;
 };

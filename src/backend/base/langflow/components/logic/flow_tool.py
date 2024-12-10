@@ -93,7 +93,7 @@ class FlowToolComponent(LCToolComponent):
         except Exception:  # noqa: BLE001
             logger.opt(exception=True).warning("Failed to set run_id")
         inputs = get_flow_inputs(graph)
-        tool_description = self.tool_description.strip() if self.tool_description.strip() else flow_data.description
+        tool_description = self.tool_description.strip() or flow_data.description
         tool = FlowTool(
             name=self.tool_name,
             description=tool_description,

@@ -98,13 +98,14 @@ jobs:
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       STORE_API_KEY: "${{ secrets.STORE_API_KEY }}"
+      ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
+      TAVILY_API_KEY: "${{ secrets.TAVILY_API_KEY }}"
 
   lint-backend:
     needs: path-filter
     if: ${{ needs.path-filter.outputs.python == 'true'}}
     name: Lint Backend
     uses: ./.github/workflows/lint-py.yml
-
 
   test-docs-build:
     needs: path-filter

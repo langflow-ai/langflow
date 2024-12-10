@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import uaParser from "ua-parser-js";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "user must be able to interact with table input component",
@@ -7,39 +7,12 @@ test(
     tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
-    await page.goto("/");
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
-
-    await page.waitForSelector('[id="new-project-btn"]', {
-      timeout: 30000,
-    });
-
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-
     const randomText = Math.random().toString(36).substring(7);
     const secondRandomText = Math.random().toString(36).substring(7);
     const thirdRandomText = Math.random().toString(36).substring(7);
 
-    const getUA = await page.evaluate(() => navigator.userAgent);
-    const userAgentInfo = uaParser(getUA);
+    await awaitBootstrapTest(page);
 
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForSelector('[data-testid="modal-title"]', {
-        timeout: 3000,
-      });
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
     await page.waitForSelector('[data-testid="blank-flow"]', {
       timeout: 30000,
     });
