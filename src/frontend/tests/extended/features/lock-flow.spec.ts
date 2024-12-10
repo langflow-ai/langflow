@@ -28,6 +28,7 @@ test(
 
     await page.getByTestId("lock_unlock").click();
 
+    //ensure the UI is updated
     await page.waitForTimeout(500);
 
     await page.waitForSelector('[data-testid="icon-Lock"]', {
@@ -45,6 +46,7 @@ test(
       state: "visible",
     });
 
+    //ensure the UI is updated
     await page.waitForTimeout(500);
 
     await page.waitForSelector('[data-testid="icon-Lock"]', {
