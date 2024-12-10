@@ -16,7 +16,7 @@ test(
     // Create DataTransfer object with file
     const dataTransfer = await page.evaluateHandle(async (content) => {
       const dt = new DataTransfer();
-      const file = new File([content], "file.json", {
+      const file = new File([content], "collection.json", {
         type: "application/json",
       });
       dt.items.add(file);
@@ -71,7 +71,7 @@ test(
     // Create DataTransfer object with file
     const dataTransfer = await page.evaluateHandle(async (content) => {
       const dt = new DataTransfer();
-      const file = new File([content], "file.json", {
+      const file = new File([content], "flow_test_drag_and_drop.json", {
         type: "application/json",
       });
       dt.items.add(file);
