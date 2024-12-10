@@ -1,7 +1,7 @@
 import re
-from langflow.utils import constants
 from urllib.parse import urlparse
 
+from langflow.utils import constants
 
 
 def truncate_long_strings(data, max_length=None):
@@ -34,8 +34,7 @@ def truncate_long_strings(data, max_length=None):
 
 
 def is_valid_database_url(url: str) -> bool:
-    """
-    Validate database connection URLs compatible with SQLAlchemy.
+    """Validate database connection URLs compatible with SQLAlchemy.
 
     Args:
         url (str): Database connection URL to validate
@@ -47,7 +46,7 @@ def is_valid_database_url(url: str) -> bool:
         return False
 
     # Regex for common database URL patterns
-    db_url_pattern = r'^[a-z]+://.*$'
+    db_url_pattern = r"^[a-z]+://.*$"
 
     # Basic pattern check
     if not re.match(db_url_pattern, url):
@@ -57,18 +56,14 @@ def is_valid_database_url(url: str) -> bool:
         parsed = urlparse(url)
 
         # Check for required scheme
-        valid_schemes = ['sqlite', 'postgresql', 'mysql', 'oracle', 'mssql']
+        valid_schemes = ["sqlite", "postgresql", "mysql", "oracle", "mssql"]
         if parsed.scheme not in valid_schemes:
             return False
 
         # SQLite specific validations
-        if parsed.scheme == 'sqlite':
+        if parsed.scheme == "sqlite":
             # Allow absolute paths, relative paths, and memory database
-            return (
-                url.startswith('sqlite:///') or
-                url.startswith('sqlite:////') or
-                url == 'sqlite:///:memory:'
-            )
+            return url.startswith("sqlite:///") or url.startswith("sqlite:////") or url == "sqlite:///:memory:"
 
         return True
 
