@@ -350,7 +350,7 @@ async def build_flow(
         vertex_build_response: VertexBuildResponse = build_task.result()
         # send built event or error event
         try:
-            vertex_build_response_json = vertex_build_response.model_dump_json()
+            vertex_build_response_json = json.dumps(vertex_build_response.model_dump(), default=str)
             build_data = json.loads(vertex_build_response_json)
         except Exception as exc:
             msg = f"Error serializing vertex build response: {exc}"

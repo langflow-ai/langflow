@@ -176,13 +176,14 @@ async def log_vertex_build(
     try:
         if not get_settings_service().settings.vertex_builds_storage_enabled:
             return
+
         vertex_build = VertexBuildBase(
             flow_id=flow_id,
             id=vertex_id,
             valid=valid,
             params=str(params) if params else None,
             # ugly hack to get the model dump with weird datatypes
-            data=json.loads(data.model_dump_json()),
+            data=json.loads(json.dumps(data.model_dump(), default=str)),
             # ugly hack to get the model dump with weird datatypes
             artifacts=json.loads(json.dumps(artifacts, default=str)),
         )
