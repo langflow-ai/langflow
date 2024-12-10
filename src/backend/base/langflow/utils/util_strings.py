@@ -63,9 +63,9 @@ def is_valid_database_url(url: str) -> bool:
         # SQLite specific validations
         if parsed.scheme == "sqlite":
             # Allow absolute paths, relative paths, and memory database
-            return url.startswith("sqlite:///") or url.startswith("sqlite:////") or url == "sqlite:///:memory:"
+            return url.startswith("sqlite:///") or url == "sqlite:///:memory:"
 
-        return True
-
-    except Exception:
+    except Exception:  # noqa: BLE001
         return False
+
+    return True
