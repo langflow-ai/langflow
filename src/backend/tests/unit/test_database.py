@@ -1,4 +1,3 @@
-import asyncio
 import json
 from typing import NamedTuple
 from uuid import UUID, uuid4
@@ -605,7 +604,7 @@ async def test_delete_nonexistent_flow(client: AsyncClient, logged_in_headers):
 @pytest.mark.usefixtures("active_user")
 async def test_read_only_starter_projects(client: AsyncClient, logged_in_headers):
     response = await client.get("api/v1/flows/basic_examples/", headers=logged_in_headers)
-    starter_projects = await asyncio.to_thread(load_starter_projects)
+    starter_projects = await load_starter_projects()
     assert response.status_code == 200
     assert len(response.json()) == len(starter_projects)
 
