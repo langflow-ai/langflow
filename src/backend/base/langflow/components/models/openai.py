@@ -1,6 +1,3 @@
-import operator
-from functools import reduce
-
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
 
