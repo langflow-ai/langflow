@@ -349,6 +349,26 @@ class SimplifiedAPIRequest(BaseModel):
     tweaks: Tweaks | None = Field(default=None, description="The tweaks")
     session_id: str | None = Field(default=None, description="The session id")
 
+    def set_value_by_path(self, path: str, value: Any) -> None:
+        """Set a value in the instance based on a dotted path.
+
+        Parameters:
+          - path: Dotted path to the attribute (e.g., "input_value" or "tweaks.some.path.to.property").
+          - value: The value to set.
+        """
+        if not path:
+            return
+
+        keys = path.split(".")
+        target_property = self
+
+        # Traverse the keys to get to the target property
+        for key in keys[:-1]:
+            target_property = getattr(target_property, key)
+
+        # Set the value
+        setattr(target_property, keys[-1], value)
+
 
 # (alias) type ReactFlowJsonObject<NodeData = any, EdgeData = any> = {
 #     nodes: Node<NodeData>[];

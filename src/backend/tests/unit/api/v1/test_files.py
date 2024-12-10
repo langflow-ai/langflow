@@ -20,11 +20,19 @@ from sqlmodel import Session
 def mock_storage_service():
     # Create a mock instance of StorageService
     service = MagicMock(spec=StorageService)
+
     # Setup mock behaviors for the service methods as needed
     service.save_file.return_value = None
     service.get_file.return_value = b"file content"  # Binary content for files
     service.list_files.return_value = ["file1.txt", "file2.jpg"]
     service.delete_file.return_value = None
+
+    # Use side_effect to dynamically return values for build_full_path
+    def build_full_path_side_effect(flow_id, file_name):
+        # Mock behavior: Construct a path using flow_id and file_name
+        return f"{flow_id}/{file_name}"
+
+    service.build_full_path.side_effect = build_full_path_side_effect
 
     # Mock the settings service with proper max_file_size_upload attribute
     settings_mock = MagicMock()
@@ -109,6 +117,7 @@ async def test_upload_file(files_client, created_api_key, flow):
 
     # Check that the file_path matches the expected pattern
     file_path_pattern = re.compile(rf"{flow.id}/\d{{4}}-\d{{2}}-\d{{2}}_\d{{2}}-\d{{2}}-\d{{2}}_test\.txt")
+
     assert file_path_pattern.match(response_json["file_path"])
 
 
@@ -140,10 +149,13 @@ async def test_file_operations(client, created_api_key, flow):
     file_name = "test.txt"
     file_content = b"Hello, world!"
 
+    # Simulate a file upload using the correct format
+    files = {"file": (file_name, file_content, "text/plain")}
+
     # Step 1: Upload the file
     response = await client.post(
         f"api/v1/files/upload/{flow_id}",
-        files={"file": (file_name, file_content)},
+        files=files,
         headers=headers,
     )
     assert response.status_code == 201
@@ -152,7 +164,7 @@ async def test_file_operations(client, created_api_key, flow):
     assert response_json["flowId"] == str(flow_id)
 
     # Check that the file_path matches the expected pattern
-    file_path_pattern = re.compile(rf"{flow_id}/\d{{4}}-\d{{2}}-\d{{2}}_\d{{2}}-\d{{2}}-\d{{2}}_{file_name}")
+    file_path_pattern = re.compile(rf".*{flow_id}/\d{{4}}-\d{{2}}-\d{{2}}_\d{{2}}-\d{{2}}-\d{{2}}_{file_name}")
     assert file_path_pattern.match(response_json["file_path"])
 
     # Extract the full file name with timestamp from the response
