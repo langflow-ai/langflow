@@ -113,7 +113,11 @@ const Footer: React.FC<{
           {children ?? <div />}
           <div className="flex items-center gap-3">
             <DialogClose asChild>
-              <Button variant="outline" type="button">
+              <Button
+                variant="outline"
+                type="button"
+                data-testid="btn-cancel-modal"
+              >
                 Cancel
               </Button>
             </DialogClose>
@@ -134,7 +138,9 @@ const Footer: React.FC<{
       )}
       {close && (
         <DialogClose asChild>
-          <Button type="button">Close</Button>
+          <Button data-testid="btn-close-modal" type="button">
+            Close
+          </Button>
         </DialogClose>
       )}
     </div>
