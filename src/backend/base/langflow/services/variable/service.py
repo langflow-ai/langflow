@@ -53,7 +53,7 @@ class DatabaseVariableService(VariableService, Service):
                 except Exception as e:  # noqa: BLE001
                     logger.exception(f"Error processing {var_name} variable: {e!s}")
 
-    def get_variable(
+    def get_variable_sync(
         self,
         user_id: UUID | str,
         name: str,
