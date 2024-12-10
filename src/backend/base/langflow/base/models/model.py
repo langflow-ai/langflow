@@ -25,7 +25,12 @@ class LCModelComponent(Component):
     output_parser: BaseOutputParser | None = None
 
     _base_inputs: list[InputTypes] = [
-        MessageInput(name="input_value", display_name="Input"),
+        MessageInput(
+            name="input_value",
+            display_name="Input",
+            info="Type your question or prompt here for the language model.",
+            tool_mode=True,
+        ),
         MessageTextInput(
             name="system_message",
             display_name="System Message",
