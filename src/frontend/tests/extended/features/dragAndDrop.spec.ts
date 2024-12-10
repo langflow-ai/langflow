@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { simulateDragAndDrop } from "../../utils/simulate-drag-and-drop";
 test(
   "user should be able to drag and drop an old collection without crashing the application",
   { tag: ["@release"] },
@@ -11,11 +10,18 @@ test(
     await page.locator("span").filter({ hasText: "Close" }).first().click();
 
     await page.locator("span").filter({ hasText: "My Projects" }).isVisible();
+    // Read your file into a buffer.
+    const jsonContent = readFileSync("tests/assets/collection.json", "utf-8");
 
-    const dataTransfer = await simulateDragAndDrop(
-      page,
-      "tests/assets/collection.json",
-    );
+    // Create DataTransfer object with file
+    const dataTransfer = await page.evaluateHandle(async (content) => {
+      const dt = new DataTransfer();
+      const file = new File([content], "file.json", {
+        type: "application/json",
+      });
+      dt.items.add(file);
+      return dt;
+    }, jsonContent);
 
     await page.getByTestId("cards-wrapper").dispatchEvent("drop", {
       dataTransfer,
@@ -62,11 +68,15 @@ test(
       randomName,
     );
 
-    const dataTransfer = await simulateDragAndDrop(
-      page,
-      "tests/assets/flow_test_drag_and_drop.json",
-      jsonContentWithNewName,
-    );
+    // Create DataTransfer object with file
+    const dataTransfer = await page.evaluateHandle(async (content) => {
+      const dt = new DataTransfer();
+      const file = new File([content], "file.json", {
+        type: "application/json",
+      });
+      dt.items.add(file);
+      return dt;
+    }, jsonContentWithNewName);
 
     await page.getByTestId("cards-wrapper").dispatchEvent("drop", {
       dataTransfer,
