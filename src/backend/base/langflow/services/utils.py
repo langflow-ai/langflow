@@ -237,7 +237,7 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
     # Test cache connection
     get_service(ServiceType.CACHE_SERVICE, default=CacheServiceFactory())
     # Setup the superuser
-    await asyncio.to_thread(initialize_database, fix_migration=fix_migration)
+    await initialize_database(fix_migration=fix_migration)
     async with get_db_service().with_async_session() as session:
         settings_service = get_service(ServiceType.SETTINGS_SERVICE)
         await setup_superuser(settings_service, session)
