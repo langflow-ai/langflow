@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import asynccontextmanager
 import os
 import time
+from contextlib import asynccontextmanager
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
-from langflow.helpers.base_model import BaseModel
+import ngrok
 import sqlalchemy as sa
 from fastapi import (
     APIRouter,
@@ -58,7 +58,6 @@ from langflow.services.deps import get_session_service, get_settings_service, ge
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.version import get_version_info
-import ngrok
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -685,7 +684,7 @@ async def create_tunnel():
         return NgrokResponse(url=public_url, status="success")
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ngrok connection failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Ngrok connection failed: {e!s}")
 
 
 @asynccontextmanager
