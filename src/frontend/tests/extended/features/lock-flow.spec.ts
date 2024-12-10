@@ -23,13 +23,17 @@ test(
 
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
+      state: "visible",
     });
 
     await page.getByTestId("lock_unlock").click();
+
+    //ensure the UI is updated
+    await page.waitForTimeout(500);
+
     await page.waitForSelector('[data-testid="icon-Lock"]', {
       timeout: 3000,
     });
-    expect(page.getByTestId("icon-Lock")).toBeVisible();
 
     await page.getByTestId("icon-ChevronLeft").click();
     await page.waitForSelector('[data-testid="mainpage_title"]', {
@@ -39,18 +43,20 @@ test(
     await page.getByTestId("list-card").first().click();
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
+      state: "visible",
     });
+
+    //ensure the UI is updated
+    await page.waitForTimeout(500);
 
     await page.waitForSelector('[data-testid="icon-Lock"]', {
       timeout: 3000,
     });
-    expect(page.getByTestId("icon-Lock")).toBeVisible();
 
     await page.getByTestId("lock_unlock").click();
     await page.waitForSelector('[data-testid="icon-LockOpen"]', {
       timeout: 3000,
     });
-    expect(page.getByTestId("icon-LockOpen")).toBeVisible();
 
     await page.getByTestId("icon-ChevronLeft").click();
     await page.waitForSelector('[data-testid="mainpage_title"]', {
@@ -58,13 +64,15 @@ test(
     });
 
     await page.getByTestId("list-card").first().click();
+
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
+      state: "visible",
     });
 
     await page.waitForSelector('[data-testid="icon-LockOpen"]', {
       timeout: 3000,
+      state: "visible",
     });
-    expect(page.getByTestId("icon-LockOpen")).toBeVisible();
   },
 );
