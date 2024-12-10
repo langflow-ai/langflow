@@ -2,6 +2,7 @@ import asyncio
 from datetime import datetime
 from pathlib import Path
 
+import anyio
 import pytest
 from langflow.custom.directory_reader.utils import abuild_custom_component_list_from_path
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
@@ -132,7 +133,7 @@ def add_edge(source, target, from_output, to_input):
 
 
 async def test_refresh_starter_projects():
-    data_path = str(Path(__file__).parent.parent.parent.absolute() / "base" / "langflow" / "components")
+    data_path = str(await anyio.Path(__file__).parent.parent.parent.absolute() / "base" / "langflow" / "components")
     components = await abuild_custom_component_list_from_path(data_path)
 
     chat_input = find_component_by_name(components, "ChatInput")
