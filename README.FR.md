@@ -40,7 +40,6 @@
 
 # 📝 Contenu
 
-- [](#)
 - [📝 Contenu](#-contenu)
 - [📦 Démarrage](#-démarrage)
 - [🎨 Créer des flux](#-créer-des-flux)
