@@ -256,8 +256,8 @@ def test_update_source_handle():
     assert updated_edge["data"]["sourceHandle"]["id"] == "last_node"
 
 
-def test_serialize_graph():
-    starter_projects = load_starter_projects()
+async def test_serialize_graph():
+    starter_projects = await load_starter_projects()
     data = starter_projects[0][1]["data"]
     graph = Graph.from_payload(data)
     assert isinstance(graph, Graph)

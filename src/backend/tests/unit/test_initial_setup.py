@@ -1,6 +1,4 @@
-import asyncio
 from datetime import datetime
-from pathlib import Path
 
 import anyio
 import pytest
@@ -18,15 +16,15 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 
-def test_load_starter_projects():
-    projects = load_starter_projects()
+async def test_load_starter_projects():
+    projects = await load_starter_projects()
     assert isinstance(projects, list)
     assert all(isinstance(project[1], dict) for project in projects)
-    assert all(isinstance(project[0], Path) for project in projects)
+    assert all(isinstance(project[0], anyio.Path) for project in projects)
 
 
-def test_get_project_data():
-    projects = load_starter_projects()
+async def test_get_project_data():
+    projects = await load_starter_projects()
     for _, project in projects:
         (
             project_name,
@@ -56,7 +54,7 @@ def test_get_project_data():
 async def test_create_or_update_starter_projects():
     async with async_session_scope() as session:
         # Get the number of projects returned by load_starter_projects
-        num_projects = len(await asyncio.to_thread(load_starter_projects))
+        num_projects = len(await load_starter_projects())
 
         # Get the number of projects in the database
         stmt = select(Folder).options(selectinload(Folder.flows)).where(Folder.name == STARTER_FOLDER_NAME)

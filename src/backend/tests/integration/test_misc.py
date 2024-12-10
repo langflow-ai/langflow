@@ -5,7 +5,7 @@ from fastapi import status
 from httpx import AsyncClient
 from langflow.graph.schema import RunOutputs
 from langflow.initial_setup.setup import load_starter_projects
-from langflow.load import run_flow_from_json
+from langflow.load.load import arun_flow_from_json
 
 
 @pytest.mark.api_key_required
@@ -78,9 +78,9 @@ async def test_run_with_inputs_and_outputs(client, starter_project, created_api_
 
 @pytest.mark.noclient
 @pytest.mark.api_key_required
-def test_run_flow_from_json_object():
+async def test_run_flow_from_json_object():
     """Test loading a flow from a json file and applying tweaks."""
-    project = next(project for _, project in load_starter_projects() if "Basic Prompting" in project["name"])
-    results = run_flow_from_json(project, input_value="test", fallback_to_env_vars=True)
+    project = next(project for _, project in await load_starter_projects() if "Basic Prompting" in project["name"])
+    results = await arun_flow_from_json(project, input_value="test", fallback_to_env_vars=True)
     assert results is not None
     assert all(isinstance(result, RunOutputs) for result in results)
