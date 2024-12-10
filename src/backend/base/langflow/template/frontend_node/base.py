@@ -188,13 +188,17 @@ class FrontendNode(BaseModel):
         return cls(**kwargs)
 
     def set_field_value_in_template(self, field_name, value) -> None:
-        for field in self.template.fields:
+        for idx, field in enumerate(self.template.fields):
             if field.name == field_name:
-                field.value = value
+                new_field = field.model_copy()
+                new_field.value = value
+                self.template.fields[idx] = new_field
                 break
 
     def set_field_load_from_db_in_template(self, field_name, value) -> None:
-        for field in self.template.fields:
+        for idx, field in enumerate(self.template.fields):
             if field.name == field_name and hasattr(field, "load_from_db"):
-                field.load_from_db = value
+                new_field = field.model_copy()
+                new_field.load_from_db = value
+                self.template.fields[idx] = new_field
                 break
