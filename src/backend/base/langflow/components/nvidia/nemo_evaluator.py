@@ -1,5 +1,6 @@
 from langflow.custom import Component
 from langflow.io import DropdownInput, StrInput, IntInput, FloatInput, MultiselectInput, SecretStrInput, BoolInput, SliderInput, Output
+from langflow.field_typing.range_spec import RangeSpec
 import json
 
 class NVIDIANeMoEvaluatorComponent(Component):
