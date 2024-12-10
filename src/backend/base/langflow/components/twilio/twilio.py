@@ -50,7 +50,7 @@ class TwilioComponent(Component):
         Output(name="result", display_name="Result", method="send_twilio_sms"),
     ]
 
-    def send_twilio_sms(self) -> str:
+    def send_twilio_sms(self) -> str | None:
         """Send a text message using Twilio's REST API with httpx.
 
         Args:
