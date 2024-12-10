@@ -9,10 +9,20 @@ test(
     await awaitBootstrapTest(page);
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
+      timeout: 10000,
     });
 
     await page.getByTestId("blank-flow").click();
+
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 5000,
+      state: "visible",
+    });
+
+    await page.waitForSelector('[data-testid="zoom_out"]', {
+      timeout: 5000,
+      state: "visible",
+    });
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("ollama");
@@ -27,6 +37,11 @@ test(
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
     await page.getByTestId("zoom_out").click();
+
+    await page.waitForSelector('[data-testid="div-generic-node"]', {
+      timeout: 5000,
+      state: "visible",
+    });
 
     await page.getByTestId("div-generic-node").click();
 

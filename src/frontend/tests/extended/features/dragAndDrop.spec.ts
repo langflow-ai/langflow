@@ -12,7 +12,11 @@ test(
 
     await page.locator("span").filter({ hasText: "My Projects" }).isVisible();
 
-    await simulateDragAndDrop(page, "assets/collection.json", "cards-wrapper");
+    await simulateDragAndDrop(
+      page,
+      "tests/assets/collection.json",
+      "cards-wrapper",
+    );
 
     await page.waitForSelector("text=uploaded successfully", {
       timeout: 60000 * 2,
@@ -45,7 +49,7 @@ test(
 
     // Read your file into a buffer.
     const jsonContent = readFileSync(
-      "assets/flow_test_drag_and_drop.json",
+      "tests/assets/flow_test_drag_and_drop.json",
       "utf-8",
     );
 
@@ -57,7 +61,7 @@ test(
 
     await simulateDragAndDrop(
       page,
-      "assets/flow_test_drag_and_drop.json",
+      "tests/assets/flow_test_drag_and_drop.json",
       "cards-wrapper",
       jsonContentWithNewName,
     );
