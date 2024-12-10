@@ -29,6 +29,7 @@ from langflow.api.v1.schemas import (
     CustomComponentRequest,
     CustomComponentResponse,
     InputValueRequest,
+    NgrokResponse,
     RunResponse,
     SimplifiedAPIRequest,
     TaskStatusResponse,
@@ -671,12 +672,7 @@ async def get_config():
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-class NgrokResponse(BaseModel):
-    url: str
-    status: str
-
-
-@router.post("/deploy", response_model=NgrokResponse)
+@router.post("/deploy/ngrok", response_model=NgrokResponse)
 async def create_tunnel():
     try:
         auth_token = os.getenv("NGROK_AUTH_TOKEN")

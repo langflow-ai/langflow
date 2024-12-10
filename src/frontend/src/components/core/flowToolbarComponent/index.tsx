@@ -1,6 +1,6 @@
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import PlaygroundButton from "@/components/core/flowToolbarComponent/components/playground-button";
-import { useDeployNgrok } from "@/controllers/API/queries/ngrok/use-post-ngrok";
+import { useDeployNgrok } from "@/controllers/API/queries/ngrok/use-post-deploy-ngrok";
 import {
   ENABLE_API,
   ENABLE_LANGFLOW_STORE,
@@ -118,7 +118,7 @@ export default function FlowToolbar(): JSX.Element {
 
   const { mutate: deployNgrok } = useDeployNgrok({
     onSuccess: (data) => {
-      console.log(data);
+      window.alert(data.url);
     },
   });
 
