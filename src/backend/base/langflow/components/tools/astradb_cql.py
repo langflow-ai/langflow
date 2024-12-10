@@ -111,10 +111,10 @@ class AstraDBCQLToolComponent(LCToolComponent):
             elif self.static_filters[k] is not None:
                 key.append(self.static_filters[k])
 
-        url = f'{astra_url}{"/".join(key)}?page-size={self.number_of_results}'
+        url = f"{astra_url}{'/'.join(key)}?page-size={self.number_of_results}"
 
         if self.projection_fields != "*":
-            url += f'&fields={urllib.parse.quote(self.projection_fields.replace(" ", ""))}'
+            url += f"&fields={urllib.parse.quote(self.projection_fields.replace(' ', ''))}"
 
         res = requests.request("GET", url=url, headers=headers, timeout=10)
 
