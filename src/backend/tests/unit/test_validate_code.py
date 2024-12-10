@@ -2,8 +2,6 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
-from requests.exceptions import MissingSchema
-
 from langflow.utils.validate import (
     create_class,
     create_function,
@@ -11,6 +9,7 @@ from langflow.utils.validate import (
     extract_function_name,
     validate_code,
 )
+from requests.exceptions import MissingSchema
 
 
 def test_create_function():

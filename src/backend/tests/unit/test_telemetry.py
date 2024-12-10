@@ -2,7 +2,6 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pytest
-
 from langflow.services.telemetry.opentelemetry import OpenTelemetry
 
 fixed_labels = {"flow_id": "this_flow_id", "service": "this", "user": "that"}
