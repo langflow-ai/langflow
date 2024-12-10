@@ -1,6 +1,7 @@
 from langflow.inputs import (
     BoolInput,
     CodeInput,
+    DataFrameInput,
     DataInput,
     DefaultPromptField,
     DictInput,
@@ -27,6 +28,7 @@ from langflow.template import Output
 __all__ = [
     "BoolInput",
     "CodeInput",
+    "DataFrameInput",
     "DataInput",
     "DefaultPromptField",
     "DefaultPromptField",

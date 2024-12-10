@@ -30,6 +30,7 @@ export type FlowType = {
   icon_bg_color?: string;
   folder_id?: string;
   webhook?: boolean;
+  locked?: boolean | null;
 };
 
 export type NodeType = {

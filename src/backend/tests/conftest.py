@@ -5,11 +5,11 @@ import shutil
 # we need to import tmpdir
 import tempfile
 from collections.abc import AsyncGenerator
-from contextlib import contextmanager, suppress
+from contextlib import suppress
 from pathlib import Path
-from typing import TYPE_CHECKING
 from uuid import UUID
 
+import anyio
 import orjson
 import pytest
 from asgi_lifespan import LifespanManager
@@ -29,6 +29,7 @@ from langflow.services.database.models.vertex_builds.crud import delete_vertex_b
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
 from loguru import logger
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -37,27 +38,32 @@ from typer.testing import CliRunner
 
 from tests.api_keys import get_openai_api_key
 
-if TYPE_CHECKING:
-    from langflow.services.database.service import DatabaseService
-
-
 load_dotenv()
 
 
 @pytest.fixture(autouse=True)
-def blockbuster():
-    with blockbuster_ctx() as bb:
-        for func in [
-            "io.BufferedReader.read",
-            "io.BufferedWriter.write",
-            "io.TextIOWrapper.read",
-            "io.TextIOWrapper.write",
-        ]:
-            bb.functions[func].can_block_functions.append(("settings/service.py", {"initialize"}))
-        for func in bb.functions:
-            if func.startswith("sqlite3."):
-                bb.functions[func].deactivate()
-        yield bb
+def blockbuster(request):
+    if "benchmark" in request.keywords:
+        yield
+    else:
+        with blockbuster_ctx() as bb:
+            for func in [
+                "io.BufferedReader.read",
+                "io.BufferedWriter.write",
+                "io.TextIOWrapper.read",
+                "io.TextIOWrapper.write",
+            ]:
+                bb.functions[func].can_block_functions.append(("settings/service.py", {"initialize"}))
+            for func in [
+                "io.BufferedReader.read",
+                "io.TextIOWrapper.read",
+            ]:
+                bb.functions[func].can_block_functions.append(("importlib_metadata/__init__.py", {"metadata"}))
+
+            for func in bb.functions:
+                if func.startswith("sqlite3."):
+                    bb.functions[func].deactivate()
+            yield bb
 
 
 def pytest_configure(config):
@@ -150,6 +156,17 @@ def session_fixture():
     SQLModel.metadata.drop_all(engine)  # Add this line to clean up tables
 
 
+@pytest.fixture
+async def async_session():
+    engine = create_async_engine("sqlite+aiosqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+    async with AsyncSession(engine, expire_on_commit=False) as session:
+        yield session
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.drop_all)
+
+
 class Config:
     broker_url = "redis://localhost:6379/0"
     result_backend = "redis://localhost:6379/0"
@@ -209,13 +226,13 @@ def distributed_client_fixture(
     monkeypatch.undo()
 
 
-def get_graph(_type="basic"):
+def get_graph(type_="basic"):
     """Get a graph from a json file."""
-    if _type == "basic":
+    if type_ == "basic":
         path = pytest.BASIC_EXAMPLE_PATH
-    elif _type == "complex":
+    elif type_ == "complex":
         path = pytest.COMPLEX_EXAMPLE_PATH
-    elif _type == "openapi":
+    elif type_ == "openapi":
         path = pytest.OPENAPI_EXAMPLE_PATH
 
     with path.open(encoding="utf-8") as f:
@@ -344,18 +361,7 @@ async def client_fixture(
         monkeypatch.undo()
         # clear the temp db
         with suppress(FileNotFoundError):
-            db_path.unlink()
-
-
-# create a fixture for session_getter above
-@pytest.fixture(name="session_getter")
-def session_getter_fixture(client):  # noqa: ARG001
-    @contextmanager
-    def blank_session_getter(db_service: "DatabaseService"):
-        with Session(db_service.engine) as session:
-            yield session
-
-    return blank_session_getter
+            await anyio.Path(db_path).unlink()
 
 
 @pytest.fixture
@@ -456,7 +462,7 @@ async def logged_in_headers_super_user(client, active_super_user):
 
 
 @pytest.fixture
-def flow(
+async def flow(
     client,  # noqa: ARG001
     json_flow: str,
     active_user,
@@ -467,14 +473,14 @@ def flow(
     flow_data = FlowCreate(name="test_flow", data=loaded_json.get("data"), user_id=active_user.id)
 
     flow = Flow.model_validate(flow_data)
-    with session_getter(get_db_service()) as session:
+    async with session_getter(get_db_service()) as session:
         session.add(flow)
-        session.commit()
-        session.refresh(flow)
+        await session.commit()
+        await session.refresh(flow)
         yield flow
         # Clean up
-        session.delete(flow)
-        session.commit()
+        await session.delete(flow)
+        await session.commit()
 
 
 @pytest.fixture
@@ -569,7 +575,7 @@ async def flow_component(client: AsyncClient, logged_in_headers):
 
 
 @pytest.fixture
-def created_api_key(active_user):
+async def created_api_key(active_user):
     hashed = get_password_hash("random_key")
     api_key = ApiKey(
         name="test_api_key",
@@ -578,17 +584,18 @@ def created_api_key(active_user):
         hashed_api_key=hashed,
     )
     db_manager = get_db_service()
-    with session_getter(db_manager) as session:
-        if existing_api_key := session.exec(select(ApiKey).where(ApiKey.api_key == api_key.api_key)).first():
+    async with session_getter(db_manager) as session:
+        stmt = select(ApiKey).where(ApiKey.api_key == api_key.api_key)
+        if existing_api_key := (await session.exec(stmt)).first():
             yield existing_api_key
             return
         session.add(api_key)
-        session.commit()
-        session.refresh(api_key)
+        await session.commit()
+        await session.refresh(api_key)
         yield api_key
         # Clean up
-        session.delete(api_key)
-        session.commit()
+        await session.delete(api_key)
+        await session.commit()
 
 
 @pytest.fixture(name="simple_api_test")
@@ -605,14 +612,15 @@ async def get_simple_api_test(client, logged_in_headers, json_simple_api_test):
 
 
 @pytest.fixture(name="starter_project")
-def get_starter_project(active_user):
+async def get_starter_project(active_user):
     # once the client is created, we can get the starter project
-    with session_getter(get_db_service()) as session:
-        flow = session.exec(
+    async with session_getter(get_db_service()) as session:
+        stmt = (
             select(Flow)
             .where(Flow.folder.has(Folder.name == STARTER_FOLDER_NAME))
             .where(Flow.name == "Basic Prompting (Hello, World)")
-        ).first()
+        )
+        flow = (await session.exec(stmt)).first()
         if not flow:
             msg = "No starter project found"
             raise ValueError(msg)
@@ -627,10 +635,10 @@ def get_starter_project(active_user):
         )
         new_flow = Flow.model_validate(new_flow_create, from_attributes=True)
         session.add(new_flow)
-        session.commit()
-        session.refresh(new_flow)
+        await session.commit()
+        await session.refresh(new_flow)
         new_flow_dict = new_flow.model_dump()
         yield new_flow_dict
         # Clean up
-        session.delete(new_flow)
-        session.commit()
+        await session.delete(new_flow)
+        await session.commit()

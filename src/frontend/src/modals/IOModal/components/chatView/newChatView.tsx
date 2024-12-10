@@ -1,7 +1,6 @@
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import ChainLogo from "@/assets/logo.svg?react";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
-import { TextShimmer } from "@/components/ui/TextShimmer";
 import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
@@ -14,7 +13,6 @@ import FlowRunningSqueleton from "../flowRunningSqueleton";
 import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 import { useFileHandler } from "./chatInput/hooks/use-file-handler";
 import ChatInput from "./chatInput/newChatInput";
-import LogoIcon from "./chatMessage/components/chatLogoIcon";
 import ChatMessage from "./chatMessage/newChatMessage";
 
 export default function ChatView({
@@ -27,11 +25,17 @@ export default function ChatView({
   focusChat,
   closeChat,
 }: chatViewProps): JSX.Element {
-  const { flowPool, inputs, CleanFlowPool } = useFlowStore();
+  const flowPool = useFlowStore((state) => state.flowPool);
+  const inputs = useFlowStore((state) => state.inputs);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const messagesRef = useRef<HTMLDivElement | null>(null);
-  const [chatHistory, setChatHistory] = useState<ChatMessageType[]>([]);
+  const [chatHistory, setChatHistory] = useState<ChatMessageType[] | undefined>(
+    undefined,
+  );
   const messages = useMessagesStore((state) => state.messages);
+  const nodes = useFlowStore((state) => state.nodes);
+  const chatInput = inputs.find((input) => input.type === "ChatInput");
+  const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
 
   const inputTypes = inputs.map((obj) => obj.type);
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
@@ -78,6 +82,10 @@ export default function ChatView({
     const finalChatHistory = [...messagesFromMessagesStore].sort((a, b) => {
       return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
     });
+
+    if (messages.length === 0 && !lockChat && chatInputNode)
+      setChatValue(chatInputNode.data.node.template["input_value"].value ?? "");
+    else setChatValue("");
 
     setChatHistory(finalChatHistory);
   }, [flowPool, messages, visibleSession]);
@@ -135,57 +143,60 @@ export default function ChatView({
       onDrop={onDrop}
     >
       <div ref={messagesRef} className="chat-message-div">
-        {lockChat || chatHistory?.length > 0 ? (
-          chatHistory.map((chat, index) => (
-            <ChatMessage
-              setLockChat={setLockChat}
-              lockChat={lockChat}
-              chat={chat}
-              lastMessage={chatHistory.length - 1 === index ? true : false}
-              key={`${chat.id}-${index}`}
-              updateChat={updateChat}
-              closeChat={closeChat}
-            />
-          ))
-        ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center">
-            <div className="flex flex-col items-center justify-center gap-4 p-8">
-              {ENABLE_NEW_LOGO ? (
-                <LangflowLogo
-                  title="Langflow logo"
-                  className="h-10 w-10 scale-[1.5]"
-                />
-              ) : (
-                <ChainLogo
-                  title="Langflow logo"
-                  className="h-10 w-10 scale-[1.5]"
-                />
-              )}
-              <div className="flex flex-col items-center justify-center">
-                <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
-                  New chat
-                </h3>
-                <p className="text-lg text-muted-foreground">
-                  <TextEffectPerChar>
-                    Test your flow with a chat prompt
-                  </TextEffectPerChar>
-                </p>
+        {chatHistory &&
+          (lockChat || chatHistory?.length > 0 ? (
+            chatHistory.map((chat, index) => (
+              <ChatMessage
+                setLockChat={setLockChat}
+                lockChat={lockChat}
+                chat={chat}
+                lastMessage={chatHistory.length - 1 === index ? true : false}
+                key={`${chat.id}-${index}`}
+                updateChat={updateChat}
+                closeChat={closeChat}
+              />
+            ))
+          ) : (
+            <div className="flex h-full w-full flex-col items-center justify-center">
+              <div className="flex flex-col items-center justify-center gap-4 p-8">
+                {ENABLE_NEW_LOGO ? (
+                  <LangflowLogo
+                    title="Langflow logo"
+                    className="h-10 w-10 scale-[1.5]"
+                  />
+                ) : (
+                  <ChainLogo
+                    title="Langflow logo"
+                    className="h-10 w-10 scale-[1.5]"
+                  />
+                )}
+                <div className="flex flex-col items-center justify-center">
+                  <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
+                    New chat
+                  </h3>
+                  <p className="text-lg text-muted-foreground">
+                    <TextEffectPerChar>
+                      Test your flow with a chat prompt
+                    </TextEffectPerChar>
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          ))}
         <div
           className={
-            lockChat ? "w-5/6 max-w-[768px] py-4 word-break-break-word" : ""
+            lockChat
+              ? "m-auto w-full max-w-[768px] py-4 word-break-break-word md:w-5/6"
+              : ""
           }
           ref={ref}
         >
           {lockChat &&
-            !(chatHistory[chatHistory.length - 1]?.category === "error") &&
+            !(chatHistory?.[chatHistory.length - 1]?.category === "error") &&
             flowRunningSkeletonMemo}
         </div>
       </div>
-      <div className="m-auto w-5/6 max-w-[768px]">
+      <div className="m-auto w-full max-w-[768px] md:w-5/6">
         <ChatInput
           chatValue={chatValue}
           noInput={!inputTypes.includes("ChatInput")}

@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Memory",
-            "id": "Memory-tBe70",
+            "id": "Memory-QarNf",
             "name": "messages_text",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "CHAT_HISTORY",
-            "id": "Prompt-WSv03",
+            "id": "Prompt-VXWKj",
             "inputTypes": [
               "Message",
               "Text"
@@ -23,12 +23,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Memory-tBe70{œdataTypeœ:œMemoryœ,œidœ:œMemory-tBe70œ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-WSv03{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-WSv03œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Memory-QarNf{œdataTypeœ:œMemoryœ,œidœ:œMemory-QarNfœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-VXWKj{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-VXWKjœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Memory-tBe70",
-        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-tBe70œ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-WSv03",
-        "targetHandle": "{œfieldNameœ: œCHAT_HISTORYœ, œidœ: œPrompt-WSv03œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "Memory-QarNf",
+        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-QarNfœ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-VXWKj",
+        "targetHandle": "{œfieldNameœ: œCHAT_HISTORYœ, œidœ: œPrompt-VXWKjœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -36,7 +36,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-VUqPC",
+            "id": "ChatInput-j1FgM",
             "name": "message",
             "output_types": [
               "Message"
@@ -44,7 +44,7 @@
           },
           "targetHandle": {
             "fieldName": "USER_INPUT",
-            "id": "Prompt-WSv03",
+            "id": "Prompt-VXWKj",
             "inputTypes": [
               "Message",
               "Text"
@@ -52,12 +52,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-VUqPC{œdataTypeœ:œChatInputœ,œidœ:œChatInput-VUqPCœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-WSv03{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-WSv03œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-j1FgM{œdataTypeœ:œChatInputœ,œidœ:œChatInput-j1FgMœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-VXWKj{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-VXWKjœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-VUqPC",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-VUqPCœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-WSv03",
-        "targetHandle": "{œfieldNameœ: œUSER_INPUTœ, œidœ: œPrompt-WSv03œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-j1FgM",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-j1FgMœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-VXWKj",
+        "targetHandle": "{œfieldNameœ: œUSER_INPUTœ, œidœ: œPrompt-VXWKjœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -65,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-WSv03",
+            "id": "Prompt-VXWKj",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -73,18 +73,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "AnthropicModel-laWKJ",
+            "id": "AnthropicModel-39lt2",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-WSv03{œdataTypeœ:œPromptœ,œidœ:œPrompt-WSv03œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-laWKJ{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-laWKJœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-WSv03",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-WSv03œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AnthropicModel-laWKJ",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-laWKJœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-VXWKj{œdataTypeœ:œPromptœ,œidœ:œPrompt-VXWKjœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-39lt2{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-39lt2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-VXWKj",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-VXWKjœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AnthropicModel-39lt2",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-39lt2œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -92,7 +92,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AnthropicModel",
-            "id": "AnthropicModel-laWKJ",
+            "id": "AnthropicModel-39lt2",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -100,18 +100,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-XNaWv",
+            "id": "ChatOutput-ZCLW2",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-AnthropicModel-laWKJ{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-laWKJœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-XNaWv{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-XNaWvœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "AnthropicModel-laWKJ",
-        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-laWKJœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-XNaWv",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-XNaWvœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-AnthropicModel-39lt2{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-39lt2œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-ZCLW2{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-ZCLW2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "AnthropicModel-39lt2",
+        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-39lt2œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-ZCLW2",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-ZCLW2œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -119,7 +119,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-9b1oo",
+            "id": "URL-ynvHI",
             "name": "text",
             "output_types": [
               "Message"
@@ -127,7 +127,7 @@
           },
           "targetHandle": {
             "fieldName": "EXAMPLE_COMPONENTS",
-            "id": "Prompt-WSv03",
+            "id": "Prompt-VXWKj",
             "inputTypes": [
               "Message",
               "Text"
@@ -135,11 +135,11 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-URL-9b1oo{œdataTypeœ:œURLœ,œidœ:œURL-9b1ooœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-WSv03{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-WSv03œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "URL-9b1oo",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-9b1ooœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-WSv03",
-        "targetHandle": "{œfieldNameœ: œEXAMPLE_COMPONENTSœ, œidœ: œPrompt-WSv03œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-URL-ynvHI{œdataTypeœ:œURLœ,œidœ:œURL-ynvHIœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-VXWKj{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-VXWKjœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "URL-ynvHI",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-ynvHIœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-VXWKj",
+        "targetHandle": "{œfieldNameœ: œEXAMPLE_COMPONENTSœ, œidœ: œPrompt-VXWKjœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -147,7 +147,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-HTi1a",
+            "id": "URL-j0mBc",
             "name": "text",
             "output_types": [
               "Message"
@@ -155,7 +155,7 @@
           },
           "targetHandle": {
             "fieldName": "BASE_COMPONENT_CODE",
-            "id": "Prompt-WSv03",
+            "id": "Prompt-VXWKj",
             "inputTypes": [
               "Message",
               "Text"
@@ -163,11 +163,11 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-URL-HTi1a{œdataTypeœ:œURLœ,œidœ:œURL-HTi1aœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-WSv03{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-WSv03œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "URL-HTi1a",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-HTi1aœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-WSv03",
-        "targetHandle": "{œfieldNameœ: œBASE_COMPONENT_CODEœ, œidœ: œPrompt-WSv03œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-URL-j0mBc{œdataTypeœ:œURLœ,œidœ:œURL-j0mBcœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-VXWKj{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-VXWKjœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "URL-j0mBc",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-j0mBcœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-VXWKj",
+        "targetHandle": "{œfieldNameœ: œBASE_COMPONENT_CODEœ, œidœ: œPrompt-VXWKjœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -175,7 +175,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-bqkBy",
+            "id": "URL-xqtKG",
             "name": "text",
             "output_types": [
               "Message"
@@ -183,7 +183,7 @@
           },
           "targetHandle": {
             "fieldName": "CUSTOM_COMPONENT_CODE",
-            "id": "Prompt-WSv03",
+            "id": "Prompt-VXWKj",
             "inputTypes": [
               "Message",
               "Text"
@@ -191,11 +191,11 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-URL-bqkBy{œdataTypeœ:œURLœ,œidœ:œURL-bqkByœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-WSv03{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-WSv03œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "URL-bqkBy",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-bqkByœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-WSv03",
-        "targetHandle": "{œfieldNameœ: œCUSTOM_COMPONENT_CODEœ, œidœ: œPrompt-WSv03œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-URL-xqtKG{œdataTypeœ:œURLœ,œidœ:œURL-xqtKGœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-VXWKj{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-VXWKjœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "URL-xqtKG",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-xqtKGœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-VXWKj",
+        "targetHandle": "{œfieldNameœ: œCUSTOM_COMPONENT_CODEœ, œidœ: œPrompt-VXWKjœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -203,7 +203,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-VUqPC",
+          "id": "ChatInput-j1FgM",
           "node": {
             "base_classes": [
               "Message"
@@ -308,7 +308,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import DropdownInput, FileInput, MessageTextInput, MultilineInput, Output\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        _background_color = self.background_color\n        _text_color = self.text_color\n        _icon = self.chat_icon\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\"background_color\": _background_color, \"text_color\": _text_color, \"icon\": _icon},\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import DropdownInput, FileInput, MessageTextInput, MultilineInput, Output\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\"background_color\": background_color, \"text_color\": text_color, \"icon\": icon},\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
               },
               "files": {
                 "_input_type": "FileInput",
@@ -484,8 +484,8 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "height": 234,
-        "id": "ChatInput-VUqPC",
+        "height": 231,
+        "id": "ChatInput-j1FgM",
         "position": {
           "x": 1436.7228707197569,
           "y": 1045.2749109595
@@ -502,7 +502,7 @@
         "data": {
           "description": "Retrieves stored chat messages from Langflow tables or an external memory.",
           "display_name": "Chat Memory",
-          "id": "Memory-tBe70",
+          "id": "Memory-QarNf",
           "node": {
             "base_classes": [
               "Data",
@@ -573,7 +573,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain.memory import ConversationBufferMemory\n\nfrom langflow.custom import Component\nfrom langflow.field_typing import BaseChatMemory\nfrom langflow.helpers.data import data_to_text\nfrom langflow.inputs import HandleInput\nfrom langflow.io import DropdownInput, IntInput, MessageTextInput, MultilineInput, Output\nfrom langflow.memory import LCBuiltinChatMemory, get_messages\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER\n\n\nclass MemoryComponent(Component):\n    display_name = \"Message History\"\n    description = \"Retrieves stored chat messages from Langflow tables or an external memory.\"\n    icon = \"message-square-more\"\n    name = \"Memory\"\n\n    inputs = [\n        HandleInput(\n            name=\"memory\",\n            display_name=\"External Memory\",\n            input_types=[\"BaseChatMessageHistory\"],\n            info=\"Retrieve messages from an external memory. If empty, it will use the Langflow tables.\",\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER, \"Machine and User\"],\n            value=\"Machine and User\",\n            info=\"Filter by sender type.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Filter by sender name.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"n_messages\",\n            display_name=\"Number of Messages\",\n            value=100,\n            info=\"Number of messages to retrieve.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"order\",\n            display_name=\"Order\",\n            options=[\"Ascending\", \"Descending\"],\n            value=\"Ascending\",\n            info=\"Order of the messages.\",\n            advanced=True,\n        ),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. \"\n            \"It can contain the keys {text}, {sender} or any other key in the message data.\",\n            value=\"{sender_name}: {text}\",\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"messages\", method=\"retrieve_messages\"),\n        Output(display_name=\"Text\", name=\"messages_text\", method=\"retrieve_messages_as_text\"),\n    ]\n\n    def retrieve_messages(self) -> Data:\n        sender = self.sender\n        sender_name = self.sender_name\n        session_id = self.session_id\n        n_messages = self.n_messages\n        order = \"DESC\" if self.order == \"Descending\" else \"ASC\"\n\n        if sender == \"Machine and User\":\n            sender = None\n\n        if self.memory:\n            # override session_id\n            self.memory.session_id = session_id\n\n            stored = self.memory.messages\n            # langchain memories are supposed to return messages in ascending order\n            if order == \"DESC\":\n                stored = stored[::-1]\n            if n_messages:\n                stored = stored[:n_messages]\n            stored = [Message.from_lc_message(m) for m in stored]\n            if sender:\n                expected_type = MESSAGE_SENDER_AI if sender == MESSAGE_SENDER_AI else MESSAGE_SENDER_USER\n                stored = [m for m in stored if m.type == expected_type]\n        else:\n            stored = get_messages(\n                sender=sender,\n                sender_name=sender_name,\n                session_id=session_id,\n                limit=n_messages,\n                order=order,\n            )\n        self.status = stored\n        return stored\n\n    def retrieve_messages_as_text(self) -> Message:\n        stored_text = data_to_text(self.template, self.retrieve_messages())\n        self.status = stored_text\n        return Message(text=stored_text)\n\n    def build_lc_memory(self) -> BaseChatMemory:\n        chat_memory = self.memory or LCBuiltinChatMemory(flow_id=self.flow_id, session_id=self.session_id)\n        return ConversationBufferMemory(chat_memory=chat_memory)\n"
+                "value": "from langchain.memory import ConversationBufferMemory\n\nfrom langflow.custom import Component\nfrom langflow.field_typing import BaseChatMemory\nfrom langflow.helpers.data import data_to_text\nfrom langflow.inputs import HandleInput\nfrom langflow.io import DropdownInput, IntInput, MessageTextInput, MultilineInput, Output\nfrom langflow.memory import LCBuiltinChatMemory, aget_messages\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER\n\n\nclass MemoryComponent(Component):\n    display_name = \"Message History\"\n    description = \"Retrieves stored chat messages from Langflow tables or an external memory.\"\n    icon = \"message-square-more\"\n    name = \"Memory\"\n\n    inputs = [\n        HandleInput(\n            name=\"memory\",\n            display_name=\"External Memory\",\n            input_types=[\"BaseChatMessageHistory\"],\n            info=\"Retrieve messages from an external memory. If empty, it will use the Langflow tables.\",\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER, \"Machine and User\"],\n            value=\"Machine and User\",\n            info=\"Filter by sender type.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Filter by sender name.\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"n_messages\",\n            display_name=\"Number of Messages\",\n            value=100,\n            info=\"Number of messages to retrieve.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"order\",\n            display_name=\"Order\",\n            options=[\"Ascending\", \"Descending\"],\n            value=\"Ascending\",\n            info=\"Order of the messages.\",\n            advanced=True,\n            tool_mode=True,\n        ),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. \"\n            \"It can contain the keys {text}, {sender} or any other key in the message data.\",\n            value=\"{sender_name}: {text}\",\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"messages\", method=\"retrieve_messages\"),\n        Output(display_name=\"Text\", name=\"messages_text\", method=\"retrieve_messages_as_text\"),\n    ]\n\n    async def retrieve_messages(self) -> Data:\n        sender = self.sender\n        sender_name = self.sender_name\n        session_id = self.session_id\n        n_messages = self.n_messages\n        order = \"DESC\" if self.order == \"Descending\" else \"ASC\"\n\n        if sender == \"Machine and User\":\n            sender = None\n\n        if self.memory:\n            # override session_id\n            self.memory.session_id = session_id\n\n            stored = await self.memory.aget_messages()\n            # langchain memories are supposed to return messages in ascending order\n            if order == \"DESC\":\n                stored = stored[::-1]\n            if n_messages:\n                stored = stored[:n_messages]\n            stored = [Message.from_lc_message(m) for m in stored]\n            if sender:\n                expected_type = MESSAGE_SENDER_AI if sender == MESSAGE_SENDER_AI else MESSAGE_SENDER_USER\n                stored = [m for m in stored if m.type == expected_type]\n        else:\n            stored = await aget_messages(\n                sender=sender,\n                sender_name=sender_name,\n                session_id=session_id,\n                limit=n_messages,\n                order=order,\n            )\n        self.status = stored\n        return stored\n\n    async def retrieve_messages_as_text(self) -> Message:\n        stored_text = data_to_text(self.template, await self.retrieve_messages())\n        self.status = stored_text\n        return Message(text=stored_text)\n\n    def build_lc_memory(self) -> BaseChatMemory:\n        chat_memory = self.memory or LCBuiltinChatMemory(flow_id=self.flow_id, session_id=self.session_id)\n        return ConversationBufferMemory(chat_memory=chat_memory)\n"
               },
               "memory": {
                 "_input_type": "HandleInput",
@@ -726,8 +726,8 @@
           "type": "Memory"
         },
         "dragging": false,
-        "height": 264,
-        "id": "Memory-tBe70",
+        "height": 262,
+        "id": "Memory-QarNf",
         "position": {
           "x": 1830.6888981898887,
           "y": 946.1205963195098
@@ -744,7 +744,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-WSv03",
+          "id": "Prompt-VXWKj",
           "node": {
             "base_classes": [
               "Message"
@@ -920,7 +920,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(self) -> Message:\n        prompt = Message.from_template(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import MessageTextInput, Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n        MessageTextInput(\n            name=\"tool_placeholder\",\n            display_name=\"Tool Placeholder\",\n            tool_mode=True,\n            advanced=True,\n            info=\"A placeholder input for tool mode.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(self) -> Message:\n        prompt = Message.from_template(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
               },
               "template": {
                 "_input_type": "PromptInput",
@@ -939,6 +939,28 @@
                 "trace_as_input": true,
                 "type": "prompt",
                 "value": "<Instructions>\nYou are an AI assistant specialized in creating Langflow components based on user requirements. Your task is to generate the code for a custom Langflow component according to the user's specifications.\n\nFirst, review the following code snippets for reference:\n\n<base_component>\n{BASE_COMPONENT_CODE}\n</base_component>\n\n<custom_component>\n{CUSTOM_COMPONENT_CODE}\n</custom_component>\n\n<example_components>\n{EXAMPLE_COMPONENTS}\n</example_components>\n\nNow, follow these steps to create a custom Langflow component:\n\n1. Analyze the user's input to determine the requirements for the component.\n2. Use an <inner_monologue> section to plan out the component structure and features based on the user's requirements.\n3. Generate the code for the custom component, using the provided code snippets as reference and inspiration.\n4. Provide a brief explanation of the component's functionality and how to use it.\n\nHere's the chat history and user input:\n\n<ChatHistory>\n{CHAT_HISTORY}\n</ChatHistory>\n\n<UserInput>\n{USER_INPUT}\n</UserInput>\n\nBased on the user's input, create a custom Langflow component that meets their requirements. Your response should include:\n\n1. <inner_monologue>\n   Use this section to analyze the user's requirements and plan the component structure.\n</inner_monologue>\n\n2. <component_code>\n   Generate the complete code for the custom Langflow component here.\n</component_code>\n\n3. <explanation>\n   Provide a brief explanation of the component's functionality and how to use it.\n</explanation>\n\nRemember to:\n- Use the provided code snippets as a reference, but create a unique component tailored to the user's needs.\n- Include all necessary imports and class definitions.\n- Implement the required inputs, outputs, and any additional features specified by the user.\n- Use clear and descriptive variable names and comments to enhance code readability.\n- Ensure that the component follows Langflow best practices and conventions.\n\nIf the user's input is unclear or lacks specific details, make reasonable assumptions based on the context and explain these assumptions in your response.\n\n</Instructions>"
+              },
+              "tool_placeholder": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Tool Placeholder",
+                "dynamic": false,
+                "info": "A placeholder input for tool mode.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "tool_placeholder",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
               }
             },
             "tool_mode": false
@@ -946,8 +968,8 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "height": 693,
-        "id": "Prompt-WSv03",
+        "height": 685,
+        "id": "Prompt-VXWKj",
         "position": {
           "x": 2219.5265974825707,
           "y": 521.6320563271215
@@ -964,7 +986,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-XNaWv",
+          "id": "ChatOutput-ZCLW2",
           "node": {
             "base_classes": [
               "Message"
@@ -1068,7 +1090,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import DropdownInput, MessageInput, MessageTextInput, Output\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_USER\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n\n    inputs = [\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, _id: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if _id:\n            source_dict[\"id\"] = _id\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            source_dict[\"source\"] = source\n        return Source(**source_dict)\n\n    def message_response(self) -> Message:\n        _source, _icon, _display_name, _source_id = self.get_properties_from_source_component()\n        _background_color = self.background_color\n        _text_color = self.text_color\n        if self.chat_icon:\n            _icon = self.chat_icon\n        message = self.input_value if isinstance(self.input_value, Message) else Message(text=self.input_value)\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(_source_id, _display_name, _source)\n        message.properties.icon = _icon\n        message.properties.background_color = _background_color\n        message.properties.text_color = _text_color\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import DropdownInput, MessageInput, MessageTextInput, Output\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_USER\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n\n    inputs = [\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            source_dict[\"source\"] = source\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n        background_color = self.background_color\n        text_color = self.text_color\n        if self.chat_icon:\n            icon = self.chat_icon\n        message = self.input_value if isinstance(self.input_value, Message) else Message(text=self.input_value)\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n        message.properties.icon = icon\n        message.properties.background_color = background_color\n        message.properties.text_color = text_color\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
               },
               "data_template": {
                 "_input_type": "MessageTextInput",
@@ -1222,8 +1244,8 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "height": 234,
-        "id": "ChatOutput-XNaWv",
+        "height": 232,
+        "id": "ChatOutput-ZCLW2",
         "position": {
           "x": 2947.267779013826,
           "y": 891.8123698756774
@@ -1232,13 +1254,13 @@
           "x": 2947.267779013826,
           "y": 891.8123698756774
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode",
         "width": 320
       },
       {
         "data": {
-          "id": "note-ybslb",
+          "id": "note-lkK06",
           "node": {
             "description": "# Fetch Components code \n\nUsing the URL component we are extracting from Github, the code from a few classes to provide as example to the LLM. \n\nThis ensures we are always up to date with recent information from the codebase.",
             "display_name": "",
@@ -1248,8 +1270,8 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 325,
-        "id": "note-ybslb",
+        "height": 324,
+        "id": "note-lkK06",
         "position": {
           "x": 1430.2014058924922,
           "y": -19.30392196909918
@@ -1260,11 +1282,11 @@
         },
         "selected": false,
         "type": "noteNode",
-        "width": 325
+        "width": 324
       },
       {
         "data": {
-          "id": "note-7Judu",
+          "id": "note-1foCQ",
           "node": {
             "description": "# 🛠️ Custom Component Generator 🚀\n\nHi! I'm here to help you create custom components for Langflow. Think of me as your technical partner who can help turn your ideas into working components! \n\n## 🎯 How to Work With Me\n\n### 1. 💭 Tell Me What You Want to Build\nSimply describe what you want your component to do in plain English. For example:\n- \"I need a component that sends Slack messages\"\n- \"I want to create a tool that can process CSV files\"\n- \"I need something that can translate text\"\n\n### 2. 📚 Share Any Relevant Information\nIf you're working with a specific:\n- 🔑 API or service (just share the documentation link or main endpoints)\n- 📄 File format\n- 🔄 Data structure\n- 🔧 Existing component you want to modify\n\n### 3. 🎨 Let Me Help Design It\nI'll help by:\n- 📊 Breaking down complex requirements into manageable pieces\n- 💡 Suggesting the best way to structure inputs and outputs\n- ⚙️ Creating the component code\n- 📝 Explaining how to use it\n\n### 4. 🔄 Iterative Refinement\nWe can then:\n- ✅ Test and refine the component\n- ⭐ Add features\n- 🔧 Modify behavior\n- 🛡️ Improve error handling\n- 📖 Add documentation\n\n## 🚀 What I Can Help With\n\nI can help create components that:\n- 📊 Process different file types (CSV, JSON, Excel, etc.)\n- 🔌 Integrate with external APIs\n- 🔄 Transform data\n- 🔀 Route messages\n- 🌐 Handle web requests\n- 🎯 Parse structured data\n- ✨ And much more!\n\n## 💡 Tips for Best Results\n\n1. **Be Specific** 🎯: The more details you provide about what you want to accomplish, the better I can help.\n\n2. **Share Examples** 📋: If you have example data or specific use cases, share them.\n\n3. **Ask Questions** ❓: Don't hesitate to ask for clarification or modifications.\n\nJust start by telling me what kind of component you'd like to create, and I'll guide you through the process! \n\nReady to build something awesome? 🚀 Let's get started!",
             "display_name": "",
@@ -1275,7 +1297,7 @@
         },
         "dragging": false,
         "height": 573,
-        "id": "note-7Judu",
+        "id": "note-1foCQ",
         "position": {
           "x": 807.6293964045135,
           "y": 605.6504562080672
@@ -1295,7 +1317,7 @@
       },
       {
         "data": {
-          "id": "AnthropicModel-laWKJ",
+          "id": "AnthropicModel-39lt2",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1364,7 +1386,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "anthropic_api_key",
                 "password": true,
                 "placeholder": "",
@@ -1372,7 +1394,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "ANTHROPIC_API_KEY"
+                "value": ""
               },
               "anthropic_api_url": {
                 "_input_type": "MessageTextInput",
@@ -1574,8 +1596,8 @@
           "type": "AnthropicModel"
         },
         "dragging": false,
-        "height": 515,
-        "id": "AnthropicModel-laWKJ",
+        "height": 687,
+        "id": "AnthropicModel-39lt2",
         "position": {
           "x": 2587.564685535714,
           "y": 646.2448246136587
@@ -1590,7 +1612,7 @@
       },
       {
         "data": {
-          "id": "URL-HTi1a",
+          "id": "URL-j0mBc",
           "node": {
             "base_classes": [
               "Data",
@@ -1709,8 +1731,8 @@
           "type": "URL"
         },
         "dragging": false,
-        "height": 368,
-        "id": "URL-HTi1a",
+        "height": 365,
+        "id": "URL-j0mBc",
         "position": {
           "x": 1436.3617127766433,
           "y": 264.218898085405
@@ -1725,7 +1747,7 @@
       },
       {
         "data": {
-          "id": "URL-9b1oo",
+          "id": "URL-ynvHI",
           "node": {
             "base_classes": [
               "Data",
@@ -1835,11 +1857,13 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": [
-                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/helpers/extract_key.py",
-                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/helpers/data_conditional_router.py",
+                  "https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/agents/agent.py",
+                  "https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/helpers/structured_output.py",
                   "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/tools/calculator.py",
                   "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/tools/tavily_search.py",
-                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/models/ollama.py"
+                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/models/ollama.py",
+                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/logic/conditional_router.py",
+                  "https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/backend/base/langflow/components/data/file.py"
                 ]
               }
             },
@@ -1848,15 +1872,15 @@
           "type": "URL"
         },
         "dragging": false,
-        "height": 568,
-        "id": "URL-9b1oo",
+        "height": 661,
+        "id": "URL-ynvHI",
         "position": {
-          "x": 1837.4098708175009,
-          "y": 323.6213535047409
+          "x": 1831.5895760156684,
+          "y": 245.62940316018893
         },
         "positionAbsolute": {
-          "x": 1837.4098708175009,
-          "y": 323.6213535047409
+          "x": 1831.5895760156684,
+          "y": 245.62940316018893
         },
         "selected": false,
         "type": "genericNode",
@@ -1864,7 +1888,7 @@
       },
       {
         "data": {
-          "id": "URL-bqkBy",
+          "id": "URL-xqtKG",
           "node": {
             "base_classes": [
               "Data",
@@ -1983,8 +2007,8 @@
           "type": "URL"
         },
         "dragging": false,
-        "height": 368,
-        "id": "URL-bqkBy",
+        "height": 365,
+        "id": "URL-xqtKG",
         "position": {
           "x": 1436.982480021523,
           "y": 651.1409296825055
@@ -1999,18 +2023,18 @@
       }
     ],
     "viewport": {
-      "x": -776.9383804523111,
-      "y": -4.900459222819279,
-      "zoom": 0.5322184854204348
+      "x": -1123.4732050518141,
+      "y": -154.4525805182622,
+      "zoom": 0.8590630148881792
     }
   },
   "description": "Generates well-structured code for custom components following Langflow's specifications.",
   "endpoint_name": null,
   "gradient": "1",
   "icon": "SquareCode",
-  "id": "aabe02e5-255f-447a-8ec2-be6f43955a43",
+  "id": "5155918c-68b1-4013-8d7b-61f31ffa931c",
   "is_component": false,
-  "last_tested_version": "1.0.19.post2",
+  "last_tested_version": "1.1.0",
   "name": "Custom Component Generator",
   "tags": [
     "coding",

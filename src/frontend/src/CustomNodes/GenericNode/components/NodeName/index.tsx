@@ -76,11 +76,10 @@ export default function NodeName({
           event.preventDefault();
         }}
         data-testid={"title-" + display_name}
-        className={
-          showNode
-            ? "nodoubleclick w-full cursor-text truncate font-medium text-primary"
-            : "cursor-default"
-        }
+        className={cn(
+          "nodoubleclick w-full truncate font-medium text-primary",
+          showNode ? "cursor-text" : "cursor-default",
+        )}
       >
         <div className="flex items-center gap-2">
           <span

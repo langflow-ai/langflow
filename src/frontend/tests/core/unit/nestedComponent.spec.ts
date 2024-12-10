@@ -1,33 +1,13 @@
 import { expect, test } from "@playwright/test";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "NestedComponent",
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
-    await page.goto("/");
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
+    await awaitBootstrapTest(page);
 
-    await page.waitForSelector('[id="new-project-btn"]', {
-      timeout: 30000,
-    });
-
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
     await page.waitForSelector('[data-testid="blank-flow"]', {
       timeout: 30000,
     });
@@ -35,7 +15,9 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("api request");
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="dataAPI Request"]', {
+      timeout: 3000,
+    });
 
     await page
       .getByTestId("dataAPI Request")
@@ -43,10 +25,7 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.click('//*[@id="react-flow-id"]');
 
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
+    await adjustScreenView(page);
 
     await page.getByTestId("dict_nesteddict_headers").first().click();
     await page

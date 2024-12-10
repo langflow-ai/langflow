@@ -1,33 +1,13 @@
 import { expect, test } from "@playwright/test";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "InputComponent",
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
-    await page.goto("/");
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
+    await awaitBootstrapTest(page);
 
-    await page.waitForSelector('[id="new-project-btn"]', {
-      timeout: 30000,
-    });
-
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
     await page.waitForSelector('[data-testid="blank-flow"]', {
       timeout: 30000,
     });
@@ -35,21 +15,16 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Chroma");
 
-    await page.waitForTimeout(1000);
-
+    await page.waitForSelector('[data-testid="vectorstoresChroma DB"]', {
+      timeout: 3000,
+    });
     await page
       .getByTestId("vectorstoresChroma DB")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 100000,
-    });
+    await adjustScreenView(page);
 
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
     await page.getByTestId("popover-anchor-input-collection_name").click();
     await page
       .getByTestId("popover-anchor-input-collection_name")
@@ -142,7 +117,6 @@ test(
       .getByTestId("popover-anchor-input-collection_name-edit")
       .fill("NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe");
 
-    await page.waitForTimeout(1000);
     await page.getByText("Close").last().click();
 
     const plusButtonLocator = page.getByTestId("input-collection_name");
