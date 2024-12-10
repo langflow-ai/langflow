@@ -16,6 +16,7 @@ from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSetti
 from typing_extensions import override
 
 from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
+from langflow.utils.util_strings import is_valid_database_url
 
 # BASE_COMPONENTS_PATH = str(Path(__file__).parent / "components")
 BASE_COMPONENTS_PATH = str(Path(__file__).parent.parent.parent / "components")
@@ -240,7 +241,10 @@ class Settings(BaseSettings):
     @field_validator("database_url", mode="before")
     @classmethod
     def set_database_url(cls, value, info):
-        if not value:
+        if value and not is_valid_database_url(value):
+            raise ValueError(f"Invalid database_url provided: '{value}'")
+
+        else:
             logger.debug("No database_url provided, trying LANGFLOW_DATABASE_URL env variable")
             if langflow_database_url := os.getenv("LANGFLOW_DATABASE_URL"):
                 value = langflow_database_url
