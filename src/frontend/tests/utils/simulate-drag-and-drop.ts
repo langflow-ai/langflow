@@ -4,7 +4,6 @@ import { readFileSync } from "fs";
 export async function simulateDragAndDrop(
   page: Page,
   filePath: string,
-  dropSelector: string,
   jsonContent?: string,
 ) {
   // Read file content
@@ -22,17 +21,5 @@ export async function simulateDragAndDrop(
     return dt;
   }, fileContent);
 
-  const dropzone = page.getByTestId(dropSelector);
-  await dropzone.waitFor({
-    state: "visible",
-  });
-
-  //ensure the dropzone is visible
-  await page.waitForTimeout(500);
-
-  await dropzone.dispatchEvent("mousedown", { button: 0 });
-  await dropzone.dispatchEvent("mousemove", { buttons: 1 });
-  await dropzone.dispatchEvent("drop", { dataTransfer });
-
-  await dataTransfer.dispose();
+  return dataTransfer;
 }

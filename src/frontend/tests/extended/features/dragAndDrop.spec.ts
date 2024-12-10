@@ -10,14 +10,16 @@ test(
 
     await page.locator("span").filter({ hasText: "Close" }).first().click();
 
-    // Wait for the modal is closed
-    await page.waitForTimeout(1000);
+    await page.locator("span").filter({ hasText: "My Projects" }).isVisible();
 
-    await simulateDragAndDrop(
+    const dataTransfer = await simulateDragAndDrop(
       page,
       "tests/assets/collection.json",
-      "cards-wrapper",
     );
+
+    await page.getByTestId("cards-wrapper").dispatchEvent("drop", {
+      dataTransfer,
+    });
 
     await page.waitForSelector("text=uploaded successfully", {
       timeout: 60000 * 2,
@@ -46,9 +48,7 @@ test(
     await awaitBootstrapTest(page);
 
     await page.locator("span").filter({ hasText: "Close" }).first().click();
-
-    // Wait for the modal is closed
-    await page.waitForTimeout(1000);
+    await page.locator("span").filter({ hasText: "My Projects" }).isVisible();
 
     // Read your file into a buffer.
     const jsonContent = readFileSync(
@@ -62,12 +62,15 @@ test(
       randomName,
     );
 
-    await simulateDragAndDrop(
+    const dataTransfer = await simulateDragAndDrop(
       page,
       "tests/assets/flow_test_drag_and_drop.json",
-      "cards-wrapper",
       jsonContentWithNewName,
     );
+
+    await page.getByTestId("cards-wrapper").dispatchEvent("drop", {
+      dataTransfer,
+    });
 
     await page.waitForSelector("text=uploaded successfully", {
       timeout: 60000 * 2,
