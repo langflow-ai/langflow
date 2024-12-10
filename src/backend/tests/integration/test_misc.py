@@ -5,7 +5,6 @@ from fastapi import status
 from httpx import AsyncClient
 from langflow.graph.schema import RunOutputs
 from langflow.initial_setup.setup import load_starter_projects
-from langflow.load import run_flow_from_json
 from langflow.load.load import arun_flow_from_json
 
 
