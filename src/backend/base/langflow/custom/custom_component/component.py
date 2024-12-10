@@ -30,6 +30,7 @@ from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import ErrorMessage, Message
 from langflow.schema.properties import Source
+from langflow.schema.table import TableOptions
 from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
@@ -1183,8 +1184,20 @@ class Component(CustomComponent):
 
         return TableInput(
             name=TOOLS_METADATA_INPUT_NAME,
-            display_name="Tools Metadata",
+            display_name="Toolset configuration",
             real_time_refresh=True,
             table_schema=TOOL_TABLE_SCHEMA,
             value=tool_data,
+            trigger_icon="Hammer",
+            trigger_text="Open toolset",
+            table_options=TableOptions(
+                allow_add=False,
+                allow_delete=False,
+                allow_edit=True,
+                allow_sort=False,
+                allow_filter=False,
+                allow_hide=False,
+                allow_select=False,
+                hide_options=True,
+            ),
         )
