@@ -3,6 +3,7 @@ import asyncio
 import zlib
 from pathlib import Path
 
+import anyio
 from aiofile import async_open
 from loguru import logger
 
@@ -107,18 +108,18 @@ class DirectoryReader:
 
     async def aread_file_content(self, file_path):
         """Read and return the content of a file."""
-        file_path_ = Path(file_path)
-        if not file_path_.is_file():
+        file_path_ = anyio.Path(file_path)
+        if not await file_path_.is_file():
             return None
         try:
-            async with async_open(file_path_, encoding="utf-8") as file:
+            async with async_open(str(file_path_), encoding="utf-8") as file:
                 # UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 3069:
                 # character maps to <undefined>
                 return await file.read()
         except UnicodeDecodeError:
             # This is happening in Windows, so we need to open the file in binary mode
             # The file is always just a python file, so we can safely read it as utf-8
-            async with async_open(file_path_, "rb") as f:
+            async with async_open(str(file_path_), "rb") as f:
                 return (await f.read()).decode("utf-8")
 
     def get_files(self):
@@ -296,9 +297,6 @@ class DirectoryReader:
             file_content = str(StringCompressor(file_content).compress_string())
         return True, file_content
 
-    async def get_output_types_from_code_async(self, code: str):
-        return await asyncio.to_thread(self.get_output_types_from_code, code)
-
     async def abuild_component_menu_list(self, file_paths):
         response = {"menu": []}
         logger.debug("-------------------- Async Building component menu list --------------------")
@@ -328,7 +326,7 @@ class DirectoryReader:
 
             if validation_result:
                 try:
-                    output_types = await self.get_output_types_from_code_async(result_content)
+                    output_types = await asyncio.to_thread(self.get_output_types_from_code, result_content)
                 except Exception:  # noqa: BLE001
                     logger.exception("Error while getting output types from code")
                     output_types = [component_name_camelcase]
