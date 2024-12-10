@@ -159,7 +159,6 @@ test("should see shortcuts", { tag: ["@release"] }, async ({ page }) => {
 test(
   "should interact with API Keys",
   { tag: ["@release", "@api"] },
-
   async ({ page }) => {
     await page.goto("/");
     await page.getByTestId("user-profile-settings").click();
@@ -175,11 +174,20 @@ test(
       .getByPlaceholder("Insert a name for your API Key")
       .fill(randomName);
     await page.getByText("Create Secret Key", { exact: true }).click();
-    await page.getByText("Please save").isVisible();
-    await page.getByTestId("icon-Copy").click();
-    await expect(page.getByText("Api Key Copied!")).toBeVisible({
+
+    // Wait for api key creation to complete and render the next form element
+    await page.waitForTimeout(1000);
+
+    await page.waitForSelector("text=Please save", { timeout: 30000 });
+    await page.waitForSelector('[data-testid="btn-copy-api-key"]', {
       timeout: 3000,
+      state: "visible",
     });
+
+    await page.getByTestId("btn-copy-api-key").click();
+
+    await page.waitForSelector("text=Api Key Copied!", { timeout: 30000 });
+
     await page.getByText(randomName).isVisible();
   },
 );
