@@ -87,6 +87,6 @@ class DataMergerComponent(Component):
                 for key, value in data_input.data.items():
                     new_key = f"{key}_doc{idx}" if idx > 1 else key
                     combined_data[new_key] = value
-            return pd.DataFrame([combined_data])
+            return DataFrame([combined_data])
 
-        return pd.DataFrame()
+        return DataFrame()
