@@ -23,6 +23,13 @@ export async function simulateDragAndDrop(
   }, fileContent);
 
   const dropzone = page.getByTestId(dropSelector);
+  await dropzone.waitFor({
+    state: "visible",
+  });
+
+  //ensure the dropzone is visible
+  await page.waitForTimeout(500);
+
   await dropzone.dispatchEvent("mousedown", { button: 0 });
   await dropzone.dispatchEvent("mousemove", { buttons: 1 });
   await dropzone.dispatchEvent("drop", { dataTransfer });

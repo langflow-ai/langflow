@@ -10,7 +10,8 @@ test(
 
     await page.locator("span").filter({ hasText: "Close" }).first().click();
 
-    await page.locator("span").filter({ hasText: "My Projects" }).isVisible();
+    // Wait for the modal is closed
+    await page.waitForTimeout(1000);
 
     await simulateDragAndDrop(
       page,
@@ -45,7 +46,9 @@ test(
     await awaitBootstrapTest(page);
 
     await page.locator("span").filter({ hasText: "Close" }).first().click();
-    await page.locator("span").filter({ hasText: "My Projects" }).isVisible();
+
+    // Wait for the modal is closed
+    await page.waitForTimeout(1000);
 
     // Read your file into a buffer.
     const jsonContent = readFileSync(
