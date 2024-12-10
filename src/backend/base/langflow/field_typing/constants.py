@@ -25,6 +25,8 @@ from langflow.schema.message import Message
 NestedDict: TypeAlias = dict[str, str | dict]
 LanguageModel = TypeVar("LanguageModel", BaseLanguageModel, BaseLLM, BaseChatModel)
 ToolEnabledLanguageModel = TypeVar("ToolEnabledLanguageModel", BaseLanguageModel, BaseLLM, BaseChatModel)
+Memory = TypeVar("Memory", bound=BaseChatMessageHistory)
+
 Retriever = TypeVar(
     "Retriever",
     BaseRetriever,
@@ -65,7 +67,7 @@ LANGCHAIN_BASE_TYPES = {
     "BaseMemory": BaseMemory,
     "BaseChatMemory": BaseChatMemory,
     "BaseChatModel": BaseChatModel,
-    "BaseChatMessageHistory": BaseChatMessageHistory,
+    "Memory": Memory,
 }
 # Langchain base types plus Python base types
 CUSTOM_COMPONENT_SUPPORTED_TYPES = {
