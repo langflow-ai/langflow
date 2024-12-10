@@ -8,6 +8,8 @@ class RetrieverToolComponent(CustomComponent):
     display_name = "RetrieverTool"
     description = "Tool for interacting with retriever"
     name = "RetrieverTool"
+    legacy = True
+    icon = "LangChain"
 
     def build_config(self):
         return {
