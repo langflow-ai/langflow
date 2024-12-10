@@ -9,9 +9,7 @@ from langflow.io import Output, SecretStrInput, StrInput
 
 class TwilioComponent(Component):
     display_name = "Twilio SMS"
-    description = (
-        "Uses the Twilio REST API to send an SMS message."
-    )
+    description = "Uses the Twilio REST API to send an SMS message."
     documentation = (
         "https://python.langchain.com/api_reference/unstructured/document_loaders/"
         "langchain_unstructured.document_loaders.UnstructuredLoader.html"
@@ -63,7 +61,8 @@ class TwilioComponent(Component):
         """
         url = f"https://api.twilio.com/2010-04-01/Accounts/{self.account_sid}/Messages.json"
         headers = {
-            "Authorization": "Basic " + b64encode(f"{self.account_sid}:{self.auth_token}".encode()).decode()
+            "Authorization": "Basic "
+            + b64encode(f"{self.account_sid}:{self.auth_token}".encode()).decode()
         }
         data = {
             "From": self.twilio_number,
@@ -79,12 +78,10 @@ class TwilioComponent(Component):
 
             return response.json()
         except httpx.HTTPStatusError as e:
-
             self.log(f"Failed to send message: {e.response.text}")
 
             return e.response.json()
         except Exception as e:  # noqa: BLE001
-
             self.log(f"An error occurred: {e}")
 
             return None
