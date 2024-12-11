@@ -162,6 +162,8 @@
 
     --tool-mode-gradient-1: #f480ff;
     --tool-mode-gradient-2: #ff3276;
+
+    --slider-input-border: #d4d4d8;
   }
 
   .dark {
@@ -313,5 +315,7 @@
     --datatype-orange-foreground: 30.7 97.2% 72.4%;
 
     --node-ring: 240 6% 90%;
+
+    --slider-input-border: #d4d4d8;
   }
 }

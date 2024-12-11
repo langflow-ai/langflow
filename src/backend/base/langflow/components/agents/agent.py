@@ -70,7 +70,7 @@ class AgentComponent(ToolCallingAgentComponent):
         if llm_model is None:
             msg = "No language model selected"
             raise ValueError(msg)
-        self.chat_history = self.get_memory_data()
+        self.chat_history = await self.get_memory_data()
 
         if self.input_value:
             message = Message(
@@ -107,11 +107,13 @@ class AgentComponent(ToolCallingAgentComponent):
         self.store_agent_history(message=message)
         return message
 
-    def get_memory_data(self):
+    async def get_memory_data(self):
         memory_kwargs = {
             component_input.name: getattr(self, f"{component_input.name}") for component_input in self.memory_inputs
         }
-        return MemoryComponent().set(**memory_kwargs).retrieve_messages()
+
+        return await MemoryComponent().set(**memory_kwargs).retrieve_messages()
+
 
     @override
     def store_agent_history(self, message: Message):
@@ -158,16 +160,18 @@ class AgentComponent(ToolCallingAgentComponent):
                 value.input_types = []
         return build_config
 
-    def update_build_config(self, build_config: dotdict, field_value: str, field_name: str | None = None) -> dotdict:
+    async def aupdate_build_config(
+        self, build_config: dotdict, field_value: str, field_name: str | None = None
+    ) -> dotdict:
         # Iterate over all providers in the MODEL_PROVIDERS_DICT
         # Existing logic for updating build_config
         if field_name == "agent_llm":
             provider_info = MODEL_PROVIDERS_DICT.get(field_value)
             if provider_info:
                 component_class = provider_info.get("component_class")
-                if component_class and hasattr(component_class, "update_build_config"):
-                    # Call the component class's update_build_config method
-                    build_config = component_class.update_build_config(build_config, field_value, field_name)
+                if component_class and hasattr(component_class, "aupdate_build_config"):
+                    # Call the component class's aupdate_build_config method
+                    build_config = await component_class.aupdate_build_config(build_config, field_value, field_name)
 
             provider_configs: dict[str, tuple[dict, list[dict]]] = {
                 provider: (
@@ -233,11 +237,11 @@ class AgentComponent(ToolCallingAgentComponent):
             if provider_info:
                 component_class = provider_info.get("component_class")
                 prefix = provider_info.get("prefix")
-                if component_class and hasattr(component_class, "update_build_config"):
-                    # Call each component class's update_build_config method
+                if component_class and hasattr(component_class, "aupdate_build_config"):
+                    # Call each component class's aupdate_build_config method
                     # remove the prefix from the field_name
                     if isinstance(field_name, str) and isinstance(prefix, str):
                         field_name = field_name.replace(prefix, "")
-                    build_config = component_class.update_build_config(build_config, field_value, field_name)
+                    build_config = await component_class.aupdate_build_config(build_config, field_value, field_name)
 
         return build_config
