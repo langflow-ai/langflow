@@ -86,8 +86,9 @@ export default function ChatView({
       return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
     });
 
-    if (finalChatHistory.length === 0 && !lockChat && chatInputNode)
+    if (messages.length === 0 && !lockChat && chatInputNode)
       setChatValue(chatInputNode.data.node.template["input_value"].value ?? "");
+    else setChatValue("");
 
     setChatHistory(finalChatHistory);
   }, [flowPool, messages, visibleSession]);
@@ -188,7 +189,7 @@ export default function ChatView({
         <div
           className={
             displayLoadingMessage
-              ? "w-full max-w-[768px] py-4 word-break-break-word md:w-5/6"
+              ? " w-full max-w-[768px] py-4 word-break-break-word md:w-5/6"
               : ""
           }
           ref={ref}

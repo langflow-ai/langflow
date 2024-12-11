@@ -27,8 +27,7 @@ class YouTubeTranscriptsComponent(Component):
             display_name="Transcript Format",
             options=["text", "chunks"],
             value="text",
-            info="The format of the transcripts. Either 'text' for a single output "
-            "or 'chunks' for timestamped chunks.",
+            info="The format of the transcripts. Either 'text' for a single output or 'chunks' for timestamped chunks.",
             advanced=True,
         ),
         IntInput(
@@ -179,8 +178,7 @@ class YouTubeTranscriptsComponent(Component):
             ],
             value="en",
             info=(
-                "Specify to make sure the transcripts are retrieved in your desired language. "
-                "Defaults to English: 'en'"
+                "Specify to make sure the transcripts are retrieved in your desired language. Defaults to English: 'en'"
             ),
         ),
         DropdownInput(
@@ -188,7 +186,7 @@ class YouTubeTranscriptsComponent(Component):
             display_name="Translation Language",
             advanced=True,
             options=["", "en", "es", "fr", "de", "it", "pt", "ru", "ja", "ko", "hi", "ar", "id"],
-            info="Translate the transcripts to the specified language. " "Leave empty for no translation.",
+            info="Translate the transcripts to the specified language. Leave empty for no translation.",
         ),
     ]
 

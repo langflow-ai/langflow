@@ -1,6 +1,7 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "should be able to share a component on the store by clicking on the share button on the canvas",
@@ -15,35 +16,16 @@ test(
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
 
-    await page.goto("/");
-    await page.waitForTimeout(1000);
-
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(5000);
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
+    await awaitBootstrapTest(page);
 
     await page.getByText("Close", { exact: true }).click();
 
-    await page.waitForTimeout(1000);
-
+    await page.waitForSelector('[data-testid="user-profile-settings"]', {
+      timeout: 3000,
+    });
     await page.getByTestId("user-profile-settings").click();
-    await page.waitForTimeout(500);
 
     await page.getByText("Settings", { exact: true }).first().click();
-
-    await page.waitForTimeout(1000);
 
     await page
       .getByPlaceholder("Insert your API Key")
@@ -51,18 +33,19 @@ test(
 
     await page.getByTestId("api-key-save-button-store").click();
 
-    await page.waitForTimeout(1000);
-
-    await page.getByText("Success! Your API Key has been saved.").isVisible();
-
-    await page.waitForTimeout(1000);
+    await expect(page.getByText("API key saved successfully")).toBeVisible({
+      timeout: 3000,
+    });
 
     await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
       timeout: 100000,
     });
 
     await page.getByTestId("icon-ChevronLeft").first().click();
-    await page.waitForTimeout(1000);
+
+    await expect(page.getByText("New Flow", { exact: true })).toBeVisible({
+      timeout: 3000,
+    });
 
     await page.getByText("New Flow", { exact: true }).click();
 
@@ -73,8 +56,6 @@ test(
     await page.waitForSelector("text=api", { timeout: 10000 });
 
     await page.getByTestId("shared-button-flow").click();
-
-    await page.waitForTimeout(500);
 
     await page.waitForSelector("text=Share Flow", {
       timeout: 10000,
@@ -96,15 +77,11 @@ test(
       timeout: 10000,
     });
 
-    await page.waitForTimeout(500);
-
     await page.waitForSelector("text=share", { timeout: 10000 });
     await page.waitForSelector("text=playground", { timeout: 10000 });
     await page.waitForSelector("text=api", { timeout: 10000 });
 
     await page.getByTestId("shared-button-flow").click();
-
-    await page.waitForTimeout(500);
 
     await page.waitForSelector("text=Publish workflow to the Langflow Store.", {
       timeout: 10000,
