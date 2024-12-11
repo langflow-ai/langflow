@@ -1,8 +1,6 @@
-import asyncio
-
 from langflow.graph import Graph
 from langflow.initial_setup.setup import load_starter_projects
-from langflow.load import load_flow_from_json
+from langflow.load import aload_flow_from_json
 
 # TODO: UPDATE BASIC EXAMPLE
 # def test_load_flow_from_json():
@@ -24,6 +22,6 @@ async def test_load_flow_from_json_object():
     """Test loading a flow from a json file and applying tweaks."""
     result = await load_starter_projects()
     project = result[0][1]
-    loaded = await asyncio.to_thread(load_flow_from_json, project)
+    loaded = await aload_flow_from_json(project)
     assert loaded is not None
     assert isinstance(loaded, Graph)

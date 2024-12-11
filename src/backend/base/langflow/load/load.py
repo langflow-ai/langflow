@@ -2,6 +2,7 @@ import asyncio
 import json
 from pathlib import Path
 
+from aiofile import async_open
 from dotenv import load_dotenv
 from loguru import logger
 
@@ -13,7 +14,7 @@ from langflow.utils.async_helpers import run_until_complete
 from langflow.utils.util import update_settings
 
 
-def load_flow_from_json(
+async def aload_flow_from_json(
     flow: Path | str | dict,
     *,
     tweaks: dict | None = None,
@@ -49,14 +50,15 @@ def load_flow_from_json(
 
     # override env variables with .env file
     if env_file:
-        load_dotenv(env_file, override=True)
+        await asyncio.to_thread(load_dotenv, env_file, override=True)
 
     # Update settings with cache and components path
-    update_settings(cache=cache)
+    await update_settings(cache=cache)
 
     if isinstance(flow, str | Path):
-        with Path(flow).open(encoding="utf-8") as f:
-            flow_graph = json.load(f)
+        async with async_open(Path(flow).name, encoding="utf-8") as f:
+            content = await f.read()
+            flow_graph = json.load(content)
     # If input is a dictionary, assume it's a JSON object
     elif isinstance(flow, dict):
         flow_graph = flow
@@ -69,6 +71,49 @@ def load_flow_from_json(
         graph_data = process_tweaks(graph_data, tweaks)
 
     return Graph.from_payload(graph_data)
+
+
+def load_flow_from_json(
+    flow: Path | str | dict,
+    *,
+    tweaks: dict | None = None,
+    log_level: str | None = None,
+    log_file: str | None = None,
+    env_file: str | None = None,
+    cache: str | None = None,
+    disable_logs: bool | None = True,
+) -> Graph:
+    """Load a flow graph from a JSON file or a JSON object.
+
+    Args:
+        flow (Union[Path, str, dict]): The flow to load. It can be a file path (str or Path object)
+            or a JSON object (dict).
+        tweaks (Optional[dict]): Optional tweaks to apply to the loaded flow graph.
+        log_level (Optional[str]): Optional log level to configure for the flow processing.
+        log_file (Optional[str]): Optional log file to configure for the flow processing.
+        env_file (Optional[str]): Optional .env file to override environment variables.
+        cache (Optional[str]): Optional cache path to update the flow settings.
+        disable_logs (Optional[bool], default=True): Optional flag to disable logs during flow processing.
+            If log_level or log_file are set, disable_logs is not used.
+
+    Returns:
+        Graph: The loaded flow graph as a Graph object.
+
+    Raises:
+        TypeError: If the input is neither a file path (str or Path object) nor a JSON object (dict).
+
+    """
+    return run_until_complete(
+        aload_flow_from_json(
+            flow,
+            tweaks=tweaks,
+            log_level=log_level,
+            log_file=log_file,
+            env_file=env_file,
+            cache=cache,
+            disable_logs=disable_logs,
+        )
+    )
 
 
 async def arun_flow_from_json(
@@ -111,8 +156,7 @@ async def arun_flow_from_json(
     if tweaks is None:
         tweaks = {}
     tweaks["stream"] = False
-    graph = await asyncio.to_thread(
-        load_flow_from_json,
+    graph = await aload_flow_from_json(
         flow=flow,
         tweaks=tweaks,
         log_level=log_level,
