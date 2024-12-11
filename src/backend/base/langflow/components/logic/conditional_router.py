@@ -36,7 +36,7 @@ class ConditionalRouterComponent(Component):
             display_name="Case Sensitive",
             info="If true, the comparison will be case sensitive.",
             value=False,
-            advanced=True,
+            advanced=False,
         ),
         MessageInput(
             name="message",
@@ -49,6 +49,7 @@ class ConditionalRouterComponent(Component):
             display_name="Max Iterations",
             info="The maximum number of iterations for the conditional router.",
             value=10,
+            advanced=True
         ),
         DropdownInput(
             name="default_route",
