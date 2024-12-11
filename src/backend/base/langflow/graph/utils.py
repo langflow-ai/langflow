@@ -183,7 +183,7 @@ async def log_vertex_build(
             valid=valid,
             params=str(params) if params else None,
             # ugly hack to get the model dump with weird datatypes
-            data=json.loads(json.dumps(data.model_dump(), default=str)),
+            data=json.loads(data.model_dump_json()),
             # ugly hack to get the model dump with weird datatypes
             artifacts=json.loads(json.dumps(artifacts, default=str)),
         )
