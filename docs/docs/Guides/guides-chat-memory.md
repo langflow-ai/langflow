@@ -38,7 +38,7 @@ To modify chat memories, from the playground, click the **Options** menu of any 
 ---
 
 
-Chat conversations store messages categorized by a `Session ID`. A a single flow can host multiple session IDs, and different flows can also share the same one.
+Chat conversations store messages categorized by a `Session ID`. A single flow can host multiple session IDs, and different flows can also share the same one.
 
 
 The **Chat Memory** component also retrieves message histories by `Session ID`, which users can change in the component's **Controls** pane.
