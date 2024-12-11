@@ -1,7 +1,15 @@
 import httpx
+from loguru import logger
 
 from langflow.custom import Component
-from langflow.io import DictInput, MultilineInput, Output, SecretStrInput, StrInput
+from langflow.io import (
+    IntInput,
+    MessageTextInput,
+    MultilineInput,
+    NestedDictInput,
+    Output,
+    SecretStrInput,
+)
 from langflow.schema import Data
 
 
@@ -18,24 +26,39 @@ class AgentQL(Component):
             display_name="AgentQL API Key",
             required=True,
             password=True,
-            info="The AgentQL API key. Create at https://dev.agentql.com/",
+            info="The AgentQL API key. Get one at https://dev.agentql.com.",
         ),
-        StrInput(
+        MessageTextInput(
             name="url",
             display_name="URL",
             required=True,
             info="The URL of the webpage to query.",
+            tool_mode=True,
         ),
         MultilineInput(
             name="query",
             display_name="Query",
             required=True,
             info="The AgentQL query to execute.",
+            tool_mode=True,
         ),
-        DictInput(
+        IntInput(
+            name="timeout",
+            display_name="Timeout",
+            info="Timeout in seconds for the request.",
+            value=900,
+        ),
+        # Temporary field type while waiting for a fix. Should be just DictInput with `advanced=True`.
+        NestedDictInput(
             name="params",
-            display_name="Request Params",
-            info="The request params to send with the request.",
+            display_name="Additional Params",
+            info="The additional params to send with the request. For details refer to https://docs.agentql.com/rest-api/api-reference#request-body.",
+            value={
+                "wait_for": 0,
+                "is_scroll_to_bottom_enabled": False,
+                "mode": "fast",
+                "is_screenshot_enabled": False,
+            },
         ),
     ]
 
@@ -44,22 +67,41 @@ class AgentQL(Component):
     ]
 
     def build_output(self) -> Data:
-        params = self.params.__dict__["data"] if self.params else {}
-
-        url = "https://api.agentql.com/v1/query-data"
+        endpoint = "https://api.agentql.com/v1/query-data"
         headers = {
             "X-API-Key": self.api_key,
             "Content-Type": "application/json",
         }
+
         payload = {
-            "query": self.query,
             "url": self.url,
-            "params": params,
+            "query": self.query,
+            "params": self.params,
         }
 
-        response = httpx.post(url, headers=headers, json=payload)
-        response.raise_for_status()
+        try:
+            response = httpx.post(endpoint, headers=headers, json=payload, timeout=self.timeout)
+            response.raise_for_status()
 
-        data = Data(data=response.json())
-        self.status = data
-        return data
+            json = response.json()
+            data = Data(result=json["data"], metadata=json["metadata"])
+
+        except httpx.HTTPStatusError as e:
+            response = e.response
+            if response.status_code in [401, 403]:
+                self.status = "Please, provide a valid API Key. You can create one at https://dev.agentql.com."
+            else:
+                try:
+                    error_json = response.json()
+                    logger.error(
+                        f"Failure response: '{response.status_code} {response.reason_phrase}' with body: {error_json}"
+                    )
+                    msg = error_json["error_info"] if "error_info" in error_json else error_json["detail"]
+                except (ValueError, TypeError):
+                    msg = f"HTTP {e}."
+                self.status = msg
+            raise ValueError(self.status) from e
+
+        else:
+            self.status = data
+            return data
