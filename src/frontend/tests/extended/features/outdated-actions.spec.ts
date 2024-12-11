@@ -1,24 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test("user must be able to update outdated components", async ({ page }) => {
-  await page.goto("/");
+  await awaitBootstrapTest(page);
 
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
-    }
-  } catch (error) {
-    modalCount = 0;
-  }
-
-  while (modalCount === 0) {
-    await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
   await page.locator("span").filter({ hasText: "Close" }).first().click();
 
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
@@ -41,13 +27,14 @@ test("user must be able to update outdated components", async ({ page }) => {
     dataTransfer,
   });
 
-  await page.waitForTimeout(3000);
+  await page.waitForSelector("data-testid=list-card", {
+    timeout: 3000,
+  });
 
   await page.getByTestId("list-card").first().click();
 
-  await page.waitForSelector("text=components are ready to update", {
+  await expect(page.getByText("components are ready to update")).toBeVisible({
     timeout: 30000,
-    state: "visible",
   });
 
   let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
@@ -55,8 +42,7 @@ test("user must be able to update outdated components", async ({ page }) => {
 
   await page.getByText("Update All", { exact: true }).click();
 
-  await page.waitForTimeout(3000);
-
-  outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
-  expect(outdatedComponents).toBe(0);
+  await expect(page.getByTestId("icon-AlertTriangle")).toHaveCount(0, {
+    timeout: 5000,
+  });
 });

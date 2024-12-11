@@ -8,7 +8,6 @@ from fastapi import Depends, HTTPException, Query
 from fastapi_pagination import Params
 from loguru import logger
 from sqlalchemy import delete
-from sqlmodel import Session
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.graph.graph.base import Graph
@@ -17,7 +16,7 @@ from langflow.services.database.models import User
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
-from langflow.services.deps import async_session_scope, get_async_session, get_session
+from langflow.services.deps import async_session_scope, get_session
 from langflow.services.store.utils import get_lf_version_from_pypi
 
 if TYPE_CHECKING:
@@ -31,8 +30,7 @@ MAX_PAGE_SIZE = 50
 MIN_PAGE_SIZE = 1
 
 CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]
-DbSession = Annotated[Session, Depends(get_session)]
-AsyncDbSession = Annotated[AsyncSession, Depends(get_async_session)]
+DbSession = Annotated[AsyncSession, Depends(get_session)]
 
 
 def has_api_terms(word: str):
@@ -263,8 +261,7 @@ def get_suggestion_message(outdated_components: list[str]) -> str:
         )
     components = ", ".join(outdated_components)
     return (
-        f"The flow contains {count} outdated components. "
-        f"We recommend updating the following components: {components}."
+        f"The flow contains {count} outdated components. We recommend updating the following components: {components}."
     )
 
 
