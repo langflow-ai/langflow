@@ -312,7 +312,7 @@ export type TableOptionsTypeAPI = {
   block_edit?: boolean;
   block_sort?: boolean;
   block_filter?: boolean;
-  block_hide?: boolean;
+  block_hide?: boolean | string[];
   block_select?: boolean;
   hide_options?: boolean;
   field_validators?: Array<FieldValidatorType | { [key: string]: FieldValidatorType }>;
