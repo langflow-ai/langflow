@@ -231,7 +231,7 @@ class CustomComponent(BaseComponent):
         field_value: Any,
         field_name: str | None = None,
     ):
-        if self.aupdate_build_config != CustomComponent.aupdate_build_config:
+        if type(self).aupdate_build_config != CustomComponent.aupdate_build_config:
             raise NotImplementedError
         build_config[field_name]["value"] = field_value
         return build_config
@@ -242,7 +242,7 @@ class CustomComponent(BaseComponent):
         field_value: Any,
         field_name: str | None = None,
     ):
-        if self.update_build_config != CustomComponent.update_build_config:
+        if type(self).update_build_config != CustomComponent.update_build_config:
             return await asyncio.to_thread(self.update_build_config, build_config, field_value, field_name)
         build_config[field_name]["value"] = field_value
         return build_config
