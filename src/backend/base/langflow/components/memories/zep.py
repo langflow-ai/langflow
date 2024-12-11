@@ -35,4 +35,4 @@ class ZepChatMemory(LCChatMemoryComponent):
             msg = "Could not import zep-python package. Please install it with `pip install zep-python`."
             raise ImportError(msg) from e
 
-        return ZepCloudChatMessageHistory(session_id=self.session_id, api_key=self.api_key)
+        return ZepCloudChatMessageHistory(session_id=self.session_id, api_key=self.api_key,memory_type="perpetual")
