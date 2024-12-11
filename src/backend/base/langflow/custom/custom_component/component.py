@@ -44,7 +44,6 @@ if TYPE_CHECKING:
     from langflow.graph.edge.schema import EdgeData
     from langflow.graph.vertex.base import Vertex
     from langflow.inputs.inputs import InputTypes
-    from langflow.schema import dotdict
     from langflow.schema.log import LoggableType
 
 
@@ -391,14 +390,6 @@ class Component(CustomComponent):
         self._validate_inputs(params)
         self._validate_outputs()
 
-    def update_inputs(
-        self,
-        build_config: dotdict,
-        field_value: Any,
-        field_name: str | None = None,
-    ):
-        return self.update_build_config(build_config, field_value, field_name)
-
     def run_and_validate_update_outputs(self, frontend_node: dict, field_name: str, field_value: Any):
         frontend_node = self.update_outputs(frontend_node, field_name, field_value)
         if field_name == "tool_mode" or frontend_node.get("tool_mode"):
@@ -625,10 +616,7 @@ class Component(CustomComponent):
     def _set_parameter_or_attribute(self, key, value) -> None:
         if isinstance(value, Component):
             methods = ", ".join([f"'{output.method}'" for output in value.outputs])
-            msg = (
-                f"You set {value.display_name} as value for `{key}`. "
-                f"You should pass one of the following: {methods}"
-            )
+            msg = f"You set {value.display_name} as value for `{key}`. You should pass one of the following: {methods}"
             raise TypeError(msg)
         self._set_input_value(key, value)
         self._parameters[key] = value
