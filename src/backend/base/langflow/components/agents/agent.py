@@ -114,7 +114,6 @@ class AgentComponent(ToolCallingAgentComponent):
 
         return await MemoryComponent().set(**memory_kwargs).retrieve_messages()
 
-
     @override
     def store_agent_history(self, message: Message):
         store_message_kwargs = {
