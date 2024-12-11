@@ -78,7 +78,7 @@ def build_output_logs(vertex, result) -> dict:
 
     for index, output in enumerate(vertex.outputs):
         payload = (
-            component_instance._results
+            component_instance._results.get(output["name"])
             if component_instance.status is None
             else component_instance._artifacts.get(output["name"], {}).get("raw")
         )
