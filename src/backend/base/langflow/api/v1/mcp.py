@@ -1,27 +1,26 @@
 import asyncio
+import json
 import logging
 import traceback
-import json
+from contextvars import ContextVar
 from typing import Annotated
 from uuid import UUID, uuid4
-from contextvars import ContextVar
 
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from pydantic import ValidationError
+from mcp import types
+from mcp.server import Server
+from mcp.server.sse import SseServerTransport
+from sqlmodel import select
 from starlette.background import BackgroundTasks
 
 from langflow.api.v1.chat import build_flow
-from mcp.server import Server
-from mcp.server.sse import SseServerTransport
-import mcp.types as types
-
 from langflow.api.v1.schemas import InputValueRequest
 from langflow.graph import Graph
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models import Flow, User
-from langflow.services.deps import get_session, get_async_session, get_db_service
-from sqlmodel import select
+from langflow.services.deps import get_db_service, get_session
 
 logger = logging.getLogger(__name__)
 if False:
@@ -29,7 +28,7 @@ if False:
     if not logger.handlers:
         handler = logging.StreamHandler()
         handler.setLevel(logging.DEBUG)
-        formatter = logging.Formatter('[%(asctime)s][%(levelname)s] %(message)s')
+        formatter = logging.Formatter("[%(asctime)s][%(levelname)s] %(message)s")
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
@@ -60,25 +59,21 @@ def json_schema_from_flow(flow: Flow) -> dict:
     properties = {}
     required = []
     for node in input_nodes:
-        node_data = node.data['node']
-        template = node_data['template']
+        node_data = node.data["node"]
+        template = node_data["template"]
 
         for field_name, field_data in template.items():
-            if field_data != "Component" and field_data.get('show', False) and not field_data.get('advanced', False):
-                field_type = field_data.get('type', 'string')
+            if field_data != "Component" and field_data.get("show", False) and not field_data.get("advanced", False):
+                field_type = field_data.get("type", "string")
                 properties[field_name] = {
                     "type": field_type,
-                    "description": field_data.get('info', f"Input for {field_name}")
+                    "description": field_data.get("info", f"Input for {field_name}"),
                 }
 
-                if field_data.get('required', False):
+                if field_data.get("required", False):
                     required.append(field_name)
 
-    return {
-        "type": "object",
-        "properties": properties,
-        "required": required
-    }
+    return {"type": "object", "properties": properties, "required": required}
 
 
 @server.list_tools()
@@ -88,7 +83,7 @@ async def handle_list_tools():
         flows = session.exec(select(Flow)).all()
         tools = []
         name_count = {}  # Track name occurrences
-        
+
         for flow in flows:
             if flow.user_id is None:
                 continue
@@ -100,17 +95,19 @@ async def handle_list_tools():
             else:
                 name_count[base_name] = 0
                 unique_name = base_name
-            
+
             tool = types.Tool(
                 name=str(flow.id),  # Use flow.id instead of name
-                description=f"{unique_name}: {flow.description}" if flow.description else f"Tool generated from flow: {unique_name}",
-                inputSchema=json_schema_from_flow(flow)
+                description=f"{unique_name}: {flow.description}"
+                if flow.description
+                else f"Tool generated from flow: {unique_name}",
+                inputSchema=json_schema_from_flow(flow),
             )
             tools.append(tool)
 
         return tools
     except Exception as e:
-        logger.error(f"Error in listing tools: {str(e)}")
+        logger.error(f"Error in listing tools: {e!s}")
         trace = traceback.format_exc()
         logger.error(trace)
         raise e
@@ -122,7 +119,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
     try:
         session = next(get_session())
         background_tasks = BackgroundTasks()
-        
+
         try:
             current_user = current_user_ctx.get()
         except LookupError:
@@ -139,7 +136,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
             processed_inputs[key] = value
 
         # Send initial progress notification
-        #if progress_token := context.meta.progressToken:
+        # if progress_token := context.meta.progressToken:
         #    await context.session.send_progress_notification(
         #        progress_token=progress_token,
         #        progress=0.5,
@@ -148,10 +145,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
 
         conversation_id = str(uuid4())
         input_request = InputValueRequest(
-            input_value=processed_inputs['input_value'], 
-            components=[], 
-            type="chat", 
-            session=conversation_id
+            input_value=processed_inputs["input_value"], components=[], type="chat", session=conversation_id
         )
 
         result = ""
@@ -172,8 +166,14 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                     try:
                         event_data = json.loads(line)
                         if event_data.get("event") == "end_vertex":
-                            result += event_data.get("data", {}).get("build_data", {}).get("data", {}).get(
-                                "results", {}).get("message", {}).get("text", "")
+                            result += (
+                                event_data.get("data", {})
+                                .get("build_data", {})
+                                .get("data", {})
+                                .get("results", {})
+                                .get("message", {})
+                                .get("text", "")
+                            )
                     except json.JSONDecodeError:
                         logger.warning(f"Failed to parse event data: {line}")
                         continue
@@ -183,16 +183,14 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                 notification = types.ProgressNotification(
                     method="notifications/progress",
                     params=types.ProgressNotificationParams(
-                        progressToken=str(uuid4()),
-                        progress=1.0,
-                        message=f"Request cancelled: {str(e)}"
-                    )
+                        progressToken=str(uuid4()), progress=1.0, message=f"Request cancelled: {str(e)}"
+                    ),
                 )
                 await server.request_context.session.send_notification(notification)
                 return [types.TextContent(type="text", text=f"Request cancelled: {str(e)}")]
 
         # Send final progress notification
-        #if progress_token:
+        # if progress_token:
         #    await context.session.send_progress_notification(
         #        progress_token=progress_token,
         #        progress=1.0,
@@ -203,55 +201,49 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
         return [types.TextContent(type="text", text=result)]
 
     except Exception as e:
-        logger.error(f"Error executing tool {name}: {str(e)}")
+        logger.error(f"Error executing tool {name}: {e!s}")
         trace = traceback.format_exc()
         logger.error(trace)
         raise
 
+
 sse = SseServerTransport("/api/v1/mcp")
 
+
 @router.get("/sse", response_class=StreamingResponse)
-async def handle_sse(
-        request: Request,
-        current_user: Annotated[User, Depends(get_current_active_user)]
-):
+async def handle_sse(request: Request, current_user: Annotated[User, Depends(get_current_active_user)]):
     token = current_user_ctx.set(current_user)
     try:
         async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
             try:
                 logger.debug("Starting SSE connection")
                 logger.debug(f"Stream types: read={type(streams[0])}, write={type(streams[1])}")
-                
+
                 # Let's look at the initialization options
                 init_options = server.create_initialization_options()
                 logger.debug(f"Initialization options: {init_options}")
-                
-                await server.run(
-                    streams[0], streams[1], init_options
-                )
+
+                await server.run(streams[0], streams[1], init_options)
             except ValidationError as e:
                 logger.warning(f"Validation error in MCP: {e}")
                 logger.debug(f"Failed message type: {type(e).__name__}")
                 logger.debug(f"Validation error details: {e.errors()}")
                 # Add more details about the failed validation
-                if hasattr(e, 'model'):
+                if hasattr(e, "model"):
                     logger.debug(f"Failed validation model: {e.model.__name__}")
-                if hasattr(e, 'raw_errors'):
+                if hasattr(e, "raw_errors"):
                     logger.debug(f"Raw validation errors: {e.raw_errors}")
             except asyncio.CancelledError:
                 logger.info("SSE connection was cancelled")
             except Exception as e:
-                logger.error(f"Error in MCP: {str(e)}")
+                logger.error(f"Error in MCP: {e!s}")
                 trace = traceback.format_exc()
                 logger.error(trace)
                 raise
     finally:
         current_user_ctx.reset(token)
 
-@router.post("/")
-async def handle_messages(
-        request: Request,
-        current_user: Annotated[User, Depends(get_current_active_user)]
-):
-    await sse.handle_post_message(request.scope, request.receive, request._send)
 
+@router.post("/")
+async def handle_messages(request: Request, current_user: Annotated[User, Depends(get_current_active_user)]):
+    await sse.handle_post_message(request.scope, request.receive, request._send)
