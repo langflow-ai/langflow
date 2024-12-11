@@ -18,6 +18,7 @@ import cloneDeep from "lodash";
 import { ElementRef, forwardRef, useRef, useState } from "react";
 import TableOptions from "./components/TableOptions";
 import resetGrid from "./utils/reset-grid-columns";
+import { TableOptionsTypeAPI } from "@/types/api";
 
 export interface TableComponentProps extends AgGridReactProps {
   columnDefs: NonNullable<ColDef<any, any>[]>;
@@ -41,10 +42,10 @@ export interface TableComponentProps extends AgGridReactProps {
 }
 
 const TableComponent = forwardRef<
-  ElementRef<typeof AgGridReact>,
-  TableComponentProps
+ElementRef<typeof AgGridReact>,
+TableComponentProps
 >(
-  (
+    (
     {
       alertTitle = DEFAULT_TABLE_ALERT_TITLE,
       alertDescription = DEFAULT_TABLE_ALERT_MSG,
