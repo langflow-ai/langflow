@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 from sqlalchemy.exc import NoResultFound
 
-from langflow.api.utils import AsyncDbSession, CurrentActiveUser
+from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.database.models.variable import VariableCreate, VariableRead, VariableUpdate
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import GENERIC_TYPE
@@ -15,7 +15,7 @@ router = APIRouter(prefix="/variables", tags=["Variables"])
 @router.post("/", response_model=VariableRead, status_code=201)
 async def create_variable(
     *,
-    session: AsyncDbSession,
+    session: DbSession,
     variable: VariableCreate,
     current_user: CurrentActiveUser,
 ):
@@ -38,7 +38,7 @@ async def create_variable(
             name=variable.name,
             value=variable.value,
             default_fields=variable.default_fields or [],
-            _type=variable.type or GENERIC_TYPE,
+            type_=variable.type or GENERIC_TYPE,
             session=session,
         )
     except Exception as e:
@@ -50,7 +50,7 @@ async def create_variable(
 @router.get("/", response_model=list[VariableRead], status_code=200)
 async def read_variables(
     *,
-    session: AsyncDbSession,
+    session: DbSession,
     current_user: CurrentActiveUser,
 ):
     """Read all variables."""
@@ -67,7 +67,7 @@ async def read_variables(
 @router.patch("/{variable_id}", response_model=VariableRead, status_code=200)
 async def update_variable(
     *,
-    session: AsyncDbSession,
+    session: DbSession,
     variable_id: UUID,
     variable: VariableUpdate,
     current_user: CurrentActiveUser,
@@ -94,7 +94,7 @@ async def update_variable(
 @router.delete("/{variable_id}", status_code=204)
 async def delete_variable(
     *,
-    session: AsyncDbSession,
+    session: DbSession,
     variable_id: UUID,
     current_user: CurrentActiveUser,
 ) -> None:

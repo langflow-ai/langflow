@@ -17,13 +17,14 @@ from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
 from langflow.memory import delete_message
 from langflow.schema import Data
 from langflow.schema.content_block import ContentBlock
-from langflow.schema.log import SendMessageFunctionType
 from langflow.schema.message import Message
 from langflow.template import Output
 from langflow.utils.constants import MESSAGE_SENDER_AI
 
 if TYPE_CHECKING:
     from langchain_core.messages import BaseMessage
+
+    from langflow.schema.log import SendMessageFunctionType
 
 
 DEFAULT_TOOLS_DESCRIPTION = "A helpful assistant with access to the following tools:"
@@ -163,12 +164,12 @@ class LCAgentComponent(Component):
                     version="v2",
                 ),
                 agent_message,
-                cast(SendMessageFunctionType, self.send_message),
+                cast("SendMessageFunctionType", self.send_message),
             )
         except ExceptionWithMessageError as e:
             msg_id = e.agent_message.id
             await delete_message(id_=msg_id)
-            self._send_message_event(e.agent_message, category="remove_message")
+            await self._send_message_event(e.agent_message, category="remove_message")
             raise
         except Exception:
             raise

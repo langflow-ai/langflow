@@ -46,14 +46,14 @@ class DatabaseVariableService(VariableService, Service):
                             name=var_name,
                             value=value,
                             default_fields=[],
-                            _type=CREDENTIAL_TYPE,
+                            type_=CREDENTIAL_TYPE,
                             session=session,
                         )
                     logger.info(f"Processed {var_name} variable from environment.")
                 except Exception as e:  # noqa: BLE001
                     logger.exception(f"Error processing {var_name} variable: {e!s}")
 
-    def get_variable(
+    def get_variable_sync(
         self,
         user_id: UUID | str,
         name: str,
@@ -163,12 +163,12 @@ class DatabaseVariableService(VariableService, Service):
         value: str,
         *,
         default_fields: Sequence[str] = (),
-        _type: str = GENERIC_TYPE,
+        type_: str = GENERIC_TYPE,
         session: AsyncSession,
     ):
         variable_base = VariableCreate(
             name=name,
-            type=_type,
+            type=type_,
             value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service),
             default_fields=list(default_fields),
         )

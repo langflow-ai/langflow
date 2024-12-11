@@ -79,7 +79,7 @@ class KubernetesSecretService(VariableService, Service):
         raise ValueError(msg)
 
     @override
-    def get_variable(
+    def get_variable_sync(
         self,
         user_id: UUID | str,
         name: str,
@@ -113,14 +113,6 @@ class KubernetesSecretService(VariableService, Service):
             else:
                 names.append(key)
         return names
-
-    @override
-    async def list_variables(
-        self,
-        user_id: UUID | str,
-        session: AsyncSession,
-    ) -> list[str | None]:
-        return await asyncio.to_thread(self.list_variables_sync, user_id, session.sync_session)
 
     def _update_variable(
         self,
@@ -163,15 +155,15 @@ class KubernetesSecretService(VariableService, Service):
         value: str,
         *,
         default_fields: list[str],
-        _type: str,
+        type_: str,
         session: AsyncSession,
     ) -> Variable:
         secret_name = encode_user_id(user_id)
         secret_key = name
-        if _type == CREDENTIAL_TYPE:
+        if type_ == CREDENTIAL_TYPE:
             secret_key = CREDENTIAL_TYPE + "_" + name
         else:
-            _type = GENERIC_TYPE
+            type_ = GENERIC_TYPE
 
         await asyncio.to_thread(
             self.kubernetes_secrets.upsert_secret, secret_name=secret_name, data={secret_key: value}
@@ -179,7 +171,7 @@ class KubernetesSecretService(VariableService, Service):
 
         variable_base = VariableCreate(
             name=name,
-            type=_type,
+            type=type_,
             value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service),
             default_fields=default_fields,
         )

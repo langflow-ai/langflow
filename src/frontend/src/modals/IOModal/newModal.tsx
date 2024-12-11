@@ -14,7 +14,6 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useMessagesStore } from "../../stores/messagesStore";
 import { IOModalPropsType } from "../../types/components";
-import { NodeType } from "../../types/flow";
 import { cn } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import IOFieldView from "./components/IOFieldView";
@@ -166,15 +165,6 @@ export default function IOModal({
     }
     // refetch();
     setLockChat(false);
-    if (chatInput) {
-      setNode(chatInput.id, (node: NodeType) => {
-        const newNode = { ...node };
-        if (newNode.data.node?.template) {
-          newNode.data.node!.template["input_value"].value = chatValue;
-        }
-        return newNode;
-      });
-    }
   }
 
   useEffect(() => {

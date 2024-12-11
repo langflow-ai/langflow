@@ -16,10 +16,8 @@ test(
     }
 
     await page.goto("/");
-    await page.waitForTimeout(1000);
 
     await page.getByTestId("button-store").click();
-    await page.waitForTimeout(1000);
 
     await page.getByTestId("api-key-button-store").click();
 
@@ -29,18 +27,16 @@ test(
 
     await page.getByTestId("api-key-save-button-store").click();
 
-    await page.waitForTimeout(1000);
-    await page.getByText("Success! Your API Key has been saved.").isVisible();
-
-    await page.waitForTimeout(1000);
+    await expect(page.getByText("API key saved successfully")).toBeVisible({
+      timeout: 5000,
+    });
 
     await page.getByTestId("button-store").click();
-    await page.waitForTimeout(1000);
 
-    await page.getByText("Basic RAG").isVisible();
+    await expect(page.getByText("Basic RAG")).toBeVisible({ timeout: 30000 });
 
     await page.getByTestId("select-order-store").click();
-    await page.waitForTimeout(1000);
+
     await page.getByText("Alphabetical").click();
 
     await page.getByText("Album Cover Builder").isVisible();
@@ -61,18 +57,19 @@ test("should filter by type", { tag: ["@release"] }, async ({ page }) => {
     dotenv.config({ path: path.resolve(__dirname, "../../.env") });
   }
   await page.goto("/");
-  await page.waitForTimeout(1000);
   await page.getByTestId("button-store").click();
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="api-key-button-store"]', {
+    timeout: 100000,
+  });
   await page.getByTestId("api-key-button-store").click();
   await page
     .getByPlaceholder("Insert your API Key")
     .fill(process.env.STORE_API_KEY ?? "");
   await page.getByTestId("api-key-save-button-store").click();
-  await page.waitForTimeout(1000);
-  await page.getByText("Success! Your API Key has been saved.").isVisible();
+  await expect(page.getByText("API key saved successfully")).toBeVisible({
+    timeout: 5000,
+  });
   await page.getByTestId("button-store").click();
-  await page.waitForTimeout(1000);
   await page.waitForSelector('[data-testid="likes-Website Content QA"]', {
     timeout: 100000,
   });
@@ -81,7 +78,6 @@ test("should filter by type", { tag: ["@release"] }, async ({ page }) => {
     timeout: 100000,
   });
   await page.getByTestId("flows-button-store").click();
-  await page.waitForTimeout(1000);
   await page.waitForSelector('[data-testid="icon-Group"]', {
     timeout: 100000,
   });
@@ -92,8 +88,9 @@ test("should filter by type", { tag: ["@release"] }, async ({ page }) => {
     timeout: 100000,
   });
   await page.getByTestId("components-button-store").click();
-  await page.waitForTimeout(1000);
-  await page.getByTestId("icon-Group").last().isHidden();
+  await expect(page.getByTestId("icon-Group").last()).toBeHidden({
+    timeout: 30000,
+  });
   await page.waitForSelector('[data-testid="icon-ToyBrick"]', {
     timeout: 100000,
   });
@@ -103,7 +100,6 @@ test("should filter by type", { tag: ["@release"] }, async ({ page }) => {
     timeout: 100000,
   });
   await page.getByTestId("all-button-store").click();
-  await page.waitForTimeout(1000);
   await page.waitForSelector('[data-testid="icon-Group"]', {
     timeout: 100000,
   });
