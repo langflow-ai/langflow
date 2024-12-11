@@ -66,7 +66,7 @@ export default function TableNodeComponent({
   const agGrid = useRef<AgGridReact>(null);
   const componentColumns = columns
     ? columns
-    : generateBackendColumnsFromValue(value ?? [], table_options);
+    : generateBackendColumnsFromValue(value ?? []);
   const AgColumns = FormatColumns(componentColumns);
   function setAllRows() {
     if (agGrid.current && !agGrid.current.api.isDestroyed()) {
@@ -103,22 +103,16 @@ export default function TableNodeComponent({
   function updateComponent() {
     setAllRows();
   }
-  const editable = componentColumns
-    .map((column) => {
-      const isCustomEdit =
-        column.formatter &&
-        ((column.formatter === "text" && column.edit_mode !== "inline") ||
-          column.formatter === "json");
-      return {
-        field: column.name,
-        onUpdate: updateComponent,
-        editableCell: isCustomEdit ? false : true,
-      };
-    })
-    .filter(
-      (col) =>
-        columns?.find((c) => c.name === col.field)?.disable_edit !== true,
-    );
+  const editable = componentColumns.map((column) => {
+    const isCustomEdit =
+      column.formatter &&
+      (column.formatter === "text" || column.formatter === "json");
+    return {
+      field: column.name,
+      onUpdate: updateComponent,
+      editableCell: isCustomEdit ? false : true,
+    };
+  });
 
   return (
     <div
@@ -137,10 +131,10 @@ export default function TableNodeComponent({
           onSelectionChanged={(event: SelectionChangedEvent) => {
             setSelectedNodes(event.api.getSelectedNodes());
           }}
-          rowSelection={table_options?.block_select ? undefined : "multiple"}
+          rowSelection="multiple"
           suppressRowClickSelection={true}
           editable={editable}
-          pagination={!table_options?.hide_options}
+          pagination={true}
           addRow={addRow}
           onDelete={deleteRow}
           onDuplicate={duplicateRow}
@@ -148,7 +142,6 @@ export default function TableNodeComponent({
           className="h-full w-full"
           columnDefs={AgColumns}
           rowData={value}
-          context={{ field_parsers: table_options?.field_parsers }}
         >
           <Button
             disabled={disabled}
@@ -159,10 +152,7 @@ export default function TableNodeComponent({
               (disabled ? "pointer-events-none cursor-not-allowed" : "")
             }
           >
-            <ForwardedIconComponent
-              name={trigger_icon}
-              className="mt-px h-4 w-4"
-            />
+            <ForwardedIconComponent name={trigger_icon} className="mt-px h-4 w-4" />
             <span className="font-normal">{trigger_text}</span>
           </Button>
         </TableModal>

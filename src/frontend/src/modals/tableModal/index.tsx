@@ -3,11 +3,10 @@ import TableComponent, {
   TableComponentProps,
 } from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { Button } from "@/components/ui/button";
-import { TableOptionsTypeAPI } from "@/types/api";
 import { DialogClose } from "@radix-ui/react-dialog";
-import { AgGridReact } from "ag-grid-react";
-import { ElementRef, ForwardedRef, forwardRef } from "react";
+import { ElementRef, forwardRef, useState } from "react";
 import BaseModal from "../baseModal";
+import { TableOptionsTypeAPI } from "@/types/api";
 
 interface TableModalProps extends TableComponentProps {
   tableTitle: string;
@@ -15,27 +14,18 @@ interface TableModalProps extends TableComponentProps {
   disabled?: boolean;
   children: React.ReactNode;
   tableOptions?: TableOptionsTypeAPI;
-  hideColumns?: boolean | string[];
 }
 
-const TableModal = forwardRef<AgGridReact, TableModalProps>(
+const TableModal = forwardRef<
+  ElementRef<typeof TableComponent>,
+  TableModalProps
+>(
   (
     { tableTitle, description, children, disabled, ...props }: TableModalProps,
-    ref: ForwardedRef<AgGridReact>,
+    ref,
   ) => {
     return (
-      <BaseModal
-        onEscapeKeyDown={(e) => {
-          if (
-            (
-              ref as React.RefObject<AgGridReact>
-            )?.current?.api.getEditingCells().length
-          ) {
-            e.preventDefault();
-          }
-        }}
-        disable={disabled}
-      >
+      <BaseModal disable={disabled}>
         <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
         <BaseModal.Header description={description}>
           <span className="pr-2">{tableTitle}</span>
