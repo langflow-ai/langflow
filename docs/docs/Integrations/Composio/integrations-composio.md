@@ -11,7 +11,7 @@ Instead of juggling multiple integrations and components in your flow, connect t
 
 - [A Composio API key](https://app.composio.dev/)
 - [An OpenAI API key](https://platform.openai.com/)
-- [A Gmail account](mail.google.com)
+- [A Gmail account](https://mail.google.com)
 
 ## Connect Langflow to a Composio tool
 
