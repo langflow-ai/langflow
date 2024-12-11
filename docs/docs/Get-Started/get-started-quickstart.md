@@ -120,13 +120,13 @@ To build the flow, follow these steps:
 
 1. Disconnect the **Chat Input** component from the **OpenAI** component by double-clicking on the connecting line.
 2. Click **Vector Stores**, select the **Astra DB component**, and then drag it to the canvas.
-The **Astra DB component** component connects to your **Astra DB component** database.
+The [Astra DB vector store](/components-vector-stores#astra-db-vector-store) component connects to your **Astra DB component** database.
 3. Click **Processing**, select the **Split Text** component, and then drag it to the canvas.
-The Split Text component splits the loaded text into smaller chunks.
+The [Split Text](/components-helpers#split-text) component splits the loaded text into smaller chunks.
 4. Click **Processing**, select the **Parse Data** component, and then drag it to the canvas.
-The Parse Data component converts the data from the **Astra DB component** component into plain text.
+The [Parse Data](/components-helpers#parse-data) component converts the data from the **Astra DB component** component into plain text.
 5. Click **Embeddings**, select the **OpenAI Embeddings** component, and then drag it to the canvas.
-The OpenAI Embeddings component generates embeddings for the user's input, which are compared to the vector data in the database.
+The [OpenAI Embeddings](/components-embedding-models#openai-embeddings) component generates embeddings for the user's input, which are compared to the vector data in the database.
 6. Connect the new components into the existing flow, so your flow looks like this:
 
 ![](/img/quickstart-add-document-ingestion.png)
@@ -134,7 +134,7 @@ The OpenAI Embeddings component generates embeddings for the user's input, which
 7. Configure the **Astra DB component** component.
 	1. In the **Astra DB Application Token** field, add your **Astra DB** application token.
 	2. In the **API Endpoint** field, add your **Astra DB** API endpoint. This value is found in your [Astra DB deployment](https://astra.datastax.com) and looks similar to `https://ASTRA_DB_ID-ASTRA_DB_REGION.apps.astra.datastax.com`.
-	3. Select your collection. The collection's **Dimensions** value must match the dimensions of the **OpenAI Embeddings Model**. If you're unsure, enter `1536` and select the `text-embedding-ada-002` model in the **OpenAI Embeddings** component.
+	3. In the **Collection** field, enter your Astra DB collection's name. Collections are created in your [Astra DB deployment](https://astra.datastax.com) for storing vector data. The collection’s **Dimensions** value must match the dimensions of the **OpenAI Embeddings Model**. If you’re unsure, enter `1536` and select the `text-embedding-ada-002` model in the OpenAI Embeddings component.
 	4. Select **Embedding Model** to bring your own embeddings model, which is the connected **OpenAI Embeddings** component.
 
 If you used Langflow's **Global Variables** feature, the RAG application flow components are already configured with the necessary credentials.
@@ -153,7 +153,7 @@ Answer the question
 
 2. In the **File** component, upload a text file from your local machine with data you want to ingest into the **Astra DB component** database.
 This example uploads an up-to-date CSV about Oscar winners.
-3. Click [material-icons]#play_arrow# **Playground** to start a chat session.
+3. Click **Playground** to start a chat session.
 4. Ask the bot: `Who won the Oscar in 2024 for best movie?`
 5. The bot's response should be similar to this:
 
@@ -171,6 +171,6 @@ This example used movie data, but the RAG pattern can be used with any data you 
 
 Make the **Astra DB component** database the brain that [Agents](/agents-overview) use to make decisions.
 
-Expose this flow as an xref:ROOT:api.adoc[API endpoint] and call it from your external applications.
+Expose this flow as an [API](/workspace-api) and call it from your external applications.
 
-For more on the **Astra DB component** component, see (/components-vector-stores#astra-db)
+For more on the **Astra DB component** component, see [Astra DB vector store](/components-vector-stores#astra-db-vector-store).
