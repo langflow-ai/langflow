@@ -71,7 +71,7 @@ Add your OpenAI API key to the OpenAI model component, and add a prompt to the P
 	1. In the OpenAI component’s OpenAI API Key field, click the language Globe icon, and then click **Add New Variable**. 
 	Alternatively, click your username in the top right corner, and then click **Settings**, **Global Variables**, and then **Add New**.
 	2. Name your variable. Paste your OpenAI API key (sk-…​) in the Value field.
-	3. In the Apply To Fields field, select the OpenAI API Key field to apply this variable to all OpenAI Embeddings components.
+	3. In the **Apply To Fields** field, select the OpenAI API Key field to apply this variable to all OpenAI Embeddings components.
 
 2. To add a prompt to the **Prompt** component, click the **Template** field, and then enter your prompt.
 The prompt guides the bot's responses to input.
@@ -133,7 +133,7 @@ The [OpenAI Embeddings](/components-embedding-models#openai-embeddings) componen
 8. Configure the **Astra DB** component.
 	1. In the **Astra DB Application Token** field, add your **Astra DB** application token.
 	2. In the **API Endpoint** field, add your **Astra DB** API endpoint. This value is found in your [Astra DB deployment](https://astra.datastax.com) and looks similar to `https://ASTRA_DB_ID-ASTRA_DB_REGION.apps.astra.datastax.com`.
-	3. In the **Collection** field, enter your Astra DB collection's name. Collections are created in your [Astra DB deployment](https://astra.datastax.com) for storing vector data. The collection’s **Dimensions** value must match the dimensions of the **OpenAI Embeddings Model**. If you’re unsure, enter `1536` and select the `text-embedding-ada-002` model in the OpenAI Embeddings component. For more on collections, see the [Datastax documentation](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection).
+	3. In the **Collection** field, enter your Astra DB collection's name. Collections are created in your [Astra DB deployment](https://astra.datastax.com) for storing vector data. The collection’s **Dimensions** value must match the dimensions of the **OpenAI Embeddings Model**. If you’re unsure, enter `1536` and select the `text-embedding-ada-002` model in the OpenAI Embeddings component. For more on collections, see the [DataStax Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection).
 	4. Select **Embedding Model** to bring your own embeddings model, which is the connected **OpenAI Embeddings** component.
 
 If you used Langflow's **Global Variables** feature, the RAG application flow components are already configured with the necessary credentials.
