@@ -82,11 +82,7 @@ class DirectoryComponent(Component):
         resolved_path = self.resolve_path(path)
 
         file_paths = retrieve_file_paths(
-            resolved_path,
-            load_hidden=load_hidden,
-            recursive=recursive,
-            depth=depth,
-            types=types
+            resolved_path, load_hidden=load_hidden, recursive=recursive, depth=depth, types=types
         )
 
         if types:
@@ -94,16 +90,9 @@ class DirectoryComponent(Component):
 
         loaded_data = []
         if use_multithreading:
-            loaded_data = parallel_load_data(
-                file_paths,
-                silent_errors=silent_errors,
-                max_concurrency=max_concurrency
-            )
+            loaded_data = parallel_load_data(file_paths, silent_errors=silent_errors, max_concurrency=max_concurrency)
         else:
-            loaded_data = [
-                parse_text_file_to_data(file_path, silent_errors=silent_errors)
-                for file_path in file_paths
-            ]
+            loaded_data = [parse_text_file_to_data(file_path, silent_errors=silent_errors) for file_path in file_paths]
 
         loaded_data = list(filter(None, loaded_data))
         self.status = loaded_data
