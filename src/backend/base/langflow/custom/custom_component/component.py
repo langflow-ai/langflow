@@ -1184,6 +1184,7 @@ class Component(CustomComponent):
 
         return TableInput(
             name=TOOLS_METADATA_INPUT_NAME,
+            info="Use the table to configure the tools.",
             display_name="Toolset configuration",
             real_time_refresh=True,
             table_schema=TOOL_TABLE_SCHEMA,
@@ -1191,13 +1192,13 @@ class Component(CustomComponent):
             trigger_icon="Hammer",
             trigger_text="Open toolset",
             table_options=TableOptions(
-                allow_add=False,
-                allow_delete=False,
-                allow_edit=True,
-                allow_sort=False,
-                allow_filter=False,
-                allow_hide=False,
-                allow_select=False,
+                block_add=False,
+                block_delete=False,
+                block_edit=True,
+                block_sort=False,
+                block_filter=False,
+                block_hide=False,
+                block_select=False,
                 hide_options=True,
             ),
         )

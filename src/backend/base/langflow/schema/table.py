@@ -68,12 +68,12 @@ class FieldValidatorType(str, Enum):
 
 
 class TableOptions(BaseModel):
-    allow_add: bool = Field(default=True)
-    allow_delete: bool = Field(default=True)
-    allow_edit: bool = Field(default=True)
-    allow_sort: bool = Field(default=True)
-    allow_filter: bool = Field(default=True)
-    allow_hide: bool = Field(default=True)
-    allow_select: bool = Field(default=True)
+    block_add: bool = Field(default=True)
+    block_delete: bool = Field(default=True)
+    block_edit: bool = Field(default=True)
+    block_sort: bool = Field(default=True)
+    block_filter: bool = Field(default=True)
+    block_hide: bool = Field(default=True)
+    block_select: bool = Field(default=True)
     hide_options: bool = Field(default=False)
     field_validators: list[FieldValidatorType | dict[str, FieldValidatorType]] = Field(default=[])
