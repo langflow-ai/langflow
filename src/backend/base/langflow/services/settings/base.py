@@ -1,3 +1,4 @@
+import asyncio
 import contextlib
 import json
 import os
@@ -7,6 +8,7 @@ from typing import Any, Literal
 
 import orjson
 import yaml
+from aiofile import async_open
 from loguru import logger
 from pydantic import field_validator
 from pydantic.fields import FieldInfo
@@ -334,8 +336,8 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
-    def update_from_yaml(self, file_path: str, *, dev: bool = False) -> None:
-        new_settings = load_settings_from_yaml(file_path)
+    async def update_from_yaml(self, file_path: str, *, dev: bool = False) -> None:
+        new_settings = await load_settings_from_yaml(file_path)
         self.components_path = new_settings.components_path or []
         self.dev = dev
 
@@ -388,7 +390,7 @@ def save_settings_to_yaml(settings: Settings, file_path: str) -> None:
         yaml.dump(settings_dict, f)
 
 
-def load_settings_from_yaml(file_path: str) -> Settings:
+async def load_settings_from_yaml(file_path: str) -> Settings:
     # Check if a string is a valid path or a file name
     if "/" not in file_path:
         # Get current path
@@ -397,8 +399,9 @@ def load_settings_from_yaml(file_path: str) -> Settings:
     else:
         file_path_ = Path(file_path)
 
-    with file_path_.open(encoding="utf-8") as f:
-        settings_dict = yaml.safe_load(f)
+    async with async_open(file_path_.name, encoding="utf-8") as f:
+        content = await f.read()
+        settings_dict = yaml.safe_load(content)
         settings_dict = {k.upper(): v for k, v in settings_dict.items()}
 
         for key in settings_dict:
@@ -407,4 +410,4 @@ def load_settings_from_yaml(file_path: str) -> Settings:
                 raise KeyError(msg)
             logger.debug(f"Loading {len(settings_dict[key])} {key} from {file_path}")
 
-    return Settings(**settings_dict)
+    return await asyncio.to_thread(Settings, **settings_dict)
