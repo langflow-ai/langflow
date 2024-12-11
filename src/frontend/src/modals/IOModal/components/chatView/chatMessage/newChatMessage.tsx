@@ -551,7 +551,7 @@ export default function ChatMessage({
                                     components={{
                                       p({ node, ...props }) {
                                         return (
-                                          <span className=" w-fit max-w-full">
+                                          <span className="w-fit max-w-full">
                                             {props.children}
                                           </span>
                                         );
