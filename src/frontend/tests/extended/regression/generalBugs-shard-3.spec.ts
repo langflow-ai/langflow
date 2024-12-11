@@ -42,7 +42,7 @@ test(
     await page.mouse.up();
     await page.mouse.down();
 
-    await adjustScreenView(page);
+    await adjustScreenView(page, { numberOfZoomOut: 1 });
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat input");
@@ -59,7 +59,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai");
 
-    await adjustScreenView(page);
+    await adjustScreenView(page, { numberOfZoomOut: 1 });
 
     await page
       .getByTestId("modelsOpenAI")
@@ -68,6 +68,13 @@ test(
     await page.mouse.down();
 
     await initialGPTsetup(page);
+
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 5000,
+      state: "visible",
+    });
+
+    await page.getByTestId("fit_view").click();
 
     const elementsChatInput = await page
       .locator('[data-testid="handle-chatinput-shownode-message-right"]')
@@ -81,10 +88,6 @@ test(
         break;
       }
     }
-
-    // Click and hold on the first element
-    await page.getByTestId("zoom_in").click();
-    await page.getByTestId("zoom_in").click();
 
     await page.locator(".react-flow__pane").click();
 
