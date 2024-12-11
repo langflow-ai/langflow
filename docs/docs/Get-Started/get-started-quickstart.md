@@ -119,8 +119,10 @@ Adding vector RAG to the basic prompting flow will look like this when completed
 To build the flow, follow these steps:
 
 1. Disconnect the **Chat Input** component from the **OpenAI** component by double-clicking on the connecting line.
-2. Click **Vector Stores**, select the **Astra DB component**, and then drag it to the canvas.
+2. Click **Vector Stores**, select the **Astra DB** component, and then drag it to the canvas.
 The [Astra DB vector store](/components-vector-stores#astra-db-vector-store) component connects to your **Astra DB component** database.
+3. Click **Data**, select the **File** component, and then drag it to the canvas.
+The [File](/components-data#file) component loads files from your local machine.
 3. Click **Processing**, select the **Split Text** component, and then drag it to the canvas.
 The [Split Text](/components-helpers#split-text) component splits the loaded text into smaller chunks.
 4. Click **Processing**, select the **Parse Data** component, and then drag it to the canvas.
@@ -131,10 +133,10 @@ The [OpenAI Embeddings](/components-embedding-models#openai-embeddings) componen
 
 ![](/img/quickstart-add-document-ingestion.png)
 
-7. Configure the **Astra DB component** component.
+8. Configure the **Astra DB component** component.
 	1. In the **Astra DB Application Token** field, add your **Astra DB** application token.
 	2. In the **API Endpoint** field, add your **Astra DB** API endpoint. This value is found in your [Astra DB deployment](https://astra.datastax.com) and looks similar to `https://ASTRA_DB_ID-ASTRA_DB_REGION.apps.astra.datastax.com`.
-	3. In the **Collection** field, enter your Astra DB collection's name. Collections are created in your [Astra DB deployment](https://astra.datastax.com) for storing vector data. The collection’s **Dimensions** value must match the dimensions of the **OpenAI Embeddings Model**. If you’re unsure, enter `1536` and select the `text-embedding-ada-002` model in the OpenAI Embeddings component.
+	3. In the **Collection** field, enter your Astra DB collection's name. Collections are created in your [Astra DB deployment](https://astra.datastax.com) for storing vector data. The collection’s **Dimensions** value must match the dimensions of the **OpenAI Embeddings Model**. If you’re unsure, enter `1536` and select the `text-embedding-ada-002` model in the OpenAI Embeddings component. For more on collections, see the [Datastax documentation](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection).
 	4. Select **Embedding Model** to bring your own embeddings model, which is the connected **OpenAI Embeddings** component.
 
 If you used Langflow's **Global Variables** feature, the RAG application flow components are already configured with the necessary credentials.
