@@ -1,6 +1,7 @@
 import asyncio
 import copy
 import json
+import os
 import shutil
 from collections import defaultdict
 from copy import deepcopy
@@ -628,15 +629,16 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
                 project_gradient,
                 project_tags,
             ) = get_project_data(project)
-            updated_project_data = update_projects_components_with_latest_component_versions(
-                project_data.copy(), all_types_dict
-            )
-            updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
-            if updated_project_data != project_data:
-                project_data = updated_project_data
-                # We also need to update the project data in the file
-
-                await update_project_file(project_path, project, updated_project_data)
+            do_update_starter_projects = os.environ.get("LANGFLOW_UPDATE_STARTER_PROJECTS", "true").lower() == "true"
+            if do_update_starter_projects:
+                updated_project_data = update_projects_components_with_latest_component_versions(
+                    project_data.copy(), all_types_dict
+                )
+                updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
+                if updated_project_data != project_data:
+                    project_data = updated_project_data
+                    # We also need to update the project data in the file
+                    await update_project_file(project_path, project, updated_project_data)
             if project_name and project_data:
                 for existing_project in await get_all_flows_similar_to_project(session, new_folder.id):
                     await session.delete(existing_project)
