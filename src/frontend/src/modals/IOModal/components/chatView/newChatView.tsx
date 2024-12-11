@@ -189,7 +189,7 @@ export default function ChatView({
         <div
           className={
             displayLoadingMessage
-              ? " w-full max-w-[768px] py-4 word-break-break-word md:w-5/6"
+              ? "w-full max-w-[768px] py-4 word-break-break-word md:w-5/6"
               : ""
           }
           ref={ref}
