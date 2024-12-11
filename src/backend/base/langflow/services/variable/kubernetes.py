@@ -79,7 +79,7 @@ class KubernetesSecretService(VariableService, Service):
         raise ValueError(msg)
 
     @override
-    def get_variable(
+    def get_variable_sync(
         self,
         user_id: UUID | str,
         name: str,
@@ -113,14 +113,6 @@ class KubernetesSecretService(VariableService, Service):
             else:
                 names.append(key)
         return names
-
-    @override
-    async def list_variables(
-        self,
-        user_id: UUID | str,
-        session: AsyncSession,
-    ) -> list[str | None]:
-        return await asyncio.to_thread(self.list_variables_sync, user_id, session.sync_session)
 
     def _update_variable(
         self,
