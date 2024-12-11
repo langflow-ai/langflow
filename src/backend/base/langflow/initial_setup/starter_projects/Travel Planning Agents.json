@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-ImgzA",
+            "id": "Agent-LAoR7",
             "name": "response",
             "output_types": [
               "Message"
@@ -15,18 +15,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-ZNoa2",
+            "id": "ChatOutput-EXlcd",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-ImgzA{œdataTypeœ:œAgentœ,œidœ:œAgent-ImgzAœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-ZNoa2{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-ZNoa2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Agent-ImgzA",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-ImgzAœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-ZNoa2",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-ZNoa2œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Agent-LAoR7{œdataTypeœ:œAgentœ,œidœ:œAgent-LAoR7œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-EXlcd{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-EXlcdœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Agent-LAoR7",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-LAoR7œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-EXlcd",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-EXlcdœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -34,7 +34,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-cj2PH",
+            "id": "Agent-qPNh7",
             "name": "response",
             "output_types": [
               "Message"
@@ -42,18 +42,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-ImgzA",
+            "id": "Agent-LAoR7",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-cj2PH{œdataTypeœ:œAgentœ,œidœ:œAgent-cj2PHœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-ImgzA{œfieldNameœ:œinput_valueœ,œidœ:œAgent-ImgzAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Agent-cj2PH",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-cj2PHœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-ImgzA",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-ImgzAœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Agent-qPNh7{œdataTypeœ:œAgentœ,œidœ:œAgent-qPNh7œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-LAoR7{œfieldNameœ:œinput_valueœ,œidœ:œAgent-LAoR7œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Agent-qPNh7",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-qPNh7œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-LAoR7",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-LAoR7œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -61,7 +61,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-rPh1n",
+            "id": "Agent-uVWaZ",
             "name": "response",
             "output_types": [
               "Message"
@@ -69,18 +69,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-cj2PH",
+            "id": "Agent-qPNh7",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-rPh1n{œdataTypeœ:œAgentœ,œidœ:œAgent-rPh1nœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-cj2PH{œfieldNameœ:œinput_valueœ,œidœ:œAgent-cj2PHœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Agent-rPh1n",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-rPh1nœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-cj2PH",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-cj2PHœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Agent-uVWaZ{œdataTypeœ:œAgentœ,œidœ:œAgent-uVWaZœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-qPNh7{œfieldNameœ:œinput_valueœ,œidœ:œAgent-qPNh7œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Agent-uVWaZ",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-uVWaZœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-qPNh7",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-qPNh7œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -88,7 +88,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "SearchAPI",
-            "id": "SearchAPI-Aez0t",
+            "id": "SearchAPI-zMZv7",
             "name": "api_build_tool",
             "output_types": [
               "Tool"
@@ -96,7 +96,7 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-rPh1n",
+            "id": "Agent-uVWaZ",
             "inputTypes": [
               "Tool",
               "BaseTool",
@@ -105,11 +105,11 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-SearchAPI-Aez0t{œdataTypeœ:œSearchAPIœ,œidœ:œSearchAPI-Aez0tœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-Agent-rPh1n{œfieldNameœ:œtoolsœ,œidœ:œAgent-rPh1nœ,œinputTypesœ:[œToolœ,œBaseToolœ,œStructuredToolœ],œtypeœ:œotherœ}",
-        "source": "SearchAPI-Aez0t",
-        "sourceHandle": "{œdataTypeœ: œSearchAPIœ, œidœ: œSearchAPI-Aez0tœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-rPh1n",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-rPh1nœ, œinputTypesœ: [œToolœ, œBaseToolœ, œStructuredToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-SearchAPI-zMZv7{œdataTypeœ:œSearchAPIœ,œidœ:œSearchAPI-zMZv7œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-Agent-uVWaZ{œfieldNameœ:œtoolsœ,œidœ:œAgent-uVWaZœ,œinputTypesœ:[œToolœ,œBaseToolœ,œStructuredToolœ],œtypeœ:œotherœ}",
+        "source": "SearchAPI-zMZv7",
+        "sourceHandle": "{œdataTypeœ: œSearchAPIœ, œidœ: œSearchAPI-zMZv7œ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-uVWaZ",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-uVWaZœ, œinputTypesœ: [œToolœ, œBaseToolœ, œStructuredToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -117,7 +117,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "url_content_fetcher",
-            "id": "url_content_fetcher-AyGpn",
+            "id": "url_content_fetcher-p0SUP",
             "name": "api_build_tool",
             "output_types": [
               "Tool"
@@ -125,7 +125,7 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-cj2PH",
+            "id": "Agent-qPNh7",
             "inputTypes": [
               "Tool",
               "BaseTool",
@@ -134,11 +134,11 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-url_content_fetcher-AyGpn{œdataTypeœ:œurl_content_fetcherœ,œidœ:œurl_content_fetcher-AyGpnœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-Agent-cj2PH{œfieldNameœ:œtoolsœ,œidœ:œAgent-cj2PHœ,œinputTypesœ:[œToolœ,œBaseToolœ,œStructuredToolœ],œtypeœ:œotherœ}",
-        "source": "url_content_fetcher-AyGpn",
-        "sourceHandle": "{œdataTypeœ: œurl_content_fetcherœ, œidœ: œurl_content_fetcher-AyGpnœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-cj2PH",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-cj2PHœ, œinputTypesœ: [œToolœ, œBaseToolœ, œStructuredToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-url_content_fetcher-p0SUP{œdataTypeœ:œurl_content_fetcherœ,œidœ:œurl_content_fetcher-p0SUPœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-Agent-qPNh7{œfieldNameœ:œtoolsœ,œidœ:œAgent-qPNh7œ,œinputTypesœ:[œToolœ,œBaseToolœ,œStructuredToolœ],œtypeœ:œotherœ}",
+        "source": "url_content_fetcher-p0SUP",
+        "sourceHandle": "{œdataTypeœ: œurl_content_fetcherœ, œidœ: œurl_content_fetcher-p0SUPœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-qPNh7",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-qPNh7œ, œinputTypesœ: [œToolœ, œBaseToolœ, œStructuredToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -146,7 +146,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "CalculatorTool",
-            "id": "CalculatorTool-dGfrj",
+            "id": "CalculatorTool-v71XZ",
             "name": "api_build_tool",
             "output_types": [
               "Tool"
@@ -154,7 +154,7 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-ImgzA",
+            "id": "Agent-LAoR7",
             "inputTypes": [
               "Tool",
               "BaseTool",
@@ -163,11 +163,11 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-CalculatorTool-dGfrj{œdataTypeœ:œCalculatorToolœ,œidœ:œCalculatorTool-dGfrjœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-Agent-ImgzA{œfieldNameœ:œtoolsœ,œidœ:œAgent-ImgzAœ,œinputTypesœ:[œToolœ,œBaseToolœ,œStructuredToolœ],œtypeœ:œotherœ}",
-        "source": "CalculatorTool-dGfrj",
-        "sourceHandle": "{œdataTypeœ: œCalculatorToolœ, œidœ: œCalculatorTool-dGfrjœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-ImgzA",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-ImgzAœ, œinputTypesœ: [œToolœ, œBaseToolœ, œStructuredToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-CalculatorTool-v71XZ{œdataTypeœ:œCalculatorToolœ,œidœ:œCalculatorTool-v71XZœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-Agent-LAoR7{œfieldNameœ:œtoolsœ,œidœ:œAgent-LAoR7œ,œinputTypesœ:[œToolœ,œBaseToolœ,œStructuredToolœ],œtypeœ:œotherœ}",
+        "source": "CalculatorTool-v71XZ",
+        "sourceHandle": "{œdataTypeœ: œCalculatorToolœ, œidœ: œCalculatorTool-v71XZœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-LAoR7",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-LAoR7œ, œinputTypesœ: [œToolœ, œBaseToolœ, œStructuredToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -175,7 +175,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-CIU0F",
+            "id": "ChatInput-iWWoE",
             "name": "message",
             "output_types": [
               "Message"
@@ -183,24 +183,24 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-rPh1n",
+            "id": "Agent-uVWaZ",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-CIU0F{œdataTypeœ:œChatInputœ,œidœ:œChatInput-CIU0Fœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-rPh1n{œfieldNameœ:œinput_valueœ,œidœ:œAgent-rPh1nœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-CIU0F",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-CIU0Fœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-rPh1n",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-rPh1nœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-iWWoE{œdataTypeœ:œChatInputœ,œidœ:œChatInput-iWWoEœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-uVWaZ{œfieldNameœ:œinput_valueœ,œidœ:œAgent-uVWaZœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-iWWoE",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-iWWoEœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-uVWaZ",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-uVWaZœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-CIU0F",
+          "id": "ChatInput-iWWoE",
           "node": {
             "base_classes": [
               "Message"
@@ -470,25 +470,25 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "height": 234,
-        "id": "ChatInput-CIU0F",
+        "height": 262,
+        "id": "ChatInput-iWWoE",
         "position": {
           "x": 1756.77096149088,
-          "y": 305.19157712497963
+          "y": 292.73476765276695
         },
         "positionAbsolute": {
           "x": 1756.77096149088,
-          "y": 305.19157712497963
+          "y": 292.73476765276695
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode",
-        "width": 320
+        "width": 360
       },
       {
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-ZNoa2",
+          "id": "ChatOutput-EXlcd",
           "node": {
             "base_classes": [
               "Message"
@@ -747,8 +747,8 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "height": 234,
-        "id": "ChatOutput-ZNoa2",
+        "height": 262,
+        "id": "ChatOutput-EXlcd",
         "position": {
           "x": 4349.229697347143,
           "y": 620.5490494265098
@@ -759,15 +759,14 @@
         },
         "selected": false,
         "type": "genericNode",
-        "width": 320
+        "width": 360
       },
       {
         "data": {
-          "id": "SearchAPI-Aez0t",
+          "id": "SearchAPI-zMZv7",
           "node": {
             "base_classes": [
               "Data",
-              "list",
               "Tool"
             ],
             "beta": false,
@@ -781,13 +780,14 @@
               "engine",
               "api_key",
               "input_value",
-              "search_params"
+              "search_params",
+              "max_results",
+              "max_snippet_length"
             ],
             "frozen": false,
+            "icon": "SearchAPI",
             "legacy": false,
-            "lf_version": "1.0.19.post2",
             "metadata": {},
-            "official": false,
             "output_types": [],
             "outputs": [
               {
@@ -831,7 +831,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -839,7 +839,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "EnE19gGWNyewCPsMj5c1fMGx"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -857,7 +857,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Any\n\nfrom langchain.tools import StructuredTool\nfrom langchain_community.utilities.searchapi import SearchApiAPIWrapper\nfrom pydantic import BaseModel, Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import DictInput, IntInput, MessageTextInput, MultilineInput, SecretStrInput\nfrom langflow.schema import Data\n\n\nclass SearchAPIComponent(LCToolComponent):\n    display_name: str = \"Search API\"\n    description: str = \"Call the searchapi.io API with result limiting\"\n    name = \"SearchAPI\"\n    documentation: str = \"https://www.searchapi.io/docs/google\"\n\n    inputs = [\n        MessageTextInput(name=\"engine\", display_name=\"Engine\", value=\"google\"),\n        SecretStrInput(name=\"api_key\", display_name=\"SearchAPI API Key\", required=True),\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n        ),\n        DictInput(name=\"search_params\", display_name=\"Search parameters\", advanced=True, is_list=True),\n        IntInput(name=\"max_results\", display_name=\"Max Results\", value=5, advanced=True),\n        IntInput(name=\"max_snippet_length\", display_name=\"Max Snippet Length\", value=100, advanced=True),\n    ]\n\n    class SearchAPISchema(BaseModel):\n        query: str = Field(..., description=\"The search query\")\n        params: dict[str, Any] = Field(default_factory=dict, description=\"Additional search parameters\")\n        max_results: int = Field(5, description=\"Maximum number of results to return\")\n        max_snippet_length: int = Field(100, description=\"Maximum length of each result snippet\")\n\n    def _build_wrapper(self):\n        return SearchApiAPIWrapper(engine=self.engine, searchapi_api_key=self.api_key)\n\n    def build_tool(self) -> Tool:\n        wrapper = self._build_wrapper()\n\n        def search_func(\n            query: str, params: dict[str, Any] | None = None, max_results: int = 5, max_snippet_length: int = 100\n        ) -> list[dict[str, Any]]:\n            params = params or {}\n            full_results = wrapper.results(query=query, **params)\n            organic_results = full_results.get(\"organic_results\", [])[:max_results]\n\n            limited_results = []\n            for result in organic_results:\n                limited_result = {\n                    \"title\": result.get(\"title\", \"\")[:max_snippet_length],\n                    \"link\": result.get(\"link\", \"\"),\n                    \"snippet\": result.get(\"snippet\", \"\")[:max_snippet_length],\n                }\n                limited_results.append(limited_result)\n\n            return limited_results\n\n        tool = StructuredTool.from_function(\n            name=\"search_api\",\n            description=\"Search for recent results using searchapi.io with result limiting\",\n            func=search_func,\n            args_schema=self.SearchAPISchema,\n        )\n\n        self.status = f\"Search API Tool created with engine: {self.engine}\"\n        return tool\n\n    def run_model(self) -> list[Data]:\n        tool = self.build_tool()\n        results = tool.run(\n            {\n                \"query\": self.input_value,\n                \"params\": self.search_params or {},\n                \"max_results\": self.max_results,\n                \"max_snippet_length\": self.max_snippet_length,\n            }\n        )\n\n        data_list = [Data(data=result, text=result.get(\"snippet\", \"\")) for result in results]\n\n        self.status = data_list\n        return data_list\n"
+                "value": "from typing import Any\n\nfrom langchain.tools import StructuredTool\nfrom langchain_community.utilities.searchapi import SearchApiAPIWrapper\nfrom pydantic import BaseModel, Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import DictInput, IntInput, MessageTextInput, MultilineInput, SecretStrInput\nfrom langflow.schema import Data\n\n\nclass SearchAPIComponent(LCToolComponent):\n    display_name: str = \"Search API\"\n    description: str = \"Call the searchapi.io API with result limiting\"\n    name = \"SearchAPI\"\n    documentation: str = \"https://www.searchapi.io/docs/google\"\n    icon = \"SearchAPI\"\n\n    inputs = [\n        MessageTextInput(name=\"engine\", display_name=\"Engine\", value=\"google\"),\n        SecretStrInput(name=\"api_key\", display_name=\"SearchAPI API Key\", required=True),\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n        ),\n        DictInput(name=\"search_params\", display_name=\"Search parameters\", advanced=True, is_list=True),\n        IntInput(name=\"max_results\", display_name=\"Max Results\", value=5, advanced=True),\n        IntInput(name=\"max_snippet_length\", display_name=\"Max Snippet Length\", value=100, advanced=True),\n    ]\n\n    class SearchAPISchema(BaseModel):\n        query: str = Field(..., description=\"The search query\")\n        params: dict[str, Any] = Field(default_factory=dict, description=\"Additional search parameters\")\n        max_results: int = Field(5, description=\"Maximum number of results to return\")\n        max_snippet_length: int = Field(100, description=\"Maximum length of each result snippet\")\n\n    def _build_wrapper(self):\n        return SearchApiAPIWrapper(engine=self.engine, searchapi_api_key=self.api_key)\n\n    def build_tool(self) -> Tool:\n        wrapper = self._build_wrapper()\n\n        def search_func(\n            query: str, params: dict[str, Any] | None = None, max_results: int = 5, max_snippet_length: int = 100\n        ) -> list[dict[str, Any]]:\n            params = params or {}\n            full_results = wrapper.results(query=query, **params)\n            organic_results = full_results.get(\"organic_results\", [])[:max_results]\n\n            limited_results = []\n            for result in organic_results:\n                limited_result = {\n                    \"title\": result.get(\"title\", \"\")[:max_snippet_length],\n                    \"link\": result.get(\"link\", \"\"),\n                    \"snippet\": result.get(\"snippet\", \"\")[:max_snippet_length],\n                }\n                limited_results.append(limited_result)\n\n            return limited_results\n\n        tool = StructuredTool.from_function(\n            name=\"search_api\",\n            description=\"Search for recent results using searchapi.io with result limiting\",\n            func=search_func,\n            args_schema=self.SearchAPISchema,\n        )\n\n        self.status = f\"Search API Tool created with engine: {self.engine}\"\n        return tool\n\n    def run_model(self) -> list[Data]:\n        tool = self.build_tool()\n        results = tool.run(\n            {\n                \"query\": self.input_value,\n                \"params\": self.search_params or {},\n                \"max_results\": self.max_results,\n                \"max_snippet_length\": self.max_snippet_length,\n            }\n        )\n\n        data_list = [Data(data=result, text=result.get(\"snippet\", \"\")) for result in results]\n\n        self.status = data_list\n        return data_list\n"
               },
               "engine": {
                 "_input_type": "MessageTextInput",
@@ -875,6 +875,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -897,6 +898,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -950,13 +952,14 @@
                 "type": "dict",
                 "value": {}
               }
-            }
+            },
+            "tool_mode": false
           },
           "type": "SearchAPI"
         },
         "dragging": false,
-        "height": 407,
-        "id": "SearchAPI-Aez0t",
+        "height": 509,
+        "id": "SearchAPI-zMZv7",
         "position": {
           "x": 2101.519951743063,
           "y": 949.7032293566349
@@ -967,11 +970,11 @@
         },
         "selected": false,
         "type": "genericNode",
-        "width": 320
+        "width": 360
       },
       {
         "data": {
-          "id": "url_content_fetcher-AyGpn",
+          "id": "url_content_fetcher-p0SUP",
           "node": {
             "base_classes": [
               "Data",
@@ -1083,8 +1086,8 @@
           "type": "url_content_fetcher"
         },
         "dragging": false,
-        "height": 234,
-        "id": "url_content_fetcher-AyGpn",
+        "height": 262,
+        "id": "url_content_fetcher-p0SUP",
         "position": {
           "x": 2834.525991812012,
           "y": 939.6518333549263
@@ -1095,11 +1098,11 @@
         },
         "selected": false,
         "type": "genericNode",
-        "width": 320
+        "width": 360
       },
       {
         "data": {
-          "id": "CalculatorTool-dGfrj",
+          "id": "CalculatorTool-v71XZ",
           "node": {
             "base_classes": [
               "Data",
@@ -1197,8 +1200,8 @@
           "type": "CalculatorTool"
         },
         "dragging": false,
-        "height": 254,
-        "id": "CalculatorTool-dGfrj",
+        "height": 338,
+        "id": "CalculatorTool-v71XZ",
         "position": {
           "x": 3546.599894399727,
           "y": 972.1522299506486
@@ -1209,13 +1212,13 @@
         },
         "selected": false,
         "type": "genericNode",
-        "width": 320
+        "width": 360
       },
       {
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "City Selection Agent",
-          "id": "Agent-rPh1n",
+          "id": "Agent-uVWaZ",
           "node": {
             "base_classes": [
               "Message"
@@ -1361,7 +1364,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1587,41 +1590,6 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Ascending"
-              },
-              "output_parser": {
-                "_input_type": "HandleInput",
-                "advanced": true,
-                "display_name": "Output Parser",
-                "dynamic": false,
-                "info": "The parser to use to parse the output of the model",
-                "input_types": [
-                  "OutputParser"
-                ],
-                "list": false,
-                "name": "output_parser",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "output_schema": {
-                "_input_type": "DictInput",
-                "advanced": true,
-                "display_name": "Schema",
-                "dynamic": false,
-                "info": "The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled. [DEPRECATED]",
-                "list": true,
-                "name": "output_schema",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "type": "dict",
-                "value": {}
               },
               "seed": {
                 "_input_type": "IntInput",
@@ -1810,8 +1778,8 @@
           "type": "Agent"
         },
         "dragging": true,
-        "height": 650,
-        "id": "Agent-rPh1n",
+        "height": 725,
+        "id": "Agent-uVWaZ",
         "position": {
           "x": 2472.7748760933105,
           "y": 335.66187210240537
@@ -1822,13 +1790,13 @@
         },
         "selected": false,
         "type": "genericNode",
-        "width": 320
+        "width": 360
       },
       {
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Local Expert Agent",
-          "id": "Agent-cj2PH",
+          "id": "Agent-qPNh7",
           "node": {
             "base_classes": [
               "Message"
@@ -1974,7 +1942,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -2200,41 +2168,6 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Ascending"
-              },
-              "output_parser": {
-                "_input_type": "HandleInput",
-                "advanced": true,
-                "display_name": "Output Parser",
-                "dynamic": false,
-                "info": "The parser to use to parse the output of the model",
-                "input_types": [
-                  "OutputParser"
-                ],
-                "list": false,
-                "name": "output_parser",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "output_schema": {
-                "_input_type": "DictInput",
-                "advanced": true,
-                "display_name": "Schema",
-                "dynamic": false,
-                "info": "The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled. [DEPRECATED]",
-                "list": true,
-                "name": "output_schema",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "type": "dict",
-                "value": {}
               },
               "seed": {
                 "_input_type": "IntInput",
@@ -2423,8 +2356,8 @@
           "type": "Agent"
         },
         "dragging": false,
-        "height": 650,
-        "id": "Agent-cj2PH",
+        "height": 725,
+        "id": "Agent-qPNh7",
         "position": {
           "x": 3185.66991544494,
           "y": 355.95841004876377
@@ -2435,13 +2368,13 @@
         },
         "selected": false,
         "type": "genericNode",
-        "width": 320
+        "width": 360
       },
       {
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Travel Concierge Agent",
-          "id": "Agent-ImgzA",
+          "id": "Agent-LAoR7",
           "node": {
             "base_classes": [
               "Message"
@@ -2587,7 +2520,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -2814,41 +2747,6 @@
                 "type": "str",
                 "value": "Ascending"
               },
-              "output_parser": {
-                "_input_type": "HandleInput",
-                "advanced": true,
-                "display_name": "Output Parser",
-                "dynamic": false,
-                "info": "The parser to use to parse the output of the model",
-                "input_types": [
-                  "OutputParser"
-                ],
-                "list": false,
-                "name": "output_parser",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "output_schema": {
-                "_input_type": "DictInput",
-                "advanced": true,
-                "display_name": "Schema",
-                "dynamic": false,
-                "info": "The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled. [DEPRECATED]",
-                "list": true,
-                "name": "output_schema",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "type": "dict",
-                "value": {}
-              },
               "seed": {
                 "_input_type": "IntInput",
                 "advanced": true,
@@ -3036,8 +2934,8 @@
           "type": "Agent"
         },
         "dragging": false,
-        "height": 650,
-        "id": "Agent-ImgzA",
+        "height": 725,
+        "id": "Agent-LAoR7",
         "position": {
           "x": 3889.695953842898,
           "y": 370.3161168611889
@@ -3048,11 +2946,11 @@
         },
         "selected": false,
         "type": "genericNode",
-        "width": 320
+        "width": 360
       },
       {
         "data": {
-          "id": "note-jCp1N",
+          "id": "note-Oz3TV",
           "node": {
             "description": "# Travel Planning Agents \n\nThe travel planning system is a smart setup that uses several specialized \"agents\" to help plan incredible trips. Imagine each agent as a travel expert focusing on a part of your journey. Here's how it works:\n\n- **User-Friendly Start:** You start by telling the system about your travel needs—where you want to go and what you love to do.\n\n- **Data Collection:** The agents uses its tools to gather current info about various destinations, like the best travel times, weather, and costs.\n\n- **Three Key Agents:**\n  - **City Selection Agent:** Picks the best places to visit based on your likes and current data.\n  - **Local Expert Agent:** Gathers interesting details about what to do and see in the chosen city.\n  - **Travel Concierge Agent:** Builds a day-by-day plan that includes where to stay, eat, and explore!\n\n- **Tools and Data:** Each agent uses tools to find and organize the latest information so you get recommendations that are both accurate and exciting.\n\n- **Final Plan:** Once everything is put together, you receive a complete, easy-to-follow travel itinerary, perfect for your adventure!\n",
             "display_name": "",
@@ -3063,7 +2961,7 @@
         },
         "dragging": false,
         "height": 636,
-        "id": "note-jCp1N",
+        "id": "note-Oz3TV",
         "position": {
           "x": 1076.3710803600266,
           "y": 92.06058855045646
@@ -3083,7 +2981,7 @@
       },
       {
         "data": {
-          "id": "note-jgIF0",
+          "id": "note-Bdsjm",
           "node": {
             "description": "# **City Selection Agent**\n   - **Purpose:** This agent evaluates potential travel destinations based on user input and external data sources.\n   - **Core Functions:** Analyzes factors such as weather, local events, and travel costs to recommend optimal cities.\n   - **Tools Utilized:** Employs APIs and data-fetching tools to gather real-time information for decision-making.\n",
             "display_name": "",
@@ -3096,7 +2994,7 @@
         },
         "dragging": false,
         "height": 362,
-        "id": "note-jgIF0",
+        "id": "note-Bdsjm",
         "position": {
           "x": 2122.4146132377227,
           "y": 485.2212661145467
@@ -3116,7 +3014,7 @@
       },
       {
         "data": {
-          "id": "note-NTTln",
+          "id": "note-NgWM7",
           "node": {
             "description": "# **Local Expert Agent**\n   - **Purpose:** Focused on gathering and providing an in-depth guide to the selected city.\n   - **Core Functions:** Compiles insights into cultural attractions, local customs, and unique experiences.\n   - **Tools Utilized:** Uses web content fetchers and data APIs to collect detailed local insights and enhance the user understanding with hidden gems.\n",
             "display_name": "",
@@ -3129,7 +3027,7 @@
         },
         "dragging": false,
         "height": 366,
-        "id": "note-NTTln",
+        "id": "note-NgWM7",
         "position": {
           "x": 2827.660803823376,
           "y": 488.6092281195304
@@ -3149,7 +3047,7 @@
       },
       {
         "data": {
-          "id": "note-45aOQ",
+          "id": "note-EkH5J",
           "node": {
             "description": "# **Travel Concierge Agent**\n   - **Purpose:** Crafts detailed travel itineraries that are customized to the traveler's interests and needs.\n   - **Core Functions:** Offers a comprehensive daily schedule, including accommodations, dining spots, and activities.\n   - **Tools Utilized:** Integrates calculators and data tools for accurate budget planning and itinerary logistics.",
             "display_name": "",
@@ -3162,7 +3060,7 @@
         },
         "dragging": false,
         "height": 344,
-        "id": "note-45aOQ",
+        "id": "note-EkH5J",
         "position": {
           "x": 3536.084279543714,
           "y": 496.3155992003396
@@ -3182,7 +3080,7 @@
       },
       {
         "data": {
-          "id": "note-elTLU",
+          "id": "note-HlQ6g",
           "node": {
             "description": "## Configure the agent by obtaining your OpenAI API key from [platform.openai.com](https://platform.openai.com). Under \"Model Provider\", choose:\n- OpenAI: Default, requires only API key\n- Anthropic/Azure/Groq/NVIDIA: Each requires their own API keys\n- Custom: Use your own model endpoint + authentication\n\nSelect model and input API key before running the flow.",
             "display_name": "",
@@ -3194,8 +3092,8 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 325,
-        "id": "note-elTLU",
+        "height": 328,
+        "id": "note-HlQ6g",
         "position": {
           "x": 2463.3881993480218,
           "y": 42.83594355441298
@@ -3206,7 +3104,7 @@
         },
         "selected": false,
         "type": "noteNode",
-        "width": 325
+        "width": 328
       }
     ],
     "viewport": {
@@ -3219,7 +3117,7 @@
   "endpoint_name": null,
   "gradient": "0",
   "icon": "Plane",
-  "id": "d6d33090-44c4-4a4b-8d06-c93fcf426446",
+  "id": "29cad7e9-2561-4cba-a974-d1fa83ac1c1e",
   "is_component": false,
   "last_tested_version": "1.0.19.post2",
   "name": "Travel Planning Agents",
