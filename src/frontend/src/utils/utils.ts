@@ -9,7 +9,7 @@ import {
   MODAL_CLASSES,
   SHORTCUT_KEYS,
 } from "../constants/constants";
-import { APIDataType, InputFieldType, VertexDataTypeAPI } from "../types/api";
+import { APIDataType, InputFieldType, TableOptionsTypeAPI, VertexDataTypeAPI } from "../types/api";
 import {
   groupedObjType,
   nodeGroupedObjType,
@@ -533,14 +533,14 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
   return colDefs;
 }
 
-export function generateBackendColumnsFromValue(rows: Object[]): ColumnField[] {
+export function generateBackendColumnsFromValue(rows: Object[],tableOptions?: TableOptionsTypeAPI): ColumnField[] {
   const columns = extractColumnsFromRows(rows, "union");
   return columns.map((column) => {
     const newColumn: ColumnField = {
       name: column.field ?? "",
       display_name: column.headerName ?? "",
-      sortable: true,
-      filterable: true,
+      sortable: !tableOptions?.block_sort,
+      filterable: !tableOptions?.block_filter,
       default: null, // Initialize default to null or appropriate value
     };
 

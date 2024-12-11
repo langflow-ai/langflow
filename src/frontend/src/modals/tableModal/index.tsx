@@ -14,6 +14,7 @@ interface TableModalProps extends TableComponentProps {
   disabled?: boolean;
   children: React.ReactNode;
   tableOptions?: TableOptionsTypeAPI;
+  hideColumns?: boolean | string[];
 }
 
 const TableModal = forwardRef<
