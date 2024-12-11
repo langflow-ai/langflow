@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import time
+from contextlib import asynccontextmanager
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
+import ngrok
 import sqlalchemy as sa
 from fastapi import (
     APIRouter,
@@ -26,6 +29,7 @@ from langflow.api.v1.schemas import (
     CustomComponentRequest,
     CustomComponentResponse,
     InputValueRequest,
+    NgrokResponse,
     RunResponse,
     SimplifiedAPIRequest,
     TaskStatusResponse,
@@ -664,3 +668,25 @@ async def get_config():
         }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.post("/deploy/ngrok", response_model=NgrokResponse)
+async def create_tunnel():
+    try:
+        auth_token = os.getenv("NGROK_AUTH_TOKEN")
+
+        ngrok.set_auth_token(auth_token)
+        listener = await ngrok.connect(7860)
+
+        public_url = listener.url()
+
+        return NgrokResponse(url=public_url, status="success")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ngrok connection failed: {e!s}")
+
+
+@asynccontextmanager
+async def lifespan():
+    yield
+    await ngrok.disconnect()
