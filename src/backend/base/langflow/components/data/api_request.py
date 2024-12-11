@@ -268,7 +268,6 @@ class APIRequestComponent(Component):
         query = dict(parse_qsl(url_parts[4]))
         query.update(params)
         url_parts[4] = urlencode(query)
-        print(url_parts)
         return urlunparse(url_parts)
 
     async def make_requests(self) -> list[Data]:
