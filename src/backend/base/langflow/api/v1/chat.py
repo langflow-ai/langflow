@@ -392,7 +392,6 @@ async def build_flow(
                 error_message = ErrorMessage(
                     flow_id=flow_id,
                     exception=e,
-                    session_id=graph.session_id,
                 )
                 event_manager.on_error(data=error_message.data)
                 raise
