@@ -17,9 +17,10 @@
   <a href="./README.md"><img alt="README en Anglais" src="https://img.shields.io/badge/English-d9d9d9"></a>
   <a href="./README.PT.md"><img alt="README en Portuguais" src="https://img.shields.io/badge/Portuguese-d9d9d9"></a>
   <a href="./README.ES.md"><img alt="README en Espagnol" src="https://img.shields.io/badge/Spanish-d9d9d9"></a>
-  <a href="./README.zh_CN.md"><img alt="README in Chinois Simplifié" src="https://img.shields.io/badge/简体中文-d9d9d9"></a>
-  <a href="./README.ja.md"><img alt="README in Japonais" src="https://img.shields.io/badge/日本語-d9d9d9"></a>
-  <a href="./README.KR.md"><img alt="README in Coréen" src="https://img.shields.io/badge/한국어-d9d9d9"></a>
+  <a href="./README.zh_CN.md"><img alt="README en Chinois Simplifié" src="https://img.shields.io/badge/简体中文-d9d9d9"></a>
+  <a href="./README.ja.md"><img alt="README en Japonais" src="https://img.shields.io/badge/日本語-d9d9d9"></a>
+  <a href="./README.KR.md"><img alt="README en Coréen" src="https://img.shields.io/badge/한국어-d9d9d9"></a>
+  <a href="./README.FR.md"><img alt="README en Français" src="https://img.shields.io/badge/Français-d9d9d9"></a>
 </div>
 
 ## ✨ Caractéristiques principales
