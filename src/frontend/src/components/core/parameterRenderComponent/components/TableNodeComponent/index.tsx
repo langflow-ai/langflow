@@ -17,6 +17,9 @@ export default function TableNodeComponent({
   columns,
   handleOnNewValue,
   disabled = false,
+  table_options,
+  trigger_icon = "Table",
+  trigger_text = "Open Table",
 }: InputProps<any[], TableComponentType>): JSX.Element {
   const dataTypeDefinitions: {
     [cellDataType: string]: DataTypeDefinition<any>;
@@ -119,6 +122,7 @@ export default function TableNodeComponent({
     >
       <div className="flex w-full items-center gap-3" data-testid={"div-" + id}>
         <TableModal
+          tableOptions={table_options}
           dataTypeDefinitions={dataTypeDefinitions}
           autoSizeStrategy={{ type: "fitGridWidth", defaultMinWidth: 100 }}
           tableTitle={tableTitle}
@@ -148,8 +152,8 @@ export default function TableNodeComponent({
               (disabled ? "pointer-events-none cursor-not-allowed" : "")
             }
           >
-            <ForwardedIconComponent name="Table" className="mt-px h-4 w-4" />
-            <span className="font-normal">Open Table</span>
+            <ForwardedIconComponent name={trigger_icon} className="mt-px h-4 w-4" />
+            <span className="font-normal">{trigger_text}</span>
           </Button>
         </TableModal>
       </div>
