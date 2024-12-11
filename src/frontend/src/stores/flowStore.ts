@@ -46,6 +46,7 @@ import { getInputsAndOutputs } from "../utils/storeUtils";
 import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
+import { useMessagesStore } from "./messagesStore";
 import { useTypesStore } from "./typesStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
@@ -83,6 +84,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   onFlowPage: false,
   lockChat: false,
   setLockChat: (lockChat) => {
+    useMessagesStore.setState({ displayLoadingMessage: lockChat });
     set({ lockChat });
   },
   setOnFlowPage: (FlowPage) => set({ onFlowPage: FlowPage }),

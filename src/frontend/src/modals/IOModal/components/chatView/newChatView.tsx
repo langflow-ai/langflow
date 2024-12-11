@@ -36,6 +36,9 @@ export default function ChatView({
   const nodes = useFlowStore((state) => state.nodes);
   const chatInput = inputs.find((input) => input.type === "ChatInput");
   const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
+  const displayLoadingMessage = useMessagesStore(
+    (state) => state.displayLoadingMessage,
+  );
 
   const inputTypes = inputs.map((obj) => obj.type);
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
@@ -185,13 +188,13 @@ export default function ChatView({
           ))}
         <div
           className={
-            lockChat
-              ? "m-auto w-full max-w-[768px] py-4 word-break-break-word md:w-5/6"
+            displayLoadingMessage
+              ? "w-full max-w-[768px] py-4 word-break-break-word md:w-5/6"
               : ""
           }
           ref={ref}
         >
-          {lockChat &&
+          {displayLoadingMessage &&
             !(chatHistory?.[chatHistory.length - 1]?.category === "error") &&
             flowRunningSkeletonMemo}
         </div>
