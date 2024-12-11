@@ -8,9 +8,27 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page);
 
-    await page.locator("span").filter({ hasText: "Close" }).first().click();
+    //add a new flow just to have the workspace available
+    await page.getByTestId("side_nav_options_all-templates").click();
+    await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-    await page.locator("span").filter({ hasText: "My Projects" }).isVisible();
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 100000,
+    });
+
+    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+      timeout: 100000,
+    });
+
+    await page.getByTestId("icon-ChevronLeft").first().click();
+
+    await page.waitForSelector("text=my projects", {
+      timeout: 5000,
+    });
+
+    await page.waitForSelector('[data-testid="new-project-btn"]', {
+      timeout: 100000,
+    });
 
     await simulateDragAndDrop(
       page,
@@ -44,9 +62,27 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page);
 
-    await page.locator("span").filter({ hasText: "Close" }).first().click();
-    await page.locator("span").filter({ hasText: "My Projects" }).isVisible();
+    //add a new flow just to have the workspace available
+    await page.getByTestId("side_nav_options_all-templates").click();
+    await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 100000,
+    });
+
+    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+      timeout: 100000,
+    });
+
+    await page.getByTestId("icon-ChevronLeft").first().click();
+
+    await page.waitForSelector("text=my projects", {
+      timeout: 5000,
+    });
+
+    await page.waitForSelector('[data-testid="new-project-btn"]', {
+      timeout: 100000,
+    });
     // Read your file into a buffer.
     const jsonContent = readFileSync(
       "tests/assets/flow_test_drag_and_drop.json",
