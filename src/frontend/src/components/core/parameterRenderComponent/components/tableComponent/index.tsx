@@ -17,6 +17,7 @@ import cloneDeep from "lodash";
 import { ElementRef, forwardRef, useRef, useState } from "react";
 import TableOptions from "./components/TableOptions";
 import resetGrid from "./utils/reset-grid-columns";
+import { TableOptionsTypeAPI } from "@/types/api";
 
 export interface TableComponentProps extends AgGridReactProps {
   columnDefs: NonNullable<ColDef<any, any>[]>;
@@ -36,13 +37,14 @@ export interface TableComponentProps extends AgGridReactProps {
   onDelete?: () => void;
   onDuplicate?: () => void;
   addRow?: () => void;
+  tableOptions?: TableOptionsTypeAPI;
 }
 
 const TableComponent = forwardRef<
-  ElementRef<typeof AgGridReact>,
-  TableComponentProps
+ElementRef<typeof AgGridReact>,
+TableComponentProps
 >(
-  (
+    (
     {
       alertTitle = DEFAULT_TABLE_ALERT_TITLE,
       alertDescription = DEFAULT_TABLE_ALERT_MSG,
@@ -206,8 +208,9 @@ const TableComponent = forwardRef<
             }
           }}
         />
-        {props.pagination && (
+        {!props.tableOptions?.hide_options && (
           <TableOptions
+            tableOptions={props.tableOptions}
             stateChange={columnStateChange}
             hasSelection={realRef.current?.api?.getSelectedRows().length > 0}
             duplicateRow={props.onDuplicate ? props.onDuplicate : undefined}
