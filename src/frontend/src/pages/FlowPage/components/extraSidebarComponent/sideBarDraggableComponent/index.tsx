@@ -120,7 +120,7 @@ export const SidebarDraggableComponent = forwardRef(
                   name="Menu"
                   className="side-bar-components-icon"
                 />
-                <SelectTrigger asChild></SelectTrigger>
+                <SelectTrigger></SelectTrigger>
                 <SelectContent
                   position="popper"
                   side="bottom"
