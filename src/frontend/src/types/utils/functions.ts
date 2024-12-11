@@ -24,4 +24,5 @@ export interface ColumnField {
   formatter?: FormatterType;
   description?: string;
   default?: any; // Add this line
+  edit_mode?: "modal" | "inline";
 }
