@@ -102,6 +102,7 @@ module.exports = {
       label: "Integrations",
       items: [
         "Integrations/integrations-assemblyai",
+        "Integrations/Composio/integrations-composio",
         "Integrations/integrations-langfuse",
         "Integrations/integrations-langsmith",
         "Integrations/integrations-langwatch",
