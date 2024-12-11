@@ -103,7 +103,7 @@ class LMStudioModelComponent(LCModelComponent):
         base_url = self.base_url or "http://localhost:1234/v1"
         seed = self.seed
 
-        api_key = SecretStr(lmstudio_api_key) if lmstudio_api_key else None
+        api_key = SecretStr(lmstudio_api_key).get_secret_value() if lmstudio_api_key else None
 
         return ChatOpenAI(
             max_tokens=max_tokens or None,
