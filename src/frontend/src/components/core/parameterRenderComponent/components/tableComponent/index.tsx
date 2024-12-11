@@ -65,6 +65,12 @@ TableComponentProps
           headerCheckboxSelectionFilteredOnly: true,
         };
       }
+      if((typeof props.tableOptions?.block_hide === "boolean" && props.tableOptions?.block_hide) || (Array.isArray(props.tableOptions?.block_hide) && props.tableOptions?.block_hide.includes(newCol.field ?? ""))){
+        newCol = {
+          ...newCol,
+          lockVisible: true,
+        };
+      }
       if (
         (typeof props.editable === "boolean" && props.editable) ||
         (Array.isArray(props.editable) &&
@@ -97,6 +103,7 @@ TableComponentProps
       }
       return newCol;
     });
+    console.log(colDef);
     // @ts-ignore
     const realRef: React.MutableRefObject<AgGridReact> =
       useRef<AgGridReact | null>(null);
@@ -172,6 +179,7 @@ TableComponentProps
         );
       }
     }
+    console.log(colDef);
     return (
       <div
         className={cn(

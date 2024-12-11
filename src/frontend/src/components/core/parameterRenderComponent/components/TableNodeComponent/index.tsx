@@ -66,7 +66,7 @@ export default function TableNodeComponent({
   const agGrid = useRef<AgGridReact>(null);
   const componentColumns = columns
     ? columns
-    : generateBackendColumnsFromValue(value ?? []);
+    : generateBackendColumnsFromValue(value ?? [],table_options);
   const AgColumns = FormatColumns(componentColumns);
   function setAllRows() {
     if (agGrid.current && !agGrid.current.api.isDestroyed()) {
@@ -113,7 +113,6 @@ export default function TableNodeComponent({
       editableCell: isCustomEdit ? false : true,
     };
   });
-  console.log(table_options);
 
   return (
     <div
