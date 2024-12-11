@@ -8,6 +8,7 @@ import {
 } from "@/constants/constants";
 import { useDarkStore } from "@/stores/darkStore";
 import "@/style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
+import { TableOptionsTypeAPI } from "@/types/api";
 import { cn } from "@/utils/utils";
 import { ColDef } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
@@ -17,7 +18,6 @@ import cloneDeep from "lodash";
 import { ElementRef, forwardRef, useRef, useState } from "react";
 import TableOptions from "./components/TableOptions";
 import resetGrid from "./utils/reset-grid-columns";
-import { TableOptionsTypeAPI } from "@/types/api";
 
 export interface TableComponentProps extends AgGridReactProps {
   columnDefs: NonNullable<ColDef<any, any>[]>;
@@ -41,10 +41,10 @@ export interface TableComponentProps extends AgGridReactProps {
 }
 
 const TableComponent = forwardRef<
-ElementRef<typeof AgGridReact>,
-TableComponentProps
+  ElementRef<typeof AgGridReact>,
+  TableComponentProps
 >(
-    (
+  (
     {
       alertTitle = DEFAULT_TABLE_ALERT_TITLE,
       alertDescription = DEFAULT_TABLE_ALERT_MSG,
@@ -65,7 +65,12 @@ TableComponentProps
           headerCheckboxSelectionFilteredOnly: true,
         };
       }
-      if((typeof props.tableOptions?.block_hide === "boolean" && props.tableOptions?.block_hide) || (Array.isArray(props.tableOptions?.block_hide) && props.tableOptions?.block_hide.includes(newCol.field ?? ""))){
+      if (
+        (typeof props.tableOptions?.block_hide === "boolean" &&
+          props.tableOptions?.block_hide) ||
+        (Array.isArray(props.tableOptions?.block_hide) &&
+          props.tableOptions?.block_hide.includes(newCol.field ?? ""))
+      ) {
         newCol = {
           ...newCol,
           lockVisible: true,
