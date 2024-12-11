@@ -13,6 +13,11 @@ class FormatterType(str, Enum):
     boolean = "boolean"
 
 
+class EditMode(str, Enum):
+    MODAL = "modal"
+    INLINE = "inline"
+
+
 class Column(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     name: str
@@ -22,6 +27,7 @@ class Column(BaseModel):
     formatter: FormatterType | str | None = Field(default=None, alias="type")
     description: str | None = None
     default: str | None = None
+    edit_mode: EditMode | None = Field(default=EditMode.MODAL)
 
     @model_validator(mode="after")
     def set_display_name(self):
