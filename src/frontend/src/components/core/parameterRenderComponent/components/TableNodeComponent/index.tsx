@@ -113,6 +113,7 @@ export default function TableNodeComponent({
       editableCell: isCustomEdit ? false : true,
     };
   });
+  console.log(table_options);
 
   return (
     <div
@@ -131,10 +132,10 @@ export default function TableNodeComponent({
           onSelectionChanged={(event: SelectionChangedEvent) => {
             setSelectedNodes(event.api.getSelectedNodes());
           }}
-          rowSelection="multiple"
+          rowSelection={table_options?.block_select ? undefined : "multiple"}
           suppressRowClickSelection={true}
           editable={editable}
-          pagination={true}
+          pagination={!table_options?.hide_options}
           addRow={addRow}
           onDelete={deleteRow}
           onDuplicate={duplicateRow}
