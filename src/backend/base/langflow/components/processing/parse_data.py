@@ -16,21 +16,21 @@ class ParseData(Component):
             name="data",
             display_name="Data",
             info="One or more Data objects to convert into message format.",
-            is_list=True
+            is_list=True,
         ),
         MultilineInput(
             name="template",
             display_name="Template",
             info="Template for formatting the message. Use placeholders like {text}, {data}, or any key in the Data object.",
-            value="{text}"
+            value="{text}",
         ),
         StrInput(
-            name="separator", 
+            name="separator",
             display_name="Separator",
             info="Character(s) to use when combining multiple messages.",
             value="\n",
-            advanced=True
-        )
+            advanced=True,
+        ),
     ]
 
     outputs = [
@@ -38,14 +38,14 @@ class ParseData(Component):
             display_name="Text",
             name="text",
             info="Single Message containing all input Data formatted and combined using the separator",
-            method="create_combined_text"
+            method="create_combined_text",
         ),
         Output(
             display_name="Data List",
-            name="data_list", 
+            name="data_list",
             info="List of individual Messages, each formatted using the template",
-            method="create_data_list"
-        )
+            method="create_data_list",
+        ),
     ]
 
     def _prepare_inputs(self) -> tuple[list[Data], str, str]:
@@ -63,9 +63,9 @@ class ParseData(Component):
         """Create individual formatted Messages for each input Data"""
         data, template, _ = self._prepare_inputs()
         text_list, data_list = data_to_text_list(template, data)
-        
+
         for item, text in zip(data_list, text_list, strict=True):
             item.set_text(text)
-            
+
         self.status = data_list
         return data_list
