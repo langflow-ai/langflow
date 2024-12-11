@@ -116,7 +116,7 @@ class TestStructuredOutputComponent:
                 "display_name": "Type",
                 "type": "str",
                 "description": (
-                    "Indicate the data type of the output field " "(e.g., str, int, float, bool, list, dict)."
+                    "Indicate the data type of the output field (e.g., str, int, float, bool, list, dict)."
                 ),
             },
             {
@@ -158,7 +158,7 @@ class TestStructuredOutputComponent:
                 "display_name": "Type",
                 "type": "str",
                 "description": (
-                    "Indicate the data type of the output field " "(e.g., str, int, float, bool, list, dict)."
+                    "Indicate the data type of the output field (e.g., str, int, float, bool, list, dict)."
                 ),
             },
             {

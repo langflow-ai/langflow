@@ -75,7 +75,7 @@ class DirectoryReader:
                     continue
             items.append({"name": menu["name"], "path": menu["path"], "components": components})
         filtered = [menu for menu in items if menu["components"]]
-        logger.debug(f'Filtered components {"with errors" if with_errors else ""}: {len(filtered)}')
+        logger.debug(f"Filtered components {'with errors' if with_errors else ''}: {len(filtered)}")
         return {"menu": filtered}
 
     def validate_code(self, file_content) -> bool:

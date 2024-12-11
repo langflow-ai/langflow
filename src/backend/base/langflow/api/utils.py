@@ -261,8 +261,7 @@ def get_suggestion_message(outdated_components: list[str]) -> str:
         )
     components = ", ".join(outdated_components)
     return (
-        f"The flow contains {count} outdated components. "
-        f"We recommend updating the following components: {components}."
+        f"The flow contains {count} outdated components. We recommend updating the following components: {components}."
     )
 
 
