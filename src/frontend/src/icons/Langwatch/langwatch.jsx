@@ -8,10 +8,10 @@ const SvgLangwatch = (props) => (
   >
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#FEFEFE"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -71,10 +71,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#D3D4D5"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -118,10 +118,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#9EA3A3"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -143,10 +143,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#788082"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -162,10 +162,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#425557"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -203,10 +203,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#223B40"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -292,10 +292,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#3E5054"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -314,10 +314,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#687275"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -331,10 +331,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#A5A9AA"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -350,10 +350,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#D9DADB"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -381,10 +381,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#FEFEFE"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -411,10 +411,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#7C8486"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -428,10 +428,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#808989"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -444,10 +444,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#697476"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -459,10 +459,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#435457"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -474,10 +474,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#616C6F"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -491,10 +491,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#888E90"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -509,10 +509,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#B2B4B5"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -525,10 +525,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#FCFCFC"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -539,10 +539,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#ADB0B1"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -553,10 +553,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#405356"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -575,10 +575,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#647072"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -595,10 +595,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#8C9293"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -613,10 +613,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#B0B3B4"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -636,10 +636,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#CFD0D0"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -656,10 +656,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#FDFDFD"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -677,10 +677,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#D4D5D5"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -693,10 +693,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#49595C"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -712,10 +712,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#7C8486"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -733,10 +733,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#AEB1B2"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -753,10 +753,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#DCDDDD"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -780,10 +780,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#FEFEFE"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -803,10 +803,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#677173"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -819,10 +819,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#747E7F"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -835,10 +835,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#48585B"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -851,10 +851,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#858D8E"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -865,10 +865,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#808789"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -886,10 +886,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#AAAEAE"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -900,10 +900,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#D0D1D1"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -923,10 +923,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#FDFEFE"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -940,10 +940,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#6C7578"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -956,10 +956,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#47575A"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -994,10 +994,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#455659"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1012,10 +1012,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#667071"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1030,10 +1030,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#5F6B6D"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1048,10 +1048,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#898F90"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1081,10 +1081,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#7F8688"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1096,10 +1096,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#B7BABA"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1115,10 +1115,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#C6C8C8"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1135,10 +1135,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#FEFEFE"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1151,10 +1151,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#FBFBFB"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1165,10 +1165,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#49585B"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1184,10 +1184,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#818889"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1199,10 +1199,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#8E9395"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1225,10 +1225,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#A6AAAB"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1242,10 +1242,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#D5D6D6"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1266,10 +1266,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#6D7678"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1287,10 +1287,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#FCFCFC"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1305,10 +1305,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#3E4F53"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1325,10 +1325,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#606B6E"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1341,10 +1341,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#898F91"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1359,10 +1359,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#C3C5C5"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1381,10 +1381,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#B1B4B5"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1396,10 +1396,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#FDFDFD"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1420,10 +1420,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#DFDFE0"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1445,10 +1445,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#A4A8A9"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1463,10 +1463,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#B8BABB"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1483,10 +1483,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#DEDFDF"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1513,10 +1513,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#FEFEFE"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1536,10 +1536,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#B9BBBC"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1551,10 +1551,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#435457"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1568,10 +1568,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#A3A6A7"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1582,10 +1582,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#7B8485"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1599,10 +1599,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#A6ABAC"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1617,10 +1617,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#C8CACA"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1634,10 +1634,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#FBFBFB"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1649,10 +1649,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#6C7678"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1663,10 +1663,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#647072"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1678,10 +1678,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#919697"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1692,10 +1692,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#A4A6A7"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1709,10 +1709,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#737B7C"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1723,10 +1723,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#BBBEBE"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1739,10 +1739,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#AFB2B3"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1754,10 +1754,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#919799"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1772,10 +1772,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#DEDFDF"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1799,10 +1799,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#6E7677"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1813,10 +1813,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#B5B8B9"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1833,10 +1833,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#6B7577"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1847,10 +1847,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#6D7779"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1862,10 +1862,10 @@ const SvgLangwatch = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#D8D9D9"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -1875,7 +1875,7 @@ const SvgLangwatch = (props) => (
   C 577.42 1042.70 559.94 1052.53 545.00 1060.00 Z"
       />
     </g>
-    <g fill="#FEFEFE" fill-opacity="1.00" stroke="None">
+    <g fill="#FEFEFE" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 0.00 1080.00
@@ -1932,7 +1932,7 @@ const SvgLangwatch = (props) => (
   C 641.79 1007.02 634.16 1008.18 628.78 1011.78 C 623.40 1015.38 618.04 1021.77 611.00 1022.00 Z"
       />
     </g>
-    <g fill="#D3D4D5" fill-opacity="1.00" stroke="None">
+    <g fill="#D3D4D5" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 145.00 862.00
@@ -1973,7 +1973,7 @@ const SvgLangwatch = (props) => (
   C 202.86 208.06 189.55 213.21 179.08 221.08 C 168.62 228.95 158.55 232.36 148.75 242.75 C 138.95 253.15 145.33 274.80 144.00 290.00 C 142.67 305.20 144.60 325.62 144.00 342.00 C 143.40 358.38 144.27 377.08 144.00 394.00 C 143.73 410.92 144.11 428.82 144.00 446.00 C 143.89 463.18 144.04 480.67 144.00 498.00 C 143.96 515.33 143.99 533.63 144.00 551.00 C 144.01 568.37 143.93 585.68 144.00 603.00 C 144.07 620.32 143.82 637.74 144.00 655.00 C 144.18 672.26 143.59 689.85 144.00 707.00 C 144.41 724.15 143.08 742.08 144.00 759.00 C 144.92 775.92 141.96 794.58 144.00 811.00 C 146.04 827.42 139.02 847.29 145.00 862.00 Z"
       />
     </g>
-    <g fill="#9EA3A3" fill-opacity="1.00" stroke="None">
+    <g fill="#9EA3A3" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 145.00 862.00
@@ -1992,7 +1992,7 @@ const SvgLangwatch = (props) => (
   C 416.42 237.70 407.42 228.05 396.23 221.77 C 385.04 215.50 374.87 211.15 364.23 203.77 C 353.59 196.39 342.55 191.94 331.25 185.75 C 319.94 179.56 312.05 173.38 300.22 166.78 C 288.40 160.17 274.14 167.66 264.25 175.25 C 254.35 182.83 242.03 186.86 231.70 193.70 C 221.36 200.53 210.76 205.65 200.25 212.25 C 189.73 218.84 178.00 223.27 167.75 230.75 C 157.49 238.22 144.19 242.35 145.00 258.00 C 145.81 273.65 144.64 291.70 145.00 308.00 C 145.36 324.30 144.83 342.43 145.00 359.00 C 145.17 375.57 144.92 392.34 145.00 409.00 C 145.08 425.66 144.96 442.24 145.00 459.00 C 145.04 475.76 144.97 493.21 145.00 510.00 C 145.03 526.79 144.96 543.20 145.00 560.00 C 145.04 576.80 144.92 594.22 145.00 611.00 C 145.08 627.78 144.84 644.28 145.00 661.00 C 145.16 677.72 144.64 694.30 145.00 711.00 C 145.36 727.70 144.21 745.42 145.00 762.00 C 145.79 778.58 143.22 795.72 145.00 812.00 C 146.78 828.28 141.05 846.28 145.00 862.00 Z"
       />
     </g>
-    <g fill="#788082" fill-opacity="1.00" stroke="None">
+    <g fill="#788082" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 478.00 55.00
@@ -2005,7 +2005,7 @@ const SvgLangwatch = (props) => (
   C 710.27 140.97 715.20 115.38 712.99 97.01 C 710.78 78.64 690.36 78.60 678.70 69.30 C 667.03 60.01 652.34 54.10 639.75 46.25 C 627.16 38.40 612.72 30.13 599.70 23.31 C 586.67 16.48 570.99 2.17 556.08 9.08 C 541.16 15.98 530.23 24.25 516.23 31.23 C 502.23 38.20 491.58 48.28 478.00 55.00 Z"
       />
     </g>
-    <g fill="#425557" fill-opacity="1.00" stroke="None">
+    <g fill="#425557" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 478.00 55.00
@@ -2040,7 +2040,7 @@ const SvgLangwatch = (props) => (
   C 473.43 64.76 483.39 53.82 495.75 47.75 C 508.11 41.68 518.31 33.18 531.22 28.22 C 544.13 23.27 556.34 13.43 571.00 13.00 Z"
       />
     </g>
-    <g fill="#223B40" fill-opacity="1.00" stroke="None">
+    <g fill="#223B40" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 571.00 13.00
@@ -2123,7 +2123,7 @@ const SvgLangwatch = (props) => (
   C 287.81 486.00 292.64 476.58 300.68 473.68 C 308.72 470.78 315.10 465.83 322.69 461.69 C 330.29 457.56 336.28 452.42 344.25 449.25 C 352.22 446.08 356.13 438.48 365.03 437.03 C 373.92 435.57 380.25 448.05 379.00 457.00 C 377.75 465.95 379.71 481.56 379.00 491.00 C 378.29 500.44 379.62 515.23 379.00 524.00 C 378.38 532.77 362.32 536.11 357.31 529.69 C 352.29 523.28 341.83 521.22 338.00 515.00 Z"
       />
     </g>
-    <g fill="#3E5054" fill-opacity="1.00" stroke="None">
+    <g fill="#3E5054" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 608.00 63.00
@@ -2139,7 +2139,7 @@ const SvgLangwatch = (props) => (
   C 469.37 92.73 474.17 85.65 482.00 85.00 Z"
       />
     </g>
-    <g fill="#687275" fill-opacity="1.00" stroke="None">
+    <g fill="#687275" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 492.00 80.00
@@ -2150,7 +2150,7 @@ const SvgLangwatch = (props) => (
   C 468.87 108.37 481.63 110.32 490.25 115.75 C 498.87 121.18 507.68 127.28 516.92 132.08 C 526.16 136.89 534.35 142.18 543.78 147.22 C 553.20 152.27 562.38 160.76 573.99 157.99 C 585.60 155.22 591.75 147.92 601.92 142.92 C 612.10 137.93 618.74 132.43 628.77 127.77 C 638.80 123.11 644.25 115.22 655.26 111.26 C 666.27 107.29 672.93 96.74 660.07 90.93 C 647.22 85.12 642.93 82.57 632.25 76.75 C 621.56 70.94 614.03 68.32 604.75 61.25 C 595.47 54.17 586.42 52.63 577.25 45.75 C 568.07 38.88 554.39 42.75 545.75 48.75 C 537.12 54.75 526.82 58.13 518.08 64.08 C 509.35 70.03 500.89 74.89 492.00 80.00 Z"
       />
     </g>
-    <g fill="#A5A9AA" fill-opacity="1.00" stroke="None">
+    <g fill="#A5A9AA" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 519.00 65.00
@@ -2163,7 +2163,7 @@ const SvgLangwatch = (props) => (
   C 476.19 90.07 488.73 84.79 499.23 80.23 C 509.73 75.67 518.90 65.47 529.75 61.75 C 540.60 58.03 550.97 47.23 562.22 45.22 C 573.47 43.21 584.85 56.48 595.23 60.77 C 605.61 65.06 615.65 71.40 626.23 77.77 C 636.81 84.14 647.21 86.44 658.69 94.31 C 670.18 102.17 649.79 110.45 641.26 115.26 C 632.72 120.06 619.74 129.74 610.00 133.00 Z"
       />
     </g>
-    <g fill="#D9DADB" fill-opacity="1.00" stroke="None">
+    <g fill="#D9DADB" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 609.00 133.00
@@ -2188,7 +2188,7 @@ const SvgLangwatch = (props) => (
   C 486.92 107.11 501.23 118.30 516.31 126.69 C 531.38 135.09 547.04 146.02 562.25 152.75 C 577.46 159.49 597.75 142.02 609.00 133.00 Z"
       />
     </g>
-    <g fill="#FEFEFE" fill-opacity="1.00" stroke="None">
+    <g fill="#FEFEFE" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 609.00 133.00
@@ -2212,7 +2212,7 @@ const SvgLangwatch = (props) => (
   C 602.05 133.90 605.28 132.44 609.00 133.00 Z"
       />
     </g>
-    <g fill="#7C8486" fill-opacity="1.00" stroke="None">
+    <g fill="#7C8486" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 492.00 80.00
@@ -2223,7 +2223,7 @@ const SvgLangwatch = (props) => (
   C 509.80 69.81 501.64 76.17 492.00 80.00 Z"
       />
     </g>
-    <g fill="#808989" fill-opacity="1.00" stroke="None">
+    <g fill="#808989" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 410.00 236.00
@@ -2233,7 +2233,7 @@ const SvgLangwatch = (props) => (
   C 413.60 248.10 412.68 241.36 410.00 236.00 Z"
       />
     </g>
-    <g fill="#697476" fill-opacity="1.00" stroke="None">
+    <g fill="#697476" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 410.00 236.00
@@ -2242,7 +2242,7 @@ const SvgLangwatch = (props) => (
   C 421.68 109.27 422.05 119.93 422.00 130.00 C 421.95 140.07 422.26 150.95 422.00 161.00 C 421.74 171.05 422.64 182.17 422.00 192.00 C 421.36 201.83 423.44 213.72 422.00 223.00 C 420.56 232.28 425.92 244.78 420.25 252.24 C 414.58 259.71 410.67 238.05 410.00 236.00 Z"
       />
     </g>
-    <g fill="#435457" fill-opacity="1.00" stroke="None">
+    <g fill="#435457" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 467.00 271.00
@@ -2251,7 +2251,7 @@ const SvgLangwatch = (props) => (
   C 497.02 289.18 506.39 294.50 514.97 299.03 C 523.54 303.56 531.34 308.09 539.31 314.70 C 547.27 321.30 563.17 322.75 563.00 309.00 C 562.83 295.25 562.85 282.52 563.00 269.00 C 563.15 255.48 562.42 242.42 563.00 229.00 C 563.58 215.58 561.65 201.26 563.00 188.00 C 564.35 174.74 554.46 170.95 545.67 165.33 C 536.89 159.71 527.85 158.29 519.25 151.75 C 510.64 145.22 503.19 142.92 494.25 136.75 C 485.31 130.59 478.55 129.26 469.25 121.75 C 459.94 114.24 446.90 117.72 450.67 131.33 C 454.44 144.94 447.84 156.65 450.00 170.00 C 452.16 183.35 448.98 196.43 449.00 209.00 C 449.02 221.57 448.76 237.01 449.02 248.98 C 449.29 260.94 457.75 267.63 467.00 271.00 Z"
       />
     </g>
-    <g fill="#616C6F" fill-opacity="1.00" stroke="None">
+    <g fill="#616C6F" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 467.00 271.00
@@ -2262,7 +2262,7 @@ const SvgLangwatch = (props) => (
   C 469.92 122.09 477.34 131.22 485.70 134.30 C 494.05 137.39 501.33 144.21 509.08 148.92 C 516.83 153.62 525.95 157.44 533.68 162.32 C 541.41 167.20 551.38 169.09 556.77 177.23 C 562.16 185.37 557.91 201.92 558.07 212.07 C 558.24 222.22 557.44 239.48 558.00 250.00 C 558.56 260.52 556.78 278.53 558.00 288.00 C 559.22 297.47 563.40 314.89 551.99 315.99 C 540.58 317.09 536.43 305.74 527.31 302.69 C 518.18 299.65 512.13 292.18 503.31 288.69 C 494.48 285.21 487.66 279.02 479.31 274.69 C 470.95 270.36 462.71 267.80 456.25 259.75 C 449.79 251.70 453.70 235.87 453.00 225.00 C 452.30 214.13 453.13 197.86 453.00 187.00 C 452.87 176.14 452.64 158.66 453.00 149.00 C 453.36 139.34 448.38 116.40 462.00 120.00 Z"
       />
     </g>
-    <g fill="#888E90" fill-opacity="1.00" stroke="None">
+    <g fill="#888E90" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 462.00 120.00
@@ -2274,7 +2274,7 @@ const SvgLangwatch = (props) => (
   C 528.98 304.74 506.17 287.74 483.00 274.00 Z"
       />
     </g>
-    <g fill="#B2B4B5" fill-opacity="1.00" stroke="None">
+    <g fill="#B2B4B5" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 482.00 274.00
@@ -2284,7 +2284,7 @@ const SvgLangwatch = (props) => (
   C 451.20 139.69 455.61 160.42 454.00 180.00 C 452.39 199.58 456.38 221.63 454.00 241.00 C 451.62 260.37 465.98 268.22 482.00 274.00 Z"
       />
     </g>
-    <g fill="#FCFCFC" fill-opacity="1.00" stroke="None">
+    <g fill="#FCFCFC" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 482.00 274.00
@@ -2292,7 +2292,7 @@ const SvgLangwatch = (props) => (
   C 491.73 274.18 496.89 283.13 504.92 286.08 C 512.96 289.02 518.14 295.52 526.75 298.25 C 535.37 300.97 538.22 308.25 547.78 311.22 C 557.33 314.19 555.19 296.44 555.00 287.00 C 554.81 277.56 554.93 263.44 555.00 253.00 C 555.07 242.56 554.64 229.86 555.00 219.00 C 555.36 208.14 554.06 197.09 555.00 186.00 C 555.94 174.91 544.87 174.30 538.23 168.77 C 531.59 163.24 522.59 162.61 516.08 156.92 C 509.58 151.23 502.00 148.98 495.25 143.75 C 488.49 138.53 480.72 137.37 474.22 131.78 C 467.73 126.19 454.04 120.64 455.00 133.00 C 455.96 145.36 454.71 155.28 455.00 167.00 C 455.29 178.72 455.23 188.59 455.00 200.00 C 454.77 211.41 455.84 222.72 455.00 234.00 C 454.16 245.28 454.46 254.40 462.25 260.75 C 470.04 267.11 476.75 266.49 482.00 274.00 Z"
       />
     </g>
-    <g fill="#ADB0B1" fill-opacity="1.00" stroke="None">
+    <g fill="#ADB0B1" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 743.00 150.00
@@ -2300,7 +2300,7 @@ const SvgLangwatch = (props) => (
   C 896.55 861.81 904.57 850.82 920.75 842.75 C 936.94 834.68 934.25 811.91 934.00 794.00 C 933.75 776.09 934.11 750.49 934.00 731.00 C 933.89 711.51 934.05 689.24 934.00 669.00 C 933.95 648.76 934.01 626.55 934.00 606.00 C 933.99 585.45 933.99 564.69 934.00 544.00 C 934.01 523.31 933.96 501.73 934.00 481.00 C 934.04 460.27 933.91 439.69 934.00 419.00 C 934.09 398.31 933.81 376.55 934.00 356.00 C 934.19 335.45 933.57 314.22 934.00 294.00 C 934.43 273.78 933.07 250.49 934.00 231.00 C 934.93 211.51 918.70 205.40 905.25 197.75 C 891.80 190.10 878.79 181.09 865.75 174.25 C 852.72 167.41 839.80 157.50 826.69 151.31 C 813.59 145.11 799.63 131.85 785.00 130.00 C 770.37 128.15 754.16 142.58 743.00 150.00 Z"
       />
     </g>
-    <g fill="#405356" fill-opacity="1.00" stroke="None">
+    <g fill="#405356" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 833.00 261.00
@@ -2316,7 +2316,7 @@ const SvgLangwatch = (props) => (
   C 828.00 268.23 829.84 263.17 833.00 261.00 Z"
       />
     </g>
-    <g fill="#647072" fill-opacity="1.00" stroke="None">
+    <g fill="#647072" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 833.00 261.00
@@ -2330,7 +2330,7 @@ const SvgLangwatch = (props) => (
   C 838.98 195.67 824.95 189.15 811.75 181.25 C 798.55 173.35 784.70 160.47 770.02 171.02 C 755.35 181.58 744.49 183.47 730.22 193.22 C 715.96 202.98 703.96 203.73 690.25 215.25 C 676.54 226.77 701.16 239.94 712.75 245.25 C 724.35 250.56 739.66 263.12 752.25 267.75 C 764.84 272.38 779.72 289.85 793.31 283.31 C 806.89 276.77 819.46 267.33 833.00 261.00 Z"
       />
     </g>
-    <g fill="#8C9293" fill-opacity="1.00" stroke="None">
+    <g fill="#8C9293" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 694.00 216.00
@@ -2342,7 +2342,7 @@ const SvgLangwatch = (props) => (
   C 840.49 204.39 831.46 189.64 819.70 187.30 C 807.93 184.97 801.47 172.75 789.68 168.32 C 777.88 163.89 766.22 175.74 756.23 181.23 C 746.24 186.72 734.63 193.18 724.22 198.22 C 713.81 203.26 703.92 209.92 694.00 216.00 Z"
       />
     </g>
-    <g fill="#B0B3B4" fill-opacity="1.00" stroke="None">
+    <g fill="#B0B3B4" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 694.00 216.00
@@ -2359,7 +2359,7 @@ const SvgLangwatch = (props) => (
   C 860.07 211.21 848.48 204.82 836.25 197.75 C 824.01 190.69 812.94 187.24 801.70 177.30 C 790.45 167.36 776.41 167.62 765.08 177.08 C 753.74 186.53 741.83 189.70 729.75 196.75 C 717.68 203.80 706.63 210.23 694.00 216.00 Z"
       />
     </g>
-    <g fill="#CFD0D0" fill-opacity="1.00" stroke="None">
+    <g fill="#CFD0D0" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 745.00 191.00
@@ -2373,7 +2373,7 @@ const SvgLangwatch = (props) => (
   C 860.89 213.26 849.64 206.75 839.08 200.92 C 828.52 195.10 817.69 189.71 807.70 183.30 C 797.70 176.90 786.70 165.30 776.02 173.02 C 765.35 180.75 754.33 181.87 745.00 191.00 Z"
       />
     </g>
-    <g fill="#FDFDFD" fill-opacity="1.00" stroke="None">
+    <g fill="#FDFDFD" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 745.00 191.00
@@ -2388,7 +2388,7 @@ const SvgLangwatch = (props) => (
   C 776.80 175.73 768.15 176.77 762.75 180.75 C 757.36 184.73 751.70 189.90 745.00 191.00 Z"
       />
     </g>
-    <g fill="#D4D5D5" fill-opacity="1.00" stroke="None">
+    <g fill="#D4D5D5" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 706.00 236.00
@@ -2398,7 +2398,7 @@ const SvgLangwatch = (props) => (
   C 687.63 227.14 699.34 232.40 706.00 236.00 Z"
       />
     </g>
-    <g fill="#49595C" fill-opacity="1.00" stroke="None">
+    <g fill="#49595C" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 350.00 261.00
@@ -2411,7 +2411,7 @@ const SvgLangwatch = (props) => (
   C 358.92 261.00 373.22 254.50 372.92 244.08 C 372.62 233.67 354.90 234.24 348.30 229.70 C 341.70 225.15 333.56 216.66 325.00 214.00 C 316.44 211.34 307.66 207.18 299.75 200.25 C 291.84 193.33 280.90 195.16 273.74 202.74 C 266.59 210.33 257.79 211.51 249.75 217.75 C 241.70 223.99 233.99 227.42 225.25 232.25 C 216.51 237.07 210.33 243.04 200.23 246.23 C 190.13 249.42 187.12 261.29 197.77 265.23 C 208.42 269.17 211.48 276.95 220.93 281.07 C 230.37 285.19 237.16 289.98 245.75 295.25 C 254.35 300.52 265.23 305.94 275.78 303.78 C 286.33 301.62 293.29 295.96 302.25 291.25 C 311.21 286.53 317.27 280.63 326.32 276.32 C 335.38 272.01 342.46 267.63 350.00 261.00 Z"
       />
     </g>
-    <g fill="#7C8486" fill-opacity="1.00" stroke="None">
+    <g fill="#7C8486" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 260.00 215.00
@@ -2426,7 +2426,7 @@ const SvgLangwatch = (props) => (
   C 355.62 257.04 374.75 248.67 365.75 241.25 C 356.75 233.82 348.38 231.91 339.70 226.30 C 331.01 220.70 322.39 214.91 313.69 211.31 C 305.00 207.71 294.43 196.58 285.03 199.03 C 275.63 201.48 269.41 211.65 260.00 215.00 Z"
       />
     </g>
-    <g fill="#AEB1B2" fill-opacity="1.00" stroke="None">
+    <g fill="#AEB1B2" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 276.00 302.00
@@ -2440,7 +2440,7 @@ const SvgLangwatch = (props) => (
   C 227.71 238.73 258.77 220.04 290.00 202.00 Z"
       />
     </g>
-    <g fill="#DCDDDD" fill-opacity="1.00" stroke="None">
+    <g fill="#DCDDDD" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 290.00 202.00
@@ -2461,7 +2461,7 @@ const SvgLangwatch = (props) => (
   C 279.41 214.25 281.90 205.91 289.02 206.02 C 296.15 206.13 298.70 213.65 306.00 213.00 Z"
       />
     </g>
-    <g fill="#FEFEFE" fill-opacity="1.00" stroke="None">
+    <g fill="#FEFEFE" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 306.00 213.00
@@ -2478,7 +2478,7 @@ const SvgLangwatch = (props) => (
   C 322.04 225.32 318.69 221.84 316.22 218.78 C 313.75 215.72 304.48 220.49 306.00 213.00 Z"
       />
     </g>
-    <g fill="#677173" fill-opacity="1.00" stroke="None">
+    <g fill="#677173" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 228.00 282.00
@@ -2488,7 +2488,7 @@ const SvgLangwatch = (props) => (
   C 200.91 266.93 214.38 275.77 228.00 282.00 Z"
       />
     </g>
-    <g fill="#747E7F" fill-opacity="1.00" stroke="None">
+    <g fill="#747E7F" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 343.00 978.00
@@ -2498,7 +2498,7 @@ const SvgLangwatch = (props) => (
   C 160.02 234.58 144.56 244.06 146.00 264.00 C 147.44 283.94 145.35 308.11 146.00 329.00 C 146.65 349.89 145.71 372.69 146.00 394.00 C 146.29 415.31 145.88 437.50 146.00 459.00 C 146.12 480.50 145.96 502.42 146.00 524.00 C 146.04 545.58 146.02 567.40 146.00 589.00 C 145.98 610.60 146.09 632.43 146.00 654.00 C 145.91 675.57 146.21 698.63 146.00 720.00 C 145.79 741.37 146.48 764.15 146.00 785.00 C 145.52 805.85 147.06 830.22 146.00 850.00 C 144.94 869.78 163.74 874.81 177.31 883.69 C 190.87 892.58 205.46 898.40 218.97 907.03 C 232.49 915.65 246.53 922.55 260.25 930.75 C 273.98 938.94 287.91 945.85 301.31 954.70 C 314.70 963.54 330.11 968.61 343.00 978.00 Z"
       />
     </g>
-    <g fill="#48585B" fill-opacity="1.00" stroke="None">
+    <g fill="#48585B" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 743.00 429.00
@@ -2508,7 +2508,7 @@ const SvgLangwatch = (props) => (
   C 778.00 437.41 776.28 444.16 766.30 439.70 C 756.33 435.24 754.20 434.14 746.25 429.75 C 738.31 425.35 734.15 423.04 727.25 418.75 C 720.34 414.46 714.85 411.65 708.25 407.75 C 701.66 403.84 694.43 401.30 688.75 396.25 C 683.07 391.20 674.11 392.35 671.23 383.77 C 668.35 375.19 670.60 364.42 670.00 355.00 C 669.40 345.58 670.50 334.57 670.00 325.00 C 669.51 315.43 670.71 303.31 670.00 294.00 C 669.29 284.69 671.45 272.42 670.00 264.00 C 668.55 255.58 668.48 244.42 678.01 244.01 C 687.54 243.60 689.00 252.78 696.25 255.75 C 703.49 258.73 708.31 264.19 715.00 268.00 Z"
       />
     </g>
-    <g fill="#858D8E" fill-opacity="1.00" stroke="None">
+    <g fill="#858D8E" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 762.00 271.00
@@ -2516,7 +2516,7 @@ const SvgLangwatch = (props) => (
   C 720.45 247.02 728.60 255.58 736.77 258.23 C 744.94 260.88 753.48 270.83 762.00 271.00 Z"
       />
     </g>
-    <g fill="#808789" fill-opacity="1.00" stroke="None">
+    <g fill="#808789" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 778.00 426.00
@@ -2531,7 +2531,7 @@ const SvgLangwatch = (props) => (
   C 708.31 264.19 703.49 258.73 696.25 255.75 C 689.00 252.78 687.54 243.60 678.01 244.01 C 668.48 244.42 668.55 255.58 670.00 264.00 C 671.45 272.42 669.29 284.69 670.00 294.00 C 670.71 303.31 669.51 315.43 670.00 325.00 C 670.50 334.57 669.40 345.58 670.00 355.00 C 670.60 364.42 668.35 375.19 671.23 383.77 C 674.11 392.35 683.07 391.20 688.75 396.25 C 694.43 401.30 701.66 403.84 708.25 407.75 C 714.85 411.65 720.34 414.46 727.25 418.75 C 734.15 423.04 738.31 425.35 746.25 429.75 C 754.20 434.14 756.33 435.24 766.30 439.70 C 776.28 444.16 778.00 437.41 778.00 426.00 Z"
       />
     </g>
-    <g fill="#AAAEAE" fill-opacity="1.00" stroke="None">
+    <g fill="#AAAEAE" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 677.00 388.00
@@ -2539,7 +2539,7 @@ const SvgLangwatch = (props) => (
   C 736.94 283.31 728.93 274.19 721.02 271.98 C 713.12 269.77 703.78 261.88 697.08 258.92 C 690.37 255.97 680.73 241.29 673.75 248.75 C 666.78 256.22 673.54 271.66 672.00 282.00 C 670.46 292.34 672.31 308.30 672.00 319.00 C 671.69 329.70 671.28 346.02 672.00 356.00 C 672.72 365.98 668.03 382.56 677.00 388.00 Z"
       />
     </g>
-    <g fill="#D0D1D1" fill-opacity="1.00" stroke="None">
+    <g fill="#D0D1D1" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 677.00 388.00
@@ -2556,7 +2556,7 @@ const SvgLangwatch = (props) => (
   C 736.42 284.30 730.83 279.12 723.25 275.75 C 715.67 272.39 710.92 269.22 703.25 264.75 C 695.58 260.28 693.22 257.24 684.74 251.26 C 676.27 245.28 671.45 255.39 674.00 265.00 C 676.55 274.61 672.61 287.16 674.00 297.00 C 675.39 306.84 672.91 318.38 674.00 328.00 C 675.09 337.62 672.49 351.13 674.00 360.00 C 675.51 368.87 669.90 382.17 677.00 388.00 Z"
       />
     </g>
-    <g fill="#FDFEFE" fill-opacity="1.00" stroke="None">
+    <g fill="#FDFEFE" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 688.00 393.00
@@ -2567,7 +2567,7 @@ const SvgLangwatch = (props) => (
   C 755.19 297.07 746.40 292.22 738.75 287.25 C 731.11 282.28 724.70 277.21 716.74 273.26 C 708.78 269.30 700.30 265.50 693.08 259.92 C 685.86 254.33 675.80 244.62 676.00 259.00 C 676.20 273.38 676.43 282.60 676.00 296.00 C 675.57 309.40 677.40 318.80 676.00 332.00 C 674.60 345.20 679.19 355.34 676.00 369.00 C 672.81 382.66 683.31 384.22 688.00 393.00 Z"
       />
     </g>
-    <g fill="#6C7578" fill-opacity="1.00" stroke="None">
+    <g fill="#6C7578" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 753.00 291.00
@@ -2577,7 +2577,7 @@ const SvgLangwatch = (props) => (
   C 725.84 274.17 745.38 280.14 753.00 291.00 Z"
       />
     </g>
-    <g fill="#47575A" fill-opacity="1.00" stroke="None">
+    <g fill="#47575A" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 261.00 331.00
@@ -2609,7 +2609,7 @@ const SvgLangwatch = (props) => (
   C 261.40 464.01 264.40 436.34 264.00 410.00 C 263.60 383.66 265.06 356.00 261.00 331.00 Z"
       />
     </g>
-    <g fill="#455659" fill-opacity="1.00" stroke="None">
+    <g fill="#455659" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 415.00 290.00
@@ -2621,7 +2621,7 @@ const SvgLangwatch = (props) => (
   C 396.43 313.65 404.23 325.21 399.00 342.00 C 393.77 358.79 414.13 362.52 423.97 352.97 C 433.82 343.43 444.23 344.47 455.25 336.25 C 466.27 328.03 471.90 324.54 484.25 317.25 C 496.60 309.96 489.20 295.92 477.25 291.75 C 465.29 287.58 457.49 277.62 446.01 274.99 C 434.53 272.36 423.15 283.63 415.00 290.00 Z"
       />
     </g>
-    <g fill="#667071" fill-opacity="1.00" stroke="None">
+    <g fill="#667071" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 207.00 864.00
@@ -2633,7 +2633,7 @@ const SvgLangwatch = (props) => (
   C 256.04 314.07 243.57 312.90 237.08 306.92 C 230.58 300.95 220.68 298.73 213.23 292.77 C 205.78 286.81 196.76 286.59 189.02 278.98 C 181.29 271.36 168.11 283.08 173.07 293.93 C 178.04 304.77 175.03 316.98 176.00 329.00 C 176.97 341.02 177.15 353.55 177.00 366.00 C 176.85 378.45 177.07 391.51 177.00 404.00 C 176.93 416.49 177.03 428.46 177.00 441.00 C 176.97 453.54 177.01 466.41 177.00 479.00 C 176.99 491.59 177.01 504.40 177.00 517.00 C 176.99 529.60 177.00 542.44 177.00 555.00 C 177.00 567.56 177.00 579.45 177.00 592.00 C 177.00 604.55 176.99 617.43 177.00 630.00 C 177.01 642.57 176.98 655.48 177.00 668.00 C 177.02 680.52 176.96 693.63 177.00 706.00 C 177.04 718.37 176.92 730.89 177.00 743.00 C 177.08 755.11 176.82 769.39 177.00 781.00 C 177.18 792.61 176.60 808.58 177.00 819.00 C 177.40 829.42 173.74 845.98 183.25 850.75 C 192.76 855.51 197.55 862.15 207.00 864.00 Z"
       />
     </g>
-    <g fill="#5F6B6D" fill-opacity="1.00" stroke="None">
+    <g fill="#5F6B6D" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 415.00 290.00
@@ -2645,7 +2645,7 @@ const SvgLangwatch = (props) => (
   C 463.84 327.12 468.32 324.80 481.75 317.75 C 495.19 310.71 489.09 298.66 476.75 294.25 C 464.41 289.84 458.98 279.96 446.69 277.31 C 434.41 274.66 425.37 284.28 415.00 290.00 Z"
       />
     </g>
-    <g fill="#898F90" fill-opacity="1.00" stroke="None">
+    <g fill="#898F90" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 179.00 841.00
@@ -2672,7 +2672,7 @@ const SvgLangwatch = (props) => (
   C 172.79 291.69 177.35 308.62 177.00 325.00 C 176.65 341.38 178.76 358.99 178.00 376.00 C 177.24 393.01 178.34 410.83 178.00 428.00 C 177.66 445.17 178.15 462.77 178.00 480.00 C 177.85 497.23 178.05 514.79 178.00 532.00 C 177.95 549.21 177.99 565.79 178.00 583.00 C 178.01 600.21 177.92 617.76 178.00 635.00 C 178.08 652.24 177.79 669.79 178.00 687.00 C 178.21 704.21 177.52 721.91 178.00 739.00 C 178.48 756.09 176.93 774.19 178.00 791.00 C 179.07 807.81 175.12 825.32 179.00 841.00 Z"
       />
     </g>
-    <g fill="#7F8688" fill-opacity="1.00" stroke="None">
+    <g fill="#7F8688" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 405.00 304.00
@@ -2681,7 +2681,7 @@ const SvgLangwatch = (props) => (
   C 460.62 328.26 466.37 322.98 477.30 319.30 C 488.24 315.63 492.12 303.84 481.69 297.31 C 471.27 290.77 464.14 289.89 454.75 283.25 C 445.35 276.62 433.83 278.34 427.08 286.08 C 420.33 293.82 403.11 291.43 405.00 304.00 Z"
       />
     </g>
-    <g fill="#B7BABA" fill-opacity="1.00" stroke="None">
+    <g fill="#B7BABA" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 405.00 304.00
@@ -2694,7 +2694,7 @@ const SvgLangwatch = (props) => (
   C 407.45 337.89 406.41 323.04 407.00 309.00 C 407.59 294.96 422.23 297.08 430.25 288.25 C 438.26 279.42 451.98 284.11 459.75 291.25 C 467.52 298.39 484.88 297.96 484.00 311.00 Z"
       />
     </g>
-    <g fill="#C6C8C8" fill-opacity="1.00" stroke="None">
+    <g fill="#C6C8C8" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 179.00 504.00
@@ -2708,7 +2708,7 @@ const SvgLangwatch = (props) => (
   C 212.97 298.50 204.61 293.31 197.25 289.75 C 189.89 286.20 177.71 275.16 178.00 289.00 C 178.29 302.84 179.42 311.06 179.00 324.00 C 178.58 336.94 179.19 347.57 179.00 360.00 C 178.81 372.43 179.09 383.81 179.00 396.00 C 178.91 408.19 179.04 419.91 179.00 432.00 C 178.96 444.09 179.01 455.95 179.00 468.00 C 178.99 480.05 179.00 491.96 179.00 504.00 Z"
       />
     </g>
-    <g fill="#FEFEFE" fill-opacity="1.00" stroke="None">
+    <g fill="#FEFEFE" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 221.00 303.00
@@ -2718,7 +2718,7 @@ const SvgLangwatch = (props) => (
   C 496.91 1010.43 495.78 995.98 496.00 982.00 C 496.22 968.02 495.90 953.99 496.00 940.00 C 496.10 926.01 495.95 912.00 496.00 898.00 C 496.05 884.00 495.98 870.00 496.00 856.00 C 496.02 842.00 495.99 828.00 496.00 814.00 C 496.01 800.00 495.99 786.01 496.00 772.00 C 496.01 757.99 495.97 744.02 496.00 730.00 C 496.03 715.98 495.95 702.03 496.00 688.00 C 496.05 673.97 495.88 660.08 496.00 646.00 C 496.12 631.92 495.74 618.17 496.00 604.00 C 496.26 589.83 495.44 575.26 496.00 561.00 C 496.56 546.74 494.74 533.40 496.00 519.00 C 497.26 504.60 493.20 491.82 496.00 477.00 C 498.80 462.18 487.04 459.14 477.25 453.75 C 467.46 448.37 459.99 441.82 451.25 437.75 C 442.51 433.69 431.76 425.89 424.22 422.78 C 416.69 419.66 402.30 404.32 399.00 416.00 C 395.70 427.68 398.67 443.37 399.00 456.00 C 399.33 468.63 397.78 484.78 399.00 498.00 C 400.22 511.22 398.03 525.40 400.00 539.00 C 401.97 552.60 394.81 566.51 381.00 563.00 C 367.19 559.48 364.55 552.90 354.22 547.78 C 343.90 542.66 336.04 538.57 326.89 533.11 C 317.75 527.64 310.58 522.04 300.92 517.08 C 291.25 512.13 283.61 508.65 273.25 502.75 C 262.89 496.85 255.13 490.60 257.00 477.00 C 258.87 463.40 256.00 448.75 257.00 435.00 C 258.00 421.25 256.22 406.73 257.00 393.00 C 257.78 379.27 255.91 364.52 257.00 351.00 C 258.09 337.48 258.36 323.99 246.22 319.78 C 234.09 315.56 231.67 308.17 221.00 303.00 Z"
       />
     </g>
-    <g fill="#FBFBFB" fill-opacity="1.00" stroke="None">
+    <g fill="#FBFBFB" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 484.00 311.00
@@ -2726,7 +2726,7 @@ const SvgLangwatch = (props) => (
   C 434.82 343.01 457.26 322.61 484.00 311.00 Z"
       />
     </g>
-    <g fill="#49585B" fill-opacity="1.00" stroke="None">
+    <g fill="#49585B" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 588.00 348.00
@@ -2739,7 +2739,7 @@ const SvgLangwatch = (props) => (
   C 763.07 470.93 765.53 461.81 759.25 455.75 C 752.97 449.70 746.95 449.65 740.25 445.75 C 733.55 441.85 730.29 438.12 723.25 433.75 C 716.21 429.39 711.49 429.39 704.30 423.70 C 697.12 418.00 694.00 420.50 685.08 412.92 C 676.16 405.34 655.43 398.99 654.00 386.00 C 652.57 373.01 654.83 368.50 653.00 358.00 C 651.17 347.50 653.80 338.96 654.00 330.00 C 654.20 321.04 655.47 311.12 648.25 305.76 C 641.02 300.39 634.89 309.00 628.67 311.67 C 622.45 314.34 615.91 317.91 610.23 322.23 C 604.55 326.55 597.85 327.96 591.70 332.70 C 585.54 337.43 580.91 341.39 588.00 348.00 Z"
       />
     </g>
-    <g fill="#818889" fill-opacity="1.00" stroke="None">
+    <g fill="#818889" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 404.00 353.00
@@ -2748,7 +2748,7 @@ const SvgLangwatch = (props) => (
   C 401.57 309.63 404.02 322.78 404.00 329.00 C 403.98 335.22 401.86 347.12 404.00 353.00 Z"
       />
     </g>
-    <g fill="#8E9395" fill-opacity="1.00" stroke="None">
+    <g fill="#8E9395" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 629.00 314.00
@@ -2768,7 +2768,7 @@ const SvgLangwatch = (props) => (
   C 640.47 377.62 636.77 371.97 631.00 371.00 Z"
       />
     </g>
-    <g fill="#A6AAAB" fill-opacity="1.00" stroke="None">
+    <g fill="#A6AAAB" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 689.00 393.00
@@ -2779,7 +2779,7 @@ const SvgLangwatch = (props) => (
   C 776.73 318.64 773.98 329.25 775.00 339.00 C 776.02 348.75 774.05 358.19 775.00 368.00 C 775.95 377.81 773.49 387.03 775.00 397.00 C 776.51 406.97 771.89 415.60 775.07 425.93 C 778.26 436.25 770.73 440.62 762.75 435.25 C 754.78 429.88 750.93 429.62 744.08 424.92 C 737.24 420.21 732.01 418.21 725.23 414.77 C 718.45 411.33 714.19 406.01 707.03 403.97 C 699.86 401.94 695.02 396.84 689.00 393.00 Z"
       />
     </g>
-    <g fill="#D5D6D6" fill-opacity="1.00" stroke="None">
+    <g fill="#D5D6D6" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 610.00 329.00
@@ -2797,7 +2797,7 @@ const SvgLangwatch = (props) => (
   C 633.19 321.77 644.96 309.11 645.99 319.01 C 647.02 328.91 645.47 337.37 646.00 347.00 C 646.53 356.63 645.60 365.45 646.00 375.00 Z"
       />
     </g>
-    <g fill="#6D7678" fill-opacity="1.00" stroke="None">
+    <g fill="#6D7678" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 588.00 348.00
@@ -2812,7 +2812,7 @@ const SvgLangwatch = (props) => (
   C 587.20 344.08 587.22 346.97 588.00 348.00 Z"
       />
     </g>
-    <g fill="#FCFCFC" fill-opacity="1.00" stroke="None">
+    <g fill="#FCFCFC" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 646.00 375.00
@@ -2824,7 +2824,7 @@ const SvgLangwatch = (props) => (
   C 614.44 354.30 627.27 370.18 646.00 375.00 Z"
       />
     </g>
-    <g fill="#3E4F53" fill-opacity="1.00" stroke="None">
+    <g fill="#3E4F53" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 498.00 327.00
@@ -2838,7 +2838,7 @@ const SvgLangwatch = (props) => (
   C 559.39 345.96 548.16 347.38 541.75 341.25 C 535.34 335.12 528.53 334.66 521.23 327.77 C 513.93 320.88 506.22 321.48 498.00 327.00 Z"
       />
     </g>
-    <g fill="#606B6E" fill-opacity="1.00" stroke="None">
+    <g fill="#606B6E" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 498.00 327.00
@@ -2848,7 +2848,7 @@ const SvgLangwatch = (props) => (
   C 515.75 449.47 529.15 435.67 537.30 432.30 C 545.46 428.93 555.82 420.31 563.77 415.77 C 571.72 411.23 583.00 404.87 590.77 400.77 C 598.54 396.67 615.25 388.73 606.75 380.25 C 598.25 371.77 587.41 373.24 579.25 364.75 C 571.08 356.26 561.95 355.70 552.70 349.30 C 543.44 342.91 535.50 340.22 526.08 332.92 C 516.66 325.61 509.62 321.69 498.00 327.00 Z"
       />
     </g>
-    <g fill="#898F91" fill-opacity="1.00" stroke="None">
+    <g fill="#898F91" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 506.00 443.00
@@ -2860,7 +2860,7 @@ const SvgLangwatch = (props) => (
   C 520.74 436.05 509.26 446.07 498.77 436.23 C 488.28 426.39 476.83 425.81 467.25 417.75 C 457.68 409.68 444.78 405.43 435.92 400.08 C 427.07 394.72 405.56 385.14 416.08 378.08 C 426.59 371.01 437.81 367.24 448.07 361.07 C 458.34 354.91 469.21 347.61 479.25 342.25 C 489.29 336.89 501.31 324.69 512.69 329.31 C 524.08 333.92 532.85 342.82 543.75 348.25 C 554.64 353.69 565.32 360.23 576.00 366.00 Z"
       />
     </g>
-    <g fill="#C3C5C5" fill-opacity="1.00" stroke="None">
+    <g fill="#C3C5C5" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 532.00 432.00
@@ -2876,7 +2876,7 @@ const SvgLangwatch = (props) => (
   C 565.32 360.23 554.64 353.69 543.75 348.25 C 532.85 342.82 524.08 333.92 512.69 329.31 C 501.31 324.69 489.29 336.89 479.25 342.25 C 469.21 347.61 458.34 354.91 448.07 361.07 C 437.81 367.24 426.59 371.01 416.08 378.08 C 405.56 385.14 427.07 394.72 435.92 400.08 C 444.78 405.43 457.68 409.68 467.25 417.75 C 476.83 425.81 488.28 426.39 498.77 436.23 C 509.26 446.07 520.74 436.05 532.00 432.00 Z"
       />
     </g>
-    <g fill="#B1B4B5" fill-opacity="1.00" stroke="None">
+    <g fill="#B1B4B5" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 631.00 371.00
@@ -2885,7 +2885,7 @@ const SvgLangwatch = (props) => (
   C 605.36 331.19 588.63 335.20 589.08 342.92 C 589.52 350.64 603.83 353.67 609.25 357.75 C 614.66 361.83 624.69 368.12 631.00 371.00 Z"
       />
     </g>
-    <g fill="#FDFDFD" fill-opacity="1.00" stroke="None">
+    <g fill="#FDFDFD" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 447.00 363.00
@@ -2903,7 +2903,7 @@ const SvgLangwatch = (props) => (
   C 548.31 358.40 539.85 346.17 531.03 342.98 C 522.20 339.78 510.89 327.53 501.03 332.03 C 491.17 336.54 483.66 343.79 474.03 348.03 C 464.41 352.27 457.35 359.46 447.00 363.00 Z"
       />
     </g>
-    <g fill="#DFDFE0" fill-opacity="1.00" stroke="None">
+    <g fill="#DFDFE0" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 532.00 431.00
@@ -2922,7 +2922,7 @@ const SvgLangwatch = (props) => (
   C 415.32 389.33 427.90 392.28 434.98 398.03 C 442.05 403.77 451.67 405.46 459.25 410.75 C 466.82 416.05 474.05 419.70 481.93 425.07 C 489.81 430.44 498.37 431.77 506.30 437.70 C 514.23 443.62 523.53 430.43 532.00 431.00 Z"
       />
     </g>
-    <g fill="#A4A8A9" fill-opacity="1.00" stroke="None">
+    <g fill="#A4A8A9" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 553.00 419.00
@@ -2934,7 +2934,7 @@ const SvgLangwatch = (props) => (
   C 588.21 397.03 571.41 409.99 553.00 419.00 Z"
       />
     </g>
-    <g fill="#B8BABB" fill-opacity="1.00" stroke="None">
+    <g fill="#B8BABB" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 652.00 528.00
@@ -2948,7 +2948,7 @@ const SvgLangwatch = (props) => (
   C 665.83 407.94 658.80 398.05 650.68 397.34 C 642.55 396.63 644.27 418.74 645.00 427.00 C 645.73 435.26 645.97 452.61 646.00 462.00 C 646.03 471.39 645.30 489.45 646.00 498.00 C 646.70 506.55 641.69 527.52 652.00 528.00 Z"
       />
     </g>
-    <g fill="#DEDFDF" fill-opacity="1.00" stroke="None">
+    <g fill="#DEDFDF" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 746.00 473.00
@@ -2972,7 +2972,7 @@ const SvgLangwatch = (props) => (
   C 663.50 407.45 673.99 420.45 689.00 423.00 Z"
       />
     </g>
-    <g fill="#FEFEFE" fill-opacity="1.00" stroke="None">
+    <g fill="#FEFEFE" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 689.00 423.00
@@ -2989,7 +2989,7 @@ const SvgLangwatch = (props) => (
   C 719.02 444.91 713.61 438.00 706.74 435.26 C 699.88 432.52 692.84 429.69 689.00 423.00 Z"
       />
     </g>
-    <g fill="#B9BBBC" fill-opacity="1.00" stroke="None">
+    <g fill="#B9BBBC" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 754.00 469.00
@@ -2998,7 +2998,7 @@ const SvgLangwatch = (props) => (
   C 698.65 428.20 707.84 434.16 715.31 437.70 C 722.77 441.23 731.75 448.71 738.25 451.75 C 744.75 454.79 762.52 459.51 754.00 469.00 Z"
       />
     </g>
-    <g fill="#435457" fill-opacity="1.00" stroke="None">
+    <g fill="#435457" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 338.00 515.00
@@ -3009,7 +3009,7 @@ const SvgLangwatch = (props) => (
   C 317.18 468.03 323.37 463.15 331.23 459.23 C 339.09 455.31 347.15 452.32 354.23 446.23 C 361.31 440.14 375.31 438.20 374.93 451.07 C 374.55 463.95 375.52 473.46 375.00 486.00 C 374.48 498.54 375.89 509.32 375.00 522.00 C 374.11 534.68 360.13 528.92 354.25 522.75 C 348.37 516.58 338.86 513.75 332.00 509.00 Z"
       />
     </g>
-    <g fill="#A3A6A7" fill-opacity="1.00" stroke="None">
+    <g fill="#A3A6A7" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 459.00 1008.00
@@ -3017,7 +3017,7 @@ const SvgLangwatch = (props) => (
   C 467.30 445.51 473.47 450.42 485.75 456.25 C 498.04 462.07 500.40 474.29 499.00 489.00 C 497.60 503.71 499.82 519.96 499.00 535.00 C 498.18 550.04 497.90 565.67 498.00 581.00 C 498.10 596.33 497.95 611.66 498.00 627.00 C 498.05 642.34 497.96 657.64 498.00 673.00 C 498.04 688.36 497.95 703.60 498.00 719.00 C 498.05 734.40 497.91 750.64 498.00 766.00 C 498.09 781.36 497.80 796.78 498.00 812.00 C 498.20 827.22 497.55 842.99 498.00 858.00 C 498.45 873.01 497.00 889.41 498.00 904.00 C 499.00 918.59 498.83 935.83 499.00 950.00 C 499.17 964.17 498.12 983.47 499.00 996.00 C 499.88 1008.53 500.24 1032.12 487.70 1025.30 C 475.15 1018.49 470.21 1015.46 459.00 1008.00 Z"
       />
     </g>
-    <g fill="#7B8485" fill-opacity="1.00" stroke="None">
+    <g fill="#7B8485" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 310.00 473.00
@@ -3028,7 +3028,7 @@ const SvgLangwatch = (props) => (
   C 303.93 476.79 311.14 475.14 318.75 469.75 C 326.35 464.35 332.61 460.34 341.75 456.75 C 350.88 453.15 352.63 444.83 364.08 443.08 C 375.52 441.32 372.81 460.55 373.00 470.00 C 373.19 479.45 371.62 494.93 373.00 505.00 C 374.38 515.07 372.78 532.48 362.25 525.75 C 351.71 519.02 349.54 516.29 339.98 512.03 C 330.41 507.76 326.27 502.60 317.92 498.08 C 309.57 493.56 301.50 491.94 297.00 483.00 Z"
       />
     </g>
-    <g fill="#A6ABAC" fill-opacity="1.00" stroke="None">
+    <g fill="#A6ABAC" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 297.00 483.00
@@ -3040,7 +3040,7 @@ const SvgLangwatch = (props) => (
   C 308.94 476.75 319.26 471.40 329.00 465.00 Z"
       />
     </g>
-    <g fill="#C8CACA" fill-opacity="1.00" stroke="None">
+    <g fill="#C8CACA" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 339.00 460.00
@@ -3051,7 +3051,7 @@ const SvgLangwatch = (props) => (
   C 373.36 516.04 370.98 505.45 372.00 494.00 C 373.02 482.55 370.19 472.88 372.00 461.00 C 373.81 449.12 369.50 441.01 359.08 447.08 C 348.65 453.14 348.26 454.21 339.00 460.00 Z"
       />
     </g>
-    <g fill="#FBFBFB" fill-opacity="1.00" stroke="None">
+    <g fill="#FBFBFB" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 339.00 460.00
@@ -3060,7 +3060,7 @@ const SvgLangwatch = (props) => (
   C 371.73 517.05 370.99 508.37 371.00 500.00 C 371.01 491.63 371.26 482.32 371.00 474.00 C 370.74 465.68 371.76 457.14 370.97 449.03 C 370.19 440.91 358.48 447.28 354.25 450.25 C 350.01 453.22 343.94 457.92 339.00 460.00 Z"
       />
     </g>
-    <g fill="#6C7678" fill-opacity="1.00" stroke="None">
+    <g fill="#6C7678" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 501.00 1021.00
@@ -3068,7 +3068,7 @@ const SvgLangwatch = (props) => (
   C 508.09 469.87 498.97 492.11 501.00 509.00 C 503.03 525.89 500.08 547.95 501.00 566.00 C 501.92 584.05 500.59 604.43 501.00 623.00 C 501.41 641.57 500.81 661.20 501.00 680.00 C 501.19 698.80 500.92 718.09 501.00 737.00 C 501.09 755.91 500.96 775.05 501.00 794.00 C 501.04 812.95 500.98 832.04 501.00 851.00 C 501.02 869.96 500.99 889.07 501.00 908.00 C 501.01 926.93 501.00 946.13 501.00 965.00 C 501.00 983.87 501.00 1002.18 501.00 1021.00 Z"
       />
     </g>
-    <g fill="#647072" fill-opacity="1.00" stroke="None">
+    <g fill="#647072" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 332.00 509.00
@@ -3077,7 +3077,7 @@ const SvgLangwatch = (props) => (
   C 304.99 475.45 292.27 478.99 296.08 486.92 C 299.89 494.85 307.82 493.94 313.77 498.23 C 319.72 502.52 325.85 505.50 332.00 509.00 Z"
       />
     </g>
-    <g fill="#919697" fill-opacity="1.00" stroke="None">
+    <g fill="#919697" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 673.00 517.00
@@ -3085,7 +3085,7 @@ const SvgLangwatch = (props) => (
   C 700.62 500.90 686.49 508.39 673.00 517.00 Z"
       />
     </g>
-    <g fill="#A4A6A7" fill-opacity="1.00" stroke="None">
+    <g fill="#A4A6A7" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 179.00 841.00
@@ -3096,7 +3096,7 @@ const SvgLangwatch = (props) => (
   C 179.00 532.15 178.75 560.91 179.00 589.00 C 179.25 617.09 178.33 645.03 179.00 673.00 C 179.67 700.97 177.47 729.16 179.00 757.00 C 180.53 784.84 175.58 813.40 179.00 841.00 Z"
       />
     </g>
-    <g fill="#737B7C" fill-opacity="1.00" stroke="None">
+    <g fill="#737B7C" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 355.00 950.00
@@ -3104,7 +3104,7 @@ const SvgLangwatch = (props) => (
   C 235.88 879.47 250.40 889.08 265.77 897.23 C 281.14 905.38 294.25 917.32 310.30 923.70 C 326.36 930.07 338.52 944.05 355.00 950.00 Z"
       />
     </g>
-    <g fill="#BBBEBE" fill-opacity="1.00" stroke="None">
+    <g fill="#BBBEBE" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 273.00 941.00
@@ -3114,7 +3114,7 @@ const SvgLangwatch = (props) => (
   C 260.31 935.95 267.63 937.68 273.00 941.00 Z"
       />
     </g>
-    <g fill="#AFB2B3" fill-opacity="1.00" stroke="None">
+    <g fill="#AFB2B3" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 833.00 891.00
@@ -3123,7 +3123,7 @@ const SvgLangwatch = (props) => (
   C 840.64 886.86 837.13 888.42 833.00 891.00 Z"
       />
     </g>
-    <g fill="#919799" fill-opacity="1.00" stroke="None">
+    <g fill="#919799" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 671.00 982.00
@@ -3135,7 +3135,7 @@ const SvgLangwatch = (props) => (
   C 805.34 905.14 777.76 920.14 751.75 936.75 C 725.73 953.35 697.12 965.83 671.00 982.00 Z"
       />
     </g>
-    <g fill="#DEDFDF" fill-opacity="1.00" stroke="None">
+    <g fill="#DEDFDF" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 468.00 1055.00
@@ -3156,7 +3156,7 @@ const SvgLangwatch = (props) => (
   C 454.46 1049.46 461.56 1053.74 468.00 1055.00 Z"
       />
     </g>
-    <g fill="#6E7677" fill-opacity="1.00" stroke="None">
+    <g fill="#6E7677" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 388.00 968.00
@@ -3164,7 +3164,7 @@ const SvgLangwatch = (props) => (
   C 365.45 957.57 377.48 961.88 388.00 968.00 Z"
       />
     </g>
-    <g fill="#B5B8B9" fill-opacity="1.00" stroke="None">
+    <g fill="#B5B8B9" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 468.00 1055.00
@@ -3178,7 +3178,7 @@ const SvgLangwatch = (props) => (
   C 323.95 970.25 338.22 976.63 351.25 984.75 C 364.28 992.87 376.33 1001.57 390.25 1007.75 C 404.18 1013.92 415.77 1025.90 429.77 1031.23 C 443.77 1036.56 454.23 1049.92 468.00 1055.00 Z"
       />
     </g>
-    <g fill="#6B7577" fill-opacity="1.00" stroke="None">
+    <g fill="#6B7577" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 478.00 1022.00
@@ -3186,7 +3186,7 @@ const SvgLangwatch = (props) => (
   C 462.50 1012.69 471.01 1021.35 478.00 1022.00 Z"
       />
     </g>
-    <g fill="#6D7779" fill-opacity="1.00" stroke="None">
+    <g fill="#6D7779" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 501.00 1023.00
@@ -3195,7 +3195,7 @@ const SvgLangwatch = (props) => (
   C 483.66 1028.68 502.02 1037.58 501.00 1023.00 Z"
       />
     </g>
-    <g fill="#D8D9D9" fill-opacity="1.00" stroke="None">
+    <g fill="#D8D9D9" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 545.00 1060.00

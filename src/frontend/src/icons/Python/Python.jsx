@@ -24,55 +24,55 @@ export const SvgPython = (props) => (
         gradientTransform="matrix(600.39 0 0 601.69 .29686 -.08793)"
         gradientUnits="userSpaceOnUse"
       >
-        <stop stop-color="#387db8" offset="0" />
-        <stop stop-color="#387db8" offset=".125" />
-        <stop stop-color="#387db7" offset=".14062" />
-        <stop stop-color="#387db6" offset=".15625" />
-        <stop stop-color="#377cb5" offset=".17188" />
-        <stop stop-color="#377cb4" offset=".1875" />
-        <stop stop-color="#377bb4" offset=".20312" />
-        <stop stop-color="#377bb3" offset=".21875" />
-        <stop stop-color="#377ab2" offset=".23438" />
-        <stop stop-color="#377ab1" offset=".25" />
-        <stop stop-color="#3779b0" offset=".26562" />
-        <stop stop-color="#3779af" offset=".28125" />
-        <stop stop-color="#3778ae" offset=".29688" />
-        <stop stop-color="#3778ad" offset=".3125" />
-        <stop stop-color="#3777ad" offset=".32812" />
-        <stop stop-color="#3777ac" offset=".34375" />
-        <stop stop-color="#3776ab" offset=".35938" />
-        <stop stop-color="#3776aa" offset=".375" />
-        <stop stop-color="#3775a9" offset=".39062" />
-        <stop stop-color="#3775a8" offset=".40625" />
-        <stop stop-color="#3774a7" offset=".42188" />
-        <stop stop-color="#3774a7" offset=".4375" />
-        <stop stop-color="#3773a6" offset=".45312" />
-        <stop stop-color="#3773a5" offset=".46875" />
-        <stop stop-color="#3672a4" offset=".48438" />
-        <stop stop-color="#3672a3" offset=".49434" />
-        <stop stop-color="#3671a3" offset=".5" />
-        <stop stop-color="#3671a2" offset=".50566" />
-        <stop stop-color="#3671a2" offset=".51562" />
-        <stop stop-color="#3671a1" offset=".53125" />
-        <stop stop-color="#3670a0" offset=".54688" />
-        <stop stop-color="#3670a0" offset=".5625" />
-        <stop stop-color="#366f9f" offset=".57812" />
-        <stop stop-color="#366f9e" offset=".59375" />
-        <stop stop-color="#366e9d" offset=".60938" />
-        <stop stop-color="#366e9c" offset=".625" />
-        <stop stop-color="#366d9b" offset=".64062" />
-        <stop stop-color="#366d9a" offset=".65625" />
-        <stop stop-color="#366c9a" offset=".67188" />
-        <stop stop-color="#366c99" offset=".6875" />
-        <stop stop-color="#366b98" offset=".70312" />
-        <stop stop-color="#366b97" offset=".71875" />
-        <stop stop-color="#366a96" offset=".73438" />
-        <stop stop-color="#366a95" offset=".75" />
-        <stop stop-color="#366994" offset=".76562" />
-        <stop stop-color="#366994" offset=".78125" />
-        <stop stop-color="#366993" offset=".8125" />
-        <stop stop-color="#366993" offset=".875" />
-        <stop stop-color="#366993" offset="1" />
+        <stop stopColor="#387db8" offset="0" />
+        <stop stopColor="#387db8" offset=".125" />
+        <stop stopColor="#387db7" offset=".14062" />
+        <stop stopColor="#387db6" offset=".15625" />
+        <stop stopColor="#377cb5" offset=".17188" />
+        <stop stopColor="#377cb4" offset=".1875" />
+        <stop stopColor="#377bb4" offset=".20312" />
+        <stop stopColor="#377bb3" offset=".21875" />
+        <stop stopColor="#377ab2" offset=".23438" />
+        <stop stopColor="#377ab1" offset=".25" />
+        <stop stopColor="#3779b0" offset=".26562" />
+        <stop stopColor="#3779af" offset=".28125" />
+        <stop stopColor="#3778ae" offset=".29688" />
+        <stop stopColor="#3778ad" offset=".3125" />
+        <stop stopColor="#3777ad" offset=".32812" />
+        <stop stopColor="#3777ac" offset=".34375" />
+        <stop stopColor="#3776ab" offset=".35938" />
+        <stop stopColor="#3776aa" offset=".375" />
+        <stop stopColor="#3775a9" offset=".39062" />
+        <stop stopColor="#3775a8" offset=".40625" />
+        <stop stopColor="#3774a7" offset=".42188" />
+        <stop stopColor="#3774a7" offset=".4375" />
+        <stop stopColor="#3773a6" offset=".45312" />
+        <stop stopColor="#3773a5" offset=".46875" />
+        <stop stopColor="#3672a4" offset=".48438" />
+        <stop stopColor="#3672a3" offset=".49434" />
+        <stop stopColor="#3671a3" offset=".5" />
+        <stop stopColor="#3671a2" offset=".50566" />
+        <stop stopColor="#3671a2" offset=".51562" />
+        <stop stopColor="#3671a1" offset=".53125" />
+        <stop stopColor="#3670a0" offset=".54688" />
+        <stop stopColor="#3670a0" offset=".5625" />
+        <stop stopColor="#366f9f" offset=".57812" />
+        <stop stopColor="#366f9e" offset=".59375" />
+        <stop stopColor="#366e9d" offset=".60938" />
+        <stop stopColor="#366e9c" offset=".625" />
+        <stop stopColor="#366d9b" offset=".64062" />
+        <stop stopColor="#366d9a" offset=".65625" />
+        <stop stopColor="#366c9a" offset=".67188" />
+        <stop stopColor="#366c99" offset=".6875" />
+        <stop stopColor="#366b98" offset=".70312" />
+        <stop stopColor="#366b97" offset=".71875" />
+        <stop stopColor="#366a96" offset=".73438" />
+        <stop stopColor="#366a95" offset=".75" />
+        <stop stopColor="#366994" offset=".76562" />
+        <stop stopColor="#366994" offset=".78125" />
+        <stop stopColor="#366993" offset=".8125" />
+        <stop stopColor="#366993" offset=".875" />
+        <stop stopColor="#366993" offset="1" />
       </linearGradient>
       <clipPath id="c">
         <path d="m209 203h601v602.5h-601z" />
@@ -89,67 +89,67 @@ export const SvgPython = (props) => (
         gradientTransform="matrix(600.4 0 0 601.7 209.54 203.58)"
         gradientUnits="userSpaceOnUse"
       >
-        <stop stop-color="#ffdf52" offset="0" />
-        <stop stop-color="#ffdf52" offset=".125" />
-        <stop stop-color="#ffdf52" offset=".1875" />
-        <stop stop-color="#ffdf51" offset=".21875" />
-        <stop stop-color="#ffdf51" offset=".23438" />
-        <stop stop-color="#ffde50" offset=".25" />
-        <stop stop-color="#ffde4f" offset=".26562" />
-        <stop stop-color="#ffdd4f" offset=".28125" />
-        <stop stop-color="#ffdc4e" offset=".29688" />
-        <stop stop-color="#ffdc4d" offset=".3125" />
-        <stop stop-color="#ffdb4c" offset=".32812" />
-        <stop stop-color="#ffda4c" offset=".34375" />
-        <stop stop-color="#ffda4b" offset=".35938" />
-        <stop stop-color="#ffd94a" offset=".375" />
-        <stop stop-color="#ffd849" offset=".39062" />
-        <stop stop-color="#ffd849" offset=".40625" />
-        <stop stop-color="#ffd748" offset=".42188" />
-        <stop stop-color="#ffd647" offset=".4375" />
-        <stop stop-color="#ffd646" offset=".45312" />
-        <stop stop-color="#ffd546" offset=".46875" />
-        <stop stop-color="#ffd445" offset=".48284" />
-        <stop stop-color="#ffd445" offset=".48438" />
-        <stop stop-color="#ffd444" offset=".5" />
-        <stop stop-color="#ffd343" offset=".51562" />
-        <stop stop-color="#ffd243" offset=".51716" />
-        <stop stop-color="#ffd242" offset=".53125" />
-        <stop stop-color="#ffd242" offset=".54688" />
-        <stop stop-color="#ffd141" offset=".5625" />
-        <stop stop-color="#ffd040" offset=".57812" />
-        <stop stop-color="#ffd040" offset=".59375" />
-        <stop stop-color="#ffcf3f" offset=".60938" />
-        <stop stop-color="#ffce3e" offset=".625" />
-        <stop stop-color="#ffce3d" offset=".64062" />
-        <stop stop-color="#ffcd3d" offset=".65625" />
-        <stop stop-color="#ffcc3c" offset=".67188" />
-        <stop stop-color="#ffcc3b" offset=".6875" />
-        <stop stop-color="#ffcb3a" offset=".70312" />
-        <stop stop-color="#ffca3a" offset=".71875" />
-        <stop stop-color="#ffca39" offset=".73438" />
-        <stop stop-color="#ffc938" offset=".75" />
-        <stop stop-color="#ffc837" offset=".76562" />
-        <stop stop-color="#ffc836" offset=".78125" />
-        <stop stop-color="#ffc736" offset=".79688" />
-        <stop stop-color="#ffc735" offset=".8125" />
-        <stop stop-color="#ffc634" offset=".82812" />
-        <stop stop-color="#ffc533" offset=".84375" />
-        <stop stop-color="#ffc533" offset=".85938" />
-        <stop stop-color="#ffc432" offset=".875" />
-        <stop stop-color="#ffc331" offset=".89062" />
-        <stop stop-color="#ffc331" offset=".90625" />
-        <stop stop-color="#ffc330" offset=".9375" />
-        <stop stop-color="#ffc330" offset="1" />
+        <stop stopColor="#ffdf52" offset="0" />
+        <stop stopColor="#ffdf52" offset=".125" />
+        <stop stopColor="#ffdf52" offset=".1875" />
+        <stop stopColor="#ffdf51" offset=".21875" />
+        <stop stopColor="#ffdf51" offset=".23438" />
+        <stop stopColor="#ffde50" offset=".25" />
+        <stop stopColor="#ffde4f" offset=".26562" />
+        <stop stopColor="#ffdd4f" offset=".28125" />
+        <stop stopColor="#ffdc4e" offset=".29688" />
+        <stop stopColor="#ffdc4d" offset=".3125" />
+        <stop stopColor="#ffdb4c" offset=".32812" />
+        <stop stopColor="#ffda4c" offset=".34375" />
+        <stop stopColor="#ffda4b" offset=".35938" />
+        <stop stopColor="#ffd94a" offset=".375" />
+        <stop stopColor="#ffd849" offset=".39062" />
+        <stop stopColor="#ffd849" offset=".40625" />
+        <stop stopColor="#ffd748" offset=".42188" />
+        <stop stopColor="#ffd647" offset=".4375" />
+        <stop stopColor="#ffd646" offset=".45312" />
+        <stop stopColor="#ffd546" offset=".46875" />
+        <stop stopColor="#ffd445" offset=".48284" />
+        <stop stopColor="#ffd445" offset=".48438" />
+        <stop stopColor="#ffd444" offset=".5" />
+        <stop stopColor="#ffd343" offset=".51562" />
+        <stop stopColor="#ffd243" offset=".51716" />
+        <stop stopColor="#ffd242" offset=".53125" />
+        <stop stopColor="#ffd242" offset=".54688" />
+        <stop stopColor="#ffd141" offset=".5625" />
+        <stop stopColor="#ffd040" offset=".57812" />
+        <stop stopColor="#ffd040" offset=".59375" />
+        <stop stopColor="#ffcf3f" offset=".60938" />
+        <stop stopColor="#ffce3e" offset=".625" />
+        <stop stopColor="#ffce3d" offset=".64062" />
+        <stop stopColor="#ffcd3d" offset=".65625" />
+        <stop stopColor="#ffcc3c" offset=".67188" />
+        <stop stopColor="#ffcc3b" offset=".6875" />
+        <stop stopColor="#ffcb3a" offset=".70312" />
+        <stop stopColor="#ffca3a" offset=".71875" />
+        <stop stopColor="#ffca39" offset=".73438" />
+        <stop stopColor="#ffc938" offset=".75" />
+        <stop stopColor="#ffc837" offset=".76562" />
+        <stop stopColor="#ffc836" offset=".78125" />
+        <stop stopColor="#ffc736" offset=".79688" />
+        <stop stopColor="#ffc735" offset=".8125" />
+        <stop stopColor="#ffc634" offset=".82812" />
+        <stop stopColor="#ffc533" offset=".84375" />
+        <stop stopColor="#ffc533" offset=".85938" />
+        <stop stopColor="#ffc432" offset=".875" />
+        <stop stopColor="#ffc331" offset=".89062" />
+        <stop stopColor="#ffc331" offset=".90625" />
+        <stop stopColor="#ffc330" offset=".9375" />
+        <stop stopColor="#ffc330" offset="1" />
       </linearGradient>
     </defs>
-    <g clip-path="url(#e)">
-      <g clip-path="url(#a)">
+    <g clipPath="url(#e)">
+      <g clipPath="url(#a)">
         <path d="m0.29688 0v608.93h616.7v-608.93z" fill="url(#f)" />
       </g>
     </g>
-    <g clip-path="url(#c)">
-      <g clip-path="url(#b)">
+    <g clipPath="url(#c)">
+      <g clipPath="url(#b)">
         <path d="m193.24 196.26v609.02h616.7v-609.02z" fill="url(#d)" />
       </g>
     </g>
