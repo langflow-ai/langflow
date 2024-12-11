@@ -73,7 +73,7 @@ class TableOptions(BaseModel):
     block_edit: bool = Field(default=False)
     block_sort: bool = Field(default=False)
     block_filter: bool = Field(default=False)
-    block_hide: bool = Field(default=False)
+    block_hide: bool | list[str] = Field(default=False)
     block_select: bool = Field(default=False)
     hide_options: bool = Field(default=False)
     field_validators: list[FieldValidatorType | dict[str, FieldValidatorType]] = Field(default=[])
