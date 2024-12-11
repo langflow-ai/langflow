@@ -549,6 +549,7 @@ export default function NodeToolbarComponent({
                     onClick={handleButtonClick}
                     size="node-toolbar"
                     data-testid="more-options-modal"
+                    asChild
                   >
                     <IconComponent name="MoreHorizontal" className="h-4 w-4" />
                   </Button>
