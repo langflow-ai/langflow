@@ -9,9 +9,9 @@ Instead of juggling multiple integrations and components in your flow, connect t
 
 ## Prerequisites
 
-- [A Composio API key created](https://app.composio.dev/)
-- [An OpenAI API key created](https://platform.openai.com/)
-- [A Gmail account created](mail.google.com)
+- [A Composio API key](https://app.composio.dev/)
+- [An OpenAI API key](https://platform.openai.com/)
+- [A Gmail account](mail.google.com)
 
 ## Connect Langflow to a Composio tool
 
@@ -26,12 +26,11 @@ For this example, select the **GMAIL** tool, which allows your agent to control 
 The component's fields change based on the tool you selected.
 The **Gmail** tool requires authentication with Google, so it presents an **Authentication Link** button.
 7. Click the link to authenticate.
-A new window opens.
-8. Enter the credentials for the Gmail account you want to control with Composio, and then click **Authenticate**.
+8. In the Google authentication dialog, enter the credentials for the Gmail account you want to control with Composio, and then click **Authenticate**.
 9. Return to Langflow.
-To update the Composio component, click **Refresh**.
+10. To update the Composio component, click **Refresh**.
 The **Auth Status** field changes to a ✅, which indicates the Langflow component is connected to your Composio account.
-10. In the **Actions to use** field, select the action you want the **Agent** to take with the **Gmail** tool.
+11. In the **Actions to use** field, select the action you want the **Agent** to take with the **Gmail** tool.
 The **Gmail** tool supports multiple actions, and also supports multiple actions within the same tool.
 The default value of **GMAIL_CREATE_EMAIL_DRAFT** is OK for this example.
 For more information, see the [Composio documentation](https://docs.composio.dev/patterns/tools/use-tools/use-specific-actions).
