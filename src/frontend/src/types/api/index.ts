@@ -305,6 +305,13 @@ export type FieldValidatorType =
   | "username"
   | "password";
 
+export type FieldParserType =
+  | "snake_case"
+  | "camel_case"
+  | "pascal_case"
+  | "kebab_case"
+  | "lowercase"
+  | "uppercase";
 
 export type TableOptionsTypeAPI = {
   block_add?: boolean;
@@ -315,5 +322,8 @@ export type TableOptionsTypeAPI = {
   block_hide?: boolean | string[];
   block_select?: boolean;
   hide_options?: boolean;
-  field_validators?: Array<FieldValidatorType | { [key: string]: FieldValidatorType }>;
+  field_validators?: Array<
+    FieldValidatorType | { [key: string]: FieldValidatorType }
+  >;
+  field_parsers?: Array<FieldParserType | { [key: string]: FieldParserType }>;
 };
