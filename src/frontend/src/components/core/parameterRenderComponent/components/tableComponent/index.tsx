@@ -57,7 +57,7 @@ TableComponentProps
       let newCol = {
         ...col,
       };
-      if (props.onSelectionChanged && index === 0) {
+      if (props.rowSelection && props.onSelectionChanged && index === 0) {
         newCol = {
           ...newCol,
           checkboxSelection: true,
