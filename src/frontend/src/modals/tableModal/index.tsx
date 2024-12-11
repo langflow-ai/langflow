@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button";
 import { DialogClose } from "@radix-ui/react-dialog";
 import { ElementRef, forwardRef, useState } from "react";
 import BaseModal from "../baseModal";
+import { TableOptionsTypeAPI } from "@/types/api";
 
 interface TableModalProps extends TableComponentProps {
   tableTitle: string;
   description: string;
   disabled?: boolean;
   children: React.ReactNode;
+  tableOptions?: TableOptionsTypeAPI;
 }
 
 const TableModal = forwardRef<
