@@ -24,7 +24,7 @@ export default function TableOptions({
   return (
     <div className={cn("absolute bottom-3 left-6")}>
       <div className="flex items-center gap-3">
-        {(addRow && !tableOptions?.block_add) && (
+        {addRow && !tableOptions?.block_add && (
           <div>
             <ShadTooltip content={"Add a new row"}>
               <Button data-testid="add-row-button" unstyled onClick={addRow}>
