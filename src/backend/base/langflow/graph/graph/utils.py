@@ -142,10 +142,14 @@ def update_target_handle(new_edge, g_nodes):
         dict: The updated edge.
     """
     target_handle = new_edge["data"]["targetHandle"]
-    if target_handle.get("proxy"):
-        proxy_id = target_handle["proxy"]["id"]
-        if node := next((n for n in g_nodes if n["id"] == proxy_id), None):
-            set_new_target_handle(proxy_id, new_edge, target_handle, node)
+    proxy = target_handle.get("proxy")
+    if proxy:
+        proxy_id = proxy["id"]
+        for node in g_nodes:
+            if node["id"] == proxy_id:
+                set_new_target_handle(proxy_id, new_edge, target_handle, node)
+                break
+
     return new_edge
 
 
@@ -164,8 +168,7 @@ def set_new_target_handle(proxy_id, new_edge, target_handle, node) -> None:
     new_edge["target"] = proxy_id
     type_ = target_handle.get("type")
     if type_ is None:
-        msg = "The 'type' key must be present in target_handle."
-        raise KeyError(msg)
+        raise KeyError("The 'type' key must be present in target_handle.")
 
     field = target_handle["proxy"]["field"]
     new_target_handle = {
@@ -173,13 +176,19 @@ def set_new_target_handle(proxy_id, new_edge, target_handle, node) -> None:
         "type": type_,
         "id": proxy_id,
     }
-    if node["data"]["node"].get("flow"):
+
+    node_data = node["data"]["node"]
+    if node_data.get("flow"):
+        field_template_proxy = node_data["template"][field]["proxy"]
         new_target_handle["proxy"] = {
-            "field": node["data"]["node"]["template"][field]["proxy"]["field"],
-            "id": node["data"]["node"]["template"][field]["proxy"]["id"],
+            "field": field_template_proxy["field"],
+            "id": field_template_proxy["id"],
         }
-    if input_types := target_handle.get("inputTypes"):
+
+    input_types = target_handle.get("inputTypes")
+    if input_types:
         new_target_handle["inputTypes"] = input_types
+
     new_edge["data"]["targetHandle"] = new_target_handle
 
 
