@@ -66,7 +66,7 @@ export default function TableNodeComponent({
   const agGrid = useRef<AgGridReact>(null);
   const componentColumns = columns
     ? columns
-    : generateBackendColumnsFromValue(value ?? [],table_options);
+    : generateBackendColumnsFromValue(value ?? [], table_options);
   const AgColumns = FormatColumns(componentColumns);
   function setAllRows() {
     if (agGrid.current && !agGrid.current.api.isDestroyed()) {
@@ -106,7 +106,8 @@ export default function TableNodeComponent({
   const editable = componentColumns.map((column) => {
     const isCustomEdit =
       column.formatter &&
-      (column.formatter === "text" || column.formatter === "json");
+      ((column.formatter === "text" && column.edit_mode !== "inline") ||
+        column.formatter === "json");
     return {
       field: column.name,
       onUpdate: updateComponent,
@@ -142,6 +143,7 @@ export default function TableNodeComponent({
           className="h-full w-full"
           columnDefs={AgColumns}
           rowData={value}
+          context={{ field_parsers: table_options?.field_parsers }}
         >
           <Button
             disabled={disabled}
@@ -152,7 +154,10 @@ export default function TableNodeComponent({
               (disabled ? "pointer-events-none cursor-not-allowed" : "")
             }
           >
-            <ForwardedIconComponent name={trigger_icon} className="mt-px h-4 w-4" />
+            <ForwardedIconComponent
+              name={trigger_icon}
+              className="mt-px h-4 w-4"
+            />
             <span className="font-normal">{trigger_text}</span>
           </Button>
         </TableModal>
