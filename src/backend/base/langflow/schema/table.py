@@ -73,6 +73,17 @@ class FieldValidatorType(str, Enum):
     PASSWORD = "password"  # Minimum security requirements  # noqa: S105
 
 
+class FieldParserType(str, Enum):
+    """Enum for field parser types."""
+
+    SNAKE_CASE = "snake_case"
+    CAMEL_CASE = "camel_case"
+    PASCAL_CASE = "pascal_case"
+    KEBAB_CASE = "kebab_case"
+    LOWERCASE = "lowercase"
+    UPPERCASE = "uppercase"
+
+
 class TableOptions(BaseModel):
     block_add: bool = Field(default=False)
     block_delete: bool = Field(default=False)
@@ -82,4 +93,5 @@ class TableOptions(BaseModel):
     block_hide: bool | list[str] = Field(default=False)
     block_select: bool = Field(default=False)
     hide_options: bool = Field(default=False)
-    field_validators: list[FieldValidatorType | dict[str, FieldValidatorType]] = Field(default=[])
+    field_validators: dict[str, list[FieldValidatorType] | FieldValidatorType] | None = Field(default=None)
+    field_parsers: dict[str, list[FieldParserType] | FieldParserType] | None = Field(default=None)
