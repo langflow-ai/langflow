@@ -8,14 +8,11 @@ Get to know Langflow by building an OpenAI-powered chatbot application. After yo
 
 ## Prerequisites
 
-* [Python 3.10 to 3.12](https://www.python.org/downloads/release/python-3100/) installed
-* [uv](https://docs.astral.sh/uv/getting-started/installation/), [pip](https://pypi.org/project/pip/), or [pipx](https://pipx.pypa.io/stable/installation/) installed
-* Before installing Langflow, we recommend creating a virtual environment to isolate your Python dependencies with [uv](https://docs.astral.sh/uv/pip/environments), [venv](https://docs.python.org/3/library/venv.html), or [conda](https://anaconda.org/anaconda/conda)
-- [OpenAI API key created](https://platform.openai.com/)
-- [An Astra DB vector database created](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html) with:
-	- AstraDB Application Token
-	- API Endpoint
-	- [A collection created in Astra](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection)
+* [An OpenAI API key](https://platform.openai.com/)
+* [An Astra DB vector database](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html) with:
+	* AstraDB application token
+	* API endpoint
+	* [A collection in Astra](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection)
 
 ## Open Langflow and start a new project
 
@@ -43,7 +40,7 @@ The [Chat Input](/components-io#chat-input) component accepts user input to the 
 2. Click **Prompt**, select the **Prompt** component, and then drag it to the canvas.
 The [Prompt](/components-prompts) component combines the user input with a user-defined prompt.
 3. Click **Outputs**, select the **Chat Output** component, and then drag it to the canvas.
-The [Chat Output](/components-io#chat-output)  component prints the flow's output to the chat.
+The [Chat Output](/components-io#chat-output) component prints the flow's output to the chat.
 4. Click **Models**, select the **OpenAI** component, and then drag it to the canvas.
 The [OpenAI](components-models#openai) model component sends the user input and prompt to the OpenAI API and receives a response.
 
