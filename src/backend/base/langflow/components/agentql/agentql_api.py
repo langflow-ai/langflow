@@ -32,7 +32,7 @@ class AgentQL(Component):
             name="url",
             display_name="URL",
             required=True,
-            info="The public URL of the webpage to query.",
+            info="The public URL of the webpage to extract data from.",
             tool_mode=True,
         ),
         MultilineInput(
@@ -55,9 +55,9 @@ class AgentQL(Component):
             info="The additional params to send with the request. For details refer to https://docs.agentql.com/rest-api/api-reference#request-body.",
             is_list=True,
             value={
+                "mode": "fast",
                 "wait_for": 0,
                 "is_scroll_to_bottom_enabled": False,
-                "mode": "fast",
                 "is_screenshot_enabled": False,
             },
             advanced=True,
