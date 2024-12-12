@@ -542,13 +542,13 @@ export default function NodeToolbarComponent({
           >
             <SelectTrigger className="w-62">
               <ShadTooltip content="Show More" side="top">
-                <div>
+                <div data-testid="more-options-modal">
                   <Button
                     className="node-toolbar-buttons h-[2rem] w-[2rem]"
                     variant="ghost"
                     onClick={handleButtonClick}
                     size="node-toolbar"
-                    data-testid="more-options-modal"
+                    asChild
                   >
                     <IconComponent name="MoreHorizontal" className="h-4 w-4" />
                   </Button>
