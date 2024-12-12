@@ -8,15 +8,7 @@ from langflow.components.outputs import ChatOutput
 from langflow.components.tools.calculator import CalculatorToolComponent
 from langflow.graph import Graph
 from langflow.schema.data import Data
-from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from pydantic import BaseModel
-
-
-@pytest.fixture
-def _add_toolkit_output():
-    FEATURE_FLAGS.add_toolkit_output = True
-    yield
-    FEATURE_FLAGS.add_toolkit_output = False
 
 
 async def test_component_tool():
@@ -43,7 +35,6 @@ async def test_component_tool():
 
 
 @pytest.mark.api_key_required
-@pytest.mark.usefixtures("_add_toolkit_output")
 def test_component_tool_with_api_key():
     chat_output = ChatOutput()
     openai_llm = OpenAIModelComponent()
