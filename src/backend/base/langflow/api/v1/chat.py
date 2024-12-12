@@ -504,7 +504,7 @@ async def build_vertex(
     start_time = time.perf_counter()
     error_message = None
     try:
-        graph = await chat_service.get_cache(flow_id_str)
+        graph: Graph = await chat_service.get_cache(flow_id_str)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Graph not found") from exc
 
@@ -513,8 +513,8 @@ async def build_vertex(
         if isinstance(cache, CacheMiss):
             # If there's no cache
             logger.warning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
-            graph: Graph = await build_graph_from_db(
-                flow_id=flow_id_str, session=await anext(get_session()), chat_service=chat_service
+            graph = await build_graph_from_db(
+                flow_id=flow_id, session=await anext(get_session()), chat_service=chat_service
             )
         else:
             graph = cache.get("result")

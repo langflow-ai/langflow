@@ -18,7 +18,7 @@ from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 def _get_variable_query(
     sender: str | None = None,
     sender_name: str | None = None,
-    session_id: str | None = None,
+    session_id: str | UUID | None = None,
     order_by: str | None = "timestamp",
     order: str | None = "DESC",
     flow_id: UUID | None = None,
@@ -44,7 +44,7 @@ def _get_variable_query(
 def get_messages(
     sender: str | None = None,
     sender_name: str | None = None,
-    session_id: str | None = None,
+    session_id: str | UUID | None = None,
     order_by: str | None = "timestamp",
     order: str | None = "DESC",
     flow_id: UUID | None = None,
@@ -73,7 +73,7 @@ def get_messages(
 async def aget_messages(
     sender: str | None = None,
     sender_name: str | None = None,
-    session_id: str | None = None,
+    session_id: str | UUID | None = None,
     order_by: str | None = "timestamp",
     order: str | None = "DESC",
     flow_id: UUID | None = None,
@@ -123,7 +123,7 @@ def add_messages(messages: Message | list[Message], flow_id: str | UUID | None =
         raise
 
 
-async def aadd_messages(messages: Message | list[Message], flow_id: str | None = None):
+async def aadd_messages(messages: Message | list[Message], flow_id: str | UUID | None = None):
     """Add a message to the monitor service."""
     if not isinstance(messages, list):
         messages = [messages]
@@ -316,7 +316,7 @@ def store_message(
 
 async def astore_message(
     message: Message,
-    flow_id: str | None = None,
+    flow_id: str | UUID | None = None,
 ) -> list[Message]:
     """Stores a message in the memory.
 

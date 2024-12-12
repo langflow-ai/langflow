@@ -1035,10 +1035,10 @@ class Component(CustomComponent):
         return stored_message
 
     async def _store_message(self, message: Message) -> Message:
-        flow_id: UUID | None = None
+        flow_id: str | None = None
         if hasattr(self, "graph"):
-            # Convert string to UUID if needed, or use existing UUID
-            flow_id = UUID(self.graph.flow_id) if isinstance(self.graph.flow_id, str) else self.graph.flow_id
+            # Convert UUID to str if needed
+            flow_id = str(self.graph.flow_id) if self.graph.flow_id else None
         stored_messages = await astore_message(message, flow_id=flow_id)
         if len(stored_messages) != 1:
             msg = "Only one message can be stored at a time."
