@@ -33,64 +33,9 @@ so that more people can benefit from it.
 
 ## Contributing code and documentation
 
-You can develop Langflow locally via uv + NodeJS.
+You can develop Langflow locally and contribute to the Project!
 
-### Clone the Langflow Repository
-
-Navigate to the [Langflow GitHub repository](https://github.com/langflow-ai/langflow) and press "Fork" in the upper right-hand corner.
-
-Add the new remote to your local repository on your local machine:
-
-```bash
-git remote add fork https://github.com/<your username>/langflow.git
-```
-
-We also provide a .vscode/launch.json file for debugging the backend in VSCode, which is a lot faster than using docker compose.
-
-### Prepare the environment
-
-Setting up hooks:
-
-```bash
-make init
-```
-
-This will set up the development environment by installing backend and frontend dependencies, building the frontend static files, and initializing the project. It runs `make install_backend`, `make install_frontend`, `make build_frontend`, and finally `uv run langflow run` to start the application.
-
-It is advised to run `make lint`, `make format`, and `make unit_tests` before pushing to the repository.
-
-### Run locally (uv and Node.js)
-
-Langflow can run locally by cloning the repository and installing the dependencies. We recommend using a virtual environment to isolate the dependencies from your system.
-
-Before you start, make sure you have the following installed:
-
-- uv (>=0.4)
-- Node.js
-
-Then, in the root folder, install the dependencies and start the development server for the backend:
-
-```bash
-make backend
-```
-
-And the frontend:
-
-```bash
-make frontend
-```
-
-### Run documentation
-
-The documentation is built using [Docusaurus](https://docusaurus.io/). To run the documentation locally, run the following commands:
-
-```bash
-cd docs
-npm install
-npm run start
-```
-
-The documentation will be available at `localhost:3000` and all the files are located in the `docs/docs` folder.
+See [DEVELOPMENT.md](DEVELOPMENT.md) for instructions on setting up and using a development envrionment.
 
 ## Opening a pull request
 
