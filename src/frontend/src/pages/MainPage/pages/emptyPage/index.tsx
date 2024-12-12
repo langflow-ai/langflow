@@ -1,5 +1,5 @@
-import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import LogoIcon from "@/components/common/logoIcon";
 import { Button } from "@/components/ui/button";
 import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
 import { useFolderStore } from "@/stores/foldersStore";
@@ -16,7 +16,7 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
       <div className="text-container">
         <div className="relative z-20 flex w-full flex-col items-center justify-center gap-2">
           {ENABLE_NEW_LOGO ? (
-            <LangflowLogo className="h-7 w-8" />
+            <LogoIcon className="h-7 w-8" alt={"Kendra Labs home"} />
           ) : (
             <span className="fill-foreground text-4xl">⛓️</span>
           )}
@@ -43,37 +43,6 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
               New Flow
             </span>
           </Button>
-        </div>
-      </div>
-      <div className="gradient-bg">
-        <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
-          <defs>
-            <filter id="lf-balls">
-              <feGaussianBlur in="turbulence" stdDeviation="10" result="blur" />
-              <feColorMatrix
-                in="blur"
-                type="matrix"
-                values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -8"
-                result="color-matrix"
-              />
-              <feBlend in="SourceGraphic" in2="color-matrix" mode="normal" />
-            </filter>
-            <filter id="lf-noise">
-              <feTurbulence
-                type="fractalNoise"
-                baseFrequency="0.65"
-                stitchTiles="stitch"
-              />
-            </filter>
-          </defs>
-        </svg>
-        <div className="gradients-container">
-          <div className="g1" />
-          <div className="g2" />
-          <div className="g3" />
-          <div className="g4" />
-          <div className="g5" />
-          <div className="g6" />
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import LangflowLogo from "@/assets/LangflowLogo.svg?react";
+import LogoIcon from "@/components/common/logoIcon";
 import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
 import { useAddUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
@@ -92,15 +92,15 @@ export default function SignUp(): JSX.Element {
       <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
         <div className="flex w-72 flex-col items-center justify-center gap-2">
           {ENABLE_NEW_LOGO ? (
-            <LangflowLogo
-              title="Langflow logo"
+            <LogoIcon
               className="mb-4 h-10 w-10 scale-[1.5]"
+              alt={"Kendra Labs logo"}
             />
           ) : (
             <span className="mb-4 text-5xl">⛓️</span>
           )}
           <span className="mb-6 text-2xl font-semibold text-primary">
-            Sign up for Langflow
+            Sign up for Kendra Labs
           </span>
           <div className="mb-3 w-full">
             <Form.Field name="username">

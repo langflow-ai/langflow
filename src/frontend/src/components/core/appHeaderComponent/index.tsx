@@ -1,7 +1,7 @@
 import AlertDropdown from "@/alerts/alertDropDown";
 import DataStaxLogo from "@/assets/DataStaxLogo.svg?react";
-import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import LogoIcon from "@/components/common/logoIcon";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -58,10 +58,8 @@ export default function AppHeader(): JSX.Element {
         >
           {ENABLE_DATASTAX_LANGFLOW ? (
             <DataStaxLogo className="fill-black dark:fill-[white]" />
-          ) : ENABLE_NEW_LOGO ? (
-            <LangflowLogo className="h-5 w-6" />
           ) : (
-            <span className="fill-black text-2xl dark:fill-white">⛓️</span>
+            <LogoIcon className="h-5 w-6" alt={"Kendra Labs home"} />
           )}
         </Button>
         {ENABLE_DATASTAX_LANGFLOW && (
