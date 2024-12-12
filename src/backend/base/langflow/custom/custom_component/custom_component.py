@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import uuid
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -439,7 +440,8 @@ class CustomComponent(BaseComponent):
         variable_service = get_variable_service()  # Get service instance
         # Retrieve and decrypt the variable by name for the current user
         async with async_session_scope() as session:
-            user_id = self.user_id or ""
+            if isinstance(self.user_id, str):
+                user_id = uuid.UUID(self.user_id)
             return await variable_service.get_variable(user_id=user_id, name=name, field=field, session=session)
 
     async def list_key_names(self):
