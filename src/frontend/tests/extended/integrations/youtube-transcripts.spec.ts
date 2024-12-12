@@ -39,7 +39,7 @@ test(
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByTestId("output-inspection-data").first().click();
+    await page.getByTestId("output-inspection-transcription").first().click();
 
     await page.waitForSelector("text=Component Output", { timeout: 30000 });
 

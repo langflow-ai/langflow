@@ -1,4 +1,3 @@
-import asyncio
 import json
 from typing import NamedTuple
 from uuid import UUID, uuid4
@@ -12,7 +11,7 @@ from langflow.initial_setup.setup import load_starter_projects
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
 from langflow.services.database.models.folder.model import FolderCreate
-from langflow.services.database.utils import async_session_getter
+from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
 
 
@@ -530,7 +529,7 @@ async def test_download_file(
         ]
     )
     db_manager = get_db_service()
-    async with async_session_getter(db_manager) as _session:
+    async with session_getter(db_manager) as _session:
         saved_flows = []
         for flow in flow_list.flows:
             flow.user_id = active_user.id
@@ -605,7 +604,7 @@ async def test_delete_nonexistent_flow(client: AsyncClient, logged_in_headers):
 @pytest.mark.usefixtures("active_user")
 async def test_read_only_starter_projects(client: AsyncClient, logged_in_headers):
     response = await client.get("api/v1/flows/basic_examples/", headers=logged_in_headers)
-    starter_projects = await asyncio.to_thread(load_starter_projects)
+    starter_projects = await load_starter_projects()
     assert response.status_code == 200
     assert len(response.json()) == len(starter_projects)
 

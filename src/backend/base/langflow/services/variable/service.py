@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from loguru import logger
-from sqlmodel import Session, select
+from sqlmodel import select
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
@@ -53,16 +53,17 @@ class DatabaseVariableService(VariableService, Service):
                 except Exception as e:  # noqa: BLE001
                     logger.exception(f"Error processing {var_name} variable: {e!s}")
 
-    def get_variable(
+    async def get_variable(
         self,
         user_id: UUID | str,
         name: str,
         field: str,
-        session: Session,
+        session: AsyncSession,
     ) -> str:
         # we get the credential from the database
         # credential = session.query(Variable).filter(Variable.user_id == user_id, Variable.name == name).first()
-        variable = session.exec(select(Variable).where(Variable.user_id == user_id, Variable.name == name)).first()
+        stmt = select(Variable).where(Variable.user_id == user_id, Variable.name == name)
+        variable = (await session.exec(stmt)).first()
 
         if not variable or not variable.value:
             msg = f"{name} variable not found."
@@ -81,10 +82,6 @@ class DatabaseVariableService(VariableService, Service):
     async def get_all(self, user_id: UUID | str, session: AsyncSession) -> list[Variable | None]:
         stmt = select(Variable).where(Variable.user_id == user_id)
         return list((await session.exec(stmt)).all())
-
-    def list_variables_sync(self, user_id: UUID | str, session: Session) -> list[str | None]:
-        variables = session.exec(select(Variable).where(Variable.user_id == user_id)).all()
-        return [variable.name for variable in variables if variable]
 
     async def list_variables(self, user_id: UUID | str, session: AsyncSession) -> list[str | None]:
         variables = await self.get_all(user_id=user_id, session=session)

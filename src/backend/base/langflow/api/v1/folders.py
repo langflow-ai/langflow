@@ -3,6 +3,7 @@ import json
 import zipfile
 from datetime import datetime, timezone
 from typing import Annotated
+from uuid import UUID
 
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
@@ -114,7 +115,7 @@ async def read_folders(
 async def read_folder(
     *,
     session: DbSession,
-    folder_id: str,
+    folder_id: UUID,
     current_user: CurrentActiveUser,
     params: Annotated[Params | None, Depends(custom_params)],
     is_component: bool = False,
@@ -165,7 +166,7 @@ async def read_folder(
 async def update_folder(
     *,
     session: DbSession,
-    folder_id: str,
+    folder_id: UUID,
     folder: FolderUpdate,  # Assuming FolderUpdate is a Pydantic model defining updatable fields
     current_user: CurrentActiveUser,
 ):
@@ -226,7 +227,7 @@ async def update_folder(
 async def delete_folder(
     *,
     session: DbSession,
-    folder_id: str,
+    folder_id: UUID,
     current_user: CurrentActiveUser,
 ):
     try:
@@ -258,7 +259,7 @@ async def delete_folder(
 async def download_file(
     *,
     session: DbSession,
-    folder_id: str,
+    folder_id: UUID,
     current_user: CurrentActiveUser,
 ):
     """Download all flows from folder as a zip file."""

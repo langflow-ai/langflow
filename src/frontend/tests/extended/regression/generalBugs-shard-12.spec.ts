@@ -44,7 +44,7 @@ test(
       .hover()
       .then(async () => {
         await page.mouse.down();
-        await page.mouse.move(-300, 300);
+        await page.mouse.move(-300, 100);
       });
 
     await page.mouse.up();
@@ -59,16 +59,24 @@ test(
       },
     );
 
-    modelElement = page.getByTestId(
-      "vectorstoresVectara Self Query Retriever for Vectara Vector Store",
-    );
-    targetElement = page.locator('//*[@id="react-flow-id"]');
-    await modelElement.dragTo(targetElement);
+    await page
+      .getByTestId(
+        "vectorstoresVectara Self Query Retriever for Vectara Vector Store",
+      )
+      .hover()
+      .then(async () => {
+        await page
+          .getByTestId(
+            "add-component-button-vectara-self-query-retriever-for-vectara-vector-store",
+          )
+          .click();
+      });
 
-    await page.mouse.up();
-    await page.mouse.down();
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 5000,
+      state: "visible",
+    });
 
-    await page.getByTestId("fit_view").click();
     await page.getByTestId("fit_view").click();
 
     //connection

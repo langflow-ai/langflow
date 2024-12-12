@@ -8,10 +8,10 @@ const SvgZepMemory = (props) => (
   >
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#000000"
-      stroke-opacity="0.00"
-      stroke-width="0.3"
+      strokeOpacity="0.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -50,10 +50,10 @@ const SvgZepMemory = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#4C1FCA"
-      stroke-opacity="0.98"
-      stroke-width="0.3"
+      strokeOpacity="0.98"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -68,10 +68,10 @@ const SvgZepMemory = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#531FCB"
-      stroke-opacity="0.99"
-      stroke-width="0.3"
+      strokeOpacity="0.99"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -85,10 +85,10 @@ const SvgZepMemory = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#731FCB"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -117,10 +117,10 @@ const SvgZepMemory = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#000000"
-      stroke-opacity="0.00"
-      stroke-width="0.3"
+      strokeOpacity="0.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -133,10 +133,10 @@ const SvgZepMemory = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#000000"
-      stroke-opacity="0.00"
-      stroke-width="0.3"
+      strokeOpacity="0.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -149,10 +149,10 @@ const SvgZepMemory = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#7920CB"
-      stroke-opacity="0.38"
-      stroke-width="0.3"
+      strokeOpacity="0.38"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -165,10 +165,10 @@ const SvgZepMemory = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#7A1FCC"
-      stroke-opacity="0.75"
-      stroke-width="0.3"
+      strokeOpacity="0.75"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -180,10 +180,10 @@ const SvgZepMemory = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#811FCB"
-      stroke-opacity="0.99"
-      stroke-width="0.3"
+      strokeOpacity="0.99"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -193,10 +193,10 @@ const SvgZepMemory = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#811FCB"
-      stroke-opacity="0.99"
-      stroke-width="0.3"
+      strokeOpacity="0.99"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -206,10 +206,10 @@ const SvgZepMemory = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#7E1FCB"
-      stroke-opacity="0.50"
-      stroke-width="0.3"
+      strokeOpacity="0.50"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -221,10 +221,10 @@ const SvgZepMemory = (props) => (
     </g>
     <g
       fill="None"
-      fill-opacity="0.0"
+      fillOpacity="0.0"
       stroke="#931FCC"
-      stroke-opacity="1.00"
-      stroke-width="0.3"
+      strokeOpacity="1.00"
+      strokeWidth="0.3"
     >
       <path
         d="
@@ -240,7 +240,7 @@ const SvgZepMemory = (props) => (
   C 222.64 734.17 209.23 729.73 204.00 731.00 C 198.77 732.27 189.32 730.46 183.00 731.00 C 176.68 731.54 167.74 730.75 161.00 731.00 C 154.26 731.25 146.91 730.91 140.00 731.00 C 133.09 731.09 126.02 731.01 119.00 731.00 C 111.98 730.99 104.03 731.11 97.00 731.00 C 89.97 730.89 82.92 731.29 76.00 731.00 C 69.08 730.71 60.67 731.64 54.00 731.00 C 47.33 730.36 39.01 732.48 33.00 731.00 C 26.99 729.52 16.70 734.32 12.00 731.00 Z"
       />
     </g>
-    <g fill="#000000" fill-opacity="0.00" stroke="None">
+    <g fill="#000000" fillOpacity="0.00" stroke="None">
       <path
         d="
   M 0.00 556.00
@@ -276,7 +276,7 @@ const SvgZepMemory = (props) => (
   C 201.85 104.71 209.60 99.25 213.92 82.92 C 218.24 66.60 236.53 67.76 252.00 66.00 C 267.47 64.24 284.14 61.79 300.00 60.00 C 315.86 58.21 332.59 55.29 348.67 53.67 C 364.75 52.05 380.11 48.99 396.22 47.22 C 412.34 45.46 428.96 43.17 445.01 41.01 C 461.05 38.85 476.95 37.33 493.00 35.00 C 509.06 32.68 525.88 31.19 542.00 29.00 C 558.12 26.81 573.69 24.58 590.00 23.00 C 606.31 21.42 622.28 17.15 639.00 17.00 Z"
       />
     </g>
-    <g fill="#4C1FCA" fill-opacity="0.98" stroke="None">
+    <g fill="#4C1FCA" fillOpacity="0.98" stroke="None">
       <path
         d="
   M 639.00 17.00
@@ -288,7 +288,7 @@ const SvgZepMemory = (props) => (
   C 546.31 156.65 566.76 129.86 584.70 101.70 C 602.64 73.54 623.69 46.12 639.00 17.00 Z"
       />
     </g>
-    <g fill="#531FCB" fill-opacity="0.99" stroke="None">
+    <g fill="#531FCB" fillOpacity="0.99" stroke="None">
       <path
         d="
   M 52.00 315.00
@@ -299,7 +299,7 @@ const SvgZepMemory = (props) => (
   C 46.74 163.03 52.00 238.88 52.00 315.00 Z"
       />
     </g>
-    <g fill="#731FCB" fill-opacity="1.00" stroke="None">
+    <g fill="#731FCB" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 121.00 309.00
@@ -325,7 +325,7 @@ const SvgZepMemory = (props) => (
   C 122.92 360.28 121.00 334.70 121.00 309.00 Z"
       />
     </g>
-    <g fill="#000000" fill-opacity="0.00" stroke="None">
+    <g fill="#000000" fillOpacity="0.00" stroke="None">
       <path
         d="
   M 225.00 730.00
@@ -335,7 +335,7 @@ const SvgZepMemory = (props) => (
   C 397.59 583.36 427.16 648.04 395.23 691.23 C 363.30 734.42 296.70 729.01 272.08 680.92 C 247.45 632.84 288.14 570.13 345.00 577.00 Z"
       />
     </g>
-    <g fill="#000000" fill-opacity="0.00" stroke="None">
+    <g fill="#000000" fillOpacity="0.00" stroke="None">
       <path
         d="
   M 625.00 730.00
@@ -345,7 +345,7 @@ const SvgZepMemory = (props) => (
   C 798.20 583.43 826.54 649.80 794.23 692.23 C 761.92 734.66 695.72 728.95 671.23 680.77 C 646.73 632.59 688.83 570.21 745.00 577.00 Z"
       />
     </g>
-    <g fill="#7920CB" fill-opacity="0.38" stroke="None">
+    <g fill="#7920CB" fillOpacity="0.38" stroke="None">
       <path
         d="
   M 0.00 569.00
@@ -355,7 +355,7 @@ const SvgZepMemory = (props) => (
   L 0.00 569.00 Z"
       />
     </g>
-    <g fill="#7A1FCC" fill-opacity="0.75" stroke="None">
+    <g fill="#7A1FCC" fillOpacity="0.75" stroke="None">
       <path
         d="
   M 0.00 590.00
@@ -364,21 +364,21 @@ const SvgZepMemory = (props) => (
   L 0.00 590.00 Z"
       />
     </g>
-    <g fill="#811FCB" fill-opacity="0.99" stroke="None">
+    <g fill="#811FCB" fillOpacity="0.99" stroke="None">
       <path
         d="
   M 345.00 577.00
   C 288.14 570.13 247.45 632.84 272.08 680.92 C 296.70 729.01 363.30 734.42 395.23 691.23 C 427.16 648.04 397.59 583.36 345.00 577.00 Z"
       />
     </g>
-    <g fill="#811FCB" fill-opacity="0.99" stroke="None">
+    <g fill="#811FCB" fillOpacity="0.99" stroke="None">
       <path
         d="
   M 745.00 577.00
   C 688.83 570.21 646.73 632.59 671.23 680.77 C 695.72 728.95 761.92 734.66 794.23 692.23 C 826.54 649.80 798.20 583.43 745.00 577.00 Z"
       />
     </g>
-    <g fill="#7E1FCB" fill-opacity="0.50" stroke="None">
+    <g fill="#7E1FCB" fillOpacity="0.50" stroke="None">
       <path
         d="
   M 0.00 628.00
@@ -387,7 +387,7 @@ const SvgZepMemory = (props) => (
   L 0.00 628.00 Z"
       />
     </g>
-    <g fill="#931FCC" fill-opacity="1.00" stroke="None">
+    <g fill="#931FCC" fillOpacity="1.00" stroke="None">
       <path
         d="
   M 12.00 731.00

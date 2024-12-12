@@ -683,3 +683,5 @@ export const isStringArray = (value: unknown): value is string[] => {
     Array.isArray(value) && value.every((item) => typeof item === "string")
   );
 };
+
+export const stringToBool = (str) => (str === "false" ? false : true);

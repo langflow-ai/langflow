@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import uuid
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -12,7 +14,7 @@ from pydantic import BaseModel
 from langflow.custom.custom_component.base_component import BaseComponent
 from langflow.helpers.flow import list_flows, load_flow, run_flow
 from langflow.schema import Data
-from langflow.services.deps import get_storage_service, get_variable_service, session_scope
+from langflow.services.deps import async_session_scope, get_storage_service, get_variable_service
 from langflow.services.storage.service import StorageService
 from langflow.template.utils import update_frontend_node_with_template_values
 from langflow.type_extraction.type_extraction import post_process_type
@@ -230,6 +232,19 @@ class CustomComponent(BaseComponent):
         field_value: Any,
         field_name: str | None = None,
     ):
+        if type(self).aupdate_build_config != CustomComponent.aupdate_build_config:
+            raise NotImplementedError
+        build_config[field_name]["value"] = field_value
+        return build_config
+
+    async def aupdate_build_config(
+        self,
+        build_config: dotdict,
+        field_value: Any,
+        field_name: str | None = None,
+    ):
+        if type(self).update_build_config != CustomComponent.update_build_config:
+            return await asyncio.to_thread(self.update_build_config, build_config, field_value, field_name)
         build_config[field_name]["value"] = field_value
         return build_config
 
@@ -410,8 +425,7 @@ class CustomComponent(BaseComponent):
             self._template_config = self.build_template_config()
         return self._template_config
 
-    @property
-    def variables(self):
+    async def variables(self, name: str, field: str):
         """Returns the variable for the current user with the specified name.
 
         Raises:
@@ -420,20 +434,17 @@ class CustomComponent(BaseComponent):
         Returns:
             The variable for the current user with the specified name.
         """
+        if hasattr(self, "_user_id") and not self.user_id:
+            msg = f"User id is not set for {self.__class__.__name__}"
+            raise ValueError(msg)
+        variable_service = get_variable_service()  # Get service instance
+        # Retrieve and decrypt the variable by name for the current user
+        async with async_session_scope() as session:
+            if isinstance(self.user_id, str):
+                user_id = uuid.UUID(self.user_id)
+            return await variable_service.get_variable(user_id=user_id, name=name, field=field, session=session)
 
-        def get_variable(name: str, field: str):
-            if hasattr(self, "_user_id") and not self.user_id:
-                msg = f"User id is not set for {self.__class__.__name__}"
-                raise ValueError(msg)
-            variable_service = get_variable_service()  # Get service instance
-            # Retrieve and decrypt the variable by name for the current user
-            with session_scope() as session:
-                user_id = self.user_id or ""
-                return variable_service.get_variable(user_id=user_id, name=name, field=field, session=session)
-
-        return get_variable
-
-    def list_key_names(self):
+    async def list_key_names(self):
         """Lists the names of the variables for the current user.
 
         Raises:
@@ -447,8 +458,8 @@ class CustomComponent(BaseComponent):
             raise ValueError(msg)
         variable_service = get_variable_service()
 
-        with session_scope() as session:
-            return variable_service.list_variables_sync(user_id=self.user_id, session=session)
+        async with async_session_scope() as session:
+            return await variable_service.list_variables(user_id=self.user_id, session=session)
 
     def index(self, value: int = 0):
         """Returns a function that returns the value at the given index in the iterable.
@@ -519,7 +530,7 @@ class CustomComponent(BaseComponent):
         """
         raise NotImplementedError
 
-    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
+    async def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
         """This function is called after the code validation is done."""
         return update_frontend_node_with_template_values(
             frontend_node=new_frontend_node, raw_frontend_node=current_frontend_node

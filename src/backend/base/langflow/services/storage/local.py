@@ -1,5 +1,4 @@
-from pathlib import Path
-
+import anyio
 from aiofile import async_open
 from loguru import logger
 
@@ -12,7 +11,7 @@ class LocalStorageService(StorageService):
     def __init__(self, session_service, settings_service) -> None:
         """Initialize the local storage service with session and settings services."""
         super().__init__(session_service, settings_service)
-        self.data_dir = Path(settings_service.settings.config_dir)
+        self.data_dir = anyio.Path(settings_service.settings.config_dir)
         self.set_ready()
 
     def build_full_path(self, flow_id: str, file_name: str) -> str:
@@ -30,11 +29,11 @@ class LocalStorageService(StorageService):
         :raises PermissionError: If there is no permission to write the file.
         """
         folder_path = self.data_dir / flow_id
-        folder_path.mkdir(parents=True, exist_ok=True)
+        await folder_path.mkdir(parents=True, exist_ok=True)
         file_path = folder_path / file_name
 
         try:
-            async with async_open(file_path, "wb") as f:
+            async with async_open(str(file_path), "wb") as f:
                 await f.write(data)
             logger.info(f"File {file_name} saved successfully in flow {flow_id}.")
         except Exception:
@@ -50,12 +49,12 @@ class LocalStorageService(StorageService):
         :raises FileNotFoundError: If the file does not exist.
         """
         file_path = self.data_dir / flow_id / file_name
-        if not file_path.exists():
+        if not await file_path.exists():
             logger.warning(f"File {file_name} not found in flow {flow_id}.")
             msg = f"File {file_name} not found in flow {flow_id}"
             raise FileNotFoundError(msg)
 
-        async with async_open(file_path, "rb") as f:
+        async with async_open(str(file_path), "rb") as f:
             content = await f.read()
 
         logger.debug(f"File {file_name} retrieved successfully from flow {flow_id}.")
@@ -68,13 +67,15 @@ class LocalStorageService(StorageService):
         :return: A list of file names.
         :raises FileNotFoundError: If the flow directory does not exist.
         """
+        if not isinstance(flow_id, str):
+            flow_id = str(flow_id)
         folder_path = self.data_dir / flow_id
-        if not folder_path.exists() or not folder_path.is_dir():
+        if not await folder_path.exists() or not await folder_path.is_dir():
             logger.warning(f"Flow {flow_id} directory does not exist.")
             msg = f"Flow {flow_id} directory does not exist."
             raise FileNotFoundError(msg)
 
-        files = [file.name for file in folder_path.iterdir() if file.is_file()]
+        files = [file.name async for file in folder_path.iterdir() if await file.is_file()]
         logger.info(f"Listed {len(files)} files in flow {flow_id}.")
         return files
 
@@ -85,8 +86,8 @@ class LocalStorageService(StorageService):
         :param file_name: The name of the file to be deleted.
         """
         file_path = self.data_dir / flow_id / file_name
-        if file_path.exists():
-            file_path.unlink()
+        if await file_path.exists():
+            await file_path.unlink()
             logger.info(f"File {file_name} deleted successfully from flow {flow_id}.")
         else:
             logger.warning(f"Attempted to delete non-existent file {file_name} in flow {flow_id}.")

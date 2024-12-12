@@ -183,7 +183,7 @@ To choose a custom name for your API endpoint, select **Project Settings** &gt; 
 
 ## Revoke an API key
 
-To revoke an API key, delete it from the the list of keys in the **Settings** menu.
+To revoke an API key, delete it from the list of keys in the **Settings** menu.
 
 1. Click your user icon and select **Settings**.
 2. Click **Langflow API**.

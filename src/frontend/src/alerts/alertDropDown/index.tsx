@@ -46,7 +46,7 @@ export default function AlertDropdown({
         }
       }}
     >
-      <PopoverTrigger>{children}</PopoverTrigger>
+      <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent
         ref={notificationRef}
         data-testid="notification-dropdown-content"

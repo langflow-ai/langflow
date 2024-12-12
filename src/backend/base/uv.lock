@@ -775,30 +775,6 @@ toml = [
 ]
 
 [[package]]
-name = "crewai"
-version = "0.36.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "appdirs" },
-    { name = "click" },
-    { name = "embedchain" },
-    { name = "instructor" },
-    { name = "jsonref" },
-    { name = "langchain" },
-    { name = "openai" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-exporter-otlp-proto-http" },
-    { name = "opentelemetry-sdk" },
-    { name = "pydantic" },
-    { name = "python-dotenv" },
-    { name = "regex" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/7c/6a/dddf6cda7d5a27f77eeedde07ec2621df1e1e688b6a3a4a470b0437994c0/crewai-0.36.1.tar.gz", hash = "sha256:ea50ec5d3ef2df85e1b520efd9331bebb49ed7143e6cd1feec645da49217d2b0", size = 62205 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/77/97/1b7d184ed46a9968acbfd558ae14e65ac26306df16bcb6580cab5d6ba794/crewai-0.36.1-py3-none-any.whl", hash = "sha256:dbaa50d102542ea0c790bd62511b35234b2f5fa8d2333a6598beb84f407f0e00", size = 78077 },
-]
-
-[[package]]
 name = "cryptography"
 version = "43.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2279,7 +2255,6 @@ dependencies = [
     { name = "cachetools" },
     { name = "chardet" },
     { name = "clickhouse-connect" },
-    { name = "crewai" },
     { name = "cryptography" },
     { name = "diskcache" },
     { name = "docstring-parser" },
@@ -2391,7 +2366,6 @@ requires-dist = [
     { name = "celery", marker = "extra == 'deploy'" },
     { name = "chardet", specifier = ">=5.2.0" },
     { name = "clickhouse-connect", specifier = "==0.7.19" },
-    { name = "crewai", specifier = ">=0.36.0" },
     { name = "cryptography", specifier = ">=42.0.5,<44.0.0" },
     { name = "ctransformers", marker = "extra == 'all'" },
     { name = "ctransformers", marker = "extra == 'local'" },

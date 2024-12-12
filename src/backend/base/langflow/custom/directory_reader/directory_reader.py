@@ -3,6 +3,7 @@ import asyncio
 import zlib
 from pathlib import Path
 
+import anyio
 from aiofile import async_open
 from loguru import logger
 
@@ -74,7 +75,7 @@ class DirectoryReader:
                     continue
             items.append({"name": menu["name"], "path": menu["path"], "components": components})
         filtered = [menu for menu in items if menu["components"]]
-        logger.debug(f'Filtered components {"with errors" if with_errors else ""}: {len(filtered)}')
+        logger.debug(f"Filtered components {'with errors' if with_errors else ''}: {len(filtered)}")
         return {"menu": filtered}
 
     def validate_code(self, file_content) -> bool:
@@ -107,18 +108,18 @@ class DirectoryReader:
 
     async def aread_file_content(self, file_path):
         """Read and return the content of a file."""
-        file_path_ = Path(file_path)
-        if not file_path_.is_file():
+        file_path_ = anyio.Path(file_path)
+        if not await file_path_.is_file():
             return None
         try:
-            async with async_open(file_path_, encoding="utf-8") as file:
+            async with async_open(str(file_path_), encoding="utf-8") as file:
                 # UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 3069:
                 # character maps to <undefined>
                 return await file.read()
         except UnicodeDecodeError:
             # This is happening in Windows, so we need to open the file in binary mode
             # The file is always just a python file, so we can safely read it as utf-8
-            async with async_open(file_path_, "rb") as f:
+            async with async_open(str(file_path_), "rb") as f:
                 return (await f.read()).decode("utf-8")
 
     def get_files(self):

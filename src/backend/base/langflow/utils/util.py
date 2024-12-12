@@ -402,7 +402,7 @@ def build_loader_repr_from_data(data: list[Data]) -> str:
     return "0 data"
 
 
-def update_settings(
+async def update_settings(
     *,
     config: str | None = None,
     cache: str | None = None,
@@ -424,7 +424,7 @@ def update_settings(
     settings_service = get_settings_service()
     if config:
         logger.debug(f"Loading settings from {config}")
-        settings_service.settings.update_from_yaml(config, dev=dev)
+        await settings_service.settings.update_from_yaml(config, dev=dev)
     if remove_api_keys:
         logger.debug(f"Setting remove_api_keys to {remove_api_keys}")
         settings_service.settings.update_settings(remove_api_keys=remove_api_keys)
