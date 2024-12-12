@@ -6,6 +6,6 @@ export const NvidiaIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  const isdark = useDarkStore((state) => state.dark);
+  const isdark = useDarkStore((state) => state.dark).toString();
   return <NvidiaSVG ref={ref} isdark={isdark} {...props} />;
 });
