@@ -1075,11 +1075,12 @@ class Component(CustomComponent):
     async def _update_stored_message(self, message: Message) -> Message:
         """Update the stored message."""
         if hasattr(self, "_vertex") and self._vertex is not None and hasattr(self._vertex, "graph"):
-            flow_id = str(
+            flow_id = (
                 UUID(self._vertex.graph.flow_id)
                 if isinstance(self._vertex.graph.flow_id, str)
                 else self._vertex.graph.flow_id
             )
+
             message.flow_id = flow_id
 
         message_tables = await aupdate_messages(message)
