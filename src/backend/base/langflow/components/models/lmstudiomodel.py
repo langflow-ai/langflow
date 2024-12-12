@@ -3,7 +3,6 @@ from urllib.parse import urljoin
 
 import httpx
 from langchain_openai import ChatOpenAI
-from pydantic.v1 import SecretStr
 from typing_extensions import override
 
 from langflow.base.models.model import LCModelComponent
@@ -103,14 +102,12 @@ class LMStudioModelComponent(LCModelComponent):
         base_url = self.base_url or "http://localhost:1234/v1"
         seed = self.seed
 
-        api_key = SecretStr(lmstudio_api_key) if lmstudio_api_key else None
-
         return ChatOpenAI(
             max_tokens=max_tokens or None,
             model_kwargs=model_kwargs,
             model=model_name,
             base_url=base_url,
-            api_key=api_key,
+            api_key=lmstudio_api_key,
             temperature=temperature if temperature is not None else 0.1,
             seed=seed,
         )
