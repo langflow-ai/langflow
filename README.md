@@ -40,13 +40,13 @@
 
 ## 📦 Quickstart
 
-- **Install with uv (recommended)** (Python 3.10 to 3.13):
+- **Install with uv (recommended)** (Python 3.10 to 3.12):
 
 ```shell
 uv pip install langflow
 ```
 
-- **Install with pip** (Python 3.10 to 3.13):
+- **Install with pip** (Python 3.10 to 3.12):
 
 ```shell
 pip install langflow
