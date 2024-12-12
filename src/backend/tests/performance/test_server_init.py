@@ -1,5 +1,3 @@
-import asyncio
-
 import pytest
 from langflow.services.deps import get_settings_service
 
@@ -72,7 +70,7 @@ async def test_create_starter_projects():
     await initialize_services(fix_migration=False)
     settings_service = get_settings_service()
     types_dict = await get_and_cache_all_types_dict(settings_service)
-    await asyncio.to_thread(create_or_update_starter_projects, types_dict)
+    await create_or_update_starter_projects(types_dict)
     assert "test_performance.db" in settings_service.settings.database_url
 
 
