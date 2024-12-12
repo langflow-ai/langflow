@@ -1,3 +1,5 @@
+from typing_extensions import TypedDict
+
 from langflow.base.models.model import LCModelComponent
 from langflow.components.models.amazon_bedrock import AmazonBedrockComponent
 from langflow.components.models.anthropic import AnthropicModelComponent
@@ -6,6 +8,13 @@ from langflow.components.models.groq import GroqModel
 from langflow.components.models.nvidia import NVIDIAModelComponent
 from langflow.components.models.openai import OpenAIModelComponent
 from langflow.inputs.inputs import SecretStrInput
+
+
+class ModelProvidersDict(TypedDict):
+    fields: list[str]
+    inputs: list[str]
+    prefix: str
+    component_class: LCModelComponent
 
 
 def get_filtered_inputs(component_class):
@@ -99,7 +108,7 @@ def _get_amazon_bedrock_inputs_and_fields():
     return amazon_bedrock_inputs, create_input_fields_dict(amazon_bedrock_inputs, "")
 
 
-MODEL_PROVIDERS_DICT = {}
+MODEL_PROVIDERS_DICT: dict[str, ModelProvidersDict] = {}
 
 # Try to add each provider
 try:
@@ -167,6 +176,7 @@ try:
     }
 except ImportError:
     pass
+
 
 MODEL_PROVIDERS = list(MODEL_PROVIDERS_DICT.keys())
 ALL_PROVIDER_FIELDS: list[str] = [field for provider in MODEL_PROVIDERS_DICT.values() for field in provider["fields"]]
