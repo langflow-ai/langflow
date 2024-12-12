@@ -51,7 +51,7 @@ Install Pre-Requisites:
 * **`git`**: The project uses the ubiquitous `git` tool for change control.
 * **`make`**: The project uses `make` to coordidinate packaging.
 * **`uv`**: This project uses `uv` (`>=0.4`), a Python package and project manager from Astral. Install instructions at https://docs.astral.sh/uv/getting-started/installation/.
-* **`npm`**: The frontend files are built with Node.js (`v22.12 LTS`) and `npm` (`v10.9`). Install instrucations at https://nodejs.org/en/download/package-manager.
+* **`npm`**: The frontend files are built with Node.js (`v22.12 LTS`) and `npm` (`v10.9`). Install instructions at https://nodejs.org/en/download/package-manager.
   - Windows (WSL) users: ensure `npm` is installed within WSL environment; `which npm` should resolve to a Linux location, not a Windows location.
 
 ### Initial Environment Validation
