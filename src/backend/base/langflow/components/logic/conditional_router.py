@@ -78,15 +78,15 @@ class ConditionalRouterComponent(Component):
 
         if operator == "equals":
             return input_text == match_text
-        elif operator == "not equals":
+        if operator == "not equals":
             return input_text != match_text
-        elif operator == "contains":
+        if operator == "contains":
             return match_text in input_text
-        elif operator == "starts with":
+        if operator == "starts with":
             return input_text.startswith(match_text)
-        elif operator == "ends with":
+        if operator == "ends with":
             return input_text.endswith(match_text)
-        elif operator == "matches regex":
+        if operator == "matches regex":
             try:
                 return bool(re.match(match_text, input_text))
             except re.error:
