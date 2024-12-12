@@ -94,6 +94,8 @@ class DirectoryComponent(Component):
         else:
             loaded_data = [parse_text_file_to_data(file_path, silent_errors=silent_errors) for file_path in file_paths]
 
-        loaded_data = list(filter(None, loaded_data))
+        loaded_data = [data for data in loaded_data if data is not None]
+
         self.status = loaded_data
+
         return loaded_data
