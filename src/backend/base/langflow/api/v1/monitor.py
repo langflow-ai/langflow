@@ -41,7 +41,7 @@ async def delete_vertex_builds(flow_id: Annotated[UUID, Query()], session: DbSes
 async def get_messages(
     session: DbSession,
     flow_id: Annotated[UUID | None, Query()] = None,
-    session_id: Annotated[UUID | None, Query()] = None,
+    session_id: Annotated[str | None, Query()] = None,
     sender: Annotated[str | None, Query()] = None,
     sender_name: Annotated[str | None, Query()] = None,
     order_by: Annotated[str | None, Query()] = "timestamp",
