@@ -3,8 +3,6 @@ on:
   pull_request:
     paths:
       - "**/*.py"
-env:
-  POETRY_VERSION: "1.8.2"
 
 jobs:
   update-starter-projects:
@@ -16,7 +14,9 @@ jobs:
         uses: ./.github/actions/setup-uv
 
       - name: "Install dependencies"
-        run: uv sync --frozen
+        run: |
+          uv sync --frozen
+          uv pip install -e . --no-dev
 
       - name: Run starter projects update
         run: python scripts/ci/update_starter_projects.py
