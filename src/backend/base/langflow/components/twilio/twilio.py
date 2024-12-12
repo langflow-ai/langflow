@@ -60,10 +60,7 @@ class TwilioComponent(Component):
 
         """
         url = f"https://api.twilio.com/2010-04-01/Accounts/{self.account_sid}/Messages.json"
-        headers = {
-            "Authorization": "Basic "
-            + b64encode(f"{self.account_sid}:{self.auth_token}".encode()).decode()
-        }
+        headers = {"Authorization": "Basic " + b64encode(f"{self.account_sid}:{self.auth_token}".encode()).decode()}
         data = {
             "From": self.twilio_number,
             "To": self.recipient_number,
