@@ -69,6 +69,7 @@ class StructuredOutputComponent(Component):
                     "default": "False",
                 },
             ],
+            value=[{"name": "field", "description": "description of field", "type": "text", "multiple": "False"}],
         ),
         BoolInput(
             name="multiple",
