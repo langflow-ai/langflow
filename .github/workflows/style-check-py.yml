@@ -6,10 +6,6 @@ on:
     paths:
       - "**/*.py"
 
-
-
-
-
 jobs:
   lint:
     name: Ruff Style Check
