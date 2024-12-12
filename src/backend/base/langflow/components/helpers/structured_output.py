@@ -37,18 +37,20 @@ class StructuredOutputComponent(Component):
             name="output_schema",
             display_name="Output Schema",
             info="Define the structure and data types for the model's output.",
-            value=[
+            table_schema=[
                 {
                     "name": "name",
                     "display_name": "Name",
                     "type": "str",
                     "description": "Specify the name of the output field.",
+                    "default": "field",
                 },
                 {
                     "name": "description",
                     "display_name": "Description",
                     "type": "str",
                     "description": "Describe the purpose of the output field.",
+                    "default": "description of field",
                 },
                 {
                     "name": "type",
@@ -67,6 +69,7 @@ class StructuredOutputComponent(Component):
                     "default": "False",
                 },
             ],
+            value=[{"name": "field", "description": "description of field", "type": "text", "multiple": "False"}],
         ),
         BoolInput(
             name="multiple",
