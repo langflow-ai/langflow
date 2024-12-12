@@ -23,7 +23,7 @@ class RunFlowComponent(Component):
         return [flow_data.data["name"] for flow_data in flow_data]
 
     @override
-    async def aupdate_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
+    async def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "flow_name":
             build_config["flow_name"]["options"] = await self.get_flow_names()
 

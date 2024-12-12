@@ -16,7 +16,7 @@ class ChatOllamaComponent(LCModelComponent):
     icon = "Ollama"
     name = "OllamaModel"
 
-    async def aupdate_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
+    async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
         if field_name == "mirostat":
             if field_value == "Disabled":
                 build_config["mirostat_eta"]["advanced"] = True

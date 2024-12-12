@@ -35,7 +35,7 @@ class SubFlowComponent(CustomComponent):
                 return flow_data
         return None
 
-    async def aupdate_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
+    async def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         logger.debug(f"Updating build config with field value {field_value} and field name {field_name}")
         if field_name == "flow_name":
             build_config["flow_name"]["options"] = await self.get_flow_names()
