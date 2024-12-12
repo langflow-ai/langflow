@@ -269,9 +269,11 @@ class ArizePhoenixTracer(BaseTracer):
         if not self._ready:
             return
 
-    def _convert_to_arize_phoenix_types(self, io_dict: dict[str, Any]):
+    def _convert_to_arize_phoenix_types(self, io_dict: dict[str | Any, Any]) -> dict[str, Any]:
         """Converts data types to Arize/Phoenix compatible formats."""
-        return {key: self._convert_to_arize_phoenix_type(value) for key, value in io_dict.items()}
+        return {
+            str(key): self._convert_to_arize_phoenix_type(value) for key, value in io_dict.items() if key is not None
+        }
 
     def _convert_to_arize_phoenix_type(self, value):
         """Recursively converts a value to a Arize/Phoenix compatible type."""
