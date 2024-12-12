@@ -12,9 +12,9 @@ Install Langflow locally with [uv (recommended)](https://docs.astral.sh/uv/getti
 
 ### Prerequisites
 
-* [Python 3.10 to 3.12](https://www.python.org/downloads/release/python-3100/) installed
-* [uv](https://docs.astral.sh/uv/getting-started/installation/), [pip](https://pypi.org/project/pip/), or [pipx](https://pipx.pypa.io/stable/installation/) installed
-* Before installing Langflow, we recommend creating a virtual environment to isolate your Python dependencies with [uv](https://docs.astral.sh/uv/pip/environments), [venv](https://docs.python.org/3/library/venv.html), or [conda](https://anaconda.org/anaconda/conda)
+- [Python 3.10 to 3.12](https://www.python.org/downloads/release/python-3100/) installed
+- [uv](https://docs.astral.sh/uv/getting-started/installation/), [pip](https://pypi.org/project/pip/), or [pipx](https://pipx.pypa.io/stable/installation/) installed
+- Before installing Langflow, we recommend creating a virtual environment to isolate your Python dependencies with [uv](https://docs.astral.sh/uv/pip/environments), [venv](https://docs.python.org/3/library/venv.html), or [conda](https://anaconda.org/anaconda/conda)
 
 ### Install Langflow with pip or pipx
 
@@ -91,9 +91,11 @@ This is a list of possible issues that you may encounter when installing and run
 ### No `langflow.__main__` module
 
 When you try to run Langflow with the command `langflow run`, you encounter the following error:
+
 ```bash
 > No module named 'langflow.__main__'
 ```
+
 1. Run `python -m langflow run` instead of `langflow run`.
 2. If that doesn't work, reinstall the latest Langflow version with `python -m pip install langflow -U`.
 3. If that doesn't work, reinstall Langflow and its dependencies with `python -m pip install langflow --pre -U --force-reinstall`.
