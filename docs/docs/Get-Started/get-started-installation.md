@@ -136,7 +136,7 @@ Installing Langflow with `pip install langflow` slowly fails with this error mes
 pip is looking at multiple versions of <<library>> to determine which version is compatible with other requirements. This could take a while.
 ```
 
-To fix this issue, install Langflow with [uv](https://docs.astral.sh/uv/getting-started/installation/) instead of pip.
+To work around this issue, install Langflow with [`uv`](https://docs.astral.sh/uv/getting-started/installation/) instead of `pip`.
 
 ```plain
 uv pip install langflow
