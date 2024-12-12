@@ -9,7 +9,6 @@ from langflow.initial_setup.setup import (
     load_starter_projects,
     update_edges_with_latest_component_versions,
     update_project_file,
-    # initialize_super_user_if_needed,
     update_projects_components_with_latest_component_versions,
 )
 from langflow.interface.types import get_and_cache_all_types_dict
