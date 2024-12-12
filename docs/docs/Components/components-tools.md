@@ -1,6 +1,15 @@
 # Tools
 
-Tool components are used to interact with external services, APIs, and tools. They can be used to search the web, query databases, and perform other tasks.
+Tools are typically connected to agent components. Agents use LLMs as a reasoning engine to decide which of the connected tool components to use to solve a problem.
+
+Tools in agentic functions are, essentially, functions that the agent can call to perform tasks or access external resources.
+A function is wrapped as a `Tool` object, with a common interface the agent understands.
+Agents become aware of tools through tool registration, where the agent is provided a list of available tools, typically at agent initialization. The `Tool` object's description tells the agent what the tool can do.
+
+The agent then uses a connected LLM to reason through the problem to decide which tool is best for the job.
+
+## Use a tool in a flow
+
 
 ## Bing Search API
 
