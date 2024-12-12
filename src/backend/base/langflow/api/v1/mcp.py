@@ -6,10 +6,11 @@ from contextvars import ContextVar
 from typing import Annotated
 from uuid import UUID, uuid4
 
+from anyio import BrokenResourceError
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from mcp import types
-from mcp.server import Server
+from mcp.server import Server, NotificationOptions
 from mcp.server.sse import SseServerTransport
 from pydantic import ValidationError
 from sqlmodel import select
@@ -74,6 +75,16 @@ def json_schema_from_flow(flow: Flow) -> dict:
                     required.append(field_name)
 
     return {"type": "object", "properties": properties, "required": required}
+
+
+@server.list_prompts()
+async def handle_list_prompts():
+    return []
+
+
+@server.list_resources()
+async def handle_list_resources():
+    return []
 
 
 @server.list_tools()
@@ -220,8 +231,12 @@ async def handle_sse(request: Request, current_user: Annotated[User, Depends(get
                 logger.debug("Starting SSE connection")
                 logger.debug(f"Stream types: read={type(streams[0])}, write={type(streams[1])}")
 
-                # Let's look at the initialization options
-                init_options = server.create_initialization_options()
+                notification_options = NotificationOptions(
+                    prompts_changed=True,
+                    resources_changed=True,
+                    tools_changed=True
+                )
+                init_options = server.create_initialization_options(notification_options)
                 logger.debug(f"Initialization options: {init_options}")
 
                 await server.run(streams[0], streams[1], init_options)
