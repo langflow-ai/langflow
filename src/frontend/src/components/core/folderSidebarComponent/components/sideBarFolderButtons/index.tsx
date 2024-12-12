@@ -28,7 +28,7 @@ import useAlertStore from "../../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../../stores/foldersStore";
 import { handleKeyDown } from "../../../../../utils/reactflowUtils";
-import { cn, getRandomKeyByssmm } from "../../../../../utils/utils";
+import { cn } from "../../../../../utils/utils";
 import useFileDrop from "../../hooks/use-on-file-drop";
 import { SidebarFolderSkeleton } from "../sidebarFolderSkeleton";
 import { HeaderButtons } from "./components/header-buttons";
@@ -356,7 +356,7 @@ const SideBarFoldersButtonsComponent = ({
                     (folder) => folder.name === item.name,
                   )[0];
                   return (
-                    <SidebarMenuItem key={getRandomKeyByssmm()}>
+                    <SidebarMenuItem key={index}>
                       <div className="relative flex w-full">
                         <SidebarMenuButton
                           size="md"
