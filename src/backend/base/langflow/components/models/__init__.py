@@ -14,6 +14,7 @@ from .nvidia import NVIDIAModelComponent
 from .ollama import ChatOllamaComponent
 from .openai import OpenAIModelComponent
 from .perplexity import PerplexityComponent
+from .sambanova import SambaNovaComponent
 from .vertexai import ChatVertexAIComponent
 
 __all__ = [
@@ -34,4 +35,5 @@ __all__ = [
     "OpenAIModelComponent",
     "PerplexityComponent",
     "QianfanChatEndpointComponent",
+    "SambaNovaComponent",
 ]

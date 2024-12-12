@@ -23,8 +23,9 @@ def set_socketio_server(socketio_server) -> None:
 
 async def get_vertices(sio, sid, flow_id, chat_service) -> None:
     try:
-        session = next(get_session())
-        flow: Flow = session.exec(select(Flow).where(Flow.id == flow_id)).first()
+        session = await anext(get_session())
+        stmt = select(Flow).where(Flow.id == flow_id)
+        flow: Flow = (await session.exec(stmt)).first()
         if not flow or not flow.data:
             await sio.emit("error", data="Invalid flow ID", to=sid)
             return
@@ -87,7 +88,7 @@ async def build_vertex(
             result_dict = ResultDataResponse(results={})
             artifacts = {}
         await set_cache(flow_id, graph)
-        log_vertex_build(
+        await log_vertex_build(
             flow_id=flow_id,
             vertex_id=vertex_id,
             valid=valid,

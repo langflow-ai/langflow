@@ -162,7 +162,7 @@ class FlowListRead(BaseModel):
 
 class FlowListReadWithFolderName(BaseModel):
     flows: list[FlowRead]
-    name: str
+    folder_name: str
     description: str
 
 
@@ -204,6 +204,7 @@ class UpdateCustomComponentRequest(CustomComponentRequest):
     field: str
     field_value: str | int | float | bool | dict | list | None = None
     template: dict
+    tool_mode: bool = False
 
     def get_template(self):
         return dotdict(self.template)

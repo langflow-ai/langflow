@@ -1,4 +1,4 @@
-import asyncio
+import re
 from abc import abstractmethod
 from typing import TYPE_CHECKING, cast
 
@@ -17,13 +17,14 @@ from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
 from langflow.memory import delete_message
 from langflow.schema import Data
 from langflow.schema.content_block import ContentBlock
-from langflow.schema.log import SendMessageFunctionType
 from langflow.schema.message import Message
 from langflow.template import Output
 from langflow.utils.constants import MESSAGE_SENDER_AI
 
 if TYPE_CHECKING:
     from langchain_core.messages import BaseMessage
+
+    from langflow.schema.log import SendMessageFunctionType
 
 
 DEFAULT_TOOLS_DESCRIPTION = "A helpful assistant with access to the following tools:"
@@ -136,6 +137,8 @@ class LCAgentComponent(Component):
                 max_iterations=max_iterations,
             )
         input_dict: dict[str, str | list[BaseMessage]] = {"input": self.input_value}
+        if hasattr(self, "system_prompt"):
+            input_dict["system_prompt"] = self.system_prompt
         if hasattr(self, "chat_history") and self.chat_history:
             input_dict["chat_history"] = data_to_messages(self.chat_history)
 
@@ -161,12 +164,12 @@ class LCAgentComponent(Component):
                     version="v2",
                 ),
                 agent_message,
-                cast(SendMessageFunctionType, self.send_message),
+                cast("SendMessageFunctionType", self.send_message),
             )
         except ExceptionWithMessageError as e:
             msg_id = e.agent_message.id
-            await asyncio.to_thread(delete_message, id_=msg_id)
-            self._send_message_event(e.agent_message, category="remove_message")
+            await delete_message(id_=msg_id)
+            await self._send_message_event(e.agent_message, category="remove_message")
             raise
         except Exception:
             raise
@@ -177,6 +180,18 @@ class LCAgentComponent(Component):
     @abstractmethod
     def create_agent_runnable(self) -> Runnable:
         """Create the agent."""
+
+    def validate_tool_names(self) -> None:
+        """Validate tool names to ensure they match the required pattern."""
+        pattern = re.compile(r"^[a-zA-Z0-9_-]+$")
+        if hasattr(self, "tools") and self.tools:
+            for tool in self.tools:
+                if not pattern.match(tool.name):
+                    msg = (
+                        f"Invalid tool name '{tool.name}': must only contain letters, numbers, underscores, dashes,"
+                        " and cannot contain spaces."
+                    )
+                    raise ValueError(msg)
 
 
 class LCToolsAgentComponent(LCAgentComponent):
@@ -193,6 +208,7 @@ class LCToolsAgentComponent(LCAgentComponent):
     ]
 
     def build_agent(self) -> AgentExecutor:
+        self.validate_tool_names()
         agent = self.create_agent_runnable()
         return AgentExecutor.from_agent_and_tools(
             agent=RunnableAgent(runnable=agent, input_keys_arg=["input"], return_keys_arg=["output"]),

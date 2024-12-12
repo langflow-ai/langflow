@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import JsonView from "react18-json-view";
 import "react18-json-view/src/dark.css";
 import "react18-json-view/src/style.css";
-import IconComponent from "../../components/genericIconComponent";
+import IconComponent from "../../components/common/genericIconComponent";
 import { CODE_DICT_DIALOG_SUBTITLE } from "../../constants/constants";
 import { useDarkStore } from "../../stores/darkStore";
 import BaseModal from "../baseModal";
@@ -48,8 +48,45 @@ export default function DictAreaModal({
     navigator.clipboard.writeText(JSON.stringify(copy));
   };
 
+  const handleChangeType = (type: "array" | "object") => {
+    setComponentValue((value) => {
+      if (type === "array") {
+        if (value && Object.keys(value).length > 0) {
+          return [value];
+        }
+        return [];
+      }
+      if (value && Array.isArray(value) && value.length > 0) {
+        return value[0];
+      }
+      return {};
+    });
+  };
+
+  const IteractiveReader = () => {
+    return (
+      <span>
+        Customize your dictionary, adding or editing key-value pairs as needed.
+        Supports adding new{" "}
+        <span
+          onClick={() => handleChangeType("object")}
+          className="cursor-pointer underline"
+        >
+          objects &#123; &#125;
+        </span>{" "}
+        or{" "}
+        <span
+          onClick={() => handleChangeType("array")}
+          className="cursor-pointer underline"
+        >
+          arrays [].
+        </span>
+      </span>
+    );
+  };
+
   const renderHeader = () => (
-    <BaseModal.Header description={onChange ? CODE_DICT_DIALOG_SUBTITLE : null}>
+    <BaseModal.Header description={onChange ? IteractiveReader() : null}>
       <span className="pr-2">
         {onChange ? "Edit Dictionary" : "View Dictionary"}
       </span>

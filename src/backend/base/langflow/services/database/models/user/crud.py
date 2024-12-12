@@ -17,6 +17,8 @@ async def get_user_by_username(db: AsyncSession, username: str) -> User | None:
 
 
 async def get_user_by_id(db: AsyncSession, user_id: UUID) -> User | None:
+    if isinstance(user_id, str):
+        user_id = UUID(user_id)
     stmt = select(User).where(User.id == user_id)
     return (await db.exec(stmt)).first()
 
@@ -56,5 +58,5 @@ async def update_user_last_login_at(user_id: UUID, db: AsyncSession):
         user_data = UserUpdate(last_login_at=datetime.now(timezone.utc))
         user = await get_user_by_id(db, user_id)
         return await update_user(user, user_data, db)
-    except Exception:  # noqa: BLE001
-        logger.opt(exception=True).debug("Error updating user last login at")
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Error updating user last login at: {e!s}")

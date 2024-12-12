@@ -8,7 +8,6 @@ from fastapi import Depends, HTTPException, Query
 from fastapi_pagination import Params
 from loguru import logger
 from sqlalchemy import delete
-from sqlmodel import Session
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.graph.graph.base import Graph
@@ -17,7 +16,7 @@ from langflow.services.database.models import User
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
-from langflow.services.deps import get_async_session, get_session
+from langflow.services.deps import async_session_scope, get_session
 from langflow.services.store.utils import get_lf_version_from_pypi
 
 if TYPE_CHECKING:
@@ -31,8 +30,7 @@ MAX_PAGE_SIZE = 50
 MIN_PAGE_SIZE = 1
 
 CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]
-DbSession = Annotated[Session, Depends(get_session)]
-AsyncDbSession = Annotated[AsyncSession, Depends(get_async_session)]
+DbSession = Annotated[AsyncSession, Depends(get_session)]
 
 
 def has_api_terms(word: str):
@@ -100,7 +98,7 @@ def get_is_component_from_data(data: dict):
     return data.get("is_component")
 
 
-def check_langflow_version(component: StoreComponentCreate) -> None:
+async def check_langflow_version(component: StoreComponentCreate) -> None:
     from langflow.utils.version import get_version_info
 
     __version__ = get_version_info()["version"]
@@ -108,7 +106,7 @@ def check_langflow_version(component: StoreComponentCreate) -> None:
     if not component.last_tested_version:
         component.last_tested_version = __version__
 
-    langflow_version = get_lf_version_from_pypi()
+    langflow_version = await get_lf_version_from_pypi()
     if langflow_version is None:
         raise HTTPException(status_code=500, detail="Unable to verify the latest version of Langflow")
     if langflow_version != component.last_tested_version:
@@ -142,16 +140,30 @@ def format_elapsed_time(elapsed_time: float) -> str:
     return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
-async def build_graph_from_data(flow_id: str, payload: dict, **kwargs):
+async def _get_flow_name(flow_id: uuid.UUID) -> str:
+    async with async_session_scope() as session:
+        flow = await session.get(Flow, flow_id)
+        if flow is None:
+            msg = f"Flow {flow_id} not found"
+            raise ValueError(msg)
+    return flow.name
+
+
+async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwargs):
     """Build and cache the graph."""
-    graph = Graph.from_payload(payload, flow_id, **kwargs)
+    # Get flow name
+    if "flow_name" not in kwargs:
+        flow_name = await _get_flow_name(flow_id if isinstance(flow_id, uuid.UUID) else uuid.UUID(flow_id))
+        kwargs["flow_name"] = flow_name
+    str_flow_id = str(flow_id)
+    graph = Graph.from_payload(payload, str_flow_id, **kwargs)
     for vertex_id in graph.has_session_id_vertices:
         vertex = graph.get_vertex(vertex_id)
         if vertex is None:
             msg = f"Vertex {vertex_id} not found"
             raise ValueError(msg)
         if not vertex.raw_params.get("session_id"):
-            vertex.update_raw_params({"session_id": flow_id}, overwrite=True)
+            vertex.update_raw_params({"session_id": str_flow_id}, overwrite=True)
 
     run_id = uuid.uuid4()
     graph.set_run_id(run_id)
@@ -160,7 +172,7 @@ async def build_graph_from_data(flow_id: str, payload: dict, **kwargs):
     return graph
 
 
-async def build_graph_from_db_no_cache(flow_id: str, session: AsyncSession):
+async def build_graph_from_db_no_cache(flow_id: uuid.UUID, session: AsyncSession):
     """Build and cache the graph."""
     flow: Flow | None = await session.get(Flow, flow_id)
     if not flow or not flow.data:
@@ -169,20 +181,22 @@ async def build_graph_from_db_no_cache(flow_id: str, session: AsyncSession):
     return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, user_id=str(flow.user_id))
 
 
-async def build_graph_from_db(flow_id: str, session: AsyncSession, chat_service: ChatService):
-    graph = await build_graph_from_db_no_cache(flow_id, session)
-    await chat_service.set_cache(flow_id, graph)
+async def build_graph_from_db(flow_id: uuid.UUID, session: AsyncSession, chat_service: ChatService):
+    graph = await build_graph_from_db_no_cache(flow_id=flow_id, session=session)
+    await chat_service.set_cache(str(flow_id), graph)
     return graph
 
 
 async def build_and_cache_graph_from_data(
-    flow_id: str,
+    flow_id: uuid.UUID | str,
     chat_service: ChatService,
     graph_data: dict,
 ):  # -> Graph | Any:
     """Build and cache the graph."""
-    graph = Graph.from_payload(graph_data, flow_id)
-    await chat_service.set_cache(flow_id, graph)
+    # Convert flow_id to str if it's UUID
+    str_flow_id = str(flow_id) if isinstance(flow_id, uuid.UUID) else flow_id
+    graph = Graph.from_payload(graph_data, str_flow_id)
+    await chat_service.set_cache(str_flow_id, graph)
     return graph
 
 
@@ -250,8 +264,7 @@ def get_suggestion_message(outdated_components: list[str]) -> str:
         )
     components = ", ".join(outdated_components)
     return (
-        f"The flow contains {count} outdated components. "
-        f"We recommend updating the following components: {components}."
+        f"The flow contains {count} outdated components. We recommend updating the following components: {components}."
     )
 
 

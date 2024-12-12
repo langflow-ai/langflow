@@ -1,6 +1,6 @@
 import * as Form from "@radix-ui/react-form";
 import { useEffect, useRef, useState } from "react";
-import IconComponent from "../../components/genericIconComponent";
+import IconComponent from "../../components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { COPIED_NOTICE_ALERT } from "../../constants/alerts_constants";
@@ -112,6 +112,7 @@ export default function SecretKeyModal({
                 onClick={() => {
                   handleCopyClick();
                 }}
+                data-testid="btn-copy-api-key"
                 unstyled
               >
                 {textCopied ? (

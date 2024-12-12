@@ -1,32 +1,30 @@
-import asyncio
 from datetime import datetime
-from pathlib import Path
 
+import anyio
 import pytest
-from langflow.custom.directory_reader.utils import (
-    abuild_custom_component_list_from_path,
-)
+from langflow.custom.directory_reader.utils import abuild_custom_component_list_from_path
+from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.initial_setup.setup import (
-    STARTER_FOLDER_NAME,
     get_project_data,
     load_starter_projects,
     update_projects_components_with_latest_component_versions,
 )
 from langflow.interface.types import aget_all_types_dict
 from langflow.services.database.models.folder.model import Folder
-from langflow.services.deps import session_scope
+from langflow.services.deps import async_session_scope
+from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 
-def test_load_starter_projects():
-    projects = load_starter_projects()
+async def test_load_starter_projects():
+    projects = await load_starter_projects()
     assert isinstance(projects, list)
     assert all(isinstance(project[1], dict) for project in projects)
-    assert all(isinstance(project[0], Path) for project in projects)
+    assert all(isinstance(project[0], anyio.Path) for project in projects)
 
 
-def test_get_project_data():
-    projects = load_starter_projects()
+async def test_get_project_data():
+    projects = await load_starter_projects()
     for _, project in projects:
         (
             project_name,
@@ -40,24 +38,27 @@ def test_get_project_data():
             project_tags,
         ) = get_project_data(project)
         assert isinstance(project_gradient, str) or project_gradient is None
-        assert isinstance(project_tags, list)
-        assert isinstance(project_name, str)
-        assert isinstance(project_description, str)
-        assert isinstance(project_is_component, bool)
-        assert isinstance(updated_at_datetime, datetime)
-        assert isinstance(project_data, dict)
-        assert isinstance(project_icon, str) or project_icon is None
-        assert isinstance(project_icon_bg_color, str) or project_icon_bg_color is None
+        assert isinstance(project_tags, list), f"Project {project_name} has no tags"
+        assert isinstance(project_name, str), f"Project {project_name} has no name"
+        assert isinstance(project_description, str), f"Project {project_name} has no description"
+        assert isinstance(project_is_component, bool), f"Project {project_name} has no is_component"
+        assert isinstance(updated_at_datetime, datetime), f"Project {project_name} has no updated_at_datetime"
+        assert isinstance(project_data, dict), f"Project {project_name} has no data"
+        assert isinstance(project_icon, str) or project_icon is None, f"Project {project_name} has no icon"
+        assert (
+            isinstance(project_icon_bg_color, str) or project_icon_bg_color is None
+        ), f"Project {project_name} has no icon_bg_color"
 
 
 @pytest.mark.usefixtures("client")
 async def test_create_or_update_starter_projects():
-    with session_scope() as session:
+    async with async_session_scope() as session:
         # Get the number of projects returned by load_starter_projects
-        num_projects = len(await asyncio.to_thread(load_starter_projects))
+        num_projects = len(await load_starter_projects())
 
         # Get the number of projects in the database
-        folder = session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
+        stmt = select(Folder).options(selectinload(Folder.flows)).where(Folder.name == STARTER_FOLDER_NAME)
+        folder = (await session.exec(stmt)).first()
         assert folder is not None
         num_db_projects = len(folder.flows)
 
@@ -130,7 +131,7 @@ def add_edge(source, target, from_output, to_input):
 
 
 async def test_refresh_starter_projects():
-    data_path = str(Path(__file__).parent.parent.parent.absolute() / "base" / "langflow" / "components")
+    data_path = str(await anyio.Path(__file__).parent.parent.parent.absolute() / "base" / "langflow" / "components")
     components = await abuild_custom_component_list_from_path(data_path)
 
     chat_input = find_component_by_name(components, "ChatInput")

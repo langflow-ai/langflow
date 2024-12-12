@@ -1,31 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
-test("chat_io_teste", async ({ page }) => {
-  await page.goto("/");
-  await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
-  await page.waitForSelector('[data-testid="mainpage_title"]', {
-    timeout: 30000,
-  });
-
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 30000,
-  });
-
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
-    }
-  } catch (error) {
-    modalCount = 0;
-  }
-
-  while (modalCount === 0) {
-    await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
+test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
+  await awaitBootstrapTest(page);
 
   await page.waitForSelector('[data-testid="blank-flow"]', {
     timeout: 30000,
@@ -37,7 +14,9 @@ test("chat_io_teste", async ({ page }) => {
   });
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("chat output");
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="outputsChat Output"]', {
+    timeout: 2000,
+  });
 
   await page
     .getByTestId("outputsChat Output")
@@ -47,7 +26,9 @@ test("chat_io_teste", async ({ page }) => {
 
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("chat input");
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="inputsChat Input"]', {
+    timeout: 2000,
+  });
 
   await page
     .getByTestId("inputsChat Input")

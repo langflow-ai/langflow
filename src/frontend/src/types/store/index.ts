@@ -21,37 +21,43 @@ export type StoreComponentResponse = {
 
 export type shortcutsStoreType = {
   updateUniqueShortcut: (name: string, combination: string) => void;
-  output: string;
+  outputInspection: string;
   play: string;
   flow: string;
   group: string;
   cut: string;
   paste: string;
   api: string;
-  open: string;
+  openPlayground: string;
   undo: string;
   redo: string;
-  advanced: string;
+  advancedSettings: string;
   minimize: string;
   code: string;
   copy: string;
   duplicate: string;
-  component: string;
+  componentShare: string;
   docs: string;
-  changes: string;
-  save: string;
+  changesSave: string;
+  saveComponent: string;
   delete: string;
   update: string;
   download: string;
   freeze: string;
-  FreezePath: string;
+  toggleSidebar: string;
+  freezePath: string;
   toolMode: string;
   shortcuts: Array<{
     name: string;
+    display_name: string;
     shortcut: string;
   }>;
   setShortcuts: (
-    newShortcuts: Array<{ name: string; shortcut: string }>,
+    newShortcuts: Array<{
+      name: string;
+      display_name: string;
+      shortcut: string;
+    }>,
   ) => void;
   getShortcutsFromStorage: () => void;
 };

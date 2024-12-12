@@ -40,6 +40,12 @@ def _get_langfuse_tracer():
     return LangFuseTracer
 
 
+def _get_arize_phoenix_tracer():
+    from langflow.services.tracing.arize_phoenix import ArizePhoenixTracer
+
+    return ArizePhoenixTracer
+
+
 class TracingService(Service):
     name = "tracing_service"
 
@@ -108,11 +114,12 @@ class TracingService(Service):
     async def initialize_tracers(self) -> None:
         try:
             await self.start()
-            await asyncio.to_thread(self._initialize_langsmith_tracer)
-            await asyncio.to_thread(self._initialize_langwatch_tracer)
-            await asyncio.to_thread(self._initialize_langfuse_tracer)
-        except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error initializing tracers")
+            self._initialize_langsmith_tracer()
+            self._initialize_langwatch_tracer()
+            self._initialize_langfuse_tracer()
+            self._initialize_arize_phoenix_tracer()
+        except Exception as e:  # noqa: BLE001
+            logger.debug(f"Error initializing tracers: {e}")
 
     def _initialize_langsmith_tracer(self) -> None:
         project_name = os.getenv("LANGCHAIN_PROJECT", "Langflow")
@@ -139,6 +146,16 @@ class TracingService(Service):
         self.project_name = os.getenv("LANGCHAIN_PROJECT", "Langflow")
         langfuse_tracer = _get_langfuse_tracer()
         self._tracers["langfuse"] = langfuse_tracer(
+            trace_name=self.run_name,
+            trace_type="chain",
+            project_name=self.project_name,
+            trace_id=self.run_id,
+        )
+
+    def _initialize_arize_phoenix_tracer(self) -> None:
+        self.project_name = os.getenv("ARIZE_PHOENIX_PROJECT", "Langflow")
+        arize_phoenix_tracer = _get_arize_phoenix_tracer()
+        self._tracers["arize_phoenix"] = arize_phoenix_tracer(
             trace_name=self.run_name,
             trace_type="chain",
             project_name=self.project_name,
@@ -184,6 +201,7 @@ class TracingService(Service):
                     )
                 except Exception:  # noqa: BLE001
                     logger.exception(f"Error ending trace {trace_name}")
+        self._reset_io()
 
     def _end_all_traces(self, outputs: dict, error: Exception | None = None) -> None:
         for tracer in self._tracers.values():
@@ -192,10 +210,10 @@ class TracingService(Service):
                     tracer.end(self.inputs, outputs=self.outputs, error=error, metadata=outputs)
                 except Exception:  # noqa: BLE001
                     logger.exception("Error ending all traces")
+        self._reset_io()
 
     async def end(self, outputs: dict, error: Exception | None = None) -> None:
         await asyncio.to_thread(self._end_all_traces, outputs, error)
-        self._reset_io()
         await self.stop()
 
     def add_log(self, trace_name: str, log: Log) -> None:
@@ -236,7 +254,6 @@ class TracingService(Service):
         task = asyncio.create_task(asyncio.to_thread(self._end_traces, trace_id, trace_name, error))
         self.end_trace_tasks.add(task)
         task.add_done_callback(self.end_trace_tasks.discard)
-        self._reset_io()
 
     def set_outputs(
         self,

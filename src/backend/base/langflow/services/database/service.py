@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import sqlite3
 import time
 from contextlib import asynccontextmanager, contextmanager
@@ -20,13 +21,11 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlmodel import Session, SQLModel, create_engine, select, text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.base import Service
 from langflow.services.database import models
 from langflow.services.database.models.user.crud import get_user_by_username
-from langflow.services.database.utils import (
-    Result,
-    TableResults,
-)
+from langflow.services.database.utils import Result, TableResults
 from langflow.services.deps import get_settings_service
 from langflow.services.utils import teardown_superuser
 
@@ -123,7 +122,7 @@ class DatabaseService(Service):
             pragmas_list = []
             for key, val in pragmas.items():
                 pragmas_list.append(f"PRAGMA {key} = {val}")
-            logger.info(f"sqlite connection, setting pragmas: {pragmas_list}")
+            logger.debug(f"sqlite connection, setting pragmas: {pragmas_list}")
             if pragmas_list:
                 cursor = dbapi_connection.cursor()
                 try:
@@ -145,30 +144,82 @@ class DatabaseService(Service):
         async with AsyncSession(self.async_engine, expire_on_commit=False) as session:
             yield session
 
-    async def migrate_flows_if_auto_login(self) -> None:
-        # if auto_login is enabled, we need to migrate the flows
-        # to the default superuser if they don't have a user id
-        # associated with them
+    async def assign_orphaned_flows_to_superuser(self) -> None:
+        """Assign orphaned flows to the default superuser when auto login is enabled."""
         settings_service = get_settings_service()
-        if settings_service.auth_settings.AUTO_LOGIN:
-            async with self.with_async_session() as session:
-                stmt = select(models.Flow).where(models.Flow.user_id is None)
-                flows = (await session.exec(stmt)).all()
-                if flows:
-                    logger.debug("Migrating flows to default superuser")
-                    username = settings_service.auth_settings.SUPERUSER
-                    user = await get_user_by_username(session, username)
-                    if not user:
-                        logger.error("Default superuser not found")
-                        msg = "Default superuser not found"
-                        raise RuntimeError(msg)
-                    for flow in flows:
-                        flow.user_id = user.id
-                    await session.commit()
-                    logger.debug("Flows migrated successfully")
 
-    def check_schema_health(self) -> bool:
-        inspector = inspect(self.engine)
+        if not settings_service.auth_settings.AUTO_LOGIN:
+            return
+
+        async with self.with_async_session() as session:
+            # Fetch orphaned flows
+            stmt = (
+                select(models.Flow)
+                .join(models.Folder)
+                .where(
+                    models.Flow.user_id == None,  # noqa: E711
+                    models.Folder.name != STARTER_FOLDER_NAME,
+                )
+            )
+            orphaned_flows = (await session.exec(stmt)).all()
+
+            if not orphaned_flows:
+                return
+
+            logger.debug("Assigning orphaned flows to the default superuser")
+
+            # Retrieve superuser
+            superuser_username = settings_service.auth_settings.SUPERUSER
+            superuser = await get_user_by_username(session, superuser_username)
+
+            if not superuser:
+                error_message = "Default superuser not found"
+                logger.error(error_message)
+                raise RuntimeError(error_message)
+
+            # Get existing flow names for the superuser
+            existing_names: set[str] = set(
+                (await session.exec(select(models.Flow.name).where(models.Flow.user_id == superuser.id))).all()
+            )
+
+            # Process orphaned flows
+            for flow in orphaned_flows:
+                flow.user_id = superuser.id
+                flow.name = self._generate_unique_flow_name(flow.name, existing_names)
+                existing_names.add(flow.name)
+                session.add(flow)
+
+            # Commit changes
+            await session.commit()
+            logger.debug("Successfully assigned orphaned flows to the default superuser")
+
+    def _generate_unique_flow_name(self, original_name: str, existing_names: set[str]) -> str:
+        """Generate a unique flow name by adding or incrementing a suffix."""
+        if original_name not in existing_names:
+            return original_name
+
+        match = re.search(r"^(.*) \((\d+)\)$", original_name)
+        if match:
+            base_name, current_number = match.groups()
+            new_name = f"{base_name} ({int(current_number) + 1})"
+        else:
+            new_name = f"{original_name} (1)"
+
+        # Ensure unique name by incrementing suffix
+        while new_name in existing_names:
+            match = re.match(r"^(.*) \((\d+)\)$", new_name)
+            if match is not None:
+                base_name, current_number = match.groups()
+            else:
+                error_message = "Invalid format: match is None"
+                raise ValueError(error_message)
+
+            new_name = f"{base_name} ({int(current_number) + 1})"
+
+        return new_name
+
+    def _check_schema_health(self, connection) -> bool:
+        inspector = inspect(connection)
 
         model_mapping: dict[str, type[SQLModel]] = {
             "flow": models.Flow,
@@ -200,6 +251,10 @@ class DatabaseService(Service):
 
         return True
 
+    async def check_schema_health(self) -> None:
+        async with self.with_async_session() as session, session.bind.connect() as conn:
+            await conn.run_sync(self._check_schema_health)
+
     def init_alembic(self, alembic_cfg) -> None:
         logger.info("Initializing alembic")
         command.ensure_version(alembic_cfg)
@@ -207,7 +262,7 @@ class DatabaseService(Service):
         command.upgrade(alembic_cfg, "head")
         logger.info("Alembic initialized")
 
-    def run_migrations(self, *, fix=False) -> None:
+    def _run_migrations(self, should_initialize_alembic, fix) -> None:
         # First we need to check if alembic has been initialized
         # If not, we need to initialize it
         # if not self.script_location.exists(): # this is not the correct way to check if alembic has been initialized
@@ -222,16 +277,6 @@ class DatabaseService(Service):
             # alembic_cfg.attributes["connection"] = session
             alembic_cfg.set_main_option("script_location", str(self.script_location))
             alembic_cfg.set_main_option("sqlalchemy.url", self.database_url.replace("%", "%%"))
-
-            should_initialize_alembic = False
-            with self.with_session() as session:
-                # If the table does not exist it throws an error
-                # so we need to catch it
-                try:
-                    session.exec(text("SELECT * FROM alembic_version"))
-                except Exception:  # noqa: BLE001
-                    logger.debug("Alembic not initialized")
-                    should_initialize_alembic = True
 
             if should_initialize_alembic:
                 try:
@@ -249,7 +294,7 @@ class DatabaseService(Service):
                 buffer.write(f"{datetime.now(tz=timezone.utc).astimezone().isoformat()}: Checking migrations\n")
                 command.check(alembic_cfg)
             except Exception as exc:  # noqa: BLE001
-                logger.opt(exception=True).debug("Error checking migrations")
+                logger.debug(f"Error checking migrations: {exc}")
                 if isinstance(exc, util.exc.CommandError | util.exc.AutogenerateDiffsDetected):
                     command.upgrade(alembic_cfg, "head")
                     time.sleep(3)
@@ -266,6 +311,18 @@ class DatabaseService(Service):
             if fix:
                 self.try_downgrade_upgrade_until_success(alembic_cfg)
 
+    async def run_migrations(self, *, fix=False) -> None:
+        should_initialize_alembic = False
+        async with self.with_async_session() as session:
+            # If the table does not exist it throws an error
+            # so we need to catch it
+            try:
+                await session.exec(text("SELECT * FROM alembic_version"))
+            except Exception:  # noqa: BLE001
+                logger.debug("Alembic not initialized")
+                should_initialize_alembic = True
+        await asyncio.to_thread(self._run_migrations, should_initialize_alembic, fix)
+
     def try_downgrade_upgrade_until_success(self, alembic_cfg, retries=5) -> None:
         # Try -1 then head, if it fails, try -2 then head, etc.
         # until we reach the number of retries
@@ -275,7 +332,7 @@ class DatabaseService(Service):
                 break
             except util.exc.AutogenerateDiffsDetected:
                 # downgrade to base and upgrade again
-                logger.opt(exception=True).warning("AutogenerateDiffsDetected")
+                logger.warning("AutogenerateDiffsDetected")
                 command.downgrade(alembic_cfg, f"-{i}")
                 # wait for the database to be ready
                 time.sleep(3)
@@ -312,10 +369,11 @@ class DatabaseService(Service):
                 results.append(Result(name=column, type="column", success=True))
         return results
 
-    def create_db_and_tables(self) -> None:
+    @staticmethod
+    def _create_db_and_tables(connection) -> None:
         from sqlalchemy import inspect
 
-        inspector = inspect(self.engine)
+        inspector = inspect(connection)
         table_names = inspector.get_table_names()
         current_tables = ["flow", "user", "apikey", "folder", "message", "variable", "transaction", "vertex_build"]
 
@@ -327,7 +385,7 @@ class DatabaseService(Service):
 
         for table in SQLModel.metadata.sorted_tables:
             try:
-                table.create(self.engine, checkfirst=True)
+                table.create(connection, checkfirst=True)
             except OperationalError as oe:
                 logger.warning(f"Table {table} already exists, skipping. Exception: {oe}")
             except Exception as exc:
@@ -336,7 +394,7 @@ class DatabaseService(Service):
                 raise RuntimeError(msg) from exc
 
         # Now check if the required tables exist, if not, something went wrong.
-        inspector = inspect(self.engine)
+        inspector = inspect(connection)
         table_names = inspector.get_table_names()
         for table in current_tables:
             if table not in table_names:
@@ -346,6 +404,10 @@ class DatabaseService(Service):
                 raise RuntimeError(msg)
 
         logger.debug("Database and tables created successfully")
+
+    async def create_db_and_tables(self) -> None:
+        async with self.with_async_session() as session, session.bind.connect() as conn:
+            await conn.run_sync(self._create_db_and_tables)
 
     async def teardown(self) -> None:
         logger.debug("Tearing down database")

@@ -1,9 +1,11 @@
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from pydantic import field_validator
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
+
+from langflow.schema.serialize import UUIDstr
 
 if TYPE_CHECKING:
     from langflow.services.database.models.user import User
@@ -21,14 +23,14 @@ class ApiKeyBase(SQLModel):
 
 
 class ApiKey(ApiKeyBase, table=True):  # type: ignore[call-arg]
-    id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
+    id: UUIDstr = Field(default_factory=uuid4, primary_key=True, unique=True)
     created_at: datetime | None = Field(
         default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     )
     api_key: str = Field(index=True, unique=True)
     # User relationship
     # Delete API keys when user is deleted
-    user_id: UUID = Field(index=True, foreign_key="user.id")
+    user_id: UUIDstr = Field(index=True, foreign_key="user.id")
     user: "User" = Relationship(
         back_populates="api_keys",
     )
@@ -36,7 +38,7 @@ class ApiKey(ApiKeyBase, table=True):  # type: ignore[call-arg]
 
 class ApiKeyCreate(ApiKeyBase):
     api_key: str | None = None
-    user_id: UUID | None = None
+    user_id: UUIDstr | None = None
     created_at: datetime | None = Field(default_factory=utc_now)
 
     @field_validator("created_at", mode="before")
@@ -46,15 +48,15 @@ class ApiKeyCreate(ApiKeyBase):
 
 
 class UnmaskedApiKeyRead(ApiKeyBase):
-    id: UUID
+    id: UUIDstr
     api_key: str = Field()
-    user_id: UUID = Field()
+    user_id: UUIDstr = Field()
 
 
 class ApiKeyRead(ApiKeyBase):
-    id: UUID
+    id: UUIDstr
     api_key: str = Field(schema_extra={"validate_default": True})
-    user_id: UUID = Field()
+    user_id: UUIDstr = Field()
     created_at: datetime = Field()
 
     @field_validator("api_key")

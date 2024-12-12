@@ -1,4 +1,3 @@
-import asyncio
 import json
 from typing import NamedTuple
 from uuid import UUID, uuid4
@@ -307,7 +306,7 @@ async def test_delete_flows_with_transaction_and_build(client: AsyncClient, logg
             "vertex_id": "vid",
             "flow_id": flow_id,
         }
-        log_vertex_build(
+        await log_vertex_build(
             flow_id=build["flow_id"],
             vertex_id=build["vertex_id"],
             valid=build["valid"],
@@ -376,7 +375,7 @@ async def test_delete_folder_with_flows_with_transaction_and_build(client: Async
             "vertex_id": "vid",
             "flow_id": flow_id,
         }
-        log_vertex_build(
+        await log_vertex_build(
             flow_id=build["flow_id"],
             vertex_id=build["vertex_id"],
             valid=build["valid"],
@@ -530,14 +529,14 @@ async def test_download_file(
         ]
     )
     db_manager = get_db_service()
-    with session_getter(db_manager) as _session:
+    async with session_getter(db_manager) as _session:
         saved_flows = []
         for flow in flow_list.flows:
             flow.user_id = active_user.id
             db_flow = Flow.model_validate(flow, from_attributes=True)
             _session.add(db_flow)
             saved_flows.append(db_flow)
-        _session.commit()
+        await _session.commit()
         # Make request to endpoint inside the session context
         flow_ids = [str(db_flow.id) for db_flow in saved_flows]  # Convert UUIDs to strings
         flow_ids_json = json.dumps(flow_ids)
@@ -605,7 +604,7 @@ async def test_delete_nonexistent_flow(client: AsyncClient, logged_in_headers):
 @pytest.mark.usefixtures("active_user")
 async def test_read_only_starter_projects(client: AsyncClient, logged_in_headers):
     response = await client.get("api/v1/flows/basic_examples/", headers=logged_in_headers)
-    starter_projects = await asyncio.to_thread(load_starter_projects)
+    starter_projects = await load_starter_projects()
     assert response.status_code == 200
     assert len(response.json()) == len(starter_projects)
 

@@ -42,7 +42,7 @@ class LangSmithTracer(BaseTracer):
             self._run_tree.add_event({"name": "Start", "time": datetime.now(timezone.utc).isoformat()})
             self._children: dict[str, RunTree] = {}
         except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error setting up LangSmith tracer")
+            logger.debug("Error setting up LangSmith tracer")
             self._ready = False
 
     @property
@@ -96,9 +96,7 @@ class LangSmithTracer(BaseTracer):
         from langflow.schema.message import Message
 
         if isinstance(value, dict):
-            for key, _value in value.copy().items():
-                _value = self._convert_to_langchain_type(_value)
-                value[key] = _value
+            value = {key: self._convert_to_langchain_type(val) for key, val in value.items()}
         elif isinstance(value, list):
             value = [self._convert_to_langchain_type(v) for v in value]
         elif isinstance(value, Message):

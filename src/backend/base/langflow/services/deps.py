@@ -16,7 +16,6 @@ if TYPE_CHECKING:
     from langflow.services.cache.service import AsyncBaseCacheService, CacheService
     from langflow.services.chat.service import ChatService
     from langflow.services.database.service import DatabaseService
-    from langflow.services.plugins.service import PluginService
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
     from langflow.services.socket.service import SocketIOService
@@ -115,15 +114,6 @@ def get_variable_service() -> VariableService:
     return get_service(ServiceType.VARIABLE_SERVICE, VariableServiceFactory())
 
 
-def get_plugins_service() -> PluginService:
-    """Get the PluginService instance from the service manager.
-
-    Returns:
-        PluginService: The PluginService instance.
-    """
-    return get_service(ServiceType.PLUGIN_SERVICE)  # type: ignore[attr-defined]
-
-
 def get_settings_service() -> SettingsService:
     """Retrieves the SettingsService instance.
 
@@ -152,22 +142,11 @@ def get_db_service() -> DatabaseService:
     return get_service(ServiceType.DATABASE_SERVICE, DatabaseServiceFactory())
 
 
-def get_session() -> Generator[Session, None, None]:
-    """Retrieves a session from the database service.
-
-    Yields:
-        Session: A session object.
-
-    """
-    with get_db_service().with_session() as session:
-        yield session
-
-
-async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """Retrieves an async session from the database service.
 
     Yields:
-        Session: An async session object.
+        AsyncSession: An async session object.
 
     """
     async with get_db_service().with_async_session() as session:
@@ -183,7 +162,7 @@ def session_scope() -> Generator[Session, None, None]:
     and rolled back if an exception is raised.
 
     Yields:
-        session: The session object.
+        Session: The session object.
 
     Raises:
         Exception: If an error occurs during the session scope.
@@ -209,7 +188,7 @@ async def async_session_scope() -> AsyncGenerator[AsyncSession, None]:
     and rolled back if an exception is raised.
 
     Yields:
-        session: The async session object.
+        AsyncSession: The async session object.
 
     Raises:
         Exception: If an error occurs during the session scope.
