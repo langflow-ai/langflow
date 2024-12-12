@@ -1,6 +1,7 @@
 import os
-
+import pdb; 
 import orjson
+
 from astrapy.admin import parse_api_endpoint
 from loguru import logger
 
@@ -18,7 +19,6 @@ from langflow.io import (
     StrInput,
 )
 from langflow.schema import Data
-
 
 class AstraGraphVectorStoreComponent(LCVectorStoreComponent):
     display_name: str = "Astra DB Graph"
@@ -122,7 +122,7 @@ class AstraGraphVectorStoreComponent(LCVectorStoreComponent):
             info="Boolean flag to determine whether to delete the collection before creating a new one.",
             advanced=True,
             value=False,
-        ),
+        ),       
         StrInput(
             name="metadata_indexing_include",
             display_name="Metadata Indexing Include",
@@ -155,13 +155,7 @@ class AstraGraphVectorStoreComponent(LCVectorStoreComponent):
             name="search_type",
             display_name="Search Type",
             info="Search type to use",
-            options=[
-                "Similarity",
-                "Similarity with score threshold",
-                "MMR (Max Marginal Relevance)",
-                "Graph Traversal",
-                "MMR (Max Marginal Relevance) Graph Traversal",
-            ],
+            options=["Similarity", "Similarity with score threshold", "MMR (Max Marginal Relevance)", "Graph Traversal", "MMR (Max Marginal Relevance) Graph Traversal"],
             value="MMR (Max Marginal Relevance) Graph Traversal",
             advanced=True,
         ),
@@ -223,9 +217,8 @@ class AstraGraphVectorStoreComponent(LCVectorStoreComponent):
                 pre_delete_collection=self.pre_delete_collection,
                 metadata_indexing_include=[s for s in self.metadata_indexing_include if s] or None,
                 metadata_indexing_exclude=[s for s in self.metadata_indexing_exclude if s] or None,
-                collection_indexing_policy=orjson.loads(self.collection_indexing_policy.encode("utf-8"))
-                if self.collection_indexing_policy
-                else None,
+                collection_indexing_policy=orjson.loads(self.collection_indexing_policy.encode('utf-8'))
+                if self.collection_indexing_policy else None,
             )
         except Exception as e:
             msg = f"Error initializing AstraDBGraphVectorStore: {e}"
@@ -256,18 +249,19 @@ class AstraGraphVectorStoreComponent(LCVectorStoreComponent):
             logger.debug("No documents to add to the Vector Store.")
 
     def _map_search_type(self) -> str:
-        if self.search_type == "Similarity":
-            return "similarity"
-        if self.search_type == "Similarity with score threshold":
-            return "similarity_score_threshold"
-        if self.search_type == "MMR (Max Marginal Relevance)":
-            return "mmr"
-            return "similarity_score_threshold"
-        if self.search_type == "Graph Traversal":
-            return "traversal"
-        if self.search_type == "MMR (Max Marginal Relevance) Graph Traversal":
-            return "mmr_traversal"
-        return "similarity"
+        match self.search_type:
+            case "Similarity":
+                return "similarity"
+            case "Similarity with score threshold":
+                return "similarity_score_threshold"
+            case "MMR (Max Marginal Relevance)":
+                return "mmr"
+            case "Graph Traversal":
+                return "traversal"
+            case "MMR (Max Marginal Relevance) Graph Traversal":
+                return "mmr_traversal"
+            case _:
+                return "similarity"
 
     def _build_search_args(self):
         args = {
@@ -285,7 +279,7 @@ class AstraGraphVectorStoreComponent(LCVectorStoreComponent):
         if not vector_store:
             vector_store = self.build_vector_store()
 
-        logger.debug("Searching for documents in AstraDBGraphVectorStore.")
+        logger.debug(f"Searching for documents in AstraDBGraphVectorStore.")
         logger.debug(f"Search input: {self.search_input}")
         logger.debug(f"Search type: {self.search_type}")
         logger.debug(f"Number of results: {self.number_of_results}")
@@ -296,13 +290,13 @@ class AstraGraphVectorStoreComponent(LCVectorStoreComponent):
                 search_args = self._build_search_args()
 
                 docs = vector_store.search(query=self.search_input, search_type=search_type, **search_args)
-
+                
                 # Drop links from the metadata. At this point the links don't add any value for building the context and haven't been restored to json which causes the conversion to fail.
-                logger.debug("Removing links from metadata.")
+                logger.debug(f"Removing links from metadata.")
                 for doc in docs:
                     if "links" in doc.metadata:
                         doc.metadata.pop("links")
-
+                
             except Exception as e:
                 msg = f"Error performing search in AstraDBGraphVectorStore: {e}"
                 raise ValueError(msg) from e
@@ -310,9 +304,9 @@ class AstraGraphVectorStoreComponent(LCVectorStoreComponent):
             logger.debug(f"Retrieved documents: {len(docs)}")
 
             data = docs_to_data(docs)
-
+            
             logger.debug(f"Converted documents to data: {len(data)}")
-
+                
             self.status = data
             return data
         logger.debug("No search input provided. Skipping search.")
