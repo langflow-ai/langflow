@@ -1,36 +1,12 @@
 import { expect, test } from "@playwright/test";
-import uaParser from "ua-parser-js";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "User must be able to stop building from inside Playground",
   { tag: ["@release", "@api"] },
   async ({ page }) => {
-    await page.goto("/");
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
-
-    await page.waitForSelector('[id="new-project-btn"]', {
-      timeout: 30000,
-    });
-
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForSelector('[data-testid="modal-title"]', {
-        timeout: 3000,
-      });
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
+    await awaitBootstrapTest(page);
 
     await page.getByTestId("blank-flow").click();
 
@@ -58,10 +34,7 @@ test(
       .getByTestId("outputsChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
+    await adjustScreenView(page);
 
     await page.getByTestId("div-generic-node").nth(0).click();
 
@@ -95,9 +68,6 @@ class CustomComponent(Component):
         self.status = data
         sleep(60)
         return data`;
-
-    const getUA = await page.evaluate(() => navigator.userAgent);
-    const userAgentInfo = uaParser(getUA);
 
     await page.locator(".ace_content").click();
     await page.keyboard.press(`ControlOrMeta+A`);

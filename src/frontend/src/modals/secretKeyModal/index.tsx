@@ -112,6 +112,7 @@ export default function SecretKeyModal({
                 onClick={() => {
                   handleCopyClick();
                 }}
+                data-testid="btn-copy-api-key"
                 unstyled
               >
                 {textCopied ? (

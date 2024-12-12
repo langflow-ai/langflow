@@ -121,7 +121,6 @@ export default function AppHeader(): JSX.Element {
               <ForwardedIconComponent
                 name="Bell"
                 className="side-bar-button-size h-[18px] w-[18px]"
-                aria-hidden="true"
               />
               <span className="hidden whitespace-nowrap 2xl:inline">
                 Notifications
@@ -175,7 +174,6 @@ export default function AppHeader(): JSX.Element {
                 <ForwardedIconComponent
                   name="book-open-text"
                   className="side-bar-button-size h-[18px] w-[18px]"
-                  aria-hidden="true"
                 />
                 <span className="hidden whitespace-nowrap 2xl:inline">
                   Docs

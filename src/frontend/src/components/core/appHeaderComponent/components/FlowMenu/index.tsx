@@ -115,7 +115,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
 
   return currentFlow && onFlowPage ? (
     <div className="flex items-center justify-center gap-2 truncate">
-      <div className="header-menu-bar hidden justify-end truncate md:flex">
+      <div className="header-menu-bar hidden w-20 max-w-fit grow justify-end truncate md:flex">
         {currentFolder?.name && (
           <div className="hidden truncate md:flex">
             <div
@@ -137,7 +137,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
         /
       </div>
 
-      <div className="w-fit overflow-hidden truncate text-sm sm:whitespace-normal lg:flex-shrink-0">
+      <div className="overflow-hidden truncate text-sm sm:whitespace-normal">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="header-menu-bar-display-2 group truncate">
@@ -336,7 +336,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               </div>
             </div>
             <button
-              data-testid="stop_building_button "
+              data-testid="stop_building_button"
               disabled={!isBuilding}
               onClick={(_) => {
                 if (isBuilding) {

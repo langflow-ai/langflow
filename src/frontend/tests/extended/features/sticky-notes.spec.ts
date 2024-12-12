@@ -1,33 +1,11 @@
 import { expect, test } from "@playwright/test";
-import uaParser from "ua-parser-js";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "user should be able to interact with sticky notes",
   { tag: ["@release", "@workspace"] },
 
   async ({ page }) => {
-    await page.goto("/");
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
-
-    await page.waitForSelector('[id="new-project-btn"]', {
-      timeout: 30000,
-    });
-
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-
-    const getUA = await page.evaluate(() => navigator.userAgent);
-    const userAgentInfo = uaParser(getUA);
-
     const randomTitle = Math.random()
       .toString(36)
       .substring(7)
@@ -55,13 +33,7 @@ Despite its many benefits, AI also raises important ethical and societal questio
 The future of AI is both exciting and uncertain. As the technology continues to advance, it will undoubtedly bring about profound changes in society. The challenge will be to harness AI's potential for good while addressing the ethical and societal issues that arise. Whether it's through smarter healthcare, more efficient transportation, or enhanced creativity, AI has the potential to reshape the world in ways we are only beginning to imagine. The journey of AI is far from over, and its impact will be felt for generations to come.
   `;
 
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForSelector('[data-testid="modal-title"]', {
-        timeout: 3000,
-      });
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
+    await awaitBootstrapTest(page);
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
       timeout: 30000,

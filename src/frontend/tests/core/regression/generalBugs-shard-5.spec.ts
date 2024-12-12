@@ -1,36 +1,15 @@
 import { expect, test } from "@playwright/test";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "should be able to see output preview from grouped components and connect components with a single click",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-    await page.goto("/");
-
-    let modalCount = 0;
     const randomName = Math.random().toString(36).substring(2);
     const secondRandomName = Math.random().toString(36).substring(2);
     const thirdRandomName = Math.random().toString(36).substring(2);
 
-    try {
-      const modalTitleElement = page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForSelector('[data-testid="modal-title"]', {
-        timeout: 3000,
-      });
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
+    await awaitBootstrapTest(page);
 
     await page.getByTestId("blank-flow").click();
 

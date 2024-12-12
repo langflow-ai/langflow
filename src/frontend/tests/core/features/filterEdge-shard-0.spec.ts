@@ -1,27 +1,12 @@
 import { expect, test } from "@playwright/test";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "user must see on handle hover a tooltip with possibility connections",
   { tag: ["@release", "@components", "@api"] },
   async ({ page }) => {
-    await page.goto("/");
-    await page.waitForTimeout(1000);
-
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
+    await awaitBootstrapTest(page);
 
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-search-input").click();
@@ -41,10 +26,7 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
+    await adjustScreenView(page);
 
     const outputElements = await page
       .getByTestId("handle-retrievalqa-shownode-text-right")
@@ -76,10 +58,7 @@ test(
       ).toBeVisible();
     });
 
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
+    await adjustScreenView(page);
 
     const rqaChainInputElements1 = await page
       .getByTestId("handle-retrievalqa-shownode-language model-left")
@@ -109,10 +88,7 @@ test(
         page.getByTestId("input-tooltip-languagemodel").first(),
       ).toBeVisible();
     });
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
+    await adjustScreenView(page);
 
     const rqaChainInputElements0 = await page
       .getByTestId("handle-retrievalqa-shownode-retriever-left")
@@ -143,10 +119,7 @@ test(
       ).toBeVisible();
     });
 
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
+    await adjustScreenView(page);
 
     const rqaChainInputElements2 = await page
       .getByTestId("handle-retrievalqa-shownode-memory-left")
