@@ -21,8 +21,8 @@ jobs:
         run: uv cache prune --ci
 
   update-starter-projects:
+    name: Update Starter Projects
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
       - name: "Setup Environment"
