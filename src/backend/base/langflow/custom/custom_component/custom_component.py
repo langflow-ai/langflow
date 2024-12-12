@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import uuid
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -233,19 +232,10 @@ class CustomComponent(BaseComponent):
         field_value: Any,
         field_name: str | None = None,
     ):
-        if type(self).aupdate_build_config != CustomComponent.aupdate_build_config:
-            raise NotImplementedError
-        build_config[field_name]["value"] = field_value
-        return build_config
+        """Updates the build configuration for the custom component.
 
-    async def aupdate_build_config(
-        self,
-        build_config: dotdict,
-        field_value: Any,
-        field_name: str | None = None,
-    ):
-        if type(self).update_build_config != CustomComponent.update_build_config:
-            return await asyncio.to_thread(self.update_build_config, build_config, field_value, field_name)
+        Do not call directly as implementation can be a coroutine.
+        """
         build_config[field_name]["value"] = field_value
         return build_config
 
