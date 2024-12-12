@@ -15,8 +15,10 @@ from typing import TYPE_CHECKING, Any, cast
 
 from loguru import logger
 
+from langflow.custom.custom_component.component import Component
 from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.edge.base import CycleEdge, Edge
+from langflow.graph.edge.schema import EdgeData
 from langflow.graph.graph.constants import Finish, lazy_load_vertex_dict
 from langflow.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 from langflow.graph.graph.schema import GraphData, GraphDump, StartConfigDict, VertexBuildResult
@@ -39,6 +41,7 @@ from langflow.schema.dotdict import dotdict
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.deps import get_chat_service, get_tracing_service
+from langflow.services.tracing.service import TracingService
 from langflow.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
@@ -1262,8 +1265,7 @@ class Graph:
         try:
             return self.vertex_map[vertex_id]
         except KeyError as e:
-            msg = f"Vertex {vertex_id} not found"
-            raise ValueError(msg) from e
+            raise ValueError(f"Vertex {vertex_id} not found") from e
 
     def get_root_of_group_node(self, vertex_id: str) -> Vertex:
         """Returns the root of a group node."""
@@ -1953,23 +1955,22 @@ class Graph:
         return [layer for layer in refined_layers if layer]
 
     def sort_chat_inputs_first(self, vertices_layers: list[list[str]]) -> list[list[str]]:
-        # First check if any chat inputs have dependencies
+        chat_inputs = []
         for layer in vertices_layers:
             for vertex_id in layer:
                 if "ChatInput" in vertex_id and self.get_predecessors(self.get_vertex(vertex_id)):
                     return vertices_layers
+                if "ChatInput" in vertex_id:
+                    chat_inputs.append(vertex_id)
 
-        # If no chat inputs have dependencies, move them to first layer
+        if not chat_inputs:
+            return vertices_layers
+
         chat_inputs_first = []
         for layer in vertices_layers:
             layer_chat_inputs_first = [vertex_id for vertex_id in layer if "ChatInput" in vertex_id]
             chat_inputs_first.extend(layer_chat_inputs_first)
-            for vertex_id in layer_chat_inputs_first:
-                # Remove the ChatInput from the layer
-                layer.remove(vertex_id)
-
-        if not chat_inputs_first:
-            return vertices_layers
+            layer[:] = [v for v in layer if v not in layer_chat_inputs_first]
 
         return [chat_inputs_first, *vertices_layers]
 
