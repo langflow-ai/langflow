@@ -343,6 +343,8 @@ async def astore_message(
         raise ValueError(msg)
     if hasattr(message, "id") and message.id:
         return await aupdate_messages([message])
+    if flow_id and not isinstance(flow_id, UUID):
+        flow_id = UUID(flow_id)
     return await aadd_messages([message], flow_id=flow_id)
 
 
