@@ -129,7 +129,7 @@ class ComponentVertex(Vertex):
                     if output.value is UNDEFINED:
                         result = self.results[edge.source_handle.name]
                     else:
-                        result = cast(Any, output.value)
+                        result = cast("Any", output.value)
                 except NoComponentInstanceError:
                     result = self.results[edge.source_handle.name]
                 break
@@ -216,16 +216,16 @@ class InterfaceVertex(ComponentVertex):
         if self.artifacts:
             # dump as a yaml string
             if isinstance(self.artifacts, dict):
-                _artifacts = [self.artifacts]
+                artifacts_ = [self.artifacts]
             elif hasattr(self.artifacts, "data"):
-                _artifacts = self.artifacts.data
+                artifacts_ = self.artifacts.data
             else:
-                _artifacts = self.artifacts
+                artifacts_ = self.artifacts
             artifacts = []
-            for artifact in _artifacts:
+            for artifact in artifacts_:
                 # artifacts = {k.title().replace("_", " "): v for k, v in self.artifacts.items() if v is not None}
-                _artifact = {k.title().replace("_", " "): v for k, v in artifact.items() if v is not None}
-                artifacts.append(_artifact)
+                artifact_ = {k.title().replace("_", " "): v for k, v in artifact.items() if v is not None}
+                artifacts.append(artifact_)
             return yaml.dump(artifacts, default_flow_style=False, allow_unicode=True)
         return super().built_object_repr()
 
@@ -372,16 +372,16 @@ class InterfaceVertex(ComponentVertex):
         complete_message = ""
         if is_async:
             async for message in iterator:
-                _message = message.content if hasattr(message, "content") else message
-                _message = _message.text if hasattr(_message, "text") else _message
-                yield _message
-                complete_message += _message
+                message_ = message.content if hasattr(message, "content") else message
+                message_ = message_.text if hasattr(message_, "text") else message_
+                yield message_
+                complete_message += message_
         else:
             for message in iterator:
-                _message = message.content if hasattr(message, "content") else message
-                _message = _message.text if hasattr(_message, "text") else _message
-                yield _message
-                complete_message += _message
+                message_ = message.content if hasattr(message, "content") else message
+                message_ = message_.text if hasattr(message_, "text") else message_
+                yield message_
+                complete_message += message_
 
         files = self.params.get("files", [])
 

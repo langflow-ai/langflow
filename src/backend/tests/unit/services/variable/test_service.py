@@ -1,6 +1,6 @@
 from datetime import datetime
 from unittest.mock import patch
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 from langflow.services.database.models.variable.model import VariableUpdate
@@ -9,7 +9,7 @@ from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONME
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
 from sqlalchemy.ext.asyncio import create_async_engine
-from sqlmodel import Session, SQLModel
+from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 
@@ -24,18 +24,8 @@ async def session():
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
-    async with AsyncSession(engine) as session:
+    async with AsyncSession(engine, expire_on_commit=False) as session:
         yield session
-
-
-def _get_variable(
-    session: Session,
-    service,
-    user_id: UUID | str,
-    name: str,
-    field: str,
-):
-    return service.get_variable(user_id, name, field, session=session)
 
 
 async def test_initialize_user_variables__create_and_update(service, session: AsyncSession):
@@ -53,7 +43,7 @@ async def test_initialize_user_variables__create_and_update(service, session: As
 
     variables = await service.list_variables(user_id, session=session)
     for name in variables:
-        value = await session.run_sync(_get_variable, service, user_id, name, field)
+        value = await service.get_variable(user_id, name, field, session=session)
         assert value == env_vars[name]
 
     assert all(i in variables for i in good_vars)
@@ -80,7 +70,7 @@ async def test_get_variable(service, session: AsyncSession):
     field = ""
     await service.create_variable(user_id, name, value, session=session)
 
-    result = await session.run_sync(_get_variable, service, user_id, name, field)
+    result = await service.get_variable(user_id, name, field, session=session)
 
     assert result == value
 
@@ -91,7 +81,7 @@ async def test_get_variable__valueerror(service, session: AsyncSession):
     field = ""
 
     with pytest.raises(ValueError, match=f"{name} variable not found."):
-        await session.run_sync(_get_variable, service, user_id, name, field)
+        await service.get_variable(user_id, name, field, session=session)
 
 
 async def test_get_variable__typeerror(service, session: AsyncSession):
@@ -99,11 +89,11 @@ async def test_get_variable__typeerror(service, session: AsyncSession):
     name = "name"
     value = "value"
     field = "session_id"
-    _type = CREDENTIAL_TYPE
-    await service.create_variable(user_id, name, value, _type=_type, session=session)
+    type_ = CREDENTIAL_TYPE
+    await service.create_variable(user_id, name, value, type_=type_, session=session)
 
     with pytest.raises(TypeError) as exc:
-        await session.run_sync(_get_variable, service, user_id, name, field)
+        await service.get_variable(user_id, name, field, session=session)
 
     assert name in str(exc.value)
     assert "purpose is to prevent the exposure of value" in str(exc.value)
@@ -136,9 +126,9 @@ async def test_update_variable(service, session: AsyncSession):
     field = ""
     await service.create_variable(user_id, name, old_value, session=session)
 
-    old_recovered = await session.run_sync(_get_variable, service, user_id, name, field)
+    old_recovered = await service.get_variable(user_id, name, field, session=session)
     result = await service.update_variable(user_id, name, new_value, session=session)
-    new_recovered = await session.run_sync(_get_variable, service, user_id, name, field)
+    new_recovered = await service.get_variable(user_id, name, field, session=session)
 
     assert old_value == old_recovered
     assert new_value == new_recovered
@@ -197,10 +187,10 @@ async def test_delete_variable(service, session: AsyncSession):
     field = ""
 
     await service.create_variable(user_id, name, value, session=session)
-    recovered = await session.run_sync(_get_variable, service, user_id, name, field)
+    recovered = await service.get_variable(user_id, name, field, session=session)
     await service.delete_variable(user_id, name, session=session)
     with pytest.raises(ValueError, match=f"{name} variable not found."):
-        await session.run_sync(_get_variable, service, user_id, name, field)
+        await service.get_variable(user_id, name, field, session=session)
 
     assert recovered == value
 
@@ -220,10 +210,10 @@ async def test_delete_variable_by_id(service, session: AsyncSession):
     field = "field"
 
     saved = await service.create_variable(user_id, name, value, session=session)
-    recovered = await session.run_sync(_get_variable, service, user_id, name, field)
+    recovered = await service.get_variable(user_id, name, field, session=session)
     await service.delete_variable_by_id(user_id, saved.id, session=session)
     with pytest.raises(ValueError, match=f"{name} variable not found."):
-        await session.run_sync(_get_variable, service, user_id, name, field)
+        await service.get_variable(user_id, name, field, session=session)
 
     assert recovered == value
 

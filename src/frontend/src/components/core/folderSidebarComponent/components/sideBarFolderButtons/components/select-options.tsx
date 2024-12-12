@@ -27,7 +27,7 @@ export const SelectOptions = ({
   checkPathName: (folderId: string) => boolean;
 }) => {
   return (
-    <>
+    <div>
       <Select
         onValueChange={(value) =>
           handleSelectChange(
@@ -75,6 +75,6 @@ export const SelectOptions = ({
           )}
         </SelectContent>
       </Select>
-    </>
+    </div>
   );
 };
