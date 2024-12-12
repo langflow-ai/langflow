@@ -234,6 +234,9 @@ async def handle_sse(request: Request, current_user: Annotated[User, Depends(get
                     logger.debug(f"Failed validation model: {e.model.__name__}")
                 if hasattr(e, "raw_errors"):
                     logger.debug(f"Raw validation errors: {e.raw_errors}")
+            except BrokenResourceError:
+                # Handle gracefully when client disconnects
+                logger.info("Client disconnected from SSE connection")
             except asyncio.CancelledError:
                 logger.info("SSE connection was cancelled")
             except Exception as e:
