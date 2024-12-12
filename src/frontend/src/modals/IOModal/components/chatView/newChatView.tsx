@@ -36,6 +36,9 @@ export default function ChatView({
   const nodes = useFlowStore((state) => state.nodes);
   const chatInput = inputs.find((input) => input.type === "ChatInput");
   const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
+  const displayLoadingMessage = useMessagesStore(
+    (state) => state.displayLoadingMessage,
+  );
 
   const inputTypes = inputs.map((obj) => obj.type);
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
@@ -83,8 +86,9 @@ export default function ChatView({
       return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
     });
 
-    if (finalChatHistory.length === 0 && !lockChat && chatInputNode)
+    if (messages.length === 0 && !lockChat && chatInputNode)
       setChatValue(chatInputNode.data.node.template["input_value"].value ?? "");
+    else setChatValue("");
 
     setChatHistory(finalChatHistory);
   }, [flowPool, messages, visibleSession]);
@@ -184,16 +188,18 @@ export default function ChatView({
           ))}
         <div
           className={
-            lockChat ? "w-5/6 max-w-[768px] py-4 word-break-break-word" : ""
+            displayLoadingMessage
+              ? "w-full max-w-[768px] py-4 word-break-break-word md:w-5/6"
+              : ""
           }
           ref={ref}
         >
-          {lockChat &&
+          {displayLoadingMessage &&
             !(chatHistory?.[chatHistory.length - 1]?.category === "error") &&
             flowRunningSkeletonMemo}
         </div>
       </div>
-      <div className="m-auto w-5/6 max-w-[768px]">
+      <div className="m-auto w-full max-w-[768px] md:w-5/6">
         <ChatInput
           chatValue={chatValue}
           noInput={!inputTypes.includes("ChatInput")}

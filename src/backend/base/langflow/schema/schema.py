@@ -92,9 +92,9 @@ def build_output_logs(vertex, result) -> dict:
             payload = component_instance._artifacts
             output_result = payload.get(output["name"], {}).get("raw")
         message = get_message(output_result)
-        _type = get_type(output_result)
+        type_ = get_type(output_result)
 
-        match _type:
+        match type_:
             case LogType.STREAM if "stream_url" in message:
                 message = StreamURL(location=message["stream_url"])
 
@@ -112,6 +112,6 @@ def build_output_logs(vertex, result) -> dict:
                     message = message.to_dict(orient="records")
                 message = [recursive_serialize_or_str(item) for item in message]
         name = output.get("name", f"output_{index}")
-        outputs |= {name: OutputValue(message=message, type=_type).model_dump()}
+        outputs |= {name: OutputValue(message=message, type=type_).model_dump()}
 
     return outputs

@@ -454,9 +454,8 @@ async def experimental_run_flow(
         try:
             # Get the flow that matches the flow_id and belongs to the user
             # flow = session.query(Flow).filter(Flow.id == flow_id).filter(Flow.user_id == api_key_user.id).first()
-            flow = session.exec(
-                select(Flow).where(Flow.id == flow_id_str).where(Flow.user_id == api_key_user.id)
-            ).first()
+            stmt = select(Flow).where(Flow.id == flow_id_str).where(Flow.user_id == api_key_user.id)
+            flow = (await session.exec(stmt)).first()
         except sa.exc.StatementError as exc:
             # StatementError('(builtins.ValueError) badly formed hexadecimal UUID string')
             if "badly formed hexadecimal UUID string" in str(exc):
@@ -512,8 +511,7 @@ async def process() -> None:
     )
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
-        detail="The /process endpoint is deprecated and will be removed in a future version. "
-        "Please use /run instead.",
+        detail="The /process endpoint is deprecated and will be removed in a future version. Please use /run instead.",
     )
 
 
@@ -583,10 +581,10 @@ async def custom_component(
 
     built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
     if raw_code.frontend_node is not None:
-        built_frontend_node = component_instance.post_code_processing(built_frontend_node, raw_code.frontend_node)
+        built_frontend_node = await component_instance.post_code_processing(built_frontend_node, raw_code.frontend_node)
 
-    _type = get_instance_name(component_instance)
-    return CustomComponentResponse(data=built_frontend_node, type=_type)
+    type_ = get_instance_name(component_instance)
+    return CustomComponentResponse(data=built_frontend_node, type=type_)
 
 
 @router.post("/custom_component/update", status_code=HTTPStatus.OK)
@@ -610,7 +608,6 @@ async def custom_component_update(
     """
     try:
         component = Component(_code=code_request.code)
-
         component_node, cc_instance = build_custom_component_template(
             component,
             user_id=user.id,
@@ -633,10 +630,10 @@ async def custom_component_update(
                 for field_name, field_dict in template.items()
                 if isinstance(field_dict, dict) and field_dict.get("load_from_db")
             ]
-            params = update_params_with_load_from_db_fields(cc_instance, params, load_from_db_fields)
+            params = await update_params_with_load_from_db_fields(cc_instance, params, load_from_db_fields)
             cc_instance.set_attributes(params)
         updated_build_config = code_request.get_template()
-        cc_instance.update_build_config(
+        await cc_instance.aupdate_build_config(
             build_config=updated_build_config,
             field_value=code_request.field_value,
             field_name=code_request.field,

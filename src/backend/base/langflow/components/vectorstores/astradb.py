@@ -104,8 +104,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             name="collection_name_new",
             display_name="Collection Name",
             info="Name of the new collection to create.",
-            advanced=False,
-            required=True,
+            advanced=os.getenv("LANGFLOW_HOST") is not None,
+            required=os.getenv("LANGFLOW_HOST") is None,
         ),
         StrInput(
             name="keyspace",
@@ -116,6 +116,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         MultilineInput(
             name="search_input",
             display_name="Search Input",
+            tool_mode=True,
         ),
         IntInput(
             name="number_of_results",
@@ -643,7 +644,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Get Langflow version and platform information
         __version__ = get_version_info()["version"]
         langflow_prefix = ""
-        if os.getenv("ASTRA_ENHANCED", "false").lower() == "true":
+        if os.getenv("LANGFLOW_HOST") is not None:
             langflow_prefix = "ds-"
 
         try:

@@ -157,14 +157,14 @@ async def log_transaction(
             error=error,
             flow_id=flow_id if isinstance(flow_id, UUID) else UUID(flow_id),
         )
-        with session_getter(get_db_service()) as session:
-            inserted = crud_log_transaction(session, transaction)
+        async with session_getter(get_db_service()) as session:
+            inserted = await crud_log_transaction(session, transaction)
             logger.debug(f"Logged transaction: {inserted.id}")
     except Exception:  # noqa: BLE001
         logger.exception("Error logging transaction")
 
 
-def log_vertex_build(
+async def log_vertex_build(
     *,
     flow_id: str,
     vertex_id: str,
@@ -186,8 +186,8 @@ def log_vertex_build(
             # ugly hack to get the model dump with weird datatypes
             artifacts=json.loads(json.dumps(artifacts, default=str)),
         )
-        with session_getter(get_db_service()) as session:
-            inserted = crud_log_vertex_build(session, vertex_build)
+        async with session_getter(get_db_service()) as session:
+            inserted = await crud_log_vertex_build(session, vertex_build)
             logger.debug(f"Logged vertex build: {inserted.build_id}")
     except Exception:  # noqa: BLE001
         logger.exception("Error logging vertex build")

@@ -528,7 +528,7 @@ class Vertex:
             stream_url = artifacts.get("stream_url")
             files = [{"path": file} if isinstance(file, str) else file for file in artifacts.get("files", [])]
             component_id = self.id
-            _type = self.artifacts_type
+            type_ = self.artifacts_type
 
             if isinstance(sender_name, Data | Message):
                 sender_name = sender_name.get_text()
@@ -542,7 +542,7 @@ class Vertex:
                     stream_url=stream_url,
                     files=files,
                     component_id=component_id,
-                    type=_type,
+                    type=type_,
                 ).model_dump(exclude_none=True)
             ]
         except KeyError:

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "user must be able to check similarity between embedding texts",
@@ -9,25 +10,7 @@ test(
       "OPENAI_API_KEY required to run this test",
     );
 
-    await page.goto("/");
-
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForSelector('[data-testid="modal-title"]', {
-        timeout: 3000,
-      });
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
+    await awaitBootstrapTest(page);
 
     await page.getByTestId("blank-flow").click();
 
