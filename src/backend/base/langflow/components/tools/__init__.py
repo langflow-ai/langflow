@@ -37,6 +37,7 @@ __all__ = [
     "GleanSearchAPIComponent",
     "GoogleSearchAPIComponent",
     "GoogleSerperAPIComponent",
+    "MCPStdio",
     "PythonCodeStructuredTool",
     "PythonREPLToolComponent",
     "SearXNGToolComponent",
@@ -48,5 +49,4 @@ __all__ = [
     "WolframAlphaAPIComponent",
     "YfinanceToolComponent",
     "YouTubeTranscriptsComponent",
-    "MCPStdio",
 ]

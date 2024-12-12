@@ -21,11 +21,11 @@ __all__ = [
     "flows_router",
     "folders_router",
     "login_router",
+    "mcp_router",
     "monitor_router",
     "starter_projects_router",
     "store_router",
     "users_router",
     "validate_router",
     "variables_router",
-    "mcp_router",
 ]
