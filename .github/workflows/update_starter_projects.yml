@@ -19,7 +19,7 @@ jobs:
         run: uv sync --frozen
 
       - name: Run starter projects update
-        run: python .github/scripts/update_starter_projects.py
+        run: python scripts/ci/update_starter_projects.py
 
       - uses: autofix-ci/action@ff86a557419858bb967097bfc916833f5647fa8c
 
