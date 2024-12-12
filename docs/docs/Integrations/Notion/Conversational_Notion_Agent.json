@@ -2263,7 +2263,7 @@
                                     "BaseChatMessageHistory"
                                 ],
                                 "dynamic": false,
-                                "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
+                                "info": "Retrieve messages from an external memory. If empty, it will use the Kendra Labs tables.",
                                 "title_case": false,
                                 "type": "other",
                                 "_input_type": "HandleInput"

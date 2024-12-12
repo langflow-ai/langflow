@@ -16,7 +16,7 @@ const LogoIcon: React.FC<LogoIconProps> = ({
       {ENABLE_NEW_LOGO ? (
         <img src={KendraLabsLogo} className={className} alt={alt} />
       ) : (
-        <ChainLogo title="Langflow Logo" className={className} />
+        <ChainLogo title="Logo" className={className} />
       )}
     </>
   );

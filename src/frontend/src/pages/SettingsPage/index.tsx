@@ -45,7 +45,7 @@ export default function SettingsPage(): JSX.Element {
       ),
     },
     {
-      title: "Langflow API",
+      title: "Kendra Labs API",
       href: "/settings/api-keys",
       icon: (
         <ForwardedIconComponent

@@ -296,7 +296,7 @@ export default function ChatView({
           ) : (
             <div className="chat-alert-box">
               <span>
-                👋 <span className="langflow-chat-span">Langflow Chat</span>
+                👋 <span className="langflow-chat-span">Kendra Labs Chat</span>
               </span>
               <br />
               <div className="langflow-chat-desc">

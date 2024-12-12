@@ -211,7 +211,7 @@ export default function ShareModal({
         <BaseModal.Header
           description={`Publish ${
             is_component ? "your component" : "workflow"
-          } to the Langflow Store.`}
+          } to the Kendra Labs Store.`}
         >
           <span className="pr-2">Share</span>
           <IconComponent

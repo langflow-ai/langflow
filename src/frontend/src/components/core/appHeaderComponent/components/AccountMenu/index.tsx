@@ -113,12 +113,12 @@ export const AccountMenu = () => {
                 Share Feedback on Github
               </HeaderMenuItemLink>
             )}
-            <HeaderMenuItemLink newPage href="https://twitter.com/langflow_ai">
-              Follow Langflow on X
+            {/* <HeaderMenuItemLink newPage href="https://twitter.com/langflow_ai">
+              Follow Kendra Labs on X
             </HeaderMenuItemLink>
             <HeaderMenuItemLink newPage href="https://discord.gg/EqksyE2EX9">
-              Join the Langflow Discord
-            </HeaderMenuItemLink>
+              Join the Kendra Labs Discord
+            </HeaderMenuItemLink> */}
           </HeaderMenuItemsSection>
           {ENABLE_DATASTAX_LANGFLOW ? (
             <HeaderMenuItemsSection>
