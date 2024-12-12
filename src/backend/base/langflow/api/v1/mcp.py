@@ -70,6 +70,19 @@ def json_schema_from_flow(flow: Flow) -> dict:
                     "type": field_type,
                     "description": field_data.get("info", f"Input for {field_name}"),
                 }
+                # Update field_type in properties after determining the JSON Schema type
+                if field_type == "str":
+                    field_type = "string"
+                elif field_type == "int":
+                    field_type = "integer"
+                elif field_type == "float":
+                    field_type = "number"
+                elif field_type == "bool":
+                    field_type = "boolean"
+                else:
+                    logger.warning(f"Unknown field type: {field_type} defaulting to string")
+                    field_type = "string"
+                properties[field_name]["type"] = field_type
 
                 if field_data.get("required", False):
                     required.append(field_name)
@@ -90,8 +103,8 @@ async def handle_list_resources():
 @server.list_tools()
 async def handle_list_tools():
     try:
-        session = next(get_session())
-        flows = session.exec(select(Flow)).all()
+        session = await anext(get_session())
+        flows = (await session.exec(select(Flow))).all()
         tools = []
         name_count = {}  # Track name occurrences
 
@@ -128,7 +141,7 @@ async def handle_list_tools():
 async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent]:
     """Handle tool execution requests."""
     try:
-        session = next(get_session())
+        session = await anext(get_session())
         background_tasks = BackgroundTasks()
 
         try:
@@ -136,7 +149,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
         except LookupError:
             raise ValueError("No authenticated user found in context")
 
-        flow = session.exec(select(Flow).where(Flow.id == UUID(name))).first()
+        flow = (await session.exec(select(Flow).where(Flow.id == UUID(name)))).first()
 
         if not flow:
             raise ValueError(f"Flow with id '{name}' not found")
@@ -232,9 +245,7 @@ async def handle_sse(request: Request, current_user: Annotated[User, Depends(get
                 logger.debug(f"Stream types: read={type(streams[0])}, write={type(streams[1])}")
 
                 notification_options = NotificationOptions(
-                    prompts_changed=True,
-                    resources_changed=True,
-                    tools_changed=True
+                    prompts_changed=True, resources_changed=True, tools_changed=True
                 )
                 init_options = server.create_initialization_options(notification_options)
                 logger.debug(f"Initialization options: {init_options}")
