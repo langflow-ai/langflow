@@ -35,7 +35,7 @@ There are two options available to you: the 'easy' and recommended option is to 
 
 ### Option 1 (Preferred): Use a Dev Container
 
-Open this repostiory as a Dev Container per your IDEs instructions.
+Open this repository as a Dev Container per your IDEs instructions.
 
 #### Microsoft VS Code
 
@@ -52,7 +52,7 @@ Install Pre-Requisites:
 * **`make`**: The project uses `make` to coordidinate packaging.
 * **`uv`**: This project uses `uv` (`>=0.4`), a Python package and project manager from Astral. Install instructions at https://docs.astral.sh/uv/getting-started/installation/.
 * **`npm`**: The frontend files are built with Node.js (`v22.12 LTS`) and `npm` (`v10.9`). Install instrucations at https://nodejs.org/en/download/package-manager.
-  * Windows (WSL) users: ensure `npm` is installed within WSL environment; `which npm` should resolve to a Linux location, not a Windows location.
+  - Windows (WSL) users: ensure `npm` is installed within WSL environment; `which npm` should resolve to a Linux location, not a Windows location.
 
 ### Initial Environment Validation
 
@@ -108,6 +108,10 @@ uv run pre-commit install
 With the above validation, you can now run the backend (FastAPI) and frontend (Node) services in a way that will "hot-reload" your changes. In this mode, the FastAPI server requires a Node.js server to serve the frontend pages rather than serving them directly.
 
 > ***Note***: You will likely have multiple terminal sessions active in the normal development workflow. These will be annotated as *Backend Terminal*, *Frontend Terminal*, *Documentation Terminal*, and *Build Terminal*.
+
+### Debug Mode
+
+A debug configuration is provided for VS Code users: this can be launched from the Debug tab (the backend debug mode can be launched directly via the F5 key). You may prefer to start services in this mode. You may still want to read the following subsections to understand expected console output and service readiness.
 
 ### Start the Backend Service
 
