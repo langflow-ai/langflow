@@ -177,7 +177,10 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
         for message in messages:
             msg = await session.get(MessageTable, message.id)
             if msg:
-                msg.sqlmodel_update(message.model_dump(exclude_unset=True, exclude_none=True))
+                if hasattr(message, "data"):
+                    msg = msg.sqlmodel_update(message.data)
+                else:
+                    msg = msg.sqlmodel_update(message.model_dump(exclude_unset=True, exclude_none=True))
                 session.add(msg)
                 await session.commit()
                 await session.refresh(msg)
