@@ -1,9 +1,20 @@
 from collections.abc import AsyncIterator, Generator, Iterator
 from datetime import datetime
+from typing import Annotated
+from uuid import UUID
 
 from loguru import logger
-from pydantic import BaseModel
+from pydantic import BaseModel, BeforeValidator
 from pydantic.v1 import BaseModel as BaseModelV1
+
+
+def str_to_uuid(v: str | UUID) -> UUID:
+    if isinstance(v, str):
+        return UUID(v)
+    return v
+
+
+UUIDstr = Annotated[UUID, BeforeValidator(str_to_uuid)]
 
 
 def recursive_serialize_or_str(obj):

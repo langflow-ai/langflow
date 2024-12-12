@@ -40,7 +40,7 @@ class Message(Data):
     sender: str | None = None
     sender_name: str | None = None
     files: list[str | Image] | None = Field(default=[])
-    session_id: str | None = Field(default="")
+    session_id: str | UUID | None = Field(default="")
     timestamp: Annotated[str, timestamp_to_str_validator] = Field(
         default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
     )

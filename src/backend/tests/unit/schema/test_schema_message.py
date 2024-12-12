@@ -6,6 +6,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts.chat import ChatPromptTemplate
 from langflow.schema.message import Message
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
+from loguru import logger
 from platformdirs import user_cache_dir
 
 
@@ -176,4 +177,7 @@ def cleanup():
     # Clean up the real cache directory after tests
     cache_dir = Path(user_cache_dir("langflow"))
     if cache_dir.exists():
-        shutil.rmtree(str(cache_dir))
+        try:
+            shutil.rmtree(str(cache_dir))
+        except OSError as exc:
+            logger.error(f"Error cleaning up cache directory: {exc}")

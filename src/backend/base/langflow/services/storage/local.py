@@ -67,6 +67,8 @@ class LocalStorageService(StorageService):
         :return: A list of file names.
         :raises FileNotFoundError: If the flow directory does not exist.
         """
+        if not isinstance(flow_id, str):
+            flow_id = str(flow_id)
         folder_path = self.data_dir / flow_id
         if not await folder_path.exists() or not await folder_path.is_dir():
             logger.warning(f"Flow {flow_id} directory does not exist.")
