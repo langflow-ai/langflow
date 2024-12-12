@@ -27,54 +27,52 @@ export const SelectOptions = ({
   checkPathName: (folderId: string) => boolean;
 }) => {
   return (
-    <>
-      <Select
-        onValueChange={(value) =>
-          handleSelectChange(
-            value,
-            item,
-            handleDeleteFolder,
-            handleDownloadFolder,
-            handleSelectFolderToRename,
-          )
-        }
-        value=""
-      >
-        <ShadTooltip content="Options" side="right" styleClasses="z-50">
-          <SelectTrigger
-            className="w-fit"
-            id={`options-trigger-${item.name}`}
-            data-testid="more-options-button"
+    <Select
+      onValueChange={(value) =>
+        handleSelectChange(
+          value,
+          item,
+          handleDeleteFolder,
+          handleDownloadFolder,
+          handleSelectFolderToRename,
+        )
+      }
+      value=""
+    >
+      <ShadTooltip content="Options" side="right" styleClasses="z-50">
+        <SelectTrigger
+          className={cn(
+            "w-fit p-0",
+            checkPathName(item.id!) ? "block" : "hidden",
+          )}
+          id={`options-trigger-${item.name}`}
+          data-testid="more-options-button"
+        >
+          <IconComponent
+            name="MoreHorizontal"
+            className="w-4 stroke-[1.5] px-0 text-muted-foreground group-hover/menu-button:text-foreground"
+          />
+        </SelectTrigger>
+      </ShadTooltip>
+      <SelectContent align="end" alignOffset={-16} position="popper">
+        {item.name !== "My Projects" && (
+          <SelectItem
+            id="rename-button"
+            value="rename"
+            data-testid="btn-rename-folder"
           >
-            <IconComponent
-              name={"MoreHorizontal"}
-              className={cn(
-                `w-4 stroke-[1.5] px-0 text-muted-foreground group-hover/menu-button:block group-hover/menu-button:text-foreground`,
-                checkPathName(item.id!) ? "block" : "hidden",
-              )}
-            />
-          </SelectTrigger>
-        </ShadTooltip>
-        <SelectContent align="end" alignOffset={-16} position="popper">
-          {item.name !== "My Projects" && (
-            <SelectItem
-              id="rename-button"
-              value="rename"
-              data-testid="btn-rename-folder"
-            >
-              <FolderSelectItem name="Rename" iconName="SquarePen" />
-            </SelectItem>
-          )}
-          <SelectItem value="download" data-testid="btn-download-folder">
-            <FolderSelectItem name="Download Content" iconName="Download" />
+            <FolderSelectItem name="Rename" iconName="SquarePen" />
           </SelectItem>
-          {index > 0 && (
-            <SelectItem value="delete" data-testid="btn-delete-folder">
-              <FolderSelectItem name="Delete" iconName="Trash2" />
-            </SelectItem>
-          )}
-        </SelectContent>
-      </Select>
-    </>
+        )}
+        <SelectItem value="download" data-testid="btn-download-folder">
+          <FolderSelectItem name="Download Content" iconName="Download" />
+        </SelectItem>
+        {index > 0 && (
+          <SelectItem value="delete" data-testid="btn-delete-folder">
+            <FolderSelectItem name="Delete" iconName="Trash2" />
+          </SelectItem>
+        )}
+      </SelectContent>
+    </Select>
   );
 };
