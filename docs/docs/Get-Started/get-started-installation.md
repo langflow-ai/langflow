@@ -8,7 +8,7 @@ You can deploy Langflow either locally or as a hosted service with [**Datastax L
 
 ## Install Langflow locally
 
-Install Langflow locally with [uv](https://docs.astral.sh/uv/getting-started/installation/), [pip](https://pypi.org/project/pip/), or [pipx](https://pipx.pypa.io/stable/installation/).
+Install Langflow locally with [uv (recommended)](https://docs.astral.sh/uv/getting-started/installation/), [pip](https://pypi.org/project/pip/), or [pipx](https://pipx.pypa.io/stable/installation/).
 
 ### Prerequisites
 
@@ -128,6 +128,22 @@ This error can occur during Langflow upgrades when the new version can't overrid
 
 If you wish to retain your files, back them up before clearing the folder.
 
+### Langflow installation freezes at pip dependency resolution
 
+Installing Langflow with `pip install langflow` slowly fails with this error message:
 
+```plain
+pip is looking at multiple versions of <<library>> to determine which version is compatible with other requirements. This could take a while.
+```
 
+To work around this issue, install Langflow with [`uv`](https://docs.astral.sh/uv/getting-started/installation/) instead of `pip`.
+
+```plain
+uv pip install langflow
+```
+
+To run Langflow with uv:
+
+```plain
+uv run langflow run
+```

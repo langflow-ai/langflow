@@ -19,6 +19,7 @@ from langflow.services.storage.service import StorageService
 from langflow.template.utils import update_frontend_node_with_template_values
 from langflow.type_extraction.type_extraction import post_process_type
 from langflow.utils import validate
+from langflow.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
     from langchain.callbacks.base import BaseCallbackHandler
@@ -439,9 +440,14 @@ class CustomComponent(BaseComponent):
             raise ValueError(msg)
         variable_service = get_variable_service()  # Get service instance
         # Retrieve and decrypt the variable by name for the current user
+        if isinstance(self.user_id, str):
+            user_id = uuid.UUID(self.user_id)
+        elif isinstance(self.user_id, uuid.UUID):
+            user_id = self.user_id
+        else:
+            msg = f"Invalid user id: {self.user_id}"
+            raise TypeError(msg)
         async with async_session_scope() as session:
-            if isinstance(self.user_id, str):
-                user_id = uuid.UUID(self.user_id)
             return await variable_service.get_variable(user_id=user_id, name=name, field=field, session=session)
 
     async def list_key_names(self):
@@ -509,11 +515,15 @@ class CustomComponent(BaseComponent):
         )
 
     def list_flows(self) -> list[Data]:
+        """This is kept for backward compatibility. Using alist_flows instead is recommended."""
+        return run_until_complete(self.alist_flows())
+
+    async def alist_flows(self) -> list[Data]:
         if not self.user_id:
             msg = "Session is invalid"
             raise ValueError(msg)
         try:
-            return list_flows(user_id=str(self.user_id))
+            return await list_flows(user_id=str(self.user_id))
         except Exception as e:
             msg = f"Error listing flows: {e}"
             raise ValueError(msg) from e
