@@ -176,6 +176,7 @@ async def log_vertex_build(
     try:
         if not get_settings_service().settings.vertex_builds_storage_enabled:
             return
+
         vertex_build = VertexBuildBase(
             flow_id=flow_id,
             id=vertex_id,
