@@ -612,6 +612,12 @@ async def find_existing_flow(session, flow_id, flow_endpoint_name):
 
 
 async def create_or_update_starter_projects(all_types_dict: dict, *, do_create: bool = True) -> None:
+    """Create or update starter projects.
+
+    Args:
+        all_types_dict (dict): Dictionary containing all component types and their templates
+        do_create (bool, optional): Whether to create new projects. Defaults to True.
+    """
     async with async_session_scope() as session:
         new_folder = await create_starter_folder(session)
         starter_projects = await load_starter_projects()
