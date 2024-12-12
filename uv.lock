@@ -15,6 +15,48 @@ members = [
 ]
 
 [[package]]
+name = "ag2"
+version = "0.3.2"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.13'",
+]
+dependencies = [
+    { name = "diskcache", marker = "python_full_version >= '3.13'" },
+    { name = "docker", marker = "python_full_version >= '3.13'" },
+    { name = "flaml", marker = "python_full_version >= '3.13'" },
+    { name = "numpy", marker = "python_full_version >= '3.13'" },
+    { name = "openai", marker = "python_full_version >= '3.13'" },
+    { name = "packaging", marker = "python_full_version >= '3.13'" },
+    { name = "pydantic", marker = "python_full_version >= '3.13'" },
+    { name = "python-dotenv", marker = "python_full_version >= '3.13'" },
+    { name = "termcolor", marker = "python_full_version >= '3.13'" },
+    { name = "tiktoken", marker = "python_full_version >= '3.13'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/26/a7/dfa06ce4c4009443ecac5bb8e3b6419c0b49dba726839eda34f2918edcfa/ag2-0.3.2.tar.gz", hash = "sha256:49bf71bdb5ba251c36a773625e06bce0a44bfa4b3647204fce82a074fc89eb1d", size = 300234 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/50/98/2a760234a4a9a74b8d807b89ff6d36e46c2988c42ce39eacc0398502207b/ag2-0.3.2-py3-none-any.whl", hash = "sha256:a3a147780c933e31b60304fe18ad3cb24c6345ad4a5d6c8c2f3ecf9a53eeb952", size = 351949 },
+]
+
+[[package]]
+name = "ag2"
+version = "0.5.2"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version < '3.11'",
+    "python_full_version == '3.11.*'",
+    "python_full_version >= '3.12' and python_full_version < '3.12.4'",
+    "python_full_version >= '3.12.4' and python_full_version < '3.13'",
+]
+dependencies = [
+    { name = "pyautogen", marker = "python_full_version < '3.13'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8e/d9/985afb6f67e56f1f0c720e76aef931a2e94e0b291f9fa2532dafd1f500fc/ag2-0.5.2.tar.gz", hash = "sha256:98a77bb291b9d8548da1328117efab2767e2a66e2b76485569173716165273c2", size = 34372 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/77/dd/4f066fa8e7e1b1f418e553b7c27774987f9627e6fafba0fed81761acac38/ag2-0.5.2-py3-none-any.whl", hash = "sha256:9384454d2791784b9a6127049f84dc7dee60ce899ef44eb71550f9a13280b47c", size = 13335 },
+]
+
+[[package]]
 name = "aiofile"
 version = "3.9.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1924,6 +1966,18 @@ wheels = [
 ]
 
 [[package]]
+name = "flaml"
+version = "2.3.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/97/d9/938b9b21a0672e976c7e5738f1ad67d77a89b48d604fb062c8fafff02a3c/flaml-2.3.2.tar.gz", hash = "sha256:4a1ec289ddaec36850cfc66f6fb335b8521df49ea31f6adb54ea63a5cebb6865", size = 285196 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5f/7f/3192ef1e666659605c3886e9e2a756806d1f24f4ca4c5753843c25e344f7/FLAML-2.3.2-py3-none-any.whl", hash = "sha256:1ee6e8e76bf1d741b4da41e2a2a8c0638b36d90b0f60aac323b5568f54dcb9e7", size = 313921 },
+]
+
+[[package]]
 name = "flatbuffers"
 version = "24.3.25"
 source = { registry = "https://pypi.org/simple" }
@@ -3690,6 +3744,8 @@ name = "langflow"
 version = "1.1.1"
 source = { editable = "." }
 dependencies = [
+    { name = "ag2", version = "0.3.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
+    { name = "ag2", version = "0.5.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
     { name = "aiofile" },
     { name = "arize-phoenix-otel" },
     { name = "assemblyai" },
@@ -3835,6 +3891,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "ag2", specifier = ">=0.3.2" },
     { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
     { name = "arize-phoenix-otel", specifier = ">=0.6.1" },
     { name = "assemblyai", specifier = "==0.35.1" },
@@ -6200,6 +6257,27 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/1d/67/6afbf0d507f73c32d21084a79946bfcfca5fbc62a72057e9c23797a737c9/pyasn1_modules-0.4.1.tar.gz", hash = "sha256:c28e2dbf9c06ad61c71a075c7e0f9fd0f1b0bb2d2ad4377f240d33ac2ab60a7c", size = 310028 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/77/89/bc88a6711935ba795a679ea6ebee07e128050d6382eaa35a0a47c8032bdc/pyasn1_modules-0.4.1-py3-none-any.whl", hash = "sha256:49bfa96b45a292b711e986f222502c1c9a5e1f4e568fc30e2574a6c7d07838fd", size = 181537 },
+]
+
+[[package]]
+name = "pyautogen"
+version = "0.5.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "diskcache", marker = "python_full_version < '3.13'" },
+    { name = "docker", marker = "python_full_version < '3.13'" },
+    { name = "flaml", marker = "python_full_version < '3.13'" },
+    { name = "numpy", marker = "python_full_version < '3.13'" },
+    { name = "openai", marker = "python_full_version < '3.13'" },
+    { name = "packaging", marker = "python_full_version < '3.13'" },
+    { name = "pydantic", marker = "python_full_version < '3.13'" },
+    { name = "python-dotenv", marker = "python_full_version < '3.13'" },
+    { name = "termcolor", marker = "python_full_version < '3.13'" },
+    { name = "tiktoken", marker = "python_full_version < '3.13'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/37/b9/693197fd1d15d614f87b28a74a3972a9db1aeca527f824486e2546d72695/pyautogen-0.5.2.tar.gz", hash = "sha256:ebd2f0fda636783422b4d5c449c447969a2f2bd34d82dcccb7633e2ba3ca0925", size = 349611 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ff/b4/9814b866e51c23b574f934ac706855c40b6a548ed8283792d2958acc1cad/pyautogen-0.5.2-py3-none-any.whl", hash = "sha256:bc77b3c10bd54bcccad4325a21f89ceca422cb4b5d508989f6acf120a9f482cb", size = 419599 },
 ]
 
 [[package]]
