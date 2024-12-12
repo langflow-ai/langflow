@@ -14,8 +14,8 @@ class MergeOperation(str, Enum):
 
 
 class DataMergerComponent(Component):
-    display_name = "Data Merger"
-    description = "Combina dados usando operações de merge"
+    display_name = "Merge Data"
+    description = "Combines data using merge operations"
     icon = "merge"
 
     MIN_INPUTS_REQUIRED = 2
