@@ -508,12 +508,12 @@ class CustomComponent(BaseComponent):
             run_id=self.graph.run_id,
         )
 
-    def list_flows(self) -> list[Data]:
+    async def list_flows(self) -> list[Data]:
         if not self.user_id:
             msg = "Session is invalid"
             raise ValueError(msg)
         try:
-            return list_flows(user_id=str(self.user_id))
+            return await list_flows(user_id=str(self.user_id))
         except Exception as e:
             msg = f"Error listing flows: {e}"
             raise ValueError(msg) from e
