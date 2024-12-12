@@ -16,7 +16,7 @@ jobs:
       - name: "Install dependencies"
         run: |
           uv sync --frozen
-          uv pip install -e . --no-dev
+          uv pip install -e .
 
       - name: Run starter projects update
         run: python scripts/ci/update_starter_projects.py
