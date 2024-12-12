@@ -21,7 +21,7 @@ services:
       POSTGRES_PASSWORD: langflow
       POSTGRES_DB: langflow
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - langflow-postgres:/var/lib/postgresql/data
 
