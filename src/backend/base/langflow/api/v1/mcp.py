@@ -8,10 +8,10 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
-from pydantic import ValidationError
 from mcp import types
 from mcp.server import Server
 from mcp.server.sse import SseServerTransport
+from pydantic import ValidationError
 from sqlmodel import select
 from starlette.background import BackgroundTasks
 
@@ -178,16 +178,17 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                         logger.warning(f"Failed to parse event data: {line}")
                         continue
             except asyncio.CancelledError as e:
-                logger.info(f"Request was cancelled: {str(e)}")
+                logger.info(f"Request was cancelled: {e!s}")
                 # Create a proper cancellation notification
-                notification = types.ProgressNotification(
-                    method="notifications/progress",
-                    params=types.ProgressNotificationParams(
-                        progressToken=str(uuid4()), progress=1.0, message=f"Request cancelled: {str(e)}"
-                    ),
-                )
-                await server.request_context.session.send_notification(notification)
-                return [types.TextContent(type="text", text=f"Request cancelled: {str(e)}")]
+                # notification = types.ProgressNotification(
+                #    method="notifications/progress",
+                #    params=types.ProgressNotificationParams(
+                #        progressToken=str(uuid4()),
+                #        progress=1.0
+                #    ),
+                # )
+                # await server.request_context.session.send_notification(notification)
+                return [types.TextContent(type="text", text=f"Request cancelled: {e!s}")]
 
         # Send final progress notification
         # if progress_token:

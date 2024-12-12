@@ -115,6 +115,7 @@ dependencies = [
     "arize-phoenix-otel>=0.6.1",
     "openinference-instrumentation-langchain>=0.1.29",
     "mcp>=0.9.1",
+    "uv>=0.5.7",
 ]
 
 [project.urls]
