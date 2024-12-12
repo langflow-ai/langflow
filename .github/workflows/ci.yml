@@ -46,6 +46,7 @@ concurrency:
 
 jobs:
   check-nightly-status:
+    name: Check Nightly Status
     runs-on: ubuntu-latest
     outputs:
       should-proceed: ${{ steps.check-workflow.outputs.success }}
