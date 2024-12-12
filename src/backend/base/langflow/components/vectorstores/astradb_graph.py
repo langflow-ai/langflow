@@ -6,11 +6,12 @@ from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers import docs_to_data
-from langflow.inputs import DictInput, FloatInput
-from langflow.io import (
+from langflow.inputs import (
     BoolInput,
     DataInput,
+    DictInput,
     DropdownInput,
+    FloatInput,
     HandleInput,
     IntInput,
     MultilineInput,
@@ -296,8 +297,9 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
                 search_args = self._build_search_args()
 
                 docs = vector_store.search(query=self.search_input, search_type=search_type, **search_args)
-
-                # Drop links from the metadata. At this point the links don't add any value for building the context and haven't been restored to json which causes the conversion to fail.
+                
+                # Drop links from the metadata. At this point the links don't add any value for building the 
+                # context and haven't been restored to json which causes the conversion to fail.
                 logger.debug("Removing links from metadata.")
                 for doc in docs:
                     if "links" in doc.metadata:
