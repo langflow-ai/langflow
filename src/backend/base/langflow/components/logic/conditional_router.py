@@ -39,7 +39,6 @@ class ConditionalRouterComponent(Component):
             display_name="Case Sensitive",
             info="If true, the comparison will be case sensitive.",
             value=False,
-            advanced=False,
         ),
         MessageInput(
             name="message",
@@ -79,15 +78,15 @@ class ConditionalRouterComponent(Component):
 
         if operator == "equals":
             return input_text == match_text
-        if operator == "not equals":
+        elif operator == "not equals":
             return input_text != match_text
-        if operator == "contains":
+        elif operator == "contains":
             return match_text in input_text
-        if operator == "starts with":
+        elif operator == "starts with":
             return input_text.startswith(match_text)
-        if operator == "ends with":
+        elif operator == "ends with":
             return input_text.endswith(match_text)
-        if operator == "matches regex":
+        elif operator == "matches regex":
             try:
                 return bool(re.match(match_text, input_text))
             except re.error:
