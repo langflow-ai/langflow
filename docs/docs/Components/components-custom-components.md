@@ -6,7 +6,7 @@ slug: /components-custom-components
 
 # Custom Components
 
-Custom components are created within Langflow and extend the platform's functionality with custom, resusable Python code.
+Custom components are created within Langflow and extend the platform's functionality with custom, reusable Python code.
 
 Since Langflow operates with Python behind the scenes, you can implement any Python function within a Custom Component. This means you can leverage the power of libraries such as Pandas, Scikit-learn, Numpy, and thousands of other packages to create components that handle data processing in unlimited ways. You can use any type as long as the type is properly annotated in the output methods (e.g., `> list[int]`).
 
