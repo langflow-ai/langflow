@@ -1,5 +1,5 @@
 from .astradb import AstraDBVectorStoreComponent
-from .astradb_graph import AstraDBGraphVectorStoreComponent
+from .astradb_graph import AstraGraphVectorStoreComponent
 from .cassandra import CassandraVectorStoreComponent
 from .cassandra_graph import CassandraGraphVectorStoreComponent
 from .chroma import ChromaVectorStoreComponent
