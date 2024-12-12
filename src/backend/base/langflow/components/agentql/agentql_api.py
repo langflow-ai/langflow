@@ -3,10 +3,10 @@ from loguru import logger
 
 from langflow.custom import Component
 from langflow.io import (
+    DictInput,
     IntInput,
     MessageTextInput,
     MultilineInput,
-    NestedDictInput,
     Output,
     SecretStrInput,
 )
@@ -47,18 +47,20 @@ class AgentQL(Component):
             display_name="Timeout",
             info="Timeout in seconds for the request.",
             value=900,
+            advanced=True,
         ),
-        # Temporary field type while waiting for a fix. Should be just DictInput with `advanced=True`.
-        NestedDictInput(
+        DictInput(
             name="params",
             display_name="Additional Params",
             info="The additional params to send with the request. For details refer to https://docs.agentql.com/rest-api/api-reference#request-body.",
+            is_list=True,
             value={
                 "wait_for": 0,
                 "is_scroll_to_bottom_enabled": False,
                 "mode": "fast",
                 "is_screenshot_enabled": False,
             },
+            advanced=True,
         ),
     ]
 
