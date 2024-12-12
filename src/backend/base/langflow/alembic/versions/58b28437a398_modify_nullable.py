@@ -26,7 +26,7 @@ depends_on = None
 
 def upgrade():
     conn = op.get_bind()
-    inspector = Inspector.from_engine(conn)
+    inspector = sa.inspect(conn)
     tables = ["apikey", "variable"]  # List of tables to modify
 
     for table_name in tables:
@@ -35,7 +35,7 @@ def upgrade():
 
 def downgrade():
     conn = op.get_bind()
-    inspector = Inspector.from_engine(conn)
+    inspector = sa.inspect(conn)
     tables = ["apikey", "variable"]  # List of tables to revert
 
     for table_name in tables:

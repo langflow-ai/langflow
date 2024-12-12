@@ -52,22 +52,22 @@ class ChatOutputResponse(BaseModel):
                 if not name:
                     name = path.split("/")[-1]
                     file["name"] = name
-                _type = file.get("type")
-                if not _type:
+                type_ = file.get("type")
+                if not type_:
                     # get the file type from the path
                     extension = path.split(".")[-1]
                     file_types = set(TEXT_FILE_TYPES + IMG_FILE_TYPES)
                     if extension and extension in file_types:
-                        _type = extension
+                        type_ = extension
                     else:
                         for file_type in file_types:
                             if file_type in path:
-                                _type = file_type
+                                type_ = file_type
                                 break
-                    if not _type:
+                    if not type_:
                         msg = "File type is required."
                         raise ValueError(msg)
-                file["type"] = _type
+                file["type"] = type_
 
         return files
 

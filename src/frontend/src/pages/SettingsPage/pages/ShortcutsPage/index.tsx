@@ -18,7 +18,7 @@ export default function ShortcutsPage() {
   const colDefs: ColDef[] = [
     {
       headerName: "Functionality",
-      field: "name",
+      field: "display_name",
       flex: 1,
       editable: false,
       resizable: false,

@@ -102,14 +102,16 @@ module.exports = {
       label: "Integrations",
       items: [
         "Integrations/integrations-assemblyai",
+        "Integrations/Composio/integrations-composio",
         "Integrations/integrations-langfuse",
         "Integrations/integrations-langsmith",
         "Integrations/integrations-langwatch",
         {
-          type: "category",
-          label: "Google",
+          type: 'category',
+          label: 'Google',
           items: [
-            "Integrations/Google/integrations-setup-google-oauth-langflow",
+            'Integrations/Google/integrations-setup-google-oauth-langflow',
+            'Integrations/Google/integrations-setup-google-cloud-vertex-ai-langflow',
           ],
         },
         {
