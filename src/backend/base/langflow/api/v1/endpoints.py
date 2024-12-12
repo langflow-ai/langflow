@@ -33,7 +33,7 @@ from langflow.api.v1.schemas import (
     UploadFileResponse,
 )
 from langflow.custom.custom_component.component import Component
-from langflow.custom.utils import build_custom_component_template, get_instance_name
+from langflow.custom.utils import build_custom_component_template, get_instance_name, update_component_build_config
 from langflow.exceptions.api import APIException, InvalidChatInputError
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
@@ -633,7 +633,8 @@ async def custom_component_update(
             params = await update_params_with_load_from_db_fields(cc_instance, params, load_from_db_fields)
             cc_instance.set_attributes(params)
         updated_build_config = code_request.get_template()
-        await cc_instance.aupdate_build_config(
+        await update_component_build_config(
+            cc_instance,
             build_config=updated_build_config,
             field_value=code_request.field_value,
             field_name=code_request.field,
