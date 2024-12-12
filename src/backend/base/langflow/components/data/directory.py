@@ -1,3 +1,5 @@
+from typing import cast
+
 from langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data, retrieve_file_paths
 from langflow.custom import Component
 from langflow.io import BoolInput, IntInput, MessageTextInput, MultiselectInput
@@ -94,8 +96,8 @@ class DirectoryComponent(Component):
         else:
             loaded_data = [parse_text_file_to_data(file_path, silent_errors=silent_errors) for file_path in file_paths]
 
-        loaded_data = [data for data in loaded_data if data is not None]
+        loaded_data = list(filter(None, loaded_data))
 
         self.status = loaded_data
 
-        return loaded_data
+        return cast(list[Data], loaded_data)
