@@ -25,11 +25,11 @@ class SubFlowComponent(CustomComponent):
     name = "SubFlow"
 
     async def get_flow_names(self) -> list[str]:
-        flow_datas = await self.list_flows()
+        flow_datas = await self.alist_flows()
         return [flow_data.data["name"] for flow_data in flow_datas]
 
     async def get_flow(self, flow_name: str) -> Data | None:
-        flow_datas = await self.list_flows()
+        flow_datas = await self.alist_flows()
         for flow_data in flow_datas:
             if flow_data.data["name"] == flow_name:
                 return flow_data

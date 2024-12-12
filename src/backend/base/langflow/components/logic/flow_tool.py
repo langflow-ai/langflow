@@ -23,7 +23,7 @@ class FlowToolComponent(LCToolComponent):
     icon = "hammer"
 
     async def get_flow_names(self) -> list[str]:
-        flow_datas = await self.list_flows()
+        flow_datas = await self.alist_flows()
         return [flow_data.data["name"] for flow_data in flow_datas]
 
     async def get_flow(self, flow_name: str) -> Data | None:
@@ -35,7 +35,7 @@ class FlowToolComponent(LCToolComponent):
         Returns:
             Optional[Text]: The flow record if found, None otherwise.
         """
-        flow_datas = await self.list_flows()
+        flow_datas = await self.alist_flows()
         for flow_data in flow_datas:
             if flow_data.data["name"] == flow_name:
                 return flow_data
@@ -74,13 +74,13 @@ class FlowToolComponent(LCToolComponent):
         Output(name="api_build_tool", display_name="Tool", method="build_tool"),
     ]
 
-    def build_tool(self) -> Tool:
+    async def build_tool(self) -> Tool:
         FlowTool.model_rebuild()
         if "flow_name" not in self._attributes or not self._attributes["flow_name"]:
             msg = "Flow name is required"
             raise ValueError(msg)
         flow_name = self._attributes["flow_name"]
-        flow_data = self.get_flow(flow_name)
+        flow_data = await self.get_flow(flow_name)
         if not flow_data:
             msg = "Flow not found."
             raise ValueError(msg)

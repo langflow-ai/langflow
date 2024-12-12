@@ -21,12 +21,12 @@ def component(
 
 
 async def test_list_flows_flow_objects(component):
-    flows = await component.list_flows()
+    flows = await component.alist_flows()
     are_flows = [isinstance(flow, Data) for flow in flows]
     flow_types = [type(flow) for flow in flows]
     assert all(are_flows), f"Expected all flows to be Data objects, got {flow_types}"
 
 
 async def test_list_flows_return_type(component):
-    flows = await component.list_flows()
+    flows = await component.alist_flows()
     assert isinstance(flows, list)

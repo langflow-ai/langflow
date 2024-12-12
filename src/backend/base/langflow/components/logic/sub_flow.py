@@ -19,11 +19,11 @@ class SubFlowComponent(Component):
     icon = "Workflow"
 
     async def get_flow_names(self) -> list[str]:
-        flow_data = await self.list_flows()
+        flow_data = await self.alist_flows()
         return [flow_data.data["name"] for flow_data in flow_data]
 
     async def get_flow(self, flow_name: str) -> Data | None:
-        flow_datas = await self.list_flows()
+        flow_datas = await self.alist_flows()
         for flow_data in flow_datas:
             if flow_data.data["name"] == flow_name:
                 return flow_data

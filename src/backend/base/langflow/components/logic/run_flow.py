@@ -19,7 +19,7 @@ class RunFlowComponent(Component):
     icon = "workflow"
 
     async def get_flow_names(self) -> list[str]:
-        flow_data = await self.list_flows()
+        flow_data = await self.alist_flows()
         return [flow_data.data["name"] for flow_data in flow_data]
 
     @override

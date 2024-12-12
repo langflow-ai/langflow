@@ -15,6 +15,6 @@ class ListFlowsComponent(CustomComponent):
     async def build(
         self,
     ) -> list[Data]:
-        flows = await self.list_flows()
+        flows = await self.alist_flows()
         self.status = flows
         return flows
