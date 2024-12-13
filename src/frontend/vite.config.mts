@@ -1,3 +1,4 @@
+import MillionLint from "@million/lint";
 import react from "@vitejs/plugin-react-swc";
 import { defineConfig, loadEnv } from "vite";
 import svgr from "vite-plugin-svgr";
@@ -41,7 +42,14 @@ export default defineConfig(({ mode }) => {
       ),
       "process.env.CI": JSON.stringify(env.CI),
     },
-    plugins: [react(), svgr(), tsconfigPaths()],
+    plugins: [
+      react(),
+      svgr(),
+      tsconfigPaths(),
+      MillionLint.vite({
+        enabled: true,
+      }),
+    ],
     server: {
       port: port,
       proxy: {

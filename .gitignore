@@ -277,3 +277,6 @@ src/frontend/temp
 
 .dspy_cache/
 *.db
+
+# Million Lint
+.million
