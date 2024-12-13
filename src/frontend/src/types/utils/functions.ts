@@ -25,6 +25,7 @@ export interface ColumnField {
   filterable: boolean;
   formatter?: FormatterType;
   description?: string;
+  disable_edit?: boolean;
   default?: any; // Add this line
   edit_mode?: "modal" | "inline";
 }
