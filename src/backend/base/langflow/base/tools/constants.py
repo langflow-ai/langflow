@@ -27,5 +27,6 @@ TOOL_TABLE_SCHEMA = [
         "display_name": "Tags",
         "type": "str",
         "description": "Tags to be added to the tool, to identify the tool, when updatinf the tool metadata",
+        "editable": False,
     },
 ]
