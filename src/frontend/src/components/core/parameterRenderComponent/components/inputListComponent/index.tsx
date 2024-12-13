@@ -82,55 +82,15 @@ export default function InputListComponent({
             onChange={(event) => handleInputChange(index, event.target.value)}
             data-testid={`${id}_${index}`}
           />
-          {index === 0 && value.length > 1 && (
-            <div className="absolute right-[65px] flex items-center peer-focus:pointer-events-none peer-focus:hidden">
-              <div
-                onClick={addNewInput}
-                className={cn(
-                  "hit-area-icon group flex !h-9 items-center justify-center text-center",
-                  disabled
-                    ? "pointer-events-none bg-background hover:bg-background"
-                    : "",
-                  index === 0
-                    ? "bg-background hover:bg-muted"
-                    : "hover:bg-smooth-red",
-                )}
-              >
-                <Button
-                  unstyled
-                  size="icon"
-                  className={cn(
-                    "hit-area-icon flex items-center justify-center",
-                    getButtonClassName(),
-                  )}
-                  data-testid={getTestId("plus", index)}
-                  disabled={disabled}
-                >
-                  <IconComponent
-                    name={"Plus"}
-                    className={cn(
-                      "icon-size justify-self-center text-muted-foreground",
-                      !disabled && "hover:cursor-pointer hover:text-foreground",
-                      "group-hover:text-foreground",
-                    )}
-                    strokeWidth={ICON_STROKE_WIDTH}
-                  />
-                </Button>
-              </div>
-            </div>
-          )}
+
           <div
-            onClick={
-              index === 0 && value.length <= 1
-                ? addNewInput
-                : (e) => removeInput(index, e)
-            }
+            onClick={index === 0 ? addNewInput : (e) => removeInput(index, e)}
             className={cn(
               "hit-area-icon group flex items-center justify-center text-center",
               disabled
                 ? "pointer-events-none bg-background hover:bg-background"
                 : "",
-              index === 0 && value.length <= 1
+              index === 0
                 ? "bg-background hover:bg-muted"
                 : "hover:bg-smooth-red",
             )}
@@ -142,18 +102,15 @@ export default function InputListComponent({
                 "hit-area-icon flex items-center justify-center",
                 getButtonClassName(),
               )}
-              data-testid={getTestId(
-                index === 0 && value.length <= 1 ? "plus" : "minus",
-                index,
-              )}
+              data-testid={getTestId(index === 0 ? "plus" : "minus", index)}
               disabled={disabled}
             >
               <IconComponent
-                name={index === 0 && value.length <= 1 ? "Plus" : "Trash2"}
+                name={index === 0 ? "Plus" : "Trash2"}
                 className={cn(
                   "icon-size justify-self-center text-muted-foreground",
                   !disabled && "hover:cursor-pointer hover:text-foreground",
-                  index === 0 && value.length <= 1
+                  index === 0
                     ? "group-hover:text-foreground"
                     : "group-hover:text-destructive",
                 )}
