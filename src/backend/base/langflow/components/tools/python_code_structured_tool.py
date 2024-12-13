@@ -98,7 +98,7 @@ class PythonCodeStructuredTool(LCToolComponent):
     ]
 
     @override
-    async def aupdate_build_config(
+    async def update_build_config(
         self, build_config: dotdict, field_value: Any, field_name: str | None = None
     ) -> dotdict:
         if field_name is None:
@@ -231,7 +231,7 @@ class PythonCodeStructuredTool(LCToolComponent):
     async def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
         """This function is called after the code validation is done."""
         frontend_node = await super().post_code_processing(new_frontend_node, current_frontend_node)
-        frontend_node["template"] = await self.aupdate_build_config(
+        frontend_node["template"] = await self.update_build_config(
             frontend_node["template"],
             frontend_node["template"]["tool_code"]["value"],
             "tool_code",
@@ -240,7 +240,7 @@ class PythonCodeStructuredTool(LCToolComponent):
         for key in frontend_node["template"]:
             if key in self.DEFAULT_KEYS:
                 continue
-            frontend_node["template"] = await self.aupdate_build_config(
+            frontend_node["template"] = await self.update_build_config(
                 frontend_node["template"], frontend_node["template"][key]["value"], key
             )
             frontend_node = await super().post_code_processing(new_frontend_node, current_frontend_node)

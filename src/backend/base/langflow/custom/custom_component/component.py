@@ -1011,6 +1011,8 @@ class Component(CustomComponent):
                 UUID(self.graph.session_id) if isinstance(self.graph.session_id, str) else self.graph.session_id
             )
             message.session_id = session_id
+        if hasattr(message, "flow_id") and isinstance(message.flow_id, str):
+            message.flow_id = UUID(message.flow_id)
         stored_message = await self._store_message(message)
 
         self._stored_message_id = stored_message.id
