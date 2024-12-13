@@ -37,7 +37,7 @@ jobs:
       UV_CACHE_DIR: /tmp/.uv-cache
     strategy:
       matrix:
-        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12"]' ) }}
+        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
         splitCount: [5]
         group: [1, 2, 3, 4, 5]
     steps:
@@ -81,7 +81,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12"]' ) }}
+        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -114,7 +114,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12"]') }}
+        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]') }}
     steps:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
