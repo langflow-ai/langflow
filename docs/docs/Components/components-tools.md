@@ -1,6 +1,6 @@
 # Tools
 
-Tools are typically connected to agent components. Agents use LLMs as a reasoning engine to decide which of the connected tool components to use to solve a problem.
+Tools are typically connected to agent components at the **Tools** port. Agents use LLMs as a reasoning engine to decide which of the connected tool components to use to solve a problem.
 
 Tools in agentic functions are, essentially, functions that the agent can call to perform tasks or access external resources.
 A function is wrapped as a `Tool` object, with a common interface the agent understands.
@@ -10,6 +10,11 @@ The agent then uses a connected LLM to reason through the problem to decide whic
 
 ## Use a tool in a flow
 
+The [simple agent starter project](/starter-projects-simple-agent) uses URL and Calculator tools connected to an [agent component](#agent-component-agent-component) to answer a user's questions. The OpenAI LLM acts as a brain for the agent to decide which tool to use.
+
+![Simple agent starter flow](/img/starter-flow-simple-agent.png)
+
+For more, see [Create a problem-solving agent](/agents-tool-calling-agent-component).
 
 ## Bing Search API
 
