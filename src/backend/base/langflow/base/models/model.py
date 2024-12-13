@@ -175,6 +175,7 @@ class LCModelComponent(Component):
             messages.insert(0, SystemMessage(content=system_message))
         inputs: list | dict = messages or {}
         try:
+            #TODO: Depreciated Feature to be removed
             if self.output_parser is not None:
                 runnable |= self.output_parser
 
