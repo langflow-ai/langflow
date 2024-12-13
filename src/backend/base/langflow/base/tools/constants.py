@@ -23,9 +23,9 @@ TOOL_TABLE_SCHEMA = [
         "edit_mode": EditMode.INLINE,
     },
     {
-        "name": "metadata",
-        "display_name": "Metadata",
-        "type": "dict",
-        "description": "Default Metadata not to be edited",
+        "name": "tags",
+        "display_name": "Tags",
+        "type": "str",
+        "description": "Tags to be added to the tool, to identify the tool, when updatinf the tool metadata",
     },
 ]
