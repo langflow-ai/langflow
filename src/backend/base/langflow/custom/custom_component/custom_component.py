@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import uuid
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -233,19 +232,10 @@ class CustomComponent(BaseComponent):
         field_value: Any,
         field_name: str | None = None,
     ):
-        if type(self).aupdate_build_config != CustomComponent.aupdate_build_config:
-            raise NotImplementedError
-        build_config[field_name]["value"] = field_value
-        return build_config
+        """Updates the build configuration for the custom component.
 
-    async def aupdate_build_config(
-        self,
-        build_config: dotdict,
-        field_value: Any,
-        field_name: str | None = None,
-    ):
-        if type(self).update_build_config != CustomComponent.update_build_config:
-            return await asyncio.to_thread(self.update_build_config, build_config, field_value, field_name)
+        Do not call directly as implementation can be a coroutine.
+        """
         build_config[field_name]["value"] = field_value
         return build_config
 
@@ -440,9 +430,14 @@ class CustomComponent(BaseComponent):
             raise ValueError(msg)
         variable_service = get_variable_service()  # Get service instance
         # Retrieve and decrypt the variable by name for the current user
+        if isinstance(self.user_id, str):
+            user_id = uuid.UUID(self.user_id)
+        elif isinstance(self.user_id, uuid.UUID):
+            user_id = self.user_id
+        else:
+            msg = f"Invalid user id: {self.user_id}"
+            raise TypeError(msg)
         async with async_session_scope() as session:
-            if isinstance(self.user_id, str):
-                user_id = uuid.UUID(self.user_id)
             return await variable_service.get_variable(user_id=user_id, name=name, field=field, session=session)
 
     async def list_key_names(self):
