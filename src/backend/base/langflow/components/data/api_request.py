@@ -13,6 +13,7 @@ import httpx
 import validators
 from aiofile import async_open
 
+from langflow.base.curl.parse import parse_context
 from langflow.custom import Component
 from langflow.io import (
     BoolInput,
@@ -54,6 +55,22 @@ class APIRequestComponent(Component):
             value="",
             info="The HTTP method to use (GET, POST, PATCH, PUT).",
             real_time_refresh=True,
+        ),
+        BoolInput(
+            name="use_curl",
+            display_name="Use cURL",
+            value=False,
+            info="Enable cURL mode to populate fields from a cURL command.",
+            real_time_refresh=True,
+        ),
+        MessageTextInput(
+            name="curl",
+            display_name="cURL",
+            info=(
+                "Paste a curl command to populate the fields. "
+                "This will fill in the dictionary fields for headers and body."
+            ),
+            advanced=True,
         ),
         DataInput(
             name="query_params",
@@ -142,12 +159,137 @@ class APIRequestComponent(Component):
         Output(display_name="Data", name="data", method="make_requests"),
     ]
 
+    def _parse_json_value(self, value: Any) -> Any:
+        """Parse a value that might be a JSON string."""
+        if not isinstance(value, str):
+            return value
+
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return value
+        else:
+            return parsed
+
+    def _process_body(self, body: Any) -> dict:
+        """Process the body input into a valid dictionary.
+
+        Args:
+            body: The body to process, can be dict, str, or list
+        Returns:
+            Processed dictionary
+        """
+        if body is None:
+            return {}
+        if isinstance(body, dict):
+            return self._process_dict_body(body)
+        if isinstance(body, str):
+            return self._process_string_body(body)
+        if isinstance(body, list):
+            return self._process_list_body(body)
+
+        return {}
+
+    def _process_dict_body(self, body: dict) -> dict:
+        """Process dictionary body by parsing JSON values."""
+        return {k: self._parse_json_value(v) for k, v in body.items()}
+
+    def _process_string_body(self, body: str) -> dict:
+        """Process string body by attempting JSON parse."""
+        try:
+            return self._process_body(json.loads(body))
+        except json.JSONDecodeError:
+            return {"data": body}
+
+    def _process_list_body(self, body: list) -> dict:
+        """Process list body by converting to key-value dictionary."""
+        processed_dict = {}
+
+        try:
+            for item in body:
+                if not self._is_valid_key_value_item(item):
+                    continue
+
+                key = item["key"]
+                value = self._parse_json_value(item["value"])
+                processed_dict[key] = value
+
+        except (KeyError, TypeError, ValueError) as e:
+            self.log(f"Failed to process body list: {e}")
+            return {}  # Return empty dictionary instead of None
+
+        return processed_dict
+
+    def _is_valid_key_value_item(self, item: Any) -> bool:
+        """Check if an item is a valid key-value dictionary."""
+        return isinstance(item, dict) and "key" in item and "value" in item
+
+    def parse_curl(self, curl: str, build_config: dotdict) -> dotdict:
+        """Parse a cURL command and update build configuration.
+
+        Args:
+            curl: The cURL command to parse
+            build_config: The build configuration to update
+        Returns:
+            Updated build configuration
+        """
+        try:
+            parsed = parse_context(curl)
+
+            # Update basic configuration
+            build_config["urls"]["value"] = [parsed.url]
+            build_config["method"]["value"] = parsed.method.upper()
+            build_config["headers"]["advanced"] = True
+            build_config["body"]["advanced"] = True
+
+            # Process headers
+            headers_list = [{"key": k, "value": v} for k, v in parsed.headers.items()]
+            build_config["headers"]["value"] = headers_list
+
+            if headers_list:
+                build_config["headers"]["advanced"] = False
+
+            # Process body data
+            if not parsed.data:
+                build_config["body"]["value"] = []
+            elif parsed.data:
+                try:
+                    json_data = json.loads(parsed.data)
+                    if isinstance(json_data, dict):
+                        body_list = [
+                            {"key": k, "value": json.dumps(v) if isinstance(v, dict | list) else str(v)}
+                            for k, v in json_data.items()
+                        ]
+                        build_config["body"]["value"] = body_list
+                        build_config["body"]["advanced"] = False
+                    else:
+                        build_config["body"]["value"] = [{"key": "data", "value": json.dumps(json_data)}]
+                        build_config["body"]["advanced"] = False
+                except json.JSONDecodeError:
+                    build_config["body"]["value"] = [{"key": "data", "value": parsed.data}]
+                    build_config["body"]["advanced"] = False
+
+        except Exception as exc:
+            msg = f"Error parsing curl: {exc}"
+            self.log(msg)
+            raise ValueError(msg) from exc
+
+        return build_config
+
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "method":
             if field_value in ["POST", "PATCH", "PUT"]:
                 build_config["body"]["advanced"] = False
             else:
                 build_config["body"]["advanced"] = True
+        elif field_name == "use_curl":
+            build_config["curl"]["advanced"] = not field_value
+            if field_value:
+                build_config["curl"]["real_time_refresh"] = True
+            else:
+                build_config["curl"]["real_time_refresh"] = False
+        elif field_name == "curl" and self.use_curl and field_value:
+            build_config = self.parse_curl(field_value, build_config)
         return build_config
 
     async def make_request(
@@ -156,7 +298,7 @@ class APIRequestComponent(Component):
         method: str,
         url: str,
         headers: dict | None = None,
-        body: dict | None = None,
+        body: Any = None,
         timeout: int = 5,
         *,
         follow_redirects: bool = True,
@@ -168,24 +310,15 @@ class APIRequestComponent(Component):
             msg = f"Unsupported method: {method}"
             raise ValueError(msg)
 
-        if isinstance(body, str) and body:
-            try:
-                body = json.loads(body)
-            except Exception as e:
-                msg = f"Error decoding JSON data: {e}"
-                self.log.exception(msg)
-                body = None
-                raise ValueError(msg) from e
-
-        data = body or None
-        redirection_history = []
+        # Process body using the new helper method
+        processed_body = self._process_body(body)
 
         try:
             response = await client.request(
                 method,
                 url,
                 headers=headers,
-                json=data,
+                json=processed_body,
                 timeout=timeout,
                 follow_redirects=follow_redirects,
             )
@@ -282,6 +415,9 @@ class APIRequestComponent(Component):
         save_to_file = self.save_to_file
         include_httpx_metadata = self.include_httpx_metadata
 
+        if self.use_curl and self.curl:
+            self._build_config = self.parse_curl(self.curl, dotdict())
+
         invalid_urls = [url for url in urls if not validators.url(url)]
         if invalid_urls:
             msg = f"Invalid URLs provided: {invalid_urls}"
@@ -355,8 +491,7 @@ class APIRequestComponent(Component):
                     filename = f"{timestamp}-{extracted_filename}"
                 else:
                     filename = extracted_filename
-
-        if not filename:
+        else:
             url_path = urlparse(str(response.request.url)).path
             base_name = Path(url_path).name
             if not base_name:
@@ -369,8 +504,7 @@ class APIRequestComponent(Component):
             timestamp = datetime.now(ZoneInfo("UTC")).strftime("%Y%m%d%H%M%S%f")
             filename = f"{timestamp}-{base_name}{extension}"
 
-        file_path = component_temp_dir / filename
-
+        file_path = component_temp_dir / (filename or "response.tmp")
         return is_binary, file_path
 
     def _headers_to_dict(self, headers: httpx.Headers) -> dict[str, str]:
