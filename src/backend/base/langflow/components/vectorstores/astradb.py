@@ -633,7 +633,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         setup_mode = autodetect_params["setup_mode"]
 
         # Get the embedding model
-        embedding_dict = {"embedding": self.embedding_model} if self.embedding_choice == "Embedding Model" else {}
+        embedding_dict = {"embedding": self.embedding_model}
 
         # Use the embedding model if the choice is set to "Embedding Model"
         if self.embedding_choice == "Astra Vectorize" and not autodetect:
