@@ -17,7 +17,7 @@ In the component's **URLs** field, enter a comma-separated list of URLs you want
 To output a `Data` type, in the **Output Format** dropdown, select **Raw HTML**.
 To output a `Message` type, in the **Output Format** dropdown, select **Text**. This option applies postprocessing with the `data_to_text` helper function.
 
-In this example of document ingestion pipeline, the URL component outputs raw HTML to a text splitter, which splits the raw content into chunks for ingestion by a vector database.
+In this example of a document ingestion pipeline, the URL component outputs raw HTML to a text splitter, which splits the raw content into chunks for ingestion by a vector database.
 
 ![URL component in a data ingestion pipeline](/img/url-component.png)
 
