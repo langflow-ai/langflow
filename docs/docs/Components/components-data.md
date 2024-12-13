@@ -4,6 +4,23 @@ sidebar_position: 3
 slug: /components-data
 ---
 
+Data components load data from a source into your flow.
+
+They may perform some processing or type checking, like converting raw HTML data into text, or ensuring your loaded file is of an acceptable type.
+
+## Use a data component in a flow
+
+The **URL** data component loads content from a list of URLs.
+
+In the component's **URLs** field, enter a comma-separated list of URLs you want to load. Alternatively, connect a component that outputs the `Message` type, like the **Chat Input** component, to supply your URLs with a component.
+
+To output a `Data` type, in the **Output Format** dropdown, select **Raw HTML**.
+To output a `Message` type, in the **Output Format** dropdown, select **Text**. This option applies postprocessing with the `data_to_text` helper function.
+
+In this example of document ingestion pipeline, the URL component outputs raw HTML to a text splitter, which splits the raw content into chunks for ingestion by a vector database.
+
+![URL component in a data ingestion pipeline](/img/url-component.png)
+
 ## API Request
 
 This component sends HTTP requests to the specified URLs.
