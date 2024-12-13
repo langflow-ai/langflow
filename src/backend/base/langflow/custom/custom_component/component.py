@@ -1174,7 +1174,7 @@ class Component(CustomComponent):
         tool_data = (
             self.tools_metadata
             if hasattr(self, TOOLS_METADATA_INPUT_NAME)
-            else [{"name": tool.name, "description": tool.description} for tool in tools]
+            else [{"name": tool.name, "description": tool.description, "metadata": tool.metadata} for tool in tools]
         )
         try:
             from langflow.io import TableInput

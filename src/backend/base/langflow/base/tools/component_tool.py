@@ -218,6 +218,7 @@ class ComponentToolkit:
                         args_schema=args_schema,
                         handle_tool_error=True,
                         callbacks=callbacks,
+                        metadata={"default_name": formatted_name},
                     )
                 )
             else:
@@ -229,6 +230,7 @@ class ComponentToolkit:
                         args_schema=args_schema,
                         handle_tool_error=True,
                         callbacks=callbacks,
+                        metadata={"default_name": formatted_name},
                     )
                 )
         if len(tools) == 1 and (tool_name or tool_description):
@@ -252,8 +254,9 @@ class ComponentToolkit:
             metadata_dict = self.metadata.to_dict(orient="records")
             for tool, metadata in zip(tools, metadata_dict, strict=False):
                 if isinstance(tool, StructuredTool | BaseTool):
-                    tool.name = metadata.get("name", tool.name)
-                    tool.description = metadata.get("description", tool.description)
+                    if metadata.get("default_name")== tool.metadata.get("default_name"):
+                        tool.name = metadata.get("name", tool.name)
+                        tool.description = metadata.get("description", tool.description)
                 else:
                     msg = f"Expected a StructuredTool or BaseTool, got {type(tool)}"
                     raise TypeError(msg)
