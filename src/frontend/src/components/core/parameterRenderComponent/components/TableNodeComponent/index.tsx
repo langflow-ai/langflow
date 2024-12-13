@@ -103,20 +103,22 @@ export default function TableNodeComponent({
   function updateComponent() {
     setAllRows();
   }
-  const editable = componentColumns.map((column) => {
-    const isCustomEdit =
-      column.formatter &&
-      ((column.formatter === "text" && column.edit_mode !== "inline") ||
-        column.formatter === "json");
-    return {
-      field: column.name,
-      onUpdate: updateComponent,
-      editableCell: isCustomEdit ? false : true,
-    };
-  }).filter(
-    (col) =>
-      columns?.find((c) => c.name === col.field)?.disable_edit !== true,
-  );
+  const editable = componentColumns
+    .map((column) => {
+      const isCustomEdit =
+        column.formatter &&
+        ((column.formatter === "text" && column.edit_mode !== "inline") ||
+          column.formatter === "json");
+      return {
+        field: column.name,
+        onUpdate: updateComponent,
+        editableCell: isCustomEdit ? false : true,
+      };
+    })
+    .filter(
+      (col) =>
+        columns?.find((c) => c.name === col.field)?.disable_edit !== true,
+    );
 
   return (
     <div
