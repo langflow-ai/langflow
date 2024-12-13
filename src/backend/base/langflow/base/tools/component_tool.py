@@ -255,6 +255,7 @@ class ComponentToolkit:
             for tool, metadata in zip(tools, metadata_dict, strict=False):
                 if isinstance(tool, StructuredTool | BaseTool):
                     if metadata.get("tags") == tool.tags:
+                        # adding a saftey check to avoid updating the tool metadata if the tags are not same
                         tool.name = metadata.get("name", tool.name)
                         tool.description = metadata.get("description", tool.description)
                 else:
