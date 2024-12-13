@@ -19,7 +19,7 @@ class Properties(BaseModel):
     source: Source = Field(default_factory=Source)
     icon: str | None = None
     allow_markdown: bool = False
-    good_answer: bool | None = None
+    positive_feedback: bool | None = None
     state: Literal["partial", "complete"] = "complete"
     targets: list = []
 
