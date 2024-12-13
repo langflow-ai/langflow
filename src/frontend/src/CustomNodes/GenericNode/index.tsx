@@ -19,17 +19,14 @@ import { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
 import { checkHasToolMode } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
-import { getNodeInputColors } from "../helpers/get-node-input-colors";
-import { getNodeInputColorsName } from "../helpers/get-node-input-colors-name";
-import { getNodeOutputColors } from "../helpers/get-node-output-colors";
-import { getNodeOutputColorsName } from "../helpers/get-node-output-colors-name";
+
 import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
 import useCheckCodeValidity from "../hooks/use-check-code-validity";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
 import sortFields from "../utils/sort-fields";
 import NodeDescription from "./components/NodeDescription";
 import NodeName from "./components/NodeName";
-import NodeOutputField from "./components/NodeOutputfield";
+import { OutputParameter } from "./components/NodeOutputParameter";
 import NodeStatus from "./components/NodeStatus";
 import RenderInputParameters from "./components/RenderInputParameters";
 import { NodeIcon } from "./components/nodeIcon";
@@ -168,61 +165,23 @@ export default function GenericNode({
 
   const [openShowMoreOptions, setOpenShowMoreOptions] = useState(false);
 
-  const renderOutputParameter = (
-    output: OutputFieldType,
-    idx: number,
-    lastOutput: boolean,
-  ) => {
-    const id = useMemo(
-      () => ({
-        output_types: [output.selected ?? output.types[0]],
-        id: data.id,
-        dataType: data.type,
-        name: output.name,
-      }),
-      [output.selected, output.types, data.id, data.type, output.name],
-    );
-
-    const colors = useMemo(
-      () => getNodeOutputColors(output, data, types),
-      [output, data.type, data.id, types],
-    );
-
-    const colorNames = useMemo(
-      () => getNodeOutputColorsName(output, data, types),
-      [output, data.type, data.id, types],
-    );
-
-    const key = useMemo(() => {
-      return (
-        JSON.stringify({
-          output_types: output.types,
-          name: output.name,
-          id: data.id,
-          dataType: data.type,
-        }) + idx
-      );
-    }, [output.types, output.name, data.id, data.type, idx]);
-
-    return (
-      <NodeOutputField
-        index={idx}
-        lastOutput={lastOutput}
-        selected={selected}
-        key={key}
+  const renderOutputs = (outputs) => {
+    return outputs.map((output, idx) => (
+      <OutputParameter
+        key={output.name + idx}
+        output={output}
+        idx={
+          data.node!.outputs?.findIndex((out) => out.name === output.name) ??
+          idx
+        }
+        lastOutput={idx === outputs.length - 1}
         data={data}
-        colors={colors}
-        outputProxy={output.proxy}
-        title={output.display_name ?? output.name}
-        tooltipTitle={output.selected ?? output.types[0]}
-        id={id}
-        type={output.types.join("|")}
+        types={types}
+        selected={selected}
         showNode={showNode}
-        outputName={output.name}
-        colorName={colorNames}
         isToolMode={isToolMode}
       />
-    );
+    ));
   };
 
   useEffect(() => {
@@ -371,13 +330,7 @@ export default function GenericNode({
                   />
                   {shownOutputs &&
                     shownOutputs.length > 0 &&
-                    renderOutputParameter(
-                      shownOutputs[0],
-                      data.node!.outputs?.findIndex(
-                        (out) => out.name === shownOutputs[0].name,
-                      ) ?? 0,
-                      false,
-                    )}
+                    renderOutputs(shownOutputs)}
                 </>
               )}
             </div>
@@ -427,29 +380,44 @@ export default function GenericNode({
               </div>
               {!showHiddenOutputs &&
                 shownOutputs &&
-                shownOutputs.map((output, idx) =>
-                  renderOutputParameter(
-                    output,
-                    data.node!.outputs?.findIndex(
-                      (out) => out.name === output.name,
-                    ) ?? idx,
-                    idx === shownOutputs.length - 1,
-                  ),
-                )}
+                shownOutputs.map((output, idx) => (
+                  <OutputParameter
+                    key={`shown-${output.name}-${idx}`}
+                    output={output}
+                    idx={
+                      data.node!.outputs?.findIndex(
+                        (out) => out.name === output.name,
+                      ) ?? idx
+                    }
+                    lastOutput={idx === shownOutputs.length - 1}
+                    data={data}
+                    types={types}
+                    selected={selected}
+                    showNode={showNode}
+                    isToolMode={isToolMode}
+                  />
+                ))}
               <div
                 className={cn(showHiddenOutputs ? "" : "h-0 overflow-hidden")}
               >
                 <div className="block">
-                  {data.node!.outputs &&
-                    data.node!.outputs.map((output, idx) => {
-                      return renderOutputParameter(
-                        output,
+                  {data.node!.outputs?.map((output, idx) => (
+                    <OutputParameter
+                      key={`hidden-${output.name}-${idx}`}
+                      output={output}
+                      idx={
                         data.node!.outputs?.findIndex(
                           (out) => out.name === output.name,
-                        ) ?? idx,
-                        idx === (data.node!.outputs?.length ?? 0) - 1,
-                      );
-                    })}
+                        ) ?? idx
+                      }
+                      lastOutput={idx === (data.node!.outputs?.length ?? 0) - 1}
+                      data={data}
+                      types={types}
+                      selected={selected}
+                      showNode={showNode}
+                      isToolMode={isToolMode}
+                    />
+                  ))}
                 </div>
               </div>
               {hiddenOutputs && hiddenOutputs.length > 0 && (
