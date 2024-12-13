@@ -80,11 +80,11 @@ jobs:
         id: set-matrix
         run: |
           # Start with input suites if provided, otherwise empty array
-          echo "Changes filter output: ${{ steps.filter.outputs }}"
+          echo "Changes filter output: $(echo '${{ toJSON(steps.filter.outputs) }}')"
           SUITES='${{ inputs.suites }}'
           echo "Initial suites: $SUITES"
           TEST_GREP=""
-
+          echo "Inputs Release: ${{ inputs.release }}"
           RELEASE="${{ inputs.release || 'false' }}"
           echo "Release build: $RELEASE"
 
