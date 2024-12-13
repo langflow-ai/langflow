@@ -375,20 +375,24 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             is_new_collection = field_value == "+ Create new collection"
 
             # Set the advanced and required fields based on the collection choice
-            build_config["embedding_choice"].update({
-                "advanced": not is_new_collection,
-                "value": "Embedding Model" if is_new_collection else build_config["embedding_choice"].get("value"),
-            })
+            build_config["embedding_choice"].update(
+                {
+                    "advanced": not is_new_collection,
+                    "value": "Embedding Model" if is_new_collection else build_config["embedding_choice"].get("value"),
+                }
+            )
 
             # Set the advanced field for the embedding model
             build_config["embedding_model"]["advanced"] = not is_new_collection
 
             # Set the advanced and required fields for the new collection name
-            build_config["collection_name_new"].update({
-                "advanced": not is_new_collection,
-                "required": is_new_collection,
-                "value": "" if not is_new_collection else build_config["collection_name_new"].get("value"),
-            })
+            build_config["collection_name_new"].update(
+                {
+                    "advanced": not is_new_collection,
+                    "required": is_new_collection,
+                    "value": "" if not is_new_collection else build_config["collection_name_new"].get("value"),
+                }
+            )
 
         # Get the collection options for the selected collection
         collection_options = self.get_collection_options()
@@ -642,7 +646,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 z_01_model_parameters=getattr(self, "z_01_model_parameters", None) or None,
                 z_02_api_key_name=getattr(self, "z_02_api_key_name", None) or None,
                 z_03_provider_api_key=getattr(self, "z_03_provider_api_key", None) or None,
-                z_04_authentication=getattr(self, "z_04_authentication", {}) or {}
+                z_04_authentication=getattr(self, "z_04_authentication", {}) or {},
             )
 
             # Set the embedding dictionary
