@@ -62,6 +62,7 @@ class DatabaseService(Service):
         else:
             # Construct the path using the langflow directory.
             self.alembic_log_path = Path(langflow_dir) / alembic_log_file
+        self._logged_pragma = False
 
     def reload_engine(self) -> None:
         self._sanitize_database_url()
@@ -122,7 +123,9 @@ class DatabaseService(Service):
             pragmas_list = []
             for key, val in pragmas.items():
                 pragmas_list.append(f"PRAGMA {key} = {val}")
-            logger.debug(f"sqlite connection, setting pragmas: {pragmas_list}")
+            if not self._logged_pragma:
+                logger.debug(f"sqlite connection, setting pragmas: {pragmas_list}")
+                self._logged_pragma = True
             if pragmas_list:
                 cursor = dbapi_connection.cursor()
                 try:
