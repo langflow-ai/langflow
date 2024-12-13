@@ -50,6 +50,9 @@ class CustomComponent(BaseComponent):
         _tree (Optional[dict]): The code tree of the custom component.
     """
 
+    # True constants that should be shared (using ClassVar)
+    _code_class_base_inheritance: ClassVar[str] = "CustomComponent"
+    function_entrypoint_name: ClassVar[str] = "build"
     name: str | None = None
     """The name of the component used to styles. Defaults to None."""
     display_name: str | None = None
@@ -58,36 +61,6 @@ class CustomComponent(BaseComponent):
     """The description of the component. Defaults to None."""
     icon: str | None = None
     """The icon of the component. It should be an emoji. Defaults to None."""
-    is_input: bool | None = None
-    """The input state of the component. Defaults to None.
-    If True, the component must have a field named 'input_value'."""
-    add_tool_output: bool | None = False
-    """Indicates whether the component will be treated as a tool. Defaults to False."""
-    is_output: bool | None = None
-    """The output state of the component. Defaults to None.
-    If True, the component must have a field named 'input_value'."""
-    field_config: dict = {}
-    """The field configuration of the component. Defaults to an empty dictionary."""
-    field_order: list[str] | None = None
-    """The field order of the component. Defaults to an empty list."""
-    frozen: bool | None = False
-    """The default frozen state of the component. Defaults to False."""
-    build_parameters: dict | None = None
-    """The build parameters of the component. Defaults to None."""
-    _vertex: Vertex | None = None
-    """The edge target parameter of the component. Defaults to None."""
-    _code_class_base_inheritance: ClassVar[str] = "CustomComponent"
-    function_entrypoint_name: ClassVar[str] = "build"
-    function: Callable | None = None
-    repr_value: Any | None = ""
-    status: Any | None = None
-    """The status of the component. This is displayed on the frontend. Defaults to None."""
-    _flows_data: list[Data] | None = None
-    _outputs: list[OutputValue] = []
-    _logs: list[Log] = []
-    _output_logs: dict[str, list[Log] | Log] = {}
-    _tracing_service: TracingService | None = None
-    _tree: dict | None = None
 
     def __init__(self, **data) -> None:
         """Initializes a new instance of the CustomComponent class.
@@ -95,10 +68,33 @@ class CustomComponent(BaseComponent):
         Args:
             **data: Additional keyword arguments to initialize the custom component.
         """
-        self.cache: TTLCache = TTLCache(maxsize=1024, ttl=60)
+        # Initialize instance-specific attributes first
+        self.is_input: bool | None = None
+        self.is_output: bool | None = None
+        self.add_tool_output: bool = False
+        self.field_config: dict = {}
+        self.field_order: list[str] | None = None
+        self.frozen: bool = False
+        self.build_parameters: dict | None = None
+        self._vertex: Vertex | None = None
+        self.function: Callable | None = None
+        self.repr_value: Any = ""
+        self.status: Any | None = None
+
+        # Initialize collections with empty defaults
+        self._flows_data: list[Data] | None = None
+        self._outputs: list[OutputValue] = []
         self._logs: list[Log] = []
+        self._output_logs: dict[str, list[Log] | Log] = {}
+        self._tracing_service: TracingService | None = None
+        self._tree: dict | None = None
+
+        # Initialize additional instance state
+        self.cache: TTLCache = TTLCache(maxsize=1024, ttl=60)
         self._results: dict = {}
         self._artifacts: dict = {}
+
+        # Call parent's init after setting up our attributes
         super().__init__(**data)
 
     def set_attributes(self, parameters: dict) -> None:
