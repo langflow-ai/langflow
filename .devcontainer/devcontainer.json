@@ -1,25 +1,14 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/universal
 {
   "name": "Langflow Dev Container",
   "build": {
     "context": "..",
     "dockerfile": "Dockerfile"
   },
-  // Features to add to the dev container. More info: https://containers.dev/features.
   "features": {
     "ghcr.io/devcontainers/features/node": {},
     "ghcr.io/dhoeric/features/hadolint:1": {}
   },
-
-  // Use 'forwardPorts' to make a list of ports inside the container available locally.
-  // "forwardPorts": [],
-
-  // Use 'postCreateCommand' to run commands after the container is created.
-  "postCreateCommand": "make install_frontend && make install_backend",
-  "postStartCommand": "make init",
-
-  // Configure tool-specific properties.
+  "postCreateCommand": "sudo chown -R langflow .venv .mypy_cache src/frontend/node_modules src/frontend/build src/backend/base/langflow/frontend && make install_frontend && make install_backend",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -44,8 +33,48 @@
       }
     }
   },
-
-  // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-  // "remoteUser": "root"
-  "remoteUser": "vscode"
+  "remoteUser": "langflow",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "workspaceFolder": "/workspace",
+  "forwardPorts": [7860, 3000],
+  "containerEnv": {
+    "FRONTEND_START_FLAGS": "--host"
+  },
+  "mounts": [
+    {
+      "source": "${localWorkspaceFolderBasename}-frontend-node_modules",
+      "target": "/workspace/src/frontend/node_modules",
+      "type": "volume"
+    },
+    {
+      "source": "${localWorkspaceFolderBasename}-frontend-build",
+      "target": "/workspace/src/frontend/build",
+      "type": "volume"
+    },
+    {
+      "source": "${localWorkspaceFolderBasename}-backend-frontend",
+      "target": "/workspace/src/backend/base/langflow/frontend",
+      "type": "volume"
+    },
+    {
+      "source": "${localWorkspaceFolderBasename}-venv",
+      "target": "/workspace/.venv",
+      "type": "volume"
+    },
+    {
+      "source": "${localWorkspaceFolderBasename}-mypy-cache",
+      "target": "/workspace/.mypy_cache",
+      "type": "volume"
+    },
+    {
+      "source": "${localWorkspaceFolderBasename}-dist",
+      "target": "/workspace/dist",
+      "type": "volume"
+    },
+    {
+      "source": "${localWorkspaceFolderBasename}-backend-dist",
+      "target": "/workspace/src/backend/base/dist",
+      "type": "volume"
+    }
+  ]
 }
