@@ -183,13 +183,11 @@ export default function GenericNode({
       [output.selected, output.types, data.id, data.type, output.name],
     );
 
-    // Memoize colors calculations
     const colors = useMemo(
       () => getNodeOutputColors(output, data, types),
       [output, data.type, data.id, types],
     );
 
-    // Memoize colorNames calculations
     const colorNames = useMemo(
       () => getNodeOutputColorsName(output, data, types),
       [output, data.type, data.id, types],

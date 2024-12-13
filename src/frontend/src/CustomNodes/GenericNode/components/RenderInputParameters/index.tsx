@@ -14,7 +14,6 @@ const RenderInputParameters = ({
   shownOutputs,
   showHiddenOutputs,
 }) => {
-  // Memoize the filtered and sorted template fields
   const templateFields = useMemo(() => {
     return Object.keys(data.node?.template || {})
       .filter((templateField) => templateField.charAt(0) !== "_")
@@ -29,7 +28,6 @@ const RenderInputParameters = ({
       );
   }, [data.node?.template, data.node?.field_order, isToolMode]);
 
-  // Memoize the colors calculations
   const memoizedColors = useMemo(() => {
     const colorMap = new Map();
 
@@ -54,7 +52,6 @@ const RenderInputParameters = ({
     return colorMap;
   }, [templateFields, types, data.node?.template]);
 
-  // Memoize the key generation
   const memoizedKeys = useMemo(() => {
     const keyMap = new Map();
 

@@ -59,10 +59,7 @@ export default function NodeDescription({
     setNodeDescription(description);
   }, [description]);
 
-  // First, memoize the Markdown component
   const MemoizedMarkdown = memo(Markdown);
-
-  // In your NodeDescription component, memoize the description rendering:
   const renderedDescription = useMemo(
     () =>
       description === "" || !description ? (

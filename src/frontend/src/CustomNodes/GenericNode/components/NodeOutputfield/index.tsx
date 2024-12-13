@@ -119,7 +119,6 @@ export default function NodeOutputField({
     },
   );
 
-  // Then, memoize the Handle instance with useMemo
   const Handle = useMemo(
     () => (
       <MemoizedHandleRenderComponent
