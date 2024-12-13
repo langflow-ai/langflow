@@ -6,27 +6,32 @@ TOOLS_METADATA_INPUT_NAME = "tools_metadata"
 TOOL_TABLE_SCHEMA = [
     {
         "name": "name",
-        "display_name": "Name",
+        "display_name": "Tool Name",
         "type": "str",
-        "description": "Specify the name of the output field.",
+        "description": "Specify the name of the tool.",
         "sortable": False,
         "filterable": False,
         "edit_mode": EditMode.INLINE,
     },
     {
         "name": "description",
-        "display_name": "Description",
+        "display_name": "Tool Description",
         "type": "str",
-        "description": "Describe the purpose of the output field.",
+        "description": "Describe the purpose of the tool.",
         "sortable": False,
         "filterable": False,
         "edit_mode": EditMode.INLINE,
     },
     {
         "name": "tags",
-        "display_name": "Tags",
+        "display_name": "Tool Identifiers",
         "type": "str",
-        "description": "Tags to be added to the tool, to identify the tool, when updatinf the tool metadata",
-        "editable": False,
+        "description": (
+            "These are the default identifiers for the tools and cannot be changed. "
+            "Tool Name and Tool Description are the only editable fields."
+        ),
+        "disable_edit": False,
     },
 ]
+
+TOOLS_METADATA_INFO = "Use the table to configure the tools."
