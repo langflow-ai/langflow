@@ -145,7 +145,7 @@ jobs:
     needs: create-nightly-tag
     uses: ./.github/workflows/python_test.yml
     with:
-      python-versions: '["3.10", "3.11", "3.12"]'
+      python-versions: '["3.10", "3.11", "3.12", "3.13"]'
 
   # Not making nightly builds dependent on integration test success
   # due to inherent flakiness of 3rd party integrations
