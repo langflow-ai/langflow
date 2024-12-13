@@ -11,7 +11,7 @@ from uuid import UUID
 
 import nanoid
 import yaml
-from langchain_core.tools import StructuredTool
+from langchain_core.tools import BaseTool, StructuredTool
 from pydantic import BaseModel, ValidationError
 
 from langflow.base.tools.constants import (
@@ -23,7 +23,7 @@ from langflow.base.tools.constants import (
 )
 from langflow.custom.tree_visitor import RequiredInputsVisitor
 from langflow.exceptions.component import StreamingError
-from langflow.field_typing import Tool  # noqa: TC001 Needed by _add_toolkit_output
+from langflow.field_typing import Tool
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
 from langflow.memory import astore_message, aupdate_messages, delete_message
@@ -572,7 +572,8 @@ class Component(CustomComponent):
         # if value is a list of components, we need to process each component
         # Note this update make sure it is not a list str | int | float | bool | type(None)
         if isinstance(value, list) and not any(
-            isinstance(val, str | int | float | bool | type(None) | Message | Data | StructuredTool) for val in value
+            isinstance(val, str | int | float | bool | type(None) | Message | Data | Tool | BaseTool | StructuredTool)
+            for val in value
         ):
             for val in value:
                 self._process_connection_or_parameter(key, val)

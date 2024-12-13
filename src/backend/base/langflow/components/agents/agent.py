@@ -83,6 +83,7 @@ class AgentComponent(ToolCallingAgentComponent):
         if not self.tools:
             msg = "Tools are required to run the agent."
             raise ValueError(msg)
+
         self.set(
             llm=llm_model,
             tools=self.tools,
