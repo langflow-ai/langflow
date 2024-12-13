@@ -3,10 +3,9 @@ title: Processing
 slug: /components-processing
 ---
 
-Processing components
+Processing components 
 
 ## Use a processing component in a flow
-
 
 ## Combine Text
 
