@@ -62,6 +62,10 @@ class DatabaseService(Service):
         else:
             # Construct the path using the langflow directory.
             self.alembic_log_path = Path(langflow_dir) / alembic_log_file
+
+        # Ensure the directory and file for the alembic log file exists
+        self.alembic_log_path.parent.mkdir(parents=True, exist_ok=True)
+        self.alembic_log_path.touch(exist_ok=True)
         self._logged_pragma = False
 
     def reload_engine(self) -> None:
