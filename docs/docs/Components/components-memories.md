@@ -6,9 +6,7 @@ Chat memory components store and retrieve chat messages by `session_id`.
 
 This component creates an `AstraDBChatMessageHistory` instance, which allows for storing and retrieving chat messages using Astra DB, a cloud-native database service.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name             | Type          | Description                                                           |
 |------------------|---------------|-----------------------------------------------------------------------|
@@ -18,7 +16,7 @@ This component creates an `AstraDBChatMessageHistory` instance, which allows for
 | namespace        | String        | Optional namespace within Astra DB for the collection.                |
 | session_id       | MessageText   | Chat session ID. Uses current session ID if not provided.             |
 
-#### Outputs
+### Outputs
 
 | Name            | Type                    | Description                                               |
 |-----------------|-------------------------|-----------------------------------------------------------|
@@ -28,9 +26,7 @@ This component creates an `AstraDBChatMessageHistory` instance, which allows for
 
 This component creates a `CassandraChatMessageHistory` instance, enabling storage and retrieval of chat messages using Apache Cassandra or DataStax Astra DB.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name           | Type          | Description                                                                   |
 |----------------|---------------|-------------------------------------------------------------------------------|
@@ -42,7 +38,7 @@ This component creates a `CassandraChatMessageHistory` instance, enabling storag
 | session_id     | MessageText   | Unique identifier for the chat session. Optional.                             |
 | cluster_kwargs | Dictionary    | Additional keyword arguments for Cassandra cluster configuration. Optional.   |
 
-#### Outputs
+### Outputs
 
 | Name            | Type                    | Description                                                  |
 |-----------------|-------------------------|--------------------------------------------------------------|
@@ -52,9 +48,7 @@ This component creates a `CassandraChatMessageHistory` instance, enabling storag
 
 This component creates a `ZepChatMessageHistory` instance, enabling storage and retrieval of chat messages using Zep, a memory server for Large Language Models (LLMs).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name          | Type          | Description                                               |
 |---------------|---------------|-----------------------------------------------------------|
@@ -63,7 +57,7 @@ This component creates a `ZepChatMessageHistory` instance, enabling storage and 
 | api_base_path | Dropdown      | API version to use. Options: "api/v1" or "api/v2".        |
 | session_id    | MessageText   | Unique identifier for the chat session. Optional.         |
 
-#### Outputs
+### Outputs
 
 | Name            | Type                    | Description                                           |
 |-----------------|-------------------------|-------------------------------------------------------|
