@@ -22,4 +22,10 @@ TOOL_TABLE_SCHEMA = [
         "filterable": False,
         "edit_mode": EditMode.INLINE,
     },
+    {
+        "name": "metadata",
+        "display_name": "Metadata",
+        "type": "dict",
+        "description": "Default Metadata not to be edited",
+    },
 ]
