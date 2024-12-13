@@ -18,6 +18,7 @@ from langflow.base.tools.constants import (
     TOOL_OUTPUT_DISPLAY_NAME,
     TOOL_OUTPUT_NAME,
     TOOL_TABLE_SCHEMA,
+    TOOLS_METADATA_INFO,
     TOOLS_METADATA_INPUT_NAME,
 )
 from langflow.custom.tree_visitor import RequiredInputsVisitor
@@ -1184,7 +1185,7 @@ class Component(CustomComponent):
 
         return TableInput(
             name=TOOLS_METADATA_INPUT_NAME,
-            info="Use the table to configure the tools.",
+            info=TOOLS_METADATA_INFO,
             display_name="Toolset configuration",
             real_time_refresh=True,
             table_schema=TOOL_TABLE_SCHEMA,
@@ -1201,5 +1202,5 @@ class Component(CustomComponent):
                 block_select=True,
                 hide_options=True,
                 field_parsers={"name": FieldParserType.SNAKE_CASE},
-            ),
+            )
         )
