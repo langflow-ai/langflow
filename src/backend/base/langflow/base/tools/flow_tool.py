@@ -105,7 +105,7 @@ class FlowTool(BaseTool):
         if len(args) == len(inputs):
             return [
                 {"components": components, "type": input_.vertex_type.lower(), "input_value": value}
-                for input_, value in zip(inputs, args)
+                for input_, value in zip(inputs, args, strict=False)
             ]
 
         return [
