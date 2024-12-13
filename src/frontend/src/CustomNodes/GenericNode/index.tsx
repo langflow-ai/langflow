@@ -17,10 +17,7 @@ import { useShortcutsStore } from "../../stores/shortcuts";
 import { useTypesStore } from "../../stores/typesStore";
 import { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
-import {
-  checkHasToolMode,
-  scapedJSONStringfy,
-} from "../../utils/reactflowUtils";
+import { checkHasToolMode } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
 import { getNodeInputColors } from "../helpers/get-node-input-colors";
 import { getNodeInputColorsName } from "../helpers/get-node-input-colors-name";
@@ -29,17 +26,16 @@ import { getNodeOutputColorsName } from "../helpers/get-node-output-colors-name"
 import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
 import useCheckCodeValidity from "../hooks/use-check-code-validity";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
-import getFieldTitle from "../utils/get-field-title";
 import sortFields from "../utils/sort-fields";
 import NodeDescription from "./components/NodeDescription";
-import NodeInputField from "./components/NodeInputField";
 import NodeName from "./components/NodeName";
 import NodeOutputField from "./components/NodeOutputfield";
 import NodeStatus from "./components/NodeStatus";
+import RenderInputParameters from "./components/RenderInputParameters";
 import { NodeIcon } from "./components/nodeIcon";
 import { useBuildStatus } from "./hooks/use-get-build-status";
 
-const sortToolModeFields = (
+export const sortToolModeFields = (
   a: string,
   b: string,
   template: any,
@@ -177,34 +173,55 @@ export default function GenericNode({
     idx: number,
     lastOutput: boolean,
   ) => {
+    const id = useMemo(
+      () => ({
+        output_types: [output.selected ?? output.types[0]],
+        id: data.id,
+        dataType: data.type,
+        name: output.name,
+      }),
+      [output.selected, output.types, data.id, data.type, output.name],
+    );
+
+    // Memoize colors calculations
+    const colors = useMemo(
+      () => getNodeOutputColors(output, data, types),
+      [output, data.type, data.id, types],
+    );
+
+    // Memoize colorNames calculations
+    const colorNames = useMemo(
+      () => getNodeOutputColorsName(output, data, types),
+      [output, data.type, data.id, types],
+    );
+
+    const key = useMemo(() => {
+      return (
+        JSON.stringify({
+          output_types: output.types,
+          name: output.name,
+          id: data.id,
+          dataType: data.type,
+        }) + idx
+      );
+    }, [output.types, output.name, data.id, data.type, idx]);
+
     return (
       <NodeOutputField
         index={idx}
         lastOutput={lastOutput}
         selected={selected}
-        key={
-          scapedJSONStringfy({
-            output_types: output.types,
-            name: output.name,
-            id: data.id,
-            dataType: data.type,
-          }) + idx
-        }
+        key={key}
         data={data}
-        colors={getNodeOutputColors(output, data, types)}
+        colors={colors}
         outputProxy={output.proxy}
         title={output.display_name ?? output.name}
         tooltipTitle={output.selected ?? output.types[0]}
-        id={{
-          output_types: [output.selected ?? output.types[0]],
-          id: data.id,
-          dataType: data.type,
-          name: output.name,
-        }}
+        id={id}
         type={output.types.join("|")}
         showNode={showNode}
         outputName={output.name}
-        colorName={getNodeOutputColorsName(output, data, types)}
+        colorName={colorNames}
         isToolMode={isToolMode}
       />
     );
@@ -259,72 +276,6 @@ export default function GenericNode({
   const isToolMode =
     data.node?.outputs?.some((output) => output.name === "component_as_tool") ??
     false;
-
-  const renderInputParameter = Object.keys(data.node!.template)
-    .filter((templateField) => templateField.charAt(0) !== "_")
-    .sort((a, b) =>
-      sortToolModeFields(
-        a,
-        b,
-        data.node!.template,
-        data.node?.field_order ?? [],
-        isToolMode,
-      ),
-    )
-    .map(
-      (templateField: string, idx) =>
-        data.node!.template[templateField]?.show &&
-        !data.node!.template[templateField]?.advanced && (
-          <NodeInputField
-            lastInput={
-              idx ===
-                Object.keys(data.node!.template).filter(
-                  (templateField) => templateField.charAt(0) !== "_",
-                ).length -
-                  1 && !(shownOutputs.length > 0 || showHiddenOutputs)
-            }
-            key={scapedJSONStringfy({
-              inputTypes: data.node!.template[templateField].input_types,
-              type: data.node!.template[templateField].type,
-              id: data.id,
-              fieldName: templateField,
-              proxy: data.node!.template[templateField].proxy,
-            })}
-            data={data}
-            colors={getNodeInputColors(
-              data.node?.template[templateField].input_types,
-              data.node?.template[templateField].type,
-              types,
-            )}
-            title={getFieldTitle(data.node?.template!, templateField)}
-            info={data.node?.template[templateField].info!}
-            name={templateField}
-            tooltipTitle={
-              data.node?.template[templateField].input_types?.join("\n") ??
-              data.node?.template[templateField].type
-            }
-            required={data.node!.template[templateField].required}
-            id={{
-              inputTypes: data.node!.template[templateField].input_types,
-              type: data.node!.template[templateField].type,
-              id: data.id,
-              fieldName: templateField,
-            }}
-            type={data.node?.template[templateField].type}
-            optionalHandle={data.node?.template[templateField].input_types}
-            proxy={data.node?.template[templateField].proxy}
-            showNode={showNode}
-            colorName={getNodeInputColorsName(
-              data.node?.template[templateField].input_types,
-              data.node?.template[templateField].type,
-              types,
-            )}
-            isToolMode={
-              isToolMode && data.node!.template[templateField].tool_mode
-            }
-          />
-        ),
-    );
 
   const buildStatus = useBuildStatus(data, data.id);
   const hasOutputs = data.node?.outputs && data.node?.outputs.length > 0;
@@ -412,7 +363,14 @@ export default function GenericNode({
             <div>
               {!showNode && (
                 <>
-                  {renderInputParameter}
+                  <RenderInputParameters
+                    data={data}
+                    types={types}
+                    isToolMode={isToolMode}
+                    showNode={showNode}
+                    shownOutputs={shownOutputs}
+                    showHiddenOutputs={showHiddenOutputs}
+                  />
                   {shownOutputs &&
                     shownOutputs.length > 0 &&
                     renderOutputParameter(
@@ -452,10 +410,15 @@ export default function GenericNode({
         </div>
         {showNode && (
           <div className="relative">
-            {/* increase height!! */}
-
             <>
-              {renderInputParameter}
+              <RenderInputParameters
+                data={data}
+                types={types}
+                isToolMode={isToolMode}
+                showNode={showNode}
+                shownOutputs={shownOutputs}
+                showHiddenOutputs={showHiddenOutputs}
+              />
               <div
                 className={classNames(
                   Object.keys(data.node!.template).length < 1 ? "hidden" : "",
