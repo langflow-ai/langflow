@@ -7,12 +7,12 @@ from langflow.components.models.azure_openai import AzureChatOpenAIComponent
 from langflow.components.models.groq import GroqModel
 from langflow.components.models.nvidia import NVIDIAModelComponent
 from langflow.components.models.openai import OpenAIModelComponent
-from langflow.inputs.inputs import SecretStrInput
+from langflow.inputs.inputs import InputTypes, SecretStrInput
 
 
 class ModelProvidersDict(TypedDict):
-    fields: list[str]
-    inputs: list[str]
+    fields: dict
+    inputs: list[InputTypes]
     prefix: str
     component_class: LCModelComponent
 
