@@ -11,6 +11,7 @@ from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.langchain_utilities.tool_calling import (
     ToolCallingAgentComponent,
 )
+from langflow.custom.utils import update_component_build_config
 from langflow.io import BoolInput, DropdownInput, MultilineInput, Output
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
@@ -136,7 +137,9 @@ class AgentComponent(ToolCallingAgentComponent):
                 value.input_types = []
         return build_config
 
-    def update_build_config(self, build_config: dotdict, field_value: str, field_name: str | None = None) -> dotdict:
+    async def update_build_config(
+        self, build_config: dotdict, field_value: str, field_name: str | None = None
+    ) -> dotdict:
         # Iterate over all providers in the MODEL_PROVIDERS_DICT
         # Existing logic for updating build_config
         if field_name == "agent_llm":
@@ -145,7 +148,9 @@ class AgentComponent(ToolCallingAgentComponent):
                 component_class = provider_info.get("component_class")
                 if component_class and hasattr(component_class, "update_build_config"):
                     # Call the component class's update_build_config method
-                    build_config = component_class.update_build_config(build_config, field_value, field_name)
+                    build_config = await update_component_build_config(
+                        component_class, build_config, field_value, field_name
+                    )
 
             provider_configs: dict[str, tuple[dict, list[dict]]] = {
                 provider: (
@@ -216,6 +221,8 @@ class AgentComponent(ToolCallingAgentComponent):
                     # remove the prefix from the field_name
                     if isinstance(field_name, str) and isinstance(prefix, str):
                         field_name = field_name.replace(prefix, "")
-                    build_config = component_class.update_build_config(build_config, field_value, field_name)
+                    build_config = await update_component_build_config(
+                        component_class, build_config, field_value, field_name
+                    )
 
         return build_config
