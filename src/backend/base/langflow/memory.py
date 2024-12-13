@@ -18,7 +18,7 @@ from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 def _get_variable_query(
     sender: str | None = None,
     sender_name: str | None = None,
-    session_id: str | None = None,
+    session_id: str | UUID | None = None,
     order_by: str | None = "timestamp",
     order: str | None = "DESC",
     flow_id: UUID | None = None,
@@ -44,7 +44,7 @@ def _get_variable_query(
 def get_messages(
     sender: str | None = None,
     sender_name: str | None = None,
-    session_id: str | None = None,
+    session_id: str | UUID | None = None,
     order_by: str | None = "timestamp",
     order: str | None = "DESC",
     flow_id: UUID | None = None,
@@ -73,7 +73,7 @@ def get_messages(
 async def aget_messages(
     sender: str | None = None,
     sender_name: str | None = None,
-    session_id: str | None = None,
+    session_id: str | UUID | None = None,
     order_by: str | None = "timestamp",
     order: str | None = "DESC",
     flow_id: UUID | None = None,
@@ -99,7 +99,7 @@ async def aget_messages(
         return [await Message.create(**d.model_dump()) for d in messages]
 
 
-def add_messages(messages: Message | list[Message], flow_id: str | None = None):
+def add_messages(messages: Message | list[Message], flow_id: str | UUID | None = None):
     """Add a message to the monitor service."""
     if not isinstance(messages, list):
         messages = [messages]
@@ -110,6 +110,10 @@ def add_messages(messages: Message | list[Message], flow_id: str | None = None):
         raise ValueError(msg)
 
     try:
+        # Convert flow_id to UUID if it's a string
+        if isinstance(flow_id, str):
+            flow_id = UUID(flow_id)
+
         messages_models = [MessageTable.from_message(msg, flow_id=flow_id) for msg in messages]
         with session_scope() as session:
             messages_models = add_messagetables(messages_models, session)
@@ -119,7 +123,7 @@ def add_messages(messages: Message | list[Message], flow_id: str | None = None):
         raise
 
 
-async def aadd_messages(messages: Message | list[Message], flow_id: str | None = None):
+async def aadd_messages(messages: Message | list[Message], flow_id: str | UUID | None = None):
     """Add a message to the monitor service."""
     if not isinstance(messages, list):
         messages = [messages]
@@ -146,9 +150,15 @@ def update_messages(messages: Message | list[Message]) -> list[Message]:
     with session_scope() as session:
         updated_messages: list[MessageTable] = []
         for message in messages:
-            msg = session.get(MessageTable, message.id)
+            message_id = UUID(message.id) if isinstance(message.id, str) else message.id
+            msg = session.get(MessageTable, message_id)
             if msg:
-                msg.sqlmodel_update(message.model_dump(exclude_unset=True, exclude_none=True))
+                if hasattr(message, "data"):
+                    msg = msg.sqlmodel_update(message.data)
+                else:
+                    msg = msg.sqlmodel_update(message.model_dump(exclude_unset=True, exclude_none=True))
+                if isinstance(msg.flow_id, str):
+                    msg.flow_id = UUID(msg.flow_id)
                 session.add(msg)
                 session.commit()
                 session.refresh(msg)
@@ -167,7 +177,10 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
         for message in messages:
             msg = await session.get(MessageTable, message.id)
             if msg:
-                msg.sqlmodel_update(message.model_dump(exclude_unset=True, exclude_none=True))
+                if hasattr(message, "data"):
+                    msg = msg.sqlmodel_update(message.data)
+                else:
+                    msg = msg.sqlmodel_update(message.model_dump(exclude_unset=True, exclude_none=True))
                 session.add(msg)
                 await session.commit()
                 await session.refresh(msg)
@@ -262,13 +275,13 @@ async def delete_message(id_: str) -> None:
 
 def store_message(
     message: Message,
-    flow_id: str | None = None,
+    flow_id: str | UUID | None = None,
 ) -> list[Message]:
     """Stores a message in the memory.
 
     Args:
         message (Message): The message to store.
-        flow_id (Optional[str]): The flow ID associated with the message.
+        flow_id (Optional[str | UUID]): The flow ID associated with the message.
             When running from the CustomComponent you can access this using `self.graph.flow_id`.
 
     Returns:
@@ -280,6 +293,10 @@ def store_message(
     if not message:
         logger.warning("No message provided.")
         return []
+
+    # Convert flow_id to UUID if it's a string
+    if isinstance(flow_id, str):
+        flow_id = UUID(flow_id)
 
     required_fields = ["session_id", "sender", "sender_name"]
     missing_fields = [field for field in required_fields if not getattr(message, field)]
@@ -302,7 +319,7 @@ def store_message(
 
 async def astore_message(
     message: Message,
-    flow_id: str | None = None,
+    flow_id: str | UUID | None = None,
 ) -> list[Message]:
     """Stores a message in the memory.
 
@@ -326,6 +343,8 @@ async def astore_message(
         raise ValueError(msg)
     if hasattr(message, "id") and message.id:
         return await aupdate_messages([message])
+    if flow_id and not isinstance(flow_id, UUID):
+        flow_id = UUID(flow_id)
     return await aadd_messages([message], flow_id=flow_id)
 
 

@@ -16,7 +16,7 @@ class LMStudioEmbeddingsComponent(LCEmbeddingsModel):
     icon = "LMStudio"
 
     @override
-    async def aupdate_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
+    async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
         if field_name == "model":
             base_url_dict = build_config.get("base_url", {})
             base_url_load_from_db = base_url_dict.get("load_from_db", False)

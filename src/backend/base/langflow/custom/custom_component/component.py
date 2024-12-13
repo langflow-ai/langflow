@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, get_type_hints
+from uuid import UUID
 
 import nanoid
 import yaml
@@ -1006,7 +1007,12 @@ class Component(CustomComponent):
 
     async def send_message(self, message: Message, id_: str | None = None):
         if (hasattr(self, "graph") and self.graph.session_id) and (message is not None and not message.session_id):
-            message.session_id = self.graph.session_id
+            session_id = (
+                UUID(self.graph.session_id) if isinstance(self.graph.session_id, str) else self.graph.session_id
+            )
+            message.session_id = session_id
+        if hasattr(message, "flow_id") and isinstance(message.flow_id, str):
+            message.flow_id = UUID(message.flow_id)
         stored_message = await self._store_message(message)
 
         self._stored_message_id = stored_message.id
@@ -1031,13 +1037,16 @@ class Component(CustomComponent):
         return stored_message
 
     async def _store_message(self, message: Message) -> Message:
-        flow_id = self.graph.flow_id if hasattr(self, "graph") else None
-        messages = await astore_message(message, flow_id=flow_id)
-        if len(messages) != 1:
+        flow_id: str | None = None
+        if hasattr(self, "graph"):
+            # Convert UUID to str if needed
+            flow_id = str(self.graph.flow_id) if self.graph.flow_id else None
+        stored_messages = await astore_message(message, flow_id=flow_id)
+        if len(stored_messages) != 1:
             msg = "Only one message can be stored at a time."
             raise ValueError(msg)
-
-        return messages[0]
+        stored_message = stored_messages[0]
+        return await Message.create(**stored_message.model_dump())
 
     async def _send_message_event(self, message: Message, id_: str | None = None, category: str | None = None) -> None:
         if hasattr(self, "_event_manager") and self._event_manager:
@@ -1065,10 +1074,20 @@ class Component(CustomComponent):
             and not isinstance(original_message.text, str)
         )
 
-    async def _update_stored_message(self, stored_message: Message) -> Message:
-        message_tables = await aupdate_messages(stored_message)
-        if len(message_tables) != 1:
-            msg = "Only one message can be updated at a time."
+    async def _update_stored_message(self, message: Message) -> Message:
+        """Update the stored message."""
+        if hasattr(self, "_vertex") and self._vertex is not None and hasattr(self._vertex, "graph"):
+            flow_id = (
+                UUID(self._vertex.graph.flow_id)
+                if isinstance(self._vertex.graph.flow_id, str)
+                else self._vertex.graph.flow_id
+            )
+
+            message.flow_id = flow_id
+
+        message_tables = await aupdate_messages(message)
+        if not message_tables:
+            msg = "Failed to update message"
             raise ValueError(msg)
         message_table = message_tables[0]
         return await Message.create(**message_table.model_dump())
