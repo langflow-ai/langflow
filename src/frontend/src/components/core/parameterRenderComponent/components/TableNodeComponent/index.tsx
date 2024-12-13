@@ -113,7 +113,10 @@ export default function TableNodeComponent({
       onUpdate: updateComponent,
       editableCell: isCustomEdit ? false : true,
     };
-  });
+  }).filter(
+    (col) =>
+      columns?.find((c) => c.name === col.field)?.disable_edit !== true,
+  );
 
   return (
     <div
