@@ -521,6 +521,7 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       field: col.name,
       sortable: col.sortable,
       filter: col.filterable,
+      editable: !col.disable_edit,
       valueParser: (params: ValueParserParams) => {
         const { context, newValue, colDef } = params;
         if (
