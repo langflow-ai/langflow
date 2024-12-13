@@ -226,7 +226,7 @@ export default function ChatMessage({
           session_id: chat.session ?? "",
           properties: {
             ...chat.properties,
-            good_answer: evaluation,
+            positive_feedback: evaluation,
           },
         },
         refetch: true,
@@ -773,7 +773,7 @@ export default function ChatMessage({
                   className="h-fit group-hover:visible"
                   isBotMessage={!chat.isSend}
                   onEvaluate={handleEvaluateAnswer}
-                  evaluation={chat.properties?.good_answer}
+                  evaluation={chat.properties?.positive_feedback}
                 />
               </div>
             </div>
