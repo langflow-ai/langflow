@@ -22,7 +22,7 @@ from langflow.settings import DEV
 VALID_LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 # Human-readable
 DEFAULT_LOG_FORMAT = (
-    "<green>{time:YYYY-MM-DD HH:mm:ss}</green> - <level>" "{level: <8}</level> - {module} - <level>{message}</level>"
+    "<green>{time:YYYY-MM-DD HH:mm:ss}</green> - <level>{level: <8}</level> - {module} - <level>{message}</level>"
 )
 
 
@@ -159,6 +159,7 @@ class AsyncFileSink(AsyncSink):
         self._sink = FileSink(
             path=file,
             rotation="10 MB",  # Log rotation based on file size
+            delay=True,
         )
         super().__init__(self.write_async, None, ErrorInterceptor(_defaults.LOGURU_CATCH, -1))
 
@@ -248,8 +249,6 @@ def configure(
             log_file = cache_dir / "langflow.log"
             logger.debug(f"Log file: {log_file}")
         try:
-            log_file.parent.mkdir(parents=True, exist_ok=True)
-
             logger.add(
                 sink=AsyncFileSink(log_file) if async_file else log_file,
                 level=log_level.upper(),
