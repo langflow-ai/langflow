@@ -12,7 +12,7 @@ packages = ["src/backend/langflow"]
 name = "langflow"
 version = "1.1.1"
 description = "A Python package with a built-in web application"
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.10,<3.14"
 license = "MIT"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 readme = "README.md"
@@ -40,7 +40,6 @@ dependencies = [
     "wikipedia==1.4.0",
     "qdrant-client==1.9.2",
     "weaviate-client==4.9.6",
-    "cohere==5.13.3",
     "faiss-cpu==1.9.0.post1",
     "types-cachetools==5.5.0.20240820",
     "pymongo==4.10.1",
@@ -58,7 +57,6 @@ dependencies = [
     "numexpr==2.10.2",
     "qianfan==0.3.5",
     "pgvector==0.3.6",
-    "pyautogen==0.5.0",
     "langchain==0.3.10",
     "elasticsearch==8.16.0",
     "pytube==15.0.0",
@@ -114,6 +112,7 @@ dependencies = [
     "arize-phoenix-otel>=0.6.1",
     "openinference-instrumentation-langchain==0.1.29",
     "crewai~=0.86.0",
+    "ag2>=0.3.2",
 ]
 
 [project.urls]
