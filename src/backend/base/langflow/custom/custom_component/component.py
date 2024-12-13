@@ -1202,5 +1202,5 @@ class Component(CustomComponent):
                 block_select=True,
                 hide_options=True,
                 field_parsers={"name": FieldParserType.SNAKE_CASE},
-            )
+            ),
         )
