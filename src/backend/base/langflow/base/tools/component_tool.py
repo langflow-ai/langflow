@@ -218,7 +218,7 @@ class ComponentToolkit:
                         args_schema=args_schema,
                         handle_tool_error=True,
                         callbacks=callbacks,
-                        metadata={"default_name": formatted_name},
+                        tags=[formatted_name],
                     )
                 )
             else:
@@ -230,7 +230,7 @@ class ComponentToolkit:
                         args_schema=args_schema,
                         handle_tool_error=True,
                         callbacks=callbacks,
-                        metadata={"default_name": formatted_name},
+                        tags=[formatted_name],
                     )
                 )
         if len(tools) == 1 and (tool_name or tool_description):
@@ -254,7 +254,7 @@ class ComponentToolkit:
             metadata_dict = self.metadata.to_dict(orient="records")
             for tool, metadata in zip(tools, metadata_dict, strict=False):
                 if isinstance(tool, StructuredTool | BaseTool):
-                    if metadata.get("default_name")== tool.metadata.get("default_name"):
+                    if metadata.get("tags") == tool.tags:
                         tool.name = metadata.get("name", tool.name)
                         tool.description = metadata.get("description", tool.description)
                 else:
