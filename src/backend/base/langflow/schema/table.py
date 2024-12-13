@@ -27,6 +27,7 @@ class Column(BaseModel):
     formatter: FormatterType | str | None = Field(default=None, alias="type")
     description: str | None = None
     default: str | None = None
+    disable_edit: bool = Field(default=False)
     edit_mode: EditMode | None = Field(default=EditMode.MODAL)
 
     @model_validator(mode="after")
