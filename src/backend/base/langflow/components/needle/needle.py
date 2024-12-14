@@ -1,90 +1,94 @@
-from typing import Any
+from typing import Any, Dict, List
+
+from pydantic.v1 import SecretStr
 
 from langchain.chains import ConversationalRetrievalChain
 from langchain_community.retrievers.needle import NeedleRetriever
 from langchain_openai import ChatOpenAI
 
-from langflow.custom import CustomComponent
+from langflow.custom.custom_component.component import Component
+from langflow.io import (
+    SecretStrInput,
+    StrInput,
+    DropdownInput,
+    Output,
+)
+from langflow.schema.message import Message
+from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 
 
-class NeedleComponent(CustomComponent):
+class NeedleComponent(Component):
     display_name = "Needle Retriever"
-    description = "A retriever that uses the Needle API to search collections and generates responses using OpenAI."
+    description = (
+        "A retriever that uses the Needle API to search collections "
+        "and generates responses using OpenAI."
+    )
     documentation = "https://docs.needle-ai.com"
     icon = "search"
     name = "needle"
 
-    def build_config(self) -> dict[str, Any]:
-        """Build the UI configuration for the component."""
-        return {
-            "needle_api_key": {
-                "display_name": "Needle API Key",
-                "field_type": "password",
-                "required": True,
-            },
-            "openai_api_key": {
-                "display_name": "OpenAI API Key",
-                "field_type": "password",
-                "required": True,
-            },
-            "collection_id": {
-                "display_name": "Collection ID",
-                "required": True,
-            },
-            "query": {
-                "display_name": "User Query",
-                "field_type": "str",
-                "required": True,
-                "placeholder": "Enter your question here",
-            },
-            "output_type": {
-                "display_name": "Output Type",
-                "field_type": "select",
-                "required": True,
-                "options": ["answer", "chunks"],
-                "value": "answer",
-                "is_multi": False,
-            },
-            "top_k": {
-                "display_name": "Top K",
-                "field_type": "int",
-                "value": 10,
-                "required": False,
-            },
-            "code": {
-                "show": False,
-                "required": False,
-            },
-        }
+    inputs = [
+        SecretStrInput(
+            name="needle_api_key",
+            display_name="Needle API Key",
+            info="Your Needle API key.",
+            required=True,
+        ),
+        SecretStrInput(
+            name="openai_api_key",
+            display_name="OpenAI API Key",
+            info="Your OpenAI API key.",
+            required=True,
+        ),
+        StrInput(
+            name="collection_id",
+            display_name="Collection ID",
+            info="The ID of the Needle collection.",
+            required=True,
+        ),
+        StrInput(
+            name="query",
+            display_name="User Query",
+            info="Enter your question here.",
+            required=True,
+        ),
+        DropdownInput(
+            name="output_type",
+            display_name="Output Type",
+            info="Return either the answer or the chunks.",
+            options=["answer", "chunks"],
+            value="answer",
+            required=True,
+        ),
+    ]
 
-    def build(
-        self,
-        needle_api_key: str,
-        openai_api_key: str,
-        collection_id: str,
-        query: str,
-        output_type: str = "answer",
-        top_k: int = 10,
-        **kwargs,  # noqa: ARG002
-    ) -> str:
-        """Build the NeedleRetriever component and process the query."""
+    outputs = [
+        Output(
+            display_name="Result",
+            name="result",
+            type_="Message",
+            method="run"
+        )
+    ]
+
+    def run(self) -> Message:
+        needle_api_key = SecretStr(self.needle_api_key).get_secret_value() if self.needle_api_key else ""
+        openai_api_key = SecretStr(self.openai_api_key).get_secret_value() if self.openai_api_key else ""
+        collection_id = self.collection_id
+        query = self.query
+        output_type = self.output_type
+
+        # Validate inputs
         if not needle_api_key.strip():
-            msg = "The Needle API key cannot be empty."
-            raise ValueError(msg)
+            raise ValueError("The Needle API key cannot be empty.")
         if not openai_api_key.strip():
-            msg = "The OpenAI API key cannot be empty."
-            raise ValueError(msg)
+            raise ValueError("The OpenAI API key cannot be empty.")
         if not collection_id.strip():
-            msg = "The Collection ID cannot be empty."
-            raise ValueError(msg)
+            raise ValueError("The Collection ID cannot be empty.")
         if not query.strip():
-            msg = "The query cannot be empty."
-            raise ValueError(msg)
-        if top_k <= 0:
-            msg = "Top K must be a positive integer."
-            raise ValueError(msg)
+            raise ValueError("The query cannot be empty.")
 
-        # Handle output_type if it's a list
+        # Handle output_type if it's somehow a list
         if isinstance(output_type, list):
             output_type = output_type[0]
 
@@ -93,7 +97,6 @@ class NeedleComponent(CustomComponent):
             retriever = NeedleRetriever(
                 needle_api_key=needle_api_key,
                 collection_id=collection_id,
-                top_k=top_k,
             )
 
             # Create the chain
@@ -110,15 +113,35 @@ class NeedleComponent(CustomComponent):
 
             # Process the query
             result = qa_chain({"question": query, "chat_history": []})
+            
+            # Format source documents
+            docs = result["source_documents"]
+            context = "\n\n".join([
+                f"Document {i+1}:\n{doc.page_content}"
+                for i, doc in enumerate(docs)
+            ])
 
-            # Return based on output type
-            if str(output_type).lower().strip() == "chunks":
-                # Format the source documents for better readability
-                docs = result["source_documents"]
-                formatted_chunks = [f"Chunk {i+1}:\n{doc.page_content}\n" for i, doc in enumerate(docs)]
-                return "\n".join(formatted_chunks)
+            # Create the text content
+            text_content = (
+                f"Question: {query}\n\n"
+                f"Context:\n{context}\n\n"
+                f"Answer: {result['answer']}"
+            )
 
-            return result["answer"]
+            # Create a Message object following chat.py pattern
+            return Message(
+                text=text_content,
+                type="assistant",
+                sender=MESSAGE_SENDER_AI,
+                additional_kwargs={
+                    "source_documents": [
+                        {
+                            "page_content": doc.page_content,
+                            "metadata": doc.metadata
+                        } for doc in docs
+                    ]
+                }
+            )
+
         except Exception as e:
-            msg = "Error processing query: " + str(e)
-            raise ValueError(msg) from e
+            raise ValueError(f"Error processing query: {e}") from e
