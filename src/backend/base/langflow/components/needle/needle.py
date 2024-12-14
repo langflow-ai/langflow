@@ -1,28 +1,22 @@
-from typing import Any, Dict, List
-
-from pydantic.v1 import SecretStr
-
 from langchain.chains import ConversationalRetrievalChain
 from langchain_community.retrievers.needle import NeedleRetriever
 from langchain_openai import ChatOpenAI
+from pydantic.v1 import SecretStr
 
 from langflow.custom.custom_component.component import Component
 from langflow.io import (
-    SecretStrInput,
-    StrInput,
     DropdownInput,
     Output,
+    SecretStrInput,
+    StrInput,
 )
 from langflow.schema.message import Message
-from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
+from langflow.utils.constants import MESSAGE_SENDER_AI
 
 
 class NeedleComponent(Component):
     display_name = "Needle Retriever"
-    description = (
-        "A retriever that uses the Needle API to search collections "
-        "and generates responses using OpenAI."
-    )
+    description = "A retriever that uses the Needle API to search collections " "and generates responses using OpenAI."
     documentation = "https://docs.needle-ai.com"
     icon = "search"
     name = "needle"
@@ -62,14 +56,7 @@ class NeedleComponent(Component):
         ),
     ]
 
-    outputs = [
-        Output(
-            display_name="Result",
-            name="result",
-            type_="Message",
-            method="run"
-        )
-    ]
+    outputs = [Output(display_name="Result", name="result", type_="Message", method="run")]
 
     def run(self) -> Message:
         needle_api_key = SecretStr(self.needle_api_key).get_secret_value() if self.needle_api_key else ""
@@ -113,23 +100,16 @@ class NeedleComponent(Component):
 
             # Process the query
             result = qa_chain({"question": query, "chat_history": []})
-            
+
             # Format content based on output type
             if str(output_type).lower().strip() == "chunks":
                 # If chunks selected, include full context and answer
                 docs = result["source_documents"]
-                context = "\n\n".join([
-                    f"Document {i+1}:\n{doc.page_content}"
-                    for i, doc in enumerate(docs)
-                ])
-                text_content = (
-                    f"Question: {query}\n\n"
-                    f"Context:\n{context}\n\n"
-                    f"Answer: {result['answer']}"
-                )
+                context = "\n\n".join([f"Document {i+1}:\n{doc.page_content}" for i, doc in enumerate(docs)])
+                text_content = f"Question: {query}\n\n" f"Context:\n{context}\n\n" f"Answer: {result['answer']}"
             else:
                 # If answer selected, only include the answer
-                text_content = result['answer']
+                text_content = result["answer"]
 
             # Create a Message object following chat.py pattern
             return Message(
@@ -138,12 +118,10 @@ class NeedleComponent(Component):
                 sender=MESSAGE_SENDER_AI,
                 additional_kwargs={
                     "source_documents": [
-                        {
-                            "page_content": doc.page_content,
-                            "metadata": doc.metadata
-                        } for doc in result["source_documents"]
+                        {"page_content": doc.page_content, "metadata": doc.metadata}
+                        for doc in result["source_documents"]
                     ]
-                }
+                },
             )
 
         except Exception as e:
