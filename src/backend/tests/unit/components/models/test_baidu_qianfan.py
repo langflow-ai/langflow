@@ -1,8 +1,9 @@
 import os
+
 import pytest
-from langflow.components.models.baidu_qianfan_chat import QianfanChatEndpointComponent
-from langchain_community.chat_models.baidu_qianfan_endpoint import QianfanChatEndpoint
 from langchain.schema import HumanMessage
+from langchain_community.chat_models.baidu_qianfan_endpoint import QianfanChatEndpoint
+from langflow.components.models.baidu_qianfan_chat import QianfanChatEndpointComponent
 
 
 @pytest.fixture
@@ -81,7 +82,6 @@ def test_invalid_endpoint(qianfan_credentials):
 )
 def test_qianfan_different_models(qianfan_credentials, model_name):
     """Test different Qianfan models with a simple prompt"""
-
     component = QianfanChatEndpointComponent(
         model=model_name,
         qianfan_ak=qianfan_credentials["ak"],
@@ -101,4 +101,4 @@ def test_qianfan_different_models(qianfan_credentials, model_name):
     try:
         response = chat_model(messages)
     except Exception as e:
-        pytest.fail(f"Model {model_name} failed with error: {str(e)}")
+        pytest.fail(f"Model {model_name} failed with error: {e!s}")
