@@ -9,7 +9,6 @@ from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs import (
-    BoolInput,
     DropdownInput,
     IntInput,
     SecretStrInput,
@@ -23,18 +22,14 @@ class OpenRouterComponent(LCModelComponent):
 
     display_name = "OpenRouter"
     description = (
-        "OpenRouter provides unified access to multiple AI models "
-        "from different providers through a single API."
+        "OpenRouter provides unified access to multiple AI models " "from different providers through a single API."
     )
     icon = "OpenRouter"
 
     inputs = [
         *LCModelComponent._base_inputs,
         SecretStrInput(
-            name="api_key",
-            display_name="OpenRouter API Key",
-            required=True,
-            info="Your OpenRouter API key"
+            name="api_key", display_name="OpenRouter API Key", required=True, info="Your OpenRouter API key"
         ),
         StrInput(
             name="site_url",
@@ -65,10 +60,7 @@ class OpenRouterComponent(LCModelComponent):
             real_time_refresh=True,
         ),
         SliderInput(
-            name="temperature",
-            display_name="Temperature",
-            value=0.7,
-            range_spec=RangeSpec(min=0, max=2, step=0.01)
+            name="temperature", display_name="Temperature", value=0.7, range_spec=RangeSpec(min=0, max=2, step=0.01)
         ),
         IntInput(
             name="max_tokens",
@@ -94,12 +86,14 @@ class OpenRouterComponent(LCModelComponent):
                     model_id = model.get("id", "")
                     if "/" in model_id:
                         provider = model_id.split("/")[0].title()
-                        provider_models[provider].append({
-                            "id": model_id,
-                            "name": model.get("name", ""),
-                            "description": model.get("description", ""),
-                            "context_length": model.get("context_length", 0)
-                        })
+                        provider_models[provider].append(
+                            {
+                                "id": model_id,
+                                "name": model.get("name", ""),
+                                "description": model.get("description", ""),
+                                "context_length": model.get("context_length", 0),
+                            }
+                        )
 
                 return dict(provider_models)
 
@@ -109,11 +103,14 @@ class OpenRouterComponent(LCModelComponent):
 
     def build_model(self) -> LanguageModel:
         """Build and return the OpenRouter language model."""
+        model_not_selected = "Please select a model"
+        api_key_required = "API key is required"
+
         if not self.model_name or self.model_name == "Select a provider first":
-            raise ValueError("Please select a model")
+            raise ValueError(model_not_selected)
 
         if not self.api_key:
-            raise ValueError("API key is required")
+            raise ValueError(api_key_required)
 
         api_key = SecretStr(self.api_key).get_secret_value()
 
@@ -139,14 +136,31 @@ class OpenRouterComponent(LCModelComponent):
             kwargs["default_headers"] = headers
 
         try:
-            chat_model = ChatOpenAI(**kwargs)
-            # Test if the model can be initialized
-            if not chat_model:
-                raise ValueError("Failed to initialize ChatOpenAI model")
-            return chat_model
-        except Exception as e:
-            self.log(f"Error building model: {str(e)}")
-            raise ValueError(f"Failed to build model: {str(e)}")
+            return ChatOpenAI(**kwargs)
+        except (ValueError, httpx.HTTPError) as err:
+            error_msg = f"Failed to build model: {err!s}"
+            self.log(error_msg)
+            raise ValueError(error_msg) from err
+
+    def _get_exception_message(self, e: Exception) -> str | None:
+        """Get a message from an OpenRouter exception.
+
+        Args:
+            e (Exception): The exception to get the message from.
+
+        Returns:
+            str | None: The message from the exception, or None if no specific message can be extracted.
+        """
+        try:
+            from openai import BadRequestError
+
+            if isinstance(e, BadRequestError):
+                message = e.body.get("message")
+                if message:
+                    return message
+        except ImportError:
+            pass
+        return None
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Update build configuration based on field updates."""
@@ -167,10 +181,9 @@ class OpenRouterComponent(LCModelComponent):
 
                 tooltips = {
                     model["id"]: (
-                        f"{model['name']}\n"
-                        f"Context Length: {model['context_length']}\n"
-                        f"{model['description']}"
-                    ) for model in models
+                        f"{model['name']}\n" f"Context Length: {model['context_length']}\n" f"{model['description']}"
+                    )
+                    for model in models
                 }
                 build_config["model_name"]["tooltips"] = tooltips
 
