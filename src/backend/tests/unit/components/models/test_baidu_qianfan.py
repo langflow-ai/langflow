@@ -16,6 +16,39 @@ def qianfan_credentials():
 
 
 @pytest.mark.api_key_required
+def test_none_endpoint(qianfan_credentials):
+    """Test that None endpoint raises an exception"""
+    component = QianfanChatEndpointComponent(
+        model="ERNIE-Bot-turbo",
+        qianfan_ak=qianfan_credentials["ak"],
+        qianfan_sk=qianfan_credentials["sk"],
+        endpoint=None,
+        temperature=0.7,
+    )
+
+    with pytest.raises(Exception):
+        model = component.build_model()
+        messages = [HumanMessage(content="Say 'Hello' in Chinese")]
+        model.invoke(messages)
+
+
+def test_invalid_endpoint(qianfan_credentials):
+    """Test that invalid endpoint raises an exception"""
+    component = QianfanChatEndpointComponent(
+        model="ERNIE-Bot-turbo",
+        qianfan_ak=qianfan_credentials["ak"],
+        qianfan_sk=qianfan_credentials["sk"],
+        endpoint="https://invalid.endpoint.example",
+        temperature=0.7,
+    )
+
+    with pytest.raises(Exception):
+        model = component.build_model()
+        messages = [HumanMessage(content="Say 'Hello' in Chinese")]
+        model.invoke(messages)
+
+
+@pytest.mark.api_key_required
 @pytest.mark.parametrize(
     "model_name",
     [
