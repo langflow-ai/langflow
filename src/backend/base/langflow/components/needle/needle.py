@@ -65,15 +65,21 @@ class NeedleComponent(Component):
         query = self.query
         output_type = self.output_type
 
+        # Define error messages
+        needle_api_key = "The Needle API key cannot be empty."
+        openai_api_key = "The OpenAI API key cannot be empty."
+        collection_id_error = "The Collection ID cannot be empty."
+        query_error = "The query cannot be empty."
+
         # Validate inputs
         if not needle_api_key.strip():
-            raise ValueError("The Needle API key cannot be empty.")
+            raise ValueError(needle_api_key)
         if not openai_api_key.strip():
-            raise ValueError("The OpenAI API key cannot be empty.")
+            raise ValueError(openai_api_key)
         if not collection_id.strip():
-            raise ValueError("The Collection ID cannot be empty.")
+            raise ValueError(collection_id_error)
         if not query.strip():
-            raise ValueError("The query cannot be empty.")
+            raise ValueError(query_error)
 
         # Handle output_type if it's somehow a list
         if isinstance(output_type, list):
@@ -125,4 +131,5 @@ class NeedleComponent(Component):
             )
 
         except Exception as e:
-            raise ValueError(f"Error processing query: {e}") from e
+            error_msg = f"Error processing query: {e!s}"
+            raise ValueError(error_msg) from e
