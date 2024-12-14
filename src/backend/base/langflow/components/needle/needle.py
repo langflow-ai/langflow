@@ -114,19 +114,22 @@ class NeedleComponent(Component):
             # Process the query
             result = qa_chain({"question": query, "chat_history": []})
             
-            # Format source documents
-            docs = result["source_documents"]
-            context = "\n\n".join([
-                f"Document {i+1}:\n{doc.page_content}"
-                for i, doc in enumerate(docs)
-            ])
-
-            # Create the text content
-            text_content = (
-                f"Question: {query}\n\n"
-                f"Context:\n{context}\n\n"
-                f"Answer: {result['answer']}"
-            )
+            # Format content based on output type
+            if str(output_type).lower().strip() == "chunks":
+                # If chunks selected, include full context and answer
+                docs = result["source_documents"]
+                context = "\n\n".join([
+                    f"Document {i+1}:\n{doc.page_content}"
+                    for i, doc in enumerate(docs)
+                ])
+                text_content = (
+                    f"Question: {query}\n\n"
+                    f"Context:\n{context}\n\n"
+                    f"Answer: {result['answer']}"
+                )
+            else:
+                # If answer selected, only include the answer
+                text_content = result['answer']
 
             # Create a Message object following chat.py pattern
             return Message(
@@ -138,7 +141,7 @@ class NeedleComponent(Component):
                         {
                             "page_content": doc.page_content,
                             "metadata": doc.metadata
-                        } for doc in docs
+                        } for doc in result["source_documents"]
                     ]
                 }
             )
