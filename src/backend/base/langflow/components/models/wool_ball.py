@@ -179,7 +179,6 @@ class WoolBallComponent(Component):
     def build(self, *args, **kwargs) -> dotdict:
         """Build the initial configuration for the component."""
         build_config = super().build(*args, **kwargs)
-        build_config["task_type"]["value"] = "Text Generation"
         return self.update_build_config(
             build_config=build_config,
             field_value="Text Generation",
