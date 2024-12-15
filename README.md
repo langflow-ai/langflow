@@ -23,7 +23,7 @@
   <a href="./README.FR.md"><img alt="README in French" src="https://img.shields.io/badge/Français-d9d9d9"></a>
 </div>
 
-## ✨ Core features
+## ✨ Core Features
 
 1. **Python-based** and agnostic to models, APIs, data sources, or databases.
 2. **Visual IDE** for drag-and-drop building and testing of workflows.
