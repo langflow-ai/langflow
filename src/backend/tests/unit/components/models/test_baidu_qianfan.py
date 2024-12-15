@@ -4,48 +4,70 @@ import pytest
 from langchain.schema import HumanMessage
 from langchain_community.chat_models.baidu_qianfan_endpoint import QianfanChatEndpoint
 from langflow.components.models.baidu_qianfan_chat import QianfanChatEndpointComponent
+from qianfan.errors import APIError
 
 
 @pytest.fixture
 def qianfan_credentials():
-    """Fixture to get Qianfan credentials from environment variables"""
+    """Fixture to get Qianfan credentials from environment variables."""
     ak = os.getenv("QIANFAN_AK")
     sk = os.getenv("QIANFAN_SK")
     if not ak or not sk:
-        pytest.skip("QIANFAN_AK and QIANFAN_SK environment variables are required")
+        pytest.skip("QIANFAN_AK and QIANFAN_SK environment variables are required.")
     return {"ak": ak, "sk": sk}
 
 
 @pytest.mark.api_key_required
 def test_none_endpoint(qianfan_credentials):
-    """Test that None endpoint raises an exception"""
+    """Test that None endpoint raises an exception."""
     component = QianfanChatEndpointComponent(
-        model="ERNIE-Bot-turbo",
+        model="ERNIE-Bot-turbo-AI",
         qianfan_ak=qianfan_credentials["ak"],
         qianfan_sk=qianfan_credentials["sk"],
         endpoint=None,
         temperature=0.7,
     )
+    # should have no error
+    model = component.build_model()
+    messages = [HumanMessage(content="Say 'Hello' in Chinese")]
+    response = model.invoke(messages)
+    assert response is not None
+    assert len(str(response)) > 0
 
-    with pytest.raises(Exception):
-        model = component.build_model()
-        messages = [HumanMessage(content="Say 'Hello' in Chinese")]
-        model.invoke(messages)
 
-
-def test_invalid_endpoint(qianfan_credentials):
-    """Test that invalid endpoint raises an exception"""
+@pytest.mark.api_key_required
+def test_empty_str_endpoint(qianfan_credentials):
+    """Test that empty string endpoint raises an exception."""
     component = QianfanChatEndpointComponent(
-        model="ERNIE-Bot-turbo",
+        model="ERNIE-Bot",
+        qianfan_ak=qianfan_credentials["ak"],
+        qianfan_sk=qianfan_credentials["sk"],
+        endpoint="",
+        temperature=0.7,
+    )
+
+    model = component.build_model()
+    messages = [HumanMessage(content="Say 'Hello' in Chinese")]
+    response = model.invoke(messages)
+    assert response is not None
+    assert len(str(response)) > 0
+
+
+@pytest.mark.api_key_required
+def test_invalid_endpoint(qianfan_credentials):
+    """Test that invalid endpoint raises an exception."""
+    component = QianfanChatEndpointComponent(
+        model="ERNIE-Bot",
         qianfan_ak=qianfan_credentials["ak"],
         qianfan_sk=qianfan_credentials["sk"],
         endpoint="https://invalid.endpoint.example",
         temperature=0.7,
     )
 
-    with pytest.raises(Exception):
-        model = component.build_model()
-        messages = [HumanMessage(content="Say 'Hello' in Chinese")]
+    model = component.build_model()
+    messages = [HumanMessage(content="Say 'Hello' in Chinese")]
+
+    with pytest.raises(APIError):
         model.invoke(messages)
 
 
@@ -81,7 +103,7 @@ def test_invalid_endpoint(qianfan_credentials):
     ],
 )
 def test_qianfan_different_models(qianfan_credentials, model_name):
-    """Test different Qianfan models with a simple prompt"""
+    """Test different Qianfan models with a simple prompt."""
     component = QianfanChatEndpointComponent(
         model=model_name,
         qianfan_ak=qianfan_credentials["ak"],
@@ -100,5 +122,7 @@ def test_qianfan_different_models(qianfan_credentials, model_name):
 
     try:
         response = chat_model(messages)
-    except Exception as e:
+        assert response is not None
+        assert len(str(response)) > 0
+    except ValueError as e:
         pytest.fail(f"Model {model_name} failed with error: {e!s}")
