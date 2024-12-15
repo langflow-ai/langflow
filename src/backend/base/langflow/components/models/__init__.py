@@ -16,6 +16,7 @@ from .openai import OpenAIModelComponent
 from .perplexity import PerplexityComponent
 from .sambanova import SambaNovaComponent
 from .vertexai import ChatVertexAIComponent
+from .wool_ball import WoolBallComponent
 
 __all__ = [
     "AIMLModelComponent",
@@ -36,4 +37,5 @@ __all__ = [
     "PerplexityComponent",
     "QianfanChatEndpointComponent",
     "SambaNovaComponent",
+    "WoolBallComponent",
 ]
