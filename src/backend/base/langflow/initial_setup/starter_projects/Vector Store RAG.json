@@ -3749,5 +3749,11 @@
   "name": "Vector Store RAG",
   "last_tested_version": "1.1.1",
   "endpoint_name": null,
-  "is_component": false
+  "is_component": false,
+  "tags": [
+    "openai",
+    "astradb",
+    "rag",
+    "q-a"
+  ]
 }
