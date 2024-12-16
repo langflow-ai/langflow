@@ -77,7 +77,7 @@
     "rehype-mathjax": "^4.0.3",
     "remark-gfm": "3.0.1",
     "remark-math": "^6.0.0",
-    "shadcn-ui": "^0.8.0",
+    "shadcn-ui": "^0.9.4",
     "short-unique-id": "^5.2.0",
     "tailwind-merge": "^2.3.0",
     "tailwindcss-animate": "^1.0.7",
@@ -118,7 +118,7 @@
   "proxy": "http://127.0.0.1:7860",
   "devDependencies": {
     "@playwright/test": "^1.44.1",
-    "@swc/cli": "^0.3.12",
+    "@swc/cli": "^0.5.2",
     "@swc/core": "^1.6.1",
     "@tailwindcss/typography": "^0.5.13",
     "@testing-library/jest-dom": "^6.4.6",
