@@ -4,14 +4,14 @@ import asyncio
 import re
 import sqlite3
 import time
-import aiofiles
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
-from aiofiles import os as aio_os
 
+import aiofiles
 import sqlalchemy as sa
+from aiofiles import os as aio_os
 from alembic import command, util
 from alembic.config import Config
 from loguru import logger
@@ -30,7 +30,6 @@ from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.utils import Result, TableResults
 from langflow.services.deps import get_settings_service
 from langflow.services.utils import teardown_superuser
-
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -58,20 +57,20 @@ class DatabaseService(Service):
         event.listen(Engine, "connect", self.on_connection)
         self.engine = self._create_engine()
         self.async_engine = self._create_async_engine()
-        
+
         alembic_log_file = self.settings_service.settings.alembic_log_file
         # Check if the provided path is absolute, cross-platform.
         if Path(alembic_log_file).is_absolute():
             self.alembic_log_path = Path(alembic_log_file)
         else:
             self.alembic_log_path = Path(langflow_dir) / alembic_log_file
-            
+
         self._logged_pragma = False
 
     async def initialize_log_file(self):
         # Ensure the directory and file for the alembic log file exists
         await aio_os.makedirs(self.alembic_log_path.parent, exist_ok=True)
-        async with aiofiles.open(self.alembic_log_path, 'a'):
+        async with aiofiles.open(self.alembic_log_path, "a"):
             pass  # Equivalent to touch
 
     def reload_engine(self) -> None:
