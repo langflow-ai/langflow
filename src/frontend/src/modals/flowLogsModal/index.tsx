@@ -4,8 +4,9 @@ import { useGetTransactionsQuery } from "@/controllers/API/queries/transactions"
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { FlowSettingsPropsType } from "@/types/components";
 import { ColDef, ColGroupDef } from "ag-grid-community";
-import { useEffect, useState } from "react";
+import {useCallback, useEffect, useState} from "react";
 import BaseModal from "../baseModal";
+import PaginatorComponent from "@/components/common/paginatorComponent";
 
 export default function FlowLogsModal({
   open,
@@ -13,22 +14,49 @@ export default function FlowLogsModal({
 }: FlowSettingsPropsType): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
+  const [pageIndex, setPageIndex] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
   const [rows, setRows] = useState<any>([]);
 
-  const { data, isLoading, refetch } = useGetTransactionsQuery({
+  const { data: TransactionData, isLoading, refetch } = useGetTransactionsQuery({
     id: currentFlowId,
+    params: {
+      page: pageIndex,
+      size: pageSize,
+    },
     mode: "union",
   });
 
+  const data = {
+    rows: TransactionData?.rows ?? [],
+    columns: TransactionData?.columns ?? [],
+    pagination: {
+      page: TransactionData?.pagination?.page ?? 1,
+      size: TransactionData?.pagination?.size ?? 10,
+      total: TransactionData?.pagination?.total ?? 0,
+      pages: TransactionData?.pagination?.pages ?? 0,
+    },
+  };
+
   useEffect(() => {
-    if (data) {
+    if (TransactionData) {
       const { columns, rows } = data;
       setColumns(columns.map((col) => ({ ...col, editable: true })));
       setRows(rows);
     }
-    if (open) refetch();
-  }, [data, open, isLoading]);
+  }, [TransactionData]);
+
+  useEffect(() => {
+    if (open) {
+      refetch();
+    }
+  }, [open]);
+
+  const handlePageChange = useCallback((newPageIndex, newPageSize) => {
+    setPageIndex(newPageIndex);
+    setPageSize(newPageSize);
+  }, []);
 
   return (
     <BaseModal open={open} setOpen={setOpen} size="x-large">
@@ -46,12 +74,24 @@ export default function FlowLogsModal({
           key={"Executions"}
           readOnlyEdit
           className="h-max-full h-full w-full"
-          pagination={rows.length === 0 ? false : true}
+          pagination={false}
           columnDefs={columns}
           autoSizeStrategy={{ type: "fitGridWidth" }}
           rowData={rows}
           headerHeight={rows.length === 0 ? 0 : undefined}
         ></TableComponent>
+        {!isLoading && data.pagination.total >= 10 && (
+          <div className="flex justify-end px-3 py-4">
+            <PaginatorComponent
+              pageIndex={data.pagination.page}
+              pageSize={data.pagination.size}
+              rowsCount={[12, 24, 48, 96]}
+              totalRowsCount={data.pagination.total}
+              paginate={handlePageChange}
+              pages={data.pagination.pages}
+            />
+          </div>
+          )}
       </BaseModal.Content>
     </BaseModal>
   );
