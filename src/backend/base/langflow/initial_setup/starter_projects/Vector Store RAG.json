@@ -3500,7 +3500,7 @@
                 "title_case": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": ""
+                "value": "vector_store_rag_demo"
               },
               "content_field": {
                 "_input_type": "StrInput",
