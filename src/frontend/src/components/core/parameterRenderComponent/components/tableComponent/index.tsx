@@ -108,7 +108,6 @@ const TableComponent = forwardRef<
       }
       return newCol;
     });
-    console.log(colDef);
     // @ts-ignore
     const realRef: React.MutableRefObject<AgGridReact> =
       useRef<AgGridReact | null>(null);
@@ -184,7 +183,6 @@ const TableComponent = forwardRef<
         );
       }
     }
-    console.log(colDef);
     return (
       <div
         className={cn(
