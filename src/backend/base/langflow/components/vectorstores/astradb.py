@@ -567,7 +567,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Bundle up the auto-detect parameters
         autodetect_params = {
-            "autodetect_collection": True,  # TODO: May want to expose this option
+            "autodetect_collection": not is_new_collection,  # TODO: May want to expose this option
             "content_field": self.content_field or None,
             "ignore_invalid_documents": self.ignore_invalid_documents,
         }
