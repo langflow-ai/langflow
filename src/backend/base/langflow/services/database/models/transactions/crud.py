@@ -4,7 +4,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.services.database.models.transactions.model import TransactionBase, TransactionTable
+from langflow.services.database.models.transactions.model import (
+    TransactionBase,
+    TransactionReadResponse,
+    TransactionTable,
+)
 
 
 async def get_transactions_by_flow_id(
@@ -31,3 +35,11 @@ async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> Tra
         await db.rollback()
         raise
     return table
+
+
+def transform_transaction_table(
+    transaction: list[TransactionTable] | TransactionTable,
+) -> list[TransactionReadResponse]:
+    if isinstance(transaction, list):
+        return [TransactionReadResponse.model_validate(t, from_attributes=True) for t in transaction]
+    return TransactionReadResponse.model_validate(transaction, from_attributes=True)
