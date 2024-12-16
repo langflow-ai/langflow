@@ -204,9 +204,9 @@
               "agent_description": {
                 "_input_type": "MultilineInput",
                 "advanced": true,
-                "display_name": "Agent Description",
+                "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
-                "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically.",
+                "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
                 "input_types": [
                   "Message"
                 ],
