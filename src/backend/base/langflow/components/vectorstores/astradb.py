@@ -1,7 +1,6 @@
 import os
 from collections import defaultdict
 
-import orjson
 from astrapy import DataAPIClient
 from astrapy.admin import parse_api_endpoint
 from langchain_astradb import AstraDBVectorStore
