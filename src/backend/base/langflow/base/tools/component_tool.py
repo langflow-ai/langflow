@@ -245,19 +245,33 @@ class ComponentToolkit:
             raise ValueError(msg)
         return tools
 
+    def get_tools_metadata_dictionary(self) -> dict:
+        if isinstance(self.metadata, pd.DataFrame):
+            try:
+                return {record["tags"][0]: record for record in self.metadata.to_dict(orient="records")}
+            except (KeyError, IndexError) as e:
+                msg = "Error processing metadata records: " + str(e)
+                raise ValueError(msg) from e
+        return {}
+
     def update_tools_metadata(
         self,
         tools: list[BaseTool | StructuredTool],
     ) -> list[BaseTool]:
         # update the tool_name and description according to the name and secriotion mentioned in the list
         if isinstance(self.metadata, pd.DataFrame):
-            metadata_dict = self.metadata.to_dict(orient="records")
-            for tool, metadata in zip(tools, metadata_dict, strict=False):
-                if isinstance(tool, StructuredTool | BaseTool):
-                    if metadata.get("tags") == tool.tags:
-                        # adding a saftey check to avoid updating the tool metadata if the tags are not same
-                        tool.name = metadata.get("name", tool.name)
-                        tool.description = metadata.get("description", tool.description)
+            metadata_dict = self.get_tools_metadata_dictionary()
+            for tool in tools:
+                if isinstance(tool, StructuredTool | BaseTool) and tool.tags:
+                    try:
+                        tag = tool.tags[0]
+                    except IndexError:
+                        msg = "Tool tags cannot be empty."
+                        raise ValueError(msg) from None
+                    if tag in metadata_dict:
+                        tool_metadata = metadata_dict[tag]
+                        tool.name = tool_metadata.get("name", tool.name)
+                        tool.description = tool_metadata.get("description", tool.description)
                 else:
                     msg = f"Expected a StructuredTool or BaseTool, got {type(tool)}"
                     raise TypeError(msg)
