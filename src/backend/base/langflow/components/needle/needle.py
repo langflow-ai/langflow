@@ -1,15 +1,9 @@
 from langchain.chains import ConversationalRetrievalChain
 from langchain_community.retrievers.needle import NeedleRetriever
 from langchain_openai import ChatOpenAI
-from pydantic.v1 import SecretStr
 
 from langflow.custom.custom_component.component import Component
-from langflow.io import (
-    DropdownInput,
-    Output,
-    SecretStrInput,
-    StrInput,
-)
+from langflow.io import DropdownInput, Output, SecretStrInput, StrInput
 from langflow.schema.message import Message
 from langflow.utils.constants import MESSAGE_SENDER_AI
 
@@ -59,8 +53,8 @@ class NeedleComponent(Component):
     outputs = [Output(display_name="Result", name="result", type_="Message", method="run")]
 
     def run(self) -> Message:
-        needle_api_key = SecretStr(self.needle_api_key).get_secret_value() if self.needle_api_key else ""
-        openai_api_key = SecretStr(self.openai_api_key).get_secret_value() if self.openai_api_key else ""
+        needle_api_key = self.needle_api_key or ""
+        openai_api_key = self.openai_api_key or ""
         collection_id = self.collection_id
         query = self.query
         output_type = self.output_type
