@@ -1,5 +1,3 @@
-import asyncio
-
 import pytest
 from langflow.services.deps import get_settings_service
 
@@ -25,7 +23,7 @@ async def test_initialize_services():
     from langflow.services.utils import initialize_services
 
     await initialize_services(fix_migration=False)
-    settings_service = await asyncio.to_thread(get_settings_service)
+    settings_service = get_settings_service()
     assert "test_performance.db" in settings_service.settings.database_url
 
 
@@ -34,8 +32,8 @@ async def test_setup_llm_caching():
     """Benchmark LLM caching setup."""
     from langflow.interface.utils import setup_llm_caching
 
-    await asyncio.to_thread(setup_llm_caching)
-    settings_service = await asyncio.to_thread(get_settings_service)
+    setup_llm_caching()
+    settings_service = get_settings_service()
     assert "test_performance.db" in settings_service.settings.database_url
 
 
@@ -47,7 +45,7 @@ async def test_initialize_super_user():
 
     await initialize_services(fix_migration=False)
     await initialize_super_user_if_needed()
-    settings_service = await asyncio.to_thread(get_settings_service)
+    settings_service = get_settings_service()
     assert "test_performance.db" in settings_service.settings.database_url
 
 
@@ -56,9 +54,9 @@ async def test_get_and_cache_all_types_dict():
     """Benchmark get_and_cache_all_types_dict function."""
     from langflow.interface.types import get_and_cache_all_types_dict
 
-    settings_service = await asyncio.to_thread(get_settings_service)
-    result = await asyncio.to_thread(get_and_cache_all_types_dict, settings_service)
-    assert result is not None
+    settings_service = get_settings_service()
+    result = await get_and_cache_all_types_dict(settings_service)
+    assert "vectorstores" in result
     assert "test_performance.db" in settings_service.settings.database_url
 
 
@@ -70,9 +68,9 @@ async def test_create_starter_projects():
     from langflow.services.utils import initialize_services
 
     await initialize_services(fix_migration=False)
-    settings_service = await asyncio.to_thread(get_settings_service)
+    settings_service = get_settings_service()
     types_dict = await get_and_cache_all_types_dict(settings_service)
-    await asyncio.to_thread(create_or_update_starter_projects, types_dict)
+    await create_or_update_starter_projects(types_dict)
     assert "test_performance.db" in settings_service.settings.database_url
 
 
@@ -82,5 +80,5 @@ async def test_load_flows():
     from langflow.initial_setup.setup import load_flows_from_directory
 
     await load_flows_from_directory()
-    settings_service = await asyncio.to_thread(get_settings_service)
+    settings_service = get_settings_service()
     assert "test_performance.db" in settings_service.settings.database_url

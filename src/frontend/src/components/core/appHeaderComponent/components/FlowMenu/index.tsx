@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { UPLOAD_ERROR_ALERT } from "@/constants/alerts_constants";
 import { SAVED_HOVER } from "@/constants/constants";
+import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
 import ExportModal from "@/modals/exportModal";
 import FlowLogsModal from "@/modals/flowLogsModal";
@@ -53,7 +54,16 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const onFlowPage = useFlowStore((state) => state.onFlowPage);
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
-  const { data: folders } = useGetFoldersQuery();
+
+  const { data: folders, isFetched: isFoldersFetched } = useGetFoldersQuery();
+
+  useGetRefreshFlowsQuery(
+    {
+      get_all: true,
+      header_flows: true,
+    },
+    { enabled: isFoldersFetched },
+  );
 
   const currentFolder = useMemo(
     () => folders?.find((f) => f.id === currentFlow?.folder_id),
@@ -105,7 +115,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
 
   return currentFlow && onFlowPage ? (
     <div className="flex items-center justify-center gap-2 truncate">
-      <div className="header-menu-bar hidden justify-end truncate md:flex">
+      <div className="header-menu-bar hidden w-20 max-w-fit grow justify-end truncate md:flex">
         {currentFolder?.name && (
           <div className="hidden truncate md:flex">
             <div
@@ -127,7 +137,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
         /
       </div>
 
-      <div className="w-fit overflow-hidden truncate text-sm sm:whitespace-normal lg:flex-shrink-0">
+      <div className="overflow-hidden truncate text-sm sm:whitespace-normal">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="header-menu-bar-display-2 group truncate">
@@ -326,7 +336,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               </div>
             </div>
             <button
-              data-testid="stop_building_button "
+              data-testid="stop_building_button"
               disabled={!isBuilding}
               onClick={(_) => {
                 if (isBuilding) {

@@ -1,1 +1,1580 @@
-{"id":"bc2cbf16-ed92-4ef6-a4a5-1526af21d044","data":{"nodes":[{"id":"ParseData-LFq8b","type":"genericNode","position":{"x":1068.0112494649502,"y":237.00462961615915},"data":{"type":"ParseData","node":{"template":{"_type":"Component","data":{"trace_as_metadata":true,"list":false,"trace_as_input":true,"required":false,"placeholder":"","show":true,"name":"data","value":"","display_name":"Data","advanced":false,"input_types":["Data"],"dynamic":false,"info":"The data to convert to text.","title_case":false,"type":"other","_input_type":"DataInput"},"code":{"type":"code","required":true,"placeholder":"","list":false,"show":true,"multiline":true,"value":"from langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import DataInput, MultilineInput, Output, StrInput\nfrom langflow.schema.message import Message\n\n\nclass ParseDataComponent(Component):\n    display_name = \"Parse Data\"\n    description = \"Convert Data into plain text following a specified template.\"\n    icon = \"braces\"\n    name = \"ParseData\"\n\n    inputs = [\n        DataInput(name=\"data\", display_name=\"Data\", info=\"The data to convert to text.\"),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. \"\n            \"It can contain the keys {text}, {data} or any other key in the Data.\",\n            value=\"{text}\",\n        ),\n        StrInput(name=\"sep\", display_name=\"Separator\", advanced=True, value=\"\\n\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Text\", name=\"text\", method=\"parse_data\"),\n    ]\n\n    def parse_data(self) -> Message:\n        data = self.data if isinstance(self.data, list) else [self.data]\n        template = self.template\n\n        result_string = data_to_text(template, data, sep=self.sep)\n        self.status = result_string\n        return Message(text=result_string)\n","fileTypes":[],"file_path":"","password":false,"name":"code","advanced":true,"dynamic":true,"info":"","load_from_db":false,"title_case":false},"sep":{"trace_as_metadata":true,"load_from_db":false,"list":false,"required":false,"placeholder":"","show":true,"name":"sep","value":"\n","display_name":"Separator","advanced":true,"dynamic":false,"info":"","title_case":false,"type":"str","_input_type":"StrInput"},"template":{"trace_as_input":true,"multiline":true,"trace_as_metadata":true,"load_from_db":false,"list":false,"required":false,"placeholder":"","show":true,"name":"template","value":"{data}","display_name":"Template","advanced":false,"input_types":["Message"],"dynamic":false,"info":"The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.","title_case":false,"type":"str","_input_type":"MultilineInput"}},"description":"Convert Data into plain text following a specified template.","icon":"braces","base_classes":["Message"],"display_name":"Parse Data","documentation":"","custom_fields":{},"output_types":[],"pinned":false,"conditional_paths":[],"frozen":false,"outputs":[{"types":["Message"],"selected":"Message","name":"text","display_name":"Text","method":"parse_data","value":"__UNDEFINED__","cache":true}],"field_order":["data","template","sep"],"beta":false,"edited":false,"metadata":{},"lf_version":"1.0.19.post2"},"id":"ParseData-LFq8b"},"selected":false,"width":384,"height":353,"positionAbsolute":{"x":1068.0112494649502,"y":237.00462961615915},"dragging":false},{"id":"GoogleDriveComponent-x1jHz","type":"genericNode","position":{"x":1919.003246541804,"y":230.60766717987485},"data":{"type":"GoogleDriveComponent","node":{"template":{"_type":"Component","code":{"type":"code","required":true,"placeholder":"","list":false,"show":true,"multiline":true,"value":"import json\nfrom json.decoder import JSONDecodeError\n\nfrom google.auth.exceptions import RefreshError\nfrom google.oauth2.credentials import Credentials\nfrom langchain_google_community import GoogleDriveLoader\n\nfrom langflow.custom import Component\nfrom langflow.helpers.data import docs_to_data\nfrom langflow.inputs import MessageTextInput\nfrom langflow.io import SecretStrInput\nfrom langflow.schema import Data\nfrom langflow.template import Output\n\n\nclass GoogleDriveComponent(Component):\n    display_name = \"Google Drive Loader\"\n    description = \"Loads documents from Google Drive using provided credentials.\"\n    icon = \"Google\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"json_string\",\n            display_name=\"JSON String of the Service Account Token\",\n            info=\"JSON string containing OAuth 2.0 access token information for service account access\",\n            required=True,\n        ),\n        MessageTextInput(\n            name=\"document_id\", display_name=\"Document ID\", info=\"Single Google Drive document ID\", required=True\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Loaded Documents\", name=\"docs\", method=\"load_documents\"),\n    ]\n\n    def load_documents(self) -> Data:\n        class CustomGoogleDriveLoader(GoogleDriveLoader):\n            creds: Credentials | None = None\n            \"\"\"Credentials object to be passed directly.\"\"\"\n\n            def _load_credentials(self):\n                \"\"\"Load credentials from the provided creds attribute or fallback to the original method.\"\"\"\n                if self.creds:\n                    return self.creds\n                msg = \"No credentials provided.\"\n                raise ValueError(msg)\n\n            class Config:\n                arbitrary_types_allowed = True\n\n        json_string = self.json_string\n\n        document_ids = [self.document_id]\n        if len(document_ids) != 1:\n            msg = \"Expected a single document ID\"\n            raise ValueError(msg)\n\n        # TODO: Add validation to check if the document ID is valid\n\n        # Load the token information from the JSON string\n        try:\n            token_info = json.loads(json_string)\n        except JSONDecodeError as e:\n            msg = \"Invalid JSON string\"\n            raise ValueError(msg) from e\n\n        # Initialize the custom loader with the provided credentials and document IDs\n        loader = CustomGoogleDriveLoader(\n            creds=Credentials.from_authorized_user_info(token_info), document_ids=document_ids\n        )\n\n        # Load the documents\n        try:\n            docs = loader.load()\n        # catch google.auth.exceptions.RefreshError\n        except RefreshError as e:\n            msg = \"Authentication error: Unable to refresh authentication token. Please try to reauthenticate.\"\n            raise ValueError(msg) from e\n        except Exception as e:\n            msg = f\"Error loading documents: {e}\"\n            raise ValueError(msg) from e\n\n        assert len(docs) == 1, \"Expected a single document to be loaded.\"\n\n        data = docs_to_data(docs)\n        # Return the loaded documents\n        self.status = data\n        return Data(data={\"text\": data})\n","fileTypes":[],"file_path":"","password":false,"name":"code","advanced":true,"dynamic":true,"info":"","load_from_db":false,"title_case":false},"document_id":{"trace_as_input":true,"trace_as_metadata":true,"load_from_db":false,"list":false,"required":true,"placeholder":"","show":true,"name":"document_id","value":"YOUR-DOCUMENT-ID-HERE","display_name":"Document ID","advanced":false,"input_types":["Message"],"dynamic":false,"info":"Single Google Drive document ID","title_case":false,"type":"str","_input_type":"MessageTextInput"},"json_string":{"load_from_db":true,"required":true,"placeholder":"","show":true,"name":"json_string","value":"","display_name":"JSON String of the Service Account Token","advanced":false,"input_types":["Message"],"dynamic":false,"info":"JSON string containing OAuth 2.0 access token information for service account access","title_case":false,"password":true,"type":"str","_input_type":"SecretStrInput"}},"description":"Loads documents from Google Drive using provided credentials.","icon":"Google","base_classes":["Data"],"display_name":"Google Drive Loader","documentation":"","custom_fields":{},"output_types":[],"pinned":false,"conditional_paths":[],"frozen":false,"outputs":[{"types":["Data"],"selected":"Data","name":"docs","display_name":"Loaded Documents","method":"load_documents","value":"__UNDEFINED__","cache":true}],"field_order":["json_string","document_id"],"beta":false,"edited":false,"metadata":{},"lf_version":"1.0.19.post2"},"id":"GoogleDriveComponent-x1jHz","description":"Loads documents from Google Drive using provided credentials.","display_name":"Google Drive Loader"},"selected":false,"width":384,"height":389,"positionAbsolute":{"x":1919.003246541804,"y":230.60766717987485},"dragging":false},{"id":"ParseData-7qhmP","type":"genericNode","position":{"x":2341.9094676839277,"y":249.73963276782303},"data":{"type":"ParseData","node":{"template":{"_type":"Component","data":{"trace_as_metadata":true,"list":false,"trace_as_input":true,"required":false,"placeholder":"","show":true,"name":"data","value":"","display_name":"Data","advanced":false,"input_types":["Data"],"dynamic":false,"info":"The data to convert to text.","title_case":false,"type":"other","_input_type":"DataInput"},"code":{"type":"code","required":true,"placeholder":"","list":false,"show":true,"multiline":true,"value":"from langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import DataInput, MultilineInput, Output, StrInput\nfrom langflow.schema.message import Message\n\n\nclass ParseDataComponent(Component):\n    display_name = \"Parse Data\"\n    description = \"Convert Data into plain text following a specified template.\"\n    icon = \"braces\"\n    name = \"ParseData\"\n\n    inputs = [\n        DataInput(name=\"data\", display_name=\"Data\", info=\"The data to convert to text.\"),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. \"\n            \"It can contain the keys {text}, {data} or any other key in the Data.\",\n            value=\"{text}\",\n        ),\n        StrInput(name=\"sep\", display_name=\"Separator\", advanced=True, value=\"\\n\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Text\", name=\"text\", method=\"parse_data\"),\n    ]\n\n    def parse_data(self) -> Message:\n        data = self.data if isinstance(self.data, list) else [self.data]\n        template = self.template\n\n        result_string = data_to_text(template, data, sep=self.sep)\n        self.status = result_string\n        return Message(text=result_string)\n","fileTypes":[],"file_path":"","password":false,"name":"code","advanced":true,"dynamic":true,"info":"","load_from_db":false,"title_case":false},"sep":{"trace_as_metadata":true,"load_from_db":false,"list":false,"required":false,"placeholder":"","show":true,"name":"sep","value":"\n","display_name":"Separator","advanced":true,"dynamic":false,"info":"","title_case":false,"type":"str","_input_type":"StrInput"},"template":{"trace_as_input":true,"multiline":true,"trace_as_metadata":true,"load_from_db":false,"list":false,"required":false,"placeholder":"","show":true,"name":"template","value":"{text}","display_name":"Template","advanced":false,"input_types":["Message"],"dynamic":false,"info":"The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.","title_case":false,"type":"str","_input_type":"MultilineInput"}},"description":"Convert Data into plain text following a specified template.","icon":"braces","base_classes":["Message"],"display_name":"Parse Data","documentation":"","custom_fields":{},"output_types":[],"pinned":false,"conditional_paths":[],"frozen":false,"outputs":[{"types":["Message"],"selected":"Message","name":"text","display_name":"Text","method":"parse_data","value":"__UNDEFINED__","cache":true}],"field_order":["data","template","sep"],"beta":false,"edited":false,"metadata":{},"lf_version":"1.0.19.post2"},"id":"ParseData-7qhmP"},"selected":false,"width":384,"height":353,"positionAbsolute":{"x":2341.9094676839277,"y":249.73963276782303},"dragging":false},{"id":"OpenAIModel-YUM1a","type":"genericNode","position":{"x":3231.963340176361,"y":94.70653241512102},"data":{"type":"OpenAIModel","node":{"template":{"_type":"Component","output_parser":{"trace_as_metadata":true,"list":false,"required":false,"placeholder":"","show":true,"name":"output_parser","value":"","display_name":"Output Parser","advanced":true,"input_types":["OutputParser"],"dynamic":false,"info":"The parser to use to parse the output of the model","title_case":false,"type":"other","_input_type":"HandleInput"},"api_key":{"load_from_db":true,"required":false,"placeholder":"","show":true,"name":"api_key","value":"","display_name":"OpenAI API Key","advanced":false,"input_types":["Message"],"dynamic":false,"info":"The OpenAI API Key to use for the OpenAI model.","title_case":false,"password":true,"type":"str","_input_type":"SecretStrInput"},"code":{"type":"code","required":true,"placeholder":"","list":false,"show":true,"multiline":true,"value":"import operator\nfrom functools import reduce\n\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs import (\n    BoolInput,\n    DictInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    SecretStrInput,\n    StrInput,\n)\nfrom langflow.inputs.inputs import HandleInput\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DictInput(\n            name=\"output_schema\",\n            is_list=True,\n            display_name=\"Schema\",\n            advanced=True,\n            info=\"The schema for the Output of the model. \"\n            \"You must pass the word JSON in the prompt. \"\n            \"If left blank, JSON mode will be disabled.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. \"\n            \"Defaults to https://api.openai.com/v1. \"\n            \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n        ),\n        FloatInput(name=\"temperature\", display_name=\"Temperature\", value=0.1),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n        HandleInput(\n            name=\"output_parser\",\n            display_name=\"Output Parser\",\n            info=\"The parser to use to parse the output of the model\",\n            advanced=True,\n            input_types=[\"OutputParser\"],\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        # self.output_schema is a list of dictionaries\n        # let's convert it to a dictionary\n        output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})\n        openai_api_key = self.api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = bool(output_schema_dict) or self.json_mode\n        seed = self.seed\n\n        api_key = SecretStr(openai_api_key) if openai_api_key else None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature if temperature is not None else 0.1,\n            seed=seed,\n        )\n        if json_mode:\n            if output_schema_dict:\n                output = output.with_structured_output(schema=output_schema_dict, method=\"json_mode\")\n            else:\n                output = output.bind(response_format={\"type\": \"json_object\"})\n\n        return output\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"\n        Get a message from an OpenAI exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")\n            if message:\n                return message\n        return None\n","fileTypes":[],"file_path":"","password":false,"name":"code","advanced":true,"dynamic":true,"info":"","load_from_db":false,"title_case":false},"input_value":{"trace_as_input":true,"trace_as_metadata":true,"load_from_db":false,"list":false,"required":false,"placeholder":"","show":true,"name":"input_value","value":"","display_name":"Input","advanced":false,"input_types":["Message"],"dynamic":false,"info":"","title_case":false,"type":"str","_input_type":"MessageInput"},"json_mode":{"trace_as_metadata":true,"list":false,"required":false,"placeholder":"","show":true,"name":"json_mode","value":false,"display_name":"JSON Mode","advanced":true,"dynamic":false,"info":"If True, it will output JSON regardless of passing a schema.","title_case":false,"type":"bool","_input_type":"BoolInput"},"max_tokens":{"trace_as_metadata":true,"range_spec":{"step_type":"float","min":0,"max":128000,"step":0.1},"list":false,"required":false,"placeholder":"","show":true,"name":"max_tokens","value":"","display_name":"Max Tokens","advanced":true,"dynamic":false,"info":"The maximum number of tokens to generate. Set to 0 for unlimited tokens.","title_case":false,"type":"int","_input_type":"IntInput"},"model_kwargs":{"trace_as_input":true,"list":false,"required":false,"placeholder":"","show":true,"name":"model_kwargs","value":{},"display_name":"Model Kwargs","advanced":true,"dynamic":false,"info":"","title_case":false,"type":"dict","_input_type":"DictInput"},"model_name":{"trace_as_metadata":true,"options":["gpt-4o-mini","gpt-4o","gpt-4-turbo","gpt-4-turbo-preview","gpt-4","gpt-3.5-turbo","gpt-3.5-turbo-0125"],"combobox":false,"required":false,"placeholder":"","show":true,"name":"model_name","value":"gpt-4o-mini","display_name":"Model Name","advanced":false,"dynamic":false,"info":"","title_case":false,"type":"str","_input_type":"DropdownInput"},"openai_api_base":{"trace_as_metadata":true,"load_from_db":false,"list":false,"required":false,"placeholder":"","show":true,"name":"openai_api_base","value":"","display_name":"OpenAI API Base","advanced":true,"dynamic":false,"info":"The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.","title_case":false,"type":"str","_input_type":"StrInput"},"output_schema":{"trace_as_input":true,"list":true,"required":false,"placeholder":"","show":true,"name":"output_schema","value":{},"display_name":"Schema","advanced":true,"dynamic":false,"info":"The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.","title_case":false,"type":"dict","_input_type":"DictInput"},"seed":{"trace_as_metadata":true,"list":false,"required":false,"placeholder":"","show":true,"name":"seed","value":1,"display_name":"Seed","advanced":true,"dynamic":false,"info":"The seed controls the reproducibility of the job.","title_case":false,"type":"int","_input_type":"IntInput"},"stream":{"trace_as_metadata":true,"list":false,"required":false,"placeholder":"","show":true,"name":"stream","value":false,"display_name":"Stream","advanced":true,"dynamic":false,"info":"Stream the response from the model. Streaming works only in Chat.","title_case":false,"type":"bool","_input_type":"BoolInput"},"system_message":{"trace_as_input":true,"trace_as_metadata":true,"load_from_db":false,"list":false,"required":false,"placeholder":"","show":true,"name":"system_message","value":"","display_name":"System Message","advanced":true,"input_types":["Message"],"dynamic":false,"info":"System message to pass to the model.","title_case":false,"type":"str","_input_type":"MessageTextInput"},"temperature":{"trace_as_metadata":true,"list":false,"required":false,"placeholder":"","show":true,"name":"temperature","value":0.1,"display_name":"Temperature","advanced":false,"dynamic":false,"info":"","title_case":false,"type":"float","_input_type":"FloatInput"}},"description":"Generates text using OpenAI LLMs.","icon":"OpenAI","base_classes":["LanguageModel","Message"],"display_name":"OpenAI","documentation":"","custom_fields":{},"output_types":[],"pinned":false,"conditional_paths":[],"frozen":false,"outputs":[{"types":["Message"],"selected":"Message","name":"text_output","display_name":"Text","method":"text_response","value":"__UNDEFINED__","cache":true,"required_inputs":["input_value","stream","system_message"]},{"types":["LanguageModel"],"selected":"LanguageModel","name":"model_output","display_name":"Language Model","method":"build_model","value":"__UNDEFINED__","cache":true,"required_inputs":["api_key","json_mode","max_tokens","model_kwargs","model_name","openai_api_base","output_schema","seed","temperature"]}],"field_order":["input_value","system_message","stream","max_tokens","model_kwargs","json_mode","output_schema","model_name","openai_api_base","api_key","temperature","seed","output_parser"],"beta":false,"edited":false,"metadata":{},"lf_version":"1.0.19.post2"},"id":"OpenAIModel-YUM1a","description":"Generates text using OpenAI LLMs.","display_name":"OpenAI"},"selected":false,"width":384,"height":587,"positionAbsolute":{"x":3231.963340176361,"y":94.70653241512102},"dragging":false},{"id":"ChatOutput-c4k0L","type":"genericNode","position":{"x":3669.141671875754,"y":248.4257650261032},"data":{"type":"ChatOutput","node":{"template":{"_type":"Component","code":{"type":"code","required":true,"placeholder":"","list":false,"show":true,"multiline":true,"value":"from langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.memory import store_message\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_USER\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n    name = \"ChatOutput\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if (\n            self.session_id\n            and isinstance(message, Message)\n            and isinstance(message.text, str)\n            and self.should_store_message\n        ):\n            store_message(\n                message,\n                flow_id=self.graph.flow_id,\n            )\n            self.message.value = message\n\n        self.status = message\n        return message\n","fileTypes":[],"file_path":"","password":false,"name":"code","advanced":true,"dynamic":true,"info":"","load_from_db":false,"title_case":false},"data_template":{"trace_as_input":true,"trace_as_metadata":true,"load_from_db":false,"list":false,"required":false,"placeholder":"","show":true,"name":"data_template","value":"{text}","display_name":"Data Template","advanced":true,"input_types":["Message"],"dynamic":false,"info":"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.","title_case":false,"type":"str","_input_type":"MessageTextInput"},"input_value":{"trace_as_input":true,"trace_as_metadata":true,"load_from_db":false,"list":false,"required":false,"placeholder":"","show":true,"name":"input_value","value":"","display_name":"Text","advanced":false,"input_types":["Message"],"dynamic":false,"info":"Message to be passed as output.","title_case":false,"type":"str","_input_type":"MessageTextInput"},"sender":{"trace_as_metadata":true,"options":["Machine","User"],"combobox":false,"required":false,"placeholder":"","show":true,"name":"sender","value":"Machine","display_name":"Sender Type","advanced":true,"dynamic":false,"info":"Type of sender.","title_case":false,"type":"str","_input_type":"DropdownInput"},"sender_name":{"trace_as_input":true,"trace_as_metadata":true,"load_from_db":false,"list":false,"required":false,"placeholder":"","show":true,"name":"sender_name","value":"AI","display_name":"Sender Name","advanced":true,"input_types":["Message"],"dynamic":false,"info":"Name of the sender.","title_case":false,"type":"str","_input_type":"MessageTextInput"},"session_id":{"trace_as_input":true,"trace_as_metadata":true,"load_from_db":false,"list":false,"required":false,"placeholder":"","show":true,"name":"session_id","value":"","display_name":"Session ID","advanced":true,"input_types":["Message"],"dynamic":false,"info":"The session ID of the chat. If empty, the current session ID parameter will be used.","title_case":false,"type":"str","_input_type":"MessageTextInput"},"should_store_message":{"trace_as_metadata":true,"list":false,"required":false,"placeholder":"","show":true,"name":"should_store_message","value":true,"display_name":"Store Messages","advanced":true,"dynamic":false,"info":"Store the message in the history.","title_case":false,"type":"bool","_input_type":"BoolInput"}},"description":"Display a chat message in the Playground.","icon":"ChatOutput","base_classes":["Message"],"display_name":"Chat Output","documentation":"","custom_fields":{},"output_types":[],"pinned":false,"conditional_paths":[],"frozen":false,"outputs":[{"types":["Message"],"selected":"Message","name":"message","display_name":"Message","method":"message_response","value":"__UNDEFINED__","cache":true}],"field_order":["input_value","should_store_message","sender","sender_name","session_id","data_template"],"beta":false,"edited":false,"metadata":{},"lf_version":"1.0.19.post2"},"id":"ChatOutput-c4k0L","description":"Display a chat message in the Playground.","display_name":"Chat Output"},"selected":false,"width":384,"height":289,"positionAbsolute":{"x":3669.141671875754,"y":248.4257650261032},"dragging":false},{"id":"note-9ynW0","type":"noteNode","position":{"x":-4,"y":38},"data":{"node":{"description":"**Google Drive Example Scopes**\n\n**Langflow - OAuth Integration Documentation**\n\n```\ndocs.langflow.org/integrations-setup-google-oauth-langflow\n```\n\n**Drive API Documentation**\n\nhttps://developers.google.com/drive/api/guides/api-specific-auth\n\n**Scope Used in This Example**\n\nPermission to view and download all your Drive files.\n\n```\nhttps://www.googleapis.com/auth/drive.readonly\n```\n\n**Example of How to Enter Scopes**\n\n```\nhttps://www.googleapis.com/auth/drive.apps.readonly, https://www.googleapis.com/auth/drive, https://www.googleapis.com/auth/drive.readonly, https://www.googleapis.com/auth/drive.activity\n```","display_name":"","documentation":"","template":{"backgroundColor":"indigo"}},"type":"note","id":"note-9ynW0"},"selected":false,"width":584,"height":673,"dragging":false,"style":{"width":584,"height":673},"resizing":false},{"id":"GoogleOAuthToken-piWFF","type":"genericNode","position":{"x":609.7629463431374,"y":218.39474366635045},"data":{"node":{"template":{"_type":"Component","oauth_credentials":{"trace_as_metadata":true,"file_path":"bc2cbf16-ed92-4ef6-a4a5-1526af21d044/2024-11-06_15-06-14_client_secret_998884801917-hsjq3alo0vfqih74fe635k01khqi74d3.apps.googleusercontent.com.json","fileTypes":["json"],"list":false,"required":true,"placeholder":"","show":true,"name":"oauth_credentials","value":"","display_name":"Credentials File","advanced":false,"dynamic":false,"info":"Input OAuth Credentials file (e.g. credentials.json).","title_case":false,"type":"file","_input_type":"FileInput"},"code":{"type":"code","required":true,"placeholder":"","list":false,"show":true,"multiline":true,"value":"import json\nimport re\nfrom pathlib import Path\n\nfrom google.auth.transport.requests import Request\nfrom google.oauth2.credentials import Credentials\nfrom google_auth_oauthlib.flow import InstalledAppFlow\n\nfrom langflow.custom import Component\nfrom langflow.io import FileInput, MultilineInput, Output\nfrom langflow.schema import Data\n\n\nclass GoogleOAuthToken(Component):\n    display_name = \"Google OAuth Token\"\n    description = \"Generates a JSON string with your Google OAuth token.\"\n    documentation: str = \"https://developers.google.com/identity/protocols/oauth2/web-server?hl=pt-br#python_1\"\n    icon = \"Google\"\n    name = \"GoogleOAuthToken\"\n\n    inputs = [\n        MultilineInput(\n            name=\"scopes\",\n            display_name=\"Scopes\",\n            info=\"Input scopes for your application.\",\n            required=True,\n        ),\n        FileInput(\n            name=\"oauth_credentials\",\n            display_name=\"Credentials File\",\n            info=\"Input OAuth Credentials file (e.g. credentials.json).\",\n            file_types=[\"json\"],\n            required=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", method=\"build_output\"),\n    ]\n\n    def validate_scopes(self, scopes):\n        pattern = (\n            r\"^(https://www\\.googleapis\\.com/auth/[\\w\\.\\-]+\"\n            r\"|mail\\.google\\.com/\"\n            r\"|www\\.google\\.com/calendar/feeds\"\n            r\"|www\\.google\\.com/m8/feeds)\"\n            r\"(,\\s*https://www\\.googleapis\\.com/auth/[\\w\\.\\-]+\"\n            r\"|mail\\.google\\.com/\"\n            r\"|www\\.google\\.com/calendar/feeds\"\n            r\"|www\\.google\\.com/m8/feeds)*$\"\n        )\n        if not re.match(pattern, scopes):\n            error_message = \"Invalid scope format.\"\n            raise ValueError(error_message)\n\n    def build_output(self) -> Data:\n        self.validate_scopes(self.scopes)\n\n        user_scopes = [scope.strip() for scope in self.scopes.split(\",\")]\n        if self.scopes:\n            scopes = user_scopes\n        else:\n            error_message = \"Incorrect scope, check the scopes field.\"\n            raise ValueError(error_message)\n\n        creds = None\n        token_path = Path(\"token.json\")\n\n        if token_path.exists():\n            with token_path.open(mode=\"r\", encoding=\"utf-8\") as token_file:\n                creds = Credentials.from_authorized_user_file(\n                    str(token_path), scopes)\n\n        if not creds or not creds.valid:\n            if creds and creds.expired and creds.refresh_token:\n                creds.refresh(Request())\n            else:\n                if self.oauth_credentials:\n                    client_secret_file = self.oauth_credentials\n                else:\n                    error_message = \"OAuth 2.0 Credentials file not provided.\"\n                    raise ValueError(error_message)\n\n                flow = InstalledAppFlow.from_client_secrets_file(\n                    client_secret_file, scopes)\n                creds = flow.run_local_server(port=0)\n\n            with token_path.open(mode=\"w\", encoding=\"utf-8\") as token_file:\n                token_file.write(creds.to_json())\n\n        creds_json = json.loads(creds.to_json())\n\n        return Data(data=creds_json)\n","fileTypes":[],"file_path":"","password":false,"name":"code","advanced":true,"dynamic":true,"info":"","load_from_db":false,"title_case":false},"scopes":{"trace_as_input":true,"multiline":true,"trace_as_metadata":true,"load_from_db":false,"list":false,"required":true,"placeholder":"","show":true,"name":"scopes","value":"https://www.googleapis.com/auth/drive.readonly","display_name":"Scopes","advanced":false,"input_types":["Message"],"dynamic":false,"info":"Input scopes for your application.","title_case":false,"type":"str","_input_type":"MultilineInput"}},"description":"Generates a JSON string with your Google OAuth token.","icon":"Google","base_classes":["Data"],"display_name":"Google OAuth Token","documentation":"https://developers.google.com/identity/protocols/oauth2/web-server?hl=pt-br#python_1","custom_fields":{},"output_types":[],"pinned":false,"conditional_paths":[],"frozen":false,"outputs":[{"types":["Data"],"selected":"Data","name":"output","display_name":"Output","method":"build_output","value":"__UNDEFINED__","cache":true}],"field_order":["scopes","oauth_credentials"],"beta":false,"edited":true,"metadata":{},"lf_version":"1.0.19.post2"},"type":"GoogleOAuthToken","id":"GoogleOAuthToken-piWFF","description":"A component to generate a json string containing your Google OAuth token.","display_name":"Google OAuth Token"},"selected":true,"width":384,"height":391,"dragging":false,"positionAbsolute":{"x":609.7629463431374,"y":218.39474366635045}},{"id":"JSONCleaner-N4p7F","type":"genericNode","position":{"x":1484.3316811088714,"y":174.88328534754476},"data":{"node":{"template":{"_type":"Component","code":{"type":"code","required":true,"placeholder":"","list":false,"show":true,"multiline":true,"value":"import json\nimport re\nimport unicodedata\n\nfrom langflow.custom import Component\nfrom langflow.inputs import BoolInput, MessageTextInput\nfrom langflow.schema.message import Message\nfrom langflow.template import Output\n\n\nclass JSONCleaner(Component):\n    display_name = \"JSON Cleaner\"\n    description = (\n        \"Cleans the messy and sometimes incorrect JSON strings produced by LLMs \"\n        \"so that they are fully compliant with the JSON spec.\"\n    )\n    icon = \"custom_components\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"json_str\", display_name=\"JSON String\", info=\"The JSON string to be cleaned.\", required=True\n        ),\n        BoolInput(\n            name=\"remove_control_chars\",\n            display_name=\"Remove Control Characters\",\n            info=\"Remove control characters from the JSON string.\",\n            required=False,\n        ),\n        BoolInput(\n            name=\"normalize_unicode\",\n            display_name=\"Normalize Unicode\",\n            info=\"Normalize Unicode characters in the JSON string.\",\n            required=False,\n        ),\n        BoolInput(\n            name=\"validate_json\",\n            display_name=\"Validate JSON\",\n            info=\"Validate the JSON string to ensure it is well-formed.\",\n            required=False,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Cleaned JSON String\", name=\"output\", method=\"clean_json\"),\n    ]\n\n    def clean_json(self) -> Message:\n        try:\n            from json_repair import repair_json\n        except ImportError as e:\n            msg = \"Could not import the json_repair package. Please install it with `pip install json_repair`.\"\n            raise ImportError(msg) from e\n\n        \"\"\"Clean the input JSON string based on provided options and return the cleaned JSON string.\"\"\"\n        json_str = self.json_str\n        remove_control_chars = self.remove_control_chars\n        normalize_unicode = self.normalize_unicode\n        validate_json = self.validate_json\n\n        try:\n            start = json_str.find(\"{\")\n            end = json_str.rfind(\"}\")\n            if start == -1 or end == -1:\n                msg = \"Invalid JSON string: Missing '{' or '}'\"\n                raise ValueError(msg)\n            json_str = json_str[start : end + 1]\n\n            if remove_control_chars:\n                json_str = self._remove_control_characters(json_str)\n            if normalize_unicode:\n                json_str = self._normalize_unicode(json_str)\n            if validate_json:\n                json_str = self._validate_json(json_str)\n\n            cleaned_json_str = repair_json(json_str)\n            result = str(cleaned_json_str)\n\n            self.status = result\n            return Message(text=result)\n        except Exception as e:\n            msg = f\"Error cleaning JSON string: {e}\"\n            raise ValueError(msg) from e\n\n    def _remove_control_characters(self, s: str) -> str:\n        \"\"\"Remove control characters from the string.\"\"\"\n        return re.sub(r\"[\\x00-\\x1F\\x7F]\", \"\", s)\n\n    def _normalize_unicode(self, s: str) -> str:\n        \"\"\"Normalize Unicode characters in the string.\"\"\"\n        return unicodedata.normalize(\"NFC\", s)\n\n    def _validate_json(self, s: str) -> str:\n        \"\"\"Validate the JSON string.\"\"\"\n        try:\n            json.loads(s)\n            return s\n        except json.JSONDecodeError as e:\n            msg = f\"Invalid JSON string: {e}\"\n            raise ValueError(msg) from e\n","fileTypes":[],"file_path":"","password":false,"name":"code","advanced":true,"dynamic":true,"info":"","load_from_db":false,"title_case":false},"json_str":{"trace_as_input":true,"trace_as_metadata":true,"load_from_db":false,"list":false,"required":true,"placeholder":"","show":true,"name":"json_str","value":"","display_name":"JSON String","advanced":false,"input_types":["Message"],"dynamic":false,"info":"The JSON string to be cleaned.","title_case":false,"type":"str","_input_type":"MessageTextInput"},"normalize_unicode":{"trace_as_metadata":true,"list":false,"required":false,"placeholder":"","show":true,"name":"normalize_unicode","value":true,"display_name":"Normalize Unicode","advanced":false,"dynamic":false,"info":"Normalize Unicode characters in the JSON string.","title_case":false,"type":"bool","_input_type":"BoolInput","load_from_db":false},"remove_control_chars":{"trace_as_metadata":true,"list":false,"required":false,"placeholder":"","show":true,"name":"remove_control_chars","value":false,"display_name":"Remove Control Characters","advanced":false,"dynamic":false,"info":"Remove control characters from the JSON string.","title_case":false,"type":"bool","_input_type":"BoolInput"},"validate_json":{"trace_as_metadata":true,"list":false,"required":false,"placeholder":"","show":true,"name":"validate_json","value":false,"display_name":"Validate JSON","advanced":false,"dynamic":false,"info":"Validate the JSON string to ensure it is well-formed.","title_case":false,"type":"bool","_input_type":"BoolInput"}},"description":"Cleans the messy and sometimes incorrect JSON strings produced by LLMs so that they are fully compliant with the JSON spec.","icon":"custom_components","base_classes":["Message"],"display_name":"JSON Cleaner","documentation":"","custom_fields":{},"output_types":[],"pinned":false,"conditional_paths":[],"frozen":false,"outputs":[{"types":["Message"],"selected":"Message","name":"output","display_name":"Cleaned JSON String","method":"clean_json","value":"__UNDEFINED__","cache":true}],"field_order":["json_str","remove_control_chars","normalize_unicode","validate_json"],"beta":false,"edited":false,"metadata":{},"lf_version":"1.0.19.post2"},"type":"JSONCleaner","id":"JSONCleaner-N4p7F","description":"Cleans the messy and sometimes incorrect JSON strings produced by LLMs so that they are fully compliant with the JSON spec.","display_name":"JSON Cleaner"},"selected":false,"width":384,"height":537,"positionAbsolute":{"x":1484.3316811088714,"y":174.88328534754476},"dragging":false},{"id":"Prompt-uk0Fr","type":"genericNode","position":{"x":2784.1158749493534,"y":225.01053782589702},"data":{"node":{"template":{"_type":"Component","code":{"type":"code","required":true,"placeholder":"","list":false,"show":true,"multiline":true,"value":"from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(\n        self,\n    ) -> Message:\n        prompt = await Message.from_template_and_variables(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"\n        This function is called after the code validation is done.\n        \"\"\"\n        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n","fileTypes":[],"file_path":"","password":false,"name":"code","advanced":true,"dynamic":true,"info":"","load_from_db":false,"title_case":false},"template":{"trace_as_input":true,"list":false,"required":false,"placeholder":"","show":true,"name":"template","value":"{context}\n\nTranslate the text you receive into Spanish!","display_name":"Template","advanced":false,"dynamic":false,"info":"","title_case":false,"type":"prompt","_input_type":"PromptInput","load_from_db":false},"context":{"field_type":"str","required":false,"placeholder":"","list":false,"show":true,"multiline":true,"value":"","fileTypes":[],"file_path":"","name":"context","display_name":"context","advanced":false,"input_types":["Message","Text"],"dynamic":false,"info":"","load_from_db":false,"title_case":false,"type":"str"}},"description":"Create a prompt template with dynamic variables.","icon":"prompts","base_classes":["Message"],"display_name":"Prompt","documentation":"","custom_fields":{"template":["context"]},"output_types":[],"pinned":false,"conditional_paths":[],"frozen":false,"outputs":[{"types":["Message"],"selected":"Message","name":"prompt","display_name":"Prompt Message","method":"build_prompt","value":"__UNDEFINED__","cache":true}],"field_order":["template"],"beta":false,"edited":false,"metadata":{},"lf_version":"1.0.19.post2"},"type":"Prompt","id":"Prompt-uk0Fr","description":"Create a prompt template with dynamic variables.","display_name":"Prompt"},"selected":false,"width":384,"height":391,"positionAbsolute":{"x":2784.1158749493534,"y":225.01053782589702},"dragging":false}],"edges":[{"source":"GoogleDriveComponent-x1jHz","target":"ParseData-7qhmP","sourceHandle":"{œdataTypeœ:œGoogleDriveComponentœ,œidœ:œGoogleDriveComponent-x1jHzœ,œnameœ:œdocsœ,œoutput_typesœ:[œDataœ]}","targetHandle":"{œfieldNameœ:œdataœ,œidœ:œParseData-7qhmPœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}","id":"reactflow__edge-GoogleDriveComponent-x1jHz{œdataTypeœ:œGoogleDriveComponentœ,œidœ:œGoogleDriveComponent-x1jHzœ,œnameœ:œdocsœ,œoutput_typesœ:[œDataœ]}-ParseData-7qhmP{œfieldNameœ:œdataœ,œidœ:œParseData-7qhmPœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}","data":{"targetHandle":{"fieldName":"data","id":"ParseData-7qhmP","inputTypes":["Data"],"type":"other"},"sourceHandle":{"dataType":"GoogleDriveComponent","id":"GoogleDriveComponent-x1jHz","name":"docs","output_types":["Data"]}},"selected":false,"animated":false,"className":""},{"source":"OpenAIModel-YUM1a","target":"ChatOutput-c4k0L","sourceHandle":"{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-YUM1aœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}","targetHandle":"{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-c4k0Lœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}","id":"reactflow__edge-OpenAIModel-YUM1a{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-YUM1aœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-c4k0L{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-c4k0Lœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}","data":{"targetHandle":{"fieldName":"input_value","id":"ChatOutput-c4k0L","inputTypes":["Message"],"type":"str"},"sourceHandle":{"dataType":"OpenAIModel","id":"OpenAIModel-YUM1a","name":"text_output","output_types":["Message"]}},"selected":false,"animated":false,"className":""},{"source":"GoogleOAuthToken-piWFF","sourceHandle":"{œdataTypeœ:œGoogleOAuthTokenœ,œidœ:œGoogleOAuthToken-piWFFœ,œnameœ:œoutputœ,œoutput_typesœ:[œDataœ]}","target":"ParseData-LFq8b","targetHandle":"{œfieldNameœ:œdataœ,œidœ:œParseData-LFq8bœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}","data":{"targetHandle":{"fieldName":"data","id":"ParseData-LFq8b","inputTypes":["Data"],"type":"other"},"sourceHandle":{"dataType":"GoogleOAuthToken","id":"GoogleOAuthToken-piWFF","name":"output","output_types":["Data"]}},"id":"reactflow__edge-GoogleOAuthToken-piWFF{œdataTypeœ:œGoogleOAuthTokenœ,œidœ:œGoogleOAuthToken-piWFFœ,œnameœ:œoutputœ,œoutput_typesœ:[œDataœ]}-ParseData-LFq8b{œfieldNameœ:œdataœ,œidœ:œParseData-LFq8bœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}","animated":false,"className":""},{"source":"ParseData-LFq8b","sourceHandle":"{œdataTypeœ:œParseDataœ,œidœ:œParseData-LFq8bœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}","target":"JSONCleaner-N4p7F","targetHandle":"{œfieldNameœ:œjson_strœ,œidœ:œJSONCleaner-N4p7Fœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}","data":{"targetHandle":{"fieldName":"json_str","id":"JSONCleaner-N4p7F","inputTypes":["Message"],"type":"str"},"sourceHandle":{"dataType":"ParseData","id":"ParseData-LFq8b","name":"text","output_types":["Message"]}},"id":"reactflow__edge-ParseData-LFq8b{œdataTypeœ:œParseDataœ,œidœ:œParseData-LFq8bœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-JSONCleaner-N4p7F{œfieldNameœ:œjson_strœ,œidœ:œJSONCleaner-N4p7Fœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}","animated":false,"className":""},{"source":"JSONCleaner-N4p7F","sourceHandle":"{œdataTypeœ:œJSONCleanerœ,œidœ:œJSONCleaner-N4p7Fœ,œnameœ:œoutputœ,œoutput_typesœ:[œMessageœ]}","target":"GoogleDriveComponent-x1jHz","targetHandle":"{œfieldNameœ:œjson_stringœ,œidœ:œGoogleDriveComponent-x1jHzœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}","data":{"targetHandle":{"fieldName":"json_string","id":"GoogleDriveComponent-x1jHz","inputTypes":["Message"],"type":"str"},"sourceHandle":{"dataType":"JSONCleaner","id":"JSONCleaner-N4p7F","name":"output","output_types":["Message"]}},"id":"reactflow__edge-JSONCleaner-N4p7F{œdataTypeœ:œJSONCleanerœ,œidœ:œJSONCleaner-N4p7Fœ,œnameœ:œoutputœ,œoutput_typesœ:[œMessageœ]}-GoogleDriveComponent-x1jHz{œfieldNameœ:œjson_stringœ,œidœ:œGoogleDriveComponent-x1jHzœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}","animated":false,"className":""},{"source":"ParseData-7qhmP","sourceHandle":"{œdataTypeœ:œParseDataœ,œidœ:œParseData-7qhmPœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}","target":"Prompt-uk0Fr","targetHandle":"{œfieldNameœ:œcontextœ,œidœ:œPrompt-uk0Frœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}","data":{"targetHandle":{"fieldName":"context","id":"Prompt-uk0Fr","inputTypes":["Message","Text"],"type":"str"},"sourceHandle":{"dataType":"ParseData","id":"ParseData-7qhmP","name":"text","output_types":["Message"]}},"id":"reactflow__edge-ParseData-7qhmP{œdataTypeœ:œParseDataœ,œidœ:œParseData-7qhmPœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-uk0Fr{œfieldNameœ:œcontextœ,œidœ:œPrompt-uk0Frœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}","animated":false,"className":""},{"source":"Prompt-uk0Fr","sourceHandle":"{œdataTypeœ:œPromptœ,œidœ:œPrompt-uk0Frœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}","target":"OpenAIModel-YUM1a","targetHandle":"{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-YUM1aœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}","data":{"targetHandle":{"fieldName":"input_value","id":"OpenAIModel-YUM1a","inputTypes":["Message"],"type":"str"},"sourceHandle":{"dataType":"Prompt","id":"Prompt-uk0Fr","name":"prompt","output_types":["Message"]}},"id":"reactflow__edge-Prompt-uk0Fr{œdataTypeœ:œPromptœ,œidœ:œPrompt-uk0Frœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-YUM1a{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-YUM1aœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}","animated":false,"className":""}],"viewport":{"x":-1019.4126433636247,"y":197.09015595775952,"zoom":0.6352002867729776}},"description":"An example of a flow that connects to Google Drive to access a text document, reads the content, translates it into the desired language, and returns the translated text in the chat, allowing for quick and efficient automation of the Google Docs file translation process.","name":"Google Drive Docs Translations Example","last_tested_version":"1.0.19.post2","endpoint_name":null,"is_component":false}
+{
+    "id": "bc2cbf16-ed92-4ef6-a4a5-1526af21d044",
+    "data": {
+        "nodes": [
+            {
+                "id": "ParseData-LFq8b",
+                "type": "genericNode",
+                "position": {
+                    "x": 1068.0112494649502,
+                    "y": 237.00462961615915
+                },
+                "data": {
+                    "type": "ParseData",
+                    "node": {
+                        "template": {
+                            "_type": "Component",
+                            "data": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "trace_as_input": true,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "data",
+                                "value": "",
+                                "display_name": "Data",
+                                "advanced": false,
+                                "input_types": [
+                                    "Data"
+                                ],
+                                "dynamic": false,
+                                "info": "The data to convert to text.",
+                                "title_case": false,
+                                "type": "other",
+                                "_input_type": "DataInput"
+                            },
+                            "code": {
+                                "type": "code",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "from langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import DataInput, MultilineInput, Output, StrInput\nfrom langflow.schema.message import Message\n\n\nclass ParseDataComponent(Component):\n    display_name = \"Parse Data\"\n    description = \"Convert Data into plain text following a specified template.\"\n    icon = \"braces\"\n    name = \"ParseData\"\n\n    inputs = [\n        DataInput(name=\"data\", display_name=\"Data\", info=\"The data to convert to text.\"),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. \"\n            \"It can contain the keys {text}, {data} or any other key in the Data.\",\n            value=\"{text}\",\n        ),\n        StrInput(name=\"sep\", display_name=\"Separator\", advanced=True, value=\"\\n\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Text\", name=\"text\", method=\"parse_data\"),\n    ]\n\n    def parse_data(self) -> Message:\n        data = self.data if isinstance(self.data, list) else [self.data]\n        template = self.template\n\n        result_string = data_to_text(template, data, sep=self.sep)\n        self.status = result_string\n        return Message(text=result_string)\n",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "code",
+                                "advanced": true,
+                                "dynamic": true,
+                                "info": "",
+                                "load_from_db": false,
+                                "title_case": false
+                            },
+                            "sep": {
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "sep",
+                                "value": "\n",
+                                "display_name": "Separator",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "StrInput"
+                            },
+                            "template": {
+                                "trace_as_input": true,
+                                "multiline": true,
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "template",
+                                "value": "{data}",
+                                "display_name": "Template",
+                                "advanced": false,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "MultilineInput"
+                            }
+                        },
+                        "description": "Convert Data into plain text following a specified template.",
+                        "icon": "braces",
+                        "base_classes": [
+                            "Message"
+                        ],
+                        "display_name": "Parse Data",
+                        "documentation": "",
+                        "custom_fields": {},
+                        "output_types": [],
+                        "pinned": false,
+                        "conditional_paths": [],
+                        "frozen": false,
+                        "outputs": [
+                            {
+                                "types": [
+                                    "Message"
+                                ],
+                                "selected": "Message",
+                                "name": "text",
+                                "display_name": "Text",
+                                "method": "parse_data",
+                                "value": "__UNDEFINED__",
+                                "cache": true
+                            }
+                        ],
+                        "field_order": [
+                            "data",
+                            "template",
+                            "sep"
+                        ],
+                        "beta": false,
+                        "edited": false,
+                        "metadata": {},
+                        "lf_version": "1.0.19.post2"
+                    },
+                    "id": "ParseData-LFq8b"
+                },
+                "selected": false,
+                "width": 384,
+                "height": 353,
+                "positionAbsolute": {
+                    "x": 1068.0112494649502,
+                    "y": 237.00462961615915
+                },
+                "dragging": false
+            },
+            {
+                "id": "GoogleDriveComponent-x1jHz",
+                "type": "genericNode",
+                "position": {
+                    "x": 1919.003246541804,
+                    "y": 230.60766717987485
+                },
+                "data": {
+                    "type": "GoogleDriveComponent",
+                    "node": {
+                        "template": {
+                            "_type": "Component",
+                            "code": {
+                                "type": "code",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "import json\nfrom json.decoder import JSONDecodeError\n\nfrom google.auth.exceptions import RefreshError\nfrom google.oauth2.credentials import Credentials\nfrom langchain_google_community import GoogleDriveLoader\n\nfrom langflow.custom import Component\nfrom langflow.helpers.data import docs_to_data\nfrom langflow.inputs import MessageTextInput\nfrom langflow.io import SecretStrInput\nfrom langflow.schema import Data\nfrom langflow.template import Output\n\n\nclass GoogleDriveComponent(Component):\n    display_name = \"Google Drive Loader\"\n    description = \"Loads documents from Google Drive using provided credentials.\"\n    icon = \"Google\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"json_string\",\n            display_name=\"JSON String of the Service Account Token\",\n            info=\"JSON string containing OAuth 2.0 access token information for service account access\",\n            required=True,\n        ),\n        MessageTextInput(\n            name=\"document_id\", display_name=\"Document ID\", info=\"Single Google Drive document ID\", required=True\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Loaded Documents\", name=\"docs\", method=\"load_documents\"),\n    ]\n\n    def load_documents(self) -> Data:\n        class CustomGoogleDriveLoader(GoogleDriveLoader):\n            creds: Credentials | None = None\n            \"\"\"Credentials object to be passed directly.\"\"\"\n\n            def _load_credentials(self):\n                \"\"\"Load credentials from the provided creds attribute or fallback to the original method.\"\"\"\n                if self.creds:\n                    return self.creds\n                msg = \"No credentials provided.\"\n                raise ValueError(msg)\n\n            class Config:\n                arbitrary_types_allowed = True\n\n        json_string = self.json_string\n\n        document_ids = [self.document_id]\n        if len(document_ids) != 1:\n            msg = \"Expected a single document ID\"\n            raise ValueError(msg)\n\n        # TODO: Add validation to check if the document ID is valid\n\n        # Load the token information from the JSON string\n        try:\n            token_info = json.loads(json_string)\n        except JSONDecodeError as e:\n            msg = \"Invalid JSON string\"\n            raise ValueError(msg) from e\n\n        # Initialize the custom loader with the provided credentials and document IDs\n        loader = CustomGoogleDriveLoader(\n            creds=Credentials.from_authorized_user_info(token_info), document_ids=document_ids\n        )\n\n        # Load the documents\n        try:\n            docs = loader.load()\n        # catch google.auth.exceptions.RefreshError\n        except RefreshError as e:\n            msg = \"Authentication error: Unable to refresh authentication token. Please try to reauthenticate.\"\n            raise ValueError(msg) from e\n        except Exception as e:\n            msg = f\"Error loading documents: {e}\"\n            raise ValueError(msg) from e\n\n        assert len(docs) == 1, \"Expected a single document to be loaded.\"\n\n        data = docs_to_data(docs)\n        # Return the loaded documents\n        self.status = data\n        return Data(data={\"text\": data})\n",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "code",
+                                "advanced": true,
+                                "dynamic": true,
+                                "info": "",
+                                "load_from_db": false,
+                                "title_case": false
+                            },
+                            "document_id": {
+                                "trace_as_input": true,
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": true,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "document_id",
+                                "value": "YOUR-DOCUMENT-ID-HERE",
+                                "display_name": "Document ID",
+                                "advanced": false,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "Single Google Drive document ID",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "MessageTextInput"
+                            },
+                            "json_string": {
+                                "load_from_db": true,
+                                "required": true,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "json_string",
+                                "value": "",
+                                "display_name": "JSON String of the Service Account Token",
+                                "advanced": false,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "JSON string containing OAuth 2.0 access token information for service account access",
+                                "title_case": false,
+                                "password": true,
+                                "type": "str",
+                                "_input_type": "SecretStrInput"
+                            }
+                        },
+                        "description": "Loads documents from Google Drive using provided credentials.",
+                        "icon": "Google",
+                        "base_classes": [
+                            "Data"
+                        ],
+                        "display_name": "Google Drive Loader",
+                        "documentation": "",
+                        "custom_fields": {},
+                        "output_types": [],
+                        "pinned": false,
+                        "conditional_paths": [],
+                        "frozen": false,
+                        "outputs": [
+                            {
+                                "types": [
+                                    "Data"
+                                ],
+                                "selected": "Data",
+                                "name": "docs",
+                                "display_name": "Loaded Documents",
+                                "method": "load_documents",
+                                "value": "__UNDEFINED__",
+                                "cache": true
+                            }
+                        ],
+                        "field_order": [
+                            "json_string",
+                            "document_id"
+                        ],
+                        "beta": false,
+                        "edited": false,
+                        "metadata": {},
+                        "lf_version": "1.0.19.post2"
+                    },
+                    "id": "GoogleDriveComponent-x1jHz",
+                    "description": "Loads documents from Google Drive using provided credentials.",
+                    "display_name": "Google Drive Loader"
+                },
+                "selected": false,
+                "width": 384,
+                "height": 389,
+                "positionAbsolute": {
+                    "x": 1919.003246541804,
+                    "y": 230.60766717987485
+                },
+                "dragging": false
+            },
+            {
+                "id": "ParseData-7qhmP",
+                "type": "genericNode",
+                "position": {
+                    "x": 2341.9094676839277,
+                    "y": 249.73963276782303
+                },
+                "data": {
+                    "type": "ParseData",
+                    "node": {
+                        "template": {
+                            "_type": "Component",
+                            "data": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "trace_as_input": true,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "data",
+                                "value": "",
+                                "display_name": "Data",
+                                "advanced": false,
+                                "input_types": [
+                                    "Data"
+                                ],
+                                "dynamic": false,
+                                "info": "The data to convert to text.",
+                                "title_case": false,
+                                "type": "other",
+                                "_input_type": "DataInput"
+                            },
+                            "code": {
+                                "type": "code",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "from langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import DataInput, MultilineInput, Output, StrInput\nfrom langflow.schema.message import Message\n\n\nclass ParseDataComponent(Component):\n    display_name = \"Parse Data\"\n    description = \"Convert Data into plain text following a specified template.\"\n    icon = \"braces\"\n    name = \"ParseData\"\n\n    inputs = [\n        DataInput(name=\"data\", display_name=\"Data\", info=\"The data to convert to text.\"),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. \"\n            \"It can contain the keys {text}, {data} or any other key in the Data.\",\n            value=\"{text}\",\n        ),\n        StrInput(name=\"sep\", display_name=\"Separator\", advanced=True, value=\"\\n\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Text\", name=\"text\", method=\"parse_data\"),\n    ]\n\n    def parse_data(self) -> Message:\n        data = self.data if isinstance(self.data, list) else [self.data]\n        template = self.template\n\n        result_string = data_to_text(template, data, sep=self.sep)\n        self.status = result_string\n        return Message(text=result_string)\n",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "code",
+                                "advanced": true,
+                                "dynamic": true,
+                                "info": "",
+                                "load_from_db": false,
+                                "title_case": false
+                            },
+                            "sep": {
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "sep",
+                                "value": "\n",
+                                "display_name": "Separator",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "StrInput"
+                            },
+                            "template": {
+                                "trace_as_input": true,
+                                "multiline": true,
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "template",
+                                "value": "{text}",
+                                "display_name": "Template",
+                                "advanced": false,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "MultilineInput"
+                            }
+                        },
+                        "description": "Convert Data into plain text following a specified template.",
+                        "icon": "braces",
+                        "base_classes": [
+                            "Message"
+                        ],
+                        "display_name": "Parse Data",
+                        "documentation": "",
+                        "custom_fields": {},
+                        "output_types": [],
+                        "pinned": false,
+                        "conditional_paths": [],
+                        "frozen": false,
+                        "outputs": [
+                            {
+                                "types": [
+                                    "Message"
+                                ],
+                                "selected": "Message",
+                                "name": "text",
+                                "display_name": "Text",
+                                "method": "parse_data",
+                                "value": "__UNDEFINED__",
+                                "cache": true
+                            }
+                        ],
+                        "field_order": [
+                            "data",
+                            "template",
+                            "sep"
+                        ],
+                        "beta": false,
+                        "edited": false,
+                        "metadata": {},
+                        "lf_version": "1.0.19.post2"
+                    },
+                    "id": "ParseData-7qhmP"
+                },
+                "selected": false,
+                "width": 384,
+                "height": 353,
+                "positionAbsolute": {
+                    "x": 2341.9094676839277,
+                    "y": 249.73963276782303
+                },
+                "dragging": false
+            },
+            {
+                "id": "OpenAIModel-YUM1a",
+                "type": "genericNode",
+                "position": {
+                    "x": 3231.963340176361,
+                    "y": 94.70653241512102
+                },
+                "data": {
+                    "type": "OpenAIModel",
+                    "node": {
+                        "template": {
+                            "_type": "Component",
+                            "output_parser": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "output_parser",
+                                "value": "",
+                                "display_name": "Output Parser",
+                                "advanced": true,
+                                "input_types": [
+                                    "OutputParser"
+                                ],
+                                "dynamic": false,
+                                "info": "The parser to use to parse the output of the model",
+                                "title_case": false,
+                                "type": "other",
+                                "_input_type": "HandleInput"
+                            },
+                            "api_key": {
+                                "load_from_db": true,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "api_key",
+                                "value": "",
+                                "display_name": "OpenAI API Key",
+                                "advanced": false,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "The OpenAI API Key to use for the OpenAI model.",
+                                "title_case": false,
+                                "password": true,
+                                "type": "str",
+                                "_input_type": "SecretStrInput"
+                            },
+                            "code": {
+                                "type": "code",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "import operator\nfrom functools import reduce\n\nfrom langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs import (\n    BoolInput,\n    DictInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    SecretStrInput,\n    StrInput,\n)\nfrom langflow.inputs.inputs import HandleInput\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(name=\"model_kwargs\", display_name=\"Model Kwargs\", advanced=True),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DictInput(\n            name=\"output_schema\",\n            is_list=True,\n            display_name=\"Schema\",\n            advanced=True,\n            info=\"The schema for the Output of the model. \"\n            \"You must pass the word JSON in the prompt. \"\n            \"If left blank, JSON mode will be disabled.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. \"\n            \"Defaults to https://api.openai.com/v1. \"\n            \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n        ),\n        FloatInput(name=\"temperature\", display_name=\"Temperature\", value=0.1),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n        HandleInput(\n            name=\"output_parser\",\n            display_name=\"Output Parser\",\n            info=\"The parser to use to parse the output of the model\",\n            advanced=True,\n            input_types=[\"OutputParser\"],\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        # self.output_schema is a list of dictionaries\n        # let's convert it to a dictionary\n        output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})\n        openai_api_key = self.api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = bool(output_schema_dict) or self.json_mode\n        seed = self.seed\n\n        api_key = SecretStr(openai_api_key) if openai_api_key else None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature if temperature is not None else 0.1,\n            seed=seed,\n        )\n        if json_mode:\n            if output_schema_dict:\n                output = output.with_structured_output(schema=output_schema_dict, method=\"json_mode\")\n            else:\n                output = output.bind(response_format={\"type\": \"json_object\"})\n\n        return output\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"\n        Get a message from an OpenAI exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")\n            if message:\n                return message\n        return None\n",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "code",
+                                "advanced": true,
+                                "dynamic": true,
+                                "info": "",
+                                "load_from_db": false,
+                                "title_case": false
+                            },
+                            "input_value": {
+                                "trace_as_input": true,
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "input_value",
+                                "value": "",
+                                "display_name": "Input",
+                                "advanced": false,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "MessageInput"
+                            },
+                            "json_mode": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "json_mode",
+                                "value": false,
+                                "display_name": "JSON Mode",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "If True, it will output JSON regardless of passing a schema.",
+                                "title_case": false,
+                                "type": "bool",
+                                "_input_type": "BoolInput"
+                            },
+                            "max_tokens": {
+                                "trace_as_metadata": true,
+                                "range_spec": {
+                                    "step_type": "float",
+                                    "min": 0,
+                                    "max": 128000,
+                                    "step": 0.1
+                                },
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "max_tokens",
+                                "value": "",
+                                "display_name": "Max Tokens",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+                                "title_case": false,
+                                "type": "int",
+                                "_input_type": "IntInput"
+                            },
+                            "model_kwargs": {
+                                "trace_as_input": true,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "model_kwargs",
+                                "value": {},
+                                "display_name": "Model Kwargs",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "type": "dict",
+                                "_input_type": "DictInput"
+                            },
+                            "model_name": {
+                                "trace_as_metadata": true,
+                                "options": [
+                                    "gpt-4o-mini",
+                                    "gpt-4o",
+                                    "gpt-4-turbo",
+                                    "gpt-4-turbo-preview",
+                                    "gpt-4",
+                                    "gpt-3.5-turbo",
+                                    "gpt-3.5-turbo-0125"
+                                ],
+                                "combobox": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "model_name",
+                                "value": "gpt-4o-mini",
+                                "display_name": "Model Name",
+                                "advanced": false,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "DropdownInput"
+                            },
+                            "openai_api_base": {
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "openai_api_base",
+                                "value": "",
+                                "display_name": "OpenAI API Base",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "StrInput"
+                            },
+                            "output_schema": {
+                                "trace_as_input": true,
+                                "list": true,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "output_schema",
+                                "value": {},
+                                "display_name": "Schema",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "The schema for the Output of the model. You must pass the word JSON in the prompt. If left blank, JSON mode will be disabled.",
+                                "title_case": false,
+                                "type": "dict",
+                                "_input_type": "DictInput"
+                            },
+                            "seed": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "seed",
+                                "value": 1,
+                                "display_name": "Seed",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "The seed controls the reproducibility of the job.",
+                                "title_case": false,
+                                "type": "int",
+                                "_input_type": "IntInput"
+                            },
+                            "stream": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "stream",
+                                "value": false,
+                                "display_name": "Stream",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "Stream the response from the model. Streaming works only in Chat.",
+                                "title_case": false,
+                                "type": "bool",
+                                "_input_type": "BoolInput"
+                            },
+                            "system_message": {
+                                "trace_as_input": true,
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "system_message",
+                                "value": "",
+                                "display_name": "System Message",
+                                "advanced": true,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "System message to pass to the model.",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "MessageTextInput"
+                            },
+                            "temperature": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "temperature",
+                                "value": 0.1,
+                                "display_name": "Temperature",
+                                "advanced": false,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "type": "float",
+                                "_input_type": "FloatInput"
+                            }
+                        },
+                        "description": "Generates text using OpenAI LLMs.",
+                        "icon": "OpenAI",
+                        "base_classes": [
+                            "LanguageModel",
+                            "Message"
+                        ],
+                        "display_name": "OpenAI",
+                        "documentation": "",
+                        "custom_fields": {},
+                        "output_types": [],
+                        "pinned": false,
+                        "conditional_paths": [],
+                        "frozen": false,
+                        "outputs": [
+                            {
+                                "types": [
+                                    "Message"
+                                ],
+                                "selected": "Message",
+                                "name": "text_output",
+                                "display_name": "Text",
+                                "method": "text_response",
+                                "value": "__UNDEFINED__",
+                                "cache": true,
+                                "required_inputs": [
+                                    "input_value",
+                                    "stream",
+                                    "system_message"
+                                ]
+                            },
+                            {
+                                "types": [
+                                    "LanguageModel"
+                                ],
+                                "selected": "LanguageModel",
+                                "name": "model_output",
+                                "display_name": "Language Model",
+                                "method": "build_model",
+                                "value": "__UNDEFINED__",
+                                "cache": true,
+                                "required_inputs": [
+                                    "api_key",
+                                    "json_mode",
+                                    "max_tokens",
+                                    "model_kwargs",
+                                    "model_name",
+                                    "openai_api_base",
+                                    "output_schema",
+                                    "seed",
+                                    "temperature"
+                                ]
+                            }
+                        ],
+                        "field_order": [
+                            "input_value",
+                            "system_message",
+                            "stream",
+                            "max_tokens",
+                            "model_kwargs",
+                            "json_mode",
+                            "output_schema",
+                            "model_name",
+                            "openai_api_base",
+                            "api_key",
+                            "temperature",
+                            "seed",
+                            "output_parser"
+                        ],
+                        "beta": false,
+                        "edited": false,
+                        "metadata": {},
+                        "lf_version": "1.0.19.post2"
+                    },
+                    "id": "OpenAIModel-YUM1a",
+                    "description": "Generates text using OpenAI LLMs.",
+                    "display_name": "OpenAI"
+                },
+                "selected": false,
+                "width": 384,
+                "height": 587,
+                "positionAbsolute": {
+                    "x": 3231.963340176361,
+                    "y": 94.70653241512102
+                },
+                "dragging": false
+            },
+            {
+                "id": "ChatOutput-c4k0L",
+                "type": "genericNode",
+                "position": {
+                    "x": 3669.141671875754,
+                    "y": 248.4257650261032
+                },
+                "data": {
+                    "type": "ChatOutput",
+                    "node": {
+                        "template": {
+                            "_type": "Component",
+                            "code": {
+                                "type": "code",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.memory import store_message\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_USER\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"ChatOutput\"\n    name = \"ChatOutput\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    def message_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n        )\n        if (\n            self.session_id\n            and isinstance(message, Message)\n            and isinstance(message.text, str)\n            and self.should_store_message\n        ):\n            store_message(\n                message,\n                flow_id=self.graph.flow_id,\n            )\n            self.message.value = message\n\n        self.status = message\n        return message\n",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "code",
+                                "advanced": true,
+                                "dynamic": true,
+                                "info": "",
+                                "load_from_db": false,
+                                "title_case": false
+                            },
+                            "data_template": {
+                                "trace_as_input": true,
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "data_template",
+                                "value": "{text}",
+                                "display_name": "Data Template",
+                                "advanced": true,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "MessageTextInput"
+                            },
+                            "input_value": {
+                                "trace_as_input": true,
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "input_value",
+                                "value": "",
+                                "display_name": "Text",
+                                "advanced": false,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "Message to be passed as output.",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "MessageTextInput"
+                            },
+                            "sender": {
+                                "trace_as_metadata": true,
+                                "options": [
+                                    "Machine",
+                                    "User"
+                                ],
+                                "combobox": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "sender",
+                                "value": "Machine",
+                                "display_name": "Sender Type",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "Type of sender.",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "DropdownInput"
+                            },
+                            "sender_name": {
+                                "trace_as_input": true,
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "sender_name",
+                                "value": "AI",
+                                "display_name": "Sender Name",
+                                "advanced": true,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "Name of the sender.",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "MessageTextInput"
+                            },
+                            "session_id": {
+                                "trace_as_input": true,
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "session_id",
+                                "value": "",
+                                "display_name": "Session ID",
+                                "advanced": true,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "MessageTextInput"
+                            },
+                            "should_store_message": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "should_store_message",
+                                "value": true,
+                                "display_name": "Store Messages",
+                                "advanced": true,
+                                "dynamic": false,
+                                "info": "Store the message in the history.",
+                                "title_case": false,
+                                "type": "bool",
+                                "_input_type": "BoolInput"
+                            }
+                        },
+                        "description": "Display a chat message in the Playground.",
+                        "icon": "ChatOutput",
+                        "base_classes": [
+                            "Message"
+                        ],
+                        "display_name": "Chat Output",
+                        "documentation": "",
+                        "custom_fields": {},
+                        "output_types": [],
+                        "pinned": false,
+                        "conditional_paths": [],
+                        "frozen": false,
+                        "outputs": [
+                            {
+                                "types": [
+                                    "Message"
+                                ],
+                                "selected": "Message",
+                                "name": "message",
+                                "display_name": "Message",
+                                "method": "message_response",
+                                "value": "__UNDEFINED__",
+                                "cache": true
+                            }
+                        ],
+                        "field_order": [
+                            "input_value",
+                            "should_store_message",
+                            "sender",
+                            "sender_name",
+                            "session_id",
+                            "data_template"
+                        ],
+                        "beta": false,
+                        "edited": false,
+                        "metadata": {},
+                        "lf_version": "1.0.19.post2"
+                    },
+                    "id": "ChatOutput-c4k0L",
+                    "description": "Display a chat message in the Playground.",
+                    "display_name": "Chat Output"
+                },
+                "selected": false,
+                "width": 384,
+                "height": 289,
+                "positionAbsolute": {
+                    "x": 3669.141671875754,
+                    "y": 248.4257650261032
+                },
+                "dragging": false
+            },
+            {
+                "id": "note-9ynW0",
+                "type": "noteNode",
+                "position": {
+                    "x": -4,
+                    "y": 38
+                },
+                "data": {
+                    "node": {
+                        "description": "**Google Drive Example Scopes**\n\n**Langflow - OAuth Integration Documentation**\n\n```\ndocs.langflow.org/integrations-setup-google-oauth-langflow\n```\n\n**Drive API Documentation**\n\nhttps://developers.google.com/drive/api/guides/api-specific-auth\n\n**Scope Used in This Example**\n\nPermission to view and download all your Drive files.\n\n```\nhttps://www.googleapis.com/auth/drive.readonly\n```\n\n**Example of How to Enter Scopes**\n\n```\nhttps://www.googleapis.com/auth/drive.apps.readonly, https://www.googleapis.com/auth/drive, https://www.googleapis.com/auth/drive.readonly, https://www.googleapis.com/auth/drive.activity\n```",
+                        "display_name": "",
+                        "documentation": "",
+                        "template": {
+                            "backgroundColor": "indigo"
+                        }
+                    },
+                    "type": "note",
+                    "id": "note-9ynW0"
+                },
+                "selected": false,
+                "width": 584,
+                "height": 673,
+                "dragging": false,
+                "style": {
+                    "width": 584,
+                    "height": 673
+                },
+                "resizing": false
+            },
+            {
+                "id": "GoogleOAuthToken-piWFF",
+                "type": "genericNode",
+                "position": {
+                    "x": 609.7629463431374,
+                    "y": 218.39474366635045
+                },
+                "data": {
+                    "node": {
+                        "template": {
+                            "_type": "Component",
+                            "oauth_credentials": {
+                                "trace_as_metadata": true,
+                                "file_path": "bc2cbf16-ed92-4ef6-a4a5-1526af21d044/2024-11-06_15-06-14_client_secret_998884801917-hsjq3alo0vfqih74fe635k01khqi74d3.apps.googleusercontent.com.json",
+                                "fileTypes": [
+                                    "json"
+                                ],
+                                "list": false,
+                                "required": true,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "oauth_credentials",
+                                "value": "",
+                                "display_name": "Credentials File",
+                                "advanced": false,
+                                "dynamic": false,
+                                "info": "Input OAuth Credentials file (e.g. credentials.json).",
+                                "title_case": false,
+                                "type": "file",
+                                "_input_type": "FileInput"
+                            },
+                            "code": {
+                                "type": "code",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "import json\nimport re\nfrom pathlib import Path\n\nfrom google.auth.transport.requests import Request\nfrom google.oauth2.credentials import Credentials\nfrom google_auth_oauthlib.flow import InstalledAppFlow\n\nfrom langflow.custom import Component\nfrom langflow.io import FileInput, MultilineInput, Output\nfrom langflow.schema import Data\n\n\nclass GoogleOAuthToken(Component):\n    display_name = \"Google OAuth Token\"\n    description = \"Generates a JSON string with your Google OAuth token.\"\n    documentation: str = \"https://developers.google.com/identity/protocols/oauth2/web-server?hl=pt-br#python_1\"\n    icon = \"Google\"\n    name = \"GoogleOAuthToken\"\n\n    inputs = [\n        MultilineInput(\n            name=\"scopes\",\n            display_name=\"Scopes\",\n            info=\"Input scopes for your application.\",\n            required=True,\n        ),\n        FileInput(\n            name=\"oauth_credentials\",\n            display_name=\"Credentials File\",\n            info=\"Input OAuth Credentials file (e.g. credentials.json).\",\n            file_types=[\"json\"],\n            required=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", method=\"build_output\"),\n    ]\n\n    def validate_scopes(self, scopes):\n        pattern = (\n            r\"^(https://www\\.googleapis\\.com/auth/[\\w\\.\\-]+\"\n            r\"|mail\\.google\\.com/\"\n            r\"|www\\.google\\.com/calendar/feeds\"\n            r\"|www\\.google\\.com/m8/feeds)\"\n            r\"(,\\s*https://www\\.googleapis\\.com/auth/[\\w\\.\\-]+\"\n            r\"|mail\\.google\\.com/\"\n            r\"|www\\.google\\.com/calendar/feeds\"\n            r\"|www\\.google\\.com/m8/feeds)*$\"\n        )\n        if not re.match(pattern, scopes):\n            error_message = \"Invalid scope format.\"\n            raise ValueError(error_message)\n\n    def build_output(self) -> Data:\n        self.validate_scopes(self.scopes)\n\n        user_scopes = [scope.strip() for scope in self.scopes.split(\",\")]\n        if self.scopes:\n            scopes = user_scopes\n        else:\n            error_message = \"Incorrect scope, check the scopes field.\"\n            raise ValueError(error_message)\n\n        creds = None\n        token_path = Path(\"token.json\")\n\n        if token_path.exists():\n            with token_path.open(mode=\"r\", encoding=\"utf-8\") as token_file:\n                creds = Credentials.from_authorized_user_file(\n                    str(token_path), scopes)\n\n        if not creds or not creds.valid:\n            if creds and creds.expired and creds.refresh_token:\n                creds.refresh(Request())\n            else:\n                if self.oauth_credentials:\n                    client_secret_file = self.oauth_credentials\n                else:\n                    error_message = \"OAuth 2.0 Credentials file not provided.\"\n                    raise ValueError(error_message)\n\n                flow = InstalledAppFlow.from_client_secrets_file(\n                    client_secret_file, scopes)\n                creds = flow.run_local_server(port=0)\n\n            with token_path.open(mode=\"w\", encoding=\"utf-8\") as token_file:\n                token_file.write(creds.to_json())\n\n        creds_json = json.loads(creds.to_json())\n\n        return Data(data=creds_json)\n",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "code",
+                                "advanced": true,
+                                "dynamic": true,
+                                "info": "",
+                                "load_from_db": false,
+                                "title_case": false
+                            },
+                            "scopes": {
+                                "trace_as_input": true,
+                                "multiline": true,
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": true,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "scopes",
+                                "value": "https://www.googleapis.com/auth/drive.readonly",
+                                "display_name": "Scopes",
+                                "advanced": false,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "Input scopes for your application.",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "MultilineInput"
+                            }
+                        },
+                        "description": "Generates a JSON string with your Google OAuth token.",
+                        "icon": "Google",
+                        "base_classes": [
+                            "Data"
+                        ],
+                        "display_name": "Google OAuth Token",
+                        "documentation": "https://developers.google.com/identity/protocols/oauth2/web-server?hl=pt-br#python_1",
+                        "custom_fields": {},
+                        "output_types": [],
+                        "pinned": false,
+                        "conditional_paths": [],
+                        "frozen": false,
+                        "outputs": [
+                            {
+                                "types": [
+                                    "Data"
+                                ],
+                                "selected": "Data",
+                                "name": "output",
+                                "display_name": "Output",
+                                "method": "build_output",
+                                "value": "__UNDEFINED__",
+                                "cache": true
+                            }
+                        ],
+                        "field_order": [
+                            "scopes",
+                            "oauth_credentials"
+                        ],
+                        "beta": false,
+                        "edited": true,
+                        "metadata": {},
+                        "lf_version": "1.0.19.post2"
+                    },
+                    "type": "GoogleOAuthToken",
+                    "id": "GoogleOAuthToken-piWFF",
+                    "description": "A component to generate a json string containing your Google OAuth token.",
+                    "display_name": "Google OAuth Token"
+                },
+                "selected": true,
+                "width": 384,
+                "height": 391,
+                "dragging": false,
+                "positionAbsolute": {
+                    "x": 609.7629463431374,
+                    "y": 218.39474366635045
+                }
+            },
+            {
+                "id": "JSONCleaner-N4p7F",
+                "type": "genericNode",
+                "position": {
+                    "x": 1484.3316811088714,
+                    "y": 174.88328534754476
+                },
+                "data": {
+                    "node": {
+                        "template": {
+                            "_type": "Component",
+                            "code": {
+                                "type": "code",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "import json\nimport re\nimport unicodedata\n\nfrom langflow.custom import Component\nfrom langflow.inputs import BoolInput, MessageTextInput\nfrom langflow.schema.message import Message\nfrom langflow.template import Output\n\n\nclass JSONCleaner(Component):\n    display_name = \"JSON Cleaner\"\n    description = (\n        \"Cleans the messy and sometimes incorrect JSON strings produced by LLMs \"\n        \"so that they are fully compliant with the JSON spec.\"\n    )\n    icon = \"custom_components\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"json_str\", display_name=\"JSON String\", info=\"The JSON string to be cleaned.\", required=True\n        ),\n        BoolInput(\n            name=\"remove_control_chars\",\n            display_name=\"Remove Control Characters\",\n            info=\"Remove control characters from the JSON string.\",\n            required=False,\n        ),\n        BoolInput(\n            name=\"normalize_unicode\",\n            display_name=\"Normalize Unicode\",\n            info=\"Normalize Unicode characters in the JSON string.\",\n            required=False,\n        ),\n        BoolInput(\n            name=\"validate_json\",\n            display_name=\"Validate JSON\",\n            info=\"Validate the JSON string to ensure it is well-formed.\",\n            required=False,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Cleaned JSON String\", name=\"output\", method=\"clean_json\"),\n    ]\n\n    def clean_json(self) -> Message:\n        try:\n            from json_repair import repair_json\n        except ImportError as e:\n            msg = \"Could not import the json_repair package. Please install it with `pip install json_repair`.\"\n            raise ImportError(msg) from e\n\n        \"\"\"Clean the input JSON string based on provided options and return the cleaned JSON string.\"\"\"\n        json_str = self.json_str\n        remove_control_chars = self.remove_control_chars\n        normalize_unicode = self.normalize_unicode\n        validate_json = self.validate_json\n\n        try:\n            start = json_str.find(\"{\")\n            end = json_str.rfind(\"}\")\n            if start == -1 or end == -1:\n                msg = \"Invalid JSON string: Missing '{' or '}'\"\n                raise ValueError(msg)\n            json_str = json_str[start : end + 1]\n\n            if remove_control_chars:\n                json_str = self._remove_control_characters(json_str)\n            if normalize_unicode:\n                json_str = self._normalize_unicode(json_str)\n            if validate_json:\n                json_str = self._validate_json(json_str)\n\n            cleaned_json_str = repair_json(json_str)\n            result = str(cleaned_json_str)\n\n            self.status = result\n            return Message(text=result)\n        except Exception as e:\n            msg = f\"Error cleaning JSON string: {e}\"\n            raise ValueError(msg) from e\n\n    def _remove_control_characters(self, s: str) -> str:\n        \"\"\"Remove control characters from the string.\"\"\"\n        return re.sub(r\"[\\x00-\\x1F\\x7F]\", \"\", s)\n\n    def _normalize_unicode(self, s: str) -> str:\n        \"\"\"Normalize Unicode characters in the string.\"\"\"\n        return unicodedata.normalize(\"NFC\", s)\n\n    def _validate_json(self, s: str) -> str:\n        \"\"\"Validate the JSON string.\"\"\"\n        try:\n            json.loads(s)\n            return s\n        except json.JSONDecodeError as e:\n            msg = f\"Invalid JSON string: {e}\"\n            raise ValueError(msg) from e\n",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "code",
+                                "advanced": true,
+                                "dynamic": true,
+                                "info": "",
+                                "load_from_db": false,
+                                "title_case": false
+                            },
+                            "json_str": {
+                                "trace_as_input": true,
+                                "trace_as_metadata": true,
+                                "load_from_db": false,
+                                "list": false,
+                                "required": true,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "json_str",
+                                "value": "",
+                                "display_name": "JSON String",
+                                "advanced": false,
+                                "input_types": [
+                                    "Message"
+                                ],
+                                "dynamic": false,
+                                "info": "The JSON string to be cleaned.",
+                                "title_case": false,
+                                "type": "str",
+                                "_input_type": "MessageTextInput"
+                            },
+                            "normalize_unicode": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "normalize_unicode",
+                                "value": true,
+                                "display_name": "Normalize Unicode",
+                                "advanced": false,
+                                "dynamic": false,
+                                "info": "Normalize Unicode characters in the JSON string.",
+                                "title_case": false,
+                                "type": "bool",
+                                "_input_type": "BoolInput",
+                                "load_from_db": false
+                            },
+                            "remove_control_chars": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "remove_control_chars",
+                                "value": false,
+                                "display_name": "Remove Control Characters",
+                                "advanced": false,
+                                "dynamic": false,
+                                "info": "Remove control characters from the JSON string.",
+                                "title_case": false,
+                                "type": "bool",
+                                "_input_type": "BoolInput"
+                            },
+                            "validate_json": {
+                                "trace_as_metadata": true,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "validate_json",
+                                "value": false,
+                                "display_name": "Validate JSON",
+                                "advanced": false,
+                                "dynamic": false,
+                                "info": "Validate the JSON string to ensure it is well-formed.",
+                                "title_case": false,
+                                "type": "bool",
+                                "_input_type": "BoolInput"
+                            }
+                        },
+                        "description": "Cleans the messy and sometimes incorrect JSON strings produced by LLMs so that they are fully compliant with the JSON spec.",
+                        "icon": "custom_components",
+                        "base_classes": [
+                            "Message"
+                        ],
+                        "display_name": "JSON Cleaner",
+                        "documentation": "",
+                        "custom_fields": {},
+                        "output_types": [],
+                        "pinned": false,
+                        "conditional_paths": [],
+                        "frozen": false,
+                        "outputs": [
+                            {
+                                "types": [
+                                    "Message"
+                                ],
+                                "selected": "Message",
+                                "name": "output",
+                                "display_name": "Cleaned JSON String",
+                                "method": "clean_json",
+                                "value": "__UNDEFINED__",
+                                "cache": true
+                            }
+                        ],
+                        "field_order": [
+                            "json_str",
+                            "remove_control_chars",
+                            "normalize_unicode",
+                            "validate_json"
+                        ],
+                        "beta": false,
+                        "edited": false,
+                        "metadata": {},
+                        "lf_version": "1.0.19.post2"
+                    },
+                    "type": "JSONCleaner",
+                    "id": "JSONCleaner-N4p7F",
+                    "description": "Cleans the messy and sometimes incorrect JSON strings produced by LLMs so that they are fully compliant with the JSON spec.",
+                    "display_name": "JSON Cleaner"
+                },
+                "selected": false,
+                "width": 384,
+                "height": 537,
+                "positionAbsolute": {
+                    "x": 1484.3316811088714,
+                    "y": 174.88328534754476
+                },
+                "dragging": false
+            },
+            {
+                "id": "Prompt-uk0Fr",
+                "type": "genericNode",
+                "position": {
+                    "x": 2784.1158749493534,
+                    "y": 225.01053782589702
+                },
+                "data": {
+                    "node": {
+                        "template": {
+                            "_type": "Component",
+                            "code": {
+                                "type": "code",
+                                "required": true,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(\n        self,\n    ) -> Message:\n        prompt = await Message.from_template_and_variables(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"\n        This function is called after the code validation is done.\n        \"\"\"\n        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "password": false,
+                                "name": "code",
+                                "advanced": true,
+                                "dynamic": true,
+                                "info": "",
+                                "load_from_db": false,
+                                "title_case": false
+                            },
+                            "template": {
+                                "trace_as_input": true,
+                                "list": false,
+                                "required": false,
+                                "placeholder": "",
+                                "show": true,
+                                "name": "template",
+                                "value": "{context}\n\nTranslate the text you receive into Spanish!",
+                                "display_name": "Template",
+                                "advanced": false,
+                                "dynamic": false,
+                                "info": "",
+                                "title_case": false,
+                                "type": "prompt",
+                                "_input_type": "PromptInput",
+                                "load_from_db": false
+                            },
+                            "context": {
+                                "field_type": "str",
+                                "required": false,
+                                "placeholder": "",
+                                "list": false,
+                                "show": true,
+                                "multiline": true,
+                                "value": "",
+                                "fileTypes": [],
+                                "file_path": "",
+                                "name": "context",
+                                "display_name": "context",
+                                "advanced": false,
+                                "input_types": [
+                                    "Message",
+                                    "Text"
+                                ],
+                                "dynamic": false,
+                                "info": "",
+                                "load_from_db": false,
+                                "title_case": false,
+                                "type": "str"
+                            }
+                        },
+                        "description": "Create a prompt template with dynamic variables.",
+                        "icon": "prompts",
+                        "base_classes": [
+                            "Message"
+                        ],
+                        "display_name": "Prompt",
+                        "documentation": "",
+                        "custom_fields": {
+                            "template": [
+                                "context"
+                            ]
+                        },
+                        "output_types": [],
+                        "pinned": false,
+                        "conditional_paths": [],
+                        "frozen": false,
+                        "outputs": [
+                            {
+                                "types": [
+                                    "Message"
+                                ],
+                                "selected": "Message",
+                                "name": "prompt",
+                                "display_name": "Prompt Message",
+                                "method": "build_prompt",
+                                "value": "__UNDEFINED__",
+                                "cache": true
+                            }
+                        ],
+                        "field_order": [
+                            "template"
+                        ],
+                        "beta": false,
+                        "edited": false,
+                        "metadata": {},
+                        "lf_version": "1.0.19.post2"
+                    },
+                    "type": "Prompt",
+                    "id": "Prompt-uk0Fr",
+                    "description": "Create a prompt template with dynamic variables.",
+                    "display_name": "Prompt"
+                },
+                "selected": false,
+                "width": 384,
+                "height": 391,
+                "positionAbsolute": {
+                    "x": 2784.1158749493534,
+                    "y": 225.01053782589702
+                },
+                "dragging": false
+            }
+        ],
+        "edges": [
+            {
+                "source": "GoogleDriveComponent-x1jHz",
+                "target": "ParseData-7qhmP",
+                "sourceHandle": "{œdataTypeœ:œGoogleDriveComponentœ,œidœ:œGoogleDriveComponent-x1jHzœ,œnameœ:œdocsœ,œoutput_typesœ:[œDataœ]}",
+                "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-7qhmPœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+                "id": "reactflow__edge-GoogleDriveComponent-x1jHz{œdataTypeœ:œGoogleDriveComponentœ,œidœ:œGoogleDriveComponent-x1jHzœ,œnameœ:œdocsœ,œoutput_typesœ:[œDataœ]}-ParseData-7qhmP{œfieldNameœ:œdataœ,œidœ:œParseData-7qhmPœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+                "data": {
+                    "targetHandle": {
+                        "fieldName": "data",
+                        "id": "ParseData-7qhmP",
+                        "inputTypes": [
+                            "Data"
+                        ],
+                        "type": "other"
+                    },
+                    "sourceHandle": {
+                        "dataType": "GoogleDriveComponent",
+                        "id": "GoogleDriveComponent-x1jHz",
+                        "name": "docs",
+                        "output_types": [
+                            "Data"
+                        ]
+                    }
+                },
+                "selected": false,
+                "animated": false,
+                "className": ""
+            },
+            {
+                "source": "OpenAIModel-YUM1a",
+                "target": "ChatOutput-c4k0L",
+                "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-YUM1aœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-c4k0Lœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "id": "reactflow__edge-OpenAIModel-YUM1a{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-YUM1aœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-c4k0L{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-c4k0Lœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "data": {
+                    "targetHandle": {
+                        "fieldName": "input_value",
+                        "id": "ChatOutput-c4k0L",
+                        "inputTypes": [
+                            "Message"
+                        ],
+                        "type": "str"
+                    },
+                    "sourceHandle": {
+                        "dataType": "OpenAIModel",
+                        "id": "OpenAIModel-YUM1a",
+                        "name": "text_output",
+                        "output_types": [
+                            "Message"
+                        ]
+                    }
+                },
+                "selected": false,
+                "animated": false,
+                "className": ""
+            },
+            {
+                "source": "GoogleOAuthToken-piWFF",
+                "sourceHandle": "{œdataTypeœ:œGoogleOAuthTokenœ,œidœ:œGoogleOAuthToken-piWFFœ,œnameœ:œoutputœ,œoutput_typesœ:[œDataœ]}",
+                "target": "ParseData-LFq8b",
+                "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-LFq8bœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+                "data": {
+                    "targetHandle": {
+                        "fieldName": "data",
+                        "id": "ParseData-LFq8b",
+                        "inputTypes": [
+                            "Data"
+                        ],
+                        "type": "other"
+                    },
+                    "sourceHandle": {
+                        "dataType": "GoogleOAuthToken",
+                        "id": "GoogleOAuthToken-piWFF",
+                        "name": "output",
+                        "output_types": [
+                            "Data"
+                        ]
+                    }
+                },
+                "id": "reactflow__edge-GoogleOAuthToken-piWFF{œdataTypeœ:œGoogleOAuthTokenœ,œidœ:œGoogleOAuthToken-piWFFœ,œnameœ:œoutputœ,œoutput_typesœ:[œDataœ]}-ParseData-LFq8b{œfieldNameœ:œdataœ,œidœ:œParseData-LFq8bœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+                "animated": false,
+                "className": ""
+            },
+            {
+                "source": "ParseData-LFq8b",
+                "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-LFq8bœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+                "target": "JSONCleaner-N4p7F",
+                "targetHandle": "{œfieldNameœ:œjson_strœ,œidœ:œJSONCleaner-N4p7Fœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "data": {
+                    "targetHandle": {
+                        "fieldName": "json_str",
+                        "id": "JSONCleaner-N4p7F",
+                        "inputTypes": [
+                            "Message"
+                        ],
+                        "type": "str"
+                    },
+                    "sourceHandle": {
+                        "dataType": "ParseData",
+                        "id": "ParseData-LFq8b",
+                        "name": "text",
+                        "output_types": [
+                            "Message"
+                        ]
+                    }
+                },
+                "id": "reactflow__edge-ParseData-LFq8b{œdataTypeœ:œParseDataœ,œidœ:œParseData-LFq8bœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-JSONCleaner-N4p7F{œfieldNameœ:œjson_strœ,œidœ:œJSONCleaner-N4p7Fœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "animated": false,
+                "className": ""
+            },
+            {
+                "source": "JSONCleaner-N4p7F",
+                "sourceHandle": "{œdataTypeœ:œJSONCleanerœ,œidœ:œJSONCleaner-N4p7Fœ,œnameœ:œoutputœ,œoutput_typesœ:[œMessageœ]}",
+                "target": "GoogleDriveComponent-x1jHz",
+                "targetHandle": "{œfieldNameœ:œjson_stringœ,œidœ:œGoogleDriveComponent-x1jHzœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "data": {
+                    "targetHandle": {
+                        "fieldName": "json_string",
+                        "id": "GoogleDriveComponent-x1jHz",
+                        "inputTypes": [
+                            "Message"
+                        ],
+                        "type": "str"
+                    },
+                    "sourceHandle": {
+                        "dataType": "JSONCleaner",
+                        "id": "JSONCleaner-N4p7F",
+                        "name": "output",
+                        "output_types": [
+                            "Message"
+                        ]
+                    }
+                },
+                "id": "reactflow__edge-JSONCleaner-N4p7F{œdataTypeœ:œJSONCleanerœ,œidœ:œJSONCleaner-N4p7Fœ,œnameœ:œoutputœ,œoutput_typesœ:[œMessageœ]}-GoogleDriveComponent-x1jHz{œfieldNameœ:œjson_stringœ,œidœ:œGoogleDriveComponent-x1jHzœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "animated": false,
+                "className": ""
+            },
+            {
+                "source": "ParseData-7qhmP",
+                "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-7qhmPœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+                "target": "Prompt-uk0Fr",
+                "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPrompt-uk0Frœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+                "data": {
+                    "targetHandle": {
+                        "fieldName": "context",
+                        "id": "Prompt-uk0Fr",
+                        "inputTypes": [
+                            "Message",
+                            "Text"
+                        ],
+                        "type": "str"
+                    },
+                    "sourceHandle": {
+                        "dataType": "ParseData",
+                        "id": "ParseData-7qhmP",
+                        "name": "text",
+                        "output_types": [
+                            "Message"
+                        ]
+                    }
+                },
+                "id": "reactflow__edge-ParseData-7qhmP{œdataTypeœ:œParseDataœ,œidœ:œParseData-7qhmPœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-uk0Fr{œfieldNameœ:œcontextœ,œidœ:œPrompt-uk0Frœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+                "animated": false,
+                "className": ""
+            },
+            {
+                "source": "Prompt-uk0Fr",
+                "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-uk0Frœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+                "target": "OpenAIModel-YUM1a",
+                "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-YUM1aœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "data": {
+                    "targetHandle": {
+                        "fieldName": "input_value",
+                        "id": "OpenAIModel-YUM1a",
+                        "inputTypes": [
+                            "Message"
+                        ],
+                        "type": "str"
+                    },
+                    "sourceHandle": {
+                        "dataType": "Prompt",
+                        "id": "Prompt-uk0Fr",
+                        "name": "prompt",
+                        "output_types": [
+                            "Message"
+                        ]
+                    }
+                },
+                "id": "reactflow__edge-Prompt-uk0Fr{œdataTypeœ:œPromptœ,œidœ:œPrompt-uk0Frœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-YUM1a{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-YUM1aœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+                "animated": false,
+                "className": ""
+            }
+        ],
+        "viewport": {
+            "x": -1019.4126433636247,
+            "y": 197.09015595775952,
+            "zoom": 0.6352002867729776
+        }
+    },
+    "description": "An example of a flow that connects to Google Drive to access a text document, reads the content, translates it into the desired language, and returns the translated text in the chat, allowing for quick and efficient automation of the Google Docs file translation process.",
+    "name": "Google Drive Docs Translations Example",
+    "last_tested_version": "1.0.19.post2",
+    "endpoint_name": null,
+    "is_component": false
+}

@@ -1,45 +1,24 @@
 import { expect, Page, test } from "@playwright/test";
-import uaParser from "ua-parser-js";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 // TODO: This test might not be needed anymore
 test(
   "user should interact with link component",
   { tag: ["@release", "@workspace"] },
   async ({ context, page }) => {
-    await page.goto("/");
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
-
-    await page.waitForSelector('[id="new-project-btn"]', {
-      timeout: 30000,
-    });
-
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
-
-    const getUA = await page.evaluate(() => navigator.userAgent);
-    const userAgentInfo = uaParser(getUA);
+    await awaitBootstrapTest(page);
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector(
+      '[data-testid="sidebar-custom-component-button"]',
+      {
+        timeout: 3000,
+      },
+    );
 
     await page.getByTestId("sidebar-custom-component-button").click();
     await page.getByTitle("fit view").click();
@@ -47,9 +26,11 @@ test(
 
     await page.getByTestId("title-Custom Component").first().click();
 
-    await page.waitForTimeout(500);
+    await page.waitForSelector('[data-testid="code-button-modal"]', {
+      timeout: 3000,
+    });
+
     await page.getByTestId("code-button-modal").click();
-    await page.waitForTimeout(500);
 
     let cleanCode = await extractAndCleanCode(page);
 
@@ -83,7 +64,10 @@ test(
     await page.keyboard.press("Backspace");
     await page.locator("textarea").last().fill(cleanCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
-    await page.waitForTimeout(500);
+
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 3000,
+    });
 
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();

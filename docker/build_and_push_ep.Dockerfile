@@ -24,6 +24,7 @@ RUN apt-get update \
     && apt-get install --no-install-recommends -y \
     # deps for building python deps
     build-essential \
+    git \
     # npm
     npm \
     # gcc
@@ -87,4 +88,4 @@ ENV LANGFLOW_HOST=0.0.0.0
 ENV LANGFLOW_PORT=7860
 
 USER 1000
-ENTRYPOINT ["python", "-m", "langflow", "run", "--host", "0.0.0.0", "--backend-only"]
+CMD ["python", "-m", "langflow", "run", "--host", "0.0.0.0", "--backend-only"]
