@@ -1,7 +1,7 @@
 from langflow.custom import Component
 from langflow.helpers.data import data_to_text, data_to_text_list
 from langflow.io import DataInput, MultilineInput, Output, StrInput
-from langflow.schema import Data 
+from langflow.schema import Data
 from langflow.schema.message import Message
 
 
@@ -41,7 +41,7 @@ class DataToMessage(Component):
             method="create_combined_text",
         ),
         Output(
-            display_name="Data List", 
+            display_name="Data List",
             name="data_list",
             info="List of individual Messages, each formatted using the template",
             method="create_data_list",
