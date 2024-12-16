@@ -49,7 +49,7 @@ resolution-markers = [
     "python_full_version >= '3.12.4' and python_full_version < '3.13'",
 ]
 dependencies = [
-    { name = "pyautogen", version = "0.5.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
+    { name = "pyautogen", marker = "python_full_version < '3.13'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/8e/d9/985afb6f67e56f1f0c720e76aef931a2e94e0b291f9fa2532dafd1f500fc/ag2-0.5.2.tar.gz", hash = "sha256:98a77bb291b9d8548da1328117efab2767e2a66e2b76485569173716165273c2", size = 34372 }
 wheels = [
@@ -3798,8 +3798,6 @@ dependencies = [
     { name = "opensearch-py" },
     { name = "pgvector" },
     { name = "pyarrow" },
-    { name = "pyautogen", version = "0.3.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
-    { name = "pyautogen", version = "0.5.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
     { name = "pydantic-settings" },
     { name = "pymongo" },
     { name = "pytube" },
@@ -3924,21 +3922,17 @@ requires-dist = [
     { name = "langchain-community", specifier = "~=0.3.10" },
     { name = "langchain-elasticsearch", specifier = "==0.3.0" },
     { name = "langchain-google-calendar-tools", specifier = "==0.0.1" },
-    { name = "langchain-google-calendar-tools", specifier = ">=0.0.1,<1.0.0" },
     { name = "langchain-google-community", specifier = "==2.0.3" },
     { name = "langchain-google-genai", specifier = "==2.0.6" },
     { name = "langchain-google-vertexai", specifier = "==2.0.7" },
     { name = "langchain-groq", specifier = "==0.2.1" },
-    { name = "langchain-groq", specifier = ">=0.1.9,<1.0.0" },
     { name = "langchain-milvus", specifier = "==0.1.7" },
-    { name = "langchain-milvus", specifier = ">=0.1.1,<1.0.0" },
     { name = "langchain-mistralai", specifier = "==0.2.3" },
     { name = "langchain-mongodb", specifier = "==0.2.0" },
     { name = "langchain-nvidia-ai-endpoints", specifier = "==0.3.5" },
     { name = "langchain-ollama", specifier = "==0.2.1" },
     { name = "langchain-openai", specifier = "==0.2.12" },
     { name = "langchain-pinecone", specifier = "==0.2.0" },
-    { name = "langchain-pinecone", specifier = ">=0.1.3,<1.0.0" },
     { name = "langchain-unstructured", specifier = "==0.1.5" },
     { name = "langflow-base", editable = "src/backend/base" },
     { name = "langfuse", specifier = "==2.53.9" },
@@ -3960,7 +3954,6 @@ requires-dist = [
     { name = "opensearch-py", specifier = "==2.8.0" },
     { name = "pgvector", specifier = "==0.3.6" },
     { name = "pyarrow", specifier = "==17.0.0" },
-    { name = "pyautogen", specifier = ">=0.2.0,<1.0.0" },
     { name = "pydantic-settings", specifier = "==2.4.0" },
     { name = "pymongo", specifier = "==4.10.1" },
     { name = "pytube", specifier = "==15.0.0" },
@@ -4058,7 +4051,6 @@ dependencies = [
     { name = "loguru" },
     { name = "multiprocess" },
     { name = "nanoid" },
-    { name = "needle-python" },
     { name = "nest-asyncio" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-prometheus" },
@@ -4193,7 +4185,6 @@ requires-dist = [
     { name = "multiprocess", specifier = ">=0.70.14,<1.0.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11.0" },
     { name = "nanoid", specifier = ">=2.0.0,<3.0.0" },
-    { name = "needle-python", specifier = ">=0.4.0" },
     { name = "nest-asyncio", specifier = ">=1.6.0,<2.0.0" },
     { name = "opentelemetry-api", specifier = ">=1.25.0,<2.0.0" },
     { name = "opentelemetry-exporter-prometheus", specifier = ">=0.46b0,<1.0.0" },
@@ -6275,38 +6266,8 @@ wheels = [
 
 [[package]]
 name = "pyautogen"
-version = "0.3.1"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.13'",
-]
-dependencies = [
-    { name = "diskcache", marker = "python_full_version >= '3.13'" },
-    { name = "docker", marker = "python_full_version >= '3.13'" },
-    { name = "flaml", marker = "python_full_version >= '3.13'" },
-    { name = "numpy", marker = "python_full_version >= '3.13'" },
-    { name = "openai", marker = "python_full_version >= '3.13'" },
-    { name = "packaging", marker = "python_full_version >= '3.13'" },
-    { name = "pydantic", marker = "python_full_version >= '3.13'" },
-    { name = "python-dotenv", marker = "python_full_version >= '3.13'" },
-    { name = "termcolor", marker = "python_full_version >= '3.13'" },
-    { name = "tiktoken", marker = "python_full_version >= '3.13'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/03/4a/147653de14134631423d7c39c4aca62fea38421b6fb753f9b71d60412738/pyautogen-0.3.1.tar.gz", hash = "sha256:14f6b0560d3d46c97092cc024585c23742611e136f001d2d1194630adfd94263", size = 304851 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/fc/63/0ee7c3adf310a502f51077f02ab7080cd9580c34f574b76d85faaad63856/pyautogen-0.3.1-py3-none-any.whl", hash = "sha256:05c11eb2a370ff11a9b5a3138fb0fec0b99e6b8281642badd554420301654f7b", size = 350154 },
-]
-
-[[package]]
-name = "pyautogen"
 version = "0.5.2"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version < '3.11'",
-    "python_full_version == '3.11.*'",
-    "python_full_version >= '3.12' and python_full_version < '3.12.4'",
-    "python_full_version >= '3.12.4' and python_full_version < '3.13'",
-]
 dependencies = [
     { name = "diskcache", marker = "python_full_version < '3.13'" },
     { name = "docker", marker = "python_full_version < '3.13'" },
