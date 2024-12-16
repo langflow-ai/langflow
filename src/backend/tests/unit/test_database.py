@@ -324,7 +324,8 @@ async def test_delete_flows_with_transaction_and_build(client: AsyncClient, logg
             "GET", "api/v1/monitor/transactions", params={"flow_id": flow_id}, headers=logged_in_headers
         )
         assert response.status_code == 200
-        assert response.json() == []
+        json_response = response.json()
+        assert json_response["items"] == []
 
     for flow_id in flow_ids:
         response = await client.request(
