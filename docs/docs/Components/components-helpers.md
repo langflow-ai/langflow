@@ -8,7 +8,13 @@ Helper components provide utility functions to help manage data, tasks, and othe
 
 ## Use a helper component in a flow
 
+Chat memory in Langflow is stored either in local Langflow tables with `LCBufferMemory`, or connected to an external database. Messages are stored  as , and retrieved as data objects or strings.
 
+The **Store Message** helper component stores chat memories as [Data](/guides-data-message) objects, and the **Message History** helper component retrieves chat messages as data objects or strings.
+
+This example flow stores and retrieves chat history from an [AstraDBChatMemory](/Components/components-memories#astradbchatmemory-component) component with **Store Message** and **Chat Memory** components.
+
+![Sample Flow storing Chat Memory in AstraDB](/img/astra_db_chat_memory_rounded.png)
 
 ## Create List
 
@@ -23,6 +29,20 @@ This component dynamically creates a record with a specified number of fields.
 
 ## Current date
 
+The Current Date component returns the current date and time in a selected timezone. This component provides a flexible way to obtain timezone-specific date and time information within a Langflow pipeline.
+
+## Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+|timezone|Timezone|Select the timezone for the current date and time.
+
+## Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+|current_date|Current Date|The resulting current date and time in the selected timezone.
+
 ## ID Generator
 
 This component generates a unique ID.
@@ -33,7 +53,7 @@ This component generates a unique ID.
 |------|--------------|------|
 | value | Value | Unique ID generated. |
 
-## Message history
+## Message history {#chat-memory}
 
 This component retrieves and manages chat messages from Langflow tables or an external memory.
 
@@ -78,3 +98,21 @@ It provides flexibility in managing message storage and retrieval within a chat 
 | Name | Display Name | Info |
 |------|--------------|------|
 | stored_messages | Stored Messages | The list of stored messages after the current message has been added. |
+
+## Structured output
+
+This component transforms LLM responses into structured data formats.
+
+### Input
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| llm | Language Model | The language model to use to generate the structured output. |
+| input_value | Input message | The input message to be processed by the language model. |
+| schema_name | Schema Name | Provide a name for the output data schema. |
+| output_schema | Output Schema | Define the structure and data types for the model's output. |
+| multiple | Generate Multiple | Set to True if the model should generate a list of outputs instead of a single output. |
+
+### Output
+
+| structured_output | Structured Output | The resulting structured output based on the defined schema. |

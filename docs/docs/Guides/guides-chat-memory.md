@@ -59,7 +59,7 @@ Chat memory is retrieved from an external database or vector store using the [**
 
 Chat memory is stored to an external database or vector store using the [Store Message](/components-helpers#store-message) component.
 
-The [**Chat Memories**](/Components/components-memories) components provide access to their respective external databases **as memory**. This allows AIs to access external memory for persistence and context retention. For example, connect the **Chat Memory** component to an **AstraDBChatMemory*** component to store the message history in an external Astra DB database.
+The [**Chat Memories**](/Components/components-memories) components provide access to their respective external databases **as memory**. This allows AIs to access external memory for persistence and context retention. For example, connect the **Chat Memory** component to an **AstraDBChatMemory** component to store the message history in an external Astra DB database.
 
 This example stores and retrieves chat history from an [AstraDBChatMemory](/Components/components-memories#astradbchatmemory-component) component with **Store Message** and **Chat Memory** components.
 
