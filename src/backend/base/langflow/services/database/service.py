@@ -4,10 +4,12 @@ import asyncio
 import re
 import sqlite3
 import time
+import aiofiles
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
+from aiofiles import os as aio_os
 
 import sqlalchemy as sa
 from alembic import command, util
@@ -29,6 +31,7 @@ from langflow.services.database.utils import Result, TableResults
 from langflow.services.deps import get_settings_service
 from langflow.services.utils import teardown_superuser
 
+
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
 
@@ -43,30 +46,33 @@ class DatabaseService(Service):
             raise ValueError(msg)
         self.database_url: str = settings_service.settings.database_url
         self._sanitize_database_url()
+
         # This file is in langflow.services.database.manager.py
         # the ini is in langflow
         langflow_dir = Path(__file__).parent.parent.parent
         self.script_location = langflow_dir / "alembic"
         self.alembic_cfg_path = langflow_dir / "alembic.ini"
+
         # register the event listener for sqlite as part of this class.
         # Using decorator will make the method not able to use self
         event.listen(Engine, "connect", self.on_connection)
         self.engine = self._create_engine()
         self.async_engine = self._create_async_engine()
+        
         alembic_log_file = self.settings_service.settings.alembic_log_file
-
         # Check if the provided path is absolute, cross-platform.
         if Path(alembic_log_file).is_absolute():
-            # Use the absolute path directly.
             self.alembic_log_path = Path(alembic_log_file)
         else:
-            # Construct the path using the langflow directory.
             self.alembic_log_path = Path(langflow_dir) / alembic_log_file
-
-        # Ensure the directory and file for the alembic log file exists
-        self.alembic_log_path.parent.mkdir(parents=True, exist_ok=True)
-        self.alembic_log_path.touch(exist_ok=True)
+            
         self._logged_pragma = False
+
+    async def initialize_log_file(self):
+        # Ensure the directory and file for the alembic log file exists
+        await aio_os.makedirs(self.alembic_log_path.parent, exist_ok=True)
+        async with aiofiles.open(self.alembic_log_path, 'a'):
+            pass  # Equivalent to touch
 
     def reload_engine(self) -> None:
         self._sanitize_database_url()
