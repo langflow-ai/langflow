@@ -19,11 +19,7 @@ export default function FlowLogsModal({
   const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
   const [rows, setRows] = useState<any>([]);
 
-  const {
-    data: TransactionData,
-    isLoading,
-    refetch,
-  } = useGetTransactionsQuery({
+  const { data, isLoading, refetch } = useGetTransactionsQuery({
     id: currentFlowId,
     params: {
       page: pageIndex,
@@ -32,24 +28,13 @@ export default function FlowLogsModal({
     mode: "union",
   });
 
-  const data = {
-    rows: TransactionData?.rows ?? [],
-    columns: TransactionData?.columns ?? [],
-    pagination: {
-      page: TransactionData?.pagination?.page ?? 1,
-      size: TransactionData?.pagination?.size ?? 10,
-      total: TransactionData?.pagination?.total ?? 0,
-      pages: TransactionData?.pagination?.pages ?? 0,
-    },
-  };
-
   useEffect(() => {
-    if (TransactionData) {
+    if (data) {
       const { columns, rows } = data;
       setColumns(columns.map((col) => ({ ...col, editable: true })));
       setRows(rows);
     }
-  }, [TransactionData]);
+  }, [data]);
 
   useEffect(() => {
     if (open) {
@@ -84,15 +69,15 @@ export default function FlowLogsModal({
           rowData={rows}
           headerHeight={rows.length === 0 ? 0 : undefined}
         ></TableComponent>
-        {!isLoading && data.pagination.total >= 10 && (
+        {!isLoading && (data?.pagination.total ?? 0) >= 10 && (
           <div className="flex justify-end px-3 py-4">
             <PaginatorComponent
-              pageIndex={data.pagination.page}
-              pageSize={data.pagination.size}
+              pageIndex={(data?.pagination.page ?? 1)}
+              pageSize={(data?.pagination.size ?? 10)}
               rowsCount={[12, 24, 48, 96]}
-              totalRowsCount={data.pagination.total}
+              totalRowsCount={(data?.pagination.total ?? 0)}
               paginate={handlePageChange}
-              pages={data.pagination.pages}
+              pages={data?.pagination.pages}
             />
           </div>
         )}
