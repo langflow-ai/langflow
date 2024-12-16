@@ -16,7 +16,7 @@ class ChatOllamaComponent(LCModelComponent):
     icon = "Ollama"
     name = "OllamaModel"
 
-    async def aupdate_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
+    async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
         if field_name == "mirostat":
             if field_value == "Disabled":
                 build_config["mirostat_eta"]["advanced"] = True
@@ -40,7 +40,7 @@ class ChatOllamaComponent(LCModelComponent):
             base_url_load_from_db = base_url_dict.get("load_from_db", False)
             base_url_value = base_url_dict.get("value")
             if base_url_load_from_db:
-                base_url_value = await self.variables(base_url_value, field_name)
+                base_url_value = await self.get_variables(base_url_value, field_name)
             elif not base_url_value:
                 base_url_value = "http://localhost:11434"
             build_config["model_name"]["options"] = await self.get_model(base_url_value)
