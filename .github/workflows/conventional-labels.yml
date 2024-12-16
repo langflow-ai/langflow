@@ -17,6 +17,8 @@ jobs:
           access_token: ${{ secrets.GITHUB_TOKEN }}
           issue: false
           title_pattern: "([\w\-]+)(\([\w\-]+\))?!?:\s+.*"
+          verbose: true
+
 
   label:
     needs: validate-pr
