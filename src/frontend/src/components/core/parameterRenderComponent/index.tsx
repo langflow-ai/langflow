@@ -177,6 +177,9 @@ export function ParameterRenderComponent({
             description={templateData.info || "Add or edit data"}
             columns={templateData?.table_schema?.columns}
             tableTitle={templateData?.display_name ?? "Table"}
+            table_options={templateData?.table_options}
+            trigger_icon={templateData?.trigger_icon}
+            trigger_text={templateData?.trigger_text}
           />
         );
       case "slider":
