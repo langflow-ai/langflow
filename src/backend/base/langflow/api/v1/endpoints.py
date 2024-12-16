@@ -581,7 +581,7 @@ async def custom_component(
 
     built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
     if raw_code.frontend_node is not None:
-        built_frontend_node = await component_instance.post_code_processing(built_frontend_node, raw_code.frontend_node)
+        built_frontend_node = await component_instance.update_frontend_node(built_frontend_node, raw_code.frontend_node)
 
     type_ = get_instance_name(component_instance)
     return CustomComponentResponse(data=built_frontend_node, type=type_)

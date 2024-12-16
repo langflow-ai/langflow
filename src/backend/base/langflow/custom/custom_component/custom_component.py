@@ -416,7 +416,11 @@ class CustomComponent(BaseComponent):
             self._template_config = self.build_template_config()
         return self._template_config
 
-    async def variables(self, name: str, field: str):
+    def variables(self, name: str, field: str):
+        """DEPRECATED - This is kept for backward compatibility. Use get_variables instead."""
+        return run_until_complete(self.get_variables(name, field))
+
+    async def get_variables(self, name: str, field: str):
         """Returns the variable for the current user with the specified name.
 
         Raises:
@@ -505,7 +509,7 @@ class CustomComponent(BaseComponent):
         )
 
     def list_flows(self) -> list[Data]:
-        """This is kept for backward compatibility. Using alist_flows instead is recommended."""
+        """DEPRECATED - This is kept for backward compatibility. Using alist_flows instead is recommended."""
         return run_until_complete(self.alist_flows())
 
     async def alist_flows(self) -> list[Data]:
@@ -530,8 +534,15 @@ class CustomComponent(BaseComponent):
         """
         raise NotImplementedError
 
-    async def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
-        """This function is called after the code validation is done."""
+    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
+        """DEPRECATED - Kept for backward compatibility. Use update_frontend_node instead."""
+        run_until_complete(self.update_frontend_node(new_frontend_node, current_frontend_node))
+
+    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):
+        """Updates the given new frontend node with values from the current frontend node.
+
+        This function is called after the code validation is done.
+        """
         return update_frontend_node_with_template_values(
             frontend_node=new_frontend_node, raw_frontend_node=current_frontend_node
         )
