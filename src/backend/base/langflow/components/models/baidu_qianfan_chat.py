@@ -3,7 +3,6 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing.constants import LanguageModel
-from langflow.inputs.inputs import HandleInput
 from langflow.io import DropdownInput, FloatInput, MessageTextInput, SecretStrInput
 
 
@@ -66,13 +65,6 @@ class QianfanChatEndpointComponent(LCModelComponent):
         ),
         MessageTextInput(
             name="endpoint", display_name="Endpoint", info="Endpoint of the Qianfan LLM, required if custom model used."
-        ),
-        HandleInput(
-            name="output_parser",
-            display_name="Output Parser",
-            info="The parser to use to parse the output of the model",
-            advanced=True,
-            input_types=["OutputParser"],
         ),
     ]
 

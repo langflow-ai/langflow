@@ -83,11 +83,11 @@ class CustomComponent(Component):
 
     await page.getByText("Check & Save").last().click();
 
-    await page.waitForSelector('text="Open Table"', {
+    await page.waitForSelector('text="Open table"', {
       timeout: 3000,
     });
 
-    await page.getByText("Open Table").click();
+    await page.getByText("Open table").click();
 
     await page.waitForSelector(".ag-cell-value", {
       timeout: 3000,
@@ -166,11 +166,11 @@ class CustomComponent(Component):
 
     await page.getByText("Close").last().click();
 
-    await page.waitForSelector("text=Open Table", {
+    await page.waitForSelector("text=Open table", {
       timeout: 3000,
     });
 
-    await page.getByText("Open Table").click();
+    await page.getByText("Open table").click();
 
     await page.waitForSelector(".ag-cell-value", {
       timeout: 3000,

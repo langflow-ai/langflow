@@ -140,9 +140,13 @@ export const SidebarDraggableComponent = forwardRef(
               }}
               onDragStart={onDragStart}
               onDragEnd={() => {
-                document.body.removeChild(
-                  document.getElementsByClassName("cursor-grabbing")[0],
-                );
+                if (
+                  document.getElementsByClassName("cursor-grabbing").length > 0
+                ) {
+                  document.body.removeChild(
+                    document.getElementsByClassName("cursor-grabbing")[0],
+                  );
+                }
               }}
             >
               <ForwardedIconComponent

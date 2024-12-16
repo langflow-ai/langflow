@@ -1,8 +1,8 @@
-import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
 import { usePostAddFlow } from "@/controllers/API/queries/flows/use-post-add-flow";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
+import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useTypesStore } from "@/stores/typesStore";
 import { FlowType } from "@/types/flow";
 import {
@@ -28,6 +28,13 @@ const useAddFlow = () => {
 
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
 
+  const unavailableFields = useGlobalVariablesStore(
+    (state) => state.unavailableFields,
+  );
+  const globalVariablesEntries = useGlobalVariablesStore(
+    (state) => state.globalVariablesEntries,
+  );
+
   const { mutate: postAddFlow } = usePostAddFlow();
 
   const addFlow = async (params?: {
@@ -41,7 +48,12 @@ const useAddFlow = () => {
         ? await processDataFromFlow(flow)
         : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
       flowData?.nodes.forEach((node) => {
-        updateGroupRecursion(node, flowData?.edges);
+        updateGroupRecursion(
+          node,
+          flowData?.edges,
+          unavailableFields,
+          globalVariablesEntries,
+        );
       });
       // Create a new flow with a default name if no flow is provided.
       if (params?.override && flow) {

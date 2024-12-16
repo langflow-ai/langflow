@@ -18,27 +18,27 @@ class SubFlowComponent(Component):
     beta: bool = True
     icon = "Workflow"
 
-    def get_flow_names(self) -> list[str]:
-        flow_data = self.list_flows()
+    async def get_flow_names(self) -> list[str]:
+        flow_data = await self.alist_flows()
         return [flow_data.data["name"] for flow_data in flow_data]
 
-    def get_flow(self, flow_name: str) -> Data | None:
-        flow_datas = self.list_flows()
+    async def get_flow(self, flow_name: str) -> Data | None:
+        flow_datas = await self.alist_flows()
         for flow_data in flow_datas:
             if flow_data.data["name"] == flow_name:
                 return flow_data
         return None
 
-    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
+    async def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "flow_name":
-            build_config["flow_name"]["options"] = self.get_flow_names()
+            build_config["flow_name"]["options"] = await self.get_flow_names()
 
         for key in list(build_config.keys()):
             if key not in [x.name for x in self.inputs] + ["code", "_type", "get_final_results_only"]:
                 del build_config[key]
         if field_value is not None and field_name == "flow_name":
             try:
-                flow_data = self.get_flow(field_value)
+                flow_data = await self.get_flow(field_value)
             except Exception:  # noqa: BLE001
                 logger.exception(f"Error getting flow {field_value}")
             else:

@@ -13,7 +13,7 @@ on:
         description: "(Optional) Python versions to test"
         required: true
         type: string
-        default: "['3.10', '3.11', '3.12']"
+        default: "['3.10', '3.11', '3.12', '3.13']"
       ref:
         description: "(Optional) ref to checkout"
         required: false

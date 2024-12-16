@@ -12,7 +12,7 @@ interface IPatchUpdateFlow {
   description: string;
   folder_id: string | null | undefined;
   endpoint_name: string | null | undefined;
-  locked: boolean | null | undefined;
+  locked?: boolean | null | undefined;
 }
 
 export const usePatchUpdateFlow: useMutationFunctionType<

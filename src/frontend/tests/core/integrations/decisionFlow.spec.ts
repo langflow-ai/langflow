@@ -11,7 +11,7 @@ async function zoomOut(page: Page, times: number = 4) {
 
 test(
   "should create a flow with decision",
-  { tag: ["@release", "@components"] },
+  { tag: ["@release", "@components", "@workflow"] },
 
   async ({ page }) => {
     test.skip(

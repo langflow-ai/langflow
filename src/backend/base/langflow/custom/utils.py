@@ -1,5 +1,7 @@
 import ast
+import asyncio
 import contextlib
+import inspect
 import re
 import traceback
 from typing import Any
@@ -547,3 +549,14 @@ def get_instance_name(instance):
     if hasattr(instance, "name") and instance.name:
         name = instance.name
     return name
+
+
+async def update_component_build_config(
+    component: CustomComponent,
+    build_config: dotdict,
+    field_value: Any,
+    field_name: str | None = None,
+):
+    if inspect.iscoroutinefunction(component.update_build_config):
+        return await component.update_build_config(build_config, field_value, field_name)
+    return await asyncio.to_thread(component.update_build_config, build_config, field_value, field_name)

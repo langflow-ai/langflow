@@ -149,7 +149,8 @@ async def handle_on_tool_start(
     agent_message.content_blocks[0].contents.append(tool_content)
 
     agent_message = await send_message_method(message=agent_message)
-    tool_blocks_map[tool_key] = agent_message.content_blocks[0].contents[-1]
+    if agent_message.content_blocks and agent_message.content_blocks[0].contents:
+        tool_blocks_map[tool_key] = agent_message.content_blocks[0].contents[-1]
     return agent_message, new_start_time
 
 

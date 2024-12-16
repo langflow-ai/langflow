@@ -1,13 +1,11 @@
 import { useEffect, useRef } from "react";
 
-import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import _ from "lodash";
 import { classNames, cn } from "../../../../../utils/utils";
-import IconComponent from "../../../../common/genericIconComponent";
-import { Button } from "../../../../ui/button";
 import { Input } from "../../../../ui/input";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import { InputListComponentType, InputProps } from "../../types";
+import { ButtonInputList } from "./components/button-input-list";
 
 export default function InputListComponent({
   value = [""],
@@ -52,12 +50,6 @@ export default function InputListComponent({
     handleOnNewValue({ value: newInputList });
   };
 
-  const getButtonClassName = () =>
-    classNames(disabled ? "text-hard-zinc" : "text-placeholder-foreground");
-
-  const getTestId = (type, index) =>
-    `input-list-${type}-btn${editNode ? "-edit" : ""}_${componentName}-${index}`;
-
   return (
     <div
       className={classNames(
@@ -76,91 +68,34 @@ export default function InputListComponent({
               editNode ? "input-edit-node" : "",
               disabled ? "disabled-state" : "",
               "peer relative",
-              index === 0 && value.length > 1 && "pr-7 focus:pr-3",
+              index === 0 && value.length > 1 && "w-3/4 pr-7 focus:pr-3",
             )}
             placeholder={getPlaceholder(disabled, placeholder)}
             onChange={(event) => handleInputChange(index, event.target.value)}
             data-testid={`${id}_${index}`}
           />
           {index === 0 && value.length > 1 && (
-            <div className="absolute right-[65px] flex items-center peer-focus:pointer-events-none peer-focus:hidden">
-              <div
-                onClick={addNewInput}
-                className={cn(
-                  "hit-area-icon group flex !h-9 items-center justify-center text-center",
-                  disabled
-                    ? "pointer-events-none bg-background hover:bg-background"
-                    : "",
-                  index === 0
-                    ? "bg-background hover:bg-muted"
-                    : "hover:bg-smooth-red",
-                )}
-              >
-                <Button
-                  unstyled
-                  size="icon"
-                  className={cn(
-                    "hit-area-icon flex items-center justify-center",
-                    getButtonClassName(),
-                  )}
-                  data-testid={getTestId("plus", index)}
-                  disabled={disabled}
-                >
-                  <IconComponent
-                    name={"Plus"}
-                    className={cn(
-                      "icon-size justify-self-center text-muted-foreground",
-                      !disabled && "hover:cursor-pointer hover:text-foreground",
-                      "group-hover:text-foreground",
-                    )}
-                    strokeWidth={ICON_STROKE_WIDTH}
-                  />
-                </Button>
-              </div>
-            </div>
-          )}
-          <div
-            onClick={
-              index === 0 && value.length <= 1
-                ? addNewInput
-                : (e) => removeInput(index, e)
-            }
-            className={cn(
-              "hit-area-icon group flex items-center justify-center text-center",
-              disabled
-                ? "pointer-events-none bg-background hover:bg-background"
-                : "",
-              index === 0 && value.length <= 1
-                ? "bg-background hover:bg-muted"
-                : "hover:bg-smooth-red",
-            )}
-          >
-            <Button
-              unstyled
-              size="icon"
-              className={cn(
-                "hit-area-icon flex items-center justify-center",
-                getButtonClassName(),
-              )}
-              data-testid={getTestId(
-                index === 0 && value.length <= 1 ? "plus" : "minus",
-                index,
-              )}
+            <ButtonInputList
+              index={index}
+              value={value}
+              addNewInput={addNewInput}
+              removeInput={removeInput}
               disabled={disabled}
-            >
-              <IconComponent
-                name={index === 0 && value.length <= 1 ? "Plus" : "Trash2"}
-                className={cn(
-                  "icon-size justify-self-center text-muted-foreground",
-                  !disabled && "hover:cursor-pointer hover:text-foreground",
-                  index === 0 && value.length <= 1
-                    ? "group-hover:text-foreground"
-                    : "group-hover:text-destructive",
-                )}
-                strokeWidth={ICON_STROKE_WIDTH}
-              />
-            </Button>
-          </div>
+              editNode={editNode}
+              addIcon
+              componentName={componentName || ""}
+            />
+          )}
+          <ButtonInputList
+            index={index}
+            value={value}
+            addNewInput={addNewInput}
+            removeInput={removeInput}
+            disabled={disabled}
+            editNode={editNode}
+            addIcon={false}
+            componentName={componentName || ""}
+          />
         </div>
       ))}
     </div>

@@ -1,0 +1,43 @@
+worker_processes auto;
+pid /tmp/nginx.pid;
+events {}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type text/plain;
+
+    types {
+        text/html html;
+        text/css css;
+        application/javascript js;
+    }
+
+    server {
+        gzip on;
+        gzip_comp_level 2;
+        gzip_min_length 1000;
+        gzip_types text/xml text/css;
+        gzip_http_version 1.1;
+        gzip_vary on;
+        gzip_disable "MSIE [4-6] \.";
+
+        listen ${FRONTEND_PORT};
+
+        location / {
+            root /usr/share/nginx/html;
+            index index.html index.htm;
+            try_files $uri $uri/ /index.html =404;
+        }
+        location /api {
+            proxy_pass ${BACKEND_URL};
+        }
+        location /health_check {
+            proxy_pass ${BACKEND_URL};
+        }
+        location /health {
+            proxy_pass ${BACKEND_URL};
+        }
+
+        include /etc/nginx/extra-conf.d/*.conf;
+    }
+}

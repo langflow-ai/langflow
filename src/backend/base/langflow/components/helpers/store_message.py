@@ -46,7 +46,7 @@ class StoreMessageComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Stored Messages", name="stored_messages", method="store_message"),
+        Output(display_name="Stored Message", name="stored_message", method="store_message"),
     ]
 
     async def store_message(self) -> Message:
@@ -61,14 +61,19 @@ class StoreMessageComponent(Component):
             self.memory.session_id = message.session_id
             lc_message = message.to_lc_message()
             await self.memory.aadd_messages([lc_message])
-            stored = await self.memory.aget_messages()
-            stored = [Message.from_lc_message(m) for m in stored]
+            stored_message = await self.memory.aget_messages()
+            stored_message = [Message.from_lc_message(m) for m in stored_message]
             if message.sender:
-                stored = [m for m in stored if m.sender == message.sender]
+                stored_message = [m for m in stored_message if m.sender == message.sender]
         else:
             await astore_message(message, flow_id=self.graph.flow_id)
-            stored = await aget_messages(
+            stored_messages = await aget_messages(
                 session_id=message.session_id, sender_name=message.sender_name, sender=message.sender
             )
-        self.status = stored
-        return stored
+        if not stored_messages:
+            msg = "No messages were stored. Please ensure that the session ID and sender are properly set."
+            raise ValueError(msg)
+        stored_message = stored_messages[0]
+
+        self.status = stored_message
+        return stored_message

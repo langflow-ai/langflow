@@ -89,7 +89,7 @@ build-backend = "hatchling.build"
 name = "langflow-base"
 version = "0.1.1"
 description = "A Python package with a built-in web application"
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.10,<3.14"
 license = "MIT"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 readme = "README.md"
@@ -111,7 +111,8 @@ dependencies = [
     "httpx[http2]>=0.27,<1.0.0",
     "uvicorn>=0.30.0,<1.0.0",
     "gunicorn>=22.0.0,<24.0.0",
-    "langchain~=0.3.3",
+    "langchain~=0.3.10",
+    "langchain-community~=0.3.10",
     "langchain-core~=0.3.15",
     "langchainhub~=0.1.15",
     "loguru>=0.7.1,<1.0.0",

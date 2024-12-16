@@ -22,11 +22,11 @@ class FlowToolComponent(LCToolComponent):
     beta = True
     icon = "hammer"
 
-    def get_flow_names(self) -> list[str]:
-        flow_datas = self.list_flows()
+    async def get_flow_names(self) -> list[str]:
+        flow_datas = await self.alist_flows()
         return [flow_data.data["name"] for flow_data in flow_datas]
 
-    def get_flow(self, flow_name: str) -> Data | None:
+    async def get_flow(self, flow_name: str) -> Data | None:
         """Retrieves a flow by its name.
 
         Args:
@@ -35,14 +35,14 @@ class FlowToolComponent(LCToolComponent):
         Returns:
             Optional[Text]: The flow record if found, None otherwise.
         """
-        flow_datas = self.list_flows()
+        flow_datas = await self.alist_flows()
         for flow_data in flow_datas:
             if flow_data.data["name"] == flow_name:
                 return flow_data
         return None
 
     @override
-    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
+    async def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "flow_name":
             build_config["flow_name"]["options"] = self.get_flow_names()
 
@@ -74,13 +74,13 @@ class FlowToolComponent(LCToolComponent):
         Output(name="api_build_tool", display_name="Tool", method="build_tool"),
     ]
 
-    def build_tool(self) -> Tool:
+    async def build_tool(self) -> Tool:
         FlowTool.model_rebuild()
         if "flow_name" not in self._attributes or not self._attributes["flow_name"]:
             msg = "Flow name is required"
             raise ValueError(msg)
         flow_name = self._attributes["flow_name"]
-        flow_data = self.get_flow(flow_name)
+        flow_data = await self.get_flow(flow_name)
         if not flow_data:
             msg = "Flow not found."
             raise ValueError(msg)

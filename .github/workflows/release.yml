@@ -47,7 +47,7 @@ jobs:
     name: CI
     uses: ./.github/workflows/ci.yml
     with:
-      python-versions: "['3.10', '3.11', '3.12']"
+      python-versions: "['3.10', '3.11', '3.12', '3.13']"
       frontend-tests-folder: "tests"
       release: true
 

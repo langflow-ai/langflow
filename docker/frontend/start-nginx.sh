@@ -1,6 +1,11 @@
 #!/bin/sh
 set -e
-trap 'kill -TERM $PID' TERM INT
+
+# Define writable directory for the final config
+CONFIG_DIR="/tmp/nginx"
+mkdir -p $CONFIG_DIR
+
+# Check and set environment variables
 if [ -z "$BACKEND_URL" ]; then
   BACKEND_URL="$1"
 fi
@@ -14,12 +19,12 @@ if [ -z "$BACKEND_URL" ]; then
   echo "BACKEND_URL must be set as an environment variable or as first parameter. (e.g. http://localhost:7860)"
   exit 1
 fi
-echo "BACKEND_URL: $BACKEND_URL"
-echo "FRONTEND_PORT: $FRONTEND_PORT"
-sed -i "s|__BACKEND_URL__|$BACKEND_URL|g" /etc/nginx/conf.d/default.conf
-sed -i "s|__FRONTEND_PORT__|$FRONTEND_PORT|g" /etc/nginx/conf.d/default.conf
-cat /etc/nginx/conf.d/default.conf
 
+# Export variables for envsubst
+export BACKEND_URL FRONTEND_PORT
 
-# Start nginx
-exec nginx -g 'daemon off;'
+# Use envsubst to substitute environment variables in the template
+envsubst '${BACKEND_URL} ${FRONTEND_PORT}' < /etc/nginx/conf.d/default.conf.template > $CONFIG_DIR/default.conf
+
+# Start nginx with the new configuration
+exec nginx -c $CONFIG_DIR/default.conf -g 'daemon off;'

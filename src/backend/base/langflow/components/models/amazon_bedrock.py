@@ -2,7 +2,6 @@ from langflow.base.models.aws_constants import AWS_REGIONS, AWS_MODEL_IDs
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs import MessageTextInput, SecretStrInput
-from langflow.inputs.inputs import HandleInput
 from langflow.io import DictInput, DropdownInput
 
 
@@ -72,13 +71,6 @@ class AmazonBedrockComponent(LCModelComponent):
             display_name="Endpoint URL",
             advanced=True,
             info="The URL of the Bedrock endpoint to use.",
-        ),
-        HandleInput(
-            name="output_parser",
-            display_name="Output Parser",
-            info="The parser to use to parse the output of the model",
-            advanced=True,
-            input_types=["OutputParser"],
         ),
     ]
 
