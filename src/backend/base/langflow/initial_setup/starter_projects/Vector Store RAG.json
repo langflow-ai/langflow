@@ -1,202 +1,12 @@
 {
+  "id": "eddd4c8f-02af-438f-8879-b8ea9ed0379d",
   "data": {
-    "edges": [
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ParseData",
-            "id": "ParseData-zyR25",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "context",
-            "id": "Prompt-xaD1Y",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ParseData-zyR25{œdataTypeœ:œParseDataœ,œidœ:œParseData-zyR25œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-xaD1Y{œfieldNameœ:œcontextœ,œidœ:œPrompt-xaD1Yœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ParseData-zyR25",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-zyR25œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-xaD1Y",
-        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-xaD1Yœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-xaD1Y",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "OpenAIModel-m4qDU",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-xaD1Y{œdataTypeœ:œPromptœ,œidœ:œPrompt-xaD1Yœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-m4qDU{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-m4qDUœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-xaD1Y",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-xaD1Yœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-m4qDU",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-m4qDUœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-m4qDU",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-ac2iX",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-m4qDU{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-m4qDUœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-ac2iX{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-ac2iXœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-m4qDU",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-m4qDUœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-ac2iX",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-ac2iXœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-uqjg5",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "question",
-            "id": "Prompt-xaD1Y",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-uqjg5{œdataTypeœ:œChatInputœ,œidœ:œChatInput-uqjg5œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-xaD1Y{œfieldNameœ:œquestionœ,œidœ:œPrompt-xaD1Yœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-uqjg5",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-uqjg5œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-xaD1Y",
-        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-xaD1Yœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "File",
-            "id": "File-DdaMQ",
-            "name": "data",
-            "output_types": [
-              "Data"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "data_inputs",
-            "id": "SplitText-gC7fw",
-            "inputTypes": [
-              "Data"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-File-DdaMQ{œdataTypeœ:œFileœ,œidœ:œFile-DdaMQœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-gC7fw{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-gC7fwœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "File-DdaMQ",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-DdaMQœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
-        "target": "SplitText-gC7fw",
-        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-gC7fwœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-LnzZl",
-            "name": "embeddings",
-            "output_types": [
-              "Embeddings"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "embedding_model",
-            "id": "AstraDB-0DSMB",
-            "inputTypes": [
-              "Embeddings"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-OpenAIEmbeddings-LnzZl{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-LnzZlœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-0DSMB{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-0DSMBœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
-        "source": "OpenAIEmbeddings-LnzZl",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-LnzZlœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "AstraDB-0DSMB",
-        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-0DSMBœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-MXIpI",
-            "name": "embeddings",
-            "output_types": [
-              "Embeddings"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "embedding_model",
-            "id": "AstraDB-lMmwm",
-            "inputTypes": [
-              "Embeddings"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-OpenAIEmbeddings-MXIpI{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-MXIpIœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-lMmwm{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-lMmwmœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
-        "source": "OpenAIEmbeddings-MXIpI",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-MXIpIœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "AstraDB-lMmwm",
-        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-lMmwmœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
-      }
-    ],
     "nodes": [
       {
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-uqjg5",
+          "id": "ChatInput-W9s0j",
           "node": {
             "base_classes": [
               "Message"
@@ -460,7 +270,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-uqjg5",
+        "id": "ChatInput-W9s0j",
         "position": {
           "x": 743.9745420290319,
           "y": 463.6977510207854
@@ -477,7 +287,7 @@
         "data": {
           "description": "Convert Data into plain text following a specified template.",
           "display_name": "Parse Data",
-          "id": "ParseData-zyR25",
+          "id": "ParseData-099UQ",
           "node": {
             "base_classes": [
               "Message"
@@ -607,7 +417,7 @@
         },
         "dragging": false,
         "height": 350,
-        "id": "ParseData-zyR25",
+        "id": "ParseData-099UQ",
         "position": {
           "x": 1606.0595305373527,
           "y": 751.4473696960695
@@ -624,7 +434,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-xaD1Y",
+          "id": "Prompt-sDGWc",
           "node": {
             "base_classes": [
               "Message"
@@ -781,7 +591,7 @@
         },
         "dragging": false,
         "height": 433,
-        "id": "Prompt-xaD1Y",
+        "id": "Prompt-sDGWc",
         "position": {
           "x": 1977.9097981422992,
           "y": 640.5656416923846
@@ -798,7 +608,7 @@
         "data": {
           "description": "Split text into chunks based on specified criteria.",
           "display_name": "Split Text",
-          "id": "SplitText-gC7fw",
+          "id": "SplitText-AxVzV",
           "node": {
             "base_classes": [
               "Data"
@@ -930,7 +740,7 @@
         },
         "dragging": false,
         "height": 475,
-        "id": "SplitText-gC7fw",
+        "id": "SplitText-AxVzV",
         "position": {
           "x": 1683.4543896546102,
           "y": 1350.7871623588553
@@ -945,7 +755,7 @@
       },
       {
         "data": {
-          "id": "note-epTtB",
+          "id": "note-z1WoH",
           "node": {
             "description": "## 🐕 2. Retriever Flow\n\nThis flow answers your questions with contextual data retrieved from your vector database.\n\nOpen the **Playground** and ask, \n\n```\nWhat is this document about?\n```\n",
             "display_name": "",
@@ -958,7 +768,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-epTtB",
+        "id": "note-z1WoH",
         "position": {
           "x": 374.388314931542,
           "y": 486.18094072679895
@@ -978,7 +788,7 @@
       },
       {
         "data": {
-          "id": "note-Rz1e5",
+          "id": "note-hdThK",
           "node": {
             "description": "## 📖 README\n\nLoad your data into a vector database with the 📚 **Load Data** flow, and then use your data as chat context with the 🐕 **Retriever** flow.\n\n**🚨 Add your OpenAI API key as a global variable to easily add it to all of the OpenAI components in this flow.** \n\n**Quick start**\n1. Run the 📚 **Load Data** flow.\n2. Run the 🐕 **Retriever** flow.\n\n**Next steps** \n\n- Experiment by changing the prompt and the loaded data to see how the bot's responses change. \n\nFor more info, see the [Langflow docs](https://docs.langflow.org/starter-projects-vector-store-rag).",
             "display_name": "Read Me",
@@ -991,7 +801,7 @@
         },
         "dragging": false,
         "height": 527,
-        "id": "note-Rz1e5",
+        "id": "note-hdThK",
         "position": {
           "x": 94.28986613312418,
           "y": 907.6428043837066
@@ -1011,7 +821,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-m4qDU",
+          "id": "OpenAIModel-1Nesr",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1306,7 +1116,7 @@
         },
         "dragging": false,
         "height": 672,
-        "id": "OpenAIModel-m4qDU",
+        "id": "OpenAIModel-1Nesr",
         "position": {
           "x": 2360.1432368563187,
           "y": 571.6712358167248
@@ -1323,7 +1133,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-ac2iX",
+          "id": "ChatOutput-GbPym",
           "node": {
             "base_classes": [
               "Message"
@@ -1583,22 +1393,22 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-ac2iX",
+        "id": "ChatOutput-GbPym",
         "position": {
           "x": 2734.385670401691,
-          "y": 808.2967893015561
+          "y": 810.6079786425926
         },
         "positionAbsolute": {
           "x": 2734.385670401691,
-          "y": 808.2967893015561
+          "y": 810.6079786425926
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode",
         "width": 320
       },
       {
         "data": {
-          "id": "OpenAIEmbeddings-LnzZl",
+          "id": "OpenAIEmbeddings-ObwK7",
           "node": {
             "base_classes": [
               "Embeddings"
@@ -2074,7 +1884,7 @@
         },
         "dragging": false,
         "height": 320,
-        "id": "OpenAIEmbeddings-LnzZl",
+        "id": "OpenAIEmbeddings-ObwK7",
         "position": {
           "x": 825.435626932521,
           "y": 739.6327999745448
@@ -2089,7 +1899,7 @@
       },
       {
         "data": {
-          "id": "note-wDTVL",
+          "id": "note-093HI",
           "node": {
             "description": "## 📚 1. Load Data Flow\n\nRun this first! Load data from a local file and embed it into the vector database.\n\nSelect a Database and a Collection, or create new ones. \n\nClick ▶️ **Run component** on the **Astra DB** component to load your data.\n\n* If you're using OSS Langflow, add your Astra DB Application Token to the Astra DB component.\n\n#### Next steps:\n Experiment by changing the prompt and the contextual data to see how the retrieval flow's responses change.",
             "display_name": "",
@@ -2102,7 +1912,7 @@
         },
         "dragging": false,
         "height": 50,
-        "id": "note-wDTVL",
+        "id": "note-093HI",
         "position": {
           "x": 955.3277857006676,
           "y": 1552.171191793604
@@ -2121,7 +1931,7 @@
       },
       {
         "data": {
-          "id": "OpenAIEmbeddings-MXIpI",
+          "id": "OpenAIEmbeddings-lRrbr",
           "node": {
             "base_classes": [
               "Embeddings"
@@ -2597,7 +2407,7 @@
         },
         "dragging": false,
         "height": 320,
-        "id": "OpenAIEmbeddings-MXIpI",
+        "id": "OpenAIEmbeddings-lRrbr",
         "position": {
           "x": 1690.9220896443658,
           "y": 1866.483269483266
@@ -2612,7 +2422,7 @@
       },
       {
         "data": {
-          "id": "File-DdaMQ",
+          "id": "File-ZjESG",
           "node": {
             "base_classes": [
               "Data"
@@ -2836,7 +2646,7 @@
         },
         "dragging": false,
         "height": 367,
-        "id": "File-DdaMQ",
+        "id": "File-ZjESG",
         "position": {
           "x": 1318.9043936921921,
           "y": 1486.3263312921847
@@ -2851,7 +2661,7 @@
       },
       {
         "data": {
-          "id": "note-PmIBE",
+          "id": "note-9Ssid",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2864,7 +2674,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-PmIBE",
+        "id": "note-9Ssid",
         "position": {
           "x": 1692.2322233423606,
           "y": 1821.9077961087607
@@ -2879,7 +2689,7 @@
       },
       {
         "data": {
-          "id": "note-BwJua",
+          "id": "note-rwnQ9",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2892,7 +2702,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-BwJua",
+        "id": "note-rwnQ9",
         "position": {
           "x": 824.1003268813427,
           "y": 698.6951695764802
@@ -2907,7 +2717,7 @@
       },
       {
         "data": {
-          "id": "note-7o6Ns",
+          "id": "note-WgSNg",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2920,7 +2730,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-7o6Ns",
+        "id": "note-WgSNg",
         "position": {
           "x": 2350.297636215281,
           "y": 525.0687902842766
@@ -2935,7 +2745,7 @@
       },
       {
         "data": {
-          "id": "AstraDB-0DSMB",
+          "id": "AstraDB-3QtJS",
           "node": {
             "base_classes": [
               "Data"
@@ -3319,7 +3129,7 @@
         },
         "dragging": false,
         "height": 783,
-        "id": "AstraDB-0DSMB",
+        "id": "AstraDB-3QtJS",
         "position": {
           "x": 1215.5738831152323,
           "y": 479.1449074798619
@@ -3334,7 +3144,7 @@
       },
       {
         "data": {
-          "id": "AstraDB-lMmwm",
+          "id": "AstraDB-oBXTB",
           "node": {
             "base_classes": [
               "Data"
@@ -3371,21 +3181,22 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
+                "types": [
+                  "Data"
+                ],
+                "selected": "Data",
+                "name": "search_results",
+                "hidden": null,
                 "display_name": "Search Results",
                 "method": "search_documents",
-                "name": "search_results",
+                "value": "__UNDEFINED__",
+                "cache": true,
                 "required_inputs": [
                   "api_endpoint",
                   "collection_name",
                   "collection_name_new",
                   "token"
-                ],
-                "selected": "Data",
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
+                ]
               }
             ],
             "pinned": false,
@@ -3472,6 +3283,8 @@
                 "info": "The name of the collection within Astra DB where the vectors will be stored.",
                 "name": "collection_name",
                 "options": [
+                  "langflow_marketplace",
+                  "movie_reviews",
                   "+ Create new collection"
                 ],
                 "placeholder": "",
@@ -3712,13 +3525,14 @@
                 "value": "ASTRA_DB_APPLICATION_TOKEN"
               }
             },
-            "tool_mode": false
+            "tool_mode": false,
+            "lf_version": "1.1.1"
           },
           "type": "AstraDB"
         },
         "dragging": false,
         "height": 783,
-        "id": "AstraDB-lMmwm",
+        "id": "AstraDB-oBXTB",
         "position": {
           "x": 2058.0903617951794,
           "y": 1377.2119232156292
@@ -3727,23 +3541,240 @@
           "x": 2058.0903617951794,
           "y": 1377.2119232156292
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode",
         "width": 320
       }
     ],
+    "edges": [
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ParseData",
+            "id": "ParseData-099UQ",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "context",
+            "id": "Prompt-sDGWc",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ParseData-099UQ{œdataTypeœ:œParseDataœ,œidœ:œParseData-099UQœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-sDGWc{œfieldNameœ:œcontextœ,œidœ:œPrompt-sDGWcœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ParseData-099UQ",
+        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-099UQœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-sDGWc",
+        "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPrompt-sDGWcœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-sDGWc",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "OpenAIModel-1Nesr",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-sDGWc{œdataTypeœ:œPromptœ,œidœ:œPrompt-sDGWcœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-1Nesr{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-1Nesrœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-sDGWc",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-sDGWcœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-1Nesr",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-1Nesrœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-1Nesr",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-GbPym",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-1Nesr{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-1Nesrœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-GbPym{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-GbPymœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-1Nesr",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-1Nesrœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-GbPym",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-GbPymœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-W9s0j",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "question",
+            "id": "Prompt-sDGWc",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-W9s0j{œdataTypeœ:œChatInputœ,œidœ:œChatInput-W9s0jœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-sDGWc{œfieldNameœ:œquestionœ,œidœ:œPrompt-sDGWcœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-W9s0j",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-W9s0jœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-sDGWc",
+        "targetHandle": "{œfieldNameœ:œquestionœ,œidœ:œPrompt-sDGWcœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "File",
+            "id": "File-ZjESG",
+            "name": "data",
+            "output_types": [
+              "Data"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "data_inputs",
+            "id": "SplitText-AxVzV",
+            "inputTypes": [
+              "Data"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-File-ZjESG{œdataTypeœ:œFileœ,œidœ:œFile-ZjESGœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-AxVzV{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-AxVzVœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "File-ZjESG",
+        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-ZjESGœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
+        "target": "SplitText-AxVzV",
+        "targetHandle": "{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-AxVzVœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIEmbeddings",
+            "id": "OpenAIEmbeddings-ObwK7",
+            "name": "embeddings",
+            "output_types": [
+              "Embeddings"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "embedding_model",
+            "id": "AstraDB-3QtJS",
+            "inputTypes": [
+              "Embeddings"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-OpenAIEmbeddings-ObwK7{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-ObwK7œ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-3QtJS{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-3QtJSœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "source": "OpenAIEmbeddings-ObwK7",
+        "sourceHandle": "{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-ObwK7œ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}",
+        "target": "AstraDB-3QtJS",
+        "targetHandle": "{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-3QtJSœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "animated": false
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIEmbeddings",
+            "id": "OpenAIEmbeddings-lRrbr",
+            "name": "embeddings",
+            "output_types": [
+              "Embeddings"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "embedding_model",
+            "id": "AstraDB-oBXTB",
+            "inputTypes": [
+              "Embeddings"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-OpenAIEmbeddings-lRrbr{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-lRrbrœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-oBXTB{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-oBXTBœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "source": "OpenAIEmbeddings-lRrbr",
+        "sourceHandle": "{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-lRrbrœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}",
+        "target": "AstraDB-oBXTB",
+        "targetHandle": "{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-oBXTBœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "animated": false
+      },
+      {
+        "source": "AstraDB-3QtJS",
+        "sourceHandle": "{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-3QtJSœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}",
+        "target": "ParseData-099UQ",
+        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-099UQœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "data",
+            "id": "ParseData-099UQ",
+            "inputTypes": [
+              "Data"
+            ],
+            "type": "other"
+          },
+          "sourceHandle": {
+            "dataType": "AstraDB",
+            "id": "AstraDB-3QtJS",
+            "name": "search_results",
+            "output_types": [
+              "Data"
+            ]
+          }
+        },
+        "id": "reactflow__edge-AstraDB-3QtJS{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-3QtJSœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}-ParseData-099UQ{œfieldNameœ:œdataœ,œidœ:œParseData-099UQœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}"
+      }
+    ],
     "viewport": {
-      "x": 42.81921558122929,
-      "y": -163.4043859549497,
-      "zoom": 0.4326776617754808
+      "x": -401.35427956333683,
+      "y": -242.43531449244597,
+      "zoom": 0.685564611136313
     }
   },
   "description": "Load your data for chat context with Retrieval Augmented Generation.",
-  "endpoint_name": null,
-  "id": "b4e002d4-8af0-4bba-a820-8e78107b68e8",
-  "is_component": false,
-  "last_tested_version": "1.1.1",
   "name": "Vector Store RAG",
+  "last_tested_version": "1.1.1",
+  "endpoint_name": null,
+  "is_component": false,
   "tags": [
     "openai",
     "astradb",
