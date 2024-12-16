@@ -15,7 +15,7 @@ export default function FlowLogsModal({
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
   const [pageIndex, setPageIndex] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
   const [rows, setRows] = useState<any>([]);
 
