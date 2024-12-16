@@ -97,6 +97,7 @@ const InspectButton = memo(
     errorOutput,
     isToolMode,
     title,
+    onClick,
   }: {
     disabled: boolean | undefined;
     displayOutputPreview: boolean;
@@ -104,11 +105,13 @@ const InspectButton = memo(
     errorOutput: boolean;
     isToolMode: boolean;
     title: string;
+    onClick: () => void;
   }) => (
     <Button
       disabled={disabled}
       data-testid={`output-inspection-${title.toLowerCase()}`}
       unstyled
+      onClick={onClick}
     >
       <ScanEyeIcon
         className={cn(
@@ -326,6 +329,9 @@ function NodeOutputField({
                   errorOutput={errorOutput ?? false}
                   isToolMode={isToolMode}
                   title={title}
+                  onClick={() => {
+                    //just to trigger the memoization
+                  }}
                 />
               </OutputModal>
             </div>
