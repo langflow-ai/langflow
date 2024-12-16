@@ -113,9 +113,27 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             info="Optional keyspace within Astra DB to use for the collection.",
             advanced=True,
         ),
+        DropdownInput(
+            name="embedding_choice",
+            display_name="Embedding Model or Astra Vectorize",
+            info="Determines whether to use Astra Vectorize for the collection.",
+            options=["Embedding Model", "Astra Vectorize"],
+            real_time_refresh=True,
+            value="Embedding Model",
+        ),
+        HandleInput(
+            name="embedding_model",
+            display_name="Embedding Model",
+            input_types=["Embeddings"],
+            info="Allows an embedding model configuration.",
+        ),
+        DataInput(
+            name="ingest_data",
+            display_name="Ingest Data",
+        ),
         MultilineInput(
             name="search_input",
-            display_name="Search Input",
+            display_name="Search Query",
             tool_mode=True,
         ),
         IntInput(
@@ -147,44 +165,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             info="Optional dictionary of filters to apply to the search query.",
             advanced=True,
         ),
-        DictInput(
-            name="search_filter",
-            display_name="[DEPRECATED] Search Metadata Filter",
-            info="Deprecated: use advanced_search_filter. Optional dictionary of filters to apply to the search query.",
-            advanced=True,
-            list=True,
-        ),
-        DataInput(
-            name="ingest_data",
-            display_name="Ingest Data",
-        ),
-        DropdownInput(
-            name="embedding_choice",
-            display_name="Embedding Model or Astra Vectorize",
-            info="Determines whether to use Astra Vectorize for the collection.",
-            options=["Embedding Model", "Astra Vectorize"],
-            real_time_refresh=True,
-            value="Embedding Model",
-        ),
-        HandleInput(
-            name="embedding_model",
-            display_name="Embedding Model",
-            input_types=["Embeddings"],
-            info="Allows an embedding model configuration.",
-        ),
-        NestedDictInput(
-            name="astradb_vectorstore_kwargs",
-            display_name="AstraDBVectorStore Parameters",
-            info="Optional dictionary of additional parameters for the AstraDBVectorStore.",
-            advanced=True,
-        ),
-        StrInput(
-            name="collection_indexing_policy",
-            display_name="Collection Indexing Policy",
-            info='Optional JSON string for the "indexing" field of the collection. '
-            "See https://docs.datastax.com/en/astra-db-serverless/api-reference/collections.html#the-indexing-option",
-            advanced=True,
-        ),
         StrInput(
             name="content_field",
             display_name="Content Field",
@@ -195,6 +175,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             name="ignore_invalid_documents",
             display_name="Ignore Invalid Documents",
             info="Boolean flag to determine whether to ignore invalid documents at runtime.",
+            advanced=True,
+        ),
+        NestedDictInput(
+            name="astradb_vectorstore_kwargs",
+            display_name="AstraDBVectorStore Parameters",
+            info="Optional dictionary of additional parameters for the AstraDBVectorStore.",
             advanced=True,
         ),
     ]
@@ -542,36 +528,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Initialize parameters based on the collection name
         is_new_collection = self.collection_name == "+ Create new collection"
 
-        # Build the list of autodetect parameters
-        collection_creation_params = {
-            "autodetect": not is_new_collection,
-            "metric_value": (
-                self.astradb_vectorstore_kwargs.get("metric")
-                if getattr(self, "astradb_vectorstore_kwargs", None)
-                else None
-            ),
-            "metadata_indexing_include": (
-                [s for s in self.astradb_vectorstore_kwargs.get("metadata_indexing_include", []) if s]
-                if getattr(self, "astradb_vectorstore_kwargs", None)
-                else None
-            ),
-            "metadata_indexing_exclude": (
-                [s for s in self.astradb_vectorstore_kwargs.get("metadata_indexing_exclude", []) if s]
-                if getattr(self, "astradb_vectorstore_kwargs", None)
-                else None
-            ),
-            "collection_indexing_policy": (
-                orjson.dumps(self.astradb_vectorstore_kwargs.get("collection_indexing_policy"))
-                if is_new_collection and self.astradb_vectorstore_kwargs.get("collection_indexing_policy")
-                else None
-            ),
-        }
-
         # Get the embedding model
         embedding_params = {"embedding": self.embedding_model} if self.embedding_choice == "Embedding Model" else {}
 
         # Use the embedding model if the choice is set to "Embedding Model"
-        if self.embedding_choice == "Astra Vectorize" and not collection_creation_params["autodetect"]:
+        if self.embedding_choice == "Astra Vectorize" and is_new_collection:
             from astrapy.info import CollectionVectorServiceOptions
 
             # Build the vectorize options dictionary
@@ -607,7 +568,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Bundle up the auto-detect parameters
         autodetect_params = {
-            "autodetect_collection": collection_creation_params["autodetect"],
+            "autodetect_collection": True,  # TODO: May want to expose this option
             "content_field": self.content_field or None,
             "ignore_invalid_documents": self.ignore_invalid_documents,
         }
@@ -626,7 +587,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 # Astra DB Vector Store Parameters
                 **autodetect_params,
                 **embedding_params,
-                **collection_creation_params,
+                **self.astradb_vectorstore_kwargs,
             )
         except Exception as e:
             msg = f"Error initializing AstraDBVectorStore: {e}"
@@ -664,9 +625,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def _build_search_args(self):
         query = self.search_input if isinstance(self.search_input, str) and self.search_input.strip() else None
-        search_filter = (
-            {k: v for k, v in self.search_filter.items() if k and v and k.strip()} if self.search_filter else None
-        )
 
         if query:
             args = {
@@ -675,7 +633,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 "k": self.number_of_results,
                 "score_threshold": self.search_score_threshold,
             }
-        elif self.advanced_search_filter or search_filter:
+        elif self.advanced_search_filter:
             args = {
                 "n": self.number_of_results,
             }
@@ -683,11 +641,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return {}
 
         filter_arg = self.advanced_search_filter or {}
-
-        if search_filter:
-            self.log(self.log(f"`search_filter` is deprecated. Use `advanced_search_filter`. Cleaned: {search_filter}"))
-            filter_arg.update(search_filter)
-
         if filter_arg:
             args["filter"] = filter_arg
 
