@@ -115,7 +115,7 @@ class BaseFileComponent(Component, ABC):
             fileTypes=[],  # Dynamically set in __init__
             info="",  # Dynamically set in __init__
             required=False,
-            value = "",
+            value="",
         ),
         HandleInput(
             name="file_path",
