@@ -303,6 +303,7 @@ function NodeOutputField({
               isToolMode={isToolMode}
             />
           </span>
+
           <ShadTooltip
             content={
               displayOutputPreview
