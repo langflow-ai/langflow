@@ -24,7 +24,11 @@ def find_start_component_id(vertices):
 
 def find_last_node(nodes, edges):
     """This function receives a flow and returns the last node."""
-    return next((n for n in nodes if all(e["source"] != n["id"] for e in edges)), None)
+    source_ids = {edge["source"] for edge in edges}
+    for node in nodes:
+        if node["id"] not in source_ids:
+            return node
+    return None
 
 
 def add_parent_node_id(nodes, parent_node_id) -> None:
