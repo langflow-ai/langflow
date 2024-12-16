@@ -16,7 +16,7 @@ jobs:
         with:
           access_token: ${{ secrets.GITHUB_TOKEN }}
           issue: false
-          title_pattern: "([\w\-]+)(\([\w\-]+\))?!?:\s+[\p{L}\p{N}\p{S}\p{P}\s]+"
+          title_pattern: "(?u)([\w\-]+)(\([\w\-]+\))?!?:\s+.*"
           verbose: true
 
 
