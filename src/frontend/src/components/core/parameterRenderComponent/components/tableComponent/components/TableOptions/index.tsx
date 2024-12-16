@@ -1,6 +1,7 @@
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
+import { TableOptionsTypeAPI } from "@/types/api";
 import { cn } from "@/utils/utils";
 
 export default function TableOptions({
@@ -10,6 +11,7 @@ export default function TableOptions({
   hasSelection,
   stateChange,
   addRow,
+  tableOptions,
 }: {
   resetGrid: () => void;
   duplicateRow?: () => void;
@@ -17,14 +19,15 @@ export default function TableOptions({
   addRow?: () => void;
   hasSelection: boolean;
   stateChange: boolean;
+  tableOptions?: TableOptionsTypeAPI;
 }): JSX.Element {
   return (
     <div className={cn("absolute bottom-3 left-6")}>
       <div className="flex items-center gap-3">
-        {addRow && (
+        {addRow && !tableOptions?.block_add && (
           <div>
             <ShadTooltip content={"Add a new row"}>
-              <Button unstyled onClick={addRow}>
+              <Button data-testid="add-row-button" unstyled onClick={addRow}>
                 <IconComponent
                   name="Plus"
                   className={cn("h-5 w-5 text-primary transition-all")}
@@ -44,7 +47,12 @@ export default function TableOptions({
                 )
               }
             >
-              <Button unstyled onClick={duplicateRow} disabled={!hasSelection}>
+              <Button
+                data-testid="duplicate-row-button"
+                unstyled
+                onClick={duplicateRow}
+                disabled={!hasSelection}
+              >
                 <IconComponent
                   name="Copy"
                   className={cn(
@@ -67,7 +75,12 @@ export default function TableOptions({
                 )
               }
             >
-              <Button unstyled onClick={deleteRow} disabled={!hasSelection}>
+              <Button
+                data-testid="delete-row-button"
+                unstyled
+                onClick={deleteRow}
+                disabled={!hasSelection}
+              >
                 <IconComponent
                   name="Trash2"
                   className={cn(
@@ -84,6 +97,7 @@ export default function TableOptions({
         <div>
           <ShadTooltip content="Reset Columns">
             <Button
+              data-testid="reset-columns-button"
               unstyled
               onClick={() => {
                 resetGrid();
@@ -94,7 +108,8 @@ export default function TableOptions({
                 name="RotateCcw"
                 strokeWidth={2}
                 className={cn(
-                  "h-5 w-5 text-primary transition-all hover:text-accent-foreground",
+                  "h-5 w-5 transition-all",
+                  !stateChange ? "text-muted-foreground" : "text-primary",
                 )}
               />
             </Button>

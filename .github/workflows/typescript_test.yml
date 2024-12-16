@@ -7,12 +7,16 @@ on:
         required: true
       STORE_API_KEY:
         required: true
+      ANTHROPIC_API_KEY:
+        required: true
+      TAVILY_API_KEY:
+        required: true
     inputs:
       suites:
         description: "Test suites to run (JSON array)"
         required: false
         type: string
-        default: "[]"
+        default: '[]'
       release:
         description: "Whether this is a release build"
         required: false
@@ -54,6 +58,7 @@ env:
 
 jobs:
   determine-test-suite:
+    name: Determine Test Suites and Shard Distribution
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.setup-matrix.outputs.matrix }}
@@ -71,7 +76,7 @@ jobs:
         with:
           filters: .github/changes-filter.yaml
 
-      - name: Set Matrix and Test Grep
+      - name: Determine Test Suites from Changes
         id: set-matrix
         run: |
           # Start with input suites if provided, otherwise empty array
@@ -149,7 +154,7 @@ jobs:
               if [ ${#TAGS[@]} -gt 0 ]; then
                 # Join tags with | for OR logic
                 REGEX_PATTERN=$(IFS='|'; echo "${TAGS[*]}")
-                TEST_GREP="--grep=\"${REGEX_PATTERN}\""
+                TEST_GREP="--grep \"${REGEX_PATTERN}\""
               fi
             fi
           fi
@@ -171,11 +176,11 @@ jobs:
           cache: "npm"
           cache-dependency-path: ./src/frontend/package-lock.json
 
-      - name: Install Node.js dependencies
+      - name: Install Frontend Dependencies
         run: npm ci
         working-directory: ./src/frontend
 
-      - name: Setup Matrix Combinations
+      - name: Calculate Test Shards Distribution
         id: setup-matrix
         run: |
           cd src/frontend
@@ -209,7 +214,7 @@ jobs:
           echo "matrix={\"include\":[$MATRIX_COMBINATIONS]}" >> "$GITHUB_OUTPUT"
 
   setup-and-test:
-    name: Playwright Tests - Group ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
+    name: Playwright Tests - Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
     runs-on: ubuntu-latest
     if: ${{ needs.determine-test-suite.outputs.test_grep != '' }}
     needs: determine-test-suite
@@ -222,18 +227,18 @@ jobs:
       SEARCH_API_KEY: "${{ secrets.SEARCH_API_KEY }}"
       ASTRA_DB_APPLICATION_TOKEN: "${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}"
       ASTRA_DB_API_ENDPOINT: "${{ secrets.ASTRA_DB_API_ENDPOINT }}"
+      ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
+      TAVILY_API_KEY: "${{ secrets.TAVILY_API_KEY }}"
       UV_CACHE_DIR: /tmp/.uv-cache
     outputs:
       failed: ${{ steps.check-failure.outputs.failed }}
     steps:
-      - name: Checkout code
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          # If ref is passed as input, checkout that ref
-          # else checkout the default ref
           ref: ${{ inputs.ref || github.ref }}
 
-      - name: Setup Node ${{ env.NODE_VERSION }}
+      - name: Setup Node.js Environment
         uses: actions/setup-node@v4
         id: setup-node
         with:
@@ -241,28 +246,29 @@ jobs:
           cache: "npm"
           cache-dependency-path: ./src/frontend/package-lock.json
 
-      - name: Install Node.js dependencies
+      - name: Install Frontend Dependencies
         run: npm ci
         working-directory: ./src/frontend
 
-      - name: Install Playwright
+      - name: Install Playwright Browser Dependencies
         id: install-playwright
         uses: ./.github/actions/install-playwright
         with:
           working-directory: ./src/frontend
           browsers: chromium
 
-      - name: "Setup Environment"
+      - name: Setup Python Environment with UV
         uses: ./.github/actions/setup-uv
-      - name: Install the project
+
+      - name: Install Python Dependencies
         run: uv sync --dev
 
-      - name: create .env
+      - name: Configure Environment Variables
         run: |
           touch .env
           echo "${{ secrets.ENV_VARS }}" > .env
 
-      - name: Run Playwright Tests
+      - name: Execute Playwright Tests
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 12
@@ -270,10 +276,13 @@ jobs:
           command: |
             cd src/frontend
             echo 'Running tests with pattern: ${{ needs.determine-test-suite.outputs.test_grep }}'
-            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --shard ${{ matrix.shardIndex }} --list
-            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }} --workers 2
+            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --list
+            # echo command before running
+            echo "npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2"
 
-      - name: Upload blob report to GitHub Actions Artifacts
+            npx playwright test ${{ inputs.tests_folder }} ${{ needs.determine-test-suite.outputs.test_grep }} --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers 2
+
+      - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -281,7 +290,7 @@ jobs:
           path: src/frontend/blob-report
           retention-days: 1
 
-      - name: Minimize uv cache
+      - name: Cleanup UV Cache
         run: uv cache prune --ci
 
   merge-reports:

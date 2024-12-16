@@ -11,7 +11,7 @@ from langflow.components.outputs import ChatOutput
 from langflow.components.processing import ParseDataComponent
 from langflow.components.processing.split_text import SplitTextComponent
 from langflow.components.prompts import PromptComponent
-from langflow.components.vectorstores import AstraVectorStoreComponent
+from langflow.components.vectorstores import AstraDBVectorStoreComponent
 from langflow.graph import Graph
 from langflow.graph.graph.constants import Finish
 from langflow.schema import Data
@@ -29,14 +29,13 @@ def ingestion_graph():
     openai_embeddings.set(
         openai_api_key="sk-123", openai_api_base="https://api.openai.com/v1", openai_api_type="openai"
     )
-    vector_store = AstraVectorStoreComponent(_id="vector-store-123")
+    vector_store = AstraDBVectorStoreComponent(_id="vector-store-123")
     vector_store.set(
         embedding_model=openai_embeddings.build_embeddings,
         ingest_data=text_splitter.split_text,
         api_endpoint="https://astra.example.com",
         token="token",  # noqa: S106
     )
-    vector_store.set_on_output(name="base_retriever", value="mock_retriever", cache=True)
     vector_store.set_on_output(name="search_results", value=[Data(text="This is a test file.")], cache=True)
 
     return Graph(file_component, vector_store)
@@ -48,7 +47,7 @@ def rag_graph():
     openai_embeddings = OpenAIEmbeddingsComponent(_id="openai-embeddings-124")
     chat_input = ChatInput(_id="chatinput-123")
     chat_input.get_output("message").value = "What is the meaning of life?"
-    rag_vector_store = AstraVectorStoreComponent(_id="rag-vector-store-123")
+    rag_vector_store = AstraDBVectorStoreComponent(_id="rag-vector-store-123")
     rag_vector_store.set(
         search_input=chat_input.message_response,
         api_endpoint="https://astra.example.com",
@@ -64,7 +63,6 @@ def rag_graph():
         ],
         cache=True,
     )
-    rag_vector_store.set_on_output(name="base_retriever", value="mock_retriever", cache=True)
     parse_data = ParseDataComponent(_id="parse-data-123")
     parse_data.set(data=rag_vector_store.search_documents)
     prompt_component = PromptComponent(_id="prompt-123")
@@ -217,10 +215,9 @@ def test_vector_store_rag_add(ingestion_graph: Graph, rag_graph: Graph):
         f"Vertices mismatch: {len(ingestion_graph_copy.vertices)} "
         f"!= {len(ingestion_graph.vertices)} + {len(rag_graph.vertices)}"
     )
-    assert len(ingestion_graph_copy.edges) == len(ingestion_graph.edges) + len(rag_graph.edges), (
-        f"Edges mismatch: {len(ingestion_graph_copy.edges)} "
-        f"!= {len(ingestion_graph.edges)} + {len(rag_graph.edges)}"
-    )
+    assert len(ingestion_graph_copy.edges) == len(ingestion_graph.edges) + len(
+        rag_graph.edges
+    ), f"Edges mismatch: {len(ingestion_graph_copy.edges)} != {len(ingestion_graph.edges)} + {len(rag_graph.edges)}"
 
     combined_graph_dump = ingestion_graph_copy.dump(
         name="Combined Graph", description="Graph for data ingestion and RAG", endpoint_name="combined"

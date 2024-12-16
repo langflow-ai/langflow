@@ -63,6 +63,11 @@ class DatabaseService(Service):
             # Construct the path using the langflow directory.
             self.alembic_log_path = Path(langflow_dir) / alembic_log_file
 
+        # Ensure the directory and file for the alembic log file exists
+        self.alembic_log_path.parent.mkdir(parents=True, exist_ok=True)
+        self.alembic_log_path.touch(exist_ok=True)
+        self._logged_pragma = False
+
     def reload_engine(self) -> None:
         self._sanitize_database_url()
         self.engine = self._create_engine()
@@ -122,7 +127,9 @@ class DatabaseService(Service):
             pragmas_list = []
             for key, val in pragmas.items():
                 pragmas_list.append(f"PRAGMA {key} = {val}")
-            logger.debug(f"sqlite connection, setting pragmas: {pragmas_list}")
+            if not self._logged_pragma:
+                logger.debug(f"sqlite connection, setting pragmas: {pragmas_list}")
+                self._logged_pragma = True
             if pragmas_list:
                 cursor = dbapi_connection.cursor()
                 try:
@@ -218,8 +225,8 @@ class DatabaseService(Service):
 
         return new_name
 
-    def check_schema_health(self) -> bool:
-        inspector = inspect(self.engine)
+    def _check_schema_health(self, connection) -> bool:
+        inspector = inspect(connection)
 
         model_mapping: dict[str, type[SQLModel]] = {
             "flow": models.Flow,
@@ -251,6 +258,10 @@ class DatabaseService(Service):
 
         return True
 
+    async def check_schema_health(self) -> None:
+        async with self.with_async_session() as session, session.bind.connect() as conn:
+            await conn.run_sync(self._check_schema_health)
+
     def init_alembic(self, alembic_cfg) -> None:
         logger.info("Initializing alembic")
         command.ensure_version(alembic_cfg)
@@ -258,7 +269,7 @@ class DatabaseService(Service):
         command.upgrade(alembic_cfg, "head")
         logger.info("Alembic initialized")
 
-    def run_migrations(self, *, fix=False) -> None:
+    def _run_migrations(self, should_initialize_alembic, fix) -> None:
         # First we need to check if alembic has been initialized
         # If not, we need to initialize it
         # if not self.script_location.exists(): # this is not the correct way to check if alembic has been initialized
@@ -273,16 +284,6 @@ class DatabaseService(Service):
             # alembic_cfg.attributes["connection"] = session
             alembic_cfg.set_main_option("script_location", str(self.script_location))
             alembic_cfg.set_main_option("sqlalchemy.url", self.database_url.replace("%", "%%"))
-
-            should_initialize_alembic = False
-            with self.with_session() as session:
-                # If the table does not exist it throws an error
-                # so we need to catch it
-                try:
-                    session.exec(text("SELECT * FROM alembic_version"))
-                except Exception:  # noqa: BLE001
-                    logger.debug("Alembic not initialized")
-                    should_initialize_alembic = True
 
             if should_initialize_alembic:
                 try:
@@ -316,6 +317,18 @@ class DatabaseService(Service):
 
             if fix:
                 self.try_downgrade_upgrade_until_success(alembic_cfg)
+
+    async def run_migrations(self, *, fix=False) -> None:
+        should_initialize_alembic = False
+        async with self.with_async_session() as session:
+            # If the table does not exist it throws an error
+            # so we need to catch it
+            try:
+                await session.exec(text("SELECT * FROM alembic_version"))
+            except Exception:  # noqa: BLE001
+                logger.debug("Alembic not initialized")
+                should_initialize_alembic = True
+        await asyncio.to_thread(self._run_migrations, should_initialize_alembic, fix)
 
     def try_downgrade_upgrade_until_success(self, alembic_cfg, retries=5) -> None:
         # Try -1 then head, if it fails, try -2 then head, etc.
@@ -363,10 +376,11 @@ class DatabaseService(Service):
                 results.append(Result(name=column, type="column", success=True))
         return results
 
-    def create_db_and_tables(self) -> None:
+    @staticmethod
+    def _create_db_and_tables(connection) -> None:
         from sqlalchemy import inspect
 
-        inspector = inspect(self.engine)
+        inspector = inspect(connection)
         table_names = inspector.get_table_names()
         current_tables = ["flow", "user", "apikey", "folder", "message", "variable", "transaction", "vertex_build"]
 
@@ -378,7 +392,7 @@ class DatabaseService(Service):
 
         for table in SQLModel.metadata.sorted_tables:
             try:
-                table.create(self.engine, checkfirst=True)
+                table.create(connection, checkfirst=True)
             except OperationalError as oe:
                 logger.warning(f"Table {table} already exists, skipping. Exception: {oe}")
             except Exception as exc:
@@ -387,7 +401,7 @@ class DatabaseService(Service):
                 raise RuntimeError(msg) from exc
 
         # Now check if the required tables exist, if not, something went wrong.
-        inspector = inspect(self.engine)
+        inspector = inspect(connection)
         table_names = inspector.get_table_names()
         for table in current_tables:
             if table not in table_names:
@@ -397,6 +411,10 @@ class DatabaseService(Service):
                 raise RuntimeError(msg)
 
         logger.debug("Database and tables created successfully")
+
+    async def create_db_and_tables(self) -> None:
+        async with self.with_async_session() as session, session.bind.connect() as conn:
+            await conn.run_sync(self._create_db_and_tables)
 
     async def teardown(self) -> None:
         logger.debug("Tearing down database")

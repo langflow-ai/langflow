@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, col, select
+from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.database.models.transactions.model import TransactionBase, TransactionTable
@@ -21,12 +21,13 @@ async def get_transactions_by_flow_id(
     return list(transactions)
 
 
-def log_transaction(db: Session, transaction: TransactionBase) -> TransactionTable:
+async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> TransactionTable:
     table = TransactionTable(**transaction.model_dump())
     db.add(table)
     try:
-        db.commit()
+        await db.commit()
+        await db.refresh(table)
     except IntegrityError:
-        db.rollback()
+        await db.rollback()
         raise
     return table

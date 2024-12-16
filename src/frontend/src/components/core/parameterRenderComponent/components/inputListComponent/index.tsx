@@ -1,13 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
-import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import _ from "lodash";
 import { classNames, cn } from "../../../../../utils/utils";
-import IconComponent from "../../../../common/genericIconComponent";
-import { Button } from "../../../../ui/button";
 import { Input } from "../../../../ui/input";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import { InputListComponentType, InputProps } from "../../types";
+import { ButtonInputList } from "./components/button-input-list";
 
 export default function InputListComponent({
   value = [""],
@@ -23,6 +21,7 @@ export default function InputListComponent({
       handleOnNewValue({ value: [""] }, { skipSnapshot: true });
     }
   }, [disabled]);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // @TODO Recursive Character Text Splitter - the value might be in string format, whereas the InputListComponent specifically requires an array format. To ensure smooth operation and prevent potential errors, it's crucial that we handle the conversion from a string to an array with the string as its element.
   if (typeof value === "string") {
@@ -51,12 +50,6 @@ export default function InputListComponent({
     handleOnNewValue({ value: newInputList });
   };
 
-  const getButtonClassName = () =>
-    classNames(disabled ? "text-hard-zinc" : "text-placeholder-foreground");
-
-  const getTestId = (type, index) =>
-    `input-list-${type}-btn${editNode ? "-edit" : ""}_${componentName}-${index}`;
-
   return (
     <div
       className={classNames(
@@ -70,49 +63,39 @@ export default function InputListComponent({
             disabled={disabled}
             type="text"
             value={singleValue}
+            ref={index === 0 ? inputRef : null}
             className={cn(
               editNode ? "input-edit-node" : "",
               disabled ? "disabled-state" : "",
+              "peer relative",
+              index === 0 && value.length > 1 && "w-3/4 pr-7 focus:pr-3",
             )}
             placeholder={getPlaceholder(disabled, placeholder)}
             onChange={(event) => handleInputChange(index, event.target.value)}
             data-testid={`${id}_${index}`}
           />
-          <div
-            onClick={index === 0 ? addNewInput : (e) => removeInput(index, e)}
-            className={cn(
-              "hit-area-icon group flex items-center justify-center text-center",
-              disabled
-                ? "pointer-events-none bg-background hover:bg-background"
-                : "",
-              index === 0
-                ? "bg-background hover:bg-muted"
-                : "hover:bg-smooth-red",
-            )}
-          >
-            <Button
-              unstyled
-              size="icon"
-              className={cn(
-                "hit-area-icon flex items-center justify-center",
-                getButtonClassName(),
-              )}
-              data-testid={getTestId(index === 0 ? "plus" : "minus", index)}
+          {index === 0 && value.length > 1 && (
+            <ButtonInputList
+              index={index}
+              value={value}
+              addNewInput={addNewInput}
+              removeInput={removeInput}
               disabled={disabled}
-            >
-              <IconComponent
-                name={index === 0 ? "Plus" : "Trash2"}
-                className={cn(
-                  "icon-size justify-self-center text-muted-foreground",
-                  !disabled && "hover:cursor-pointer hover:text-foreground",
-                  index === 0
-                    ? "group-hover:text-foreground"
-                    : "group-hover:text-destructive",
-                )}
-                strokeWidth={ICON_STROKE_WIDTH}
-              />
-            </Button>
-          </div>
+              editNode={editNode}
+              addIcon
+              componentName={componentName || ""}
+            />
+          )}
+          <ButtonInputList
+            index={index}
+            value={value}
+            addNewInput={addNewInput}
+            removeInput={removeInput}
+            disabled={disabled}
+            editNode={editNode}
+            addIcon={false}
+            componentName={componentName || ""}
+          />
         </div>
       ))}
     </div>

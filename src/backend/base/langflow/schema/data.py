@@ -97,7 +97,7 @@ class Data(BaseModel):
             Data: The converted Data.
         """
         data: dict = {"text": message.content}
-        data["metadata"] = cast(dict, message.to_json())
+        data["metadata"] = cast("dict", message.to_json())
         return cls(data=data, text_key="text")
 
     def __add__(self, other: "Data") -> "Data":
@@ -130,7 +130,9 @@ class Data(BaseModel):
         """
         data_copy = self.data.copy()
         text = data_copy.pop(self.text_key, self.default_value)
-        return Document(page_content=text, metadata=data_copy)
+        if isinstance(text, str):
+            return Document(page_content=text, metadata=data_copy)
+        return Document(page_content=str(text), metadata=data_copy)
 
     def to_lc_message(
         self,

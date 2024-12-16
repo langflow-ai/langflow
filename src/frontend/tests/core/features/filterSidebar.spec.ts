@@ -1,36 +1,14 @@
 import { expect, test } from "@playwright/test";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "user must see on handle click the possibility connections",
   { tag: ["@release", "@components", "@api"] },
 
   async ({ page }) => {
-    await page.goto("/");
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
+    await awaitBootstrapTest(page);
 
-    await page.waitForSelector('[id="new-project-btn"]', {
-      timeout: 30000,
-    });
-
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForSelector('[data-testid="modal-title"]', {
-        timeout: 3000,
-      });
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
     await page.waitForSelector('[data-testid="blank-flow"]', {
       timeout: 3000,
     });
@@ -51,10 +29,8 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
+    await adjustScreenView(page);
+
     await page.waitForSelector(
       '[data-testid="handle-apirequest-shownode-urls-left"]',
       {
@@ -106,7 +82,9 @@ test(
       page.getByTestId("langchain_utilitiesConversationChain"),
     ).toBeVisible();
 
-    await expect(page.getByTestId("helpersCurrent Date")).toBeVisible();
+    await expect(
+      page.getByTestId("langchain_utilitiesPrompt Hub"),
+    ).toBeVisible();
 
     await page.getByTestId("sidebar-options-trigger").click();
     await page.getByTestId("sidebar-beta-switch").isVisible({ timeout: 5000 });
@@ -114,7 +92,9 @@ test(
     await expect(page.getByTestId("sidebar-beta-switch")).not.toBeChecked();
     await page.getByTestId("sidebar-options-trigger").click();
 
-    await expect(page.getByTestId("helpersCurrent Date")).not.toBeVisible();
+    await expect(
+      page.getByTestId("langchain_utilitiesPrompt Hub"),
+    ).not.toBeVisible();
 
     await page.getByTestId("sidebar-filter-reset").click();
 

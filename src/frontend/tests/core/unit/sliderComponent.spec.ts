@@ -1,5 +1,5 @@
 import { expect, Page, test } from "@playwright/test";
-import uaParser from "ua-parser-js";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 // TODO: This component doesn't have slider needs updating
 test(
@@ -8,33 +8,7 @@ test(
     tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
-    await page.goto("/");
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
-
-    await page.waitForSelector('[id="new-project-btn"]', {
-      timeout: 30000,
-    });
-
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
-
-    const getUA = await page.evaluate(() => navigator.userAgent);
-    const userAgentInfo = uaParser(getUA);
+    await awaitBootstrapTest(page);
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
       timeout: 30000,
@@ -43,7 +17,9 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("ollama");
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="modelsOllama"]', {
+      timeout: 3000,
+    });
 
     await page
       .getByTestId("modelsOllama")
@@ -75,13 +51,14 @@ test(
     await page.keyboard.press("Backspace");
     await page.locator("textarea").last().fill(cleanCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
-    await page.waitForTimeout(500);
 
     await page.getByTestId("fit_view").click();
 
     await mutualValidation(page);
 
     await moveSlider(page, "right", false);
+
+    // wait for the slider to update
 
     await page.waitForTimeout(500);
 

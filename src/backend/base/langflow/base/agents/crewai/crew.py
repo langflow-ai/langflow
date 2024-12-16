@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from typing import Any, cast
 
+import litellm
 from crewai import LLM, Agent, Crew, Process, Task
 from crewai.task import TaskOutput
 from crewai.tools.base_tool import Tool
@@ -61,6 +62,22 @@ def convert_llm(llm: Any, excluded_keys=None) -> LLM:
     if isinstance(llm, LLM):
         return llm
 
+    # Check if we should use model_name or model
+    if hasattr(llm, "model_name"):
+        model_name = llm.model_name
+    elif hasattr(llm, "model"):
+        model_name = llm.model
+    else:
+        msg = "Could not find model name in the LLM object"
+        raise ValueError(msg)
+
+    # Normalize to the LLM model name
+    # Remove langchain_ prefix if present
+    provider = llm.get_lc_namespace()[0]
+    if provider.startswith("langchain_"):
+        provider = provider[10:]
+        model_name = f"{provider}/{model_name}"
+
     # Retrieve the API Key from the LLM
     if excluded_keys is None:
         excluded_keys = {"model", "model_name", "_type", "api_key"}
@@ -70,7 +87,7 @@ def convert_llm(llm: Any, excluded_keys=None) -> LLM:
 
     # Convert Langchain LLM to CrewAI-compatible LLM object
     return LLM(
-        model=llm.model_name,
+        model=model_name,
         api_key=api_key,
         **{k: v for k, v in llm.dict().items() if k not in excluded_keys},
     )
@@ -134,7 +151,7 @@ class BaseCrewComponent(Component):
             agent.llm = convert_llm(agent.llm)
             agent.tools = convert_tools(agent.tools)
 
-        return self.tasks, self.agents
+        return self.tasks, agents_list
 
     def get_manager_llm(self) -> LLM | None:
         if not self.manager_llm:
@@ -161,22 +178,27 @@ class BaseCrewComponent(Component):
         self,
     ) -> Callable:
         def step_callback(agent_output: AgentFinish | list[tuple[AgentAction, str]]) -> None:
-            _id = self._vertex.id if self._vertex else self.display_name
+            id_ = self._vertex.id if self._vertex else self.display_name
             if isinstance(agent_output, AgentFinish):
                 messages = agent_output.messages
-                self.log(cast(dict, messages[0].to_json()), name=f"Finish (Agent: {_id})")
+                self.log(cast("dict", messages[0].to_json()), name=f"Finish (Agent: {id_})")
             elif isinstance(agent_output, list):
-                _messages_dict = {f"Action {i}": action.messages for i, (action, _) in enumerate(agent_output)}
+                messages_dict_ = {f"Action {i}": action.messages for i, (action, _) in enumerate(agent_output)}
                 # Serialize the messages with to_json() to avoid issues with circular references
-                serializable_dict = {k: [m.to_json() for m in v] for k, v in _messages_dict.items()}
+                serializable_dict = {k: [m.to_json() for m in v] for k, v in messages_dict_.items()}
                 messages_dict = {k: v[0] if len(v) == 1 else v for k, v in serializable_dict.items()}
-                self.log(messages_dict, name=f"Step (Agent: {_id})")
+                self.log(messages_dict, name=f"Step (Agent: {id_})")
 
         return step_callback
 
     async def build_output(self) -> Message:
-        crew = self.build_crew()
-        result = await crew.kickoff_async()
-        message = Message(text=result.raw, sender=MESSAGE_SENDER_AI)
+        try:
+            crew = self.build_crew()
+            result = await crew.kickoff_async()
+            message = Message(text=result.raw, sender=MESSAGE_SENDER_AI)
+        except litellm.exceptions.BadRequestError as e:
+            raise ValueError(e) from e
+
         self.status = message
+
         return message

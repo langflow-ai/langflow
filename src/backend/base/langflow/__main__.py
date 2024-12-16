@@ -26,7 +26,7 @@ from sqlmodel import select
 from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
 from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
-from langflow.services.database.utils import async_session_getter
+from langflow.services.database.utils import session_getter
 from langflow.services.deps import async_session_scope, get_db_service, get_settings_service
 from langflow.services.settings.constants import DEFAULT_SUPERUSER
 from langflow.services.utils import initialize_services
@@ -423,7 +423,7 @@ def superuser(
 
     async def _create_superuser():
         await initialize_services()
-        async with async_session_getter(db_service) as session:
+        async with session_getter(db_service) as session:
             from langflow.services.auth.utils import create_super_user
 
             if await create_super_user(db=session, username=username, password=password):
@@ -485,6 +485,15 @@ def copy_db() -> None:
         typer.echo("Pre-release database not found in the cache directory.")
 
 
+async def _migration(*, test: bool, fix: bool) -> None:
+    await initialize_services(fix_migration=fix)
+    db_service = get_db_service()
+    if not test:
+        await db_service.run_migrations()
+    results = db_service.run_migrations_test()
+    display_results(results)
+
+
 @app.command()
 def migration(
     test: bool = typer.Option(default=True, help="Run migrations in test mode."),  # noqa: FBT001
@@ -499,12 +508,7 @@ def migration(
     ):
         raise typer.Abort
 
-    asyncio.run(initialize_services(fix_migration=fix))
-    db_service = get_db_service()
-    if not test:
-        db_service.run_migrations()
-    results = db_service.run_migrations_test()
-    display_results(results)
+    asyncio.run(_migration(test=test, fix=fix))
 
 
 @app.command()
