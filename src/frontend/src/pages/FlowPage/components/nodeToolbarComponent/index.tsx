@@ -473,7 +473,6 @@ const NodeToolbarComponent = memo(
                 s.name.toLowerCase().startsWith("freeze path"),
               )}
               className={cn("node-toolbar-buttons", frozen && "text-blue-500")}
-              dataTestId="freeze-path-button"
             />
           )}
           {hasToolMode && (
