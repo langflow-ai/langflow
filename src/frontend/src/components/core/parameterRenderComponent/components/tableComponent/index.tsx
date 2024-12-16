@@ -77,17 +77,6 @@ const TableComponent = forwardRef<
         };
       }
       if (
-        (typeof props.tableOptions?.block_hide === "boolean" &&
-          props.tableOptions?.block_hide) ||
-        (Array.isArray(props.tableOptions?.block_hide) &&
-          props.tableOptions?.block_hide.includes(newCol.field ?? ""))
-      ) {
-        newCol = {
-          ...newCol,
-          lockVisible: true,
-        };
-      }
-      if (
         (typeof props.editable === "boolean" && props.editable) ||
         (Array.isArray(props.editable) &&
           props.editable.every((field) => typeof field === "string") &&
