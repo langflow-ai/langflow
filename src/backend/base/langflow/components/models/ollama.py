@@ -6,7 +6,6 @@ from langchain_ollama import ChatOllama
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.inputs.inputs import HandleInput
 from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, StrInput
 
 
@@ -166,13 +165,6 @@ class ChatOllamaComponent(LCModelComponent):
         ),
         StrInput(name="system", display_name="System", info="System to use for generating text.", advanced=True),
         StrInput(name="template", display_name="Template", info="Template to use for generating text.", advanced=True),
-        HandleInput(
-            name="output_parser",
-            display_name="Output Parser",
-            info="The parser to use to parse the output of the model",
-            advanced=True,
-            input_types=["OutputParser"],
-        ),
         *LCModelComponent._base_inputs,
     ]
 

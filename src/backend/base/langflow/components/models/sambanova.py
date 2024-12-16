@@ -4,7 +4,6 @@ from pydantic.v1 import SecretStr
 from langflow.base.models.model import LCModelComponent
 from langflow.base.models.sambanova_constants import SAMBANOVA_MODEL_NAMES
 from langflow.field_typing import LanguageModel
-from langflow.inputs.inputs import HandleInput
 from langflow.io import DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
 
 
@@ -47,13 +46,6 @@ class SambaNovaComponent(LCModelComponent):
             info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
         ),
         FloatInput(name="temperature", display_name="Temperature", value=0.07),
-        HandleInput(
-            name="output_parser",
-            display_name="Output Parser",
-            info="The parser to use to parse the output of the model",
-            advanced=True,
-            input_types=["OutputParser"],
-        ),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
