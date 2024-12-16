@@ -1262,7 +1262,8 @@ class Graph:
         try:
             return self.vertex_map[vertex_id]
         except KeyError as e:
-            raise ValueError(f"Vertex {vertex_id} not found") from e
+            msg = f"Vertex {vertex_id} not found"
+            raise ValueError(msg) from e
 
     def get_root_of_group_node(self, vertex_id: str) -> Vertex:
         """Returns the root of a group node."""
