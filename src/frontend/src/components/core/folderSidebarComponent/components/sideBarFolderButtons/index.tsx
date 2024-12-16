@@ -28,7 +28,7 @@ import useAlertStore from "../../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import { useFolderStore } from "../../../../../stores/foldersStore";
 import { handleKeyDown } from "../../../../../utils/reactflowUtils";
-import { cn, getRandomKeyByssmm } from "../../../../../utils/utils";
+import { cn } from "../../../../../utils/utils";
 import useFileDrop from "../../hooks/use-on-file-drop";
 import { SidebarFolderSkeleton } from "../sidebarFolderSkeleton";
 import { HeaderButtons } from "./components/header-buttons";
@@ -333,6 +333,8 @@ const SideBarFoldersButtonsComponent = ({
     }
   };
 
+  const [hoveredFolderId, setHoveredFolderId] = useState<string | null>(null);
+
   return (
     <Sidebar
       collapsible={isMobile ? "offcanvas" : "none"}
@@ -356,7 +358,12 @@ const SideBarFoldersButtonsComponent = ({
                     (folder) => folder.name === item.name,
                   )[0];
                   return (
-                    <SidebarMenuItem key={getRandomKeyByssmm()}>
+                    <SidebarMenuItem
+                      key={index}
+                      className="group/menu-button"
+                      onMouseEnter={() => setHoveredFolderId(item.id!)}
+                      onMouseLeave={() => setHoveredFolderId(null)}
+                    >
                       <div className="relative flex w-full">
                         <SidebarMenuButton
                           size="md"
@@ -369,7 +376,8 @@ const SideBarFoldersButtonsComponent = ({
                           isActive={checkPathName(item.id!)}
                           onClick={() => handleChangeFolder!(item.id!)}
                           className={cn(
-                            "group/menu-button flex-grow pr-8", // Added padding-right to make room for options
+                            "flex-grow pr-8",
+                            hoveredFolderId === item.id && "bg-accent",
                             checkHoveringFolder(item.id!),
                           )}
                         >
@@ -401,7 +409,7 @@ const SideBarFoldersButtonsComponent = ({
                         </SidebarMenuButton>
                         <div
                           className="absolute right-2 top-[0.45rem] flex items-center hover:text-foreground"
-                          onClick={(e) => e.stopPropagation()} // Prevent click from triggering parent button
+                          onClick={(e) => e.stopPropagation()}
                         >
                           <SelectOptions
                             item={item}
