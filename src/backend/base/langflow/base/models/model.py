@@ -177,7 +177,7 @@ class LCModelComponent(Component):
         try:
             # TODO: Depreciated Feature to be removed in upcoming release
             if hasattr(self, "output_parser") and self.output_parser is not None:
-                    runnable |= self.output_parser
+                runnable |= self.output_parser
 
             runnable = runnable.with_config(
                 {
