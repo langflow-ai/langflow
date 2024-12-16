@@ -2,7 +2,7 @@
 
 Memory components store and retrieve chat messages by `session_id`.
 
-They are distinct from vector store components, because they are built specifically for storing and retrieving chat messages.
+They are distinct from vector store components, because they are built specifically for storing and retrieving chat messages from external databases.
 
 Memory components provide access to their respective external databases **as memory**. This allows AIs to access external memory for persistence and context retention.
 
