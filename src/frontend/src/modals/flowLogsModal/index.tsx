@@ -1,12 +1,12 @@
 import IconComponent from "@/components/common/genericIconComponent";
+import PaginatorComponent from "@/components/common/paginatorComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { useGetTransactionsQuery } from "@/controllers/API/queries/transactions";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { FlowSettingsPropsType } from "@/types/components";
 import { ColDef, ColGroupDef } from "ag-grid-community";
-import {useCallback, useEffect, useState} from "react";
+import { useCallback, useEffect, useState } from "react";
 import BaseModal from "../baseModal";
-import PaginatorComponent from "@/components/common/paginatorComponent";
 
 export default function FlowLogsModal({
   open,
@@ -19,7 +19,11 @@ export default function FlowLogsModal({
   const [columns, setColumns] = useState<Array<ColDef | ColGroupDef>>([]);
   const [rows, setRows] = useState<any>([]);
 
-  const { data: TransactionData, isLoading, refetch } = useGetTransactionsQuery({
+  const {
+    data: TransactionData,
+    isLoading,
+    refetch,
+  } = useGetTransactionsQuery({
     id: currentFlowId,
     params: {
       page: pageIndex,
@@ -91,7 +95,7 @@ export default function FlowLogsModal({
               pages={data.pagination.pages}
             />
           </div>
-          )}
+        )}
       </BaseModal.Content>
     </BaseModal>
   );

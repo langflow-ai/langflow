@@ -38,11 +38,11 @@ export const useGetTransactionsQuery: useQueryFunctionType<
   const { query } = UseRequestProcessor();
 
   const responseFn = (data: TransactionsPagination) => {
-    const pagination: PaginationType = {...data};
+    const pagination: PaginationType = { ...data };
 
     const rows = data.items ?? [];
     const columns = extractColumnsFromRows(rows, mode, excludedColumns);
-    return {pagination: pagination, rows: rows, columns};
+    return { pagination: pagination, rows: rows, columns };
   };
 
   const getTransactionsFn = async () => {
@@ -52,16 +52,23 @@ export const useGetTransactionsQuery: useQueryFunctionType<
       config["params"] = { ...config["params"], ...params };
     }
 
-    const result = await api.get<TransactionsPagination>(`${getURL("TRANSACTIONS")}`, config);
+    const result = await api.get<TransactionsPagination>(
+      `${getURL("TRANSACTIONS")}`,
+      config,
+    );
 
     return responseFn(result.data);
   };
 
-  const queryResult = query(["useGetTransactionsQuery", id, {...params}], getTransactionsFn, {
-    placeholderData: keepPreviousData,
-    refetchOnWindowFocus: false,
-    ...options,
-  });
+  const queryResult = query(
+    ["useGetTransactionsQuery", id, { ...params }],
+    getTransactionsFn,
+    {
+      placeholderData: keepPreviousData,
+      refetchOnWindowFocus: false,
+      ...options,
+    },
+  );
 
   return queryResult;
 };
