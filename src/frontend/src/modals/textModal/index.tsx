@@ -70,9 +70,6 @@ export default function TextModal({
               Save
             </Button>
           )}
-          <Button className="flex gap-2 px-3" onClick={() => setOpen(false)}>
-            Close
-          </Button>
         </div>
       </BaseModal.Footer>
     </BaseModal>

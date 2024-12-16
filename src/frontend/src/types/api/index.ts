@@ -290,3 +290,40 @@ export type useMutationFunctionType<
         "mutationFn" | "mutationKey"
       >,
     ) => UseMutationResult<Data, Error, Variables>;
+
+export type FieldValidatorType =
+  | "no_spaces"
+  | "lowercase"
+  | "uppercase"
+  | "email"
+  | "url"
+  | "alphanumeric"
+  | "numeric"
+  | "alpha"
+  | "phone"
+  | "slug"
+  | "username"
+  | "password";
+
+export type FieldParserType =
+  | "snake_case"
+  | "camel_case"
+  | "pascal_case"
+  | "kebab_case"
+  | "lowercase"
+  | "uppercase";
+
+export type TableOptionsTypeAPI = {
+  block_add?: boolean;
+  block_delete?: boolean;
+  block_edit?: boolean;
+  block_sort?: boolean;
+  block_filter?: boolean;
+  block_hide?: boolean | string[];
+  block_select?: boolean;
+  hide_options?: boolean;
+  field_validators?: Array<
+    FieldValidatorType | { [key: string]: FieldValidatorType }
+  >;
+  field_parsers?: Array<FieldParserType | { [key: string]: FieldParserType }>;
+};
