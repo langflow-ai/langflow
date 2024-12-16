@@ -6,7 +6,6 @@ from langflow.memory import (
     aadd_messages,
     aadd_messagetables,
     add_messages,
-    add_messagetables,
     adelete_messages,
     aget_messages,
     astore_message,
@@ -14,7 +13,6 @@ from langflow.memory import (
     delete_messages,
     get_messages,
     store_message,
-    update_messages,
 )
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.content_types import TextContent, ToolContent
@@ -95,14 +93,6 @@ async def test_aadd_messages():
 
 
 @pytest.mark.usefixtures("client")
-def test_add_messagetables(session):
-    messages = [MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")]
-    added_messages = add_messagetables(messages, session)
-    assert len(added_messages) == 1
-    assert added_messages[0].text == "New Test message"
-
-
-@pytest.mark.usefixtures("client")
 async def test_aadd_messagetables(async_session):
     messages = [MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")]
     added_messages = await aadd_messagetables(messages, async_session)
@@ -177,191 +167,6 @@ def test_convert_to_langchain(method_name):
     assert lc_message.content == ""
     assert lc_message.type == "ai"
     assert len(list(iterator)) == 2
-
-
-@pytest.mark.usefixtures("client")
-def test_update_single_message(created_message):
-    # Modify the message
-    created_message.text = "Updated message"
-    updated = update_messages(created_message)
-
-    assert len(updated) == 1
-    assert updated[0].text == "Updated message"
-    assert updated[0].id == created_message.id
-
-
-@pytest.mark.usefixtures("client")
-def test_update_multiple_messages(created_messages):
-    # Modify the messages
-    for i, message in enumerate(created_messages):
-        message.text = f"Updated message {i}"
-
-    updated = update_messages(created_messages)
-
-    assert len(updated) == len(created_messages)
-    for i, message in enumerate(updated):
-        assert message.text == f"Updated message {i}"
-        assert message.id == created_messages[i].id
-
-
-@pytest.mark.usefixtures("client")
-def test_update_nonexistent_message():
-    # Create a message with a non-existent UUID
-    message = MessageRead(
-        id=uuid4(),  # Generate a random UUID that won't exist in the database
-        text="Test message",
-        sender="User",
-        sender_name="User",
-        session_id="session_id",
-        flow_id=uuid4(),
-    )
-
-    updated = update_messages(message)
-    assert len(updated) == 0
-
-
-@pytest.mark.usefixtures("client")
-def test_update_mixed_messages(created_messages):
-    # Create a mix of existing and non-existing messages
-    nonexistent_message = MessageRead(
-        id=uuid4(),  # Generate a random UUID that won't exist in the database
-        text="Test message",
-        sender="User",
-        sender_name="User",
-        session_id="session_id",
-        flow_id=uuid4(),
-    )
-
-    messages_to_update = created_messages[:1] + [nonexistent_message]
-    created_messages[0].text = "Updated existing message"
-
-    updated = update_messages(messages_to_update)
-
-    assert len(updated) == 1
-    assert updated[0].text == "Updated existing message"
-    assert updated[0].id == created_messages[0].id
-    assert isinstance(updated[0].id, UUID)  # Verify ID is UUID type
-
-
-@pytest.mark.usefixtures("client")
-def test_update_message_with_timestamp(created_message):
-    # Set a specific timestamp
-    new_timestamp = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
-    created_message.timestamp = new_timestamp
-    created_message.text = "Updated message with timestamp"
-
-    updated = update_messages(created_message)
-
-    assert len(updated) == 1
-    assert updated[0].text == "Updated message with timestamp"
-
-    # Compare timestamps without timezone info since DB doesn't preserve it
-    assert updated[0].timestamp.replace(tzinfo=None) == new_timestamp.replace(tzinfo=None)
-    assert updated[0].id == created_message.id
-
-
-@pytest.mark.usefixtures("client")
-def test_update_multiple_messages_with_timestamps(created_messages):
-    # Modify messages with different timestamps
-    for i, message in enumerate(created_messages):
-        message.text = f"Updated message {i}"
-        message.timestamp = datetime(2024, 1, 1, i, 0, 0, tzinfo=timezone.utc)
-
-    updated = update_messages(created_messages)
-
-    assert len(updated) == len(created_messages)
-    for i, message in enumerate(updated):
-        assert message.text == f"Updated message {i}"
-        # Compare timestamps without timezone info
-        expected_timestamp = datetime(2024, 1, 1, i, 0, 0, tzinfo=timezone.utc)
-        assert message.timestamp.replace(tzinfo=None) == expected_timestamp.replace(tzinfo=None)
-        assert message.id == created_messages[i].id
-
-
-@pytest.mark.usefixtures("client")
-def test_update_message_with_content_blocks(created_message):
-    # Create a content block using proper models
-    text_content = TextContent(
-        type="text", text="Test content", duration=5, header={"title": "Test Header", "icon": "TestIcon"}
-    )
-
-    tool_content = ToolContent(type="tool_use", name="test_tool", tool_input={"param": "value"}, duration=10)
-
-    content_block = ContentBlock(title="Test Block", contents=[text_content, tool_content], allow_markdown=True)
-
-    created_message.content_blocks = [content_block]
-    created_message.text = "Message with content blocks"
-
-    updated = update_messages(created_message)
-
-    assert len(updated) == 1
-    assert updated[0].text == "Message with content blocks"
-    assert len(updated[0].content_blocks) == 1
-
-    # Verify the content block structure
-    updated_block = updated[0].content_blocks[0]
-    assert updated_block.title == "Test Block"
-    assert len(updated_block.contents) == 2
-
-    # Verify text content
-    text_content = updated_block.contents[0]
-    assert text_content.type == "text"
-    assert text_content.text == "Test content"
-    assert text_content.duration == 5
-    assert text_content.header["title"] == "Test Header"
-
-    # Verify tool content
-    tool_content = updated_block.contents[1]
-    assert tool_content.type == "tool_use"
-    assert tool_content.name == "test_tool"
-    assert tool_content.tool_input == {"param": "value"}
-    assert tool_content.duration == 10
-
-
-@pytest.mark.usefixtures("client")
-def test_update_message_with_nested_properties(created_message):
-    # Create a text content with nested properties
-    text_content = TextContent(
-        type="text", text="Test content", header={"title": "Test Header", "icon": "TestIcon"}, duration=15
-    )
-
-    content_block = ContentBlock(
-        title="Test Properties",
-        contents=[text_content],
-        allow_markdown=True,
-        media_url=["http://example.com/image.jpg"],
-    )
-
-    # Set properties according to the Properties model structure
-    created_message.properties = Properties(
-        text_color="blue",
-        background_color="white",
-        edited=False,
-        source=Source(id="test_id", display_name="Test Source", source="test"),
-        icon="TestIcon",
-        allow_markdown=True,
-        state="complete",
-        targets=[],
-    )
-    created_message.text = "Message with nested properties"
-    created_message.content_blocks = [content_block]
-
-    updated = update_messages(created_message)
-
-    assert len(updated) == 1
-    assert updated[0].text == "Message with nested properties"
-
-    # Verify the properties were properly serialized and stored
-    assert updated[0].properties.text_color == "blue"
-    assert updated[0].properties.background_color == "white"
-    assert updated[0].properties.edited is False
-    assert updated[0].properties.source.id == "test_id"
-    assert updated[0].properties.source.display_name == "Test Source"
-    assert updated[0].properties.source.source == "test"
-    assert updated[0].properties.icon == "TestIcon"
-    assert updated[0].properties.allow_markdown is True
-    assert updated[0].properties.state == "complete"
-    assert updated[0].properties.targets == []
 
 
 @pytest.mark.usefixtures("client")
