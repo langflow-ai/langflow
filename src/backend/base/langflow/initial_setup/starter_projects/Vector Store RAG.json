@@ -1,12 +1,12 @@
 {
-  "id": "5f2cd88e-8584-4199-8046-a27d644d84f2",
+  "id": "b4e002d4-8af0-4bba-a820-8e78107b68e8",
   "data": {
     "nodes": [
       {
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-D6fj2",
+          "id": "ChatInput-uqjg5",
           "node": {
             "base_classes": [
               "Message"
@@ -270,7 +270,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-D6fj2",
+        "id": "ChatInput-uqjg5",
         "position": {
           "x": 743.9745420290319,
           "y": 463.6977510207854
@@ -287,7 +287,7 @@
         "data": {
           "description": "Convert Data into plain text following a specified template.",
           "display_name": "Parse Data",
-          "id": "ParseData-yvSdI",
+          "id": "ParseData-zyR25",
           "node": {
             "base_classes": [
               "Message"
@@ -417,7 +417,7 @@
         },
         "dragging": false,
         "height": 350,
-        "id": "ParseData-yvSdI",
+        "id": "ParseData-zyR25",
         "position": {
           "x": 1606.0595305373527,
           "y": 751.4473696960695
@@ -434,7 +434,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-cBMbm",
+          "id": "Prompt-xaD1Y",
           "node": {
             "base_classes": [
               "Message"
@@ -591,7 +591,7 @@
         },
         "dragging": false,
         "height": 433,
-        "id": "Prompt-cBMbm",
+        "id": "Prompt-xaD1Y",
         "position": {
           "x": 1977.9097981422992,
           "y": 640.5656416923846
@@ -608,7 +608,7 @@
         "data": {
           "description": "Split text into chunks based on specified criteria.",
           "display_name": "Split Text",
-          "id": "SplitText-yKJMx",
+          "id": "SplitText-gC7fw",
           "node": {
             "base_classes": [
               "Data"
@@ -740,7 +740,7 @@
         },
         "dragging": false,
         "height": 475,
-        "id": "SplitText-yKJMx",
+        "id": "SplitText-gC7fw",
         "position": {
           "x": 1683.4543896546102,
           "y": 1350.7871623588553
@@ -755,7 +755,7 @@
       },
       {
         "data": {
-          "id": "note-ja04x",
+          "id": "note-epTtB",
           "node": {
             "description": "## 🐕 2. Retriever Flow\n\nThis flow answers your questions with contextual data retrieved from your vector database.\n\nOpen the **Playground** and ask, \n\n```\nWhat is this document about?\n```\n",
             "display_name": "",
@@ -768,7 +768,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-ja04x",
+        "id": "note-epTtB",
         "position": {
           "x": 374.388314931542,
           "y": 486.18094072679895
@@ -788,7 +788,7 @@
       },
       {
         "data": {
-          "id": "note-5ElIA",
+          "id": "note-Rz1e5",
           "node": {
             "description": "## 📖 README\n\nLoad your data into a vector database with the 📚 **Load Data** flow, and then use your data as chat context with the 🐕 **Retriever** flow.\n\n**🚨 Add your OpenAI API key as a global variable to easily add it to all of the OpenAI components in this flow.** \n\n**Quick start**\n1. Run the 📚 **Load Data** flow.\n2. Run the 🐕 **Retriever** flow.\n\n**Next steps** \n\n- Experiment by changing the prompt and the loaded data to see how the bot's responses change. \n\nFor more info, see the [Langflow docs](https://docs.langflow.org/starter-projects-vector-store-rag).",
             "display_name": "Read Me",
@@ -801,7 +801,7 @@
         },
         "dragging": false,
         "height": 527,
-        "id": "note-5ElIA",
+        "id": "note-Rz1e5",
         "position": {
           "x": 94.28986613312418,
           "y": 907.6428043837066
@@ -821,7 +821,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-ceUer",
+          "id": "OpenAIModel-m4qDU",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1116,7 +1116,7 @@
         },
         "dragging": false,
         "height": 672,
-        "id": "OpenAIModel-ceUer",
+        "id": "OpenAIModel-m4qDU",
         "position": {
           "x": 2360.1432368563187,
           "y": 571.6712358167248
@@ -1133,7 +1133,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-XolxJ",
+          "id": "ChatOutput-ac2iX",
           "node": {
             "base_classes": [
               "Message"
@@ -1393,7 +1393,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-XolxJ",
+        "id": "ChatOutput-ac2iX",
         "position": {
           "x": 2734.385670401691,
           "y": 808.2967893015561
@@ -1408,7 +1408,7 @@
       },
       {
         "data": {
-          "id": "OpenAIEmbeddings-x3Ejt",
+          "id": "OpenAIEmbeddings-LnzZl",
           "node": {
             "base_classes": [
               "Embeddings"
@@ -1884,7 +1884,7 @@
         },
         "dragging": false,
         "height": 320,
-        "id": "OpenAIEmbeddings-x3Ejt",
+        "id": "OpenAIEmbeddings-LnzZl",
         "position": {
           "x": 825.435626932521,
           "y": 739.6327999745448
@@ -1899,7 +1899,7 @@
       },
       {
         "data": {
-          "id": "note-B1X5i",
+          "id": "note-wDTVL",
           "node": {
             "description": "## 📚 1. Load Data Flow\n\nRun this first! Load data from a local file and embed it into the vector database.\n\nSelect a Database and a Collection, or create new ones. \n\nClick ▶️ **Run component** on the **Astra DB** component to load your data.\n\n* If you're using OSS Langflow, add your Astra DB Application Token to the Astra DB component.\n\n#### Next steps:\n Experiment by changing the prompt and the contextual data to see how the retrieval flow's responses change.",
             "display_name": "",
@@ -1912,7 +1912,7 @@
         },
         "dragging": false,
         "height": 50,
-        "id": "note-B1X5i",
+        "id": "note-wDTVL",
         "position": {
           "x": 955.3277857006676,
           "y": 1552.171191793604
@@ -1931,7 +1931,7 @@
       },
       {
         "data": {
-          "id": "OpenAIEmbeddings-rrwfr",
+          "id": "OpenAIEmbeddings-MXIpI",
           "node": {
             "base_classes": [
               "Embeddings"
@@ -2407,7 +2407,7 @@
         },
         "dragging": false,
         "height": 320,
-        "id": "OpenAIEmbeddings-rrwfr",
+        "id": "OpenAIEmbeddings-MXIpI",
         "position": {
           "x": 1690.9220896443658,
           "y": 1866.483269483266
@@ -2422,7 +2422,7 @@
       },
       {
         "data": {
-          "id": "File-y4QPS",
+          "id": "File-DdaMQ",
           "node": {
             "base_classes": [
               "Data"
@@ -2646,7 +2646,7 @@
         },
         "dragging": false,
         "height": 367,
-        "id": "File-y4QPS",
+        "id": "File-DdaMQ",
         "position": {
           "x": 1318.9043936921921,
           "y": 1486.3263312921847
@@ -2661,7 +2661,7 @@
       },
       {
         "data": {
-          "id": "note-GYVf0",
+          "id": "note-PmIBE",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2674,7 +2674,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-GYVf0",
+        "id": "note-PmIBE",
         "position": {
           "x": 1692.2322233423606,
           "y": 1821.9077961087607
@@ -2689,7 +2689,7 @@
       },
       {
         "data": {
-          "id": "note-nCuCY",
+          "id": "note-BwJua",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2702,7 +2702,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-nCuCY",
+        "id": "note-BwJua",
         "position": {
           "x": 824.1003268813427,
           "y": 698.6951695764802
@@ -2717,7 +2717,7 @@
       },
       {
         "data": {
-          "id": "note-2xHS7",
+          "id": "note-7o6Ns",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2730,7 +2730,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-2xHS7",
+        "id": "note-7o6Ns",
         "position": {
           "x": 2350.297636215281,
           "y": 525.0687902842766
@@ -2744,352 +2744,441 @@
         "width": 324
       },
       {
-        "id": "AstraDB-Zqzsn",
-        "type": "genericNode",
-        "position": {
-          "x": 1215.5738831152323,
-          "y": 479.1449074798619
-        },
         "data": {
+          "id": "AstraDB-0DSMB",
           "node": {
-            "template": {
-              "_type": "Component",
-              "embedding_model": {
-                "trace_as_metadata": true,
-                "list": false,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "embedding_model",
-                "value": "",
-                "display_name": "Embedding Model",
-                "advanced": false,
-                "input_types": [
-                  "Embeddings"
+            "base_classes": [
+              "Data"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Implementation of Vector Store using Astra DB with search capabilities",
+            "display_name": "Astra DB",
+            "documentation": "https://docs.langflow.org/starter-projects-vector-store-rag",
+            "edited": false,
+            "field_order": [
+              "token",
+              "api_endpoint",
+              "collection_name",
+              "collection_name_new",
+              "keyspace",
+              "embedding_choice",
+              "embedding_model",
+              "ingest_data",
+              "search_input",
+              "number_of_results",
+              "search_type",
+              "search_score_threshold",
+              "advanced_search_filter",
+              "content_field",
+              "ignore_invalid_documents",
+              "astradb_vectorstore_kwargs"
+            ],
+            "frozen": false,
+            "icon": "AstraDB",
+            "legacy": false,
+            "metadata": {},
+            "output_types": [],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Search Results",
+                "method": "search_documents",
+                "name": "search_results",
+                "required_inputs": [
+                  "api_endpoint",
+                  "collection_name",
+                  "collection_name_new",
+                  "token"
                 ],
-                "dynamic": false,
-                "info": "Allows an embedding model configuration.",
-                "title_case": false,
-                "type": "other",
-                "_input_type": "HandleInput"
-              },
-              "ingest_data": {
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "list": false,
-                "trace_as_input": true,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "ingest_data",
-                "value": "",
-                "display_name": "Ingest Data",
-                "advanced": false,
-                "input_types": [
+                "selected": "Data",
+                "types": [
                   "Data"
                 ],
-                "dynamic": false,
-                "info": "",
-                "title_case": false,
-                "type": "other",
-                "_input_type": "DataInput"
-              },
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
               "advanced_search_filter": {
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "list": false,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "advanced_search_filter",
-                "value": {},
-                "display_name": "Search Metadata Filter",
+                "_input_type": "NestedDictInput",
                 "advanced": true,
+                "display_name": "Search Metadata Filter",
                 "dynamic": false,
                 "info": "Optional dictionary of filters to apply to the search query.",
+                "list": false,
+                "name": "advanced_search_filter",
+                "placeholder": "",
+                "required": false,
+                "show": true,
                 "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
                 "type": "NestedDict",
-                "_input_type": "NestedDictInput"
+                "value": {}
               },
               "api_endpoint": {
-                "load_from_db": true,
-                "required": true,
-                "placeholder": "",
-                "show": true,
-                "name": "api_endpoint",
-                "value": "ASTRA_DB_API_ENDPOINT",
-                "display_name": "API Endpoint",
+                "_input_type": "SecretStrInput",
                 "advanced": false,
+                "display_name": "API Endpoint",
+                "dynamic": false,
+                "info": "API endpoint URL for the Astra DB service.",
                 "input_types": [
                   "Message"
                 ],
-                "dynamic": false,
-                "info": "API endpoint URL for the Astra DB service.",
-                "real_time_refresh": true,
-                "title_case": false,
+                "load_from_db": true,
+                "name": "api_endpoint",
                 "password": true,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": true,
+                "show": true,
+                "title_case": false,
                 "type": "str",
-                "_input_type": "SecretStrInput"
+                "value": "ASTRA_DB_API_ENDPOINT"
               },
               "astradb_vectorstore_kwargs": {
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "list": false,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "astradb_vectorstore_kwargs",
-                "value": {},
-                "display_name": "AstraDBVectorStore Parameters",
+                "_input_type": "NestedDictInput",
                 "advanced": true,
+                "display_name": "AstraDBVectorStore Parameters",
                 "dynamic": false,
                 "info": "Optional dictionary of additional parameters for the AstraDBVectorStore.",
+                "list": false,
+                "name": "astradb_vectorstore_kwargs",
+                "placeholder": "",
+                "required": false,
+                "show": true,
                 "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
                 "type": "NestedDict",
-                "_input_type": "NestedDictInput"
+                "value": {}
               },
               "code": {
-                "type": "code",
-                "required": true,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "import os\nfrom collections import defaultdict\n\nimport orjson\nfrom astrapy import DataAPIClient\nfrom astrapy.admin import parse_api_endpoint\nfrom langchain_astradb import AstraDBVectorStore\n\nfrom langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom langflow.helpers import docs_to_data\nfrom langflow.inputs import DictInput, FloatInput, MessageTextInput, NestedDictInput\nfrom langflow.io import (\n    BoolInput,\n    DataInput,\n    DropdownInput,\n    HandleInput,\n    IntInput,\n    MultilineInput,\n    SecretStrInput,\n    StrInput,\n)\nfrom langflow.schema import Data\nfrom langflow.utils.version import get_version_info\n\n\nclass AstraDBVectorStoreComponent(LCVectorStoreComponent):\n    display_name: str = \"Astra DB\"\n    description: str = \"Implementation of Vector Store using Astra DB with search capabilities\"\n    documentation: str = \"https://docs.langflow.org/starter-projects-vector-store-rag\"\n    name = \"AstraDB\"\n    icon: str = \"AstraDB\"\n\n    _cached_vector_store: AstraDBVectorStore | None = None\n\n    VECTORIZE_PROVIDERS_MAPPING = defaultdict(\n        list,\n        {\n            \"Azure OpenAI\": [\n                \"azureOpenAI\",\n                [\"text-embedding-3-small\", \"text-embedding-3-large\", \"text-embedding-ada-002\"],\n            ],\n            \"Hugging Face - Dedicated\": [\"huggingfaceDedicated\", [\"endpoint-defined-model\"]],\n            \"Hugging Face - Serverless\": [\n                \"huggingface\",\n                [\n                    \"sentence-transformers/all-MiniLM-L6-v2\",\n                    \"intfloat/multilingual-e5-large\",\n                    \"intfloat/multilingual-e5-large-instruct\",\n                    \"BAAI/bge-small-en-v1.5\",\n                    \"BAAI/bge-base-en-v1.5\",\n                    \"BAAI/bge-large-en-v1.5\",\n                ],\n            ],\n            \"Jina AI\": [\n                \"jinaAI\",\n                [\n                    \"jina-embeddings-v2-base-en\",\n                    \"jina-embeddings-v2-base-de\",\n                    \"jina-embeddings-v2-base-es\",\n                    \"jina-embeddings-v2-base-code\",\n                    \"jina-embeddings-v2-base-zh\",\n                ],\n            ],\n            \"Mistral AI\": [\"mistral\", [\"mistral-embed\"]],\n            \"Nvidia\": [\"nvidia\", [\"NV-Embed-QA\"]],\n            \"OpenAI\": [\"openai\", [\"text-embedding-3-small\", \"text-embedding-3-large\", \"text-embedding-ada-002\"]],\n            \"Upstage\": [\"upstageAI\", [\"solar-embedding-1-large\"]],\n            \"Voyage AI\": [\n                \"voyageAI\",\n                [\"voyage-large-2-instruct\", \"voyage-law-2\", \"voyage-code-2\", \"voyage-large-2\", \"voyage-2\"],\n            ],\n        },\n    )\n\n    inputs = [\n        SecretStrInput(\n            name=\"token\",\n            display_name=\"Astra DB Application Token\",\n            info=\"Authentication token for accessing Astra DB.\",\n            value=\"ASTRA_DB_APPLICATION_TOKEN\",\n            required=True,\n            advanced=os.getenv(\"ASTRA_ENHANCED\", \"false\").lower() == \"true\",\n            real_time_refresh=True,\n        ),\n        SecretStrInput(\n            name=\"api_endpoint\",\n            display_name=\"Database\" if os.getenv(\"ASTRA_ENHANCED\", \"false\").lower() == \"true\" else \"API Endpoint\",\n            info=\"API endpoint URL for the Astra DB service.\",\n            value=\"ASTRA_DB_API_ENDPOINT\",\n            required=True,\n            real_time_refresh=True,\n        ),\n        DropdownInput(\n            name=\"collection_name\",\n            display_name=\"Collection\",\n            info=\"The name of the collection within Astra DB where the vectors will be stored.\",\n            required=True,\n            refresh_button=True,\n            real_time_refresh=True,\n            options=[\"+ Create new collection\"],\n            value=\"+ Create new collection\",\n        ),\n        StrInput(\n            name=\"collection_name_new\",\n            display_name=\"Collection Name\",\n            info=\"Name of the new collection to create.\",\n            advanced=os.getenv(\"LANGFLOW_HOST\") is not None,\n            required=os.getenv(\"LANGFLOW_HOST\") is None,\n        ),\n        StrInput(\n            name=\"keyspace\",\n            display_name=\"Keyspace\",\n            info=\"Optional keyspace within Astra DB to use for the collection.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"embedding_choice\",\n            display_name=\"Embedding Model or Astra Vectorize\",\n            info=\"Determines whether to use Astra Vectorize for the collection.\",\n            options=[\"Embedding Model\", \"Astra Vectorize\"],\n            real_time_refresh=True,\n            value=\"Embedding Model\",\n        ),\n        HandleInput(\n            name=\"embedding_model\",\n            display_name=\"Embedding Model\",\n            input_types=[\"Embeddings\"],\n            info=\"Allows an embedding model configuration.\",\n        ),\n        DataInput(\n            name=\"ingest_data\",\n            display_name=\"Ingest Data\",\n        ),\n        MultilineInput(\n            name=\"search_input\",\n            display_name=\"Search Data\",\n            tool_mode=True,\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Search Results\",\n            info=\"Number of search results to return.\",\n            advanced=True,\n            value=4,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            info=\"Search type to use\",\n            options=[\"Similarity\", \"Similarity with score threshold\", \"MMR (Max Marginal Relevance)\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"search_score_threshold\",\n            display_name=\"Search Score Threshold\",\n            info=\"Minimum similarity score threshold for search results. \"\n            \"(when using 'Similarity with score threshold')\",\n            value=0,\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"advanced_search_filter\",\n            display_name=\"Search Metadata Filter\",\n            info=\"Optional dictionary of filters to apply to the search query.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"content_field\",\n            display_name=\"Content Field\",\n            info=\"Field to use as the text content field for the vector store.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"ignore_invalid_documents\",\n            display_name=\"Ignore Invalid Documents\",\n            info=\"Boolean flag to determine whether to ignore invalid documents at runtime.\",\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"astradb_vectorstore_kwargs\",\n            display_name=\"AstraDBVectorStore Parameters\",\n            info=\"Optional dictionary of additional parameters for the AstraDBVectorStore.\",\n            advanced=True,\n        ),\n    ]\n\n    def del_fields(self, build_config, field_list):\n        for field in field_list:\n            if field in build_config:\n                del build_config[field]\n\n        return build_config\n\n    def insert_in_dict(self, build_config, field_name, new_parameters):\n        # Insert the new key-value pair after the found key\n        for new_field_name, new_parameter in new_parameters.items():\n            # Get all the items as a list of tuples (key, value)\n            items = list(build_config.items())\n\n            # Find the index of the key to insert after\n            idx = len(items)\n            for i, (key, _) in enumerate(items):\n                if key == field_name:\n                    idx = i + 1\n                    break\n\n            items.insert(idx, (new_field_name, new_parameter))\n\n            # Clear the original dictionary and update with the modified items\n            build_config.clear()\n            build_config.update(items)\n\n        return build_config\n\n    def update_providers_mapping(self):\n        # If we don't have token or api_endpoint, we can't fetch the list of providers\n        if not self.token or not self.api_endpoint:\n            self.log(\"Astra DB token and API endpoint are required to fetch the list of Vectorize providers.\")\n\n            return self.VECTORIZE_PROVIDERS_MAPPING\n\n        try:\n            self.log(\"Dynamically updating list of Vectorize providers.\")\n\n            # Get the admin object\n            client = DataAPIClient(token=self.token)\n            admin = client.get_admin()\n\n            # Get the embedding providers\n            db_admin = admin.get_database_admin(self.api_endpoint)\n            embedding_providers = db_admin.find_embedding_providers().as_dict()\n\n            vectorize_providers_mapping = {}\n\n            # Map the provider display name to the provider key and models\n            for provider_key, provider_data in embedding_providers[\"embeddingProviders\"].items():\n                display_name = provider_data[\"displayName\"]\n                models = [model[\"name\"] for model in provider_data[\"models\"]]\n\n                vectorize_providers_mapping[display_name] = [provider_key, models]\n\n            # Sort the resulting dictionary\n            return defaultdict(list, dict(sorted(vectorize_providers_mapping.items())))\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error fetching Vectorize providers: {e}\")\n\n            return self.VECTORIZE_PROVIDERS_MAPPING\n\n    def get_database(self):\n        try:\n            client = DataAPIClient(token=self.token)\n\n            return client.get_database(\n                self.api_endpoint,\n                token=self.token,\n            )\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error getting database: {e}\")\n\n            return None\n\n    def _initialize_collection_options(self):\n        database = self.get_database()\n        if database is None:\n            return [\"+ Create new collection\"]\n\n        try:\n            collections = [collection.name for collection in database.list_collections()]\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error fetching collections: {e}\")\n\n            return [\"+ Create new collection\"]\n\n        return [*collections, \"+ Create new collection\"]\n\n    def get_collection_choice(self):\n        collection_name = self.collection_name\n        if collection_name == \"+ Create new collection\":\n            return self.collection_name_new\n\n        return collection_name\n\n    def get_collection_options(self):\n        # Only get the options if the collection exists\n        database = self.get_database()\n        if database is None:\n            return None\n\n        collection_name = self.get_collection_choice()\n\n        try:\n            collection = database.get_collection(collection_name)\n            collection_options = collection.options()\n        except Exception as _:  # noqa: BLE001\n            return None\n\n        return collection_options.vector\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):\n        # Refresh the collection name options\n        build_config[\"collection_name\"][\"options\"] = self._initialize_collection_options()\n\n        # Update the choice of embedding model based on collection name\n        if field_name == \"collection_name\":\n            # Detect if it is a new collection\n            is_new_collection = field_value == \"+ Create new collection\"\n\n            # Set the advanced and required fields based on the collection choice\n            build_config[\"embedding_choice\"].update(\n                {\n                    \"advanced\": not is_new_collection,\n                    \"value\": \"Embedding Model\" if is_new_collection else build_config[\"embedding_choice\"].get(\"value\"),\n                }\n            )\n\n            # Set the advanced field for the embedding model\n            build_config[\"embedding_model\"][\"advanced\"] = not is_new_collection\n\n            # Set the advanced and required fields for the new collection name\n            build_config[\"collection_name_new\"].update(\n                {\n                    \"advanced\": not is_new_collection,\n                    \"required\": is_new_collection,\n                    \"value\": \"\" if not is_new_collection else build_config[\"collection_name_new\"].get(\"value\"),\n                }\n            )\n\n        # Get the collection options for the selected collection\n        collection_options = self.get_collection_options()\n\n        # If the collection options are available (DB exists), show the advanced options\n        if collection_options:\n            build_config[\"embedding_choice\"][\"advanced\"] = True\n\n            if collection_options.service:\n                # Remove unnecessary fields when a service is set\n                self.del_fields(\n                    build_config,\n                    [\n                        \"embedding_provider\",\n                        \"model\",\n                        \"z_01_model_parameters\",\n                        \"z_02_api_key_name\",\n                        \"z_03_provider_api_key\",\n                        \"z_04_authentication\",\n                    ],\n                )\n\n                # Update the providers mapping\n                updates = {\n                    \"embedding_model\": {\"advanced\": True},\n                    \"embedding_choice\": {\"value\": \"Astra Vectorize\"},\n                }\n            else:\n                # Update the providers mapping\n                updates = {\n                    \"embedding_model\": {\"advanced\": False},\n                    \"embedding_provider\": {\"advanced\": False},\n                    \"embedding_choice\": {\"value\": \"Embedding Model\"},\n                }\n\n            # Apply updates to the build_config\n            for key, value in updates.items():\n                build_config[key].update(value)\n\n        elif field_name == \"embedding_choice\":\n            if field_value == \"Astra Vectorize\":\n                build_config[\"embedding_model\"][\"advanced\"] = True\n\n                # Update the providers mapping\n                vectorize_providers = self.update_providers_mapping()\n\n                new_parameter = DropdownInput(\n                    name=\"embedding_provider\",\n                    display_name=\"Embedding Provider\",\n                    options=vectorize_providers.keys(),\n                    value=\"\",\n                    required=True,\n                    real_time_refresh=True,\n                ).to_dict()\n\n                self.insert_in_dict(build_config, \"embedding_choice\", {\"embedding_provider\": new_parameter})\n            else:\n                build_config[\"embedding_model\"][\"advanced\"] = False\n\n                self.del_fields(\n                    build_config,\n                    [\n                        \"embedding_provider\",\n                        \"model\",\n                        \"z_01_model_parameters\",\n                        \"z_02_api_key_name\",\n                        \"z_03_provider_api_key\",\n                        \"z_04_authentication\",\n                    ],\n                )\n\n        elif field_name == \"embedding_provider\":\n            self.del_fields(\n                build_config,\n                [\"model\", \"z_01_model_parameters\", \"z_02_api_key_name\", \"z_03_provider_api_key\", \"z_04_authentication\"],\n            )\n\n            # Update the providers mapping\n            vectorize_providers = self.update_providers_mapping()\n            model_options = vectorize_providers[field_value][1]\n\n            new_parameter = DropdownInput(\n                name=\"model\",\n                display_name=\"Model\",\n                info=\"The embedding model to use for the selected provider. Each provider has a different set of \"\n                \"models available (full list at \"\n                \"https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html):\\n\\n\"\n                f\"{', '.join(model_options)}\",\n                options=model_options,\n                value=None,\n                required=True,\n                real_time_refresh=True,\n            ).to_dict()\n\n            self.insert_in_dict(build_config, \"embedding_provider\", {\"model\": new_parameter})\n\n        elif field_name == \"model\":\n            self.del_fields(\n                build_config,\n                [\"z_01_model_parameters\", \"z_02_api_key_name\", \"z_03_provider_api_key\", \"z_04_authentication\"],\n            )\n\n            new_parameter_1 = DictInput(\n                name=\"z_01_model_parameters\",\n                display_name=\"Model Parameters\",\n                list=True,\n            ).to_dict()\n\n            new_parameter_2 = MessageTextInput(\n                name=\"z_02_api_key_name\",\n                display_name=\"API Key Name\",\n                info=\"The name of the embeddings provider API key stored on Astra. \"\n                \"If set, it will override the 'ProviderKey' in the authentication parameters.\",\n            ).to_dict()\n\n            new_parameter_3 = SecretStrInput(\n                load_from_db=False,\n                name=\"z_03_provider_api_key\",\n                display_name=\"Provider API Key\",\n                info=\"An alternative to the Astra Authentication that passes an API key for the provider \"\n                \"with each request to Astra DB. \"\n                \"This may be used when Vectorize is configured for the collection, \"\n                \"but no corresponding provider secret is stored within Astra's key management system.\",\n            ).to_dict()\n\n            new_parameter_4 = DictInput(\n                name=\"z_04_authentication\",\n                display_name=\"Authentication Parameters\",\n                list=True,\n            ).to_dict()\n\n            self.insert_in_dict(\n                build_config,\n                \"model\",\n                {\n                    \"z_01_model_parameters\": new_parameter_1,\n                    \"z_02_api_key_name\": new_parameter_2,\n                    \"z_03_provider_api_key\": new_parameter_3,\n                    \"z_04_authentication\": new_parameter_4,\n                },\n            )\n\n        return build_config\n\n    def build_vectorize_options(self, **kwargs):\n        for attribute in [\n            \"embedding_provider\",\n            \"model\",\n            \"z_01_model_parameters\",\n            \"z_02_api_key_name\",\n            \"z_03_provider_api_key\",\n            \"z_04_authentication\",\n        ]:\n            if not hasattr(self, attribute):\n                setattr(self, attribute, None)\n\n        # Fetch values from kwargs if any self.* attributes are None\n        provider_mapping = self.update_providers_mapping()\n        provider_value = provider_mapping.get(self.embedding_provider, [None])[0] or kwargs.get(\"embedding_provider\")\n        model_name = self.model or kwargs.get(\"model\")\n        authentication = {**(self.z_04_authentication or {}), **kwargs.get(\"z_04_authentication\", {})}\n        parameters = self.z_01_model_parameters or kwargs.get(\"z_01_model_parameters\", {})\n\n        # Set the API key name if provided\n        api_key_name = self.z_02_api_key_name or kwargs.get(\"z_02_api_key_name\")\n        provider_key = self.z_03_provider_api_key or kwargs.get(\"z_03_provider_api_key\")\n        if api_key_name:\n            authentication[\"providerKey\"] = api_key_name\n        if authentication:\n            provider_key = None\n            authentication[\"providerKey\"] = authentication[\"providerKey\"].split(\".\")[0]\n\n        # Set authentication and parameters to None if no values are provided\n        if not authentication:\n            authentication = None\n        if not parameters:\n            parameters = None\n\n        return {\n            # must match astrapy.info.CollectionVectorServiceOptions\n            \"collection_vector_service_options\": {\n                \"provider\": provider_value,\n                \"modelName\": model_name,\n                \"authentication\": authentication,\n                \"parameters\": parameters,\n            },\n            \"collection_embedding_api_key\": provider_key,\n        }\n\n    @check_cached_vector_store\n    def build_vector_store(self, vectorize_options=None):\n        try:\n            from langchain_astradb import AstraDBVectorStore\n        except ImportError as e:\n            msg = (\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n            raise ImportError(msg) from e\n\n        # Initialize parameters based on the collection name\n        is_new_collection = self.collection_name == \"+ Create new collection\"\n\n        # Get the embedding model\n        embedding_params = {\"embedding\": self.embedding_model} if self.embedding_choice == \"Embedding Model\" else {}\n\n        # Use the embedding model if the choice is set to \"Embedding Model\"\n        if self.embedding_choice == \"Astra Vectorize\" and is_new_collection:\n            from astrapy.info import CollectionVectorServiceOptions\n\n            # Build the vectorize options dictionary\n            dict_options = vectorize_options or self.build_vectorize_options(\n                embedding_provider=getattr(self, \"embedding_provider\", None) or None,\n                model=getattr(self, \"model\", None) or None,\n                z_01_model_parameters=getattr(self, \"z_01_model_parameters\", None) or None,\n                z_02_api_key_name=getattr(self, \"z_02_api_key_name\", None) or None,\n                z_03_provider_api_key=getattr(self, \"z_03_provider_api_key\", None) or None,\n                z_04_authentication=getattr(self, \"z_04_authentication\", {}) or {},\n            )\n\n            # Set the embedding dictionary\n            embedding_params = {\n                \"collection_vector_service_options\": CollectionVectorServiceOptions.from_dict(\n                    dict_options.get(\"collection_vector_service_options\")\n                ),\n                \"collection_embedding_api_key\": dict_options.get(\"collection_embedding_api_key\"),\n            }\n\n        # Get the running environment for Langflow\n        environment = (\n            parse_api_endpoint(getattr(self, \"api_endpoint\", None)).environment\n            if getattr(self, \"api_endpoint\", None)\n            else None\n        )\n\n        # Get Langflow version and platform information\n        __version__ = get_version_info()[\"version\"]\n        langflow_prefix = \"\"\n        if os.getenv(\"LANGFLOW_HOST\") is not None:\n            langflow_prefix = \"ds-\"\n\n        # Bundle up the auto-detect parameters\n        autodetect_params = {\n            \"autodetect_collection\": True,  # TODO: May want to expose this option\n            \"content_field\": self.content_field or None,\n            \"ignore_invalid_documents\": self.ignore_invalid_documents,\n        }\n\n        # Attempt to build the Vector Store object\n        try:\n            vector_store = AstraDBVectorStore(\n                # Astra DB Authentication Parameters\n                token=self.token,\n                api_endpoint=self.api_endpoint,\n                namespace=self.keyspace or None,\n                collection_name=self.get_collection_choice(),\n                environment=environment,\n                # Astra DB Usage Tracking Parameters\n                ext_callers=[(f\"{langflow_prefix}langflow\", __version__)],\n                # Astra DB Vector Store Parameters\n                **autodetect_params,\n                **embedding_params,\n                **self.astradb_vectorstore_kwargs,\n            )\n        except Exception as e:\n            msg = f\"Error initializing AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        self._add_documents_to_vector_store(vector_store)\n\n        return vector_store\n\n    def _add_documents_to_vector_store(self, vector_store) -> None:\n        documents = []\n        for _input in self.ingest_data or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise TypeError(msg)\n\n        if documents:\n            self.log(f\"Adding {len(documents)} documents to the Vector Store.\")\n            try:\n                vector_store.add_documents(documents)\n            except Exception as e:\n                msg = f\"Error adding documents to AstraDBVectorStore: {e}\"\n                raise ValueError(msg) from e\n        else:\n            self.log(\"No documents to add to the Vector Store.\")\n\n    def _map_search_type(self) -> str:\n        if self.search_type == \"Similarity with score threshold\":\n            return \"similarity_score_threshold\"\n        if self.search_type == \"MMR (Max Marginal Relevance)\":\n            return \"mmr\"\n        return \"similarity\"\n\n    def _build_search_args(self):\n        query = self.search_input if isinstance(self.search_input, str) and self.search_input.strip() else None\n\n        if query:\n            args = {\n                \"query\": query,\n                \"search_type\": self._map_search_type(),\n                \"k\": self.number_of_results,\n                \"score_threshold\": self.search_score_threshold,\n            }\n        elif self.advanced_search_filter:\n            args = {\n                \"n\": self.number_of_results,\n            }\n        else:\n            return {}\n\n        filter_arg = self.advanced_search_filter or {}\n        if filter_arg:\n            args[\"filter\"] = filter_arg\n\n        return args\n\n    def search_documents(self, vector_store=None) -> list[Data]:\n        vector_store = vector_store or self.build_vector_store()\n\n        self.log(f\"Search input: {self.search_input}\")\n        self.log(f\"Search type: {self.search_type}\")\n        self.log(f\"Number of results: {self.number_of_results}\")\n\n        try:\n            search_args = self._build_search_args()\n        except Exception as e:\n            msg = f\"Error in AstraDBVectorStore._build_search_args: {e}\"\n            raise ValueError(msg) from e\n\n        if not search_args:\n            self.log(\"No search input or filters provided. Skipping search.\")\n            return []\n\n        docs = []\n        search_method = \"search\" if \"query\" in search_args else \"metadata_search\"\n\n        try:\n            self.log(f\"Calling vector_store.{search_method} with args: {search_args}\")\n            docs = getattr(vector_store, search_method)(**search_args)\n        except Exception as e:\n            msg = f\"Error performing {search_method} in AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        self.log(f\"Retrieved documents: {len(docs)}\")\n\n        data = docs_to_data(docs)\n        self.log(f\"Converted documents to data: {len(data)}\")\n        self.status = data\n        return data\n\n    def get_retriever_kwargs(self):\n        search_args = self._build_search_args()\n        return {\n            \"search_type\": self._map_search_type(),\n            \"search_kwargs\": search_args,\n        }\n",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "code",
                 "advanced": true,
                 "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
                 "info": "",
+                "list": false,
                 "load_from_db": false,
-                "title_case": false
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "import os\nfrom collections import defaultdict\n\nimport orjson\nfrom astrapy import DataAPIClient\nfrom astrapy.admin import parse_api_endpoint\nfrom langchain_astradb import AstraDBVectorStore\n\nfrom langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom langflow.helpers import docs_to_data\nfrom langflow.inputs import DictInput, FloatInput, MessageTextInput, NestedDictInput\nfrom langflow.io import (\n    BoolInput,\n    DataInput,\n    DropdownInput,\n    HandleInput,\n    IntInput,\n    MultilineInput,\n    SecretStrInput,\n    StrInput,\n)\nfrom langflow.schema import Data\nfrom langflow.utils.version import get_version_info\n\n\nclass AstraDBVectorStoreComponent(LCVectorStoreComponent):\n    display_name: str = \"Astra DB\"\n    description: str = \"Implementation of Vector Store using Astra DB with search capabilities\"\n    documentation: str = \"https://docs.langflow.org/starter-projects-vector-store-rag\"\n    name = \"AstraDB\"\n    icon: str = \"AstraDB\"\n\n    _cached_vector_store: AstraDBVectorStore | None = None\n\n    VECTORIZE_PROVIDERS_MAPPING = defaultdict(\n        list,\n        {\n            \"Azure OpenAI\": [\n                \"azureOpenAI\",\n                [\"text-embedding-3-small\", \"text-embedding-3-large\", \"text-embedding-ada-002\"],\n            ],\n            \"Hugging Face - Dedicated\": [\"huggingfaceDedicated\", [\"endpoint-defined-model\"]],\n            \"Hugging Face - Serverless\": [\n                \"huggingface\",\n                [\n                    \"sentence-transformers/all-MiniLM-L6-v2\",\n                    \"intfloat/multilingual-e5-large\",\n                    \"intfloat/multilingual-e5-large-instruct\",\n                    \"BAAI/bge-small-en-v1.5\",\n                    \"BAAI/bge-base-en-v1.5\",\n                    \"BAAI/bge-large-en-v1.5\",\n                ],\n            ],\n            \"Jina AI\": [\n                \"jinaAI\",\n                [\n                    \"jina-embeddings-v2-base-en\",\n                    \"jina-embeddings-v2-base-de\",\n                    \"jina-embeddings-v2-base-es\",\n                    \"jina-embeddings-v2-base-code\",\n                    \"jina-embeddings-v2-base-zh\",\n                ],\n            ],\n            \"Mistral AI\": [\"mistral\", [\"mistral-embed\"]],\n            \"Nvidia\": [\"nvidia\", [\"NV-Embed-QA\"]],\n            \"OpenAI\": [\"openai\", [\"text-embedding-3-small\", \"text-embedding-3-large\", \"text-embedding-ada-002\"]],\n            \"Upstage\": [\"upstageAI\", [\"solar-embedding-1-large\"]],\n            \"Voyage AI\": [\n                \"voyageAI\",\n                [\"voyage-large-2-instruct\", \"voyage-law-2\", \"voyage-code-2\", \"voyage-large-2\", \"voyage-2\"],\n            ],\n        },\n    )\n\n    inputs = [\n        SecretStrInput(\n            name=\"token\",\n            display_name=\"Astra DB Application Token\",\n            info=\"Authentication token for accessing Astra DB.\",\n            value=\"ASTRA_DB_APPLICATION_TOKEN\",\n            required=True,\n            advanced=os.getenv(\"ASTRA_ENHANCED\", \"false\").lower() == \"true\",\n            real_time_refresh=True,\n        ),\n        SecretStrInput(\n            name=\"api_endpoint\",\n            display_name=\"Database\" if os.getenv(\"ASTRA_ENHANCED\", \"false\").lower() == \"true\" else \"API Endpoint\",\n            info=\"API endpoint URL for the Astra DB service.\",\n            value=\"ASTRA_DB_API_ENDPOINT\",\n            required=True,\n            real_time_refresh=True,\n        ),\n        DropdownInput(\n            name=\"collection_name\",\n            display_name=\"Collection\",\n            info=\"The name of the collection within Astra DB where the vectors will be stored.\",\n            required=True,\n            refresh_button=True,\n            real_time_refresh=True,\n            options=[\"+ Create new collection\"],\n            value=\"+ Create new collection\",\n        ),\n        StrInput(\n            name=\"collection_name_new\",\n            display_name=\"Collection Name\",\n            info=\"Name of the new collection to create.\",\n            advanced=os.getenv(\"LANGFLOW_HOST\") is not None,\n            required=os.getenv(\"LANGFLOW_HOST\") is None,\n        ),\n        StrInput(\n            name=\"keyspace\",\n            display_name=\"Keyspace\",\n            info=\"Optional keyspace within Astra DB to use for the collection.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"embedding_choice\",\n            display_name=\"Embedding Model or Astra Vectorize\",\n            info=\"Determines whether to use Astra Vectorize for the collection.\",\n            options=[\"Embedding Model\", \"Astra Vectorize\"],\n            real_time_refresh=True,\n            value=\"Embedding Model\",\n        ),\n        HandleInput(\n            name=\"embedding_model\",\n            display_name=\"Embedding Model\",\n            input_types=[\"Embeddings\"],\n            info=\"Allows an embedding model configuration.\",\n        ),\n        DataInput(\n            name=\"ingest_data\",\n            display_name=\"Ingest Data\",\n        ),\n        MultilineInput(\n            name=\"search_input\",\n            display_name=\"Search Query\",\n            tool_mode=True,\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Search Results\",\n            info=\"Number of search results to return.\",\n            advanced=True,\n            value=4,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            info=\"Search type to use\",\n            options=[\"Similarity\", \"Similarity with score threshold\", \"MMR (Max Marginal Relevance)\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"search_score_threshold\",\n            display_name=\"Search Score Threshold\",\n            info=\"Minimum similarity score threshold for search results. \"\n            \"(when using 'Similarity with score threshold')\",\n            value=0,\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"advanced_search_filter\",\n            display_name=\"Search Metadata Filter\",\n            info=\"Optional dictionary of filters to apply to the search query.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"content_field\",\n            display_name=\"Content Field\",\n            info=\"Field to use as the text content field for the vector store.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"ignore_invalid_documents\",\n            display_name=\"Ignore Invalid Documents\",\n            info=\"Boolean flag to determine whether to ignore invalid documents at runtime.\",\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"astradb_vectorstore_kwargs\",\n            display_name=\"AstraDBVectorStore Parameters\",\n            info=\"Optional dictionary of additional parameters for the AstraDBVectorStore.\",\n            advanced=True,\n        ),\n    ]\n\n    def del_fields(self, build_config, field_list):\n        for field in field_list:\n            if field in build_config:\n                del build_config[field]\n\n        return build_config\n\n    def insert_in_dict(self, build_config, field_name, new_parameters):\n        # Insert the new key-value pair after the found key\n        for new_field_name, new_parameter in new_parameters.items():\n            # Get all the items as a list of tuples (key, value)\n            items = list(build_config.items())\n\n            # Find the index of the key to insert after\n            idx = len(items)\n            for i, (key, _) in enumerate(items):\n                if key == field_name:\n                    idx = i + 1\n                    break\n\n            items.insert(idx, (new_field_name, new_parameter))\n\n            # Clear the original dictionary and update with the modified items\n            build_config.clear()\n            build_config.update(items)\n\n        return build_config\n\n    def update_providers_mapping(self):\n        # If we don't have token or api_endpoint, we can't fetch the list of providers\n        if not self.token or not self.api_endpoint:\n            self.log(\"Astra DB token and API endpoint are required to fetch the list of Vectorize providers.\")\n\n            return self.VECTORIZE_PROVIDERS_MAPPING\n\n        try:\n            self.log(\"Dynamically updating list of Vectorize providers.\")\n\n            # Get the admin object\n            client = DataAPIClient(token=self.token)\n            admin = client.get_admin()\n\n            # Get the embedding providers\n            db_admin = admin.get_database_admin(self.api_endpoint)\n            embedding_providers = db_admin.find_embedding_providers().as_dict()\n\n            vectorize_providers_mapping = {}\n\n            # Map the provider display name to the provider key and models\n            for provider_key, provider_data in embedding_providers[\"embeddingProviders\"].items():\n                display_name = provider_data[\"displayName\"]\n                models = [model[\"name\"] for model in provider_data[\"models\"]]\n\n                vectorize_providers_mapping[display_name] = [provider_key, models]\n\n            # Sort the resulting dictionary\n            return defaultdict(list, dict(sorted(vectorize_providers_mapping.items())))\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error fetching Vectorize providers: {e}\")\n\n            return self.VECTORIZE_PROVIDERS_MAPPING\n\n    def get_database(self):\n        try:\n            client = DataAPIClient(token=self.token)\n\n            return client.get_database(\n                self.api_endpoint,\n                token=self.token,\n            )\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error getting database: {e}\")\n\n            return None\n\n    def _initialize_collection_options(self):\n        database = self.get_database()\n        if database is None:\n            return [\"+ Create new collection\"]\n\n        try:\n            collections = [collection.name for collection in database.list_collections()]\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error fetching collections: {e}\")\n\n            return [\"+ Create new collection\"]\n\n        return [*collections, \"+ Create new collection\"]\n\n    def get_collection_choice(self):\n        collection_name = self.collection_name\n        if collection_name == \"+ Create new collection\":\n            return self.collection_name_new\n\n        return collection_name\n\n    def get_collection_options(self):\n        # Only get the options if the collection exists\n        database = self.get_database()\n        if database is None:\n            return None\n\n        collection_name = self.get_collection_choice()\n\n        try:\n            collection = database.get_collection(collection_name)\n            collection_options = collection.options()\n        except Exception as _:  # noqa: BLE001\n            return None\n\n        return collection_options.vector\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):\n        # Refresh the collection name options\n        build_config[\"collection_name\"][\"options\"] = self._initialize_collection_options()\n\n        # Update the choice of embedding model based on collection name\n        if field_name == \"collection_name\":\n            # Detect if it is a new collection\n            is_new_collection = field_value == \"+ Create new collection\"\n\n            # Set the advanced and required fields based on the collection choice\n            build_config[\"embedding_choice\"].update(\n                {\n                    \"advanced\": not is_new_collection,\n                    \"value\": \"Embedding Model\" if is_new_collection else build_config[\"embedding_choice\"].get(\"value\"),\n                }\n            )\n\n            # Set the advanced field for the embedding model\n            build_config[\"embedding_model\"][\"advanced\"] = not is_new_collection\n\n            # Set the advanced and required fields for the new collection name\n            build_config[\"collection_name_new\"].update(\n                {\n                    \"advanced\": not is_new_collection,\n                    \"required\": is_new_collection,\n                    \"value\": \"\" if not is_new_collection else build_config[\"collection_name_new\"].get(\"value\"),\n                }\n            )\n\n        # Get the collection options for the selected collection\n        collection_options = self.get_collection_options()\n\n        # If the collection options are available (DB exists), show the advanced options\n        if collection_options:\n            build_config[\"embedding_choice\"][\"advanced\"] = True\n\n            if collection_options.service:\n                # Remove unnecessary fields when a service is set\n                self.del_fields(\n                    build_config,\n                    [\n                        \"embedding_provider\",\n                        \"model\",\n                        \"z_01_model_parameters\",\n                        \"z_02_api_key_name\",\n                        \"z_03_provider_api_key\",\n                        \"z_04_authentication\",\n                    ],\n                )\n\n                # Update the providers mapping\n                updates = {\n                    \"embedding_model\": {\"advanced\": True},\n                    \"embedding_choice\": {\"value\": \"Astra Vectorize\"},\n                }\n            else:\n                # Update the providers mapping\n                updates = {\n                    \"embedding_model\": {\"advanced\": False},\n                    \"embedding_provider\": {\"advanced\": False},\n                    \"embedding_choice\": {\"value\": \"Embedding Model\"},\n                }\n\n            # Apply updates to the build_config\n            for key, value in updates.items():\n                build_config[key].update(value)\n\n        elif field_name == \"embedding_choice\":\n            if field_value == \"Astra Vectorize\":\n                build_config[\"embedding_model\"][\"advanced\"] = True\n\n                # Update the providers mapping\n                vectorize_providers = self.update_providers_mapping()\n\n                new_parameter = DropdownInput(\n                    name=\"embedding_provider\",\n                    display_name=\"Embedding Provider\",\n                    options=vectorize_providers.keys(),\n                    value=\"\",\n                    required=True,\n                    real_time_refresh=True,\n                ).to_dict()\n\n                self.insert_in_dict(build_config, \"embedding_choice\", {\"embedding_provider\": new_parameter})\n            else:\n                build_config[\"embedding_model\"][\"advanced\"] = False\n\n                self.del_fields(\n                    build_config,\n                    [\n                        \"embedding_provider\",\n                        \"model\",\n                        \"z_01_model_parameters\",\n                        \"z_02_api_key_name\",\n                        \"z_03_provider_api_key\",\n                        \"z_04_authentication\",\n                    ],\n                )\n\n        elif field_name == \"embedding_provider\":\n            self.del_fields(\n                build_config,\n                [\"model\", \"z_01_model_parameters\", \"z_02_api_key_name\", \"z_03_provider_api_key\", \"z_04_authentication\"],\n            )\n\n            # Update the providers mapping\n            vectorize_providers = self.update_providers_mapping()\n            model_options = vectorize_providers[field_value][1]\n\n            new_parameter = DropdownInput(\n                name=\"model\",\n                display_name=\"Model\",\n                info=\"The embedding model to use for the selected provider. Each provider has a different set of \"\n                \"models available (full list at \"\n                \"https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html):\\n\\n\"\n                f\"{', '.join(model_options)}\",\n                options=model_options,\n                value=None,\n                required=True,\n                real_time_refresh=True,\n            ).to_dict()\n\n            self.insert_in_dict(build_config, \"embedding_provider\", {\"model\": new_parameter})\n\n        elif field_name == \"model\":\n            self.del_fields(\n                build_config,\n                [\"z_01_model_parameters\", \"z_02_api_key_name\", \"z_03_provider_api_key\", \"z_04_authentication\"],\n            )\n\n            new_parameter_1 = DictInput(\n                name=\"z_01_model_parameters\",\n                display_name=\"Model Parameters\",\n                list=True,\n            ).to_dict()\n\n            new_parameter_2 = MessageTextInput(\n                name=\"z_02_api_key_name\",\n                display_name=\"API Key Name\",\n                info=\"The name of the embeddings provider API key stored on Astra. \"\n                \"If set, it will override the 'ProviderKey' in the authentication parameters.\",\n            ).to_dict()\n\n            new_parameter_3 = SecretStrInput(\n                load_from_db=False,\n                name=\"z_03_provider_api_key\",\n                display_name=\"Provider API Key\",\n                info=\"An alternative to the Astra Authentication that passes an API key for the provider \"\n                \"with each request to Astra DB. \"\n                \"This may be used when Vectorize is configured for the collection, \"\n                \"but no corresponding provider secret is stored within Astra's key management system.\",\n            ).to_dict()\n\n            new_parameter_4 = DictInput(\n                name=\"z_04_authentication\",\n                display_name=\"Authentication Parameters\",\n                list=True,\n            ).to_dict()\n\n            self.insert_in_dict(\n                build_config,\n                \"model\",\n                {\n                    \"z_01_model_parameters\": new_parameter_1,\n                    \"z_02_api_key_name\": new_parameter_2,\n                    \"z_03_provider_api_key\": new_parameter_3,\n                    \"z_04_authentication\": new_parameter_4,\n                },\n            )\n\n        return build_config\n\n    def build_vectorize_options(self, **kwargs):\n        for attribute in [\n            \"embedding_provider\",\n            \"model\",\n            \"z_01_model_parameters\",\n            \"z_02_api_key_name\",\n            \"z_03_provider_api_key\",\n            \"z_04_authentication\",\n        ]:\n            if not hasattr(self, attribute):\n                setattr(self, attribute, None)\n\n        # Fetch values from kwargs if any self.* attributes are None\n        provider_mapping = self.update_providers_mapping()\n        provider_value = provider_mapping.get(self.embedding_provider, [None])[0] or kwargs.get(\"embedding_provider\")\n        model_name = self.model or kwargs.get(\"model\")\n        authentication = {**(self.z_04_authentication or {}), **kwargs.get(\"z_04_authentication\", {})}\n        parameters = self.z_01_model_parameters or kwargs.get(\"z_01_model_parameters\", {})\n\n        # Set the API key name if provided\n        api_key_name = self.z_02_api_key_name or kwargs.get(\"z_02_api_key_name\")\n        provider_key = self.z_03_provider_api_key or kwargs.get(\"z_03_provider_api_key\")\n        if api_key_name:\n            authentication[\"providerKey\"] = api_key_name\n        if authentication:\n            provider_key = None\n            authentication[\"providerKey\"] = authentication[\"providerKey\"].split(\".\")[0]\n\n        # Set authentication and parameters to None if no values are provided\n        if not authentication:\n            authentication = None\n        if not parameters:\n            parameters = None\n\n        return {\n            # must match astrapy.info.CollectionVectorServiceOptions\n            \"collection_vector_service_options\": {\n                \"provider\": provider_value,\n                \"modelName\": model_name,\n                \"authentication\": authentication,\n                \"parameters\": parameters,\n            },\n            \"collection_embedding_api_key\": provider_key,\n        }\n\n    @check_cached_vector_store\n    def build_vector_store(self, vectorize_options=None):\n        try:\n            from langchain_astradb import AstraDBVectorStore\n        except ImportError as e:\n            msg = (\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n            raise ImportError(msg) from e\n\n        # Initialize parameters based on the collection name\n        is_new_collection = self.collection_name == \"+ Create new collection\"\n\n        # Get the embedding model\n        embedding_params = {\"embedding\": self.embedding_model} if self.embedding_choice == \"Embedding Model\" else {}\n\n        # Use the embedding model if the choice is set to \"Embedding Model\"\n        if self.embedding_choice == \"Astra Vectorize\" and is_new_collection:\n            from astrapy.info import CollectionVectorServiceOptions\n\n            # Build the vectorize options dictionary\n            dict_options = vectorize_options or self.build_vectorize_options(\n                embedding_provider=getattr(self, \"embedding_provider\", None) or None,\n                model=getattr(self, \"model\", None) or None,\n                z_01_model_parameters=getattr(self, \"z_01_model_parameters\", None) or None,\n                z_02_api_key_name=getattr(self, \"z_02_api_key_name\", None) or None,\n                z_03_provider_api_key=getattr(self, \"z_03_provider_api_key\", None) or None,\n                z_04_authentication=getattr(self, \"z_04_authentication\", {}) or {},\n            )\n\n            # Set the embedding dictionary\n            embedding_params = {\n                \"collection_vector_service_options\": CollectionVectorServiceOptions.from_dict(\n                    dict_options.get(\"collection_vector_service_options\")\n                ),\n                \"collection_embedding_api_key\": dict_options.get(\"collection_embedding_api_key\"),\n            }\n\n        # Get the running environment for Langflow\n        environment = (\n            parse_api_endpoint(getattr(self, \"api_endpoint\", None)).environment\n            if getattr(self, \"api_endpoint\", None)\n            else None\n        )\n\n        # Get Langflow version and platform information\n        __version__ = get_version_info()[\"version\"]\n        langflow_prefix = \"\"\n        if os.getenv(\"LANGFLOW_HOST\") is not None:\n            langflow_prefix = \"ds-\"\n\n        # Bundle up the auto-detect parameters\n        autodetect_params = {\n            \"autodetect_collection\": True,  # TODO: May want to expose this option\n            \"content_field\": self.content_field or None,\n            \"ignore_invalid_documents\": self.ignore_invalid_documents,\n        }\n\n        # Attempt to build the Vector Store object\n        try:\n            vector_store = AstraDBVectorStore(\n                # Astra DB Authentication Parameters\n                token=self.token,\n                api_endpoint=self.api_endpoint,\n                namespace=self.keyspace or None,\n                collection_name=self.get_collection_choice(),\n                environment=environment,\n                # Astra DB Usage Tracking Parameters\n                ext_callers=[(f\"{langflow_prefix}langflow\", __version__)],\n                # Astra DB Vector Store Parameters\n                **autodetect_params,\n                **embedding_params,\n                **self.astradb_vectorstore_kwargs,\n            )\n        except Exception as e:\n            msg = f\"Error initializing AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        self._add_documents_to_vector_store(vector_store)\n\n        return vector_store\n\n    def _add_documents_to_vector_store(self, vector_store) -> None:\n        documents = []\n        for _input in self.ingest_data or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise TypeError(msg)\n\n        if documents:\n            self.log(f\"Adding {len(documents)} documents to the Vector Store.\")\n            try:\n                vector_store.add_documents(documents)\n            except Exception as e:\n                msg = f\"Error adding documents to AstraDBVectorStore: {e}\"\n                raise ValueError(msg) from e\n        else:\n            self.log(\"No documents to add to the Vector Store.\")\n\n    def _map_search_type(self) -> str:\n        if self.search_type == \"Similarity with score threshold\":\n            return \"similarity_score_threshold\"\n        if self.search_type == \"MMR (Max Marginal Relevance)\":\n            return \"mmr\"\n        return \"similarity\"\n\n    def _build_search_args(self):\n        query = self.search_input if isinstance(self.search_input, str) and self.search_input.strip() else None\n\n        if query:\n            args = {\n                \"query\": query,\n                \"search_type\": self._map_search_type(),\n                \"k\": self.number_of_results,\n                \"score_threshold\": self.search_score_threshold,\n            }\n        elif self.advanced_search_filter:\n            args = {\n                \"n\": self.number_of_results,\n            }\n        else:\n            return {}\n\n        filter_arg = self.advanced_search_filter or {}\n        if filter_arg:\n            args[\"filter\"] = filter_arg\n\n        return args\n\n    def search_documents(self, vector_store=None) -> list[Data]:\n        vector_store = vector_store or self.build_vector_store()\n\n        self.log(f\"Search input: {self.search_input}\")\n        self.log(f\"Search type: {self.search_type}\")\n        self.log(f\"Number of results: {self.number_of_results}\")\n\n        try:\n            search_args = self._build_search_args()\n        except Exception as e:\n            msg = f\"Error in AstraDBVectorStore._build_search_args: {e}\"\n            raise ValueError(msg) from e\n\n        if not search_args:\n            self.log(\"No search input or filters provided. Skipping search.\")\n            return []\n\n        docs = []\n        search_method = \"search\" if \"query\" in search_args else \"metadata_search\"\n\n        try:\n            self.log(f\"Calling vector_store.{search_method} with args: {search_args}\")\n            docs = getattr(vector_store, search_method)(**search_args)\n        except Exception as e:\n            msg = f\"Error performing {search_method} in AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        self.log(f\"Retrieved documents: {len(docs)}\")\n\n        data = docs_to_data(docs)\n        self.log(f\"Converted documents to data: {len(data)}\")\n        self.status = data\n        return data\n\n    def get_retriever_kwargs(self):\n        search_args = self._build_search_args()\n        return {\n            \"search_type\": self._map_search_type(),\n            \"search_kwargs\": search_args,\n        }\n"
               },
               "collection_name": {
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "options": [
-                  "langflow_marketplace",
-                  "movie_reviews",
-                  "vector_store_rag_demo",
-                  "+ Create new collection"
-                ],
-                "combobox": false,
-                "required": true,
-                "placeholder": "",
-                "show": true,
-                "name": "collection_name",
-                "value": "+ Create new collection",
-                "display_name": "Collection",
+                "_input_type": "DropdownInput",
                 "advanced": false,
+                "combobox": false,
+                "display_name": "Collection",
                 "dynamic": false,
                 "info": "The name of the collection within Astra DB where the vectors will be stored.",
+                "name": "collection_name",
+                "options": [
+                  "+ Create new collection"
+                ],
+                "placeholder": "",
                 "real_time_refresh": true,
                 "refresh_button": true,
-                "title_case": false,
-                "type": "str",
-                "_input_type": "DropdownInput"
-              },
-              "collection_name_new": {
-                "trace_as_metadata": true,
-                "load_from_db": false,
-                "list": false,
                 "required": true,
-                "placeholder": "",
                 "show": true,
-                "name": "collection_name_new",
-                "value": "vector_store_rag_demo",
-                "display_name": "Collection Name",
-                "advanced": false,
-                "dynamic": false,
-                "info": "Name of the new collection to create.",
                 "title_case": false,
-                "type": "str",
-                "_input_type": "StrInput"
-              },
-              "content_field": {
-                "trace_as_metadata": true,
-                "load_from_db": false,
-                "list": false,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "content_field",
-                "value": "",
-                "display_name": "Content Field",
-                "advanced": true,
-                "dynamic": false,
-                "info": "Field to use as the text content field for the vector store.",
-                "title_case": false,
-                "type": "str",
-                "_input_type": "StrInput"
-              },
-              "embedding_choice": {
                 "tool_mode": false,
                 "trace_as_metadata": true,
+                "type": "str",
+                "value": "+ Create new collection"
+              },
+              "collection_name_new": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "Collection Name",
+                "dynamic": false,
+                "info": "Name of the new collection to create.",
+                "list": false,
+                "load_from_db": false,
+                "name": "collection_name_new",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "vector_store_rag_demo"
+              },
+              "content_field": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "Content Field",
+                "dynamic": false,
+                "info": "Field to use as the text content field for the vector store.",
+                "list": false,
+                "load_from_db": false,
+                "name": "content_field",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "embedding_choice": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "display_name": "Embedding Model or Astra Vectorize",
+                "dynamic": false,
+                "info": "Determines whether to use Astra Vectorize for the collection.",
+                "name": "embedding_choice",
                 "options": [
                   "Embedding Model",
                   "Astra Vectorize"
                 ],
-                "combobox": false,
-                "required": false,
                 "placeholder": "",
-                "show": true,
-                "name": "embedding_choice",
-                "value": "Embedding Model",
-                "display_name": "Embedding Model or Astra Vectorize",
-                "advanced": false,
-                "dynamic": false,
-                "info": "Determines whether to use Astra Vectorize for the collection.",
                 "real_time_refresh": true,
+                "required": false,
+                "show": true,
                 "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
                 "type": "str",
-                "_input_type": "DropdownInput"
+                "value": "Embedding Model"
+              },
+              "embedding_model": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Embedding Model",
+                "dynamic": false,
+                "info": "Allows an embedding model configuration.",
+                "input_types": [
+                  "Embeddings"
+                ],
+                "list": false,
+                "name": "embedding_model",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
               },
               "ignore_invalid_documents": {
-                "trace_as_metadata": true,
-                "list": false,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "ignore_invalid_documents",
-                "value": false,
-                "display_name": "Ignore Invalid Documents",
+                "_input_type": "BoolInput",
                 "advanced": true,
+                "display_name": "Ignore Invalid Documents",
                 "dynamic": false,
                 "info": "Boolean flag to determine whether to ignore invalid documents at runtime.",
+                "list": false,
+                "name": "ignore_invalid_documents",
+                "placeholder": "",
+                "required": false,
+                "show": true,
                 "title_case": false,
+                "trace_as_metadata": true,
                 "type": "bool",
-                "_input_type": "BoolInput"
+                "value": false
+              },
+              "ingest_data": {
+                "_input_type": "DataInput",
+                "advanced": false,
+                "display_name": "Ingest Data",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Data"
+                ],
+                "list": false,
+                "name": "ingest_data",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
               },
               "keyspace": {
-                "trace_as_metadata": true,
-                "load_from_db": false,
-                "list": false,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "keyspace",
-                "value": "",
-                "display_name": "Keyspace",
+                "_input_type": "StrInput",
                 "advanced": true,
+                "display_name": "Keyspace",
                 "dynamic": false,
                 "info": "Optional keyspace within Astra DB to use for the collection.",
+                "list": false,
+                "load_from_db": false,
+                "name": "keyspace",
+                "placeholder": "",
+                "required": false,
+                "show": true,
                 "title_case": false,
+                "trace_as_metadata": true,
                 "type": "str",
-                "_input_type": "StrInput"
+                "value": ""
               },
               "number_of_results": {
-                "trace_as_metadata": true,
-                "list": false,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "number_of_results",
-                "value": 4,
-                "display_name": "Number of Search Results",
+                "_input_type": "IntInput",
                 "advanced": true,
+                "display_name": "Number of Search Results",
                 "dynamic": false,
                 "info": "Number of search results to return.",
+                "list": false,
+                "name": "number_of_results",
+                "placeholder": "",
+                "required": false,
+                "show": true,
                 "title_case": false,
+                "trace_as_metadata": true,
                 "type": "int",
-                "_input_type": "IntInput"
+                "value": 4
               },
               "search_input": {
-                "tool_mode": true,
-                "trace_as_input": true,
-                "multiline": true,
-                "trace_as_metadata": true,
-                "load_from_db": false,
-                "list": false,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "search_input",
-                "value": "",
-                "display_name": "Search Data",
+                "_input_type": "MultilineInput",
                 "advanced": false,
+                "display_name": "Search Query",
+                "dynamic": false,
+                "info": "",
                 "input_types": [
                   "Message"
                 ],
-                "dynamic": false,
-                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "search_input",
+                "placeholder": "",
+                "required": false,
+                "show": true,
                 "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
                 "type": "str",
-                "_input_type": "MultilineInput"
+                "value": ""
               },
               "search_score_threshold": {
-                "trace_as_metadata": true,
-                "list": false,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "search_score_threshold",
-                "value": 0,
-                "display_name": "Search Score Threshold",
+                "_input_type": "FloatInput",
                 "advanced": true,
+                "display_name": "Search Score Threshold",
                 "dynamic": false,
                 "info": "Minimum similarity score threshold for search results. (when using 'Similarity with score threshold')",
+                "list": false,
+                "name": "search_score_threshold",
+                "placeholder": "",
+                "required": false,
+                "show": true,
                 "title_case": false,
+                "trace_as_metadata": true,
                 "type": "float",
-                "_input_type": "FloatInput"
+                "value": 0
               },
               "search_type": {
-                "tool_mode": false,
-                "trace_as_metadata": true,
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "display_name": "Search Type",
+                "dynamic": false,
+                "info": "Search type to use",
+                "name": "search_type",
                 "options": [
                   "Similarity",
                   "Similarity with score threshold",
                   "MMR (Max Marginal Relevance)"
                 ],
-                "combobox": false,
-                "required": false,
                 "placeholder": "",
+                "required": false,
                 "show": true,
-                "name": "search_type",
-                "value": "Similarity",
-                "display_name": "Search Type",
-                "advanced": true,
-                "dynamic": false,
-                "info": "Search type to use",
                 "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
                 "type": "str",
-                "_input_type": "DropdownInput"
+                "value": "Similarity"
               },
               "token": {
-                "load_from_db": true,
-                "required": true,
-                "placeholder": "",
-                "show": true,
-                "name": "token",
-                "value": "ASTRA_DB_APPLICATION_TOKEN",
-                "display_name": "Astra DB Application Token",
+                "_input_type": "SecretStrInput",
                 "advanced": false,
+                "display_name": "Astra DB Application Token",
+                "dynamic": false,
+                "info": "Authentication token for accessing Astra DB.",
                 "input_types": [
                   "Message"
                 ],
-                "dynamic": false,
-                "info": "Authentication token for accessing Astra DB.",
-                "real_time_refresh": true,
-                "title_case": false,
+                "load_from_db": true,
+                "name": "token",
                 "password": true,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": true,
+                "show": true,
+                "title_case": false,
                 "type": "str",
-                "_input_type": "SecretStrInput"
+                "value": "ASTRA_DB_APPLICATION_TOKEN"
               }
             },
-            "description": "Implementation of Vector Store using Astra DB with search capabilities",
-            "icon": "AstraDB",
+            "tool_mode": false
+          },
+          "type": "AstraDB"
+        },
+        "dragging": false,
+        "height": 783,
+        "id": "AstraDB-0DSMB",
+        "position": {
+          "x": 1215.5738831152323,
+          "y": 479.1449074798619
+        },
+        "positionAbsolute": {
+          "x": 1215.5738831152323,
+          "y": 479.1449074798619
+        },
+        "selected": false,
+        "type": "genericNode",
+        "width": 320
+      },
+      {
+        "data": {
+          "id": "AstraDB-lMmwm",
+          "node": {
             "base_classes": [
               "Data"
             ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Implementation of Vector Store using Astra DB with search capabilities",
             "display_name": "Astra DB",
             "documentation": "https://docs.langflow.org/starter-projects-vector-store-rag",
-            "custom_fields": {},
-            "output_types": [],
-            "pinned": false,
-            "conditional_paths": [],
+            "edited": false,
+            "field_order": [
+              "token",
+              "api_endpoint",
+              "collection_name",
+              "collection_name_new",
+              "keyspace",
+              "embedding_choice",
+              "embedding_model",
+              "ingest_data",
+              "search_input",
+              "number_of_results",
+              "search_type",
+              "search_score_threshold",
+              "advanced_search_filter",
+              "content_field",
+              "ignore_invalid_documents",
+              "astradb_vectorstore_kwargs"
+            ],
             "frozen": false,
+            "icon": "AstraDB",
+            "legacy": false,
+            "metadata": {},
+            "output_types": [],
             "outputs": [
               {
                 "types": [
@@ -3110,444 +3199,351 @@
                 ]
               }
             ],
-            "field_order": [
-              "token",
-              "api_endpoint",
-              "collection_name",
-              "collection_name_new",
-              "keyspace",
-              "embedding_choice",
-              "embedding_model",
-              "ingest_data",
-              "search_input",
-              "number_of_results",
-              "search_type",
-              "search_score_threshold",
-              "advanced_search_filter",
-              "content_field",
-              "ignore_invalid_documents",
-              "astradb_vectorstore_kwargs"
-            ],
-            "beta": false,
-            "legacy": false,
-            "edited": false,
-            "metadata": {},
-            "tool_mode": false
-          },
-          "type": "AstraDB",
-          "id": "AstraDB-Zqzsn"
-        },
-        "selected": false,
-        "width": 320,
-        "height": 783,
-        "positionAbsolute": {
-          "x": 1215.5738831152323,
-          "y": 479.1449074798619
-        },
-        "dragging": false
-      },
-      {
-        "id": "AstraDB-3ZGs1",
-        "type": "genericNode",
-        "position": {
-          "x": 2058.0903617951794,
-          "y": 1377.2119232156292
-        },
-        "data": {
-          "node": {
+            "pinned": false,
             "template": {
               "_type": "Component",
-              "embedding_model": {
-                "trace_as_metadata": true,
-                "list": false,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "embedding_model",
-                "value": "",
-                "display_name": "Embedding Model",
-                "advanced": false,
-                "input_types": [
-                  "Embeddings"
-                ],
-                "dynamic": false,
-                "info": "Allows an embedding model configuration.",
-                "title_case": false,
-                "type": "other",
-                "_input_type": "HandleInput"
-              },
-              "ingest_data": {
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "list": false,
-                "trace_as_input": true,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "ingest_data",
-                "value": "",
-                "display_name": "Ingest Data",
-                "advanced": false,
-                "input_types": [
-                  "Data"
-                ],
-                "dynamic": false,
-                "info": "",
-                "title_case": false,
-                "type": "other",
-                "_input_type": "DataInput"
-              },
               "advanced_search_filter": {
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "list": false,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "advanced_search_filter",
-                "value": {},
-                "display_name": "Search Metadata Filter",
+                "_input_type": "NestedDictInput",
                 "advanced": true,
+                "display_name": "Search Metadata Filter",
                 "dynamic": false,
                 "info": "Optional dictionary of filters to apply to the search query.",
+                "list": false,
+                "name": "advanced_search_filter",
+                "placeholder": "",
+                "required": false,
+                "show": true,
                 "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
                 "type": "NestedDict",
-                "_input_type": "NestedDictInput"
+                "value": {}
               },
               "api_endpoint": {
-                "load_from_db": true,
-                "required": true,
-                "placeholder": "",
-                "show": true,
-                "name": "api_endpoint",
-                "value": "ASTRA_DB_API_ENDPOINT",
-                "display_name": "API Endpoint",
+                "_input_type": "SecretStrInput",
                 "advanced": false,
+                "display_name": "API Endpoint",
+                "dynamic": false,
+                "info": "API endpoint URL for the Astra DB service.",
                 "input_types": [
                   "Message"
                 ],
-                "dynamic": false,
-                "info": "API endpoint URL for the Astra DB service.",
-                "real_time_refresh": true,
-                "title_case": false,
+                "load_from_db": true,
+                "name": "api_endpoint",
                 "password": true,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": true,
+                "show": true,
+                "title_case": false,
                 "type": "str",
-                "_input_type": "SecretStrInput"
+                "value": "ASTRA_DB_API_ENDPOINT"
               },
               "astradb_vectorstore_kwargs": {
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "list": false,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "astradb_vectorstore_kwargs",
-                "value": {},
-                "display_name": "AstraDBVectorStore Parameters",
+                "_input_type": "NestedDictInput",
                 "advanced": true,
+                "display_name": "AstraDBVectorStore Parameters",
                 "dynamic": false,
                 "info": "Optional dictionary of additional parameters for the AstraDBVectorStore.",
+                "list": false,
+                "name": "astradb_vectorstore_kwargs",
+                "placeholder": "",
+                "required": false,
+                "show": true,
                 "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
                 "type": "NestedDict",
-                "_input_type": "NestedDictInput"
+                "value": {}
               },
               "code": {
-                "type": "code",
-                "required": true,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "import os\nfrom collections import defaultdict\n\nimport orjson\nfrom astrapy import DataAPIClient\nfrom astrapy.admin import parse_api_endpoint\nfrom langchain_astradb import AstraDBVectorStore\n\nfrom langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom langflow.helpers import docs_to_data\nfrom langflow.inputs import DictInput, FloatInput, MessageTextInput, NestedDictInput\nfrom langflow.io import (\n    BoolInput,\n    DataInput,\n    DropdownInput,\n    HandleInput,\n    IntInput,\n    MultilineInput,\n    SecretStrInput,\n    StrInput,\n)\nfrom langflow.schema import Data\nfrom langflow.utils.version import get_version_info\n\n\nclass AstraDBVectorStoreComponent(LCVectorStoreComponent):\n    display_name: str = \"Astra DB\"\n    description: str = \"Implementation of Vector Store using Astra DB with search capabilities\"\n    documentation: str = \"https://docs.langflow.org/starter-projects-vector-store-rag\"\n    name = \"AstraDB\"\n    icon: str = \"AstraDB\"\n\n    _cached_vector_store: AstraDBVectorStore | None = None\n\n    VECTORIZE_PROVIDERS_MAPPING = defaultdict(\n        list,\n        {\n            \"Azure OpenAI\": [\n                \"azureOpenAI\",\n                [\"text-embedding-3-small\", \"text-embedding-3-large\", \"text-embedding-ada-002\"],\n            ],\n            \"Hugging Face - Dedicated\": [\"huggingfaceDedicated\", [\"endpoint-defined-model\"]],\n            \"Hugging Face - Serverless\": [\n                \"huggingface\",\n                [\n                    \"sentence-transformers/all-MiniLM-L6-v2\",\n                    \"intfloat/multilingual-e5-large\",\n                    \"intfloat/multilingual-e5-large-instruct\",\n                    \"BAAI/bge-small-en-v1.5\",\n                    \"BAAI/bge-base-en-v1.5\",\n                    \"BAAI/bge-large-en-v1.5\",\n                ],\n            ],\n            \"Jina AI\": [\n                \"jinaAI\",\n                [\n                    \"jina-embeddings-v2-base-en\",\n                    \"jina-embeddings-v2-base-de\",\n                    \"jina-embeddings-v2-base-es\",\n                    \"jina-embeddings-v2-base-code\",\n                    \"jina-embeddings-v2-base-zh\",\n                ],\n            ],\n            \"Mistral AI\": [\"mistral\", [\"mistral-embed\"]],\n            \"Nvidia\": [\"nvidia\", [\"NV-Embed-QA\"]],\n            \"OpenAI\": [\"openai\", [\"text-embedding-3-small\", \"text-embedding-3-large\", \"text-embedding-ada-002\"]],\n            \"Upstage\": [\"upstageAI\", [\"solar-embedding-1-large\"]],\n            \"Voyage AI\": [\n                \"voyageAI\",\n                [\"voyage-large-2-instruct\", \"voyage-law-2\", \"voyage-code-2\", \"voyage-large-2\", \"voyage-2\"],\n            ],\n        },\n    )\n\n    inputs = [\n        SecretStrInput(\n            name=\"token\",\n            display_name=\"Astra DB Application Token\",\n            info=\"Authentication token for accessing Astra DB.\",\n            value=\"ASTRA_DB_APPLICATION_TOKEN\",\n            required=True,\n            advanced=os.getenv(\"ASTRA_ENHANCED\", \"false\").lower() == \"true\",\n            real_time_refresh=True,\n        ),\n        SecretStrInput(\n            name=\"api_endpoint\",\n            display_name=\"Database\" if os.getenv(\"ASTRA_ENHANCED\", \"false\").lower() == \"true\" else \"API Endpoint\",\n            info=\"API endpoint URL for the Astra DB service.\",\n            value=\"ASTRA_DB_API_ENDPOINT\",\n            required=True,\n            real_time_refresh=True,\n        ),\n        DropdownInput(\n            name=\"collection_name\",\n            display_name=\"Collection\",\n            info=\"The name of the collection within Astra DB where the vectors will be stored.\",\n            required=True,\n            refresh_button=True,\n            real_time_refresh=True,\n            options=[\"+ Create new collection\"],\n            value=\"+ Create new collection\",\n        ),\n        StrInput(\n            name=\"collection_name_new\",\n            display_name=\"Collection Name\",\n            info=\"Name of the new collection to create.\",\n            advanced=os.getenv(\"LANGFLOW_HOST\") is not None,\n            required=os.getenv(\"LANGFLOW_HOST\") is None,\n        ),\n        StrInput(\n            name=\"keyspace\",\n            display_name=\"Keyspace\",\n            info=\"Optional keyspace within Astra DB to use for the collection.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"embedding_choice\",\n            display_name=\"Embedding Model or Astra Vectorize\",\n            info=\"Determines whether to use Astra Vectorize for the collection.\",\n            options=[\"Embedding Model\", \"Astra Vectorize\"],\n            real_time_refresh=True,\n            value=\"Embedding Model\",\n        ),\n        HandleInput(\n            name=\"embedding_model\",\n            display_name=\"Embedding Model\",\n            input_types=[\"Embeddings\"],\n            info=\"Allows an embedding model configuration.\",\n        ),\n        DataInput(\n            name=\"ingest_data\",\n            display_name=\"Ingest Data\",\n        ),\n        MultilineInput(\n            name=\"search_input\",\n            display_name=\"Search Data\",\n            tool_mode=True,\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Search Results\",\n            info=\"Number of search results to return.\",\n            advanced=True,\n            value=4,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            info=\"Search type to use\",\n            options=[\"Similarity\", \"Similarity with score threshold\", \"MMR (Max Marginal Relevance)\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"search_score_threshold\",\n            display_name=\"Search Score Threshold\",\n            info=\"Minimum similarity score threshold for search results. \"\n            \"(when using 'Similarity with score threshold')\",\n            value=0,\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"advanced_search_filter\",\n            display_name=\"Search Metadata Filter\",\n            info=\"Optional dictionary of filters to apply to the search query.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"content_field\",\n            display_name=\"Content Field\",\n            info=\"Field to use as the text content field for the vector store.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"ignore_invalid_documents\",\n            display_name=\"Ignore Invalid Documents\",\n            info=\"Boolean flag to determine whether to ignore invalid documents at runtime.\",\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"astradb_vectorstore_kwargs\",\n            display_name=\"AstraDBVectorStore Parameters\",\n            info=\"Optional dictionary of additional parameters for the AstraDBVectorStore.\",\n            advanced=True,\n        ),\n    ]\n\n    def del_fields(self, build_config, field_list):\n        for field in field_list:\n            if field in build_config:\n                del build_config[field]\n\n        return build_config\n\n    def insert_in_dict(self, build_config, field_name, new_parameters):\n        # Insert the new key-value pair after the found key\n        for new_field_name, new_parameter in new_parameters.items():\n            # Get all the items as a list of tuples (key, value)\n            items = list(build_config.items())\n\n            # Find the index of the key to insert after\n            idx = len(items)\n            for i, (key, _) in enumerate(items):\n                if key == field_name:\n                    idx = i + 1\n                    break\n\n            items.insert(idx, (new_field_name, new_parameter))\n\n            # Clear the original dictionary and update with the modified items\n            build_config.clear()\n            build_config.update(items)\n\n        return build_config\n\n    def update_providers_mapping(self):\n        # If we don't have token or api_endpoint, we can't fetch the list of providers\n        if not self.token or not self.api_endpoint:\n            self.log(\"Astra DB token and API endpoint are required to fetch the list of Vectorize providers.\")\n\n            return self.VECTORIZE_PROVIDERS_MAPPING\n\n        try:\n            self.log(\"Dynamically updating list of Vectorize providers.\")\n\n            # Get the admin object\n            client = DataAPIClient(token=self.token)\n            admin = client.get_admin()\n\n            # Get the embedding providers\n            db_admin = admin.get_database_admin(self.api_endpoint)\n            embedding_providers = db_admin.find_embedding_providers().as_dict()\n\n            vectorize_providers_mapping = {}\n\n            # Map the provider display name to the provider key and models\n            for provider_key, provider_data in embedding_providers[\"embeddingProviders\"].items():\n                display_name = provider_data[\"displayName\"]\n                models = [model[\"name\"] for model in provider_data[\"models\"]]\n\n                vectorize_providers_mapping[display_name] = [provider_key, models]\n\n            # Sort the resulting dictionary\n            return defaultdict(list, dict(sorted(vectorize_providers_mapping.items())))\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error fetching Vectorize providers: {e}\")\n\n            return self.VECTORIZE_PROVIDERS_MAPPING\n\n    def get_database(self):\n        try:\n            client = DataAPIClient(token=self.token)\n\n            return client.get_database(\n                self.api_endpoint,\n                token=self.token,\n            )\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error getting database: {e}\")\n\n            return None\n\n    def _initialize_collection_options(self):\n        database = self.get_database()\n        if database is None:\n            return [\"+ Create new collection\"]\n\n        try:\n            collections = [collection.name for collection in database.list_collections()]\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error fetching collections: {e}\")\n\n            return [\"+ Create new collection\"]\n\n        return [*collections, \"+ Create new collection\"]\n\n    def get_collection_choice(self):\n        collection_name = self.collection_name\n        if collection_name == \"+ Create new collection\":\n            return self.collection_name_new\n\n        return collection_name\n\n    def get_collection_options(self):\n        # Only get the options if the collection exists\n        database = self.get_database()\n        if database is None:\n            return None\n\n        collection_name = self.get_collection_choice()\n\n        try:\n            collection = database.get_collection(collection_name)\n            collection_options = collection.options()\n        except Exception as _:  # noqa: BLE001\n            return None\n\n        return collection_options.vector\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):\n        # Refresh the collection name options\n        build_config[\"collection_name\"][\"options\"] = self._initialize_collection_options()\n\n        # Update the choice of embedding model based on collection name\n        if field_name == \"collection_name\":\n            # Detect if it is a new collection\n            is_new_collection = field_value == \"+ Create new collection\"\n\n            # Set the advanced and required fields based on the collection choice\n            build_config[\"embedding_choice\"].update(\n                {\n                    \"advanced\": not is_new_collection,\n                    \"value\": \"Embedding Model\" if is_new_collection else build_config[\"embedding_choice\"].get(\"value\"),\n                }\n            )\n\n            # Set the advanced field for the embedding model\n            build_config[\"embedding_model\"][\"advanced\"] = not is_new_collection\n\n            # Set the advanced and required fields for the new collection name\n            build_config[\"collection_name_new\"].update(\n                {\n                    \"advanced\": not is_new_collection,\n                    \"required\": is_new_collection,\n                    \"value\": \"\" if not is_new_collection else build_config[\"collection_name_new\"].get(\"value\"),\n                }\n            )\n\n        # Get the collection options for the selected collection\n        collection_options = self.get_collection_options()\n\n        # If the collection options are available (DB exists), show the advanced options\n        if collection_options:\n            build_config[\"embedding_choice\"][\"advanced\"] = True\n\n            if collection_options.service:\n                # Remove unnecessary fields when a service is set\n                self.del_fields(\n                    build_config,\n                    [\n                        \"embedding_provider\",\n                        \"model\",\n                        \"z_01_model_parameters\",\n                        \"z_02_api_key_name\",\n                        \"z_03_provider_api_key\",\n                        \"z_04_authentication\",\n                    ],\n                )\n\n                # Update the providers mapping\n                updates = {\n                    \"embedding_model\": {\"advanced\": True},\n                    \"embedding_choice\": {\"value\": \"Astra Vectorize\"},\n                }\n            else:\n                # Update the providers mapping\n                updates = {\n                    \"embedding_model\": {\"advanced\": False},\n                    \"embedding_provider\": {\"advanced\": False},\n                    \"embedding_choice\": {\"value\": \"Embedding Model\"},\n                }\n\n            # Apply updates to the build_config\n            for key, value in updates.items():\n                build_config[key].update(value)\n\n        elif field_name == \"embedding_choice\":\n            if field_value == \"Astra Vectorize\":\n                build_config[\"embedding_model\"][\"advanced\"] = True\n\n                # Update the providers mapping\n                vectorize_providers = self.update_providers_mapping()\n\n                new_parameter = DropdownInput(\n                    name=\"embedding_provider\",\n                    display_name=\"Embedding Provider\",\n                    options=vectorize_providers.keys(),\n                    value=\"\",\n                    required=True,\n                    real_time_refresh=True,\n                ).to_dict()\n\n                self.insert_in_dict(build_config, \"embedding_choice\", {\"embedding_provider\": new_parameter})\n            else:\n                build_config[\"embedding_model\"][\"advanced\"] = False\n\n                self.del_fields(\n                    build_config,\n                    [\n                        \"embedding_provider\",\n                        \"model\",\n                        \"z_01_model_parameters\",\n                        \"z_02_api_key_name\",\n                        \"z_03_provider_api_key\",\n                        \"z_04_authentication\",\n                    ],\n                )\n\n        elif field_name == \"embedding_provider\":\n            self.del_fields(\n                build_config,\n                [\"model\", \"z_01_model_parameters\", \"z_02_api_key_name\", \"z_03_provider_api_key\", \"z_04_authentication\"],\n            )\n\n            # Update the providers mapping\n            vectorize_providers = self.update_providers_mapping()\n            model_options = vectorize_providers[field_value][1]\n\n            new_parameter = DropdownInput(\n                name=\"model\",\n                display_name=\"Model\",\n                info=\"The embedding model to use for the selected provider. Each provider has a different set of \"\n                \"models available (full list at \"\n                \"https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html):\\n\\n\"\n                f\"{', '.join(model_options)}\",\n                options=model_options,\n                value=None,\n                required=True,\n                real_time_refresh=True,\n            ).to_dict()\n\n            self.insert_in_dict(build_config, \"embedding_provider\", {\"model\": new_parameter})\n\n        elif field_name == \"model\":\n            self.del_fields(\n                build_config,\n                [\"z_01_model_parameters\", \"z_02_api_key_name\", \"z_03_provider_api_key\", \"z_04_authentication\"],\n            )\n\n            new_parameter_1 = DictInput(\n                name=\"z_01_model_parameters\",\n                display_name=\"Model Parameters\",\n                list=True,\n            ).to_dict()\n\n            new_parameter_2 = MessageTextInput(\n                name=\"z_02_api_key_name\",\n                display_name=\"API Key Name\",\n                info=\"The name of the embeddings provider API key stored on Astra. \"\n                \"If set, it will override the 'ProviderKey' in the authentication parameters.\",\n            ).to_dict()\n\n            new_parameter_3 = SecretStrInput(\n                load_from_db=False,\n                name=\"z_03_provider_api_key\",\n                display_name=\"Provider API Key\",\n                info=\"An alternative to the Astra Authentication that passes an API key for the provider \"\n                \"with each request to Astra DB. \"\n                \"This may be used when Vectorize is configured for the collection, \"\n                \"but no corresponding provider secret is stored within Astra's key management system.\",\n            ).to_dict()\n\n            new_parameter_4 = DictInput(\n                name=\"z_04_authentication\",\n                display_name=\"Authentication Parameters\",\n                list=True,\n            ).to_dict()\n\n            self.insert_in_dict(\n                build_config,\n                \"model\",\n                {\n                    \"z_01_model_parameters\": new_parameter_1,\n                    \"z_02_api_key_name\": new_parameter_2,\n                    \"z_03_provider_api_key\": new_parameter_3,\n                    \"z_04_authentication\": new_parameter_4,\n                },\n            )\n\n        return build_config\n\n    def build_vectorize_options(self, **kwargs):\n        for attribute in [\n            \"embedding_provider\",\n            \"model\",\n            \"z_01_model_parameters\",\n            \"z_02_api_key_name\",\n            \"z_03_provider_api_key\",\n            \"z_04_authentication\",\n        ]:\n            if not hasattr(self, attribute):\n                setattr(self, attribute, None)\n\n        # Fetch values from kwargs if any self.* attributes are None\n        provider_mapping = self.update_providers_mapping()\n        provider_value = provider_mapping.get(self.embedding_provider, [None])[0] or kwargs.get(\"embedding_provider\")\n        model_name = self.model or kwargs.get(\"model\")\n        authentication = {**(self.z_04_authentication or {}), **kwargs.get(\"z_04_authentication\", {})}\n        parameters = self.z_01_model_parameters or kwargs.get(\"z_01_model_parameters\", {})\n\n        # Set the API key name if provided\n        api_key_name = self.z_02_api_key_name or kwargs.get(\"z_02_api_key_name\")\n        provider_key = self.z_03_provider_api_key or kwargs.get(\"z_03_provider_api_key\")\n        if api_key_name:\n            authentication[\"providerKey\"] = api_key_name\n        if authentication:\n            provider_key = None\n            authentication[\"providerKey\"] = authentication[\"providerKey\"].split(\".\")[0]\n\n        # Set authentication and parameters to None if no values are provided\n        if not authentication:\n            authentication = None\n        if not parameters:\n            parameters = None\n\n        return {\n            # must match astrapy.info.CollectionVectorServiceOptions\n            \"collection_vector_service_options\": {\n                \"provider\": provider_value,\n                \"modelName\": model_name,\n                \"authentication\": authentication,\n                \"parameters\": parameters,\n            },\n            \"collection_embedding_api_key\": provider_key,\n        }\n\n    @check_cached_vector_store\n    def build_vector_store(self, vectorize_options=None):\n        try:\n            from langchain_astradb import AstraDBVectorStore\n        except ImportError as e:\n            msg = (\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n            raise ImportError(msg) from e\n\n        # Initialize parameters based on the collection name\n        is_new_collection = self.collection_name == \"+ Create new collection\"\n\n        # Get the embedding model\n        embedding_params = {\"embedding\": self.embedding_model} if self.embedding_choice == \"Embedding Model\" else {}\n\n        # Use the embedding model if the choice is set to \"Embedding Model\"\n        if self.embedding_choice == \"Astra Vectorize\" and is_new_collection:\n            from astrapy.info import CollectionVectorServiceOptions\n\n            # Build the vectorize options dictionary\n            dict_options = vectorize_options or self.build_vectorize_options(\n                embedding_provider=getattr(self, \"embedding_provider\", None) or None,\n                model=getattr(self, \"model\", None) or None,\n                z_01_model_parameters=getattr(self, \"z_01_model_parameters\", None) or None,\n                z_02_api_key_name=getattr(self, \"z_02_api_key_name\", None) or None,\n                z_03_provider_api_key=getattr(self, \"z_03_provider_api_key\", None) or None,\n                z_04_authentication=getattr(self, \"z_04_authentication\", {}) or {},\n            )\n\n            # Set the embedding dictionary\n            embedding_params = {\n                \"collection_vector_service_options\": CollectionVectorServiceOptions.from_dict(\n                    dict_options.get(\"collection_vector_service_options\")\n                ),\n                \"collection_embedding_api_key\": dict_options.get(\"collection_embedding_api_key\"),\n            }\n\n        # Get the running environment for Langflow\n        environment = (\n            parse_api_endpoint(getattr(self, \"api_endpoint\", None)).environment\n            if getattr(self, \"api_endpoint\", None)\n            else None\n        )\n\n        # Get Langflow version and platform information\n        __version__ = get_version_info()[\"version\"]\n        langflow_prefix = \"\"\n        if os.getenv(\"LANGFLOW_HOST\") is not None:\n            langflow_prefix = \"ds-\"\n\n        # Bundle up the auto-detect parameters\n        autodetect_params = {\n            \"autodetect_collection\": True,  # TODO: May want to expose this option\n            \"content_field\": self.content_field or None,\n            \"ignore_invalid_documents\": self.ignore_invalid_documents,\n        }\n\n        # Attempt to build the Vector Store object\n        try:\n            vector_store = AstraDBVectorStore(\n                # Astra DB Authentication Parameters\n                token=self.token,\n                api_endpoint=self.api_endpoint,\n                namespace=self.keyspace or None,\n                collection_name=self.get_collection_choice(),\n                environment=environment,\n                # Astra DB Usage Tracking Parameters\n                ext_callers=[(f\"{langflow_prefix}langflow\", __version__)],\n                # Astra DB Vector Store Parameters\n                **autodetect_params,\n                **embedding_params,\n                **self.astradb_vectorstore_kwargs,\n            )\n        except Exception as e:\n            msg = f\"Error initializing AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        self._add_documents_to_vector_store(vector_store)\n\n        return vector_store\n\n    def _add_documents_to_vector_store(self, vector_store) -> None:\n        documents = []\n        for _input in self.ingest_data or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise TypeError(msg)\n\n        if documents:\n            self.log(f\"Adding {len(documents)} documents to the Vector Store.\")\n            try:\n                vector_store.add_documents(documents)\n            except Exception as e:\n                msg = f\"Error adding documents to AstraDBVectorStore: {e}\"\n                raise ValueError(msg) from e\n        else:\n            self.log(\"No documents to add to the Vector Store.\")\n\n    def _map_search_type(self) -> str:\n        if self.search_type == \"Similarity with score threshold\":\n            return \"similarity_score_threshold\"\n        if self.search_type == \"MMR (Max Marginal Relevance)\":\n            return \"mmr\"\n        return \"similarity\"\n\n    def _build_search_args(self):\n        query = self.search_input if isinstance(self.search_input, str) and self.search_input.strip() else None\n\n        if query:\n            args = {\n                \"query\": query,\n                \"search_type\": self._map_search_type(),\n                \"k\": self.number_of_results,\n                \"score_threshold\": self.search_score_threshold,\n            }\n        elif self.advanced_search_filter:\n            args = {\n                \"n\": self.number_of_results,\n            }\n        else:\n            return {}\n\n        filter_arg = self.advanced_search_filter or {}\n        if filter_arg:\n            args[\"filter\"] = filter_arg\n\n        return args\n\n    def search_documents(self, vector_store=None) -> list[Data]:\n        vector_store = vector_store or self.build_vector_store()\n\n        self.log(f\"Search input: {self.search_input}\")\n        self.log(f\"Search type: {self.search_type}\")\n        self.log(f\"Number of results: {self.number_of_results}\")\n\n        try:\n            search_args = self._build_search_args()\n        except Exception as e:\n            msg = f\"Error in AstraDBVectorStore._build_search_args: {e}\"\n            raise ValueError(msg) from e\n\n        if not search_args:\n            self.log(\"No search input or filters provided. Skipping search.\")\n            return []\n\n        docs = []\n        search_method = \"search\" if \"query\" in search_args else \"metadata_search\"\n\n        try:\n            self.log(f\"Calling vector_store.{search_method} with args: {search_args}\")\n            docs = getattr(vector_store, search_method)(**search_args)\n        except Exception as e:\n            msg = f\"Error performing {search_method} in AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        self.log(f\"Retrieved documents: {len(docs)}\")\n\n        data = docs_to_data(docs)\n        self.log(f\"Converted documents to data: {len(data)}\")\n        self.status = data\n        return data\n\n    def get_retriever_kwargs(self):\n        search_args = self._build_search_args()\n        return {\n            \"search_type\": self._map_search_type(),\n            \"search_kwargs\": search_args,\n        }\n",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "code",
                 "advanced": true,
                 "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
                 "info": "",
+                "list": false,
                 "load_from_db": false,
-                "title_case": false
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "import os\nfrom collections import defaultdict\n\nimport orjson\nfrom astrapy import DataAPIClient\nfrom astrapy.admin import parse_api_endpoint\nfrom langchain_astradb import AstraDBVectorStore\n\nfrom langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom langflow.helpers import docs_to_data\nfrom langflow.inputs import DictInput, FloatInput, MessageTextInput, NestedDictInput\nfrom langflow.io import (\n    BoolInput,\n    DataInput,\n    DropdownInput,\n    HandleInput,\n    IntInput,\n    MultilineInput,\n    SecretStrInput,\n    StrInput,\n)\nfrom langflow.schema import Data\nfrom langflow.utils.version import get_version_info\n\n\nclass AstraDBVectorStoreComponent(LCVectorStoreComponent):\n    display_name: str = \"Astra DB\"\n    description: str = \"Implementation of Vector Store using Astra DB with search capabilities\"\n    documentation: str = \"https://docs.langflow.org/starter-projects-vector-store-rag\"\n    name = \"AstraDB\"\n    icon: str = \"AstraDB\"\n\n    _cached_vector_store: AstraDBVectorStore | None = None\n\n    VECTORIZE_PROVIDERS_MAPPING = defaultdict(\n        list,\n        {\n            \"Azure OpenAI\": [\n                \"azureOpenAI\",\n                [\"text-embedding-3-small\", \"text-embedding-3-large\", \"text-embedding-ada-002\"],\n            ],\n            \"Hugging Face - Dedicated\": [\"huggingfaceDedicated\", [\"endpoint-defined-model\"]],\n            \"Hugging Face - Serverless\": [\n                \"huggingface\",\n                [\n                    \"sentence-transformers/all-MiniLM-L6-v2\",\n                    \"intfloat/multilingual-e5-large\",\n                    \"intfloat/multilingual-e5-large-instruct\",\n                    \"BAAI/bge-small-en-v1.5\",\n                    \"BAAI/bge-base-en-v1.5\",\n                    \"BAAI/bge-large-en-v1.5\",\n                ],\n            ],\n            \"Jina AI\": [\n                \"jinaAI\",\n                [\n                    \"jina-embeddings-v2-base-en\",\n                    \"jina-embeddings-v2-base-de\",\n                    \"jina-embeddings-v2-base-es\",\n                    \"jina-embeddings-v2-base-code\",\n                    \"jina-embeddings-v2-base-zh\",\n                ],\n            ],\n            \"Mistral AI\": [\"mistral\", [\"mistral-embed\"]],\n            \"Nvidia\": [\"nvidia\", [\"NV-Embed-QA\"]],\n            \"OpenAI\": [\"openai\", [\"text-embedding-3-small\", \"text-embedding-3-large\", \"text-embedding-ada-002\"]],\n            \"Upstage\": [\"upstageAI\", [\"solar-embedding-1-large\"]],\n            \"Voyage AI\": [\n                \"voyageAI\",\n                [\"voyage-large-2-instruct\", \"voyage-law-2\", \"voyage-code-2\", \"voyage-large-2\", \"voyage-2\"],\n            ],\n        },\n    )\n\n    inputs = [\n        SecretStrInput(\n            name=\"token\",\n            display_name=\"Astra DB Application Token\",\n            info=\"Authentication token for accessing Astra DB.\",\n            value=\"ASTRA_DB_APPLICATION_TOKEN\",\n            required=True,\n            advanced=os.getenv(\"ASTRA_ENHANCED\", \"false\").lower() == \"true\",\n            real_time_refresh=True,\n        ),\n        SecretStrInput(\n            name=\"api_endpoint\",\n            display_name=\"Database\" if os.getenv(\"ASTRA_ENHANCED\", \"false\").lower() == \"true\" else \"API Endpoint\",\n            info=\"API endpoint URL for the Astra DB service.\",\n            value=\"ASTRA_DB_API_ENDPOINT\",\n            required=True,\n            real_time_refresh=True,\n        ),\n        DropdownInput(\n            name=\"collection_name\",\n            display_name=\"Collection\",\n            info=\"The name of the collection within Astra DB where the vectors will be stored.\",\n            required=True,\n            refresh_button=True,\n            real_time_refresh=True,\n            options=[\"+ Create new collection\"],\n            value=\"+ Create new collection\",\n        ),\n        StrInput(\n            name=\"collection_name_new\",\n            display_name=\"Collection Name\",\n            info=\"Name of the new collection to create.\",\n            advanced=os.getenv(\"LANGFLOW_HOST\") is not None,\n            required=os.getenv(\"LANGFLOW_HOST\") is None,\n        ),\n        StrInput(\n            name=\"keyspace\",\n            display_name=\"Keyspace\",\n            info=\"Optional keyspace within Astra DB to use for the collection.\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"embedding_choice\",\n            display_name=\"Embedding Model or Astra Vectorize\",\n            info=\"Determines whether to use Astra Vectorize for the collection.\",\n            options=[\"Embedding Model\", \"Astra Vectorize\"],\n            real_time_refresh=True,\n            value=\"Embedding Model\",\n        ),\n        HandleInput(\n            name=\"embedding_model\",\n            display_name=\"Embedding Model\",\n            input_types=[\"Embeddings\"],\n            info=\"Allows an embedding model configuration.\",\n        ),\n        DataInput(\n            name=\"ingest_data\",\n            display_name=\"Ingest Data\",\n        ),\n        MultilineInput(\n            name=\"search_input\",\n            display_name=\"Search Query\",\n            tool_mode=True,\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Search Results\",\n            info=\"Number of search results to return.\",\n            advanced=True,\n            value=4,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            info=\"Search type to use\",\n            options=[\"Similarity\", \"Similarity with score threshold\", \"MMR (Max Marginal Relevance)\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"search_score_threshold\",\n            display_name=\"Search Score Threshold\",\n            info=\"Minimum similarity score threshold for search results. \"\n            \"(when using 'Similarity with score threshold')\",\n            value=0,\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"advanced_search_filter\",\n            display_name=\"Search Metadata Filter\",\n            info=\"Optional dictionary of filters to apply to the search query.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"content_field\",\n            display_name=\"Content Field\",\n            info=\"Field to use as the text content field for the vector store.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"ignore_invalid_documents\",\n            display_name=\"Ignore Invalid Documents\",\n            info=\"Boolean flag to determine whether to ignore invalid documents at runtime.\",\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"astradb_vectorstore_kwargs\",\n            display_name=\"AstraDBVectorStore Parameters\",\n            info=\"Optional dictionary of additional parameters for the AstraDBVectorStore.\",\n            advanced=True,\n        ),\n    ]\n\n    def del_fields(self, build_config, field_list):\n        for field in field_list:\n            if field in build_config:\n                del build_config[field]\n\n        return build_config\n\n    def insert_in_dict(self, build_config, field_name, new_parameters):\n        # Insert the new key-value pair after the found key\n        for new_field_name, new_parameter in new_parameters.items():\n            # Get all the items as a list of tuples (key, value)\n            items = list(build_config.items())\n\n            # Find the index of the key to insert after\n            idx = len(items)\n            for i, (key, _) in enumerate(items):\n                if key == field_name:\n                    idx = i + 1\n                    break\n\n            items.insert(idx, (new_field_name, new_parameter))\n\n            # Clear the original dictionary and update with the modified items\n            build_config.clear()\n            build_config.update(items)\n\n        return build_config\n\n    def update_providers_mapping(self):\n        # If we don't have token or api_endpoint, we can't fetch the list of providers\n        if not self.token or not self.api_endpoint:\n            self.log(\"Astra DB token and API endpoint are required to fetch the list of Vectorize providers.\")\n\n            return self.VECTORIZE_PROVIDERS_MAPPING\n\n        try:\n            self.log(\"Dynamically updating list of Vectorize providers.\")\n\n            # Get the admin object\n            client = DataAPIClient(token=self.token)\n            admin = client.get_admin()\n\n            # Get the embedding providers\n            db_admin = admin.get_database_admin(self.api_endpoint)\n            embedding_providers = db_admin.find_embedding_providers().as_dict()\n\n            vectorize_providers_mapping = {}\n\n            # Map the provider display name to the provider key and models\n            for provider_key, provider_data in embedding_providers[\"embeddingProviders\"].items():\n                display_name = provider_data[\"displayName\"]\n                models = [model[\"name\"] for model in provider_data[\"models\"]]\n\n                vectorize_providers_mapping[display_name] = [provider_key, models]\n\n            # Sort the resulting dictionary\n            return defaultdict(list, dict(sorted(vectorize_providers_mapping.items())))\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error fetching Vectorize providers: {e}\")\n\n            return self.VECTORIZE_PROVIDERS_MAPPING\n\n    def get_database(self):\n        try:\n            client = DataAPIClient(token=self.token)\n\n            return client.get_database(\n                self.api_endpoint,\n                token=self.token,\n            )\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error getting database: {e}\")\n\n            return None\n\n    def _initialize_collection_options(self):\n        database = self.get_database()\n        if database is None:\n            return [\"+ Create new collection\"]\n\n        try:\n            collections = [collection.name for collection in database.list_collections()]\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error fetching collections: {e}\")\n\n            return [\"+ Create new collection\"]\n\n        return [*collections, \"+ Create new collection\"]\n\n    def get_collection_choice(self):\n        collection_name = self.collection_name\n        if collection_name == \"+ Create new collection\":\n            return self.collection_name_new\n\n        return collection_name\n\n    def get_collection_options(self):\n        # Only get the options if the collection exists\n        database = self.get_database()\n        if database is None:\n            return None\n\n        collection_name = self.get_collection_choice()\n\n        try:\n            collection = database.get_collection(collection_name)\n            collection_options = collection.options()\n        except Exception as _:  # noqa: BLE001\n            return None\n\n        return collection_options.vector\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):\n        # Refresh the collection name options\n        build_config[\"collection_name\"][\"options\"] = self._initialize_collection_options()\n\n        # Update the choice of embedding model based on collection name\n        if field_name == \"collection_name\":\n            # Detect if it is a new collection\n            is_new_collection = field_value == \"+ Create new collection\"\n\n            # Set the advanced and required fields based on the collection choice\n            build_config[\"embedding_choice\"].update(\n                {\n                    \"advanced\": not is_new_collection,\n                    \"value\": \"Embedding Model\" if is_new_collection else build_config[\"embedding_choice\"].get(\"value\"),\n                }\n            )\n\n            # Set the advanced field for the embedding model\n            build_config[\"embedding_model\"][\"advanced\"] = not is_new_collection\n\n            # Set the advanced and required fields for the new collection name\n            build_config[\"collection_name_new\"].update(\n                {\n                    \"advanced\": not is_new_collection,\n                    \"required\": is_new_collection,\n                    \"value\": \"\" if not is_new_collection else build_config[\"collection_name_new\"].get(\"value\"),\n                }\n            )\n\n        # Get the collection options for the selected collection\n        collection_options = self.get_collection_options()\n\n        # If the collection options are available (DB exists), show the advanced options\n        if collection_options:\n            build_config[\"embedding_choice\"][\"advanced\"] = True\n\n            if collection_options.service:\n                # Remove unnecessary fields when a service is set\n                self.del_fields(\n                    build_config,\n                    [\n                        \"embedding_provider\",\n                        \"model\",\n                        \"z_01_model_parameters\",\n                        \"z_02_api_key_name\",\n                        \"z_03_provider_api_key\",\n                        \"z_04_authentication\",\n                    ],\n                )\n\n                # Update the providers mapping\n                updates = {\n                    \"embedding_model\": {\"advanced\": True},\n                    \"embedding_choice\": {\"value\": \"Astra Vectorize\"},\n                }\n            else:\n                # Update the providers mapping\n                updates = {\n                    \"embedding_model\": {\"advanced\": False},\n                    \"embedding_provider\": {\"advanced\": False},\n                    \"embedding_choice\": {\"value\": \"Embedding Model\"},\n                }\n\n            # Apply updates to the build_config\n            for key, value in updates.items():\n                build_config[key].update(value)\n\n        elif field_name == \"embedding_choice\":\n            if field_value == \"Astra Vectorize\":\n                build_config[\"embedding_model\"][\"advanced\"] = True\n\n                # Update the providers mapping\n                vectorize_providers = self.update_providers_mapping()\n\n                new_parameter = DropdownInput(\n                    name=\"embedding_provider\",\n                    display_name=\"Embedding Provider\",\n                    options=vectorize_providers.keys(),\n                    value=\"\",\n                    required=True,\n                    real_time_refresh=True,\n                ).to_dict()\n\n                self.insert_in_dict(build_config, \"embedding_choice\", {\"embedding_provider\": new_parameter})\n            else:\n                build_config[\"embedding_model\"][\"advanced\"] = False\n\n                self.del_fields(\n                    build_config,\n                    [\n                        \"embedding_provider\",\n                        \"model\",\n                        \"z_01_model_parameters\",\n                        \"z_02_api_key_name\",\n                        \"z_03_provider_api_key\",\n                        \"z_04_authentication\",\n                    ],\n                )\n\n        elif field_name == \"embedding_provider\":\n            self.del_fields(\n                build_config,\n                [\"model\", \"z_01_model_parameters\", \"z_02_api_key_name\", \"z_03_provider_api_key\", \"z_04_authentication\"],\n            )\n\n            # Update the providers mapping\n            vectorize_providers = self.update_providers_mapping()\n            model_options = vectorize_providers[field_value][1]\n\n            new_parameter = DropdownInput(\n                name=\"model\",\n                display_name=\"Model\",\n                info=\"The embedding model to use for the selected provider. Each provider has a different set of \"\n                \"models available (full list at \"\n                \"https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html):\\n\\n\"\n                f\"{', '.join(model_options)}\",\n                options=model_options,\n                value=None,\n                required=True,\n                real_time_refresh=True,\n            ).to_dict()\n\n            self.insert_in_dict(build_config, \"embedding_provider\", {\"model\": new_parameter})\n\n        elif field_name == \"model\":\n            self.del_fields(\n                build_config,\n                [\"z_01_model_parameters\", \"z_02_api_key_name\", \"z_03_provider_api_key\", \"z_04_authentication\"],\n            )\n\n            new_parameter_1 = DictInput(\n                name=\"z_01_model_parameters\",\n                display_name=\"Model Parameters\",\n                list=True,\n            ).to_dict()\n\n            new_parameter_2 = MessageTextInput(\n                name=\"z_02_api_key_name\",\n                display_name=\"API Key Name\",\n                info=\"The name of the embeddings provider API key stored on Astra. \"\n                \"If set, it will override the 'ProviderKey' in the authentication parameters.\",\n            ).to_dict()\n\n            new_parameter_3 = SecretStrInput(\n                load_from_db=False,\n                name=\"z_03_provider_api_key\",\n                display_name=\"Provider API Key\",\n                info=\"An alternative to the Astra Authentication that passes an API key for the provider \"\n                \"with each request to Astra DB. \"\n                \"This may be used when Vectorize is configured for the collection, \"\n                \"but no corresponding provider secret is stored within Astra's key management system.\",\n            ).to_dict()\n\n            new_parameter_4 = DictInput(\n                name=\"z_04_authentication\",\n                display_name=\"Authentication Parameters\",\n                list=True,\n            ).to_dict()\n\n            self.insert_in_dict(\n                build_config,\n                \"model\",\n                {\n                    \"z_01_model_parameters\": new_parameter_1,\n                    \"z_02_api_key_name\": new_parameter_2,\n                    \"z_03_provider_api_key\": new_parameter_3,\n                    \"z_04_authentication\": new_parameter_4,\n                },\n            )\n\n        return build_config\n\n    def build_vectorize_options(self, **kwargs):\n        for attribute in [\n            \"embedding_provider\",\n            \"model\",\n            \"z_01_model_parameters\",\n            \"z_02_api_key_name\",\n            \"z_03_provider_api_key\",\n            \"z_04_authentication\",\n        ]:\n            if not hasattr(self, attribute):\n                setattr(self, attribute, None)\n\n        # Fetch values from kwargs if any self.* attributes are None\n        provider_mapping = self.update_providers_mapping()\n        provider_value = provider_mapping.get(self.embedding_provider, [None])[0] or kwargs.get(\"embedding_provider\")\n        model_name = self.model or kwargs.get(\"model\")\n        authentication = {**(self.z_04_authentication or {}), **kwargs.get(\"z_04_authentication\", {})}\n        parameters = self.z_01_model_parameters or kwargs.get(\"z_01_model_parameters\", {})\n\n        # Set the API key name if provided\n        api_key_name = self.z_02_api_key_name or kwargs.get(\"z_02_api_key_name\")\n        provider_key = self.z_03_provider_api_key or kwargs.get(\"z_03_provider_api_key\")\n        if api_key_name:\n            authentication[\"providerKey\"] = api_key_name\n        if authentication:\n            provider_key = None\n            authentication[\"providerKey\"] = authentication[\"providerKey\"].split(\".\")[0]\n\n        # Set authentication and parameters to None if no values are provided\n        if not authentication:\n            authentication = None\n        if not parameters:\n            parameters = None\n\n        return {\n            # must match astrapy.info.CollectionVectorServiceOptions\n            \"collection_vector_service_options\": {\n                \"provider\": provider_value,\n                \"modelName\": model_name,\n                \"authentication\": authentication,\n                \"parameters\": parameters,\n            },\n            \"collection_embedding_api_key\": provider_key,\n        }\n\n    @check_cached_vector_store\n    def build_vector_store(self, vectorize_options=None):\n        try:\n            from langchain_astradb import AstraDBVectorStore\n        except ImportError as e:\n            msg = (\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n            raise ImportError(msg) from e\n\n        # Initialize parameters based on the collection name\n        is_new_collection = self.collection_name == \"+ Create new collection\"\n\n        # Get the embedding model\n        embedding_params = {\"embedding\": self.embedding_model} if self.embedding_choice == \"Embedding Model\" else {}\n\n        # Use the embedding model if the choice is set to \"Embedding Model\"\n        if self.embedding_choice == \"Astra Vectorize\" and is_new_collection:\n            from astrapy.info import CollectionVectorServiceOptions\n\n            # Build the vectorize options dictionary\n            dict_options = vectorize_options or self.build_vectorize_options(\n                embedding_provider=getattr(self, \"embedding_provider\", None) or None,\n                model=getattr(self, \"model\", None) or None,\n                z_01_model_parameters=getattr(self, \"z_01_model_parameters\", None) or None,\n                z_02_api_key_name=getattr(self, \"z_02_api_key_name\", None) or None,\n                z_03_provider_api_key=getattr(self, \"z_03_provider_api_key\", None) or None,\n                z_04_authentication=getattr(self, \"z_04_authentication\", {}) or {},\n            )\n\n            # Set the embedding dictionary\n            embedding_params = {\n                \"collection_vector_service_options\": CollectionVectorServiceOptions.from_dict(\n                    dict_options.get(\"collection_vector_service_options\")\n                ),\n                \"collection_embedding_api_key\": dict_options.get(\"collection_embedding_api_key\"),\n            }\n\n        # Get the running environment for Langflow\n        environment = (\n            parse_api_endpoint(getattr(self, \"api_endpoint\", None)).environment\n            if getattr(self, \"api_endpoint\", None)\n            else None\n        )\n\n        # Get Langflow version and platform information\n        __version__ = get_version_info()[\"version\"]\n        langflow_prefix = \"\"\n        if os.getenv(\"LANGFLOW_HOST\") is not None:\n            langflow_prefix = \"ds-\"\n\n        # Bundle up the auto-detect parameters\n        autodetect_params = {\n            \"autodetect_collection\": True,  # TODO: May want to expose this option\n            \"content_field\": self.content_field or None,\n            \"ignore_invalid_documents\": self.ignore_invalid_documents,\n        }\n\n        # Attempt to build the Vector Store object\n        try:\n            vector_store = AstraDBVectorStore(\n                # Astra DB Authentication Parameters\n                token=self.token,\n                api_endpoint=self.api_endpoint,\n                namespace=self.keyspace or None,\n                collection_name=self.get_collection_choice(),\n                environment=environment,\n                # Astra DB Usage Tracking Parameters\n                ext_callers=[(f\"{langflow_prefix}langflow\", __version__)],\n                # Astra DB Vector Store Parameters\n                **autodetect_params,\n                **embedding_params,\n                **self.astradb_vectorstore_kwargs,\n            )\n        except Exception as e:\n            msg = f\"Error initializing AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        self._add_documents_to_vector_store(vector_store)\n\n        return vector_store\n\n    def _add_documents_to_vector_store(self, vector_store) -> None:\n        documents = []\n        for _input in self.ingest_data or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise TypeError(msg)\n\n        if documents:\n            self.log(f\"Adding {len(documents)} documents to the Vector Store.\")\n            try:\n                vector_store.add_documents(documents)\n            except Exception as e:\n                msg = f\"Error adding documents to AstraDBVectorStore: {e}\"\n                raise ValueError(msg) from e\n        else:\n            self.log(\"No documents to add to the Vector Store.\")\n\n    def _map_search_type(self) -> str:\n        if self.search_type == \"Similarity with score threshold\":\n            return \"similarity_score_threshold\"\n        if self.search_type == \"MMR (Max Marginal Relevance)\":\n            return \"mmr\"\n        return \"similarity\"\n\n    def _build_search_args(self):\n        query = self.search_input if isinstance(self.search_input, str) and self.search_input.strip() else None\n\n        if query:\n            args = {\n                \"query\": query,\n                \"search_type\": self._map_search_type(),\n                \"k\": self.number_of_results,\n                \"score_threshold\": self.search_score_threshold,\n            }\n        elif self.advanced_search_filter:\n            args = {\n                \"n\": self.number_of_results,\n            }\n        else:\n            return {}\n\n        filter_arg = self.advanced_search_filter or {}\n        if filter_arg:\n            args[\"filter\"] = filter_arg\n\n        return args\n\n    def search_documents(self, vector_store=None) -> list[Data]:\n        vector_store = vector_store or self.build_vector_store()\n\n        self.log(f\"Search input: {self.search_input}\")\n        self.log(f\"Search type: {self.search_type}\")\n        self.log(f\"Number of results: {self.number_of_results}\")\n\n        try:\n            search_args = self._build_search_args()\n        except Exception as e:\n            msg = f\"Error in AstraDBVectorStore._build_search_args: {e}\"\n            raise ValueError(msg) from e\n\n        if not search_args:\n            self.log(\"No search input or filters provided. Skipping search.\")\n            return []\n\n        docs = []\n        search_method = \"search\" if \"query\" in search_args else \"metadata_search\"\n\n        try:\n            self.log(f\"Calling vector_store.{search_method} with args: {search_args}\")\n            docs = getattr(vector_store, search_method)(**search_args)\n        except Exception as e:\n            msg = f\"Error performing {search_method} in AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        self.log(f\"Retrieved documents: {len(docs)}\")\n\n        data = docs_to_data(docs)\n        self.log(f\"Converted documents to data: {len(data)}\")\n        self.status = data\n        return data\n\n    def get_retriever_kwargs(self):\n        search_args = self._build_search_args()\n        return {\n            \"search_type\": self._map_search_type(),\n            \"search_kwargs\": search_args,\n        }\n"
               },
               "collection_name": {
-                "tool_mode": false,
-                "trace_as_metadata": true,
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "display_name": "Collection",
+                "dynamic": false,
+                "info": "The name of the collection within Astra DB where the vectors will be stored.",
+                "name": "collection_name",
                 "options": [
                   "langflow_marketplace",
                   "movie_reviews",
                   "vector_store_rag_demo",
                   "+ Create new collection"
                 ],
-                "combobox": false,
-                "required": true,
                 "placeholder": "",
-                "show": true,
-                "name": "collection_name",
-                "value": "+ Create new collection",
-                "display_name": "Collection",
-                "advanced": false,
-                "dynamic": false,
-                "info": "The name of the collection within Astra DB where the vectors will be stored.",
                 "real_time_refresh": true,
                 "refresh_button": true,
-                "title_case": false,
-                "type": "str",
-                "_input_type": "DropdownInput"
-              },
-              "collection_name_new": {
-                "trace_as_metadata": true,
-                "load_from_db": false,
-                "list": false,
                 "required": true,
-                "placeholder": "",
                 "show": true,
-                "name": "collection_name_new",
-                "value": "",
-                "display_name": "Collection Name",
-                "advanced": false,
-                "dynamic": false,
-                "info": "Name of the new collection to create.",
                 "title_case": false,
-                "type": "str",
-                "_input_type": "StrInput"
-              },
-              "content_field": {
-                "trace_as_metadata": true,
-                "load_from_db": false,
-                "list": false,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "content_field",
-                "value": "",
-                "display_name": "Content Field",
-                "advanced": true,
-                "dynamic": false,
-                "info": "Field to use as the text content field for the vector store.",
-                "title_case": false,
-                "type": "str",
-                "_input_type": "StrInput"
-              },
-              "embedding_choice": {
                 "tool_mode": false,
                 "trace_as_metadata": true,
+                "type": "str",
+                "value": "+ Create new collection"
+              },
+              "collection_name_new": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "Collection Name",
+                "dynamic": false,
+                "info": "Name of the new collection to create.",
+                "list": false,
+                "load_from_db": false,
+                "name": "collection_name_new",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "content_field": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "Content Field",
+                "dynamic": false,
+                "info": "Field to use as the text content field for the vector store.",
+                "list": false,
+                "load_from_db": false,
+                "name": "content_field",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "embedding_choice": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "display_name": "Embedding Model or Astra Vectorize",
+                "dynamic": false,
+                "info": "Determines whether to use Astra Vectorize for the collection.",
+                "name": "embedding_choice",
                 "options": [
                   "Embedding Model",
                   "Astra Vectorize"
                 ],
-                "combobox": false,
-                "required": false,
                 "placeholder": "",
-                "show": true,
-                "name": "embedding_choice",
-                "value": "Embedding Model",
-                "display_name": "Embedding Model or Astra Vectorize",
-                "advanced": false,
-                "dynamic": false,
-                "info": "Determines whether to use Astra Vectorize for the collection.",
                 "real_time_refresh": true,
+                "required": false,
+                "show": true,
                 "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
                 "type": "str",
-                "_input_type": "DropdownInput"
+                "value": "Embedding Model"
+              },
+              "embedding_model": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Embedding Model",
+                "dynamic": false,
+                "info": "Allows an embedding model configuration.",
+                "input_types": [
+                  "Embeddings"
+                ],
+                "list": false,
+                "name": "embedding_model",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
               },
               "ignore_invalid_documents": {
-                "trace_as_metadata": true,
-                "list": false,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "ignore_invalid_documents",
-                "value": false,
-                "display_name": "Ignore Invalid Documents",
+                "_input_type": "BoolInput",
                 "advanced": true,
+                "display_name": "Ignore Invalid Documents",
                 "dynamic": false,
                 "info": "Boolean flag to determine whether to ignore invalid documents at runtime.",
+                "list": false,
+                "name": "ignore_invalid_documents",
+                "placeholder": "",
+                "required": false,
+                "show": true,
                 "title_case": false,
+                "trace_as_metadata": true,
                 "type": "bool",
-                "_input_type": "BoolInput"
+                "value": false
+              },
+              "ingest_data": {
+                "_input_type": "DataInput",
+                "advanced": false,
+                "display_name": "Ingest Data",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Data"
+                ],
+                "list": false,
+                "name": "ingest_data",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
               },
               "keyspace": {
-                "trace_as_metadata": true,
-                "load_from_db": false,
-                "list": false,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "keyspace",
-                "value": "",
-                "display_name": "Keyspace",
+                "_input_type": "StrInput",
                 "advanced": true,
+                "display_name": "Keyspace",
                 "dynamic": false,
                 "info": "Optional keyspace within Astra DB to use for the collection.",
+                "list": false,
+                "load_from_db": false,
+                "name": "keyspace",
+                "placeholder": "",
+                "required": false,
+                "show": true,
                 "title_case": false,
+                "trace_as_metadata": true,
                 "type": "str",
-                "_input_type": "StrInput"
+                "value": ""
               },
               "number_of_results": {
-                "trace_as_metadata": true,
-                "list": false,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "number_of_results",
-                "value": 4,
-                "display_name": "Number of Search Results",
+                "_input_type": "IntInput",
                 "advanced": true,
+                "display_name": "Number of Search Results",
                 "dynamic": false,
                 "info": "Number of search results to return.",
+                "list": false,
+                "name": "number_of_results",
+                "placeholder": "",
+                "required": false,
+                "show": true,
                 "title_case": false,
+                "trace_as_metadata": true,
                 "type": "int",
-                "_input_type": "IntInput"
+                "value": 4
               },
               "search_input": {
-                "tool_mode": true,
-                "trace_as_input": true,
-                "multiline": true,
-                "trace_as_metadata": true,
-                "load_from_db": false,
-                "list": false,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "search_input",
-                "value": "",
-                "display_name": "Search Data",
+                "_input_type": "MultilineInput",
                 "advanced": false,
+                "display_name": "Search Query",
+                "dynamic": false,
+                "info": "",
                 "input_types": [
                   "Message"
                 ],
-                "dynamic": false,
-                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "search_input",
+                "placeholder": "",
+                "required": false,
+                "show": true,
                 "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
                 "type": "str",
-                "_input_type": "MultilineInput"
+                "value": ""
               },
               "search_score_threshold": {
-                "trace_as_metadata": true,
-                "list": false,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "search_score_threshold",
-                "value": 0,
-                "display_name": "Search Score Threshold",
+                "_input_type": "FloatInput",
                 "advanced": true,
+                "display_name": "Search Score Threshold",
                 "dynamic": false,
                 "info": "Minimum similarity score threshold for search results. (when using 'Similarity with score threshold')",
+                "list": false,
+                "name": "search_score_threshold",
+                "placeholder": "",
+                "required": false,
+                "show": true,
                 "title_case": false,
+                "trace_as_metadata": true,
                 "type": "float",
-                "_input_type": "FloatInput"
+                "value": 0
               },
               "search_type": {
-                "tool_mode": false,
-                "trace_as_metadata": true,
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "display_name": "Search Type",
+                "dynamic": false,
+                "info": "Search type to use",
+                "name": "search_type",
                 "options": [
                   "Similarity",
                   "Similarity with score threshold",
                   "MMR (Max Marginal Relevance)"
                 ],
-                "combobox": false,
-                "required": false,
                 "placeholder": "",
+                "required": false,
                 "show": true,
-                "name": "search_type",
-                "value": "Similarity",
-                "display_name": "Search Type",
-                "advanced": true,
-                "dynamic": false,
-                "info": "Search type to use",
                 "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
                 "type": "str",
-                "_input_type": "DropdownInput"
+                "value": "Similarity"
               },
               "token": {
-                "load_from_db": true,
-                "required": true,
-                "placeholder": "",
-                "show": true,
-                "name": "token",
-                "value": "ASTRA_DB_APPLICATION_TOKEN",
-                "display_name": "Astra DB Application Token",
+                "_input_type": "SecretStrInput",
                 "advanced": false,
+                "display_name": "Astra DB Application Token",
+                "dynamic": false,
+                "info": "Authentication token for accessing Astra DB.",
                 "input_types": [
                   "Message"
                 ],
-                "dynamic": false,
-                "info": "Authentication token for accessing Astra DB.",
-                "real_time_refresh": true,
-                "title_case": false,
+                "load_from_db": true,
+                "name": "token",
                 "password": true,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": true,
+                "show": true,
+                "title_case": false,
                 "type": "str",
-                "_input_type": "SecretStrInput"
+                "value": "ASTRA_DB_APPLICATION_TOKEN"
               }
             },
-            "description": "Implementation of Vector Store using Astra DB with search capabilities",
-            "icon": "AstraDB",
-            "base_classes": [
-              "Data"
-            ],
-            "display_name": "Astra DB",
-            "documentation": "https://docs.langflow.org/starter-projects-vector-store-rag",
-            "custom_fields": {},
-            "output_types": [],
-            "pinned": false,
-            "conditional_paths": [],
-            "frozen": false,
-            "outputs": [
-              {
-                "types": [
-                  "Data"
-                ],
-                "selected": "Data",
-                "name": "search_results",
-                "hidden": null,
-                "display_name": "Search Results",
-                "method": "search_documents",
-                "value": "__UNDEFINED__",
-                "cache": true,
-                "required_inputs": [
-                  "api_endpoint",
-                  "collection_name",
-                  "collection_name_new",
-                  "token"
-                ]
-              }
-            ],
-            "field_order": [
-              "token",
-              "api_endpoint",
-              "collection_name",
-              "collection_name_new",
-              "keyspace",
-              "embedding_choice",
-              "embedding_model",
-              "ingest_data",
-              "search_input",
-              "number_of_results",
-              "search_type",
-              "search_score_threshold",
-              "advanced_search_filter",
-              "content_field",
-              "ignore_invalid_documents",
-              "astradb_vectorstore_kwargs"
-            ],
-            "beta": false,
-            "legacy": false,
-            "edited": false,
-            "metadata": {},
             "tool_mode": false
           },
-          "type": "AstraDB",
-          "id": "AstraDB-3ZGs1"
+          "type": "AstraDB"
         },
-        "selected": false,
-        "width": 320,
+        "dragging": false,
         "height": 783,
+        "id": "AstraDB-lMmwm",
+        "position": {
+          "x": 2058.0903617951794,
+          "y": 1377.2119232156292
+        },
         "positionAbsolute": {
           "x": 2058.0903617951794,
           "y": 1377.2119232156292
         },
-        "dragging": false
+        "selected": true,
+        "type": "genericNode",
+        "width": 320
       }
     ],
     "edges": [
@@ -3557,7 +3553,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-yvSdI",
+            "id": "ParseData-zyR25",
             "name": "text",
             "output_types": [
               "Message"
@@ -3565,7 +3561,7 @@
           },
           "targetHandle": {
             "fieldName": "context",
-            "id": "Prompt-cBMbm",
+            "id": "Prompt-xaD1Y",
             "inputTypes": [
               "Message",
               "Text"
@@ -3573,11 +3569,11 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParseData-yvSdI{œdataTypeœ:œParseDataœ,œidœ:œParseData-yvSdIœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-cBMbm{œfieldNameœ:œcontextœ,œidœ:œPrompt-cBMbmœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ParseData-yvSdI",
-        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-yvSdIœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Prompt-cBMbm",
-        "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPrompt-cBMbmœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "id": "reactflow__edge-ParseData-zyR25{œdataTypeœ:œParseDataœ,œidœ:œParseData-zyR25œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-xaD1Y{œfieldNameœ:œcontextœ,œidœ:œPrompt-xaD1Yœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ParseData-zyR25",
+        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-zyR25œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-xaD1Y",
+        "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPrompt-xaD1Yœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -3585,7 +3581,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-cBMbm",
+            "id": "Prompt-xaD1Y",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -3593,18 +3589,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-ceUer",
+            "id": "OpenAIModel-m4qDU",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-cBMbm{œdataTypeœ:œPromptœ,œidœ:œPrompt-cBMbmœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-ceUer{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-ceUerœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-cBMbm",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-cBMbmœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "OpenAIModel-ceUer",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-ceUerœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "id": "reactflow__edge-Prompt-xaD1Y{œdataTypeœ:œPromptœ,œidœ:œPrompt-xaD1Yœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-m4qDU{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-m4qDUœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-xaD1Y",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-xaD1Yœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-m4qDU",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-m4qDUœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -3612,7 +3608,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-ceUer",
+            "id": "OpenAIModel-m4qDU",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -3620,18 +3616,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-XolxJ",
+            "id": "ChatOutput-ac2iX",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-ceUer{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-ceUerœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-XolxJ{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-XolxJœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-ceUer",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-ceUerœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "ChatOutput-XolxJ",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-XolxJœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-m4qDU{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-m4qDUœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-ac2iX{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-ac2iXœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-m4qDU",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-m4qDUœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-ac2iX",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-ac2iXœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -3639,7 +3635,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-D6fj2",
+            "id": "ChatInput-uqjg5",
             "name": "message",
             "output_types": [
               "Message"
@@ -3647,7 +3643,7 @@
           },
           "targetHandle": {
             "fieldName": "question",
-            "id": "Prompt-cBMbm",
+            "id": "Prompt-xaD1Y",
             "inputTypes": [
               "Message",
               "Text"
@@ -3655,11 +3651,11 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-D6fj2{œdataTypeœ:œChatInputœ,œidœ:œChatInput-D6fj2œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-cBMbm{œfieldNameœ:œquestionœ,œidœ:œPrompt-cBMbmœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-D6fj2",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-D6fj2œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Prompt-cBMbm",
-        "targetHandle": "{œfieldNameœ:œquestionœ,œidœ:œPrompt-cBMbmœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "id": "reactflow__edge-ChatInput-uqjg5{œdataTypeœ:œChatInputœ,œidœ:œChatInput-uqjg5œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-xaD1Y{œfieldNameœ:œquestionœ,œidœ:œPrompt-xaD1Yœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-uqjg5",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-uqjg5œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-xaD1Y",
+        "targetHandle": "{œfieldNameœ:œquestionœ,œidœ:œPrompt-xaD1Yœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -3667,7 +3663,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-y4QPS",
+            "id": "File-DdaMQ",
             "name": "data",
             "output_types": [
               "Data"
@@ -3675,74 +3671,76 @@
           },
           "targetHandle": {
             "fieldName": "data_inputs",
-            "id": "SplitText-yKJMx",
+            "id": "SplitText-gC7fw",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-File-y4QPS{œdataTypeœ:œFileœ,œidœ:œFile-y4QPSœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-yKJMx{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-yKJMxœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "File-y4QPS",
-        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-y4QPSœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
-        "target": "SplitText-yKJMx",
-        "targetHandle": "{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-yKJMxœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}"
+        "id": "reactflow__edge-File-DdaMQ{œdataTypeœ:œFileœ,œidœ:œFile-DdaMQœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-gC7fw{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-gC7fwœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "File-DdaMQ",
+        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-DdaMQœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
+        "target": "SplitText-gC7fw",
+        "targetHandle": "{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-gC7fwœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}"
       },
       {
-        "source": "OpenAIEmbeddings-x3Ejt",
-        "sourceHandle": "{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-x3Ejtœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}",
-        "target": "AstraDB-Zqzsn",
-        "targetHandle": "{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-Zqzsnœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "data": {
-          "targetHandle": {
-            "fieldName": "embedding_model",
-            "id": "AstraDB-Zqzsn",
-            "inputTypes": [
-              "Embeddings"
-            ],
-            "type": "other"
-          },
           "sourceHandle": {
             "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-x3Ejt",
+            "id": "OpenAIEmbeddings-LnzZl",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
             ]
-          }
-        },
-        "id": "reactflow__edge-OpenAIEmbeddings-x3Ejt{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-x3Ejtœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-Zqzsn{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-Zqzsnœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}"
-      },
-      {
-        "source": "OpenAIEmbeddings-rrwfr",
-        "sourceHandle": "{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-rrwfrœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}",
-        "target": "AstraDB-3ZGs1",
-        "targetHandle": "{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-3ZGs1œ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
-        "data": {
+          },
           "targetHandle": {
             "fieldName": "embedding_model",
-            "id": "AstraDB-3ZGs1",
+            "id": "AstraDB-0DSMB",
             "inputTypes": [
               "Embeddings"
             ],
             "type": "other"
-          },
+          }
+        },
+        "id": "reactflow__edge-OpenAIEmbeddings-LnzZl{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-LnzZlœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-0DSMB{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-0DSMBœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "source": "OpenAIEmbeddings-LnzZl",
+        "sourceHandle": "{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-LnzZlœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}",
+        "target": "AstraDB-0DSMB",
+        "targetHandle": "{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-0DSMBœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "className": ""
+      },
+      {
+        "data": {
           "sourceHandle": {
             "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-rrwfr",
+            "id": "OpenAIEmbeddings-MXIpI",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
             ]
+          },
+          "targetHandle": {
+            "fieldName": "embedding_model",
+            "id": "AstraDB-lMmwm",
+            "inputTypes": [
+              "Embeddings"
+            ],
+            "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIEmbeddings-rrwfr{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-rrwfrœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-3ZGs1{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-3ZGs1œ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}"
+        "id": "reactflow__edge-OpenAIEmbeddings-MXIpI{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-MXIpIœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-lMmwm{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-lMmwmœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "source": "OpenAIEmbeddings-MXIpI",
+        "sourceHandle": "{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-MXIpIœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}",
+        "target": "AstraDB-lMmwm",
+        "targetHandle": "{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-lMmwmœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "className": ""
       }
     ],
     "viewport": {
-      "x": 43.8246418310963,
-      "y": -162.00929980139136,
-      "zoom": 0.43203902737939853
+      "x": 42.81921558122929,
+      "y": -163.4043859549497,
+      "zoom": 0.4326776617754808
     }
   },
   "description": "Load your data for chat context with Retrieval Augmented Generation.",
