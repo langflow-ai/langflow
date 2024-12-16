@@ -444,6 +444,7 @@ const NodeToolbarComponent = memo(
               shortcut={shortcuts.find((s) =>
                 s.name.toLowerCase().startsWith("code"),
               )}
+              dataTestId="code-button-modal"
             />
           )}
           {nodeLength > 0 && (
@@ -454,6 +455,7 @@ const NodeToolbarComponent = memo(
               shortcut={shortcuts.find((s) =>
                 s.name.toLowerCase().startsWith("advanced"),
               )}
+              dataTestId="edit-button-modal"
             />
           )}
           {!hasToolMode && (
@@ -471,6 +473,7 @@ const NodeToolbarComponent = memo(
                 s.name.toLowerCase().startsWith("freeze path"),
               )}
               className={cn("node-toolbar-buttons", frozen && "text-blue-500")}
+              dataTestId="freeze-path-button"
             />
           )}
           {hasToolMode && (
