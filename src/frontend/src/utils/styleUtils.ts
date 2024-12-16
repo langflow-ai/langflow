@@ -231,6 +231,7 @@ import {
 } from "lucide-react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
+import { AgentQLIcon } from "../icons/AgentQL";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
 import { ArizeIcon } from "../icons/Arize";
@@ -273,6 +274,7 @@ import { Mem0 } from "../icons/Mem0";
 import { MetaIcon } from "../icons/Meta";
 import { MidjourneyIcon } from "../icons/Midjorney";
 import { MongoDBIcon } from "../icons/MongoDB";
+import { NeedleIcon } from "../icons/Needle";
 import { NotDiamondIcon } from "../icons/NotDiamond";
 import { NotionIcon } from "../icons/Notion";
 import { NvidiaIcon } from "../icons/Nvidia";
@@ -501,6 +503,7 @@ export const SIDEBAR_CATEGORIES = [
 
 export const SIDEBAR_BUNDLES = [
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
+  { display_name: "AgentQL", name: "agentql", icon: "AgentQL" },
   { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
   {
     display_name: "DataStax",
@@ -508,6 +511,7 @@ export const SIDEBAR_BUNDLES = [
     icon: "AstraDB",
   },
   { display_name: "Notion", name: "Notion", icon: "Notion" },
+  { display_name: "Needle", name: "needle", icon: "Needle" },
   { display_name: "NVIDIA", name: "nvidia", icon: "NVIDIA" },
   { display_name: "Vectara", name: "vectara", icon: "Vectara" },
   { display_name: "Icosa Computing", name: "icosacomputing", icon: "Icosa" },
@@ -611,6 +615,7 @@ export const nodeIconsLucide: iconsType = {
   Anthropic: AnthropicIcon,
   ChatAnthropic: AnthropicIcon,
   assemblyai: AssemblyAIIcon,
+  AgentQL: AgentQLIcon,
   AssemblyAI: AssemblyAIIcon,
   AstraDB: AstraDBIcon,
   BingSearchAPIWrapper: BingIcon,
@@ -652,6 +657,7 @@ export const nodeIconsLucide: iconsType = {
   notion: NotionIcon,
   Notion: NotionIcon,
   NotionDirectoryLoader: NotionIcon,
+  Needle: NeedleIcon,
   NVIDIA: NvidiaIcon,
   ChatOpenAI: OpenAiIcon,
   AzureChatOpenAI: OpenAiIcon,
