@@ -80,11 +80,11 @@ jobs:
         id: set-matrix
         run: |
           # Start with input suites if provided, otherwise empty array
-          echo "Changes filter output: ${{ steps.filter.outputs }}"
+          echo "Changes filter output: $(echo '${{ toJSON(steps.filter.outputs) }}')"
           SUITES='${{ inputs.suites }}'
           echo "Initial suites: $SUITES"
           TEST_GREP=""
-
+          echo "Inputs Release: ${{ inputs.release }}"
           RELEASE="${{ inputs.release || 'false' }}"
           echo "Release build: $RELEASE"
 
@@ -229,6 +229,7 @@ jobs:
       ASTRA_DB_API_ENDPOINT: "${{ secrets.ASTRA_DB_API_ENDPOINT }}"
       ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
       TAVILY_API_KEY: "${{ secrets.TAVILY_API_KEY }}"
+      LANGFLOW_DEACTIVE_TRACING: "true"
       UV_CACHE_DIR: /tmp/.uv-cache
     outputs:
       failed: ${{ steps.check-failure.outputs.failed }}
