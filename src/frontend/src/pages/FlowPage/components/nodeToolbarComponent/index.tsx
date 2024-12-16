@@ -12,7 +12,7 @@ import useAddFlow from "@/hooks/flows/use-add-flow";
 import CodeAreaModal from "@/modals/codeAreaModal";
 import { APIClassType } from "@/types/api";
 import _, { cloneDeep } from "lodash";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useUpdateNodeInternals } from "reactflow";
 import IconComponent from "../../../../components/common/genericIconComponent";
 import {
@@ -395,6 +395,28 @@ export default function NodeToolbarComponent({
     tool_mode: data.node!.tool_mode ?? false,
   });
 
+  const handleConfirm = useCallback(() => {
+    addFlow({
+      flow: flowComponent,
+      override: true,
+    });
+    setSuccessData({ title: `${data.id} successfully overridden!` });
+    setShowOverrideModal(false);
+  }, [flowComponent, setSuccessData, setShowOverrideModal]);
+
+  const handleClose = useCallback(() => {
+    setShowOverrideModal(false);
+  }, []);
+
+  const handleCancel = useCallback(() => {
+    addFlow({
+      flow: flowComponent,
+      override: true,
+    });
+    setSuccessData({ title: "New component successfully saved!" });
+    setShowOverrideModal(false);
+  }, [flowComponent, setSuccessData, setShowOverrideModal]);
+
   return (
     <>
       <div className="noflow nopan nodelete nodrag">
@@ -542,13 +564,13 @@ export default function NodeToolbarComponent({
           >
             <SelectTrigger className="w-62">
               <ShadTooltip content="Show More" side="top">
-                <div>
+                <div data-testid="more-options-modal">
                   <Button
                     className="node-toolbar-buttons h-[2rem] w-[2rem]"
                     variant="ghost"
                     onClick={handleButtonClick}
                     size="node-toolbar"
-                    data-testid="more-options-modal"
+                    asChild
                   >
                     <IconComponent name="MoreHorizontal" className="h-4 w-4" />
                   </Button>
@@ -754,29 +776,15 @@ export default function NodeToolbarComponent({
 
         <ConfirmationModal
           open={showOverrideModal}
-          title={`Replace`}
+          title="Replace"
+          onConfirm={handleConfirm}
+          onClose={handleClose}
+          onCancel={handleCancel}
           cancelText="Create New"
           confirmationText="Replace"
           size={"x-small"}
           icon={"SaveAll"}
           index={6}
-          onConfirm={() => {
-            addFlow({
-              flow: flowComponent,
-              override: true,
-            });
-            setSuccessData({ title: `${data.id} successfully overridden!` });
-            setShowOverrideModal(false);
-          }}
-          onClose={() => setShowOverrideModal(false)}
-          onCancel={() => {
-            addFlow({
-              flow: flowComponent,
-              override: true,
-            });
-            setSuccessData({ title: "New component successfully saved!" });
-            setShowOverrideModal(false);
-          }}
         >
           <ConfirmationModal.Content>
             <span>
