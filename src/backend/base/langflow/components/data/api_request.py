@@ -51,9 +51,8 @@ class APIRequestComponent(Component):
         DropdownInput(
             name="method",
             display_name="Method",
-            options=["GET", "POST", "PATCH", "PUT"],
-            value="",
-            info="The HTTP method to use (GET, POST, PATCH, PUT).",
+            options=["GET", "POST", "PATCH", "PUT", "DELETE"],
+            info="The HTTP method to use.",
             real_time_refresh=True,
         ),
         BoolInput(
@@ -276,20 +275,72 @@ class APIRequestComponent(Component):
 
         return build_config
 
-    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
-        if field_name == "method":
-            if field_value in ["POST", "PATCH", "PUT"]:
-                build_config["body"]["advanced"] = False
-            else:
-                build_config["body"]["advanced"] = True
-        elif field_name == "use_curl":
-            build_config["curl"]["advanced"] = not field_value
-            if field_value:
-                build_config["curl"]["real_time_refresh"] = True
-            else:
-                build_config["curl"]["real_time_refresh"] = False
+    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
+        if field_name == "use_curl":
+            build_config = self._update_curl_mode(build_config, use_curl=field_value)
+        elif field_name == "method" and not self.use_curl:
+            build_config = self._update_method_fields(build_config, field_value)
         elif field_name == "curl" and self.use_curl and field_value:
             build_config = self.parse_curl(field_value, build_config)
+
+        return build_config
+
+    def _update_curl_mode(self, build_config: dotdict, *, use_curl: bool) -> dotdict:
+        always_visible = ["urls", "method", "use_curl"]
+
+        for field in self.inputs:
+            field_name = field.name
+            field_config = build_config.get(field_name)
+            if isinstance(field_config, dict):
+                if field_name in always_visible:
+                    field_config["advanced"] = False
+                elif field_name == "curl":
+                    field_config["advanced"] = not use_curl
+                    field_config["real_time_refresh"] = use_curl
+                else:
+                    field_config["advanced"] = use_curl
+            else:
+                self.log(f"Expected dict for build_config[{field_name}], got {type(field_config).__name__}")
+
+        if not use_curl:
+            current_method = build_config.get("method", {}).get("value", "GET")
+            build_config = self._update_method_fields(build_config, current_method)
+
+        return build_config
+
+    def _update_method_fields(self, build_config: dotdict, method: str) -> dotdict:
+        common_fields = [
+            "urls",
+            "method",
+            "use_curl",
+            "query_params",
+        ]
+
+        always_advanced_fields = [
+            "headers",
+            "timeout",
+            "follow_redirects",
+            "save_to_file",
+            "include_httpx_metadata",
+        ]
+
+        body_fields = ["body"]
+
+        for field in self.inputs:
+            field_name = field.name
+            field_config = build_config.get(field_name)
+            if isinstance(field_config, dict):
+                if field_name in common_fields:
+                    field_config["advanced"] = False
+                elif field_name in body_fields:
+                    field_config["advanced"] = method not in ["POST", "PUT", "PATCH"]
+                elif field_name in always_advanced_fields:
+                    field_config["advanced"] = True
+                else:
+                    field_config["advanced"] = True
+            else:
+                self.log(f"Expected dict for build_config[{field_name}], got {type(field_config).__name__}")
+
         return build_config
 
     async def make_request(
@@ -361,8 +412,8 @@ class APIRequestComponent(Component):
             else:
                 try:
                     result = response.json()
-                except Exception:  # noqa: BLE001
-                    self.log("Error decoding JSON response")
+                except json.JSONDecodeError:
+                    self.log("Failed to decode JSON response")
                     result = response.text.encode("utf-8")
 
             metadata.update({"result": result})
@@ -428,11 +479,11 @@ class APIRequestComponent(Component):
         else:
             query_params = self.query_params.data if self.query_params else {}
 
-        if isinstance(headers, Data):
-            headers = headers.data
+        # Process headers here
+        headers = self._process_headers(headers)
 
-        if isinstance(body, Data):
-            body = body.data
+        # Process body
+        body = self._process_body(body)
 
         bodies = [body] * len(urls)
 
@@ -452,7 +503,7 @@ class APIRequestComponent(Component):
                         save_to_file=save_to_file,
                         include_httpx_metadata=include_httpx_metadata,
                     )
-                    for u, rec in zip(urls, bodies, strict=True)
+                    for u, rec in zip(urls, bodies, strict=False)
                 ]
             )
         self.status = results
@@ -510,3 +561,30 @@ class APIRequestComponent(Component):
     def _headers_to_dict(self, headers: httpx.Headers) -> dict[str, str]:
         """Convert HTTP headers to a dictionary with lowercased keys."""
         return {k.lower(): v for k, v in headers.items()}
+
+    def _process_headers(self, headers: Any) -> dict:
+        """Process the headers input into a valid dictionary.
+
+        Args:
+            headers: The headers to process, can be dict, str, or list
+        Returns:
+            Processed dictionary
+        """
+        if headers is None:
+            return {}
+        if isinstance(headers, dict):
+            return headers
+        if isinstance(headers, list):
+            processed_headers = {}
+            try:
+                for item in headers:
+                    if not self._is_valid_key_value_item(item):
+                        continue
+                    key = item["key"]
+                    value = item["value"]
+                    processed_headers[key] = value
+            except (KeyError, TypeError, ValueError) as e:
+                self.log(f"Failed to process headers list: {e}")
+                return {}  # Return empty dictionary instead of None
+            return processed_headers
+        return {}
