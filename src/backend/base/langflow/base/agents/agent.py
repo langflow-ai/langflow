@@ -57,10 +57,11 @@ class LCAgentComponent(Component):
         ),
         MultilineInput(
             name="agent_description",
-            display_name="Agent Description",
+            display_name="Agent Description [Deprecated]",
             info=(
                 "The description of the agent. This is only used when in Tool Mode. "
-                f"Defaults to '{DEFAULT_TOOLS_DESCRIPTION}' and tools are added dynamically."
+                f"Defaults to '{DEFAULT_TOOLS_DESCRIPTION}' and tools are added dynamically. "
+                "This feature is deprecated and will be removed in future versions."
             ),
             advanced=True,
             value=DEFAULT_TOOLS_DESCRIPTION,
@@ -236,11 +237,11 @@ class LCToolsAgentComponent(LCAgentComponent):
         component_toolkit = _get_component_toolkit()
         tools_names = self._build_tools_names()
         agent_description = self.get_tool_description()
-        # Check if tools_description is the default value
-        if agent_description == DEFAULT_TOOLS_DESCRIPTION:
-            description = f"{agent_description}{tools_names}"
-        else:
-            description = agent_description
-        return component_toolkit(component=self).get_tools(
+        # TODO: Agent Description Depreciated Feature to be removed
+        description = f"{agent_description}{tools_names}"
+        tools = component_toolkit(component=self).get_tools(
             tool_name=self.get_tool_name(), tool_description=description, callbacks=self.get_langchain_callbacks()
         )
+        if hasattr(self, "tools_metadata"):
+            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
+        return tools
