@@ -2876,7 +2876,7 @@
                 "title_case": false,
                 "trace_as_metadata": true,
                 "type": "file",
-                "value": "Please Choose a File"
+                "value": ""
               },
               "silent_errors": {
                 "_input_type": "BoolInput",
