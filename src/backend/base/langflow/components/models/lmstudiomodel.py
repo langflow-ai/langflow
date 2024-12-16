@@ -9,7 +9,6 @@ from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs import DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
-from langflow.inputs.inputs import HandleInput
 
 
 class LMStudioModelComponent(LCModelComponent):
@@ -25,7 +24,7 @@ class LMStudioModelComponent(LCModelComponent):
             base_url_load_from_db = base_url_dict.get("load_from_db", False)
             base_url_value = base_url_dict.get("value")
             if base_url_load_from_db:
-                base_url_value = await self.variables(base_url_value, field_name)
+                base_url_value = await self.get_variables(base_url_value, field_name)
             elif not base_url_value:
                 base_url_value = "http://localhost:1234/v1"
             build_config["model_name"]["options"] = await self.get_model(base_url_value)
@@ -83,13 +82,6 @@ class LMStudioModelComponent(LCModelComponent):
             info="The seed controls the reproducibility of the job.",
             advanced=True,
             value=1,
-        ),
-        HandleInput(
-            name="output_parser",
-            display_name="Output Parser",
-            info="The parser to use to parse the output of the model",
-            advanced=True,
-            input_types=["OutputParser"],
         ),
     ]
 

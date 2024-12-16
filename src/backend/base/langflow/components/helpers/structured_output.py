@@ -18,6 +18,7 @@ class StructuredOutputComponent(Component):
         "Transforms LLM responses into **structured data formats**. Ideal for extracting specific information "
         "or creating consistent outputs."
     )
+    name = "StructuredOutput"
     icon = "braces"
 
     inputs = [
@@ -26,17 +27,25 @@ class StructuredOutputComponent(Component):
             display_name="Language Model",
             info="The language model to use to generate the structured output.",
             input_types=["LanguageModel"],
+            required=True,
         ),
-        MessageTextInput(name="input_value", display_name="Input message"),
+        MessageTextInput(
+            name="input_value",
+            display_name="Input Message",
+            info="The input message to the language model.",
+            tool_mode=True,
+        ),
         StrInput(
             name="schema_name",
             display_name="Schema Name",
             info="Provide a name for the output data schema.",
+            advanced=True,
         ),
         TableInput(
             name="output_schema",
             display_name="Output Schema",
             info="Define the structure and data types for the model's output.",
+            required=True,
             table_schema=[
                 {
                     "name": "name",
@@ -73,6 +82,7 @@ class StructuredOutputComponent(Component):
         ),
         BoolInput(
             name="multiple",
+            advanced=True,
             display_name="Generate Multiple",
             info="Set to True if the model should generate a list of outputs instead of a single output.",
         ),
