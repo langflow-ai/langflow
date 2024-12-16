@@ -4,6 +4,7 @@ import asyncio
 import re
 import sqlite3
 import time
+import anyio
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -67,11 +68,10 @@ class DatabaseService(Service):
 
         self._logged_pragma = False
 
-    async def initialize_log_file(self):
+    async def initialize_alembic_log_file(self):
         # Ensure the directory and file for the alembic log file exists
-        await aio_os.makedirs(self.alembic_log_path.parent, exist_ok=True)
-        async with aiofiles.open(self.alembic_log_path, "a"):
-            pass  # Equivalent to touch
+        anyio.Path(self.alembic_log_path.parent).mkdir(parents=True, exist_ok=True)
+        anyio.Path(self.alembic_log_path).touch(exist_ok=True)
 
     def reload_engine(self) -> None:
         self._sanitize_database_url()
