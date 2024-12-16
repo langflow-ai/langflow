@@ -30,7 +30,10 @@ TOOL_TABLE_SCHEMA = [
             "These are the default identifiers for the tools and cannot be changed. "
             "Tool Name and Tool Description are the only editable fields."
         ),
-        "disable_edit": False,
+        "disable_edit": True,
+        "sortable": False,
+        "filterable": False,
+        "edit_mode": EditMode.INLINE,
     },
 ]
 
