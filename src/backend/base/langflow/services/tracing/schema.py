@@ -1,5 +1,7 @@
+from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, field_serializer
 from pydantic.v1 import BaseModel as V1BaseModel
+from pydantic_core import PydanticSerializationError
 
 from langflow.schema.log import LoggableType
 
@@ -24,4 +26,8 @@ class Log(BaseModel):
             return value.to_json()
         if isinstance(value, BaseModel):
             return value.model_dump(exclude_none=True)
+        try:
+            value = jsonable_encoder(value)
+        except PydanticSerializationError:
+            return str(value)
         return value

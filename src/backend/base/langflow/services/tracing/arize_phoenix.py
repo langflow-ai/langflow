@@ -74,13 +74,13 @@ class ArizePhoenixTracer(BaseTracer):
 
     def setup_arize_phoenix(self) -> bool:
         """Configures Arize/Phoenix specific environment variables and registers the tracer provider."""
-        arize_phoenix_batch = os.getenv("ARIZE_PHOENIX_BATCH", "False").lower() in (
+        arize_phoenix_batch = os.getenv("ARIZE_PHOENIX_BATCH", "False").lower() in {
             "true",
             "t",
             "yes",
             "y",
             "1",
-        )
+        }
 
         # Arize Config
         arize_api_key = os.getenv("ARIZE_API_KEY", None)
@@ -269,9 +269,11 @@ class ArizePhoenixTracer(BaseTracer):
         if not self._ready:
             return
 
-    def _convert_to_arize_phoenix_types(self, io_dict: dict[str, Any]):
+    def _convert_to_arize_phoenix_types(self, io_dict: dict[str | Any, Any]) -> dict[str, Any]:
         """Converts data types to Arize/Phoenix compatible formats."""
-        return {key: self._convert_to_arize_phoenix_type(value) for key, value in io_dict.items()}
+        return {
+            str(key): self._convert_to_arize_phoenix_type(value) for key, value in io_dict.items() if key is not None
+        }
 
     def _convert_to_arize_phoenix_type(self, value):
         """Recursively converts a value to a Arize/Phoenix compatible type."""

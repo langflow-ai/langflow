@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -12,11 +13,12 @@ from pydantic import BaseModel
 from langflow.custom.custom_component.base_component import BaseComponent
 from langflow.helpers.flow import list_flows, load_flow, run_flow
 from langflow.schema import Data
-from langflow.services.deps import get_storage_service, get_variable_service, session_scope
+from langflow.services.deps import async_session_scope, get_storage_service, get_variable_service
 from langflow.services.storage.service import StorageService
 from langflow.template.utils import update_frontend_node_with_template_values
 from langflow.type_extraction.type_extraction import post_process_type
 from langflow.utils import validate
+from langflow.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
     from langchain.callbacks.base import BaseCallbackHandler
@@ -230,6 +232,10 @@ class CustomComponent(BaseComponent):
         field_value: Any,
         field_name: str | None = None,
     ):
+        """Updates the build configuration for the custom component.
+
+        Do not call directly as implementation can be a coroutine.
+        """
         build_config[field_name]["value"] = field_value
         return build_config
 
@@ -410,8 +416,7 @@ class CustomComponent(BaseComponent):
             self._template_config = self.build_template_config()
         return self._template_config
 
-    @property
-    def variables(self):
+    async def variables(self, name: str, field: str):
         """Returns the variable for the current user with the specified name.
 
         Raises:
@@ -420,20 +425,22 @@ class CustomComponent(BaseComponent):
         Returns:
             The variable for the current user with the specified name.
         """
+        if hasattr(self, "_user_id") and not self.user_id:
+            msg = f"User id is not set for {self.__class__.__name__}"
+            raise ValueError(msg)
+        variable_service = get_variable_service()  # Get service instance
+        # Retrieve and decrypt the variable by name for the current user
+        if isinstance(self.user_id, str):
+            user_id = uuid.UUID(self.user_id)
+        elif isinstance(self.user_id, uuid.UUID):
+            user_id = self.user_id
+        else:
+            msg = f"Invalid user id: {self.user_id}"
+            raise TypeError(msg)
+        async with async_session_scope() as session:
+            return await variable_service.get_variable(user_id=user_id, name=name, field=field, session=session)
 
-        def get_variable(name: str, field: str):
-            if hasattr(self, "_user_id") and not self.user_id:
-                msg = f"User id is not set for {self.__class__.__name__}"
-                raise ValueError(msg)
-            variable_service = get_variable_service()  # Get service instance
-            # Retrieve and decrypt the variable by name for the current user
-            with session_scope() as session:
-                user_id = self.user_id or ""
-                return variable_service.get_variable(user_id=user_id, name=name, field=field, session=session)
-
-        return get_variable
-
-    def list_key_names(self):
+    async def list_key_names(self):
         """Lists the names of the variables for the current user.
 
         Raises:
@@ -447,8 +454,8 @@ class CustomComponent(BaseComponent):
             raise ValueError(msg)
         variable_service = get_variable_service()
 
-        with session_scope() as session:
-            return variable_service.list_variables_sync(user_id=self.user_id, session=session)
+        async with async_session_scope() as session:
+            return await variable_service.list_variables(user_id=self.user_id, session=session)
 
     def index(self, value: int = 0):
         """Returns a function that returns the value at the given index in the iterable.
@@ -498,11 +505,15 @@ class CustomComponent(BaseComponent):
         )
 
     def list_flows(self) -> list[Data]:
+        """This is kept for backward compatibility. Using alist_flows instead is recommended."""
+        return run_until_complete(self.alist_flows())
+
+    async def alist_flows(self) -> list[Data]:
         if not self.user_id:
             msg = "Session is invalid"
             raise ValueError(msg)
         try:
-            return list_flows(user_id=str(self.user_id))
+            return await list_flows(user_id=str(self.user_id))
         except Exception as e:
             msg = f"Error listing flows: {e}"
             raise ValueError(msg) from e
@@ -519,7 +530,7 @@ class CustomComponent(BaseComponent):
         """
         raise NotImplementedError
 
-    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
+    async def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
         """This function is called after the code validation is done."""
         return update_frontend_node_with_template_values(
             frontend_node=new_frontend_node, raw_frontend_node=current_frontend_node
