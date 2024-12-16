@@ -76,6 +76,7 @@ export function EditMessageButton({
                 size="icon"
                 onClick={() => handleEvaluate(true)}
                 className="h-8 w-8"
+                data-testid="helpful-button"
               >
                 <IconComponent
                   name={evaluation === true ? "ThumbUpIconCustom" : "ThumbsUp"}
@@ -92,6 +93,7 @@ export function EditMessageButton({
                 size="icon"
                 onClick={() => handleEvaluate(false)}
                 className="h-8 w-8"
+                data-testid="not-helpful-button"
               >
                 <IconComponent
                   name={
