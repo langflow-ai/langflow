@@ -438,7 +438,7 @@ def find_cycle_vertices(edges):
 
     # Utilize the strong component feature in NetworkX to find cycles
     for component in nx.strongly_connected_components(graph):
-        if len(component) > 1 or graph.has_edge(tuple(component)[0], tuple(component)[0]):
+        if len(component) > 1 or graph.has_edge(tuple(component)[0], tuple(component)[0]):  # noqa: RUF015
             cycle_vertices.update(component)
 
     return sorted(cycle_vertices)
