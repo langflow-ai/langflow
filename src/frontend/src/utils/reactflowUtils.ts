@@ -1625,11 +1625,30 @@ export function isOutputType(type: string): boolean {
   return OUTPUT_TYPES.has(type);
 }
 
-export function updateGroupRecursion(groupNode: NodeType, edges: Edge[]) {
+export function updateGroupRecursion(
+  groupNode: NodeType,
+  edges: Edge[],
+  unavailableFields:
+    | {
+        [name: string]: string;
+      }
+    | undefined,
+  globalVariablesEntries: string[] | undefined,
+) {
+  updateGlobalVariables(
+    groupNode.data.node,
+    unavailableFields,
+    globalVariablesEntries,
+  );
   if (groupNode.data.node?.flow) {
     groupNode.data.node.flow.data!.nodes.forEach((node) => {
       if (node.data.node?.flow) {
-        updateGroupRecursion(node, node.data.node.flow.data!.edges);
+        updateGroupRecursion(
+          node,
+          node.data.node.flow.data!.edges,
+          unavailableFields,
+          globalVariablesEntries,
+        );
       }
     });
     let newFlow = groupNode.data.node!.flow;
@@ -1638,6 +1657,40 @@ export function updateGroupRecursion(groupNode: NodeType, edges: Edge[]) {
     updateProxyIdsOnOutputs(groupNode.data.node.outputs, idsMap);
     let flowEdges = edges;
     updateEdgesIds(flowEdges, idsMap);
+  }
+}
+export function updateGlobalVariables(
+  node: APIClassType | undefined,
+  unavailableFields:
+    | {
+        [name: string]: string;
+      }
+    | undefined,
+  globalVariablesEntries: string[] | undefined,
+) {
+  if (node && node.template) {
+    Object.keys(node.template).forEach((field) => {
+      if (
+        globalVariablesEntries &&
+        node!.template[field].load_from_db &&
+        !globalVariablesEntries.includes(node!.template[field].value)
+      ) {
+        node!.template[field].value = "";
+        node!.template[field].load_from_db = false;
+      }
+      if (
+        !node!.template[field].load_from_db &&
+        node!.template[field].value === "" &&
+        unavailableFields &&
+        Object.keys(unavailableFields).includes(
+          node!.template[field].display_name ?? "",
+        )
+      ) {
+        node!.template[field].value =
+          unavailableFields[node!.template[field].display_name ?? ""];
+        node!.template[field].load_from_db = true;
+      }
+    });
   }
 }
 
