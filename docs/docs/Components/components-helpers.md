@@ -8,7 +8,7 @@ Helper components provide utility functions to help manage data, tasks, and othe
 
 ## Use a helper component in a flow
 
-Chat memory in Langflow is stored either in local Langflow tables with `LCBufferMemory`, or connected to an external database. Messages are stored  as , and retrieved as data objects or strings.
+Chat memory in Langflow is stored either in local Langflow tables with `LCBufferMemory`, or connected to an external database.
 
 The **Store Message** helper component stores chat memories as [Data](/guides-data-message) objects, and the **Message History** helper component retrieves chat messages as data objects or strings.
 
@@ -31,13 +31,13 @@ This component dynamically creates a record with a specified number of fields.
 
 The Current Date component returns the current date and time in a selected timezone. This component provides a flexible way to obtain timezone-specific date and time information within a Langflow pipeline.
 
-## Inputs
+### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
 |timezone|Timezone|Select the timezone for the current date and time.
 
-## Outputs
+### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -53,7 +53,11 @@ This component generates a unique ID.
 |------|--------------|------|
 | value | Value | Unique ID generated. |
 
-## Message history {#chat-memory}
+## Message history
+
+:::info
+Prior to Langflow 1.1, this component was known as the Chat Memory component.
+:::
 
 This component retrieves and manages chat messages from Langflow tables or an external memory.
 

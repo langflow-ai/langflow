@@ -1,10 +1,22 @@
 # Memories
 
-Chat memory components store and retrieve chat messages by `session_id`.
+Memory components store and retrieve chat messages by `session_id`.
+
+They are distinct from vector store components, because they are built specifically for storing and retrieving chat messages.
+
+Memory components provide access to their respective external databases **as memory**. This allows AIs to access external memory for persistence and context retention.
+
+## Use a memory component in a flow
+
+This example flow stores and retrieves chat history from an **Astra DB Chat Memory** component with **Store Message** and **Chat Memory** components.
+
+The **Store Message** helper component stores chat memories as [Data](/guides-data-message) objects, and the **Message History** helper component retrieves chat messages as [Data](/guides-data-message) objects or strings.
+
+![Sample Flow storing Chat Memory in AstraDB](/img/astra_db_chat_memory_rounded.png)
 
 ## AstraDBChatMemory Component
 
-This component creates an `AstraDBChatMessageHistory` instance, which allows for storing and retrieving chat messages using Astra DB, a cloud-native database service.
+This component creates an `AstraDBChatMessageHistory` instance, which stores and retrieves chat messages using Astra DB, a cloud-native database service.
 
 ### Inputs
 

@@ -12,7 +12,7 @@ Langflow allows every chat message to be stored, and a single flow can have mult
 In any project, as long as there are [**Chat**](/components-io) being used, memories are always being stored by default. These are messages from a user to the AI or vice-versa.
 
 
-To see and access this history of messages, Langflow features a component called **Chat Memory**. It retrieves previous messages and outputs them in structured format or parsed.
+To see and access this history of messages, Langflow features a component called [Message history](/components-helpers#memory-history). It retrieves previous messages and outputs them in structured format or parsed.
 
 
 To learn the basics about memory in Langflow, check out the [Memory Chatbot](/starter-projects-memory-chatbot) starter example.
@@ -55,7 +55,7 @@ You can also display all messages stored across every flow and session by going 
 
 ## Store chat memory in an external database
 
-Chat memory is retrieved from an external database or vector store using the [**Chat Memory**](/components-helpers#chat-memory) component.
+Chat memory is retrieved from an external database or vector store using the [Chat Memory](/components-helpers#chat-memory) component.
 
 Chat memory is stored to an external database or vector store using the [Store Message](/components-helpers#store-message) component.
 
