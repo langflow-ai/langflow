@@ -780,6 +780,11 @@ export default function NodeToolbarComponent({
           onConfirm={handleConfirm}
           onClose={handleClose}
           onCancel={handleCancel}
+          cancelText="Create New"
+          confirmationText="Replace"
+          size={"x-small"}
+          icon={"SaveAll"}
+          index={6}
         >
           <ConfirmationModal.Content>
             <span>
