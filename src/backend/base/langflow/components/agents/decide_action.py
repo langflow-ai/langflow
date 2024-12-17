@@ -33,8 +33,9 @@ class DecideActionComponent(Component):
         action = parse_ai_message_to_tool_action(response)
         if isinstance(action, list):
             self.agent_context.last_action = action[0]
+            action = action[0]
         else:
             self.agent_context.last_action = action
-        self.agent_context.update_context("Action", action)
+        self.agent_context.update_context("Action", action.log)
         self.status = self.agent_context.to_data_repr()
         return self.agent_context
