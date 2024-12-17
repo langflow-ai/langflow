@@ -12,11 +12,12 @@ from urllib.parse import urlparse
 from pathlib import Path
 
 class NVIDIAIngestComponent(Component):
-    display_name = "NVIDIA Ingest Component"
+    display_name = "NV-Ingest"
     description = "Ingest documents"
     documentation: str = "https://github.com/NVIDIA/nv-ingest/tree/main/docs"
     icon = "NVIDIA"
     name = "NVIDIAIngest"
+    beta = True
 
     file_types = list(EXTENSION_TO_DOCUMENT_TYPE.keys())
     supported_file_types_info = f"Supported file types: {', '.join(file_types)}"
