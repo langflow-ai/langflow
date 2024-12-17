@@ -1,7 +1,7 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
-import { useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useUpdateNodeInternals } from "reactflow";
 import { Button } from "../../components/ui/button";
@@ -15,7 +15,7 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../stores/shortcuts";
 import { useTypesStore } from "../../stores/typesStore";
-import { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
+import { VertexBuildTypeAPI } from "../../types/api";
 import { NodeDataType } from "../../types/flow";
 import { checkHasToolMode } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
@@ -23,7 +23,6 @@ import { classNames, cn } from "../../utils/utils";
 import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
 import useCheckCodeValidity from "../hooks/use-check-code-validity";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
-import sortFields from "../utils/sort-fields";
 import NodeDescription from "./components/NodeDescription";
 import NodeName from "./components/NodeName";
 import { OutputParameter } from "./components/NodeOutputParameter";
@@ -32,27 +31,36 @@ import RenderInputParameters from "./components/RenderInputParameters";
 import { NodeIcon } from "./components/nodeIcon";
 import { useBuildStatus } from "./hooks/use-get-build-status";
 
-export const sortToolModeFields = (
-  a: string,
-  b: string,
-  template: any,
-  fieldOrder: string[],
-  isToolMode: boolean,
-) => {
-  if (!isToolMode) return sortFields(a, b, fieldOrder);
+const MemoizedOutputParameter = memo(OutputParameter);
+const MemoizedRenderInputParameters = memo(RenderInputParameters);
+const MemoizedNodeIcon = memo(NodeIcon);
+const MemoizedNodeName = memo(NodeName);
+const MemoizedNodeStatus = memo(NodeStatus);
+const MemoizedNodeDescription = memo(NodeDescription);
 
-  const aToolMode = template[a]?.tool_mode ?? false;
-  const bToolMode = template[b]?.tool_mode ?? false;
+const HiddenOutputsButton = memo(
+  ({
+    showHiddenOutputs,
+    onClick,
+  }: {
+    showHiddenOutputs: boolean;
+    onClick: () => void;
+  }) => (
+    <Button
+      unstyled
+      className="group flex h-6 w-6 items-center justify-center rounded-full border bg-background hover:border-foreground hover:text-foreground"
+      onClick={onClick}
+    >
+      <ForwardedIconComponent
+        name={showHiddenOutputs ? "EyeOff" : "Eye"}
+        strokeWidth={1.5}
+        className="h-4 w-4 text-placeholder-foreground group-hover:text-foreground"
+      />
+    </Button>
+  ),
+);
 
-  // If one is tool_mode and the other isn't, tool_mode goes last
-  if (aToolMode && !bToolMode) return 1;
-  if (!aToolMode && bToolMode) return -1;
-
-  // If both are tool_mode or both aren't, use regular field order
-  return sortFields(a, b, fieldOrder);
-};
-
-export default function GenericNode({
+function GenericNode({
   data,
   selected,
 }: {
@@ -61,6 +69,14 @@ export default function GenericNode({
   xPos?: number;
   yPos?: number;
 }): JSX.Element {
+  const [isOutdated, setIsOutdated] = useState(false);
+  const [isUserEdited, setIsUserEdited] = useState(false);
+  const [borderColor, setBorderColor] = useState<string>("");
+  const [loadingUpdate, setLoadingUpdate] = useState(false);
+  const [showHiddenOutputs, setShowHiddenOutputs] = useState(false);
+  const [validationStatus, setValidationStatus] =
+    useState<VertexBuildTypeAPI | null>(null);
+
   const types = useTypesStore((state) => state.types);
   const templates = useTypesStore((state) => state.templates);
   const deleteNode = useFlowStore((state) => state.deleteNode);
@@ -68,10 +84,18 @@ export default function GenericNode({
   const updateNodeInternals = useUpdateNodeInternals();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
-  const [isOutdated, setIsOutdated] = useState(false);
-  const [isUserEdited, setIsUserEdited] = useState(false);
-  const [borderColor, setBorderColor] = useState<string>("");
+  const edges = useFlowStore((state) => state.edges);
+  const shortcuts = useShortcutsStore((state) => state.shortcuts);
+  const buildStatus = useBuildStatus(data, data.id);
+
   const showNode = data.showNode ?? true;
+
+  const getValidationStatus = (data) => {
+    setValidationStatus(data);
+    return null;
+  };
+
+  const { mutate: validateComponentCode } = usePostValidateComponentCode();
 
   const updateNodeCode = useUpdateNodeCode(
     data?.id,
@@ -81,6 +105,8 @@ export default function GenericNode({
     setIsUserEdited,
     updateNodeInternals,
   );
+
+  useCheckCodeValidity(data, templates, setIsOutdated, setIsUserEdited, types);
 
   if (!data.node!.template) {
     setErrorData({
@@ -94,23 +120,11 @@ export default function GenericNode({
     deleteNode(data.id);
   }
 
-  useCheckCodeValidity(data, templates, setIsOutdated, setIsUserEdited, types);
-
-  const [loadingUpdate, setLoadingUpdate] = useState(false);
-
-  const [showHiddenOutputs, setShowHiddenOutputs] = useState(false);
-
-  const { mutate: validateComponentCode } = usePostValidateComponentCode();
-
-  const edges = useFlowStore((state) => state.edges);
-
-  const handleUpdateCode = () => {
+  const handleUpdateCode = useCallback(() => {
     setLoadingUpdate(true);
     takeSnapshot();
-    // to update we must get the code from the templates in useTypesStore
+
     const thisNodeTemplate = templates[data.type]?.template;
-    // if the template does not have a code key
-    // return
     if (!thisNodeTemplate?.code) return;
 
     const currentCode = thisNodeTemplate.code.value;
@@ -125,70 +139,93 @@ export default function GenericNode({
                 edges,
                 data.id,
               );
-
               updateNodeCode(newNode, currentCode, "code", type);
               setLoadingUpdate(false);
             }
           },
           onError: (error) => {
             setErrorData({
-              title: "Error updating Compoenent code",
+              title: "Error updating Component code",
               list: [
                 "There was an error updating the Component.",
                 "If the error persists, please report it on our Discord or GitHub.",
               ],
             });
-            console.log(error);
+            console.error(error);
             setLoadingUpdate(false);
           },
         },
       );
     }
-  };
+  }, [
+    data,
+    templates,
+    edges,
+    updateNodeCode,
+    validateComponentCode,
+    setErrorData,
+    takeSnapshot,
+  ]);
 
-  function handleUpdateCodeWShortcut() {
+  const handleUpdateCodeWShortcut = useCallback(() => {
     if (isOutdated && selected) {
       handleUpdateCode();
     }
-  }
-
-  const shownOutputs =
-    data.node!.outputs?.filter((output) => !output.hidden) ?? [];
-
-  const hiddenOutputs =
-    data.node!.outputs?.filter((output) => output.hidden) ?? [];
+  }, [isOutdated, selected, handleUpdateCode]);
 
   const update = useShortcutsStore((state) => state.update);
   useHotkeys(update, handleUpdateCodeWShortcut, { preventDefault: true });
 
-  const shortcuts = useShortcutsStore((state) => state.shortcuts);
+  // Memoized values
+  const isToolMode = useMemo(
+    () =>
+      data.node?.outputs?.some(
+        (output) => output.name === "component_as_tool",
+      ) ?? false,
+    [data.node?.outputs],
+  );
 
-  const [openShowMoreOptions, setOpenShowMoreOptions] = useState(false);
+  const hasToolMode = useMemo(
+    () => checkHasToolMode(data.node?.template ?? {}),
+    [data.node?.template],
+  );
 
-  const renderOutputs = (outputs) => {
-    return outputs.map((output, idx) => (
-      <OutputParameter
-        key={output.name + idx}
-        output={output}
-        idx={
-          data.node!.outputs?.findIndex((out) => out.name === output.name) ??
-          idx
-        }
-        lastOutput={idx === outputs.length - 1}
-        data={data}
-        types={types}
-        selected={selected}
-        showNode={showNode}
-        isToolMode={isToolMode}
-      />
-    ));
-  };
+  const hasOutputs = useMemo(
+    () => data.node?.outputs && data.node.outputs.length > 0,
+    [data.node?.outputs],
+  );
 
-  useEffect(() => {
-    if (hiddenOutputs && hiddenOutputs.length == 0) {
-      setShowHiddenOutputs(false);
-    }
-  }, [hiddenOutputs]);
+  const renderOutputs = useCallback(
+    (outputs, key?: string) => {
+      return outputs?.map((output, idx) => (
+        <MemoizedOutputParameter
+          key={`${key}-${output.name}-${idx}`}
+          output={output}
+          idx={
+            data.node!.outputs?.findIndex((out) => out.name === output.name) ??
+            idx
+          }
+          lastOutput={idx === outputs.length - 1}
+          data={data}
+          types={types}
+          selected={selected}
+          showNode={showNode}
+          isToolMode={isToolMode}
+        />
+      ));
+    },
+    [data, types, selected, showNode, isToolMode],
+  );
+
+  const { shownOutputs, hiddenOutputs } = useMemo(
+    () => ({
+      shownOutputs:
+        data.node?.outputs?.filter((output) => !output.hidden) ?? [],
+      hiddenOutputs:
+        data.node?.outputs?.filter((output) => output.hidden) ?? [],
+    }),
+    [data.node?.outputs],
+  );
 
   const memoizedNodeToolbarComponent = useMemo(() => {
     return selected ? (
@@ -211,7 +248,6 @@ export default function GenericNode({
           onCloseAdvancedModal={() => {}}
           updateNode={handleUpdateCode}
           isOutdated={isOutdated && isUserEdited}
-          setOpenShowMoreOptions={setOpenShowMoreOptions}
         />
       </div>
     ) : (
@@ -230,20 +266,95 @@ export default function GenericNode({
     shortcuts,
   ]);
 
-  const isToolMode =
-    data.node?.outputs?.some((output) => output.name === "component_as_tool") ??
-    false;
+  useEffect(() => {
+    if (hiddenOutputs && hiddenOutputs.length === 0) {
+      setShowHiddenOutputs(false);
+    }
+  }, [hiddenOutputs]);
 
-  const buildStatus = useBuildStatus(data, data.id);
-  const hasOutputs = data.node?.outputs && data.node?.outputs.length > 0;
-  const [validationStatus, setValidationStatus] =
-    useState<VertexBuildTypeAPI | null>(null);
-  const getValidationStatus = (data) => {
-    setValidationStatus(data);
-    return null;
-  };
+  const renderNodeIcon = useCallback(() => {
+    return (
+      <MemoizedNodeIcon
+        dataType={data.type}
+        showNode={showNode}
+        icon={data.node?.icon}
+        isGroup={!!data.node?.flow}
+        hasToolMode={hasToolMode ?? false}
+      />
+    );
+  }, [data.type, showNode, data.node?.icon, data.node?.flow, hasToolMode]);
 
-  const hasToolMode = checkHasToolMode(data.node?.template ?? {});
+  const renderNodeName = useCallback(() => {
+    return (
+      <MemoizedNodeName
+        display_name={data.node?.display_name}
+        nodeId={data.id}
+        selected={selected}
+        showNode={showNode}
+        validationStatus={validationStatus}
+        isOutdated={isOutdated}
+        beta={data.node?.beta || false}
+      />
+    );
+  }, [
+    data.node?.display_name,
+    data.id,
+    selected,
+    showNode,
+    validationStatus,
+    isOutdated,
+    data.node?.beta,
+  ]);
+
+  const renderNodeStatus = useCallback(() => {
+    return (
+      <MemoizedNodeStatus
+        data={data}
+        frozen={data.node?.frozen}
+        showNode={showNode}
+        display_name={data.node?.display_name!}
+        nodeId={data.id}
+        selected={selected}
+        setBorderColor={setBorderColor}
+        buildStatus={buildStatus}
+        isOutdated={isOutdated}
+        isUserEdited={isUserEdited}
+        getValidationStatus={getValidationStatus}
+      />
+    );
+  }, [
+    data,
+    showNode,
+    selected,
+    buildStatus,
+    isOutdated,
+    isUserEdited,
+    getValidationStatus,
+  ]);
+
+  const renderDescription = useCallback(() => {
+    return (
+      <MemoizedNodeDescription
+        description={data.node?.description}
+        mdClassName={"dark:prose-invert"}
+        nodeId={data.id}
+        selected={selected}
+      />
+    );
+  }, [data.node?.description, data.id, selected]);
+
+  const renderInputParameters = useCallback(() => {
+    return (
+      <MemoizedRenderInputParameters
+        data={data}
+        types={types}
+        isToolMode={isToolMode}
+        showNode={showNode}
+        shownOutputs={shownOutputs}
+        showHiddenOutputs={showHiddenOutputs}
+      />
+    );
+  }, [data, types, isToolMode, showNode, shownOutputs, showHiddenOutputs]);
 
   return (
     <div className={cn(isOutdated && !isUserEdited ? "relative -mt-10" : "")}>
@@ -298,78 +409,27 @@ export default function GenericNode({
               className={"generic-node-title-arrangement"}
               data-testid="generic-node-title-arrangement"
             >
-              <NodeIcon
-                dataType={data.type}
-                showNode={showNode}
-                icon={data.node?.icon}
-                isGroup={!!data.node?.flow}
-                hasToolMode={hasToolMode ?? false}
-              />
-              <div className="generic-node-tooltip-div">
-                <NodeName
-                  display_name={data.node?.display_name}
-                  nodeId={data.id}
-                  selected={selected}
-                  showNode={showNode}
-                  validationStatus={validationStatus}
-                  isOutdated={isOutdated}
-                  beta={data.node?.beta || false}
-                />
-              </div>
+              {renderNodeIcon()}
+              <div className="generic-node-tooltip-div">{renderNodeName()}</div>
             </div>
             <div>
               {!showNode && (
                 <>
-                  <RenderInputParameters
-                    data={data}
-                    types={types}
-                    isToolMode={isToolMode}
-                    showNode={showNode}
-                    shownOutputs={shownOutputs}
-                    showHiddenOutputs={showHiddenOutputs}
-                  />
+                  {renderInputParameters()}
                   {shownOutputs &&
                     shownOutputs.length > 0 &&
-                    renderOutputs(shownOutputs)}
+                    renderOutputs(shownOutputs, "render-outputs")}
                 </>
               )}
             </div>
-            <NodeStatus
-              data={data}
-              frozen={data.node?.frozen}
-              showNode={showNode}
-              display_name={data.node?.display_name!}
-              nodeId={data.id}
-              selected={selected}
-              setBorderColor={setBorderColor}
-              buildStatus={buildStatus}
-              isOutdated={isOutdated}
-              isUserEdited={isUserEdited}
-              getValidationStatus={getValidationStatus}
-            />
+            {renderNodeStatus()}
           </div>
-          {showNode && (
-            <div>
-              <NodeDescription
-                description={data.node?.description}
-                mdClassName={"dark:prose-invert"}
-                nodeId={data.id}
-                selected={selected}
-              />
-            </div>
-          )}
+          {showNode && <div>{renderDescription()}</div>}
         </div>
         {showNode && (
           <div className="relative">
             <>
-              <RenderInputParameters
-                data={data}
-                types={types}
-                isToolMode={isToolMode}
-                showNode={showNode}
-                shownOutputs={shownOutputs}
-                showHiddenOutputs={showHiddenOutputs}
-              />
+              {renderInputParameters()}
               <div
                 className={classNames(
                   Object.keys(data.node!.template).length < 1 ? "hidden" : "",
@@ -380,44 +440,13 @@ export default function GenericNode({
               </div>
               {!showHiddenOutputs &&
                 shownOutputs &&
-                shownOutputs.map((output, idx) => (
-                  <OutputParameter
-                    key={`shown-${output.name}-${idx}`}
-                    output={output}
-                    idx={
-                      data.node!.outputs?.findIndex(
-                        (out) => out.name === output.name,
-                      ) ?? idx
-                    }
-                    lastOutput={idx === shownOutputs.length - 1}
-                    data={data}
-                    types={types}
-                    selected={selected}
-                    showNode={showNode}
-                    isToolMode={isToolMode}
-                  />
-                ))}
+                renderOutputs(shownOutputs, "shown")}
+
               <div
                 className={cn(showHiddenOutputs ? "" : "h-0 overflow-hidden")}
               >
                 <div className="block">
-                  {data.node!.outputs?.map((output, idx) => (
-                    <OutputParameter
-                      key={`hidden-${output.name}-${idx}`}
-                      output={output}
-                      idx={
-                        data.node!.outputs?.findIndex(
-                          (out) => out.name === output.name,
-                        ) ?? idx
-                      }
-                      lastOutput={idx === (data.node!.outputs?.length ?? 0) - 1}
-                      data={data}
-                      types={types}
-                      selected={selected}
-                      showNode={showNode}
-                      isToolMode={isToolMode}
-                    />
-                  ))}
+                  {renderOutputs(data.node!.outputs, "hidden")}
                 </div>
               </div>
               {hiddenOutputs && hiddenOutputs.length > 0 && (
@@ -437,17 +466,10 @@ export default function GenericNode({
                         : "bottom-[-0.8rem]",
                     )}
                   >
-                    <Button
-                      unstyled
-                      className="group flex h-6 w-6 items-center justify-center rounded-full border bg-background hover:border-foreground hover:text-foreground"
+                    <HiddenOutputsButton
+                      showHiddenOutputs={showHiddenOutputs}
                       onClick={() => setShowHiddenOutputs(!showHiddenOutputs)}
-                    >
-                      <ForwardedIconComponent
-                        name={showHiddenOutputs ? "EyeOff" : "Eye"}
-                        strokeWidth={1.5}
-                        className="h-4 w-4 text-placeholder-foreground group-hover:text-foreground"
-                      />
-                    </Button>
+                    />
                   </div>
                 </ShadTooltip>
               )}
@@ -458,3 +480,5 @@ export default function GenericNode({
     </div>
   );
 }
+
+export default memo(GenericNode);

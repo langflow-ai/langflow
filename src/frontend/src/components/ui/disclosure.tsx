@@ -8,7 +8,15 @@ import {
   Variants,
 } from "framer-motion";
 import * as React from "react";
-import { createContext, useContext, useEffect, useId, useState } from "react";
+import {
+  createContext,
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+} from "react";
 import { cn } from "../../utils/utils";
 
 type DisclosureContextType = {
@@ -28,38 +36,33 @@ type DisclosureProviderProps = {
   variants?: { expanded: Variant; collapsed: Variant };
 };
 
-function DisclosureProvider({
+const DisclosureProvider = memo(function DisclosureProvider({
   children,
   open: openProp,
   onOpenChange,
   variants,
 }: DisclosureProviderProps) {
-  const [internalOpenValue, setInternalOpenValue] = useState<boolean>(openProp);
-
-  useEffect(() => {
-    setInternalOpenValue(openProp);
-  }, [openProp]);
-
-  const toggle = () => {
-    const newOpen = !internalOpenValue;
-    setInternalOpenValue(newOpen);
+  const toggle = useCallback(() => {
     if (onOpenChange) {
-      onOpenChange(newOpen);
+      onOpenChange(!openProp);
     }
-  };
+  }, [onOpenChange, openProp]);
+
+  const contextValue = useMemo(
+    () => ({
+      open: openProp,
+      toggle,
+      variants,
+    }),
+    [openProp, toggle, variants],
+  );
 
   return (
-    <DisclosureContext.Provider
-      value={{
-        open: internalOpenValue,
-        toggle,
-        variants,
-      }}
-    >
+    <DisclosureContext.Provider value={contextValue}>
       {children}
     </DisclosureContext.Provider>
   );
-}
+});
 
 function useDisclosure() {
   const context = useContext(DisclosureContext);
@@ -78,7 +81,7 @@ type DisclosureProps = {
   transition?: Transition;
 };
 
-export function Disclosure({
+export const Disclosure = memo(function Disclosure({
   open: openProp = false,
   onOpenChange,
   children,
@@ -86,6 +89,8 @@ export function Disclosure({
   transition,
   variants,
 }: DisclosureProps) {
+  const childrenArray = React.Children.toArray(children);
+
   return (
     <MotionConfig transition={transition}>
       <div className={className}>
@@ -94,15 +99,15 @@ export function Disclosure({
           onOpenChange={onOpenChange}
           variants={variants}
         >
-          {React.Children.toArray(children)[0]}
-          {React.Children.toArray(children)[1]}
+          {childrenArray[0]}
+          {childrenArray[1]}
         </DisclosureProvider>
       </div>
     </MotionConfig>
   );
-}
+});
 
-export function DisclosureTrigger({
+const DisclosureTrigger = memo(function DisclosureTrigger({
   children,
   className,
 }: {
@@ -111,34 +116,54 @@ export function DisclosureTrigger({
 }) {
   const { toggle, open } = useDisclosure();
 
+  const handleKeyDown = useCallback(
+    (e: { key: string; preventDefault: () => void }) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggle();
+      }
+    },
+    [toggle],
+  );
+
+  const childProps = useMemo(
+    () => ({
+      onClick: toggle,
+      role: "button",
+      "aria-expanded": open,
+      tabIndex: 0,
+      onKeyDown: handleKeyDown,
+    }),
+    [toggle, open, handleKeyDown],
+  );
+
   return (
     <>
       {React.Children.map(children, (child) => {
-        return React.isValidElement(child)
-          ? React.cloneElement(child, {
-              onClick: toggle,
-              role: "button",
-              "aria-expanded": open,
-              tabIndex: 0,
-              onKeyDown: (e: { key: string; preventDefault: () => void }) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  toggle();
-                }
-              },
-              className: cn(
-                className,
-                (child as React.ReactElement).props.className,
-              ),
-              ...(child as React.ReactElement).props,
-            })
-          : child;
+        if (!React.isValidElement(child)) return child;
+
+        return React.cloneElement(child, {
+          ...childProps,
+          className: cn(className, child.props.className),
+          ...child.props,
+        });
       })}
     </>
   );
-}
+});
 
-export function DisclosureContent({
+const BASE_VARIANTS: Variants = {
+  expanded: {
+    height: "auto",
+    opacity: 1,
+  },
+  collapsed: {
+    height: 0,
+    opacity: 0,
+  },
+};
+
+const DisclosureContent = memo(function DisclosureContent({
   children,
   className,
 }: {
@@ -148,21 +173,13 @@ export function DisclosureContent({
   const { open, variants } = useDisclosure();
   const uniqueId = useId();
 
-  const BASE_VARIANTS: Variants = {
-    expanded: {
-      height: "auto",
-      opacity: 1,
-    },
-    collapsed: {
-      height: 0,
-      opacity: 0,
-    },
-  };
-
-  const combinedVariants = {
-    expanded: { ...BASE_VARIANTS.expanded, ...variants?.expanded },
-    collapsed: { ...BASE_VARIANTS.collapsed, ...variants?.collapsed },
-  };
+  const combinedVariants = useMemo(
+    () => ({
+      expanded: { ...BASE_VARIANTS.expanded, ...variants?.expanded },
+      collapsed: { ...BASE_VARIANTS.collapsed, ...variants?.collapsed },
+    }),
+    [variants],
+  );
 
   return (
     <div className={cn("overflow-hidden", className)}>
@@ -181,7 +198,9 @@ export function DisclosureContent({
       </AnimatePresence>
     </div>
   );
-}
+});
+
+export { DisclosureContent, DisclosureTrigger };
 
 export default {
   Disclosure,
