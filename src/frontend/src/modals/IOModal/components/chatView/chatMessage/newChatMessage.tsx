@@ -26,6 +26,7 @@ import {
 import useAlertStore from "../../../../../stores/alertStore";
 import { chatMessagePropsType } from "../../../../../types/components";
 import { cn } from "../../../../../utils/utils";
+import useTabVisibility from "../chatInput/hooks/use-tab-visibility";
 import LogoIcon from "./components/chatLogoIcon";
 import { EditMessageButton } from "./components/editMessageButton/newMessageOptions";
 import EditMessageField from "./components/editMessageField/newEditMessageField";
@@ -125,24 +126,17 @@ export default function ChatMessage({
     }
   }, [streamUrl, chatMessage]);
 
-  const [tabChanged, setTabChanged] = useState(true);
-
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      setTabChanged(document.hidden);
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
     return () => {
       eventSource.current?.close();
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
+  const isTabHidden = useTabVisibility();
+
   useEffect(() => {
     const element = document.getElementById("last-chat-message");
-    if (element && tabChanged) {
+    if (element && isTabHidden) {
       if (playgroundScrollBehaves === "instant") {
         element.scrollIntoView({ behavior: playgroundScrollBehaves });
         setPlaygroundScrollBehaves("smooth");

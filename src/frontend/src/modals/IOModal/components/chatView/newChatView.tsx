@@ -12,6 +12,7 @@ import { chatViewProps } from "../../../../types/components";
 import FlowRunningSqueleton from "../flowRunningSqueleton";
 import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 import { useFileHandler } from "./chatInput/hooks/use-file-handler";
+import useTabVisibility from "./chatInput/hooks/use-tab-visibility";
 import ChatInput from "./chatInput/newChatInput";
 import ChatMessage from "./chatMessage/newChatMessage";
 
@@ -42,6 +43,8 @@ export default function ChatView({
 
   const inputTypes = inputs.map((obj) => obj.type);
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
+
+  const isTabHidden = useTabVisibility();
 
   //build chat history
   useEffect(() => {
@@ -86,9 +89,11 @@ export default function ChatView({
       return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
     });
 
-    if (messages.length === 0 && !lockChat && chatInputNode)
+    if (messages.length === 0 && !lockChat && chatInputNode) {
       setChatValue(chatInputNode.data.node.template["input_value"].value ?? "");
-    else setChatValue("");
+    } else {
+      isTabHidden ? setChatValue("") : null;
+    }
 
     setChatHistory(finalChatHistory);
   }, [flowPool, messages, visibleSession]);
