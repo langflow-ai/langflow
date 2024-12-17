@@ -1,10 +1,10 @@
 import { APIClassType } from "@/types/api";
-import { Edge } from "@xyflow/react";
+import { EdgeType } from "@/types/flow";
 import { cloneDeep } from "lodash";
 
 export function processNodeAdvancedFields(
   resData: APIClassType,
-  edges: Edge[],
+  edges: EdgeType[],
   nodeId: string,
 ) {
   let newNode = cloneDeep(resData);

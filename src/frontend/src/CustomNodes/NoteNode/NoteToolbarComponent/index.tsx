@@ -17,7 +17,7 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
-import { noteDataType } from "@/types/flow";
+import { NoteDataType } from "@/types/flow";
 import { classNames, cn, openInNewTab } from "@/utils/utils";
 import { cloneDeep } from "lodash";
 import IconComponent from "../../../components/common/genericIconComponent";
@@ -26,7 +26,7 @@ export default function NoteToolbarComponent({
   data,
   bgColor,
 }: {
-  data: noteDataType;
+  data: NoteDataType;
   bgColor: string;
 }) {
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
@@ -113,19 +113,24 @@ export default function NoteToolbarComponent({
                       unstyled
                       key={color}
                       onClick={() => {
-                        setNode(data.id, (old) => ({
-                          ...old,
-                          data: {
-                            ...old.data,
-                            node: {
-                              ...old.data.node,
-                              template: {
-                                ...old.data.node?.template,
-                                backgroundColor: color,
+                        setNode(data.id, (old) => {
+                          if (old.type === "noteNode") {
+                            return {
+                              ...old,
+                              data: {
+                                ...old.data,
+                                node: {
+                                  ...old.data.node,
+                                  template: {
+                                    ...old.data.node?.template,
+                                    backgroundColor: color,
+                                  },
+                                },
                               },
-                            },
-                          },
-                        }));
+                            };
+                          }
+                          return old;
+                        });
                       }}
                     >
                       <div

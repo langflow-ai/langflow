@@ -50,7 +50,7 @@ export type noteClassType = Pick<
   };
 };
 
-export type NoteDataType = Pick<NodeDataType, "showNode" | "type" | "id"> & {
+export type NoteDataType = {
   showNode?: boolean;
   type: string;
   node: noteClassType;

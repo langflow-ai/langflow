@@ -99,7 +99,9 @@ export default function NodeToolbarComponent({
           (node) => node.id === data.id,
         );
         const index = currentFlow?.data?.nodes.indexOf(node!)!;
-        currentFlow!.data!.nodes[index]!.data.node.tool_mode = newValue;
+        if (currentFlow!.data!.nodes[index]!.type === "genericNode") {
+          currentFlow!.data!.nodes[index]!.data.node.tool_mode = newValue;
+        }
 
         patchUpdateFlow({
           id: currentFlow?.id!,
@@ -181,16 +183,21 @@ export default function NodeToolbarComponent({
   }
 
   const freezeFunction = () => {
-    setNode(data.id, (old) => ({
-      ...old,
-      data: {
-        ...old.data,
-        node: {
-          ...old.data.node,
-          frozen: old.data?.node?.frozen ? false : true,
-        },
-      },
-    }));
+    setNode(data.id, (old) => {
+      if (old.type === "genericNode") {
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            node: {
+              ...old.data.node,
+              frozen: old.data?.node?.frozen ? false : true,
+            },
+          },
+        };
+      }
+      return old;
+    });
   };
 
   useShortcuts({
