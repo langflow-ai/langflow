@@ -17,6 +17,9 @@ jobs:
       contents: write
       pull-requests: write
     env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ASTRA_DB_API_ENDPOINT: ${{ secrets.ASTRA_DB_API_ENDPOINT }}
+      ASTRA_DB_APPLICATION_TOKEN: ${{ secrets.ASTRA_DB_APPLICATION_TOKEN }}
       UV_CACHE_DIR: /tmp/.uv-cache
     steps:
       - uses: actions/checkout@v4
@@ -28,7 +31,7 @@ jobs:
       - name: "Set up Python"
         uses: actions/setup-python@v5
         with:
-          python-version-file: "pyproject.toml"
+          python-version: "3.12"
       - name: Restore uv cache
         uses: actions/cache@v4
         with:
