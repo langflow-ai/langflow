@@ -99,4 +99,5 @@ class JSONCleaner(Component):
 
     def __init__(self):
         # Create a translation table that maps control characters to None
+        super().__init__()
         self.translation_table = str.maketrans("", "", "".join(chr(i) for i in range(32)) + chr(127))
