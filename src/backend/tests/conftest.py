@@ -83,12 +83,8 @@ def blockbuster(request):
                     ("_pytest/assertion/rewrite.py", {"_should_rewrite"}),
                 ]
             )
-            bb.functions["os.mkdir"].can_block_functions.append(
-                ("_pytest/assertion/rewrite.py", {"try_makedirs"})
-            )
-            bb.functions["os.replace"].can_block_functions.append(
-                ("_pytest/assertion/rewrite.py", {"_write_pyc"})
-            )
+            bb.functions["os.mkdir"].can_block_functions.append(("_pytest/assertion/rewrite.py", {"try_makedirs"}))
+            bb.functions["os.replace"].can_block_functions.append(("_pytest/assertion/rewrite.py", {"_write_pyc"}))
             yield bb
 
 
