@@ -165,7 +165,15 @@ export default function IOModal({
       // refetch();
       setLockChat(false);
     },
-    [isBuilding, setIsBuilding, setLockChat, chatValue, chatInput?.id, sessionId, buildFlow]
+    [
+      isBuilding,
+      setIsBuilding,
+      setLockChat,
+      chatValue,
+      chatInput?.id,
+      sessionId,
+      buildFlow,
+    ],
   );
 
   useEffect(() => {
