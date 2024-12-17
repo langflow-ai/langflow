@@ -1,5 +1,7 @@
 import ast
+import asyncio
 import contextlib
+import inspect
 import re
 import traceback
 from typing import Any
@@ -506,42 +508,6 @@ async def abuild_custom_components(components_paths: list[str]):
     return custom_components_from_file
 
 
-def update_field_dict(
-    custom_component_instance: "CustomComponent",
-    field_dict: dict,
-    build_config: dict,
-    *,
-    update_field: str | None = None,
-    update_field_value: Any | None = None,
-    call: bool = False,
-):
-    """Update the field dictionary by calling options() or value() if they are callable."""
-    if (
-        ("real_time_refresh" in field_dict or "refresh_button" in field_dict)
-        and any(
-            (
-                field_dict.get("real_time_refresh", False),
-                field_dict.get("refresh_button", False),
-            )
-        )
-        and call
-    ):
-        try:
-            dd_build_config = dotdict(build_config)
-            custom_component_instance.update_build_config(
-                build_config=dd_build_config,
-                field_value=update_field,
-                field_name=update_field_value,
-            )
-            build_config = dd_build_config
-        except Exception as exc:
-            msg = f"Error while running update_build_config: {exc}"
-            logger.exception(msg)
-            raise UpdateBuildConfigError(msg) from exc
-
-    return build_config
-
-
 def sanitize_field_config(field_config: dict | Input):
     # If any of the already existing keys are in field_config, remove them
     field_dict = field_config.to_dict() if isinstance(field_config, Input) else field_config
@@ -583,3 +549,14 @@ def get_instance_name(instance):
     if hasattr(instance, "name") and instance.name:
         name = instance.name
     return name
+
+
+async def update_component_build_config(
+    component: CustomComponent,
+    build_config: dotdict,
+    field_value: Any,
+    field_name: str | None = None,
+):
+    if inspect.iscoroutinefunction(component.update_build_config):
+        return await component.update_build_config(build_config, field_value, field_name)
+    return await asyncio.to_thread(component.update_build_config, build_config, field_value, field_name)

@@ -33,7 +33,7 @@ from langflow.api.v1.schemas import (
     UploadFileResponse,
 )
 from langflow.custom.custom_component.component import Component
-from langflow.custom.utils import build_custom_component_template, get_instance_name
+from langflow.custom.utils import build_custom_component_template, get_instance_name, update_component_build_config
 from langflow.exceptions.api import APIException, InvalidChatInputError
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
@@ -511,8 +511,7 @@ async def process() -> None:
     )
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
-        detail="The /process endpoint is deprecated and will be removed in a future version. "
-        "Please use /run instead.",
+        detail="The /process endpoint is deprecated and will be removed in a future version. Please use /run instead.",
     )
 
 
@@ -582,7 +581,7 @@ async def custom_component(
 
     built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
     if raw_code.frontend_node is not None:
-        built_frontend_node = component_instance.post_code_processing(built_frontend_node, raw_code.frontend_node)
+        built_frontend_node = await component_instance.update_frontend_node(built_frontend_node, raw_code.frontend_node)
 
     type_ = get_instance_name(component_instance)
     return CustomComponentResponse(data=built_frontend_node, type=type_)
@@ -631,10 +630,11 @@ async def custom_component_update(
                 for field_name, field_dict in template.items()
                 if isinstance(field_dict, dict) and field_dict.get("load_from_db")
             ]
-            params = update_params_with_load_from_db_fields(cc_instance, params, load_from_db_fields)
+            params = await update_params_with_load_from_db_fields(cc_instance, params, load_from_db_fields)
             cc_instance.set_attributes(params)
         updated_build_config = code_request.get_template()
-        cc_instance.update_build_config(
+        await update_component_build_config(
+            cc_instance,
             build_config=updated_build_config,
             field_value=code_request.field_value,
             field_name=code_request.field,
