@@ -12,15 +12,15 @@ Prompts are a combination of natural language and variables created with curly b
 
 ## Use a prompt component in a flow
 
-The default prompt is `Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.`
+An example of modifying a prompt can be found in the [Quickstart](/get-started-quickstart#run-the-chatbot-with-retrieved-context), where a basic chatbot flow is extended to include a full vector RAG pipeline.
+
+![](/img/quickstart-add-document-ingestion.png)
+
+The default prompt in the **Prompt** component is `Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.`
 
 This prompt creates a "personality" for your LLM's chat interactions, but it doesn't include variables that you may find useful when templating prompts.
 
-In the **Prompt** component, click the **Template** field to modify the prompt.
-
-An example of modifying a prompt can be found in the [Quickstart](/get-started-quickstart#run-the-chatbot-with-retrieved-context), where a basic chatbot flow is extended to include a full vector RAG pipeline.
-
-Modifying the **Prompt** component's **Template** field gives the LLM access to more context to answer the user's question.
+To modify the prompt template, in the **Prompt** component, click the **Template** field. For example, the `{context}` variable gives the LLM model access to embedded vector data to return better answers.
 
 ```plain
 Given the context
@@ -28,10 +28,6 @@ Given the context
 Answer the question
 {user_question}
 ```
-
-The `{context}` variable gives the LLM model access to embedded vector data to return better answers.
-
-![](/img/quickstart-add-document-ingestion.png)
 
 When variables are added to a prompt template, new fields are automatically created in the component. These fields can be connected to receive text input from other components to automate prompting, or to output instructions to other components. An example of prompts controlling agents behavior is available in the [sequential tasks agent starter flow](/starter-projects-sequential-agent).
 
