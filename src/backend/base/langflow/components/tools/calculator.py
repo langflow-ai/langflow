@@ -51,11 +51,13 @@ class CalculatorToolComponent(LCToolComponent):
             operand_val = self._eval_expr(node.operand)
             return self.operators[type(node.op)](operand_val)
         if isinstance(node, ast.Call):
-            raise TypeError(
+            msg = (
                 "Function calls like sqrt(), sin(), cos() etc. are not supported. "
                 "Only basic arithmetic operations (+, -, *, /, **) are allowed."
             )
-        raise TypeError(f"Unsupported operation or expression type: {type(node).__name__}")
+            raise TypeError(msg)
+        msg = f"Unsupported operation or expression type: {type(node).__name__}"
+        raise TypeError(msg)
 
     def _eval_expr_with_error(self, expression: str) -> list[Data]:
         try:
