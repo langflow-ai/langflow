@@ -1,7 +1,6 @@
-import { AllNodeType, FlowType } from "@/types/flow";
+import { AllNodeType, EdgeType, FlowType } from "@/types/flow";
 import {
   Connection,
-  Edge,
   Node,
   OnEdgesChange,
   OnNodesChange,
@@ -100,13 +99,15 @@ export type FlowStoreType = {
       | ((oldState: FlowState | undefined) => FlowState),
   ) => void;
   nodes: AllNodeType[];
-  edges: Edge[];
+  edges: EdgeType[];
   onNodesChange: OnNodesChange<AllNodeType>;
-  onEdgesChange: OnEdgesChange<Edge>;
+  onEdgesChange: OnEdgesChange<EdgeType>;
   setNodes: (
     update: AllNodeType[] | ((oldState: AllNodeType[]) => AllNodeType[]),
   ) => void;
-  setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void;
+  setEdges: (
+    update: EdgeType[] | ((oldState: EdgeType[]) => EdgeType[]),
+  ) => void;
   setNode: (
     id: string,
     update: AllNodeType | ((oldState: AllNodeType) => AllNodeType),
@@ -147,7 +148,7 @@ export type FlowStoreType = {
     silent?: boolean;
     session?: string;
   }) => Promise<void>;
-  getFlow: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
+  getFlow: () => { nodes: Node[]; edges: EdgeType[]; viewport: Viewport };
   updateVerticesBuild: (
     vertices: {
       verticesIds: string[];
@@ -186,7 +187,7 @@ export type FlowStoreType = {
     viewport,
   }: {
     nodes?: AllNodeType[];
-    edges?: Edge[];
+    edges?: EdgeType[];
     viewport?: Viewport;
   }) => void;
   handleDragging:

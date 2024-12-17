@@ -5,7 +5,6 @@ import {
 import { track } from "@/customization/utils/analytics";
 import { brokenEdgeMessage } from "@/utils/utils";
 import {
-  Edge,
   EdgeChange,
   Node,
   NodeChange,
@@ -24,6 +23,7 @@ import { VertexBuildTypeAPI } from "../types/api";
 import { ChatInputType, ChatOutputType } from "../types/chat";
 import {
   AllNodeType,
+  EdgeType,
   NodeDataType,
   sourceHandleType,
   targetHandleType,
@@ -234,7 +234,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       nodes: applyNodeChanges(changes, get().nodes),
     });
   },
-  onEdgesChange: (changes: EdgeChange[]) => {
+  onEdgesChange: (changes: EdgeChange<EdgeType>[]) => {
     set({
       edges: applyEdgeChanges(changes, get().edges),
     });
@@ -419,7 +419,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
     get().setNodes(newNodes);
 
-    selection.edges.forEach((edge: Edge) => {
+    selection.edges.forEach((edge: EdgeType) => {
       let source = idsMap[edge.source];
       let target = idsMap[edge.target];
       const sourceHandleObject: sourceHandleType = scapeJSONParse(
@@ -431,7 +431,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       });
       sourceHandleObject.id = source;
 
-      edge.data.sourceHandle = sourceHandleObject;
       const targetHandleObject: targetHandleType = scapeJSONParse(
         edge.targetHandle!,
       );
@@ -440,7 +439,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         id: target,
       });
       targetHandleObject.id = target;
-      edge.data.targetHandle = targetHandleObject;
+
+      edge.data = {
+        sourceHandle: sourceHandleObject,
+        targetHandle: targetHandleObject,
+      };
+
       let id = getHandleId(source, sourceHandle, target, targetHandle);
       newEdges = addEdge(
         {
@@ -523,7 +527,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     //   isIoOut = outputTypes.has(sourceType);
     // }
 
-    let newEdges: Edge[] = [];
+    let newEdges: EdgeType[] = [];
     get().setEdges((oldEdges) => {
       newEdges = addEdge(
         {
@@ -740,7 +744,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
         const edges = get().edges;
         const newEdges = edges.map((edge) => {
-          if (idList.includes(edge.data.targetHandle.id)) {
+          if (
+            edge.data?.targetHandle &&
+            idList.includes(edge.data.targetHandle.id ?? "")
+          ) {
             edge.className = "ran";
           }
           return edge;
@@ -766,7 +773,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   updateEdgesRunningByNodes: (ids: string[], running: boolean) => {
     const edges = get().edges;
     const newEdges = edges.map((edge) => {
-      if (ids.includes(edge.data.sourceHandle.id)) {
+      if (
+        edge.data?.sourceHandle &&
+        ids.includes(edge.data.sourceHandle.id ?? "")
+      ) {
         edge.animated = running;
         edge.className = running ? "running" : "";
       } else {

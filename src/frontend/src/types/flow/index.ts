@@ -13,7 +13,7 @@ export type PaginatedFlowsType = {
 export type FlowType = {
   name: string;
   id: string;
-  data: ReactFlowJsonObject<AllNodeType, Edge> | null;
+  data: ReactFlowJsonObject<AllNodeType, EdgeType> | null;
   description: string;
   endpoint_name?: string | null;
   style?: FlowStyleType;
@@ -63,6 +63,14 @@ export type NodeDataType = {
   selected_output_type?: string;
   buildStatus?: BuildStatus;
 };
+
+export type EdgeType = Edge<EdgeDataType, "default">;
+
+export type EdgeDataType = {
+  sourceHandle: sourceHandleType;
+  targetHandle: targetHandleType;
+};
+
 // FlowStyleType is the type of the style object that is used to style the
 // Flow card with an emoji and a color.
 export type FlowStyleType = {
