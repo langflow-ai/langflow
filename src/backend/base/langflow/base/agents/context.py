@@ -96,7 +96,8 @@ class AgentContext(BaseModel):
         return f"{name}: {value}"
 
     def get_full_context(self) -> str:
-        context_history_reversed = self.context_history[::-1]
+        initial_context = self.context_history[0][1]
+        context_history_reversed = self.context_history[1:][::-1]
         context_formatted = "\n".join(
             [
                 self._serialize_context_history_tuple(context_history_tuple)
@@ -106,4 +107,7 @@ class AgentContext(BaseModel):
         return f"""
 Context:
 {context_formatted}
+
+Initial Context:
+{initial_context}
 """
