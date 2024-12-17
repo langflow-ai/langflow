@@ -3,9 +3,30 @@ title: Vector Stores
 sidebar_position: 7
 slug: /components-vector-stores
 ---
-# Vector Stores
 
-Vector databases are used to store and search for vectors. They can be used to store embeddings, search for similar vectors, and perform other vector operations.
+Vector databases store vector data, which backs AI workloads like chatbots and Retrieval Augmented Generation.
+
+Vector database components establish connections to existing vector databases or create in-memory vector stores for storing and retrieving vector data.
+
+Vector database components are distinct from [memory components](/components-memories), which are are built specifically for storing and retrieving chat messages from external databases.
+
+## Use a vector store component in a flow
+
+Vector databases can be populated from within Langflow with document ingestion pipelines, like this one.
+
+![](/img/vector-store-document-ingestion.png)
+
+This example uses the **Astra DB vector store** component. Your vector store component's parameters and authentication may be different, but the document ingestion workflow is the same. A document is loaded from a local machine and chunked. The Astra DB vector store generates embeddings with the connected [model](/components-models) component, and stores them in the connected Astra DB database.
+
+This vector data can then be retrieved for workloads like Retrieval Augmented Generation.
+
+![](/img/vector-store-retrieval.png)
+
+The user's chat input is embedded and compared to the vectors embedded during document ingestion for a similarity search. The results are output from the vector database component as a [Data](/guides-data-message) object, and parsed into text. This text fills the `{context}` variable in the **Prompt** component, which informs the **Open AI model** component's responses.
+
+Alternatively, connect the vector database component's **Retriever** port to a [retriever tool](/components-tools#retriever), and then to an [agent](/components-agents) component. This enables the agent to use your vector database as a tool and make decisions based on the available data.
+
+![](/img/vector-store-agent-retrieval-tool.png)
 
 ## Astra DB Vector Store
 
