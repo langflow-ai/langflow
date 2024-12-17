@@ -1,6 +1,6 @@
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
-import { Handle, Position } from "@xyflow/react";
+import { Connection, Handle, Position } from "@xyflow/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import {
@@ -305,7 +305,7 @@ export default function HandleRenderComponent({
           key={myId}
           id={myId}
           isValidConnection={(connection) =>
-            isValidConnection(connection, nodes, edges)
+            isValidConnection(connection as Connection, nodes, edges)
           }
           className={cn(
             `group/handle z-50 transition-all`,
