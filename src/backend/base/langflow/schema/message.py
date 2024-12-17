@@ -22,7 +22,7 @@ from langflow.schema.content_types import ErrorContent
 from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
 from langflow.schema.properties import Properties, Source
-from langflow.schema.validators import timestamp_to_str_validator
+from langflow.schema.validators import timestamp_to_str, timestamp_to_str_validator
 from langflow.utils.constants import (
     MESSAGE_SENDER_AI,
     MESSAGE_SENDER_NAME_AI,
@@ -91,7 +91,7 @@ class Message(Data):
     def serialize_timestamp(self, value):
         try:
             # Try parsing with timezone
-            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S %Z").astimezone(timezone.utc)
+            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
         except ValueError:
             # Try parsing without timezone
             return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
@@ -339,8 +339,7 @@ class MessageResponse(DefaultModel):
     @field_serializer("timestamp")
     @classmethod
     def serialize_timestamp(cls, v):
-        v = v.replace(microsecond=0)
-        return v.strftime("%Y-%m-%d %H:%M:%S %Z")
+        return timestamp_to_str(v)
 
     @field_serializer("files")
     @classmethod
