@@ -199,6 +199,18 @@ class CustomComponent(BaseComponent):
     def flow_name(self):
         return self.graph.flow_name
 
+    @property
+    def effective_display_name(self) -> str | None:
+        if self._vertex:
+            return self._vertex.get_node_property("display_name", self.display_name)
+        return self.display_name
+
+    @property
+    def effective_description(self) -> str | None:
+        if self._vertex:
+            return self._vertex.get_node_property("description", self.description)
+        return self.description
+
     def _get_field_order(self):
         return self.field_order or list(self.field_config.keys())
 
