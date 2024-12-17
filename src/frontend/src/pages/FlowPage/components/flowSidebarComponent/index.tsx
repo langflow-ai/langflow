@@ -36,6 +36,7 @@ import { APIClassType } from "../../../../types/api";
 import sensitiveSort from "../extraSidebarComponent/utils/sensitive-sort";
 import { CategoryGroup } from "./components/categoryGroup";
 import NoResultsMessage from "./components/emptySearchComponent";
+import MemoizedSidebarGroup from "./components/sidebarBundles";
 import SidebarMenuButtons from "./components/sidebarFooterButtons";
 import { SidebarHeaderComponent } from "./components/sidebarHeader";
 import SidebarItemsList from "./components/sidebarItemsList";
@@ -416,75 +417,19 @@ export function FlowSidebarComponent() {
               />
             )}
             {hasBundleItems && (
-              <SidebarGroup className="p-3">
-                <SidebarGroupLabel>Bundles</SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {BUNDLES.toSorted(
-                      (a, b) =>
-                        (search !== "" ? sortedCategories : BUNDLES).findIndex(
-                          (value) => value === a.name,
-                        ) -
-                        (search !== "" ? sortedCategories : BUNDLES).findIndex(
-                          (value) => value === b.name,
-                        ),
-                    ).map(
-                      (item) =>
-                        dataFilter[item.name] &&
-                        Object.keys(dataFilter[item.name]).length > 0 && (
-                          <Disclosure
-                            key={item.name}
-                            open={openCategories.includes(item.name)}
-                            onOpenChange={(isOpen) => {
-                              setOpenCategories((prev) =>
-                                isOpen
-                                  ? [...prev, item.name]
-                                  : prev.filter((cat) => cat !== item.name),
-                              );
-                            }}
-                          >
-                            <SidebarMenuItem>
-                              <DisclosureTrigger className="group/collapsible">
-                                <SidebarMenuButton asChild>
-                                  <div
-                                    tabIndex={0}
-                                    onKeyDown={(e) =>
-                                      handleKeyDownInput(e, item.name)
-                                    }
-                                    className="flex cursor-pointer items-center gap-2"
-                                    data-testid={`disclosure-bundles-${item.display_name.toLocaleLowerCase()}`}
-                                  >
-                                    <ForwardedIconComponent
-                                      name={item.icon}
-                                      className="h-4 w-4 text-muted-foreground group-aria-expanded/collapsible:text-primary"
-                                    />
-                                    <span className="flex-1 group-aria-expanded/collapsible:font-semibold">
-                                      {item.display_name}
-                                    </span>
-                                    <ForwardedIconComponent
-                                      name="ChevronRight"
-                                      className="-mr-1 h-4 w-4 text-muted-foreground transition-all group-aria-expanded/collapsible:rotate-90"
-                                    />
-                                  </div>
-                                </SidebarMenuButton>
-                              </DisclosureTrigger>
-                              <DisclosureContent>
-                                <SidebarItemsList
-                                  item={item}
-                                  dataFilter={dataFilter}
-                                  nodeColors={nodeColors}
-                                  chatInputAdded={chatInputAdded}
-                                  onDragStart={onDragStart}
-                                  sensitiveSort={sensitiveSort}
-                                />
-                              </DisclosureContent>
-                            </SidebarMenuItem>
-                          </Disclosure>
-                        ),
-                    )}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
+              <MemoizedSidebarGroup
+                BUNDLES={BUNDLES}
+                search={search}
+                sortedCategories={sortedCategories}
+                dataFilter={dataFilter}
+                nodeColors={nodeColors}
+                chatInputAdded={chatInputAdded}
+                onDragStart={onDragStart}
+                sensitiveSort={sensitiveSort}
+                openCategories={openCategories}
+                setOpenCategories={setOpenCategories}
+                handleKeyDownInput={handleKeyDownInput}
+              />
             )}
           </>
         ) : (
