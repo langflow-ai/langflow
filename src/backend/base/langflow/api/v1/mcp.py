@@ -11,7 +11,7 @@ from anyio import BrokenResourceError
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from mcp import types
-from mcp.server import Server, NotificationOptions
+from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
 from pydantic import ValidationError
 from sqlmodel import select
