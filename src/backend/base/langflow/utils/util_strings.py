@@ -1,3 +1,5 @@
+from sqlalchemy.engine import make_url
+
 from langflow.utils import constants
 
 
@@ -28,3 +30,23 @@ def truncate_long_strings(data, max_length=None):
                 truncate_long_strings(item, max_length)
 
     return data
+
+
+def is_valid_database_url(url: str) -> bool:
+    """Validate database connection URLs compatible with SQLAlchemy.
+
+    Args:
+        url (str): Database connection URL to validate
+
+    Returns:
+        bool: True if URL is valid, False otherwise
+    """
+    try:
+        parsed_url = make_url(url)
+        parsed_url.get_dialect()
+        parsed_url.get_driver_name()
+
+    except Exception:  # noqa: BLE001
+        return False
+
+    return True
