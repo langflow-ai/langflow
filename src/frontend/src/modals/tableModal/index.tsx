@@ -37,7 +37,9 @@ const TableModal = forwardRef<AgGridReact, TableModalProps>(
         disable={disabled}
       >
         <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
-        <BaseModal.Header description={description}>
+        <BaseModal.Header
+          description={props.tableOptions?.description ?? description}
+        >
           <span className="pr-2">{tableTitle}</span>
           <ForwardedIconComponent name="Table" className="mr-2 h-4 w-4" />
         </BaseModal.Header>
