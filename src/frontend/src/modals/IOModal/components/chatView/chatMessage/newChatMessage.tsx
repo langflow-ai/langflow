@@ -125,15 +125,24 @@ export default function ChatMessage({
     }
   }, [streamUrl, chatMessage]);
 
+  const [tabChanged, setTabChanged] = useState(true);
+
   useEffect(() => {
+    const handleVisibilityChange = () => {
+      setTabChanged(document.hidden);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       eventSource.current?.close();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
   useEffect(() => {
     const element = document.getElementById("last-chat-message");
-    if (element) {
+    if (element && tabChanged) {
       if (playgroundScrollBehaves === "instant") {
         element.scrollIntoView({ behavior: playgroundScrollBehaves });
         setPlaygroundScrollBehaves("smooth");
