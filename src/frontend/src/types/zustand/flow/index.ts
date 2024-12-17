@@ -89,8 +89,10 @@ export type FlowStoreType = {
   setIsBuilding: (isBuilding: boolean) => void;
   setPending: (isPending: boolean) => void;
   resetFlow: (flow: FlowType | undefined) => void;
-  reactFlowInstance: ReactFlowInstance | null;
-  setReactFlowInstance: (newState: ReactFlowInstance) => void;
+  reactFlowInstance: ReactFlowInstance<AllNodeType, EdgeType> | null;
+  setReactFlowInstance: (
+    newState: ReactFlowInstance<AllNodeType, EdgeType>,
+  ) => void;
   flowState: FlowState | undefined;
   setFlowState: (
     state:
