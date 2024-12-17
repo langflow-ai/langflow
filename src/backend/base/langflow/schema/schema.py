@@ -73,7 +73,7 @@ def get_message(payload):
 
 
 def build_output_logs(vertex, result) -> dict:
-    outputs = {}
+    outputs: dict[str, OutputValue] = {}
     component_instance = result[0]
 
     for index, output in enumerate(vertex.outputs):
