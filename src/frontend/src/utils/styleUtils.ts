@@ -15,6 +15,7 @@ import { ZepMemoryIcon } from "@/icons/ZepMemory";
 import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import { GlobeOkIcon } from "@/icons/globe-ok";
+import { ThumbDownIconCustom, ThumbUpIconCustom } from "@/icons/thumbs";
 import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import {
   AlertCircle,
@@ -205,6 +206,8 @@ import {
   TextCursorInput,
   TextSearch,
   TextSearchIcon,
+  ThumbsDown,
+  ThumbsUp,
   ToyBrick,
   Trash2,
   Type,
@@ -927,4 +930,8 @@ export const nodeIconsLucide: iconsType = {
   Cog,
   ArrowRightLeft,
   FolderSync,
+  ThumbsUp,
+  ThumbsDown,
+  ThumbDownIconCustom,
+  ThumbUpIconCustom,
 };
