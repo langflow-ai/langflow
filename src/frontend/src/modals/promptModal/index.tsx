@@ -257,7 +257,7 @@ export default function PromptModal({
           ) : (
             <SanitizedHTMLWrapper
               ref={previewRef}
-              className={getClassByNumberLength() + " bg-muted"}
+              className={getClassByNumberLength() + " m-0"}
               onClick={handlePreviewClick}
               content={coloredContent}
               suppressWarning={true}
