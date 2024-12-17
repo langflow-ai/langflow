@@ -52,6 +52,7 @@ class TestChatInput(ComponentTestBaseWithClient):
             "background_color": default_kwargs["background_color"],
             "text_color": default_kwargs["text_color"],
             "icon": default_kwargs["chat_icon"],
+            "positive_feedback": None,
             "edited": False,
             "source": {"id": None, "display_name": None, "source": None},
             "allow_markdown": False,
