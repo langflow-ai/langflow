@@ -8,6 +8,10 @@ members = ["src/backend/base", "."]
 [tool.hatch.build.targets.wheel]
 packages = ["src/backend/langflow"]
 
+# TEMPORARY FOR NV-INGEST-CLIENT
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [project]
 name = "langflow"
 version = "1.1.1"
@@ -118,7 +122,9 @@ dependencies = [
     "mcp>=0.9.1",
     "uv>=0.5.7",
     "ag2",
-    "pydantic-ai>=0.0.12",
+    "pydantic-ai>=0.0.12",    #"nv-ingest-client @ git+https://github.com/NVIDIA/nv-ingest.git@24.12-rc0#egg=nv-ingest-client&subdirectory=client",
+    "nv-ingest-client @ git+https://github.com/jdye64/nv-ingest.git@pydantic_2_update#egg=nv-ingest-client&subdirectory=client",
+    "python-pptx==0.6.23",
 ]
 
 [project.urls]
