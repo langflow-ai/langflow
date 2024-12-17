@@ -1,5 +1,4 @@
 from langchain_community.chat_models.baidu_qianfan_endpoint import QianfanChatEndpoint
-from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing.constants import LanguageModel
