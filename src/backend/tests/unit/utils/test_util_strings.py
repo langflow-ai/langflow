@@ -18,7 +18,6 @@ from langflow.utils import util_strings
         ("oracle://scott:tiger@127.0.0.1:1521/?service_name=freepdb1", True),
         ("oracle+cx_oracle://scott:tiger@tnsalias", True),
         ("oracle+oracledb://scott:tiger@127.0.0.1:1521/?service_name=freepdb1", True),
-
         ("", False),
         (" invalid ", False),
         ("not_a_url", False),
