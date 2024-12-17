@@ -1,4 +1,4 @@
-import { ReactFlowJsonObject, XYPosition } from "@xyflow/react";
+import { Node, ReactFlowJsonObject } from "@xyflow/react";
 import { BuildStatus } from "../../constants/enums";
 import { APIClassType } from "../api/index";
 
@@ -33,13 +33,7 @@ export type FlowType = {
   locked?: boolean | null;
 };
 
-export type NodeType = {
-  id: string;
-  type?: string;
-  position: XYPosition;
-  data: NodeDataType;
-  selected?: boolean;
-};
+export type NodeType = Node<NodeDataType, "GenericNode">;
 
 export interface noteClassType
   extends Pick<APIClassType, "description" | "display_name" | "documentation"> {

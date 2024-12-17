@@ -1,4 +1,4 @@
-import { FlowType } from "@/types/flow";
+import { FlowType, NodeType } from "@/types/flow";
 import {
   Connection,
   Edge,
@@ -99,19 +99,21 @@ export type FlowStoreType = {
       | undefined
       | ((oldState: FlowState | undefined) => FlowState),
   ) => void;
-  nodes: Node[];
+  nodes: NodeType[];
   edges: Edge[];
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
-  setNodes: (update: Node[] | ((oldState: Node[]) => Node[])) => void;
+  setNodes: (
+    update: NodeType[] | ((oldState: NodeType[]) => NodeType[]),
+  ) => void;
   setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void;
   setNode: (
     id: string,
-    update: Node | ((oldState: Node) => Node),
+    update: NodeType | ((oldState: NodeType) => NodeType),
     isUserChange?: boolean,
     callback?: () => void,
   ) => void;
-  getNode: (id: string) => Node | undefined;
+  getNode: (id: string) => NodeType | undefined;
   deleteNode: (nodeId: string | Array<string>) => void;
   deleteEdge: (edgeId: string | Array<string>) => void;
   paste: (
