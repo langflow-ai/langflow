@@ -1,8 +1,8 @@
 import { NODE_HEIGHT, NODE_WIDTH } from "@/constants/constants";
 import { NodeType } from "@/types/flow";
+import { Edge } from "@xyflow/react";
 import ELK, { ElkNode } from "elkjs/lib/elk.bundled.js";
 import { cloneDeep } from "lodash";
-import { Edge } from "reactflow";
 
 const layoutOptions = {
   "elk.algorithm": "layered",

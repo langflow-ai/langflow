@@ -5,8 +5,8 @@ import { APIClassType } from "@/types/api";
 import { NodeType } from "@/types/flow";
 import { getNodeId } from "@/utils/reactflowUtils";
 import { getNodeRenderType } from "@/utils/utils";
+import { useStoreApi } from "@xyflow/react";
 import { useCallback } from "react";
-import { useStoreApi } from "reactflow";
 
 export function useAddComponent() {
   const store = useStoreApi();

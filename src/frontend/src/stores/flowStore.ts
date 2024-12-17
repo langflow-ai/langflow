@@ -4,7 +4,6 @@ import {
 } from "@/constants/constants";
 import { track } from "@/customization/utils/analytics";
 import { brokenEdgeMessage } from "@/utils/utils";
-import { cloneDeep, zip } from "lodash";
 import {
   Edge,
   EdgeChange,
@@ -13,7 +12,8 @@ import {
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
-} from "reactflow";
+} from "@xyflow/react";
+import { cloneDeep, zip } from "lodash";
 import { create } from "zustand";
 import {
   FLOW_BUILD_SUCCESS_ALERT,

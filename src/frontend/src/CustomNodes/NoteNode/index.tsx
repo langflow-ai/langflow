@@ -7,8 +7,8 @@ import {
 } from "@/constants/constants";
 import { noteDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
+import { NodeResizer } from "@xyflow/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { NodeResizer } from "reactflow";
 import NodeDescription from "../GenericNode/components/NodeDescription";
 import NoteToolbarComponent from "./NoteToolbarComponent";
 function NoteNode({

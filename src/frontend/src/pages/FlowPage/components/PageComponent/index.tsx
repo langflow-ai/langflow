@@ -20,6 +20,17 @@ import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useAddComponent } from "@/hooks/useAddComponent";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { cn, isSupportedNodeTypes } from "@/utils/utils";
+import {
+  Background,
+  Connection,
+  Edge,
+  NodeDragHandler,
+  OnSelectionChangeParams,
+  Panel,
+  ReactFlow,
+  SelectionDragHandler,
+  updateEdge,
+} from "@xyflow/react";
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -30,16 +41,6 @@ import {
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import ReactFlow, {
-  Background,
-  Connection,
-  Edge,
-  NodeDragHandler,
-  OnSelectionChangeParams,
-  Panel,
-  SelectionDragHandler,
-  updateEdge,
-} from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import {
   INVALID_SELECTION_ERROR_ALERT,

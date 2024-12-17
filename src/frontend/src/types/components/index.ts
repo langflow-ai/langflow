@@ -1,5 +1,5 @@
+import { ReactFlowJsonObject } from "@xyflow/react";
 import { ReactElement, ReactNode } from "react";
-import { ReactFlowJsonObject } from "reactflow";
 import { InputOutput } from "../../constants/enums";
 import {
   APIClassType,

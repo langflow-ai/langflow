@@ -10,8 +10,8 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { cn } from "@/utils/utils";
+import { useUpdateNodeInternals } from "@xyflow/react";
 import { useState } from "react";
-import { useUpdateNodeInternals } from "reactflow";
 
 export default function UpdateAllComponents() {
   const { componentsToUpdate, nodes, edges, setNodes } = useFlowStore();

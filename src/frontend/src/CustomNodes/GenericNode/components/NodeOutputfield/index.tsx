@@ -1,7 +1,7 @@
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
+import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
 import { memo, useEffect, useMemo, useRef } from "react";
-import { useUpdateNodeInternals } from "reactflow";
 import { default as IconComponent } from "../../../../components/common/genericIconComponent";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import { Button } from "../../../../components/ui/button";

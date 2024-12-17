@@ -5,8 +5,8 @@ import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { NodeType } from "@/types/flow";
+import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
-import { useUpdateNodeInternals } from "reactflow";
 import { mutateTemplate } from "../helpers/mutate-template";
 
 export type handleOnNewValueType = (

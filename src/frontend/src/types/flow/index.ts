@@ -1,4 +1,4 @@
-import { ReactFlowJsonObject, XYPosition } from "reactflow";
+import { ReactFlowJsonObject, XYPosition } from "@xyflow/react";
 import { BuildStatus } from "../../constants/enums";
 import { APIClassType } from "../api/index";
 

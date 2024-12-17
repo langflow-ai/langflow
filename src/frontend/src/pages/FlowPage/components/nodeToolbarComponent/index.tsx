@@ -11,9 +11,9 @@ import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import CodeAreaModal from "@/modals/codeAreaModal";
 import { APIClassType } from "@/types/api";
+import { useUpdateNodeInternals } from "@xyflow/react";
 import _, { cloneDeep } from "lodash";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useUpdateNodeInternals } from "reactflow";
 import IconComponent from "../../../../components/common/genericIconComponent";
 import {
   Select,

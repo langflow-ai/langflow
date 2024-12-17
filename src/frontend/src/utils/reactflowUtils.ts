@@ -2,7 +2,6 @@ import {
   getLeftHandleId,
   getRightHandleId,
 } from "@/CustomNodes/utils/get-handle-id";
-import { cloneDeep } from "lodash";
 import {
   Connection,
   Edge,
@@ -10,7 +9,8 @@ import {
   OnSelectionChangeParams,
   ReactFlowJsonObject,
   XYPosition,
-} from "reactflow";
+} from "@xyflow/react";
+import { cloneDeep } from "lodash";
 import ShortUniqueId from "short-unique-id";
 import getFieldTitle from "../CustomNodes/utils/get-field-title";
 import {

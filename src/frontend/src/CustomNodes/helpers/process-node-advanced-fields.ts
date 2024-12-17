@@ -1,6 +1,6 @@
 import { APIClassType } from "@/types/api";
+import { Edge } from "@xyflow/react";
 import { cloneDeep } from "lodash";
-import { Edge } from "reactflow";
 
 export function processNodeAdvancedFields(
   resData: APIClassType,

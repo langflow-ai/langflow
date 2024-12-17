@@ -7,7 +7,7 @@ import {
   OnNodesChange,
   ReactFlowInstance,
   Viewport,
-} from "reactflow";
+} from "@xyflow/react";
 import { BuildStatus } from "../../../constants/enums";
 import { VertexBuildTypeAPI } from "../../api";
 import { ChatInputType, ChatOutputType } from "../../chat";

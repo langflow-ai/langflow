@@ -1,4 +1,4 @@
-import { Edge } from "reactflow";
+import { Edge } from "@xyflow/react";
 import { FlowType, NodeType } from "../flow";
 
 export type addEscapedHandleIdsToEdgesType = {
