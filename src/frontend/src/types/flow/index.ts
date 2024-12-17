@@ -34,6 +34,7 @@ export type FlowType = {
 };
 
 export type NodeType = Node<NodeDataType, "GenericNode">;
+export type NoteNodeType = Node<NoteDataType, "NoteNode">;
 
 export interface noteClassType
   extends Pick<APIClassType, "description" | "display_name" | "documentation"> {
@@ -43,13 +44,12 @@ export interface noteClassType
   };
 }
 
-export interface noteDataType
-  extends Pick<NodeDataType, "showNode" | "type" | "id"> {
+export type NoteDataType = Pick<NodeDataType, "showNode" | "type" | "id"> & {
   showNode?: boolean;
   type: string;
   node?: noteClassType;
   id: string;
-}
+};
 export type NodeDataType = {
   showNode?: boolean;
   type: string;
