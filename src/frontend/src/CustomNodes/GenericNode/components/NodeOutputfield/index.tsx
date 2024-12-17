@@ -82,18 +82,20 @@ export default function NodeOutputField({
   const handleUpdateOutputHide = (value?: boolean) => {
     setNode(data.id, (oldNode) => {
       let newNode = cloneDeep(oldNode);
-      newNode.data = {
-        ...newNode.data,
-        node: {
-          ...newNode.data.node,
-          outputs: newNode.data.node.outputs?.map((output, i) => {
-            if (i === index) {
-              output.hidden = value ?? !output.hidden;
-            }
-            return output;
-          }),
-        },
-      };
+      if (newNode.type === "genericNode") {
+        newNode.data = {
+          ...newNode.data,
+          node: {
+            ...newNode.data.node,
+            outputs: newNode.data.node.outputs?.map((output, i) => {
+              if (i === index) {
+                output.hidden = value ?? !output.hidden;
+              }
+              return output;
+            }),
+          },
+        };
+      }
       return newNode;
     });
     updateNodeInternals(data.id);
