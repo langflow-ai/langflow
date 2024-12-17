@@ -24,7 +24,7 @@ This vector data can then be retrieved for workloads like Retrieval Augmented Ge
 
 The user's chat input is embedded and compared to the vectors embedded during document ingestion for a similarity search. The results are output from the vector database component as a [Data](/guides-data-message) object, and parsed into text. This text fills the `{context}` variable in the **Prompt** component, which informs the **Open AI model** component's responses.
 
-Alternatively, connect the vector database component's **Retriever** port to a [retriever tool](/components-tools#retriever), and then to an [agent](/components-agents) component. This enables the agent to use your vector database as a tool and make decisions based on the available data.
+Alternatively, connect the vector database component's **Retriever** port to a [retriever tool](components-tools#retriever-tool), and then to an [agent](/components-agents) component. This enables the agent to use your vector database as a tool and make decisions based on the available data.
 
 ![](/img/vector-store-agent-retrieval-tool.png)
 
