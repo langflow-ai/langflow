@@ -4,19 +4,11 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 // import "ace-builds/webpack-resolver";
-import { cloneDeep, set } from "lodash";
-import { useEffect, useState } from "react";
-import JsonView from "react18-json-view";
+import { useState } from "react";
 import "react18-json-view/src/dark.css";
 import "react18-json-view/src/style.css";
 import IconComponent from "../../components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
-import {
-  CODE_DICT_DIALOG_SUBTITLE,
-  TEXT_DIALOG_SUBTITLE,
-} from "../../constants/constants";
-import TextOutputView from "../../shared/components/textOutputView";
-import { useDarkStore } from "../../stores/darkStore";
 import BaseModal from "../baseModal";
 import TextEditorArea from "./components/textEditorArea";
 
