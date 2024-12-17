@@ -197,3 +197,12 @@ code {
   appearance: none;
   margin: 0;
 }
+
+.ag-large-text-input.ag-text-area.ag-input-field {
+  background-color: hsl(var(--background)) !important;
+}
+
+.ag-large-text-input.ag-text-area.ag-input-field textarea {
+  resize: none !important;
+  height: 100% !important;
+}

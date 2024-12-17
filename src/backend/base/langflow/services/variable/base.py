@@ -1,7 +1,6 @@
 import abc
 from uuid import UUID
 
-from sqlmodel import Session
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.base import Service
@@ -23,19 +22,6 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def get_variable_sync(self, user_id: UUID | str, name: str, field: str, session: Session) -> str:
-        """Get a variable value.
-
-        Args:
-            user_id: The user ID.
-            name: The name of the variable.
-            field: The field of the variable.
-            session: The database session.
-
-        Returns:
-            The value of the variable.
-        """
-
     async def get_variable(self, user_id: UUID | str, name: str, field: str, session: AsyncSession) -> str:
         """Async get a variable value.
 
@@ -48,20 +34,8 @@ class VariableService(Service):
         Returns:
             The value of the variable.
         """
-        return await session.run_sync(lambda session_: self.get_variable_sync(user_id, name, field, session_))
 
     @abc.abstractmethod
-    def list_variables_sync(self, user_id: UUID | str, session: Session) -> list[str | None]:
-        """List all variables.
-
-        Args:
-            user_id: The user ID.
-            session: The database session.
-
-        Returns:
-            A list of variable names.
-        """
-
     async def list_variables(self, user_id: UUID | str, session: AsyncSession) -> list[str | None]:
         """List all variables.
 
@@ -72,7 +46,6 @@ class VariableService(Service):
         Returns:
             A list of variable names.
         """
-        return await session.run_sync(lambda session_: self.list_variables_sync(user_id, session_))
 
     @abc.abstractmethod
     async def update_variable(self, user_id: UUID | str, name: str, value: str, session: AsyncSession) -> Variable:

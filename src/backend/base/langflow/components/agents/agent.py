@@ -11,6 +11,7 @@ from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.langchain_utilities.tool_calling import (
     ToolCallingAgentComponent,
 )
+from langflow.custom.utils import update_component_build_config
 from langflow.io import BoolInput, DropdownInput, MultilineInput, Output
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
@@ -136,7 +137,7 @@ class AgentComponent(ToolCallingAgentComponent):
                 value.input_types = []
         return build_config
 
-    async def aupdate_build_config(
+    async def update_build_config(
         self, build_config: dotdict, field_value: str, field_name: str | None = None
     ) -> dotdict:
         # Iterate over all providers in the MODEL_PROVIDERS_DICT
@@ -145,9 +146,11 @@ class AgentComponent(ToolCallingAgentComponent):
             provider_info = MODEL_PROVIDERS_DICT.get(field_value)
             if provider_info:
                 component_class = provider_info.get("component_class")
-                if component_class and hasattr(component_class, "aupdate_build_config"):
-                    # Call the component class's aupdate_build_config method
-                    build_config = await component_class.aupdate_build_config(build_config, field_value, field_name)
+                if component_class and hasattr(component_class, "update_build_config"):
+                    # Call the component class's update_build_config method
+                    build_config = await update_component_build_config(
+                        component_class, build_config, field_value, field_name
+                    )
 
             provider_configs: dict[str, tuple[dict, list[dict]]] = {
                 provider: (
@@ -213,11 +216,13 @@ class AgentComponent(ToolCallingAgentComponent):
             if provider_info:
                 component_class = provider_info.get("component_class")
                 prefix = provider_info.get("prefix")
-                if component_class and hasattr(component_class, "aupdate_build_config"):
-                    # Call each component class's aupdate_build_config method
+                if component_class and hasattr(component_class, "update_build_config"):
+                    # Call each component class's update_build_config method
                     # remove the prefix from the field_name
                     if isinstance(field_name, str) and isinstance(prefix, str):
                         field_name = field_name.replace(prefix, "")
-                    build_config = await component_class.aupdate_build_config(build_config, field_value, field_name)
+                    build_config = await update_component_build_config(
+                        component_class, build_config, field_value, field_name
+                    )
 
         return build_config
