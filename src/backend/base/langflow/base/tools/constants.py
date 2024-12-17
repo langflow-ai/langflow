@@ -37,4 +37,4 @@ TOOL_TABLE_SCHEMA = [
     },
 ]
 
-TOOLS_METADATA_INFO = "Use the table to configure the tools."
+TOOLS_METADATA_INFO = "Modify tool names and descriptions to help agents understand when to use each tool."
