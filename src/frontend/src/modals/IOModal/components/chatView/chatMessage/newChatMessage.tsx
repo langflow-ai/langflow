@@ -23,6 +23,7 @@ import {
   EMPTY_INPUT_SEND_MESSAGE,
   EMPTY_OUTPUT_SEND_MESSAGE,
 } from "../../../../../constants/constants";
+import useTabVisibility from "../../../../../shared/hooks/use-tab-visibility";
 import useAlertStore from "../../../../../stores/alertStore";
 import { chatMessagePropsType } from "../../../../../types/components";
 import { cn } from "../../../../../utils/utils";
@@ -131,9 +132,11 @@ export default function ChatMessage({
     };
   }, []);
 
+  const isTabHidden = useTabVisibility();
+
   useEffect(() => {
     const element = document.getElementById("last-chat-message");
-    if (element) {
+    if (element && isTabHidden) {
       if (playgroundScrollBehaves === "instant") {
         element.scrollIntoView({ behavior: playgroundScrollBehaves });
         setPlaygroundScrollBehaves("smooth");
