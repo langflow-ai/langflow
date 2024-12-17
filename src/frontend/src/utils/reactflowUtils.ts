@@ -34,7 +34,6 @@ import {
   AllNodeType,
   EdgeType,
   FlowType,
-  GenericNodeType,
   NodeDataType,
   sourceHandleType,
   targetHandleType,
@@ -218,7 +217,7 @@ export function unselectAllNodesEdges(nodes: Node[], edges: Edge[]) {
 
 export function isValidConnection(
   { source, target, sourceHandle, targetHandle }: Connection,
-  nodes: GenericNodeType[],
+  nodes: AllNodeType[],
   edges: EdgeType[],
 ) {
   if (source === target) {
@@ -344,7 +343,7 @@ export async function processDataFromFlow(
 
 export function updateIds(
   { edges, nodes }: { edges: EdgeType[]; nodes: AllNodeType[] },
-  selection?: { edges: EdgeType[]; nodes: AllNodeType[] },
+  selection?: OnSelectionChangeParams,
 ) {
   let idsMap = {};
   const selectionIds = selection?.nodes.map((n) => n.id);
@@ -360,13 +359,15 @@ export function updateIds(
       node.data.id = newId;
       // Add the new node to the list of nodes in state
     });
-    selection?.nodes.forEach((sNode: AllNodeType) => {
-      let newId = idsMap[sNode.id];
-      sNode.id = newId;
-      sNode.data.id = newId;
+    selection?.nodes.forEach((sNode: Node) => {
+      if (sNode.type === "genericNode") {
+        let newId = idsMap[sNode.id];
+        sNode.id = newId;
+        sNode.data.id = newId;
+      }
     });
   }
-  const concatedEdges = [...edges, ...(selection?.edges ?? [])];
+  const concatedEdges = [...edges, ...((selection?.edges as EdgeType[]) ?? [])];
   if (concatedEdges)
     concatedEdges.forEach((edge: EdgeType) => {
       edge.source = idsMap[edge.source];
