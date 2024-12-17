@@ -277,6 +277,7 @@ import { Mem0 } from "../icons/Mem0";
 import { MetaIcon } from "../icons/Meta";
 import { MidjourneyIcon } from "../icons/Midjorney";
 import { MongoDBIcon } from "../icons/MongoDB";
+import { NeedleIcon } from "../icons/Needle";
 import { NotDiamondIcon } from "../icons/NotDiamond";
 import { NotionIcon } from "../icons/Notion";
 import { NvidiaIcon } from "../icons/Nvidia";
@@ -513,6 +514,7 @@ export const SIDEBAR_BUNDLES = [
     icon: "AstraDB",
   },
   { display_name: "Notion", name: "Notion", icon: "Notion" },
+  { display_name: "Needle", name: "needle", icon: "Needle" },
   { display_name: "NVIDIA", name: "nvidia", icon: "NVIDIA" },
   { display_name: "Vectara", name: "vectara", icon: "Vectara" },
   { display_name: "Icosa Computing", name: "icosacomputing", icon: "Icosa" },
@@ -658,6 +660,7 @@ export const nodeIconsLucide: iconsType = {
   notion: NotionIcon,
   Notion: NotionIcon,
   NotionDirectoryLoader: NotionIcon,
+  Needle: NeedleIcon,
   NVIDIA: NvidiaIcon,
   ChatOpenAI: OpenAiIcon,
   AzureChatOpenAI: OpenAiIcon,
