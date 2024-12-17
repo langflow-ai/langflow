@@ -33,13 +33,15 @@ export type FlowType = {
   locked?: boolean | null;
 };
 
-export type NodeType = Node<NodeDataType, "GenericNode">;
-export type NoteNodeType = Node<NoteDataType, "NoteNode">;
+export type NodeType = Node<NodeDataType, "genericNode">;
+export type NoteNodeType = Node<NoteDataType, "noteNode">;
+
+export type AllNodeType = NodeType | NoteNodeType;
 
 export interface noteClassType
   extends Pick<APIClassType, "description" | "display_name" | "documentation"> {
   template: {
-    backgroundColor: string;
+    backgroundColor?: string;
     [key: string]: any;
   };
 }
