@@ -326,4 +326,5 @@ export type TableOptionsTypeAPI = {
     FieldValidatorType | { [key: string]: FieldValidatorType }
   >;
   field_parsers?: Array<FieldParserType | { [key: string]: FieldParserType }>;
+  description?: string;
 };
