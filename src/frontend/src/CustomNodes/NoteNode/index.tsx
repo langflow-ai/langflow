@@ -5,7 +5,7 @@ import {
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
-import { noteDataType } from "@/types/flow";
+import { NoteDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 import { NodeResizer } from "@xyflow/react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -15,7 +15,7 @@ function NoteNode({
   data,
   selected,
 }: {
-  data: noteDataType;
+  data: NoteDataType;
   selected?: boolean;
 }) {
   const bgColor =
