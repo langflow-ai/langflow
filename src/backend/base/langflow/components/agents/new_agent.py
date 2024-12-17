@@ -94,8 +94,8 @@ class LangflowAgent(Component):
 
         # Chat output
         chat_output = ChatOutput().set(input_value=final_answer.get_final_answer)
-        output_model = create_state_model("AgentOutput", output=chat_output.message_response)
-
+        agent_output_model = create_state_model("AgentOutput", output=chat_output.message_response)
+        output_model = agent_output_model()
         # Build the graph
         graph = Graph(chat_input, chat_output)
         async for result in graph.async_start(max_iterations=self.max_iterations):
