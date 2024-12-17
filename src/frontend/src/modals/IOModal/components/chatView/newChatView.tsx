@@ -5,6 +5,7 @@ import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useEffect, useMemo, useRef, useState } from "react";
+import useTabVisibility from "../../../../shared/hooks/use-tab-visibility";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { ChatMessageType } from "../../../../types/chat";
@@ -12,7 +13,6 @@ import { chatViewProps } from "../../../../types/components";
 import FlowRunningSqueleton from "../flowRunningSqueleton";
 import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 import { useFileHandler } from "./chatInput/hooks/use-file-handler";
-import useTabVisibility from "./chatInput/hooks/use-tab-visibility";
 import ChatInput from "./chatInput/newChatInput";
 import ChatMessage from "./chatMessage/newChatMessage";
 

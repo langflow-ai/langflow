@@ -23,10 +23,10 @@ import {
   EMPTY_INPUT_SEND_MESSAGE,
   EMPTY_OUTPUT_SEND_MESSAGE,
 } from "../../../../../constants/constants";
+import useTabVisibility from "../../../../../shared/hooks/use-tab-visibility";
 import useAlertStore from "../../../../../stores/alertStore";
 import { chatMessagePropsType } from "../../../../../types/components";
 import { cn } from "../../../../../utils/utils";
-import useTabVisibility from "../chatInput/hooks/use-tab-visibility";
 import LogoIcon from "./components/chatLogoIcon";
 import { EditMessageButton } from "./components/editMessageButton/newMessageOptions";
 import EditMessageField from "./components/editMessageField/newEditMessageField";
