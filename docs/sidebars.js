@@ -70,7 +70,6 @@ module.exports = {
         "Components/components-memories",
         "Components/components-models",
         "Components/components-prompts",
-        "Components/components-rag",
         "Components/components-tools",
         "Components/components-vector-stores",
         "Components/components-custom-components",
