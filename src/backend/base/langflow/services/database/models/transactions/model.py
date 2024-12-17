@@ -46,5 +46,5 @@ class TransactionTable(TransactionBase, table=True):  # type: ignore[call-arg]
 
 
 class TransactionReadResponse(TransactionBase):
-    transaction_id: UUID
+    id: UUID = Field(alias="transaction_id")
     flow_id: UUID
