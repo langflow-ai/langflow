@@ -425,6 +425,9 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
           onMouseDown={handleMouseDown}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
+          data-testid={`handle-${testIdComplement}-${title.toLowerCase()}-${
+            !showNode ? (left ? "target" : "source") : left ? "left" : "right"
+          }`}
         >
           <HandleContent
             isNullHandle={isNullHandle ?? false}

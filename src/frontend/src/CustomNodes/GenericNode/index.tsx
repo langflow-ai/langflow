@@ -197,7 +197,7 @@ function GenericNode({
 
   const renderOutputs = useCallback(
     (outputs, key?: string) => {
-      return outputs.map((output, idx) => (
+      return outputs?.map((output, idx) => (
         <MemoizedOutputParameter
           key={`${key}-${output.name}-${idx}`}
           output={output}
