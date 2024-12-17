@@ -78,6 +78,30 @@ const NodeToolbarComponent = memo(
     const frozen = data.node?.frozen ?? false;
     const currentFlow = useFlowStore((state) => state.currentFlow);
 
+    const paste = useFlowStore((state) => state.paste);
+    const nodes = useFlowStore((state) => state.nodes);
+    const edges = useFlowStore((state) => state.edges);
+    const setNodes = useFlowStore((state) => state.setNodes);
+    const setEdges = useFlowStore((state) => state.setEdges);
+    const getNodePosition = useFlowStore((state) => state.getNodePosition);
+    const flows = useFlowsManagerStore((state) => state.flows);
+    const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
+    const { mutate: FreezeAllVertices } = usePostRetrieveVertexOrder({
+      onSuccess: ({ vertices_to_run }) => {
+        updateFreezeStatus(vertices_to_run, !data.node?.frozen);
+        vertices_to_run.forEach((vertex) => {
+          updateNodeInternals(vertex);
+        });
+      },
+    });
+    const updateToolMode = useFlowStore((state) => state.updateToolMode);
+
+    const isSaved = flows?.some((flow) =>
+      Object.values(flow).includes(data.node?.display_name!),
+    );
+
+    const setNode = useFlowStore((state) => state.setNode);
+
     const nodeLength = useMemo(() => getNodeLength(data), [data]);
     const hasCode = useMemo(
       () => Object.keys(data.node!.template).includes("code"),
@@ -161,7 +185,7 @@ const NodeToolbarComponent = memo(
       });
     }, [isMinimal, showNode, data.id]);
 
-    function handleungroup() {
+    const handleungroup = useCallback(() => {
       if (isGroup) {
         takeSnapshot();
         expandGroupNode(
@@ -175,21 +199,36 @@ const NodeToolbarComponent = memo(
           data.node?.outputs,
         );
       }
-    }
+    }, [
+      isGroup,
+      data.id,
+      data.node?.flow,
+      data.node?.template,
+      data.node?.outputs,
+      nodes,
+      edges,
+      setNodes,
+      setEdges,
+      takeSnapshot,
+      getNodePosition,
+      updateFlowPosition,
+      expandGroupNode,
+    ]);
 
-    function shareComponent() {
+    const shareComponent = useCallback(() => {
       if (hasApiKey || hasStore) {
         setShowconfirmShare((state) => !state);
       }
-    }
+    }, [hasApiKey, hasStore]);
 
-    function handleCodeModal() {
-      if (!hasCode)
+    const handleCodeModal = useCallback(() => {
+      if (!hasCode) {
         setNoticeData({ title: `You can not access ${data.id} code` });
+      }
       setOpenModal((state) => !state);
-    }
+    }, [hasCode, data.id]);
 
-    function saveComponent() {
+    const saveComponent = useCallback(() => {
       if (isSaved) {
         setShowOverrideModal((state) => !state);
         return;
@@ -199,19 +238,18 @@ const NodeToolbarComponent = memo(
         override: false,
       });
       setSuccessData({ title: `${data.id} saved successfully` });
-      return;
-    }
+    }, [isSaved, data.id, flowComponent, addFlow]);
 
-    function openDocs() {
+    const openDocs = useCallback(() => {
       if (data.node?.documentation) {
-        return openInNewTab(data.node?.documentation);
+        return openInNewTab(data.node.documentation);
       }
       setNoticeData({
         title: `${data.id} docs is not available at the moment.`,
       });
-    }
+    }, [data.id, data.node?.documentation, openInNewTab]);
 
-    const freezeFunction = () => {
+    const freezeFunction = useCallback(() => {
       setNode(data.id, (old) => ({
         ...old,
         data: {
@@ -222,7 +260,7 @@ const NodeToolbarComponent = memo(
           },
         },
       }));
-    };
+    }, [data.id, setNode]);
 
     useShortcuts({
       showOverrideModal,
@@ -244,24 +282,6 @@ const NodeToolbarComponent = memo(
       activateToolMode: handleActivateToolMode,
       hasToolMode,
     });
-
-    const paste = useFlowStore((state) => state.paste);
-    const nodes = useFlowStore((state) => state.nodes);
-    const edges = useFlowStore((state) => state.edges);
-    const setNodes = useFlowStore((state) => state.setNodes);
-    const setEdges = useFlowStore((state) => state.setEdges);
-    const getNodePosition = useFlowStore((state) => state.getNodePosition);
-    const flows = useFlowsManagerStore((state) => state.flows);
-    const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
-    const { mutate: FreezeAllVertices } = usePostRetrieveVertexOrder({
-      onSuccess: ({ vertices_to_run }) => {
-        updateFreezeStatus(vertices_to_run, !data.node?.frozen);
-        vertices_to_run.forEach((vertex) => {
-          updateNodeInternals(vertex);
-        });
-      },
-    });
-    const updateToolMode = useFlowStore((state) => state.updateToolMode);
 
     useEffect(() => {
       if (!showModalAdvanced) {
@@ -370,12 +390,6 @@ const NodeToolbarComponent = memo(
       setSelectedValue(null);
     }, []);
 
-    const isSaved = flows?.some((flow) =>
-      Object.values(flow).includes(data.node?.display_name!),
-    );
-
-    const setNode = useFlowStore((state) => state.setNode);
-
     const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue({
       node: data.node!,
       nodeId: data.id,
@@ -410,28 +424,6 @@ const NodeToolbarComponent = memo(
       parameterId: "tool_mode",
       tool_mode: data.node!.tool_mode ?? false,
     });
-
-    const handleConfirm = useCallback(() => {
-      addFlow({
-        flow: flowComponent,
-        override: true,
-      });
-      setSuccessData({ title: `${data.id} successfully overridden!` });
-      setShowOverrideModal(false);
-    }, [flowComponent, data.id]);
-
-    const handleClose = useCallback(() => {
-      setShowOverrideModal(false);
-    }, []);
-
-    const handleCancel = useCallback(() => {
-      addFlow({
-        flow: flowComponent,
-        override: true,
-      });
-      setSuccessData({ title: "New component successfully saved!" });
-      setShowOverrideModal(false);
-    }, [flowComponent, setSuccessData, setShowOverrideModal]);
 
     const renderToolbarButtons = useMemo(
       () => (
