@@ -311,6 +311,24 @@ class MessageResponse(DefaultModel):
     category: str | None = None
     content_blocks: list[ContentBlock] | None = None
 
+    @field_validator("content_blocks", mode="before")
+    @classmethod
+    def validate_content_blocks(cls, v):
+        if isinstance(v, str):
+            v = json.loads(v)
+        if isinstance(v, list):
+            return [cls.validate_content_blocks(block) for block in v]
+        if isinstance(v, dict):
+            return ContentBlock.model_validate(v)
+        return v
+
+    @field_validator("properties", mode="before")
+    @classmethod
+    def validate_properties(cls, v):
+        if isinstance(v, str):
+            v = json.loads(v)
+        return v
+
     @field_validator("files", mode="before")
     @classmethod
     def validate_files(cls, v):
