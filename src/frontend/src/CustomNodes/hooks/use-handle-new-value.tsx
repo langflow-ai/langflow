@@ -4,7 +4,7 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { APIClassType, InputFieldType } from "@/types/api";
-import { NodeType } from "@/types/flow";
+import { AllNodeType } from "@/types/flow";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
 import { mutateTemplate } from "../helpers/mutate-template";
@@ -28,7 +28,7 @@ const useHandleOnNewValue = ({
   name: string;
   setNode?: (
     id: string,
-    update: NodeType | ((oldState: NodeType) => NodeType),
+    update: AllNodeType | ((oldState: AllNodeType) => AllNodeType),
   ) => void;
 }) => {
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);

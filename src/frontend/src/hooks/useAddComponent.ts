@@ -2,7 +2,7 @@ import { NODE_WIDTH } from "@/constants/constants";
 import { track } from "@/customization/utils/analytics";
 import useFlowStore from "@/stores/flowStore";
 import { APIClassType } from "@/types/api";
-import { NodeType } from "@/types/flow";
+import { AllNodeType } from "@/types/flow";
 import { getNodeId } from "@/utils/reactflowUtils";
 import { getNodeRenderType } from "@/utils/utils";
 import { useStoreApi } from "@xyflow/react";
@@ -50,7 +50,7 @@ export function useAddComponent() {
 
       const newId = getNodeId(type);
 
-      const newNode: NodeType = {
+      const newNode: AllNodeType = {
         id: newId,
         type: getNodeRenderType("genericnode"),
         position: { x: 0, y: 0 },
