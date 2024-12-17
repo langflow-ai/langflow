@@ -40,18 +40,20 @@ export type AllNodeType = GenericNodeType | NoteNodeType;
 export type SetNodeType<T = "genericNode" | "noteNode"> =
   T extends "genericNode" ? GenericNodeType : NoteNodeType;
 
-export interface noteClassType
-  extends Pick<APIClassType, "description" | "display_name" | "documentation"> {
+export type noteClassType = Pick<
+  APIClassType,
+  "description" | "display_name" | "documentation"
+> & {
   template: {
     backgroundColor?: string;
     [key: string]: any;
   };
-}
+};
 
 export type NoteDataType = Pick<NodeDataType, "showNode" | "type" | "id"> & {
   showNode?: boolean;
   type: string;
-  node?: noteClassType;
+  node: noteClassType;
   id: string;
 };
 export type NodeDataType = {
