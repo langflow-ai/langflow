@@ -47,7 +47,7 @@ def get_type(payload):
         return LogType.DATA
     if isinstance(payload, dict):
         return LogType.OBJECT
-    if isinstance(payload, (list, DataFrame)):
+    if isinstance(payload, (list | DataFrame)):
         return LogType.ARRAY
     if isinstance(payload, str):
         return LogType.TEXT
@@ -66,7 +66,7 @@ def get_message(payload):
     if hasattr(payload, "model_dump"):
         return payload.model_dump()
 
-    if isinstance(payload, (dict, str, Data)):
+    if isinstance(payload, (dict | str | Data)):
         return payload.data if isinstance(payload, Data) else payload
 
     return payload
