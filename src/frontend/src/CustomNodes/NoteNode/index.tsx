@@ -16,7 +16,7 @@ function NoteNode({
   selected,
 }: {
   data: noteDataType;
-  selected: boolean;
+  selected?: boolean;
 }) {
   const bgColor =
     Object.keys(COLOR_OPTIONS).find(

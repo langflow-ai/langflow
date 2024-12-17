@@ -57,7 +57,7 @@ export default function GenericNode({
   selected,
 }: {
   data: NodeDataType;
-  selected: boolean;
+  selected?: boolean;
   xPos?: number;
   yPos?: number;
 }): JSX.Element {
