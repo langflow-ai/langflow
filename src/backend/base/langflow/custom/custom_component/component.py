@@ -1185,13 +1185,12 @@ class Component(CustomComponent):
 
         return TableInput(
             name=TOOLS_METADATA_INPUT_NAME,
-            info=TOOLS_METADATA_INFO,
-            display_name="Toolset configuration",
+            display_name="Edit tools",
             real_time_refresh=True,
             table_schema=TOOL_TABLE_SCHEMA,
             value=tool_data,
             trigger_icon="Hammer",
-            trigger_text="Open toolset",
+            trigger_text="",
             table_options=TableOptions(
                 block_add=True,
                 block_delete=True,
@@ -1202,5 +1201,6 @@ class Component(CustomComponent):
                 block_select=True,
                 hide_options=True,
                 field_parsers={"name": FieldParserType.SNAKE_CASE},
+                description=TOOLS_METADATA_INFO,
             ),
         )
