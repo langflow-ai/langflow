@@ -5,7 +5,7 @@ from langflow.components.embeddings import OpenAIEmbeddingsComponent
 from langflow.components.inputs import ChatInput
 from langflow.components.models import OpenAIModelComponent
 from langflow.components.outputs import ChatOutput
-from langflow.components.processing import ParseDataComponent
+from langflow.components.processing import DataToMessage
 from langflow.components.processing.split_text import SplitTextComponent
 from langflow.components.prompts import PromptComponent
 from langflow.components.vectorstores import AstraDBVectorStoreComponent
@@ -37,7 +37,7 @@ def rag_graph():
         embedding_model=openai_embeddings.build_embeddings,
     )
 
-    parse_data = ParseDataComponent()
+    parse_data = DataToMessage()
     parse_data.set(data=rag_vector_store.search_documents)
     prompt_component = PromptComponent()
     prompt_component.set(

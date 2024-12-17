@@ -2,7 +2,7 @@ from langflow.components.data import FileComponent
 from langflow.components.inputs import ChatInput
 from langflow.components.models import OpenAIModelComponent
 from langflow.components.outputs import ChatOutput
-from langflow.components.processing import ParseDataComponent
+from langflow.components.processing import DataToMessage
 from langflow.components.prompts import PromptComponent
 from langflow.graph import Graph
 
@@ -23,7 +23,7 @@ Question:
 Answer:
 """
     file_component = FileComponent()
-    parse_data_component = ParseDataComponent()
+    parse_data_component = DataToMessage()
     parse_data_component.set(data=file_component.load_files)
 
     chat_input = ChatInput()
