@@ -92,14 +92,14 @@ async def update_message(
 
     try:
         message_dict = message.model_dump(exclude_unset=True, exclude_none=True)
-        message_dict["edit"] = True
+        if "text" in message_dict and message_dict["text"] != db_message.text:
+            message_dict["edit"] = True
         db_message.sqlmodel_update(message_dict)
         session.add(db_message)
         await session.commit()
         await session.refresh(db_message)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
-
     return db_message
 
 
