@@ -6,6 +6,7 @@ from contextvars import ContextVar
 from typing import Annotated
 from uuid import UUID, uuid4
 
+import pydantic
 from anyio import BrokenResourceError
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
@@ -169,7 +170,10 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
 
         conversation_id = str(uuid4())
         input_request = InputValueRequest(
-            input_value=processed_inputs["input_value"], components=[], type="chat", session=conversation_id
+            input_value=processed_inputs.get("input_value", ""),
+            components=[],
+            type="chat",
+            session=conversation_id
         )
 
         result = ""
@@ -190,7 +194,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                     try:
                         event_data = json.loads(line)
                         if event_data.get("event") == "end_vertex":
-                            result += (
+                            message = (
                                 event_data.get("data", {})
                                 .get("build_data", {})
                                 .get("data", {})
@@ -198,6 +202,8 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                                 .get("message", {})
                                 .get("text", "")
                             )
+                            if message:
+                                result += str(message)
                     except json.JSONDecodeError:
                         logger.warning(f"Failed to parse event data: {line}")
                         continue
@@ -250,16 +256,30 @@ async def handle_sse(request: Request, current_user: Annotated[User, Depends(get
                 init_options = server.create_initialization_options(notification_options)
                 logger.debug(f"Initialization options: {init_options}")
 
-                await server.run(streams[0], streams[1], init_options)
-            except ValidationError as e:
-                logger.warning(f"Validation error in MCP: {e}")
-                logger.debug(f"Failed message type: {type(e).__name__}")
-                logger.debug(f"Validation error details: {e.errors()}")
-                # Add more details about the failed validation
-                if hasattr(e, "model"):
-                    logger.debug(f"Failed validation model: {e.model.__name__}")
-                if hasattr(e, "raw_errors"):
-                    logger.debug(f"Raw validation errors: {e.raw_errors}")
+                try:
+                    await server.run(streams[0], streams[1], init_options)
+                except (pydantic.ValidationError, ExceptionGroup) as exc:
+                    validation_error = None
+                    
+                    # For ExceptionGroup, find the validation error if present
+                    if isinstance(exc, ExceptionGroup):
+                        for inner_exc in exc.exceptions:
+                            if isinstance(inner_exc, pydantic.ValidationError):
+                                validation_error = inner_exc
+                                break
+                    elif isinstance(exc, pydantic.ValidationError):
+                        validation_error = exc
+                    
+                    # Handle the validation error if found
+                    if validation_error and any("cancelled" in err["input"] for err in validation_error.errors()):
+                        logger.debug("Ignoring validation error for cancelled notification")
+                    else:
+                        # For other errors, log as error but don't crash
+                        logger.error(f"Validation error in MCP: {exc}")
+                        logger.debug(f"Failed message type: {type(exc).__name__}")
+                        if validation_error:
+                            logger.debug(f"Validation error details: {validation_error.errors()}")
+                    return
             except BrokenResourceError:
                 # Handle gracefully when client disconnects
                 logger.info("Client disconnected from SSE connection")
