@@ -17,7 +17,8 @@ export function DefaultEdge({
   const sourceNode = getNode(source);
   const targetNode = getNode(target);
 
-  const sourceXNew = (sourceNode?.position.x ?? 0) + (sourceNode?.width ?? 0);
+  const sourceXNew =
+    (sourceNode?.position.x ?? 0) + (sourceNode?.measured?.width ?? 0);
   const targetXNew = targetNode?.position.x ?? 0;
 
   const [edgePath] = getBezierPath({
