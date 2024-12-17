@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Assistant Web App</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Voice Assistant Web App</h1>
+    <button id="startBtn">Start Conversation</button>
+    <div id="status"></div>
+    <div id="message"></div>
+    <canvas id="audioVisualizer"></canvas>
+
+    <script>
+        let ws;
+        let audioContext = null;
+        let analyser;
+        let microphone;
+        let isRecording = false;
+        let statusDiv;
+        let messageDiv;
+        let canvasCtx;
+        let audioQueue = [];
+        let isPlaying = false;
+        let processor;
+
+        const workletCode = `
+            class StreamProcessor extends AudioWorkletProcessor {
+                constructor() {
+                    super();
+                    this.inputBuffer = new Float32Array(128);
+                    this.inputOffset = 0;
+                    this.outputBuffers = [];
+                    this.isPlaying = false;
+
+                    // Handle messages from main thread
+                    this.port.onmessage = (event) => {
+                        if (event.data.type === 'playback') {
+                            // Add audio data to output buffer queue
+                            this.outputBuffers.push(event.data.audio);
+                            this.isPlaying = true;
+                        }
+                    };
+                }
+
+                process(inputs, outputs, parameters) {
+                    // Handle microphone input
+                    const input = inputs[0];
+                    if (input && input.length > 0) {
+                        const inputData = input[0];
+                        for (let i = 0; i < inputData.length; i++) {
+                            this.inputBuffer[this.inputOffset++] = inputData[i];
+
+                            if (this.inputOffset >= this.inputBuffer.length) {
+                                const outputData = new Int16Array(this.inputBuffer.length);
+                                for (let j = 0; j < this.inputBuffer.length; j++) {
+                                    outputData[j] = Math.max(-1, Math.min(1, this.inputBuffer[j])) * 0x7FFF;
+                                }
+                                this.port.postMessage({
+                                    type: 'input',
+                                    audio: outputData
+                                });
+                                this.inputBuffer = new Float32Array(128);
+                                this.inputOffset = 0;
+                            }
+                        }
+                    }
+
+                    // Handle audio playback
+                    const output = outputs[0];
+                    if (output && output.length > 0 && this.isPlaying) {
+                        if (this.outputBuffers.length > 0) {
+                            const currentBuffer = this.outputBuffers[0];
+                            const chunkSize = Math.min(output[0].length, currentBuffer.length);
+
+                            // Copy data to both channels with same gain
+                            const gain = 0.8;
+                            for (let channel = 0; channel < output.length; channel++) {
+                                const outputChannel = output[channel];
+                                for (let i = 0; i < chunkSize; i++) {
+                                    outputChannel[i] = currentBuffer[i] * gain;
+                                }
+                            }
+
+                            // Remove processed samples
+                            if (chunkSize === currentBuffer.length) {
+                                this.outputBuffers.shift();
+                            } else {
+                                this.outputBuffers[0] = currentBuffer.slice(chunkSize);
+                            }
+                        }
+
+                        // Stop if no more buffers
+                        if (this.outputBuffers.length === 0) {
+                            this.isPlaying = false;
+                            this.port.postMessage({ type: 'done' });
+                        }
+                    }
+                    return true;
+                }
+            }
+            registerProcessor('stream_processor', StreamProcessor);
+        `;
+
+        function initializeAudioAndStartConversation() {
+            console.log('Initializing audio...');
+            try {
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                        sampleRate: 24000
+                    });
+                    console.log('Created new AudioContext');
+                }
+
+                audioContext.resume().then(() => {
+                    console.log('AudioContext resumed successfully');
+                    startConversation();
+                }).catch(error => {
+                    console.error('Failed to resume AudioContext:', error);
+                    statusDiv.textContent = 'Error: Failed to start audio. Please try again.';
+                });
+
+            } catch (error) {
+                console.error('Error initializing AudioContext:', error);
+                statusDiv.textContent = 'Error: Failed to initialize audio. Please try again.';
+            }
+        }
+
+        function base64ToFloat32Array(base64String) {
+            const binaryString = atob(base64String);
+
+            const pcmData = new Int16Array(binaryString.length / 2);
+
+            for (let i = 0; i < binaryString.length; i += 2) {
+                const lsb = binaryString.charCodeAt(i);
+                const msb = binaryString.charCodeAt(i + 1);
+                pcmData[i/2] = (msb << 8) | lsb;
+            }
+
+            const float32Data = new Float32Array(pcmData.length);
+            for (let i = 0; i < pcmData.length; i++) {
+                float32Data[i] = pcmData[i] / 32768.0;
+            }
+
+            return float32Data;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const startBtn = document.getElementById('startBtn');
+            statusDiv = document.getElementById('status');
+            messageDiv = document.getElementById('message');
+            const canvas = document.getElementById('audioVisualizer');
+            canvasCtx = canvas.getContext('2d');
+
+            canvas.width = window.innerWidth * 0.8;
+            canvas.height = 200;
+
+            startBtn.addEventListener('click', initializeAudioAndStartConversation);
+        });
+
+        function startConversation() {
+            console.log('Starting WebSocket connection...');
+            try {
+                ws = new WebSocket('ws://localhost:7860/api/v1/voice/ws/5dc5652d-4271-4ee1-9278-1f7998a43219');
+                console.log('WebSocket instance created:', ws);
+
+                ws.onopen = () => {
+                    console.log('WebSocket connection opened, readyState:', ws.readyState);
+                    statusDiv.textContent = 'Connected to server';
+
+                    const sessionConfig = {
+                        type: "session.update",
+                        session: {
+                            modalities: ["text", "audio"],
+                            instructions: "You are Flow, a concise and efficient voice assistant.",
+                            voice: "shimmer",
+                            input_audio_format: "pcm16",
+                            output_audio_format: "pcm16",
+                            turn_detection: {
+                                type: "server_vad",
+                                threshold: 0.5,
+                                prefix_padding_ms: 300,
+                                silence_duration_ms: 400,
+                            }
+                        }
+                    };
+
+                    try {
+                        //console.log('Attempting to send session config:', sessionConfig);
+                        //ws.send(JSON.stringify(sessionConfig));
+                        console.log('Session config sent successfully');
+                        startRecording();
+                    } catch (error) {
+                        console.error('Error sending session config:', error);
+                    }
+                };
+
+                ws.onclose = (event) => {
+                    console.log('WebSocket closed:', {
+                        code: event.code,
+                        reason: event.reason,
+                        wasClean: event.wasClean,
+                        timestamp: new Date().toISOString()
+                    });
+                    statusDiv.textContent = `Disconnected from server (${event.code})`;
+                    stopRecording();
+                };
+
+                ws.onerror = (error) => {
+                    console.error('WebSocket Error:', {
+                        error: error,
+                        readyState: ws.readyState,
+                        timestamp: new Date().toISOString()
+                    });
+                    statusDiv.textContent = 'Connection error. Check console for details.';
+                };
+
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    console.log('WebSocket message received:', data);
+
+                    switch (data.type) {
+                        case 'session.created':
+                            console.log('Session created:', data.session);
+                            break;
+
+                        case 'session.updated':
+                            console.log('Session updated:', data.session);
+                            break;
+
+                        case 'response.output_item.done':
+                        case 'response.done':
+                            console.log('Response completed');
+                            break;
+
+                        case 'input_audio_buffer.speech_started':
+                            console.log('Speech started');
+                            break;
+
+                        case 'input_audio_buffer.speech_stopped':
+                            console.log('Speech stopped');
+                            break;
+
+                        case 'input_audio_buffer.committed':
+                            console.log('Audio buffer committed');
+                            break;
+
+                        case 'conversation.item.created':
+                            console.log('New conversation item created:', data.item);
+                            break;
+
+                        case 'response.created':
+                            console.log('New response created:', data.response);
+                            break;
+
+                        case 'rate_limits.updated':
+                            console.log('Rate limits updated:', data.rate_limits);
+                            break;
+
+                        case 'response.output_item.added':
+                            console.log('New output item added:', data.item);
+                            break;
+
+                        case 'response.content_part.added':
+                            if (data.part) {
+                                console.log('Content part:', data.part);
+                                if (data.part.type === 'text' && data.part.text) {
+                                    console.log('Content text:', data.part.text);
+                                    messageDiv.textContent += data.part.text;
+                                }
+                            }
+                            break;
+
+                        case 'response.audio_transcript.delta':
+                            if (data.delta) {
+                                console.log('Transcript text:', data.delta);
+                                statusDiv.textContent += data.delta;
+                            }
+                            break;
+
+                        case 'response.audio.delta':
+                            if (data.delta) {
+                                try {
+                                    console.log('Processing audio response:', {
+                                        deltaLength: data.delta.length,
+                                        type: typeof data.delta
+                                    });
+
+                                    const float32Data = base64ToFloat32Array(data.delta);
+                                    const audioBuffer = audioContext.createBuffer(
+                                        2,                    // Changed from 1 to 2 for stereo
+                                        float32Data.length,
+                                        24000                 // sample rate
+                                    );
+
+                                    // Copy same data to both channels
+                                    audioBuffer.copyToChannel(float32Data, 0);  // Left channel
+                                    audioBuffer.copyToChannel(float32Data, 1);  // Right channel
+
+                                    audioQueue.push(audioBuffer);
+
+                                    if (!isPlaying) {
+                                        playNextAudioChunk();
+                                    }
+                                } catch (error) {
+                                    console.error('Error processing audio response:', {
+                                        error: error,
+                                        delta: data.delta.substring(0, 100) // Log first 100 chars of delta
+                                    });
+                                }
+                            }
+                            break;
+
+                        case 'error':
+                            console.error('Server error:', data.error);
+                            statusDiv.textContent = 'Error: ' + data.error;
+                            break;
+
+                        default:
+                            console.log('Unhandled message type:', data.type);
+                    }
+                };
+
+            } catch (error) {
+                console.error('Error creating WebSocket:', error);
+                statusDiv.textContent = 'Failed to create WebSocket connection';
+            }
+        }
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                microphone = audioContext.createMediaStreamSource(stream);
+                analyser = audioContext.createAnalyser();
+                microphone.connect(analyser);
+
+                const blob = new Blob([workletCode], { type: 'application/javascript' });
+                const workletUrl = URL.createObjectURL(blob);
+
+                try {
+                    await audioContext.audioWorklet.addModule(workletUrl);
+                    processor = new AudioWorkletNode(audioContext, 'stream_processor');
+
+                    analyser.connect(processor);
+                    processor.connect(audioContext.destination);
+
+                    processor.port.onmessage = (event) => {
+                        if (event.data.type === 'input' && event.data.audio) {
+                            // Handle input audio
+                            const hasSignificantAudio = event.data.audio.some(x => Math.abs(x) > 2000);
+                            let messageCount = 0;
+                            messageCount++;
+
+                            if (hasSignificantAudio || messageCount % 100 === 0) {
+                                console.log('Audio data:', {
+                                    length: event.data.audio.length,
+                                    hasSignificantAudio,
+                                    messageCount
+                                });
+                            }
+
+                            const base64Audio = btoa(String.fromCharCode.apply(null, new Uint8Array(event.data.audio.buffer)));
+                            ws.send(JSON.stringify({
+                                type: 'input_audio_buffer.append',
+                                audio: base64Audio
+                            }));
+                        } else if (event.data.type === 'done') {
+                            // Handle playback completion
+                            console.log('Playback chunk complete, queue length:', audioQueue.length);
+                            if (audioQueue.length > 0) {
+                                playNextAudioChunk();
+                            } else {
+                                isPlaying = false;
+                            }
+                        }
+                    };
+
+                    isRecording = true;
+                    visualize();
+                } catch (err) {
+                    console.error('AudioWorklet failed to load:', err);
+                    throw err;
+                } finally {
+                    URL.revokeObjectURL(workletUrl);
+                }
+
+            } catch (err) {
+                console.error('Error accessing microphone:', err);
+                statusDiv.textContent = 'Error: ' + err.message;
+            }
+        }
+
+        function stopRecording() {
+            if (microphone) {
+                microphone.disconnect();
+                microphone = null;
+            }
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+            isRecording = false;
+        }
+
+        function visualize() {
+            if (!canvasCtx || !analyser) {
+                console.log('Visualization not ready');
+                return;
+            }
+
+            const WIDTH = canvasCtx.canvas.width;
+            const HEIGHT = canvasCtx.canvas.height;
+
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+            function draw() {
+                if (!isRecording) return;
+
+                requestAnimationFrame(draw);
+                analyser.getByteFrequencyData(dataArray);
+
+                canvasCtx.fillStyle = 'rgb(0, 0, 0)';
+                canvasCtx.fillRect(0, 0, WIDTH, HEIGHT);
+
+                const barWidth = (WIDTH / dataArray.length) * 2.5;
+                let barHeight;
+                let x = 0;
+
+                for (let i = 0; i < dataArray.length; i++) {
+                    barHeight = dataArray[i] / 2;
+                    canvasCtx.fillStyle = `rgb(50, ${barHeight + 100}, 50)`;
+                    canvasCtx.fillRect(x, HEIGHT - barHeight, barWidth, barHeight);
+                    x += barWidth + 1;
+                }
+            }
+
+            draw();
+        }
+
+        function playNextAudioChunk() {
+            if (audioQueue.length === 0) {
+                console.log('Audio queue empty, stopping playback');
+                isPlaying = false;
+                return;
+            }
+
+            isPlaying = true;
+            const audioBuffer = audioQueue.shift();
+
+            try {
+                // Send the audio data to the worklet for playback
+                processor.port.postMessage({
+                    type: 'playback',
+                    audio: audioBuffer.getChannelData(0)  // Get raw Float32Array data
+                });
+
+                console.log('Sent audio chunk to worklet:', {
+                    duration: audioBuffer.duration,
+                    length: audioBuffer.length,
+                    queueLength: audioQueue.length
+                });
+
+            } catch (error) {
+                console.error('Error playing audio:', error);
+                isPlaying = false;
+            }
+        }
+
+    </script>
+</body>
+</html>
