@@ -1,5 +1,3 @@
-import logging
-
 from langchain_core.tools import StructuredTool
 
 from langflow.base.agents.agent import LCToolsAgentComponent
