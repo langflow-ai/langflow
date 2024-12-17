@@ -1593,7 +1593,7 @@ export function getRandomDescription(): string {
 }
 
 export const createNewFlow = (
-  flowData: ReactFlowJsonObject,
+  flowData: ReactFlowJsonObject<AllNodeType, EdgeType>,
   folderId: string,
   flow?: FlowType,
 ) => {
