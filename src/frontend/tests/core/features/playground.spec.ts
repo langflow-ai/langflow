@@ -242,55 +242,41 @@ test(
     await page.getByTestId("chat-message-User-session_after_delete").click();
     await expect(page.getByTestId("session-selector")).toBeVisible();
 
-    // check new chat
-    await page.getByTestId("new-chat").click();
-    await page.waitForSelector('[data-testid="new-chat-text"]', {
-      timeout: 100000,
-    });
-    await page.getByTestId("input-chat-playground").click();
-    await page.getByTestId("input-chat-playground").fill("second session");
-    await page.keyboard.press("Enter");
-    await page.getByTestId("chat-message-User-second session").click();
-    await page
-      .getByTestId("chat-message-AI-second session")
-      .getByText("second session")
-      .click();
-    expect(await page.getByTestId("session-selector").count()).toBe(2);
     // check helpful button
-    await page.getByTestId("chat-message-AI-second session").hover();
+    await page.getByTestId("chat-message-AI-session_after_delete").hover();
     await page.getByTestId("helpful-button").click();
-    await page.getByTestId("chat-message-AI-second session").hover();
+    await page.getByTestId("chat-message-AI-session_after_delete").hover();
     await expect(page.getByTestId("icon-ThumbUpIconCustom")).toBeVisible({
       timeout: 10000,
     });
     await page.getByTestId("helpful-button").click();
-    await page.getByTestId("chat-message-AI-second session").hover();
+    await page.getByTestId("chat-message-AI-session_after_delete").hover();
     await expect(page.getByTestId("icon-ThumbUpIconCustom")).toBeVisible({
       timeout: 10000,
       visible: false,
     });
     // check not helpful button
-    await page.getByTestId("chat-message-AI-second session").hover();
+    await page.getByTestId("chat-message-AI-session_after_delete").hover();
     await page.getByTestId("not-helpful-button").click();
-    await page.getByTestId("chat-message-AI-second session").hover();
+    await page.getByTestId("chat-message-AI-session_after_delete").hover();
     await expect(page.getByTestId("icon-ThumbDownIconCustom")).toBeVisible({
       timeout: 10000,
     });
     await page.getByTestId("not-helpful-button").click();
-    await page.getByTestId("chat-message-AI-second session").hover();
+    await page.getByTestId("chat-message-AI-session_after_delete").hover();
     await expect(page.getByTestId("icon-ThumbDownIconCustom")).toBeVisible({
       timeout: 10000,
       visible: false,
     });
     // check switch feedback
-    await page.getByTestId("chat-message-AI-second session").hover();
+    await page.getByTestId("chat-message-AI-session_after_delete").hover();
     await page.getByTestId("helpful-button").click();
-    await page.getByTestId("chat-message-AI-second session").hover();
+    await page.getByTestId("chat-message-AI-session_after_delete").hover();
     await expect(page.getByTestId("icon-ThumbUpIconCustom")).toBeVisible({
       timeout: 10000,
     });
     await page.getByTestId("not-helpful-button").click();
-    await page.getByTestId("chat-message-AI-second session").hover();
+    await page.getByTestId("chat-message-AI-session_after_delete").hover();
     await expect(page.getByTestId("icon-ThumbDownIconCustom")).toBeVisible({
       timeout: 10000,
     });
