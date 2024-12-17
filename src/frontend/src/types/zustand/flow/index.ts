@@ -60,7 +60,7 @@ export type FlowStoreType = {
   setComponentsToUpdate: (
     update: string[] | ((oldState: string[]) => string[]),
   ) => void;
-  updateComponentsToUpdate: (nodes: Node[]) => void;
+  updateComponentsToUpdate: (nodes: AllNodeType[]) => void;
   onFlowPage: boolean;
   setOnFlowPage: (onFlowPage: boolean) => void;
   flowPool: FlowPoolType;
@@ -101,8 +101,8 @@ export type FlowStoreType = {
   ) => void;
   nodes: AllNodeType[];
   edges: Edge[];
-  onNodesChange: OnNodesChange;
-  onEdgesChange: OnEdgesChange;
+  onNodesChange: OnNodesChange<AllNodeType>;
+  onEdgesChange: OnEdgesChange<Edge>;
   setNodes: (
     update: AllNodeType[] | ((oldState: AllNodeType[]) => AllNodeType[]),
   ) => void;
@@ -185,7 +185,7 @@ export type FlowStoreType = {
     edges,
     viewport,
   }: {
-    nodes?: Node[];
+    nodes?: AllNodeType[];
     edges?: Edge[];
     viewport?: Viewport;
   }) => void;
