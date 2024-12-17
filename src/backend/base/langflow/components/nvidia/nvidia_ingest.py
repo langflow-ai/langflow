@@ -1,5 +1,5 @@
 from langflow.custom import Component
-from langflow.io import MessageTextInput, Output
+from langflow.io import MessageTextInput, StrInput, FileInput, BoolInput, IntInput, Output
 from langflow.schema import Data
 
 from nv_ingest_client.client import NvIngestClient
@@ -7,7 +7,9 @@ from nv_ingest_client.primitives import JobSpec
 from nv_ingest_client.primitives.tasks import ExtractTask
 from nv_ingest_client.primitives.tasks import SplitTask
 from nv_ingest_client.util.file_processing.extract import extract_file_content, EXTENSION_TO_DOCUMENT_TYPE
-import logging, time
+import time
+from urllib.parse import urlparse
+from pathlib import Path
 
 class NVIDIAIngestComponent(Component):
     display_name = "NVIDIA Ingest Component"
@@ -20,6 +22,11 @@ class NVIDIAIngestComponent(Component):
     supported_file_types_info = f"Supported file types: {', '.join(file_types)}"
 
     inputs = [
+        StrInput(
+            name="base_url",
+            display_name="NVIDIA Ingestion URL",
+            info="The URL of the NVIDIA Ingestion API.",
+        ),
         FileInput(
             name="path",
             display_name="Path",
@@ -116,17 +123,21 @@ class NVIDIAIngestComponent(Component):
             )
             job_spec.add_task(split_task)
 
-        client = NvIngestClient() # message_client_hostname="localhost", message_client_port=7670
+        parsed_url = urlparse(self.base_url)
+        self.log(f"creating NvIngestClient for host: {parsed_url.hostname}, port: {parsed_url.port}", name="NVIDIAIngestComponent")
+        client = NvIngestClient(message_client_hostname=parsed_url.hostname, message_client_port=parsed_url.port)
 
         job_id = client.add_job(job_spec)
 
         client.submit_job(job_id, "morpheus_task_queue")
 
         result = client.fetch_job_result(job_id, timeout=60)
+        msg = f"results: {str(result)}"
+        self.log(msg, name="NVIDIAIngestComponent")
 
         data = []
 
-        for element in result[0][0]:
+        for element in result[0]:
             if element['document_type'] == 'text':
                 data.append(Data(text=element['metadata']['content'],file_path=element['metadata']['source_metadata']['source_name'],document_type=element['document_type'],description=element['metadata']['content_metadata']['description']))
             elif element['document_type'] == 'structured':
