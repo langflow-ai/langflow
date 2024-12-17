@@ -13,9 +13,7 @@ This component implements a Vector Store using Astra DB with search capabilities
 
 For more information, see the [DataStax documentation](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -37,7 +35,7 @@ For more information, see the [DataStax documentation](https://docs.datastax.com
 | search_score_threshold | Search Score Threshold | Minimum similarity score threshold for search results |
 | search_filter | Search Metadata Filter | Optional dictionary of filters to apply to the search query |
 
-#### Outputs
+### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -49,9 +47,7 @@ For more information, see the [DataStax documentation](https://docs.datastax.com
 This component creates a Cassandra Vector Store with search capabilities.
 For more information, see the [Cassandra documentation](https://cassandra.apache.org/doc/latest/cassandra/vector-search/overview.html).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -74,7 +70,7 @@ For more information, see the [Cassandra documentation](https://cassandra.apache
 | body_search | String | Document textual search terms |
 | enable_body_search | Boolean | Flag to enable body search |
 
-#### Outputs
+### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -85,9 +81,7 @@ For more information, see the [Cassandra documentation](https://cassandra.apache
 
 This component implements a Cassandra Graph Vector Store with search capabilities.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -107,7 +101,7 @@ This component implements a Cassandra Graph Vector Store with search capabilitie
 | search_score_threshold | Search Score Threshold | Minimum similarity score threshold for search results (for "Similarity with score threshold" search type) |
 | search_filter | Search Metadata Filter | Optional dictionary of filters to apply to the search query |
 
-#### Outputs
+### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -119,9 +113,7 @@ This component implements a Cassandra Graph Vector Store with search capabilitie
 This component creates a Chroma Vector Store with search capabilities.
 For more information, see the [Chroma documentation](https://docs.trychroma.com/).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name                         | Type          | Description                                      |
 |------------------------------|---------------|--------------------------------------------------|
@@ -140,7 +132,7 @@ For more information, see the [Chroma documentation](https://docs.trychroma.com/
 | number_of_results             | Integer       | Number of results to return from the search. Default: 10. |
 | limit                         | Integer       | Limit the number of records to compare when Allow Duplicates is False. |
 
-#### Outputs
+### Outputs
 
 | Name           | Type          | Description                    |
 |----------------|---------------|--------------------------------|
@@ -152,9 +144,7 @@ For more information, see the [Chroma documentation](https://docs.trychroma.com/
 This component implements a Clickhouse Vector Store with search capabilities.
 For more information, see the [CLickhouse Documentation](https://clickhouse.com/docs/en/intro).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -175,7 +165,7 @@ For more information, see the [CLickhouse Documentation](https://clickhouse.com/
 | number_of_results | Number of Results | Number of results to return in similarity search (default: 4) |
 | score_threshold | Score threshold | Threshold for similarity scores |
 
-#### Outputs
+### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -187,9 +177,7 @@ For more information, see the [CLickhouse Documentation](https://clickhouse.com/
 This component creates a Couchbase Vector Store with search capabilities.
 For more information, see the [Couchbase documentation](https://docs.couchbase.com/home/index.html).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name                    | Type          | Description                                      |
 |-------------------------|---------------|--------------------------------------------------|
@@ -205,7 +193,7 @@ For more information, see the [Couchbase documentation](https://docs.couchbase.c
 | embedding                | Embeddings    | The embedding function to use for the vector store. |
 | number_of_results        | Integer       | Number of results to return from the search. Default: 4 (advanced). |
 
-#### Outputs
+### Outputs
 
 | Name           | Type                   | Description                    |
 |----------------|------------------------|--------------------------------|
@@ -216,9 +204,7 @@ For more information, see the [Couchbase documentation](https://docs.couchbase.c
 This component creates a FAISS Vector Store with search capabilities.
 For more information, see the [FAISS documentation](https://faiss.ai/index.html).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name                      | Type          | Description                                      |
 |---------------------------|---------------|--------------------------------------------------|
@@ -230,7 +216,7 @@ For more information, see the [FAISS documentation](https://faiss.ai/index.html)
 | embedding                  | Embeddings    | The embedding function to use for the vector store. |
 | number_of_results          | Integer       | Number of results to return from the search. Default: 4 (advanced). |
 
-#### Outputs
+### Outputs
 
 | Name           | Type                   | Description                    |
 |----------------|------------------------|--------------------------------|
@@ -240,9 +226,7 @@ For more information, see the [FAISS documentation](https://faiss.ai/index.html)
 
 This component implements a Vector Store using HCD.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -270,7 +254,7 @@ This component implements a Vector Store using HCD.
 | search_score_threshold | Search Score Threshold | Minimum similarity score threshold for search results (default: 0) |
 | search_filter | Search Metadata Filter | Optional dictionary of filters to apply to the search query |
 
-#### Outputs
+### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -282,9 +266,7 @@ This component implements a Vector Store using HCD.
 This component creates a Milvus Vector Store with search capabilities.
 For more information, see the [Milvus documentation](https://milvus.io/docs).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name                    | Type          | Description                                      |
 |-------------------------|---------------|--------------------------------------------------|
@@ -305,7 +287,7 @@ For more information, see the [Milvus documentation](https://milvus.io/docs).
 | vector_dimensions        | Integer       | Number of dimensions of the vectors              |
 | pre_delete_collection    | Boolean       | Whether to delete the collection before creating a new one |
 
-#### Outputs
+### Outputs
 
 | Name           | Type                   | Description                    |
 |----------------|------------------------|--------------------------------|
@@ -316,9 +298,7 @@ For more information, see the [Milvus documentation](https://milvus.io/docs).
 This component creates a MongoDB Atlas Vector Store with search capabilities.
 For more information, see the [MongoDB Atlas documentation](https://www.mongodb.com/docs/atlas/atlas-vector-search/tutorials/vector-search-quick-start/).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name                     | Type         | Description                               |
 | ------------------------ | ------------ | ----------------------------------------- |
@@ -331,7 +311,7 @@ For more information, see the [MongoDB Atlas documentation](https://www.mongodb.
 | embedding                 | Embeddings   | Embedding function to use                 |
 | number_of_results         | Integer      | Number of results to return in search     |
 
-#### Outputs
+### Outputs
 
 | Name          | Type                   | Description                               |
 | ------------- | ---------------------- | ----------------------------------------- |
@@ -344,9 +324,7 @@ For more information, see the [MongoDB Atlas documentation](https://www.mongodb.
 This component creates a PGVector Vector Store with search capabilities.
 For more information, see the [PGVector documentation](https://github.com/pgvector/pgvector).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name            | Type         | Description                               |
 | --------------- | ------------ | ----------------------------------------- |
@@ -357,7 +335,7 @@ For more information, see the [PGVector documentation](https://github.com/pgvect
 | embedding       | Embeddings   | Embedding function to use                 |
 | number_of_results | Integer    | Number of results to return in search     |
 
-#### Outputs
+### Outputs
 
 | Name          | Type        | Description                               |
 | ------------- | ----------- | ----------------------------------------- |
@@ -370,9 +348,7 @@ For more information, see the [PGVector documentation](https://github.com/pgvect
 This component creates a Pinecone Vector Store with search capabilities.
 For more information, see the [Pinecone documentation](https://docs.pinecone.io/home).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name              | Type         | Description                               |
 | ----------------- | ------------ | ----------------------------------------- |
@@ -386,7 +362,7 @@ For more information, see the [Pinecone documentation](https://docs.pinecone.io/
 | embedding         | Embeddings   | Embedding function to use                 |
 | number_of_results | Integer      | Number of results to return in search     |
 
-#### Outputs
+### Outputs
 
 | Name          | Type       | Description                               |
 | ------------- | ---------- | ----------------------------------------- |
@@ -399,9 +375,7 @@ For more information, see the [Pinecone documentation](https://docs.pinecone.io/
 This component creates a Qdrant Vector Store with search capabilities.
 For more information, see the [Qdrant documentation](https://qdrant.tech/documentation/).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name                 | Type         | Description                               |
 | -------------------- | ------------ | ----------------------------------------- |
@@ -422,7 +396,7 @@ For more information, see the [Qdrant documentation](https://qdrant.tech/documen
 | embedding            | Embeddings   | Embedding function to use                 |
 | number_of_results    | Integer      | Number of results to return in search     |
 
-#### Outputs
+### Outputs
 
 | Name          | Type     | Description                               |
 | ------------- | -------- | ----------------------------------------- |
@@ -435,9 +409,7 @@ For more information, see the [Qdrant documentation](https://qdrant.tech/documen
 This component creates a Redis Vector Store with search capabilities.
 For more information, see the [Redis documentation](https://redis.io/docs/latest/develop/interact/search-and-query/advanced-concepts/vectors/).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name              | Type         | Description                               |
 | ----------------- | ------------ | ----------------------------------------- |
@@ -450,7 +422,7 @@ For more information, see the [Redis documentation](https://redis.io/docs/latest
 | number_of_results | Integer      | Number of results to return in search     |
 | embedding         | Embeddings   | Embedding function to use                 |
 
-#### Outputs
+### Outputs
 
 | Name          | Type     | Description                               |
 | ------------- | -------- | ----------------------------------------- |
@@ -463,9 +435,7 @@ For more information, see the [Redis documentation](https://redis.io/docs/latest
 This component creates a connection to a Supabase Vector Store with search capabilities.
 For more information, see the [Supabase documentation](https://supabase.com/docs/guides/ai).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name                | Type         | Description                               |
 | ------------------- | ------------ | ----------------------------------------- |
@@ -478,7 +448,7 @@ For more information, see the [Supabase documentation](https://supabase.com/docs
 | embedding           | Embeddings   | Embedding function to use                 |
 | number_of_results   | Integer      | Number of results to return in search     |
 
-#### Outputs
+### Outputs
 
 | Name          | Type               | Description                               |
 | ------------- | ------------------ | ----------------------------------------- |
@@ -491,9 +461,7 @@ For more information, see the [Supabase documentation](https://supabase.com/docs
 This component creates an Upstash Vector Store with search capabilities.
 For more information, see the [Upstash documentation](https://upstash.com/docs/introduction).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name            | Type         | Description                               |
 | --------------- | ------------ | ----------------------------------------- |
@@ -507,7 +475,7 @@ For more information, see the [Upstash documentation](https://upstash.com/docs/i
 | embedding       | Embeddings   | Embedding function to use (optional)      |
 | number_of_results | Integer    | Number of results to return in search     |
 
-#### Outputs
+### Outputs
 
 | Name          | Type             | Description                               |
 | ------------- | ---------------- | ----------------------------------------- |
@@ -520,9 +488,7 @@ For more information, see the [Upstash documentation](https://upstash.com/docs/i
 This component creates a Vectara Vector Store with search capabilities.
 For more information, see the [Vectara documentation](https://docs.vectara.com/docs/).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name             | Type         | Description                               |
 | ---------------- | ------------ | ----------------------------------------- |
@@ -534,7 +500,7 @@ For more information, see the [Vectara documentation](https://docs.vectara.com/d
 | search_query      | String       | Query for similarity search               |
 | number_of_results | Integer      | Number of results to return in search     |
 
-#### Outputs
+### Outputs
 
 | Name          | Type              | Description                               |
 | ------------- | ----------------- | ----------------------------------------- |
@@ -546,9 +512,7 @@ For more information, see the [Vectara documentation](https://docs.vectara.com/d
 This component searches a Vectara Vector Store for documents based on the provided input.
 For more information, see the [Vectara documentation](https://docs.vectara.com/docs/).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name                | Type         | Description                               |
 |---------------------|--------------|-------------------------------------------|
@@ -559,20 +523,45 @@ For more information, see the [Vectara documentation](https://docs.vectara.com/d
 | vectara_api_key     | SecretString | Vectara API key                           |
 | files_url           | List[String] | Optional URLs for file initialization     |
 
-#### Outputs
+### Outputs
 
 | Name           | Type       | Description                |
 |----------------|------------|----------------------------|
 | search_results | List[Data] | Results of similarity search |
+
+## Vectara RAG
+
+This component leverages Vectara's Retrieval Augmented Generation (RAG) capabilities to search and summarize documents based on the provided input. For more information, see the [Vectara documentation](https://docs.vectara.com/docs/).
+
+### Inputs
+
+| Name                  | Type         | Description                                                |
+|-----------------------|--------------|------------------------------------------------------------|
+| vectara_customer_id   | String       | Vectara customer ID                                        |
+| vectara_corpus_id     | String       | Vectara corpus ID                                          |
+| vectara_api_key       | SecretString | Vectara API key                                            |
+| search_query          | String       | The query to receive an answer on                          |
+| lexical_interpolation | Float        | Hybrid search factor (0.005 to 0.1)                        |
+| filter                | String       | Metadata filters to narrow the search                      |
+| reranker              | String       | Reranker type (mmr, rerank_multilingual_v1, none)          |
+| reranker_k            | Integer      | Number of results to rerank (1 to 100)                     |
+| diversity_bias        | Float        | Diversity bias for MMR reranker (0 to 1)                   |
+| max_results           | Integer      | Maximum number of search results to summarize (1 to 100)   |
+| response_lang         | String       | Language code for the response (e.g., "eng", "auto")       |
+| prompt                | String       | Prompt name for summarization                              |
+
+### Outputs
+
+| Name   | Type    | Description           |
+|--------|---------|-----------------------|
+| answer | Message | Generated RAG response|
 
 ## Weaviate
 
 This component facilitates a Weaviate Vector Store setup, optimizing text and document indexing and retrieval.
 For more information, see the [Weaviate Documentation](https://weaviate.io/developers/weaviate).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name          | Type         | Description                               |
 |---------------|--------------|-------------------------------------------|
@@ -585,7 +574,7 @@ For more information, see the [Weaviate Documentation](https://weaviate.io/devel
 | embedding     | Embeddings   | Model used                                |
 | attributes    | List[String] | Optional additional attributes            |
 
-#### Outputs
+### Outputs
 
 | Name         | Type             | Description                   |
 |--------------|------------------|-------------------------------|
@@ -598,9 +587,7 @@ For more information, see the [Weaviate Documentation](https://weaviate.io/devel
 This component searches a Weaviate Vector Store for documents similar to the input.
 For more information, see the [Weaviate Documentation](https://weaviate.io/developers/weaviate).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name          | Type         | Description                               |
 |---------------|--------------|-------------------------------------------|
@@ -614,7 +601,7 @@ For more information, see the [Weaviate Documentation](https://weaviate.io/devel
 | embedding     | Embeddings   | Model used                                |
 | attributes    | List[String] | Optional additional attributes            |
 
-#### Outputs
+### Outputs
 
 | Name           | Type       | Description                |
 |----------------|------------|----------------------------|
