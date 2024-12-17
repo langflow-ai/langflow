@@ -42,7 +42,7 @@ export type SetNodeType<T = "genericNode" | "noteNode"> =
 
 export type noteClassType = Pick<
   APIClassType,
-  "description" | "display_name" | "documentation"
+  "description" | "display_name" | "documentation" | "tool_mode" | "frozen"
 > & {
   template: {
     backgroundColor?: string;
