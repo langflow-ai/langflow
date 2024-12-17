@@ -16,8 +16,7 @@ def set_advanced_true(component_input):
     return component_input
 
 
-
-class AgentComponent(LangflowAgent,Component):
+class AgentComponent(LangflowAgent, Component):
     display_name: str = "Agent"
     description: str = "Define the agent's instructions, then enter a task to complete using tools."
     icon = "bot"
