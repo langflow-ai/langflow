@@ -4,12 +4,36 @@ sidebar_position: 2
 slug: /components-prompts
 ---
 
-A prompt serves as the input to a language model, comprising multiple components that can be parameterized using prompt templates.
+A prompt is a structured input to a language model that instructs the model how to handle user inputs and variables.
 
-Prompt templates provide a systematic approach for generating prompts, allowing for reproducible customization through defined input variables.
+Prompt components create prompt templates with custom fields and dynamic variables for providing your model structured, repeatable prompts.
+
+Prompts are a combination of natural language and variables created with curly braces.
 
 ## Use a prompt component in a flow
 
+The default prompt is `Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.`
+
+This prompt creates a "personality" for your LLM's chat interactions, but it doesn't include variables that you may find useful when templating prompts.
+
+In the **Prompt** component, click the **Template** field to modify the prompt.
+
+An example of modifying a prompt can be found in the [Quickstart](/get-started-quickstart#run-the-chatbot-with-retrieved-context), where a basic chatbot flow is extended to include a full vector RAG pipeline.
+
+Modifying the **Prompt** component's **Template** field gives the LLM access to more context to answer the user's question.
+
+```plain
+Given the context
+{context}
+Answer the question
+{user_question}
+```
+
+The `{context}` variable gives the LLM model access to embedded vector data to return better answers.
+
+![](/img/quickstart-add-document-ingestion.png)
+
+When variables are added to a prompt template, new fields are automatically created in the component. These fields can be connected to receive text input from other components to automate prompting, or to output instructions to other components. An example of prompts controlling agents behavior is available in the [sequential tasks agent starter flow](/starter-projects-sequential-agent).
 
 ### Inputs
 
