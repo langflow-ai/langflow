@@ -95,8 +95,8 @@ class QianfanChatEndpointComponent(LCModelComponent):
         try:
             kwargs = {
                 "model": model,
-                "qianfan_ak": SecretStr(qianfan_ak).get_secret_value() if qianfan_ak else None,
-                "qianfan_sk": SecretStr(qianfan_sk).get_secret_value() if qianfan_sk else None,
+                "qianfan_ak": qianfan_ak or None,
+                "qianfan_sk": qianfan_sk or None,
                 "top_p": top_p,
                 "temperature": temperature,
                 "penalty_score": penalty_score,

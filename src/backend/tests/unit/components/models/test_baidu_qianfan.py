@@ -19,7 +19,7 @@ def qianfan_credentials():
 
 @pytest.mark.api_key_required
 def test_none_endpoint(qianfan_credentials):
-    """Test that None endpoint raises an exception."""
+    """Test that None endpoint does not raise an exception."""
     component = QianfanChatEndpointComponent(
         model="ERNIE-Bot-turbo-AI",
         qianfan_ak=qianfan_credentials["ak"],
@@ -37,7 +37,7 @@ def test_none_endpoint(qianfan_credentials):
 
 @pytest.mark.api_key_required
 def test_empty_str_endpoint(qianfan_credentials):
-    """Test that empty string endpoint raises an exception."""
+    """Test that empty string endpoint does not raise an exception."""
     component = QianfanChatEndpointComponent(
         model="ERNIE-Bot",
         qianfan_ak=qianfan_credentials["ak"],
