@@ -57,7 +57,7 @@ export type NoteDataType = Pick<NodeDataType, "showNode" | "type" | "id"> & {
 export type NodeDataType = {
   showNode?: boolean;
   type: string;
-  node?: APIClassType;
+  node: APIClassType;
   id: string;
   output_types?: string[];
   selected_output_type?: string;
@@ -89,6 +89,7 @@ export type TweaksType = Array<
 
 // right side
 export type sourceHandleType = {
+  baseClasses?: string[];
   dataType: string;
   id: string;
   output_types: string[];
