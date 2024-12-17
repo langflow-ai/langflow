@@ -24,27 +24,31 @@ class NVIDIAIngestComponent(Component):
             name="path",
             display_name="Path",
             file_types=file_types,
-            info=supported_file_types_info
+            info=supported_file_types_info,
         ),
         BoolInput(
             name="extract_text",
             display_name="Extract text?",
-            info="Extract text or not"
+            info="Extract text or not",
+            value=True,
         ),
         BoolInput(
             name="extract_images",
             display_name="Extract images?",
-            info="Extract images or not"
+            info="Extract images or not",
+            value=False,
         ),
         BoolInput(
             name="extract_tables",
             display_name="Extract tables?",
-            info="Extract tables or not"
+            info="Extract tables or not",
+            value=True,
         ),
         BoolInput(
             name="split_text",
             display_name="Split text?",
-            info="Split text into smaller chunks?"
+            info="Split text into smaller chunks?",
+            value=True,
         ),
         IntInput(
             name="chunk_overlap",
