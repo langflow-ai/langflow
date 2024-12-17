@@ -2,7 +2,7 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import IconComponent from "../../../../components/common/genericIconComponent";
 import { SidebarOpenViewProps } from "../../types/sidebar-open-view";
-import SessionSelector from "../IOFieldView/components/sessionSelector";
+import SessionSelector from "../IOFieldView/components/sessionSelector/newSessionSelector";
 
 export const SidebarOpenView = ({
   sessions,

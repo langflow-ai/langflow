@@ -1,7 +1,3 @@
-import { ButtonProps } from "@/components/ui/button";
-import { IconComponentProps, TooltipProps } from "@/types/components";
-import { FC } from "react";
-
 export type ChatViewWrapperProps = {
   selectedViewField: { type: string; id: string } | undefined;
   visibleSession: string | undefined;
