@@ -13,7 +13,6 @@ from fastapi.responses import StreamingResponse
 from mcp import types
 from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
-from pydantic import ValidationError
 from sqlmodel import select
 from starlette.background import BackgroundTasks
 
@@ -170,10 +169,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
 
         conversation_id = str(uuid4())
         input_request = InputValueRequest(
-            input_value=processed_inputs.get("input_value", ""),
-            components=[],
-            type="chat",
-            session=conversation_id
+            input_value=processed_inputs.get("input_value", ""), components=[], type="chat", session=conversation_id
         )
 
         result = ""
@@ -260,7 +256,7 @@ async def handle_sse(request: Request, current_user: Annotated[User, Depends(get
                     await server.run(streams[0], streams[1], init_options)
                 except (pydantic.ValidationError, ExceptionGroup) as exc:
                     validation_error = None
-                    
+
                     # For ExceptionGroup, find the validation error if present
                     if isinstance(exc, ExceptionGroup):
                         for inner_exc in exc.exceptions:
@@ -269,7 +265,7 @@ async def handle_sse(request: Request, current_user: Annotated[User, Depends(get
                                 break
                     elif isinstance(exc, pydantic.ValidationError):
                         validation_error = exc
-                    
+
                     # Handle the validation error if found
                     if validation_error and any("cancelled" in err["input"] for err in validation_error.errors()):
                         logger.debug("Ignoring validation error for cancelled notification")
