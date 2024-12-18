@@ -23,7 +23,6 @@ import { MarkdownField } from "./components/editMessage";
 import { EditMessageButton } from "./components/editMessageButton/newMessageOptions";
 import EditMessageField from "./components/editMessageField/newEditMessageField";
 import FileCardWrapper from "./components/fileCardWrapper";
-import { PromptView } from "./components/promptView";
 import { convertFiles } from "./helpers/convert-files";
 
 export default function ChatMessage({
