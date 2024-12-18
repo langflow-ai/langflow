@@ -1,5 +1,5 @@
+import { Node } from "@xyflow/react";
 import { cloneDeep, uniqueId } from "lodash";
-import { Node } from "reactflow";
 import { FlowType, NodeDataType } from "../types/flow";
 import { isInputNode, isOutputNode } from "./reactflowUtils";
 

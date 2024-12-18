@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { zoomOut } from "../../utils/zoom-out";
 
 test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await awaitBootstrapTest(page);
@@ -19,16 +20,11 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
     .getByTestId("modelsOpenAI")
     .first()
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
-  await page.mouse.up();
-  await page.mouse.down();
-  await page.waitForSelector('[data-testid="fit_view"]', {
-    timeout: 100000,
-  });
 
   await page.getByTestId("fit_view").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
+  await zoomOut(page, 2);
+
+  await page.getByTestId("div-generic-node").click();
 
   await page.getByTestId("more-options-modal").click();
   await page.getByTestId("advanced-button-modal").click();

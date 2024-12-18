@@ -137,6 +137,9 @@ body {
   stroke: var(--selected) !important;
   stroke-width: 2px !important;
 }
+.react-flow__controls-button svg {
+  fill: none !important;
+}
 
 .react-flow__edge .react-flow__edge-path {
   transition: color;

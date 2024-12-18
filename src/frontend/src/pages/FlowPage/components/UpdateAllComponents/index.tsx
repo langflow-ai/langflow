@@ -10,8 +10,8 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { cn } from "@/utils/utils";
+import { useUpdateNodeInternals } from "@xyflow/react";
 import { useState } from "react";
-import { useUpdateNodeInternals } from "reactflow";
 
 export default function UpdateAllComponents() {
   const { componentsToUpdate, nodes, edges, setNodes } = useFlowStore();
@@ -36,7 +36,7 @@ export default function UpdateAllComponents() {
 
     const updatePromises = componentsToUpdate.map((nodeId) => {
       const node = nodes.find((n) => n.id === nodeId);
-      if (!node) return Promise.resolve();
+      if (!node || node.type !== "genericNode") return Promise.resolve();
 
       const thisNodeTemplate = templates[node.data.type]?.template;
       if (!thisNodeTemplate?.code) return Promise.resolve();
@@ -46,7 +46,7 @@ export default function UpdateAllComponents() {
       return new Promise((resolve) => {
         validateComponentCode({
           code: currentCode,
-          frontend_node: node.data.node,
+          frontend_node: node.data.node!,
         })
           .then(({ data: resData, type }) => {
             if (resData && type) {

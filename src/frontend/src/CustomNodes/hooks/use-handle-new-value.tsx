@@ -4,10 +4,10 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { APIClassType, InputFieldType } from "@/types/api";
-import { NodeType } from "@/types/flow";
+import { AllNodeType } from "@/types/flow";
+import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
 import { useCallback, useMemo } from "react";
-import { useUpdateNodeInternals } from "reactflow";
 import { mutateTemplate } from "../helpers/mutate-template";
 
 export type handleOnNewValueType = (
@@ -29,7 +29,7 @@ const useHandleOnNewValue = ({
   name: string;
   setNode?: (
     id: string,
-    update: NodeType | ((oldState: NodeType) => NodeType),
+    update: AllNodeType | ((oldState: AllNodeType) => AllNodeType),
   ) => void;
 }) => {
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);

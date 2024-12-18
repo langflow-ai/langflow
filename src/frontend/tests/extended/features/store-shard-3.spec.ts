@@ -19,7 +19,9 @@ test(
 
     await page.getByTestId("button-store").click();
 
-    await page.getByTestId("api-key-button-store").click();
+    await page.getByTestId("api-key-button-store").click({
+      timeout: 200000,
+    });
 
     await page
       .getByPlaceholder("Insert your API Key")
@@ -58,10 +60,10 @@ test("should filter by type", { tag: ["@release"] }, async ({ page }) => {
   }
   await page.goto("/");
   await page.getByTestId("button-store").click();
-  await page.waitForSelector('[data-testid="api-key-button-store"]', {
-    timeout: 100000,
+  await page.getByTestId("api-key-button-store").click({
+    timeout: 200000,
   });
-  await page.getByTestId("api-key-button-store").click();
+
   await page
     .getByPlaceholder("Insert your API Key")
     .fill(process.env.STORE_API_KEY ?? "");

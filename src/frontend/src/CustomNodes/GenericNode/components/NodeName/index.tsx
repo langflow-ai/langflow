@@ -15,7 +15,7 @@ export default function NodeName({
   beta,
 }: {
   display_name?: string;
-  selected: boolean;
+  selected?: boolean;
   nodeId: string;
   showNode: boolean;
   validationStatus: VertexBuildTypeAPI | null;
@@ -23,7 +23,7 @@ export default function NodeName({
   beta: boolean;
 }) {
   const [inputName, setInputName] = useState(false);
-  const [nodeName, setNodeName] = useState(display_name);
+  const [nodeName, setNodeName] = useState<string>(display_name ?? "");
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const setNode = useFlowStore((state) => state.setNode);
   useEffect(() => {
@@ -33,7 +33,7 @@ export default function NodeName({
   }, [selected]);
 
   useEffect(() => {
-    setNodeName(display_name);
+    setNodeName(display_name ?? "");
   }, [display_name]);
 
   return inputName ? (
@@ -54,7 +54,7 @@ export default function NodeName({
               },
             }));
           } else {
-            setNodeName(display_name);
+            setNodeName(display_name ?? "");
           }
         }}
         value={nodeName}

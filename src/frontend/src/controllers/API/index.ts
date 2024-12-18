@@ -1,5 +1,5 @@
+import { Edge, Node, ReactFlowJsonObject } from "@xyflow/react";
 import { AxiosRequestConfig, AxiosResponse } from "axios";
-import { Edge, Node, ReactFlowJsonObject } from "reactflow";
 import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
 import {

@@ -3,6 +3,7 @@ import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
 import useFlowStore from "@/stores/flowStore";
 import { useTweaksStore } from "@/stores/tweaksStore";
+import { APIClassType } from "@/types/api";
 import { isTargetHandleConnected } from "@/utils/reactflowUtils";
 import { CustomCellRendererProps } from "ag-grid-react";
 
@@ -25,7 +26,7 @@ export default function TableNodeCellRender({
   );
 
   const { handleOnNewValue } = useHandleOnNewValue({
-    node: node?.data.node,
+    node: node?.data.node as APIClassType,
     nodeId,
     name: parameterId,
     setNode: isTweaks ? setNode : undefined,

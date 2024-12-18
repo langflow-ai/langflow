@@ -22,9 +22,10 @@ test(
     await page
       .getByTestId("modelsAmazon Bedrock")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
+
     await adjustScreenView(page);
+
+    await page.getByTestId("div-generic-node").click();
 
     await page.getByTestId("more-options-modal").click();
     await page.getByTestId("advanced-button-modal").click();

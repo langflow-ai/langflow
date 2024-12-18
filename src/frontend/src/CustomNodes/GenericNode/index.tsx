@@ -1,9 +1,9 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
+import { useUpdateNodeInternals } from "@xyflow/react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { useUpdateNodeInternals } from "reactflow";
 import { Button } from "../../components/ui/button";
 import {
   TOOLTIP_HIDDEN_OUTPUTS,
@@ -65,7 +65,7 @@ function GenericNode({
   selected,
 }: {
   data: NodeDataType;
-  selected: boolean;
+  selected?: boolean;
   xPos?: number;
   yPos?: number;
 }): JSX.Element {

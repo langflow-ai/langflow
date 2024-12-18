@@ -19,7 +19,11 @@ export default function EditShortcutButton({
 }: {
   children: JSX.Element;
   shortcut: string[];
-  defaultShortcuts: Array<{ name: string; shortcut: string }>;
+  defaultShortcuts: Array<{
+    name: string;
+    shortcut: string;
+    display_name: string;
+  }>;
   open: boolean;
   setOpen: (bool: boolean) => void;
   disable?: boolean;
@@ -64,10 +68,15 @@ export default function EditShortcutButton({
           if (s.name === shortcut[0]) {
             return {
               name: s.name,
+              display_name: s.display_name,
               shortcut: fixCombination.join("").toLowerCase(),
             };
           }
-          return { name: s.name, shortcut: s.shortcut };
+          return {
+            name: s.name,
+            display_name: s.display_name,
+            shortcut: s.shortcut,
+          };
         });
         const shortcutName = toCamelCase(shortcut[0]);
         setUniqueShortcut(shortcutName, fixCombination.join("").toLowerCase());

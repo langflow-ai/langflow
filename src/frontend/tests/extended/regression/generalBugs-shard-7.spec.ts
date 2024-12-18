@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
+import { zoomOut } from "../../utils/zoom-out";
 // TODO: This test might not be needed anymore
 test(
   "should be able to select all with ctrl + A on advanced modal",
@@ -35,8 +35,7 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
     await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
+    await zoomOut(page, 3);
 
     await page.waitForSelector('[data-testid="div-generic-node"]', {
       timeout: 5000,

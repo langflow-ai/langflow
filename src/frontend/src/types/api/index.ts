@@ -4,7 +4,7 @@ import {
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
-import { Edge, Node, Viewport } from "reactflow";
+import { Edge, Node, Viewport } from "@xyflow/react";
 import { ChatInputType, ChatOutputType } from "../chat";
 import { FlowType } from "../flow";
 //kind and class are just representative names to represent the actual structure of the object received by the API

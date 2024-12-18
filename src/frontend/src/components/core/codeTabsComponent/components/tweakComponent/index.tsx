@@ -2,7 +2,7 @@ import AccordionComponent from "@/components/common/accordionComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { EditNodeComponent } from "@/modals/editNodeModal/components/editNodeComponent";
 import { APIClassType } from "@/types/api";
-import { NodeType } from "@/types/flow";
+import { AllNodeType } from "@/types/flow";
 import { customStringify } from "@/utils/reactflowUtils";
 import { useEffect, useState } from "react";
 
@@ -11,7 +11,7 @@ export function TweakComponent({
   node,
 }: {
   open: boolean;
-  node: NodeType;
+  node: AllNodeType;
 }) {
   const [nodeClass, setNodeClass] = useState<APIClassType | undefined>(
     node.data?.node,

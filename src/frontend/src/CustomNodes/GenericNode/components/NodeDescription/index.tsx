@@ -18,7 +18,7 @@ export default function NodeDescription({
   style,
 }: {
   description?: string;
-  selected: boolean;
+  selected?: boolean;
   nodeId: string;
   emptyPlaceholder?: string;
   placeholderClassName?: string;
@@ -28,7 +28,9 @@ export default function NodeDescription({
   style?: React.CSSProperties;
 }) {
   const [inputDescription, setInputDescription] = useState(false);
-  const [nodeDescription, setNodeDescription] = useState(description);
+  const [nodeDescription, setNodeDescription] = useState<string>(
+    description ?? "",
+  );
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const setNode = useFlowStore((state) => state.setNode);
   const overflowRef = useRef<HTMLDivElement>(null);
@@ -56,7 +58,7 @@ export default function NodeDescription({
   }, [selected]);
 
   useEffect(() => {
-    setNodeDescription(description);
+    setNodeDescription(description ?? "");
   }, [description]);
 
   const MemoizedMarkdown = memo(Markdown);

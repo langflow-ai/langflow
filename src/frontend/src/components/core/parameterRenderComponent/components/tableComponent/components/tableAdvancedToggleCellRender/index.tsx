@@ -1,6 +1,7 @@
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import useFlowStore from "@/stores/flowStore";
+import { APIClassType } from "@/types/api";
 import { isTargetHandleConnected } from "@/utils/reactflowUtils";
 import { CustomCellRendererProps } from "ag-grid-react";
 import ToggleShadComponent from "../../../toggleShadComponent";
@@ -20,7 +21,7 @@ export default function TableAdvancedToggleCellRender({
   );
 
   const { handleOnNewValue } = useHandleOnNewValue({
-    node: node?.data.node,
+    node: node?.data.node as APIClassType,
     nodeId,
     name: parameterId,
   });

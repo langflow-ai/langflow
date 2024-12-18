@@ -1,18 +1,18 @@
-import { Edge } from "reactflow";
-import { FlowType, NodeType } from "../flow";
+import { Edge } from "@xyflow/react";
+import { AllNodeType, EdgeType, FlowType } from "../flow";
 
 export type addEscapedHandleIdsToEdgesType = {
-  edges: Edge[];
+  edges: EdgeType[];
 };
 
 export type updateEdgesHandleIdsType = {
-  nodes: NodeType[];
-  edges: Edge[];
+  nodes: AllNodeType[];
+  edges: EdgeType[];
 };
 
 export type generateFlowType = { newFlow: FlowType; removedEdges: Edge[] };
 
 export type findLastNodeType = {
-  nodes: NodeType[];
-  edges: Edge[];
+  nodes: AllNodeType[];
+  edges: EdgeType[];
 };
