@@ -17,7 +17,7 @@ from langflow.io import MessageTextInput, Output
 load_dotenv()  # load environment variables from .env
 
 
-class MCPClient:
+class MCPStdioClient:
     def __init__(self):
         # Initialize session and client objects
         self.session: ClientSession | None = None
@@ -82,14 +82,14 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
 
 
 class MCPStdio(Component):
-    client = MCPClient()
+    client = MCPStdioClient()
     tools = None
     tool_names = []
-    display_name = "Get Tools from MCP"
+    display_name = "MCP Tools (stdio)"
     description = "Use as a template to create your own component."
     documentation: str = "http://docs.langflow.org/components/custom"
     icon = "code"
-    name = "CustomComponent"
+    name = "MCPStdio"
 
     inputs = [
         MessageTextInput(

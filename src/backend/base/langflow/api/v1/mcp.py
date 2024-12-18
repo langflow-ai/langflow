@@ -11,7 +11,7 @@ from anyio import BrokenResourceError
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from mcp import types
-from mcp.server import NotificationOptions, Server
+from mcp.server import Server, NotificationOptions
 from mcp.server.sse import SseServerTransport
 from pydantic import ValidationError
 from sqlmodel import select
@@ -161,84 +161,95 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
             processed_inputs[key] = value
 
         # Send initial progress notification
-        # if progress_token := context.meta.progressToken:
-        #    await context.session.send_progress_notification(
-        #        progress_token=progress_token,
-        #        progress=0.5,
-        #        total=1.0
-        #    )
+        if progress_token := server.request_context.meta.progressToken:
+            await server.request_context.session.send_progress_notification(
+                progress_token=progress_token, progress=0.0, total=1.0
+            )
 
         conversation_id = str(uuid4())
         input_request = InputValueRequest(
-            input_value=processed_inputs.get("input_value", ""),
-            components=[],
-            type="chat",
-            session=conversation_id
+            input_value=processed_inputs.get("input_value", ""), components=[], type="chat", session=conversation_id
         )
 
-        result = ""
+        async def send_progress_updates():
+            if not (progress_token := server.request_context.meta.progressToken):
+                return
+
+            try:
+                progress = 0.0
+                while True:
+                    await server.request_context.session.send_progress_notification(
+                        progress_token=progress_token, progress=min(0.9, progress), total=1.0
+                    )
+                    progress += 0.1
+                    await asyncio.sleep(1.0)
+            except asyncio.CancelledError:
+                # Send final 100% progress
+                await server.request_context.session.send_progress_notification(
+                    progress_token=progress_token, progress=1.0, total=1.0
+                )
+                raise
+
         db_service = get_db_service()
+        collected_results = []
         async with db_service.with_async_session() as async_session:
             try:
-                response = await build_flow(
-                    flow_id=UUID(name),
-                    inputs=input_request,
-                    background_tasks=background_tasks,
-                    current_user=current_user,
-                    session=async_session,
-                )
+                progress_task = asyncio.create_task(send_progress_updates())
 
-                async for line in response.body_iterator:
-                    if not line:
-                        continue
+                try:
+                    response = await build_flow(
+                        flow_id=UUID(name),
+                        inputs=input_request,
+                        background_tasks=background_tasks,
+                        current_user=current_user,
+                        session=async_session,
+                    )
+
+                    async for line in response.body_iterator:
+                        if not line:
+                            continue
+                        try:
+                            event_data = json.loads(line)
+                            if event_data.get("event") == "end_vertex":
+                                message = (
+                                    event_data.get("data", {})
+                                    .get("build_data", {})
+                                    .get("data", {})
+                                    .get("results", {})
+                                    .get("message", {})
+                                    .get("text", "")
+                                )
+                                if message:
+                                    collected_results.append(types.TextContent(type="text", text=str(message)))
+                        except json.JSONDecodeError:
+                            logger.warning(f"Failed to parse event data: {line}")
+                            continue
+
+                    return collected_results
+                finally:
+                    progress_task.cancel()
                     try:
-                        event_data = json.loads(line)
-                        if event_data.get("event") == "end_vertex":
-                            message = (
-                                event_data.get("data", {})
-                                .get("build_data", {})
-                                .get("data", {})
-                                .get("results", {})
-                                .get("message", {})
-                                .get("text", "")
-                            )
-                            if message:
-                                result += str(message)
-                    except json.JSONDecodeError:
-                        logger.warning(f"Failed to parse event data: {line}")
-                        continue
-            except asyncio.CancelledError as e:
-                logger.info(f"Request was cancelled: {e!s}")
-                # Create a proper cancellation notification
-                # notification = types.ProgressNotification(
-                #    method="notifications/progress",
-                #    params=types.ProgressNotificationParams(
-                #        progressToken=str(uuid4()),
-                #        progress=1.0
-                #    ),
-                # )
-                # await server.request_context.session.send_notification(notification)
-                return [types.TextContent(type="text", text=f"Request cancelled: {e!s}")]
-
-        # Send final progress notification
-        # if progress_token:
-        #    await context.session.send_progress_notification(
-        #        progress_token=progress_token,
-        #        progress=1.0,
-        #        total=1.0
-        #    )
-        print(result)
-
-        return [types.TextContent(type="text", text=result)]
+                        await progress_task
+                    except asyncio.CancelledError:
+                        pass
+            except Exception as e:
+                logger.error(f"Error in async session: {e}")
+                raise
 
     except Exception as e:
+        context = server.request_context
+        # Send error progress if there's an exception
+        if progress_token := context.meta.progressToken:
+            await server.request_context.session.send_progress_notification(
+                progress_token=progress_token, progress=1.0, total=1.0
+            )
         logger.error(f"Error executing tool {name}: {e!s}")
         trace = traceback.format_exc()
         logger.error(trace)
         raise
 
 
-sse = SseServerTransport("/api/v1/mcp")
+sse = SseServerTransport("/api/v1/mcp/")
 
 
 @router.get("/sse", response_class=StreamingResponse)
@@ -260,7 +271,7 @@ async def handle_sse(request: Request, current_user: Annotated[User, Depends(get
                     await server.run(streams[0], streams[1], init_options)
                 except (pydantic.ValidationError, ExceptionGroup) as exc:
                     validation_error = None
-                    
+
                     # For ExceptionGroup, find the validation error if present
                     if isinstance(exc, ExceptionGroup):
                         for inner_exc in exc.exceptions:
@@ -269,7 +280,7 @@ async def handle_sse(request: Request, current_user: Annotated[User, Depends(get
                                 break
                     elif isinstance(exc, pydantic.ValidationError):
                         validation_error = exc
-                    
+
                     # Handle the validation error if found
                     if validation_error and any("cancelled" in err["input"] for err in validation_error.errors()):
                         logger.debug("Ignoring validation error for cancelled notification")
@@ -296,4 +307,5 @@ async def handle_sse(request: Request, current_user: Annotated[User, Depends(get
 
 @router.post("/")
 async def handle_messages(request: Request, current_user: Annotated[User, Depends(get_current_active_user)]):
+    print(f"Handling message request {request}")
     await sse.handle_post_message(request.scope, request.receive, request._send)
