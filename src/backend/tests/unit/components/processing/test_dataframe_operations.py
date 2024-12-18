@@ -1,6 +1,6 @@
 import pandas as pd
 import pytest
-from langflow.base.langflow.components.processing.dataframe_operations import DataFrameOperationsComponent
+from langflow.components.processing.dataframe_operations import DataFrameOperationsComponent
 
 
 @pytest.fixture
@@ -10,7 +10,7 @@ def sample_dataframe():
 
 
 @pytest.mark.parametrize(
-    "operation, expected_columns, expected_values",
+    ("operation", "expected_columns", "expected_values"),
     [
         ("Add Column", ["A", "B", "C", "D"], [10, 10, 10, 10, 10]),
         ("Drop Column", ["A", "C"], None),
@@ -82,5 +82,5 @@ def test_invalid_operation():
     component = DataFrameOperationsComponent()
     component.df = pd.DataFrame({"A": [1, 2, 3]})
     component.operation = "Invalid Operation"
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid operation type"):
         component.perform_operation()
