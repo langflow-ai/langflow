@@ -28,10 +28,10 @@ from langflow.services.database.models.folder.utils import (
 )
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.deps import (
-    async_session_scope,
     get_settings_service,
     get_storage_service,
     get_variable_service,
+    session_scope,
 )
 from langflow.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
 from langflow.utils.util import escape_json_dump
@@ -544,7 +544,7 @@ async def load_flows_from_directory() -> None:
         logger.warning("AUTO_LOGIN is disabled, not loading flows from directory")
         return
 
-    async with async_session_scope() as session:
+    async with session_scope() as session:
         user = await get_user_by_username(session, settings_service.auth_settings.SUPERUSER)
         if user is None:
             msg = "Superuser not found in the database"
@@ -618,7 +618,7 @@ async def create_or_update_starter_projects(all_types_dict: dict, *, do_create: 
         all_types_dict (dict): Dictionary containing all component types and their templates
         do_create (bool, optional): Whether to create new projects. Defaults to True.
     """
-    async with async_session_scope() as session:
+    async with session_scope() as session:
         new_folder = await create_starter_folder(session)
         starter_projects = await load_starter_projects()
         await delete_start_projects(session, new_folder.id)
@@ -674,7 +674,7 @@ async def initialize_super_user_if_needed() -> None:
         msg = "SUPERUSER and SUPERUSER_PASSWORD must be set in the settings if AUTO_LOGIN is true."
         raise ValueError(msg)
 
-    async with async_session_scope() as async_session:
+    async with session_scope() as async_session:
         super_user = await create_super_user(db=async_session, username=username, password=password)
         await get_variable_service().initialize_user_variables(super_user.id, async_session)
         await create_default_folder_if_it_doesnt_exist(async_session, super_user.id)

@@ -9,7 +9,7 @@ from langflow.services.deps import get_db_service
 
 
 async def get_user_by_flow_id_or_endpoint_name(flow_id_or_name: str) -> UserRead | None:
-    async with get_db_service().with_async_session() as session:
+    async with get_db_service().with_session() as session:
         try:
             flow_id = UUID(flow_id_or_name)
             flow = await session.get(Flow, flow_id)

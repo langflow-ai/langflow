@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from langflow.custom.custom_component.base_component import BaseComponent
 from langflow.helpers.flow import list_flows, load_flow, run_flow
 from langflow.schema import Data
-from langflow.services.deps import async_session_scope, get_storage_service, get_variable_service
+from langflow.services.deps import get_storage_service, get_variable_service, session_scope
 from langflow.services.storage.service import StorageService
 from langflow.template.utils import update_frontend_node_with_template_values
 from langflow.type_extraction.type_extraction import post_process_type
@@ -437,7 +437,7 @@ class CustomComponent(BaseComponent):
         else:
             msg = f"Invalid user id: {self.user_id}"
             raise TypeError(msg)
-        async with async_session_scope() as session:
+        async with session_scope() as session:
             return await variable_service.get_variable(user_id=user_id, name=name, field=field, session=session)
 
     async def list_key_names(self):
@@ -454,7 +454,7 @@ class CustomComponent(BaseComponent):
             raise ValueError(msg)
         variable_service = get_variable_service()
 
-        async with async_session_scope() as session:
+        async with session_scope() as session:
             return await variable_service.list_variables(user_id=self.user_id, session=session)
 
     def index(self, value: int = 0):

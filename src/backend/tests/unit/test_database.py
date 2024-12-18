@@ -615,14 +615,14 @@ async def test_read_only_starter_projects(client: AsyncClient, logged_in_headers
     assert len(response.json()) == len(starter_projects)
 
 
-def test_sqlite_pragmas():
+async def test_sqlite_pragmas():
     db_service = get_db_service()
 
-    with db_service.with_session() as session:
+    async with db_service.with_session() as session:
         from sqlalchemy import text
 
-        assert session.exec(text("PRAGMA journal_mode;")).scalar() == "wal"
-        assert session.exec(text("PRAGMA synchronous;")).scalar() == 1
+        assert (await session.exec(text("PRAGMA journal_mode;"))).scalar() == "wal"
+        assert (await session.exec(text("PRAGMA synchronous;"))).scalar() == 1
 
 
 @pytest.mark.usefixtures("active_user")

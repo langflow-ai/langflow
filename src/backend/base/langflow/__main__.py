@@ -27,7 +27,7 @@ from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
 from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
 from langflow.services.database.utils import session_getter
-from langflow.services.deps import async_session_scope, get_db_service, get_settings_service
+from langflow.services.deps import get_db_service, get_settings_service, session_scope
 from langflow.services.settings.constants import DEFAULT_SUPERUSER
 from langflow.services.utils import initialize_services
 from langflow.utils.version import fetch_latest_version, get_version_info
@@ -490,7 +490,7 @@ async def _migration(*, test: bool, fix: bool) -> None:
     db_service = get_db_service()
     if not test:
         await db_service.run_migrations()
-    results = db_service.run_migrations_test()
+    results = await db_service.run_migrations_test()
     display_results(results)
 
 
@@ -533,7 +533,7 @@ def api_key(
             typer.echo("Auto login is disabled. API keys cannot be created through the CLI.")
             return None
 
-        async with async_session_scope() as session:
+        async with session_scope() as session:
             from langflow.services.database.models.user.model import User
 
             stmt = select(User).where(User.username == DEFAULT_SUPERUSER)

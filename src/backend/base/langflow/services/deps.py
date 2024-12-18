@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
 from loguru import logger
@@ -8,9 +8,8 @@ from loguru import logger
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Generator
+    from collections.abc import AsyncGenerator
 
-    from sqlmodel import Session
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.cache.service import AsyncBaseCacheService, CacheService
@@ -149,38 +148,12 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
         AsyncSession: An async session object.
 
     """
-    async with get_db_service().with_async_session() as session:
+    async with get_db_service().with_session() as session:
         yield session
 
 
-@contextmanager
-def session_scope() -> Generator[Session, None, None]:
-    """Context manager for managing a session scope.
-
-    This context manager is used to manage a session scope for database operations.
-    It ensures that the session is properly committed if no exceptions occur,
-    and rolled back if an exception is raised.
-
-    Yields:
-        Session: The session object.
-
-    Raises:
-        Exception: If an error occurs during the session scope.
-
-    """
-    db_service = get_db_service()
-    with db_service.with_session() as session:
-        try:
-            yield session
-            session.commit()
-        except Exception:
-            logger.exception("An error occurred during the session scope.")
-            session.rollback()
-            raise
-
-
 @asynccontextmanager
-async def async_session_scope() -> AsyncGenerator[AsyncSession, None]:
+async def session_scope() -> AsyncGenerator[AsyncSession, None]:
     """Context manager for managing an async session scope.
 
     This context manager is used to manage an async session scope for database operations.
@@ -195,7 +168,7 @@ async def async_session_scope() -> AsyncGenerator[AsyncSession, None]:
 
     """
     db_service = get_db_service()
-    async with db_service.with_async_session() as session:
+    async with db_service.with_session() as session:
         try:
             yield session
             await session.commit()

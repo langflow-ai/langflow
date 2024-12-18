@@ -44,7 +44,7 @@ from langflow.schema.schema import OutputValue
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.chat.service import ChatService
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.deps import async_session_scope, get_chat_service, get_session, get_telemetry_service
+from langflow.services.deps import get_chat_service, get_session, get_telemetry_service, session_scope
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
 if TYPE_CHECKING:
@@ -167,7 +167,7 @@ async def build_flow(
             if not data:
                 graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
             else:
-                async with async_session_scope() as new_session:
+                async with session_scope() as new_session:
                     result = await new_session.exec(select(Flow.name).where(Flow.id == flow_id))
                     flow_name = result.first()
                 graph = await build_graph_from_data(
