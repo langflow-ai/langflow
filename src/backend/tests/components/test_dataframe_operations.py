@@ -1,27 +1,28 @@
-import pytest
 import pandas as pd
+import pytest
 from langflow.base.langflow.components.processing.dataframe_operations import DataFrameOperationsComponent
+
 
 @pytest.fixture
 def sample_dataframe():
-    data = {
-        'A': [1, 2, 3, 4, 5],
-        'B': [5, 4, 3, 2, 1],
-        'C': ['a', 'b', 'c', 'd', 'e']
-    }
+    data = {"A": [1, 2, 3, 4, 5], "B": [5, 4, 3, 2, 1], "C": ["a", "b", "c", "d", "e"]}
     return pd.DataFrame(data)
 
-@pytest.mark.parametrize("operation, expected_columns, expected_values", [
-    ("Add Column", ["A", "B", "C", "D"], [10, 10, 10, 10, 10]),
-    ("Drop Column", ["A", "C"], None),
-    ("Filter", ["A", "B", "C"], [3]),
-    ("Sort", ["A", "B", "C"], [5, 4, 3, 2, 1]),
-    ("Rename Column", ["Z", "B", "C"], None),
-    ("Select Columns", ["A", "C"], None),
-    ("Head", ["A", "B", "C"], [1, 2, 3]),
-    ("Tail", ["A", "B", "C"], [4, 5]),
-    ("Replace Value", ["A", "B", "C"], ["z", "b", "c", "d", "e"])
-])
+
+@pytest.mark.parametrize(
+    "operation, expected_columns, expected_values",
+    [
+        ("Add Column", ["A", "B", "C", "D"], [10, 10, 10, 10, 10]),
+        ("Drop Column", ["A", "C"], None),
+        ("Filter", ["A", "B", "C"], [3]),
+        ("Sort", ["A", "B", "C"], [5, 4, 3, 2, 1]),
+        ("Rename Column", ["Z", "B", "C"], None),
+        ("Select Columns", ["A", "C"], None),
+        ("Head", ["A", "B", "C"], [1, 2, 3]),
+        ("Tail", ["A", "B", "C"], [4, 5]),
+        ("Replace Value", ["A", "B", "C"], ["z", "b", "c", "d", "e"]),
+    ],
+)
 def test_operations(sample_dataframe, operation, expected_columns, expected_values):
     component = DataFrameOperationsComponent()
     component.df = sample_dataframe
@@ -58,6 +59,7 @@ def test_operations(sample_dataframe, operation, expected_columns, expected_valu
     if expected_values is not None:
         assert all(result.iloc[:, -1] == expected_values)
 
+
 def test_empty_dataframe():
     component = DataFrameOperationsComponent()
     component.df = pd.DataFrame()
@@ -66,17 +68,19 @@ def test_empty_dataframe():
     result = component.perform_operation()
     assert result.empty
 
+
 def test_non_existent_column():
     component = DataFrameOperationsComponent()
-    component.df = pd.DataFrame({'A': [1, 2, 3]})
+    component.df = pd.DataFrame({"A": [1, 2, 3]})
     component.operation = "Drop Column"
     component.column_name = "B"
     with pytest.raises(KeyError):
         component.perform_operation()
 
+
 def test_invalid_operation():
     component = DataFrameOperationsComponent()
-    component.df = pd.DataFrame({'A': [1, 2, 3]})
+    component.df = pd.DataFrame({"A": [1, 2, 3]})
     component.operation = "Invalid Operation"
     with pytest.raises(ValueError):
         component.perform_operation()
