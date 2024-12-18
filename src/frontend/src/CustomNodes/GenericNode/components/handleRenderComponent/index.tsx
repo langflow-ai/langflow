@@ -1,7 +1,7 @@
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
+import { Connection, Handle, Position } from "@xyflow/react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Handle, Position } from "reactflow";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import {
   isValidConnection,
@@ -413,7 +413,9 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
           type={left ? "target" : "source"}
           position={left ? Position.Left : Position.Right}
           id={myId}
-          isValidConnection={validateConnection}
+          isValidConnection={(connection) =>
+            isValidConnection(connection as Connection, nodes, edges)
+          }
           className={cn(
             `group/handle z-50 transition-all`,
             !showNode && "no-show",
