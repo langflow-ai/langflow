@@ -144,7 +144,7 @@ class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTr
         return [cls._validate_value(vv, info) for vv in v] if is_list else cls._validate_value(v, info)
 
 
-class MessageInput(StrInput, InputTraceMixin,ToolModeMixin):
+class MessageInput(StrInput, InputTraceMixin, ToolModeMixin):
     input_types: list[str] = ["Message"]
 
     @staticmethod
