@@ -2,15 +2,17 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi_pagination import Page, Params
+from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy import delete
 from sqlmodel import col, select
 
-from langflow.api.utils import DbSession
+from langflow.api.utils import DbSession, custom_params
 from langflow.schema.message import MessageResponse
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models.message.model import MessageRead, MessageTable, MessageUpdate
-from langflow.services.database.models.transactions.crud import get_transactions_by_flow_id
-from langflow.services.database.models.transactions.model import TransactionReadResponse
+from langflow.services.database.models.transactions.crud import transform_transaction_table
+from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.crud import (
     delete_vertex_builds_by_flow_id,
     get_vertex_builds_by_flow_id,
@@ -40,7 +42,7 @@ async def delete_vertex_builds(flow_id: Annotated[UUID, Query()], session: DbSes
 @router.get("/messages")
 async def get_messages(
     session: DbSession,
-    flow_id: Annotated[str | None, Query()] = None,
+    flow_id: Annotated[UUID | None, Query()] = None,
     session_id: Annotated[str | None, Query()] = None,
     sender: Annotated[str | None, Query()] = None,
     sender_name: Annotated[str | None, Query()] = None,
@@ -90,14 +92,14 @@ async def update_message(
 
     try:
         message_dict = message.model_dump(exclude_unset=True, exclude_none=True)
-        message_dict["edit"] = True
+        if "text" in message_dict and message_dict["text"] != db_message.text:
+            message_dict["edit"] = True
         db_message.sqlmodel_update(message_dict)
         session.add(db_message)
         await session.commit()
         await session.refresh(db_message)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
-
     return db_message
 
 
@@ -160,22 +162,14 @@ async def delete_messages_session(
 async def get_transactions(
     flow_id: Annotated[UUID, Query()],
     session: DbSession,
-) -> list[TransactionReadResponse]:
+    params: Annotated[Params | None, Depends(custom_params)],
+) -> Page[TransactionTable]:
     try:
-        transactions = await get_transactions_by_flow_id(session, flow_id)
-        return [
-            TransactionReadResponse(
-                transaction_id=t.id,
-                timestamp=t.timestamp,
-                vertex_id=t.vertex_id,
-                target_id=t.target_id,
-                inputs=t.inputs,
-                outputs=t.outputs,
-                status=t.status,
-                error=t.error,
-                flow_id=t.flow_id,
-            )
-            for t in transactions
-        ]
+        stmt = (
+            select(TransactionTable)
+            .where(TransactionTable.flow_id == flow_id)
+            .order_by(col(TransactionTable.timestamp))
+        )
+        return await paginate(session, stmt, params=params, transformer=transform_transaction_table)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

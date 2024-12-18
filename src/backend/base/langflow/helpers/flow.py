@@ -10,7 +10,7 @@ from sqlmodel import select
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.flow.model import FlowRead
-from langflow.services.deps import async_session_scope, get_settings_service, session_scope
+from langflow.services.deps import async_session_scope, get_settings_service
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -27,15 +27,15 @@ INPUT_TYPE_MAP = {
 }
 
 
-def list_flows(*, user_id: str | None = None) -> list[Data]:
+async def list_flows(*, user_id: str | None = None) -> list[Data]:
     if not user_id:
         msg = "Session is invalid"
         raise ValueError(msg)
     try:
-        with session_scope() as session:
-            flows = session.exec(
-                select(Flow).where(Flow.user_id == user_id).where(Flow.is_component == False)  # noqa: E712
-            ).all()
+        async with async_session_scope() as session:
+            uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
+            stmt = select(Flow).where(Flow.user_id == uuid_user_id).where(Flow.is_component == False)  # noqa: E712
+            flows = (await session.exec(stmt)).all()
 
             return [flow.to_data() for flow in flows]
     except Exception as e:
