@@ -545,8 +545,8 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       newCol.cellRendererParams = {
         formatter: col.formatter,
       };
-      if (col.formatter !== FormatterType.text || col.edit_mode !== "inline" ) {
-        if(col.edit_mode === "popover"){
+      if (col.formatter !== FormatterType.text || col.edit_mode !== "inline") {
+        if (col.edit_mode === "popover") {
           newCol.wrapText = true;
           newCol.autoHeight = true;
           newCol.cellEditor = "agLargeTextCellEditor";
@@ -554,8 +554,7 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
           newCol.cellEditorParams = {
             maxLength: 100000000,
           };
-        }
-        else{
+        } else {
           newCol.cellRenderer = TableAutoCellRender;
         }
       }
