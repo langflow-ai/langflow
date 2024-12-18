@@ -65,7 +65,6 @@ import {
   CopyPlus,
   CornerDownLeft,
   Cpu,
-  CpuIcon,
   Database,
   DatabaseZap,
   Delete,
@@ -477,6 +476,7 @@ export const nodeColorsName: { [char: string]: string } = {
   Tool: "cyan",
   BaseChatMemory: "cyan",
   BaseChatMessageHistory: "orange",
+  Memory: "orange",
 };
 
 export const SIDEBAR_CATEGORIES = [

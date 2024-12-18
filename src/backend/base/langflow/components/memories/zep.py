@@ -1,5 +1,5 @@
 from langflow.base.memory.model import LCChatMemoryComponent
-from langflow.field_typing import BaseChatMessageHistory
+from langflow.field_typing.constants import Memory
 from langflow.inputs import DropdownInput, MessageTextInput, SecretStrInput
 
 
@@ -24,7 +24,7 @@ class ZepChatMemory(LCChatMemoryComponent):
         ),
     ]
 
-    def build_message_history(self) -> BaseChatMessageHistory:
+    def build_message_history(self) -> Memory:
         try:
             # Monkeypatch API_BASE_PATH to
             # avoid 404
