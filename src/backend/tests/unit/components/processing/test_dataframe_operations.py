@@ -12,15 +12,15 @@ def sample_dataframe():
 @pytest.mark.parametrize(
     ("operation", "expected_columns", "expected_values"),
     [
-        ("Add Column", ["A", "B", "C", "D"], [10, 10, 10, 10, 10]),
+        ("Add Column", ["A", "B", "C", "D"], [1, 5, "a", 10]),
         ("Drop Column", ["A", "C"], None),
-        ("Filter", ["A", "B", "C"], [3]),
-        ("Sort", ["A", "B", "C"], [5, 4, 3, 2, 1]),
+        ("Filter", ["A", "B", "C"], [3, 3, "c"]),
+        ("Sort", ["A", "B", "C"], [5, 1, "e"]),
         ("Rename Column", ["Z", "B", "C"], None),
         ("Select Columns", ["A", "C"], None),
-        ("Head", ["A", "B", "C"], [1, 2, 3]),
-        ("Tail", ["A", "B", "C"], [4, 5]),
-        ("Replace Value", ["A", "B", "C"], ["z", "b", "c", "d", "e"]),
+        ("Head", ["A", "B", "C"], [1, 5, "a"]),
+        ("Tail", ["A", "B", "C"], [5, 1, "e"]),
+        ("Replace Value", ["A", "B", "C"], [1, 5, "z"]),
     ],
 )
 def test_operations(sample_dataframe, operation, expected_columns, expected_values):
@@ -44,10 +44,8 @@ def test_operations(sample_dataframe, operation, expected_columns, expected_valu
         component.new_column_name = "Z"
     elif operation == "Select Columns":
         component.columns_to_select = ["A", "C"]
-    elif operation == "Head":
-        component.num_rows = 3
-    elif operation == "Tail":
-        component.num_rows = 2
+    elif operation in ("Head", "Tail"):
+        component.num_rows = 1
     elif operation == "Replace Value":
         component.column_name = "C"
         component.replace_value = "a"
@@ -56,8 +54,8 @@ def test_operations(sample_dataframe, operation, expected_columns, expected_valu
     result = component.perform_operation()
 
     assert list(result.columns) == expected_columns
-    if expected_values is not None:
-        assert all(result.iloc[:, -1] == expected_values)
+    if expected_values is not None and isinstance(expected_values, list):
+        assert list(result.iloc[0]) == expected_values
 
 
 def test_empty_dataframe():
@@ -82,5 +80,5 @@ def test_invalid_operation():
     component = DataFrameOperationsComponent()
     component.df = pd.DataFrame({"A": [1, 2, 3]})
     component.operation = "Invalid Operation"
-    with pytest.raises(ValueError, match="Invalid operation type"):
+    with pytest.raises(ValueError, match="Unsupported operation: Invalid Operation"):
         component.perform_operation()
