@@ -559,11 +559,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             }
 
         # Get the running environment for Langflow
-        environment = (
-            parse_api_endpoint(self.get_api_endpoint()).environment
-            if self.get_api_endpoint()
-            else None
-        )
+        environment = parse_api_endpoint(self.get_api_endpoint()).environment if self.get_api_endpoint() else None
 
         # Get Langflow version and platform information
         __version__ = get_version_info()["version"]
