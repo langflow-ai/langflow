@@ -191,7 +191,10 @@ export default function ChatView({
                   <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
                     New chat
                   </h3>
-                  <p className="text-lg text-muted-foreground">
+                  <p
+                    className="text-lg text-muted-foreground"
+                    data-testid="new-chat-text"
+                  >
                     <TextEffectPerChar>
                       Test your flow with a chat prompt
                     </TextEffectPerChar>

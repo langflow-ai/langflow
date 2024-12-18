@@ -13,7 +13,11 @@ import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../../components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "../../../../../components/common/sanitizedHTMLWrapper";
-import { EMPTY_INPUT_SEND_MESSAGE } from "../../../../../constants/constants";
+import CodeTabsComponent from "../../../../../components/core/codeTabsComponent/ChatCodeTabComponent";
+import {
+  EMPTY_INPUT_SEND_MESSAGE,
+  EMPTY_OUTPUT_SEND_MESSAGE,
+} from "../../../../../constants/constants";
 import useTabVisibility from "../../../../../shared/hooks/use-tab-visibility";
 import useAlertStore from "../../../../../stores/alertStore";
 import { chatMessagePropsType } from "../../../../../types/components";
@@ -188,6 +192,35 @@ export default function ChatMessage({
       },
     );
   };
+
+  const handleEvaluateAnswer = (evaluation: boolean | null) => {
+    updateMessageMutation(
+      {
+        message: {
+          ...chat,
+          files: convertFiles(chat.files),
+          sender_name: chat.sender_name ?? "AI",
+          text: chat.message.toString(),
+          sender: chat.isSend ? "User" : "Machine",
+          flow_id,
+          session_id: chat.session ?? "",
+          properties: {
+            ...chat.properties,
+            positive_feedback: evaluation,
+          },
+        },
+        refetch: true,
+      },
+      {
+        onError: () => {
+          setErrorData({
+            title: "Error updating messages.",
+          });
+        },
+      },
+    );
+  };
+
   const editedFlag = chat.edit ? (
     <div className="text-sm text-muted-foreground">(Edited)</div>
   ) : null;
@@ -410,6 +443,9 @@ export default function ChatMessage({
                   onDelete={() => {}}
                   onEdit={() => setEditMessage(true)}
                   className="h-fit group-hover:visible"
+                  isBotMessage={!chat.isSend}
+                  onEvaluate={handleEvaluateAnswer}
+                  evaluation={chat.properties?.positive_feedback}
                 />
               </div>
             </div>
