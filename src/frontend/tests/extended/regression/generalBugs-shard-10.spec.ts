@@ -77,7 +77,9 @@ test(
 
     await page.locator('//*[@id="react-flow-id"]').click();
 
-    expect(page.getByTestId("icon-Snowflake").first()).toBeVisible();
+    await page.waitForSelector(".border-ring-frozen", { timeout: 3000 });
+
+    expect(page.locator(".border-ring-frozen")).toHaveCount(1);
 
     await page.locator('//*[@id="react-flow-id"]').click();
 
