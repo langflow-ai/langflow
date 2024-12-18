@@ -93,16 +93,27 @@ class Component(CustomComponent):
     inputs: list[InputTypes] = []
     outputs: list[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
-    _output_logs: dict[str, list[Log]] = {}
-    _current_output: str = ""
-    _metadata: dict = {}
-    _ctx: dict = {}
-    _code: str | None = None
-    _logs: list[Log] = []
 
     def __init__(self, **kwargs) -> None:
-        # if key starts with _ it is a config
-        # else it is an input
+        # Initialize instance-specific attributes first
+        self._output_logs: dict[str, list[Log]] = {}
+        self._current_output: str = ""
+        self._metadata: dict = {}
+        self._ctx: dict = {}
+        self._code: str | None = None
+        self._logs: list[Log] = []
+
+        # Initialize component-specific collections
+        self._inputs: dict[str, InputTypes] = {}
+        self._outputs_map: dict[str, Output] = {}
+        self._results: dict[str, Any] = {}
+        self._attributes: dict[str, Any] = {}
+        self._edges: list[EdgeData] = []
+        self._components: list[Component] = []
+        self._event_manager: EventManager | None = None
+        self._state_model = None
+
+        # Process input kwargs
         inputs = {}
         config = {}
         for key, value in kwargs.items():
@@ -112,34 +123,35 @@ class Component(CustomComponent):
                 config[key[1:]] = value
             else:
                 inputs[key] = value
-        self._inputs: dict[str, InputTypes] = {}
-        self._outputs_map: dict[str, Output] = {}
-        self._results: dict[str, Any] = {}
-        self._attributes: dict[str, Any] = {}
+
         self._parameters = inputs or {}
-        self._edges: list[EdgeData] = []
-        self._components: list[Component] = []
-        self._current_output = ""
-        self._event_manager: EventManager | None = None
-        self._state_model = None
         self.set_attributes(self._parameters)
-        self._output_logs = {}
-        config = config or {}
-        if "_id" not in config:
-            config |= {"_id": f"{self.__class__.__name__}-{nanoid.generate(size=5)}"}
+
+        # Store original inputs and config for reference
         self.__inputs = inputs
-        self.__config = config
-        self._reset_all_output_values()
-        super().__init__(**config)
+        self.__config = config or {}
+
+        # Add unique ID if not provided
+        if "_id" not in self.__config:
+            self.__config |= {"_id": f"{self.__class__.__name__}-{nanoid.generate(size=5)}"}
+
+        # Initialize base class
+        super().__init__(**self.__config)
+
+        # Post-initialization setup
         if hasattr(self, "_trace_type"):
             self.trace_type = self._trace_type
         if not hasattr(self, "trace_type"):
             self.trace_type = "chain"
+
+        # Setup inputs and outputs
+        self._reset_all_output_values()
         if self.inputs is not None:
             self.map_inputs(self.inputs)
         if self.outputs is not None:
             self.map_outputs(self.outputs)
-        # Set output types
+
+        # Final setup
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
         self._set_output_required_inputs()
