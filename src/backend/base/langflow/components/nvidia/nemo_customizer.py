@@ -1,19 +1,15 @@
 import httpx
 import json
 from langflow.custom import Component
-from langflow.io import MessageTextInput, Output, DropdownInput, IntInput, FloatInput
+from langflow.io import MessageTextInput, Output, DropdownInput, IntInput, FloatInput, StrInput
+
 
 class NVIDIANeMoCustomizerComponent(Component):
-    display_name = "NVIDIA NeMo Customizer"
+    display_name = "Customizer"
     description = "Train models"
     icon = "NVIDIA"
     name = "NVIDIANeMoCustomizer"
     beta = True
-
-    # TODO allow override via advanced properties
-    endpoint = "localhost:9000"
-    url = f"http://{endpoint}/v2/customizations"
-    models_url = f"http://{endpoint}/v2/availableParentModels"
 
     headers = {
         'accept': 'application/json',
@@ -21,6 +17,11 @@ class NVIDIANeMoCustomizerComponent(Component):
     }
 
     inputs = [
+        StrInput(
+            name="base_url",
+            display_name="NVIDIA NeMo Customizer Base URL",
+            info="The base URL of the NVIDIA NeMo Customizer API.",
+        ),
         MessageTextInput(
             name="dataset",
             display_name="Dataset",
@@ -84,12 +85,14 @@ class NVIDIANeMoCustomizerComponent(Component):
         """
         Updates the component's configuration based on the selected option or refresh button.
         """
+        models_url = f"{self.base_url}/v2/availableParentModels"
+
         try:
             if field_name == "model_name":
-                self.log("Refreshing model names from availableParentModels endpoint.", name="NeMoCustomizerComponent")
+                self.log(f"Refreshing model names from endpoint {models_url}", name="NeMoCustomizerComponent")
 
                 async with httpx.AsyncClient(timeout=5.0) as client:
-                    response = await client.get(self.models_url, headers=self.headers)
+                    response = await client.get(models_url, headers=self.headers)
                     response.raise_for_status()
 
                     models_data = response.json()
@@ -100,7 +103,7 @@ class NVIDIANeMoCustomizerComponent(Component):
                     self.log("Updated model_name dropdown options.", name="NeMoCustomizerComponent")
             return build_config
         except httpx.HTTPStatusError as exc:
-            error_msg = f"HTTP error {exc.response.status_code} on {self.models_url}"
+            error_msg = f"HTTP error {exc.response.status_code} on {models_url}"
             self.log(error_msg, name="NeMoCustomizerComponent")
             raise ValueError(error_msg)
         except Exception as exc:
@@ -122,12 +125,15 @@ class NVIDIANeMoCustomizerComponent(Component):
             "sha": "main"
         }
 
+        customizations_url = f"{self.base_url}/v2/customizations"
+
         try:
             formatted_data = json.dumps(data, indent=2)
-            self.log(f"Sending request to NeMo API with data: {formatted_data}", name="NeMoCustomizerComponent")
+
+            self.log(f"Sending customization request to endpoint {customizations_url} with data: {formatted_data}", name="NeMoCustomizerComponent")
 
             async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.post(self.url, headers=self.headers, json=data)
+                response = await client.post(customizations_url, headers=self.headers, json=data)
                 response.raise_for_status()
 
                 result = response.json()
@@ -136,22 +142,22 @@ class NVIDIANeMoCustomizerComponent(Component):
 
                 result_dict = {**result}
                 id = result_dict["id"]
-                result_dict["url"] = f"{self.url}/{id}"
+                result_dict["url"] = f"{customizations_url}/{id}"
                 return result_dict
 
         except httpx.TimeoutException:
-            error_msg = f"Request to {self.url} timed out"
+            error_msg = f"Request to {customizations_url} timed out"
             self.log(error_msg, name="NeMoCustomizerComponent")
             raise ValueError(error_msg)
 
         except httpx.HTTPStatusError as exc:
             status_code = exc.response.status_code
             response_content = exc.response.text
-            error_msg = f"HTTP error {status_code} on URL: {self.url}. Response content: {response_content}"
+            error_msg = f"HTTP error {status_code} on URL: {customizations_url}. Response content: {response_content}"
             self.log(error_msg, name="NeMoCustomizerComponent")
             raise ValueError(error_msg)
 
         except Exception as exc:
-            error_msg = f"An unexpected error occurred on URL {self.url}: {str(exc)}"
+            error_msg = f"An unexpected error occurred on URL {customizations_url}: {str(exc)}"
             self.log(error_msg, name="NeMoCustomizerComponent")
             raise ValueError(error_msg)
