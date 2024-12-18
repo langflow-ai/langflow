@@ -4,6 +4,7 @@ name: Label PRs with Conventional Commits
 on:
   pull_request_target:
     types: [opened, edited, synchronize]
+  merge_group:
 
 jobs:
   validate-pr:
