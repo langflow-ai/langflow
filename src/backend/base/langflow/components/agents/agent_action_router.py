@@ -15,7 +15,7 @@ class AgentActionRouter(Component):
 
     inputs = [
         HandleInput(name="agent_context", display_name="Agent Context", input_types=["AgentContext"], required=True),
-        IntInput(name="max_iterations", display_name="Max Interations", required=True, value=5),
+        IntInput(name="max_iterations", display_name="Max Iterations", required=True, value=5),
     ]
 
     outputs = [
