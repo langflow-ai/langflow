@@ -52,6 +52,11 @@ test(
         targetPosition: { x: 100, y: 100 },
       });
 
+    await page.waitForSelector('[data-testid="input-list-plus-btn_texts-0"]', {
+      timeout: 3000,
+      state: "attached",
+    });
+
     await page.getByTestId("input-list-plus-btn_texts-0").first().click();
     await page.getByTestId("input-list-plus-btn_texts-0").first().click();
     await page.getByTestId("input-list-plus-btn_texts-0").first().click();

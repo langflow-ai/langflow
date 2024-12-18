@@ -63,6 +63,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
     expect(await page.getByText("2500/2500")).toBeVisible();
 
     await targetElement.click();
+    await page.keyboard.press("Escape");
     const textMarkdown = await page.locator(".markdown").innerText();
 
     const textLength = textMarkdown.length;
