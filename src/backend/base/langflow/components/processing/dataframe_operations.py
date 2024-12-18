@@ -1,13 +1,5 @@
 from langflow.custom import Component
-from langflow.io import (
-    BoolInput,
-    DataFrameInput,
-    DropdownInput,
-    IntInput,
-    MessageTextInput,
-    Output,
-    StrInput,
-)
+from langflow.io import BoolInput, DataFrameInput, DropdownInput, IntInput, MessageTextInput, Output, StrInput
 from langflow.schema import DataFrame
 
 
@@ -162,28 +154,30 @@ class DataFrameOperationsComponent(Component):
         return build_config
 
     def perform_operation(self) -> DataFrame:
-        df = self.df.copy()
+        dataframe_copy = self.df.copy()
         operation = self.operation
 
         if operation == "Filter":
-            return self.filter_rows_by_value(df)
+            return self.filter_rows_by_value(dataframe_copy)
         if operation == "Sort":
-            return self.sort_by_column(df)
+            return self.sort_by_column(dataframe_copy)
         if operation == "Drop Column":
-            return self.drop_column(df)
+            return self.drop_column(dataframe_copy)
         if operation == "Rename Column":
-            return self.rename_column(df)
+            return self.rename_column(dataframe_copy)
         if operation == "Add Column":
-            return self.add_column(df)
+            return self.add_column(dataframe_copy)
         if operation == "Select Columns":
-            return self.select_columns(df)
+            return self.select_columns(dataframe_copy)
         if operation == "Head":
-            return self.head(df)
+            return self.head(dataframe_copy)
         if operation == "Tail":
-            return self.tail(df)
+            return self.tail(dataframe_copy)
         if operation == "Replace Value":
-            return self.replace_values(df)
-        raise ValueError(f"Unsupported operation: {operation}")
+            return self.replace_values(dataframe_copy)
+        msg = f"Unsupported operation: {operation}"
+
+        raise ValueError(msg)
 
     # Existing methods
     def filter_rows_by_value(self, df: DataFrame) -> DataFrame:
