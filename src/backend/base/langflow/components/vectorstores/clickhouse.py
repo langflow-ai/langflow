@@ -19,7 +19,6 @@ from langflow.schema import Data
 class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Clickhouse"
     description = "Clickhouse Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/clickhouse/"
     name = "Clickhouse"
     icon = "Clickhouse"
 
@@ -54,8 +53,7 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
         ),
         StrInput(name="index_param", display_name="Param of the index", value="'L2Distance',100", advanced=True),
         DictInput(name="index_query_params", display_name="index query params", advanced=True),
-        MultilineInput(name="search_query", display_name="Search Query"),
-        DataInput(name="ingest_data", display_name="Ingest Data", is_list=True),
+        *LCVectorStoreComponent.inputs,
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         IntInput(
             name="number_of_results",

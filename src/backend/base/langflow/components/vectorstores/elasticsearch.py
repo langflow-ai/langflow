@@ -2,16 +2,13 @@ from typing import Any
 
 from langchain.schema import Document
 from langchain_elasticsearch import ElasticsearchStore
-from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.io import (
-    DataInput,
     DropdownInput,
     FloatInput,
     HandleInput,
     IntInput,
-    MultilineInput,
     SecretStrInput,
     StrInput,
 )
@@ -23,7 +20,6 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
 
     display_name: str = "Elasticsearch"
     description: str = "Elasticsearch Vector Store with with advanced, customizable search capabilities."
-    documentation = "https://python.langchain.com/docs/integrations/vectorstores/elasticsearch"
     name = "Elasticsearch"
     icon = "ElasticsearchStore"
 
@@ -47,11 +43,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
             value="langflow",
             info="The index name where the vectors will be stored in Elasticsearch cluster.",
         ),
-        MultilineInput(
-            name="search_input",
-            display_name="Search Input",
-            info="Enter a search query. Leave empty to retrieve all documents.",
-        ),
+        *LCVectorStoreComponent.inputs,
         StrInput(
             name="username",
             display_name="Username",
@@ -71,11 +63,6 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
                 "Elasticsearch password for the specified user. "
                 "Required for both local and Elastic Cloud setups unless API keys are used."
             ),
-        ),
-        DataInput(
-            name="ingest_data",
-            display_name="Ingest Data",
-            is_list=True,
         ),
         HandleInput(
             name="embedding",
@@ -163,10 +150,10 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
         """Adds documents to the Vector Store."""
         documents = self._prepare_documents()
         if documents and self.embedding:
-            logger.debug(f"Adding {len(documents)} documents to the Vector Store.")
+            self.log(f"Adding {len(documents)} documents to the Vector Store.")
             vector_store.add_documents(documents)
         else:
-            logger.debug("No documents to add to the Vector Store.")
+            self.log("No documents to add to the Vector Store.")
 
     def search(self, query: str | None = None) -> list[dict[str, Any]]:
         """Search for similar documents in the vector store or retrieve all documents if no query is provided."""
@@ -228,7 +215,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
 
         If no search input is provided, retrieve all documents.
         """
-        results = self.search(self.search_input)
+        results = self.search(self.search_query)
         retrieved_data = [
             Data(
                 text=result["page_content"],
