@@ -1,9 +1,10 @@
+import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import Fuse from "fuse.js";
 import { cloneDeep } from "lodash";
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { DropDownComponent } from "../../../types/components";
-import { cn, formatPlaceholderName } from "../../../utils/utils";
+import { cn, formatName, formatPlaceholderName } from "../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../common/genericIconComponent";
 import ShadTooltip from "../../common/shadTooltipComponent";
 import { Button } from "../../ui/button";
@@ -32,12 +33,16 @@ export default function Dropdown({
   id = "",
   children,
   name,
+  hasDialog,
 }: DropDownComponent): JSX.Element {
   const placeholderName = name
     ? formatPlaceholderName(name)
     : "Choose an option...";
 
+  const { firstWord } = formatName(name);
+
   const [open, setOpen] = useState(children ? true : false);
+  const [openDialog, setOpenDialog] = useState(false);
 
   const refButton = useRef<HTMLButtonElement>(null);
 
@@ -91,7 +96,12 @@ export default function Dropdown({
           "w-full justify-between font-normal",
         )}
       >
-        <span className="truncate" data-testid={`value-dropdown-${id}`}>
+        <span
+          className="flex items-center gap-2 truncate"
+          data-testid={`value-dropdown-${id}`}
+        >
+          {true && <ForwardedIconComponent name={""} className="h-4 w-4" />}
+
           {value &&
           value !== "" &&
           filteredOptions.find((option) => option === value)
@@ -161,6 +171,73 @@ export default function Dropdown({
     </CommandList>
   );
 
+  const renderCreateOptionDialog = () => (
+    <div className="flex items-center justify-between gap-2 truncate pb-1 pl-2 text-xs font-semibold text-muted-foreground">
+      {`${firstWord}${filteredOptions.length > 1 ? "s" : ""} (${filteredOptions.length})`}
+      <ShadTooltip delayDuration={700} content={`New ${firstWord}`} side="left">
+        <Button
+          variant="ghost"
+          size="iconMd"
+          onClick={() => setOpenDialog(true)}
+        >
+          <ForwardedIconComponent name="Plus" className="text-primary" />
+        </Button>
+      </ShadTooltip>
+      <NodeDialog
+        open={openDialog}
+        onClose={() => setOpenDialog(false)}
+        content={<div>Content</div>}
+      />
+    </div>
+  );
+
+  const renderIconOptionsList = () => (
+    <CommandList>
+      <CommandEmpty>No values found.</CommandEmpty>
+      <CommandGroup defaultChecked={false}>
+        {renderCreateOptionDialog()}
+        {filteredOptions?.map((option, index) => (
+          <ShadTooltip key={index} delayDuration={700} content={option}>
+            <div>
+              <CommandItem
+                value={option}
+                onSelect={(currentValue) => {
+                  onSelect(currentValue);
+                  setOpen(false);
+                }}
+                className="items-center overflow-hidden truncate"
+                data-testid={`${option}-${index}-option`}
+              >
+                <div className="flex items-center gap-2">
+                  <ForwardedIconComponent
+                    name={option?.icon}
+                    className={cn("h-4 w-4 shrink-0 text-primary")}
+                  />
+                  <div className="flex flex-col">
+                    <span className="truncate">{option}</span>
+                    <span className="flex items-center gap-1 truncate pt-1 text-muted-foreground">
+                      {["GPT-4o", "510 records"].map((value, i) => (
+                        <>
+                          {i > 0 && (
+                            <ForwardedIconComponent
+                              name="Circle"
+                              className="h-1 w-1 fill-muted-foreground"
+                            />
+                          )}
+                          <span className="truncate text-xs">{value}</span>
+                        </>
+                      ))}
+                    </span>
+                  </div>
+                </div>
+              </CommandItem>
+            </div>
+          </ShadTooltip>
+        ))}
+      </CommandGroup>
+    </CommandList>
+  );
+
   const renderPopoverContent = () => (
     <PopoverContentDropdown
       side="bottom"
@@ -172,7 +249,7 @@ export default function Dropdown({
     >
       <Command>
         {renderSearchInput()}
-        {renderOptionsList()}
+        {hasDialog ? renderIconOptionsList() : renderOptionsList()}
       </Command>
     </PopoverContentDropdown>
   );

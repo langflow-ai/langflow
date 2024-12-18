@@ -70,6 +70,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             ],
         },
     )
+    
+
 
     inputs = [
         SecretStrInput(
@@ -96,9 +98,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             required=True,
             refresh_button=True,
             real_time_refresh=True,
+            has_dialog=True,
             options=["+ Create new collection"],
             value="+ Create new collection",
         ),
+        
         StrInput(
             name="collection_name_new",
             display_name="Collection Name",

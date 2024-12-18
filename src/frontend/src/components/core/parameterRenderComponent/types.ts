@@ -78,6 +78,7 @@ export type DropDownComponentType = {
   combobox?: boolean;
   options: string[];
   name: string;
+  hasDialog?: boolean;
 };
 
 export type TextAreaComponentType = {
