@@ -1953,23 +1953,22 @@ class Graph:
         return [layer for layer in refined_layers if layer]
 
     def sort_chat_inputs_first(self, vertices_layers: list[list[str]]) -> list[list[str]]:
-        # First check if any chat inputs have dependencies
+        chat_inputs = []
         for layer in vertices_layers:
             for vertex_id in layer:
                 if "ChatInput" in vertex_id and self.get_predecessors(self.get_vertex(vertex_id)):
                     return vertices_layers
+                if "ChatInput" in vertex_id:
+                    chat_inputs.append(vertex_id)
 
-        # If no chat inputs have dependencies, move them to first layer
+        if not chat_inputs:
+            return vertices_layers
+
         chat_inputs_first = []
         for layer in vertices_layers:
             layer_chat_inputs_first = [vertex_id for vertex_id in layer if "ChatInput" in vertex_id]
             chat_inputs_first.extend(layer_chat_inputs_first)
-            for vertex_id in layer_chat_inputs_first:
-                # Remove the ChatInput from the layer
-                layer.remove(vertex_id)
-
-        if not chat_inputs_first:
-            return vertices_layers
+            layer[:] = [v for v in layer if v not in layer_chat_inputs_first]
 
         return [chat_inputs_first, *vertices_layers]
 
