@@ -239,7 +239,7 @@ class NVIDIANeMoCustomizerComponent(Component):
                 return created_dataset.get("id")
 
         except httpx.HTTPStatusError as e:
-            print(f"Error processing datasets: {e}")
+            self.log(f"Error processing datasets: {e}")
             return None
 
     async def process_and_upload_dataset(self) -> str:
