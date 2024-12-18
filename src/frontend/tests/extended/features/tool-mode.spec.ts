@@ -7,38 +7,42 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
-    await page.waitForSelector('[data-testid="disclosure-vector stores"]', {
+    await page.waitForSelector('[data-testid="disclosure-data"]', {
       timeout: 3000,
       state: "visible",
     });
 
-    await page.getByTestId("disclosure-vector stores").click();
-    await page.waitForSelector('[data-testid="vectorstoresAstra DB"]', {
+    await page.getByTestId("disclosure-data").click();
+    await page.waitForSelector('[data-testid="dataURL"]', {
       timeout: 3000,
       state: "visible",
     });
     await page
-      .getByTestId("vectorstoresAstra DB")
+      .getByTestId("dataURL")
       .hover()
       .then(async () => {
-        await page.getByTestId("add-component-button-astra-db").click();
+        await page.getByTestId("add-component-button-url").click();
       });
 
     await page.getByTestId("generic-node-title-arrangement").click();
 
-    await page.keyboard.press("ControlOrMeta+Shift+m");
-
-    await page.waitForSelector("text=toolset", {
-      timeout: 3000,
-      state: "visible",
-    });
-
-    expect(await page.getByText("toolset").count()).toBeGreaterThan(0);
+    await page
+      .getByTestId("generic-node-title-arrangement")
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
     await page.keyboard.press("ControlOrMeta+Shift+m");
 
     await page.waitForSelector("text=toolset", {
       timeout: 3000,
+      state: "visible",
+    });
+
+    expect(await page.getByText("toolset").count()).toBeGreaterThan(0);
+
+    await page.keyboard.press("ControlOrMeta+Shift+m");
+
+    await page.waitForSelector("text=toolset", {
+      timeout: 3000,
       state: "hidden",
     });
 
@@ -105,7 +109,7 @@ test(
       state: "visible",
     });
 
-    await page.getByTestId("disclosure-vector stores").click();
+    await page.getByTestId("disclosure-data").click();
 
     await page.getByTestId("disclosure-agents").click();
 
@@ -120,10 +124,9 @@ test(
         await page.getByTestId("add-component-button-agent").click();
       });
 
-    await page
-      .getByTestId("handle-astradb-shownode-toolset-right")
-      .first()
-      .click();
+    // Move the Agent node a bit
+
+    await page.getByTestId("handle-url-shownode-toolset-right").first().click();
 
     await page.getByTestId("handle-agent-shownode-tools-left").first().click();
 
