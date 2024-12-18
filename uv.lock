@@ -520,14 +520,14 @@ wheels = [
 
 [[package]]
 name = "blockbuster"
-version = "1.5.0"
+version = "1.5.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "forbiddenfruit" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f1/5d/1999e1a4a204b7a0b72662b8b1390a162b32a601f9a7fbe7549f1e77b3fe/blockbuster-1.5.0.tar.gz", hash = "sha256:f647638413f99fc6a6e47923ce3fa7ff3b9c078b458ed00e6131941db5540fac", size = 10431 }
+sdist = { url = "https://files.pythonhosted.org/packages/a7/3a/07f9c267527c561cb0bdca99147d84f7e0c0551b00869bc63a4906280f2b/blockbuster-1.5.2.tar.gz", hash = "sha256:3588dd4d6f18ec1a64e0c9b9fe13eec79e5b16cf4e49504956d8168a33738583", size = 10751 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7e/06/c9103025eb2e58a2853fbea4be184db4342c37510b09131af9d7b1218e3f/blockbuster-1.5.0-py3-none-any.whl", hash = "sha256:24c2923980a17fe4231b16942d45a117278b8939eeeba64dec3e7b92a91867c6", size = 8475 },
+    { url = "https://files.pythonhosted.org/packages/bb/8f/7faccc4f7353606606fab3851bf4652f915348f368e71f8d6910474b7f7c/blockbuster-1.5.2-py3-none-any.whl", hash = "sha256:7853b05bf6650c74b2f07324bd56c277f4ef3d7dcc2d4e6b7cf21a758de706bf", size = 8743 },
 ]
 
 [[package]]
@@ -4015,7 +4015,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
-    { name = "blockbuster", specifier = ">=1.5.0,<1.6" },
+    { name = "blockbuster", specifier = ">=1.5.2,<1.6" },
     { name = "dictdiffer", specifier = ">=0.9.0" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "ipykernel", specifier = ">=6.29.0" },
