@@ -4,7 +4,7 @@ import asyncio
 import re
 import sqlite3
 import time
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -19,7 +19,7 @@ from sqlalchemy.dialects import sqlite as dialect_sqlite
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
-from sqlmodel import Session, SQLModel, create_engine, select, text
+from sqlmodel import SQLModel, select, text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
@@ -55,7 +55,6 @@ class DatabaseService(Service):
         # Using decorator will make the method not able to use self
         event.listen(Engine, "connect", self.on_connection)
         self.engine = self._create_engine()
-        self.async_engine = self._create_async_engine()
 
         alembic_log_file = self.settings_service.settings.alembic_log_file
         # Check if the provided path is absolute, cross-platform.
@@ -74,7 +73,6 @@ class DatabaseService(Service):
     def reload_engine(self) -> None:
         self._sanitize_database_url()
         self.engine = self._create_engine()
-        self.async_engine = self._create_async_engine()
 
     def _sanitize_database_url(self):
         if self.database_url.startswith("postgres://"):
@@ -84,16 +82,7 @@ class DatabaseService(Service):
                 "To avoid this warning, update the database URL."
             )
 
-    def _create_engine(self) -> Engine:
-        """Create the engine for the database."""
-        return create_engine(
-            self.database_url,
-            connect_args=self._get_connect_args(),
-            pool_size=self.settings_service.settings.pool_size,
-            max_overflow=self.settings_service.settings.max_overflow,
-        )
-
-    def _create_async_engine(self) -> AsyncEngine:
+    def _create_engine(self) -> AsyncEngine:
         """Create the engine for the database."""
         url_components = self.database_url.split("://", maxsplit=1)
         if url_components[0].startswith("sqlite"):
@@ -144,14 +133,9 @@ class DatabaseService(Service):
                 finally:
                     cursor.close()
 
-    @contextmanager
-    def with_session(self):
-        with Session(self.engine) as session:
-            yield session
-
     @asynccontextmanager
-    async def with_async_session(self):
-        async with AsyncSession(self.async_engine, expire_on_commit=False) as session:
+    async def with_session(self):
+        async with AsyncSession(self.engine, expire_on_commit=False) as session:
             yield session
 
     async def assign_orphaned_flows_to_superuser(self) -> None:
@@ -161,7 +145,7 @@ class DatabaseService(Service):
         if not settings_service.auth_settings.AUTO_LOGIN:
             return
 
-        async with self.with_async_session() as session:
+        async with self.with_session() as session:
             # Fetch orphaned flows
             stmt = (
                 select(models.Flow)
@@ -262,7 +246,7 @@ class DatabaseService(Service):
         return True
 
     async def check_schema_health(self) -> None:
-        async with self.with_async_session() as session, session.bind.connect() as conn:
+        async with self.with_session() as session, session.bind.connect() as conn:
             await conn.run_sync(self._check_schema_health)
 
     def init_alembic(self, alembic_cfg) -> None:
@@ -323,7 +307,7 @@ class DatabaseService(Service):
 
     async def run_migrations(self, *, fix=False) -> None:
         should_initialize_alembic = False
-        async with self.with_async_session() as session:
+        async with self.with_session() as session:
             # If the table does not exist it throws an error
             # so we need to catch it
             try:
@@ -348,7 +332,7 @@ class DatabaseService(Service):
                 time.sleep(3)
                 command.upgrade(alembic_cfg, "head")
 
-    def run_migrations_test(self):
+    async def run_migrations_test(self):
         # This method is used for testing purposes only
         # We will check that all models are in the database
         # and that the database is up to date with all columns
@@ -356,11 +340,16 @@ class DatabaseService(Service):
         sql_models = [
             model for model in models.__dict__.values() if isinstance(model, type) and issubclass(model, SQLModel)
         ]
-        return [TableResults(sql_model.__tablename__, self.check_table(sql_model)) for sql_model in sql_models]
+        async with self.with_session() as session, session.bind.connect() as conn:
+            return [
+                TableResults(sql_model.__tablename__, conn.run_sync(self.check_table, sql_model))
+                for sql_model in sql_models
+            ]
 
-    def check_table(self, model):
+    @staticmethod
+    def check_table(connection, model):
         results = []
-        inspector = inspect(self.engine)
+        inspector = inspect(connection)
         table_name = model.__tablename__
         expected_columns = list(model.__fields__.keys())
         available_columns = []
@@ -416,7 +405,7 @@ class DatabaseService(Service):
         logger.debug("Database and tables created successfully")
 
     async def create_db_and_tables(self) -> None:
-        async with self.with_async_session() as session, session.bind.connect() as conn:
+        async with self.with_session() as session, session.bind.connect() as conn:
             await conn.run_sync(self._create_db_and_tables)
 
     async def teardown(self) -> None:
@@ -425,9 +414,8 @@ class DatabaseService(Service):
             settings_service = get_settings_service()
             # remove the default superuser if auto_login is enabled
             # using the SUPERUSER to get the user
-            async with self.with_async_session() as session:
+            async with self.with_session() as session:
                 await teardown_superuser(settings_service, session)
         except Exception:  # noqa: BLE001
             logger.exception("Error tearing down database")
-        await self.async_engine.dispose()
-        await asyncio.to_thread(self.engine.dispose)
+        await self.engine.dispose()
