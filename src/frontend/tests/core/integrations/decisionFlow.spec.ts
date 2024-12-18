@@ -2,12 +2,7 @@ import { Page, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
-async function zoomOut(page: Page, times: number = 4) {
-  for (let i = 0; i < times; i++) {
-    await page.getByTestId("zoom_out").click();
-  }
-}
+import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "should create a flow with decision",
