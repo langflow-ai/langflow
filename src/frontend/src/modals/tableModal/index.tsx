@@ -16,11 +16,12 @@ interface TableModalProps extends TableComponentProps {
   children: React.ReactNode;
   tableOptions?: TableOptionsTypeAPI;
   hideColumns?: boolean | string[];
+  tableIcon?: string;
 }
 
 const TableModal = forwardRef<AgGridReact, TableModalProps>(
   (
-    { tableTitle, description, children, disabled, ...props }: TableModalProps,
+    { tableTitle, description, children, disabled, tableIcon, ...props }: TableModalProps,
     ref: ForwardedRef<AgGridReact>,
   ) => {
     return (
@@ -41,7 +42,7 @@ const TableModal = forwardRef<AgGridReact, TableModalProps>(
           description={props.tableOptions?.description ?? description}
         >
           <span className="pr-2">{tableTitle}</span>
-          <ForwardedIconComponent name="Table" className="mr-2 h-4 w-4" />
+          <ForwardedIconComponent name={tableIcon ?? "Table"} className="mr-2 h-4 w-4" />
         </BaseModal.Header>
         <BaseModal.Content>
           <TableComponent
