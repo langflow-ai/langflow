@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from uuid import UUID
 
 import pytest
@@ -25,7 +26,7 @@ async def created_messages(session):  # noqa: ARG001
         messages = [
             MessageCreate(text="Test message 1", sender="User", sender_name="User", session_id="session_id2"),
             MessageCreate(text="Test message 2", sender="User", sender_name="User", session_id="session_id2"),
-            MessageCreate(text="Test message 3", sender="User", sender_name="User", session_id="session_id2"),
+            MessageCreate(text="Test message 3", sender="AI", sender_name="AI", session_id="session_id2"),
         ]
         messagetables = [MessageTable.model_validate(message, from_attributes=True) for message in messages]
         return await aadd_messagetables(messagetables, _session)
@@ -99,8 +100,19 @@ async def test_successfully_update_session_id(client, logged_in_headers, created
     )
     assert response.status_code == 200
     assert len(response.json()) == len(created_messages)
-    for message in response.json():
+    messages = response.json()
+    for message in messages:
         assert message["session_id"] == new_session_id
+        response_timestamp = message["timestamp"]
+        timestamp = datetime.strptime(response_timestamp, "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
+        timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S %Z")
+        assert timestamp_str == response_timestamp
+
+    # Check if the messages ordered by timestamp are in the correct order
+    # User, User, AI
+    assert messages[0]["sender"] == "User"
+    assert messages[1]["sender"] == "User"
+    assert messages[2]["sender"] == "AI"
 
 
 # No messages found with the given session ID
