@@ -1,14 +1,14 @@
 from langflow.custom import Component
 from langflow.io import (
-    BoolInput,
     DataFrameInput,
     DropdownInput,
-    IntInput,
     MessageTextInput,
-    Output,
     StrInput,
+    BoolInput,
+    IntInput,
+    Output,
 )
-from langflow.schema import DataFrame
+from langflow.schema import Data, DataFrame
 
 
 class DataFrameOperationsComponent(Component):
@@ -167,23 +167,24 @@ class DataFrameOperationsComponent(Component):
 
         if operation == "Filter":
             return self.filter_rows_by_value(df)
-        if operation == "Sort":
+        elif operation == "Sort":
             return self.sort_by_column(df)
-        if operation == "Drop Column":
+        elif operation == "Drop Column":
             return self.drop_column(df)
-        if operation == "Rename Column":
+        elif operation == "Rename Column":
             return self.rename_column(df)
-        if operation == "Add Column":
+        elif operation == "Add Column":
             return self.add_column(df)
-        if operation == "Select Columns":
+        elif operation == "Select Columns":
             return self.select_columns(df)
-        if operation == "Head":
+        elif operation == "Head":
             return self.head(df)
-        if operation == "Tail":
+        elif operation == "Tail":
             return self.tail(df)
-        if operation == "Replace Value":
+        elif operation == "Replace Value":
             return self.replace_values(df)
-        raise ValueError(f"Unsupported operation: {operation}")
+        else:
+            raise ValueError(f"Unsupported operation: {operation}")
 
     # Existing methods
     def filter_rows_by_value(self, df: DataFrame) -> DataFrame:
