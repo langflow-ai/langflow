@@ -84,6 +84,9 @@ class FieldParserType(str, Enum):
     KEBAB_CASE = "kebab_case"
     LOWERCASE = "lowercase"
     UPPERCASE = "uppercase"
+    NO_BLANK = "no_blank"
+    VALID_CSV = ("valid_csv",)
+    COMMANDS = "commands"
 
 
 class TableOptions(BaseModel):
