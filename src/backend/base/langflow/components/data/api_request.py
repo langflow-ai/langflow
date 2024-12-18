@@ -47,6 +47,7 @@ class APIRequestComponent(Component):
             display_name="URLs",
             list=True,
             info="Enter one or more URLs, separated by commas.",
+            required=True,
         ),
         DropdownInput(
             name="method",
@@ -76,6 +77,7 @@ class APIRequestComponent(Component):
             display_name="Query Parameters",
             info="The query parameters to append to the URL.",
             tool_mode=True,
+            advanced=True,
         ),
         TableInput(
             name="body",
@@ -313,7 +315,6 @@ class APIRequestComponent(Component):
             "urls",
             "method",
             "use_curl",
-            "query_params",
         ]
 
         always_advanced_fields = [
