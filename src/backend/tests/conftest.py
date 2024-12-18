@@ -408,7 +408,7 @@ async def test_user(client):
 @pytest.fixture
 async def active_user(client):  # noqa: ARG001
     db_manager = get_db_service()
-    async with db_manager.with_async_session() as session:
+    async with db_manager.with_session() as session:
         user = User(
             username="activeuser",
             password=get_password_hash("testpassword"),
@@ -426,7 +426,7 @@ async def active_user(client):  # noqa: ARG001
     yield user
     # Clean up
     # Now cleanup transactions, vertex_build
-    async with db_manager.with_async_session() as session:
+    async with db_manager.with_session() as session:
         user = await session.get(User, user.id, options=[selectinload(User.flows)])
         await _delete_transactions_and_vertex_builds(session, user.flows)
         await session.delete(user)
@@ -447,7 +447,7 @@ async def logged_in_headers(client, active_user):
 @pytest.fixture
 async def active_super_user(client):  # noqa: ARG001
     db_manager = get_db_service()
-    async with db_manager.with_async_session() as session:
+    async with db_manager.with_session() as session:
         user = User(
             username="activeuser",
             password=get_password_hash("testpassword"),
@@ -465,7 +465,7 @@ async def active_super_user(client):  # noqa: ARG001
     yield user
     # Clean up
     # Now cleanup transactions, vertex_build
-    async with db_manager.with_async_session() as session:
+    async with db_manager.with_session() as session:
         user = await session.get(User, user.id, options=[selectinload(User.flows)])
         await _delete_transactions_and_vertex_builds(session, user.flows)
         await session.delete(user)

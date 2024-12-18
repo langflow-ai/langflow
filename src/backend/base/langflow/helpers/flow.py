@@ -10,7 +10,7 @@ from sqlmodel import select
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.flow.model import FlowRead
-from langflow.services.deps import async_session_scope, get_settings_service
+from langflow.services.deps import get_settings_service, session_scope
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -32,7 +32,7 @@ async def list_flows(*, user_id: str | None = None) -> list[Data]:
         msg = "Session is invalid"
         raise ValueError(msg)
     try:
-        async with async_session_scope() as session:
+        async with session_scope() as session:
             uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
             stmt = select(Flow).where(Flow.user_id == uuid_user_id).where(Flow.is_component == False)  # noqa: E712
             flows = (await session.exec(stmt)).all()
@@ -58,7 +58,7 @@ async def load_flow(
             msg = f"Flow {flow_name} not found"
             raise ValueError(msg)
 
-    async with async_session_scope() as session:
+    async with session_scope() as session:
         graph_data = flow.data if (flow := await session.get(Flow, flow_id)) else None
     if not graph_data:
         msg = f"Flow {flow_id} not found"
@@ -69,7 +69,7 @@ async def load_flow(
 
 
 async def find_flow(flow_name: str, user_id: str) -> str | None:
-    async with async_session_scope() as session:
+    async with session_scope() as session:
         stmt = select(Flow).where(Flow.name == flow_name).where(Flow.user_id == user_id)
         flow = (await session.exec(stmt)).first()
         return flow.id if flow else None
@@ -275,7 +275,7 @@ def get_arg_names(inputs: list[Vertex]) -> list[dict[str, str]]:
 
 
 async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: UUID | None = None) -> FlowRead | None:
-    async with async_session_scope() as session:
+    async with session_scope() as session:
         endpoint_name = None
         try:
             flow_id = UUID(flow_id_or_name)
