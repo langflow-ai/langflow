@@ -6,6 +6,7 @@ import jq
 from langflow.custom import Component
 from langflow.io import DataInput, IntInput, MessageTextInput, Output
 from langflow.schema import Data
+from langflow.schema.dataframe import DataFrame
 
 
 class FilterDataComponent(Component):
@@ -50,7 +51,8 @@ class FilterDataComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Filtered Data", name="filtered_data", method="process_data"),
+        Output(display_name="Filtered Results", name="filtered_data", method="process_data"),
+        Output(display_name="Filtered DataFrame", name="dataframe", method="process_dataframe"),
     ]
 
     def _parse_data(self, input_value: Data | str | dict | Any) -> str:
@@ -96,52 +98,68 @@ class FilterDataComponent(Component):
         except (KeyError, TypeError):
             return data
 
-    def process_data(self) -> Data | list[Data]:
-        """Process data in three steps: 1. Index filter, 2. JQ query, 3. Column filtering."""
+    def process_dataframe(self) -> DataFrame:
+        """Process data and return as DataFrame."""
         try:
             to_filter = self.input_value
             if not to_filter:
-                return []
+                return DataFrame()
 
-            # Handle list input
+            # Convert input to DataFrame
             if isinstance(to_filter, list):
-                to_filter = [self._parse_data(f) for f in to_filter]
-                to_filter = f"[{','.join(to_filter)}]"
-            else:
-                to_filter = self._parse_data(to_filter)
-
-            filtered_data = json.loads(to_filter)
-
-            # Step 1: Apply index filter if provided
-            if isinstance(self.index, int) and isinstance(filtered_data, list):
-                filtered_data = self._apply_index_filter(filtered_data, self.index)
-
-            # Step 2: Apply JQ query if provided
-            if self.jq_query and self.jq_query.strip():
-                filtered_data = self._apply_jq_query(json.dumps(filtered_data), self.jq_query)
-
-            # Step 3: Apply column filtering if needed
-            if self.select_columns:
-                filtered_data = self._apply_column_filter(filtered_data, self.select_columns)
-
-            # Create result Data object(s)
-            if isinstance(filtered_data, list):
-                if self.jq_query and self.jq_query.strip():
-                    # Wrap list results in a dictionary to satisfy Data model requirements
-                    result: Data | list[Data] = Data(data={"results": filtered_data})
+                if all(isinstance(x, Data) for x in to_filter):
+                    filtered_frame = DataFrame(to_filter)
                 else:
-                    result = [
-                        Data(data=item) if isinstance(item, dict) else Data(data={"value": item})
-                        for item in filtered_data
+                    # Convert each item to Data format first
+                    data_list = [
+                        Data(data=item) if isinstance(item, dict) else Data(data={"value": item}) for item in to_filter
                     ]
+                    filtered_frame = DataFrame(data_list)
             else:
-                result = Data(data=filtered_data if isinstance(filtered_data, dict) else {"value": filtered_data})
+                # Single item case
+                data = self._parse_data(to_filter)
+                parsed_data = json.loads(data)
+                filtered_frame = DataFrame([parsed_data] if isinstance(parsed_data, dict) else [{"value": parsed_data}])
 
-            self.status = result
-        except (ValueError, TypeError, KeyError) as e:
+            # Apply filters
+            if isinstance(self.index, int) and len(filtered_frame) > self.index:
+                filtered_frame = DataFrame([filtered_frame.iloc[self.index].to_dict()])
+
+            if self.jq_query and self.jq_query.strip():
+                # Apply JQ query and convert result back to DataFrame
+                json_data = filtered_frame.to_dict(orient="records")
+                filtered_data = self._apply_jq_query(json.dumps(json_data), self.jq_query)
+                if isinstance(filtered_data, list):
+                    filtered_frame = DataFrame(filtered_data)
+                else:
+                    filtered_frame = DataFrame(
+                        [filtered_data] if isinstance(filtered_data, dict) else [{"value": filtered_data}]
+                    )
+
+            if self.select_columns:
+                filtered_frame = filtered_frame[self.select_columns]
+
+        except Exception as e:
+            error_message = f"Error processing dataframe: {e!s}"
+            raise ValueError(error_message) from e
+        return filtered_frame
+
+    def process_data(self) -> Data:
+        """Process data and return as Data object."""
+        try:
+            filtered_frame = self.process_dataframe()
+            if filtered_frame.empty:
+                return Data(data={})
+
+            # Convert DataFrame result to Data format
+            if len(filtered_frame) == 1:
+                # Single row case
+                return Data(data=filtered_frame.iloc[0].to_dict())
+            # Multiple rows case
+            return Data(data={"results": filtered_frame.to_dict(orient="records")})
+
+        except Exception as e:
             error_data = Data(data={"error": str(e)})
             self.status = error_data
             error_message = f"Error processing data: {e!s}"
             raise ValueError(error_message) from e
-        else:
-            return result
