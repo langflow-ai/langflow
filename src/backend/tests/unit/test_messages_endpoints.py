@@ -8,12 +8,12 @@ from langflow.memory import aadd_messagetables
 # Assuming you have these imports available
 from langflow.services.database.models.message import MessageCreate, MessageRead, MessageUpdate
 from langflow.services.database.models.message.model import MessageTable
-from langflow.services.deps import async_session_scope
+from langflow.services.deps import session_scope
 
 
 @pytest.fixture
 async def created_message():
-    async with async_session_scope() as session:
+    async with session_scope() as session:
         message = MessageCreate(text="Test message", sender="User", sender_name="User", session_id="session_id")
         messagetable = MessageTable.model_validate(message, from_attributes=True)
         messagetables = await aadd_messagetables([messagetable], session)
@@ -22,7 +22,7 @@ async def created_message():
 
 @pytest.fixture
 async def created_messages(session):  # noqa: ARG001
-    async with async_session_scope() as _session:
+    async with session_scope() as _session:
         messages = [
             MessageCreate(text="Test message 1", sender="User", sender_name="User", session_id="session_id2"),
             MessageCreate(text="Test message 2", sender="User", sender_name="User", session_id="session_id2"),
