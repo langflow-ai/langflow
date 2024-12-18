@@ -17,6 +17,7 @@ import ChatInput from "./chatInput/newChatInput";
 import ChatMessage from "./chatMessage/newChatMessage";
 
 export default function ChatView({
+  messageFetched,
   sendMessage,
   chatValue,
   setChatValue,
@@ -141,6 +142,14 @@ export default function ChatView({
   };
 
   const flowRunningSkeletonMemo = useMemo(() => <FlowRunningSqueleton />, []);
+
+  if (!messageFetched) {
+    return (
+      <span className="flex h-full w-full items-center justify-center font-thin text-muted-foreground">
+        Select an IO component to view
+      </span>
+    );
+  }
 
   return (
     <div

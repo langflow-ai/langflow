@@ -19,7 +19,7 @@ import useAlertStore from "../../../../../stores/alertStore";
 import { chatMessagePropsType } from "../../../../../types/components";
 import { cn } from "../../../../../utils/utils";
 import { ErrorView } from "./components/contentView";
-import { EditMessage } from "./components/editMessage";
+import { MarkdownField } from "./components/editMessage";
 import { EditMessageButton } from "./components/editMessageButton/newMessageOptions";
 import EditMessageField from "./components/editMessageField/newEditMessageField";
 import FileCardWrapper from "./components/fileCardWrapper";
@@ -341,16 +341,23 @@ export default function ChatMessage({
                           />
                         ) : (
                           <div className="w-full">
-                            <EditMessage
-                              editMessage={editMessage}
-                              chat={chat}
-                              decodedMessage={decodedMessage}
-                              handleEditMessage={handleEditMessage}
-                              setEditMessage={setEditMessage}
-                              isEmpty={isEmpty}
-                              chatMessage={chatMessage}
-                              editedFlag={editedFlag}
-                            />
+                            {editMessage ? (
+                              <EditMessageField
+                                key={`edit-message-${chat.id}`}
+                                message={decodedMessage}
+                                onEdit={(message) => {
+                                  handleEditMessage(message);
+                                }}
+                                onCancel={() => setEditMessage(false)}
+                              />
+                            ) : (
+                              <MarkdownField
+                                chat={chat}
+                                isEmpty={isEmpty}
+                                chatMessage={chatMessage}
+                                editedFlag={editedFlag}
+                              />
+                            )}
                           </div>
                         )}
                       </div>
@@ -360,48 +367,37 @@ export default function ChatMessage({
               </div>
             ) : (
               <div className="form-modal-chat-text-position flex-grow">
-                {template ? (
-                  <PromptView
-                    promptOpen={promptOpen}
-                    setPromptOpen={setPromptOpen}
-                    template={template}
-                    chat={chat}
-                    isEmpty={isEmpty}
-                    chatMessage={chatMessage}
-                  />
-                ) : (
-                  <div className="flex w-full flex-col">
-                    {editMessage ? (
-                      <EditMessageField
-                        key={`edit-message-${chat.id}`}
-                        message={decodedMessage}
-                        onEdit={(message) => {
-                          handleEditMessage(message);
-                        }}
-                        onCancel={() => setEditMessage(false)}
-                      />
-                    ) : (
-                      <>
-                        <div
-                          className={`w-full items-baseline whitespace-pre-wrap break-words text-[14px] font-normal ${
-                            isEmpty ? "text-muted-foreground" : "text-primary"
-                          }`}
-                          data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
-                        >
-                          {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
-                          {editedFlag}
-                        </div>
-                      </>
-                    )}
-                    {chat.files && (
-                      <div className="my-2 flex flex-col gap-5">
-                        {chat.files?.map((file, index) => {
-                          return <FileCardWrapper index={index} path={file} />;
-                        })}
+                <div className="flex w-full flex-col">
+                  {editMessage ? (
+                    <EditMessageField
+                      key={`edit-message-${chat.id}`}
+                      message={decodedMessage}
+                      onEdit={(message) => {
+                        handleEditMessage(message);
+                      }}
+                      onCancel={() => setEditMessage(false)}
+                    />
+                  ) : (
+                    <>
+                      <div
+                        className={`w-full items-baseline whitespace-pre-wrap break-words text-[14px] font-normal ${
+                          isEmpty ? "text-muted-foreground" : "text-primary"
+                        }`}
+                        data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
+                      >
+                        {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
+                        {editedFlag}
                       </div>
-                    )}
-                  </div>
-                )}
+                    </>
+                  )}
+                  {chat.files && (
+                    <div className="my-2 flex flex-col gap-5">
+                      {chat.files?.map((file, index) => {
+                        return <FileCardWrapper index={index} path={file} />;
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
