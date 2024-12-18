@@ -107,7 +107,7 @@ export default function TableNodeComponent({
     .map((column) => {
       const isCustomEdit =
         column.formatter &&
-        ((column.formatter === "text" && column.edit_mode !== "inline") ||
+        ((column.formatter === "text" && column.edit_mode === "modal") ||
           column.formatter === "json");
       return {
         field: column.name,
