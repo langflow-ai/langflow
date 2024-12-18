@@ -30,7 +30,7 @@ from .input_mixin import (
 )
 
 
-class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMixin):
+class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.TABLE
     is_list: bool = True
 
@@ -91,7 +91,7 @@ class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
 
 
 # Applying mixins to a specific input type
-class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTraceMixin):
+class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTraceMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.TEXT
     load_from_db: CoalesceBool = False
     """Defines if the field will allow the user to open a text editor. Default is False."""
@@ -299,7 +299,7 @@ class SecretStrInput(BaseInputMixin, DatabaseLoadMixin):
         return value
 
 
-class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixin):
+class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents an integer field.
 
     This class represents an integer input and provides functionality for handling integer values.
@@ -334,7 +334,7 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
         return v
 
 
-class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixin):
+class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a float field.
 
     This class represents a float input and provides functionality for handling float values.
@@ -369,7 +369,7 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
         return v
 
 
-class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
+class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a boolean field.
 
     This class represents a boolean input and provides functionality for handling boolean values.
@@ -384,7 +384,7 @@ class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
     value: CoalesceBool = False
 
 
-class NestedDictInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, InputTraceMixin):
+class NestedDictInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, InputTraceMixin, ToolModeMixin):
     """Represents a nested dictionary field.
 
     This class represents a nested dictionary input and provides functionality for handling dictionary values.
@@ -399,7 +399,7 @@ class NestedDictInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, In
     value: dict | Data | None = {}
 
 
-class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
+class DictInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
     """Represents a dictionary field.
 
     This class represents a dictionary input and provides functionality for handling dictionary values.
@@ -431,7 +431,7 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeM
     combobox: CoalesceBool = False
 
 
-class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, MetadataTraceMixin):
+class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a multiselect input field.
 
     This class represents a multiselect input field and provides functionality for handling multiselect values.
@@ -479,7 +479,7 @@ class LinkInput(BaseInputMixin, LinkMixin):
     field_type: SerializableFieldTypes = FieldTypes.LINK
 
 
-class SliderInput(BaseInputMixin, RangeMixin, SliderMixin):
+class SliderInput(BaseInputMixin, RangeMixin, SliderMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.SLIDER
 
 
