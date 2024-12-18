@@ -68,8 +68,8 @@ class DatabaseService(Service):
 
     async def initialize_alembic_log_file(self):
         # Ensure the directory and file for the alembic log file exists
-        anyio.Path(self.alembic_log_path.parent).mkdir(parents=True, exist_ok=True)
-        anyio.Path(self.alembic_log_path).touch(exist_ok=True)
+        await anyio.Path(self.alembic_log_path.parent).mkdir(parents=True, exist_ok=True)
+        await anyio.Path(self.alembic_log_path).touch(exist_ok=True)
 
     def reload_engine(self) -> None:
         self._sanitize_database_url()

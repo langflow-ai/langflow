@@ -36,9 +36,9 @@ import { APIClassType } from "../../../../types/api";
 import sensitiveSort from "../extraSidebarComponent/utils/sensitive-sort";
 import { CategoryGroup } from "./components/categoryGroup";
 import NoResultsMessage from "./components/emptySearchComponent";
+import MemoizedSidebarGroup from "./components/sidebarBundles";
 import SidebarMenuButtons from "./components/sidebarFooterButtons";
 import { SidebarHeaderComponent } from "./components/sidebarHeader";
-import SidebarItemsList from "./components/sidebarItemsList";
 import { applyBetaFilter } from "./helpers/apply-beta-filter";
 import { applyEdgeFilter } from "./helpers/apply-edge-filter";
 import { applyLegacyFilter } from "./helpers/apply-legacy-filter";
@@ -415,7 +415,21 @@ export function FlowSidebarComponent() {
                 sensitiveSort={sensitiveSort}
               />
             )}
-            {hasBundleItems && <></>}
+            {hasBundleItems && (
+              <MemoizedSidebarGroup
+                BUNDLES={BUNDLES}
+                search={search}
+                sortedCategories={sortedCategories}
+                dataFilter={dataFilter}
+                nodeColors={nodeColors}
+                chatInputAdded={chatInputAdded}
+                onDragStart={onDragStart}
+                sensitiveSort={sensitiveSort}
+                openCategories={openCategories}
+                setOpenCategories={setOpenCategories}
+                handleKeyDownInput={handleKeyDownInput}
+              />
+            )}
           </>
         ) : (
           <NoResultsMessage onClearSearch={handleClearSearch} />

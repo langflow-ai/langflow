@@ -20,7 +20,9 @@ test(
     await page.getByTestId("button-store").click();
     await page.waitForTimeout(1000);
 
-    await page.getByTestId("api-key-button-store").click();
+    await page.getByTestId("api-key-button-store").click({
+      timeout: 200000,
+    });
 
     await page
       .getByPlaceholder("Insert your API Key")

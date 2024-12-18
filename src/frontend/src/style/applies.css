@@ -1111,7 +1111,7 @@
   }
 
   .chat-message-highlight {
-    @apply rounded-md bg-indigo-100 px-0.5 dark:bg-indigo-900;
+    @apply rounded-md bg-indigo-100 px-0 font-semibold dark:bg-indigo-900;
   }
 
   .field-invalid {

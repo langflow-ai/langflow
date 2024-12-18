@@ -3,16 +3,16 @@ import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import ToggleShadComponent from "@/components/core/parameterRenderComponent/components/toggleShadComponent";
 import { Button } from "@/components/ui/button";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 import useAddFlow from "@/hooks/flows/use-add-flow";
-import CodeAreaModal from "@/modals/codeAreaModal";
 import { APIClassType } from "@/types/api";
+import { useUpdateNodeInternals } from "@xyflow/react";
 import _, { cloneDeep } from "lodash";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useUpdateNodeInternals } from "reactflow";
 import IconComponent from "../../../../components/common/genericIconComponent";
 import {
   Select,
@@ -20,9 +20,6 @@ import {
   SelectItem,
   SelectTrigger,
 } from "../../../../components/ui/select-custom";
-import ConfirmationModal from "../../../../modals/confirmationModal";
-import EditNodeModal from "../../../../modals/editNodeModal";
-import ShareModal from "../../../../modals/shareModal";
 import useAlertStore from "../../../../stores/alertStore";
 import { useDarkStore } from "../../../../stores/darkStore";
 import useFlowStore from "../../../../stores/flowStore";
@@ -42,6 +39,7 @@ import { cn, getNodeLength, openInNewTab } from "../../../../utils/utils";
 import { ToolbarButton } from "./components/toolbar-button";
 import ToolbarModals from "./components/toolbar-modals";
 import useShortcuts from "./hooks/use-shortcuts";
+import ShortcutDisplay from "./shortcutDisplay";
 import ToolbarSelectItem from "./toolbarSelectItem";
 
 const NodeToolbarComponent = memo(
@@ -77,6 +75,36 @@ const NodeToolbarComponent = memo(
     const [openModal, setOpenModal] = useState(false);
     const frozen = data.node?.frozen ?? false;
     const currentFlow = useFlowStore((state) => state.currentFlow);
+    const updateNodeInternals = useUpdateNodeInternals();
+    const flows = useFlowsManagerStore((state) => state.flows);
+
+    const flowDataNodes = useMemo(
+      () => currentFlow?.data?.nodes,
+      [currentFlow],
+    );
+
+    const node = useMemo(
+      () => flowDataNodes?.find((n) => n.id === data.id),
+      [flowDataNodes, data.id],
+    );
+
+    const index = useMemo(
+      () => flowDataNodes?.indexOf(node!)!,
+      [flowDataNodes, node],
+    );
+
+    const postToolModeValue = usePostTemplateValue({
+      node: data.node!,
+      nodeId: data.id,
+      parameterId: "tool_mode",
+      tool_mode: data.node!.tool_mode ?? false,
+    });
+
+    const isSaved = flows?.some((flow) =>
+      Object.values(flow).includes(data.node?.display_name!),
+    );
+
+    const setNode = useFlowStore((state) => state.setNode);
 
     const nodeLength = useMemo(() => getNodeLength(data), [data]);
     const hasCode = useMemo(
@@ -118,10 +146,21 @@ const NodeToolbarComponent = memo(
       return hasComponentAsTool ?? false;
     });
 
-    const handleActivateToolMode = useCallback(() => {
-      const newValue = !toolMode;
+    const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
+      data.id,
+    );
+
+    const handleNodeClass = (newNodeClass: APIClassType, type: string) => {
+      handleNodeClassHook(newNodeClass, type);
+    };
+
+    const handleActivateToolMode = () => {
+      const newValue = !flowDataNodes![index]!.data.node.tool_mode;
+
       updateToolMode(data.id, newValue);
       data.node!.tool_mode = newValue;
+
+      setToolMode(newValue);
 
       mutateTemplate(
         newValue,
@@ -131,10 +170,7 @@ const NodeToolbarComponent = memo(
         setErrorData,
         "tool_mode",
         () => {
-          const node = currentFlow?.data?.nodes.find((n) => n.id === data.id);
-          const index = currentFlow?.data?.nodes.indexOf(node!)!;
           currentFlow!.data!.nodes[index]!.data.node.tool_mode = newValue;
-
           patchUpdateFlow({
             id: currentFlow?.id!,
             name: currentFlow?.name!,
@@ -147,7 +183,8 @@ const NodeToolbarComponent = memo(
       );
 
       updateNodeInternals(data.id);
-    }, [toolMode, data, currentFlow]);
+      return newValue;
+    };
 
     const handleMinimize = useCallback(() => {
       if (isMinimal || !showNode) {
@@ -251,7 +288,6 @@ const NodeToolbarComponent = memo(
     const setNodes = useFlowStore((state) => state.setNodes);
     const setEdges = useFlowStore((state) => state.setEdges);
     const getNodePosition = useFlowStore((state) => state.getNodePosition);
-    const flows = useFlowsManagerStore((state) => state.flows);
     const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
     const { mutate: FreezeAllVertices } = usePostRetrieveVertexOrder({
       onSuccess: ({ vertices_to_run }) => {
@@ -268,7 +304,6 @@ const NodeToolbarComponent = memo(
         onCloseAdvancedModal!(false);
       }
     }, [showModalAdvanced]);
-    const updateNodeInternals = useUpdateNodeInternals();
 
     const setLastCopiedSelection = useFlowStore(
       (state) => state.setLastCopiedSelection,
@@ -370,12 +405,6 @@ const NodeToolbarComponent = memo(
       setSelectedValue(null);
     }, []);
 
-    const isSaved = flows?.some((flow) =>
-      Object.values(flow).includes(data.node?.display_name!),
-    );
-
-    const setNode = useFlowStore((state) => state.setNode);
-
     const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue({
       node: data.node!,
       nodeId: data.id,
@@ -384,14 +413,6 @@ const NodeToolbarComponent = memo(
 
     const handleOnNewValue = (value: string | string[]) => {
       handleOnNewValueHook({ value });
-    };
-
-    const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
-      data.id,
-    );
-
-    const handleNodeClass = (newNodeClass: APIClassType, type: string) => {
-      handleNodeClassHook(newNodeClass, type);
     };
 
     const selectTriggerRef = useRef(null);
@@ -403,35 +424,6 @@ const NodeToolbarComponent = memo(
     const handleOpenChange = (open: boolean) => {
       setOpenShowMoreOptions && setOpenShowMoreOptions(open);
     };
-
-    const postToolModeValue = usePostTemplateValue({
-      node: data.node!,
-      nodeId: data.id,
-      parameterId: "tool_mode",
-      tool_mode: data.node!.tool_mode ?? false,
-    });
-
-    const handleConfirm = useCallback(() => {
-      addFlow({
-        flow: flowComponent,
-        override: true,
-      });
-      setSuccessData({ title: `${data.id} successfully overridden!` });
-      setShowOverrideModal(false);
-    }, [flowComponent, data.id]);
-
-    const handleClose = useCallback(() => {
-      setShowOverrideModal(false);
-    }, []);
-
-    const handleCancel = useCallback(() => {
-      addFlow({
-        flow: flowComponent,
-        override: true,
-      });
-      setSuccessData({ title: "New component successfully saved!" });
-      setShowOverrideModal(false);
-    }, [flowComponent, setSuccessData, setShowOverrideModal]);
 
     const renderToolbarButtons = useMemo(
       () => (
@@ -476,21 +468,52 @@ const NodeToolbarComponent = memo(
             />
           )}
           {hasToolMode && (
-            <ToolbarButton
-              icon="Hammer"
-              label="Tool Mode"
-              onClick={() => {
-                takeSnapshot();
-                handleSelectChange("toolMode");
-              }}
-              shortcut={shortcuts.find((s) =>
-                s.name.toLowerCase().startsWith("tool mode"),
-              )}
-              className={cn(
-                "node-toolbar-buttons h-[2rem]",
-                toolMode && "text-primary",
-              )}
-            />
+            <ShadTooltip
+              content={
+                <ShortcutDisplay
+                  {...shortcuts.find(
+                    ({ name }) => name.toLowerCase() === "tool mode",
+                  )!}
+                />
+              }
+              side="top"
+            >
+              <Button
+                className={cn(
+                  "node-toolbar-buttons h-[2rem]",
+                  toolMode && "text-primary",
+                )}
+                variant="ghost"
+                onClick={(event) => {
+                  event.preventDefault();
+                  takeSnapshot();
+                  handleSelectChange("toolMode");
+                }}
+                size="node-toolbar"
+                data-testid="tool-mode-button"
+              >
+                <IconComponent
+                  name="Hammer"
+                  className={cn(
+                    "h-4 w-4 transition-all",
+                    toolMode ? "text-primary" : "",
+                  )}
+                />
+                <span className="text-[13px] font-medium">Tool Mode</span>
+                <ToggleShadComponent
+                  value={toolMode}
+                  editNode={false}
+                  handleOnNewValue={() => {
+                    takeSnapshot();
+                    handleSelectChange("toolMode");
+                  }}
+                  disabled={false}
+                  size="medium"
+                  showToogle={false}
+                  id="tool-mode-toggle"
+                />
+              </Button>
+            </ShadTooltip>
           )}
         </>
       ),
