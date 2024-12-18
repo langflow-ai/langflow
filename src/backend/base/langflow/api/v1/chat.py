@@ -39,6 +39,7 @@ from langflow.events.event_manager import EventManager, create_default_event_man
 from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.graph.base import Graph
 from langflow.graph.utils import log_vertex_build
+from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.chat.service import ChatService
@@ -376,10 +377,11 @@ async def build_flow(
                 vertices_task.cancel()
                 return
             except Exception as e:
-                if isinstance(e, HTTPException):
-                    event_manager.on_error(data={"error": str(e.detail), "statusCode": e.status_code})
-                    raise
-                event_manager.on_error(data={"error": str(e)})
+                error_message = ErrorMessage(
+                    flow_id=flow_id,
+                    exception=e,
+                )
+                event_manager.on_error(data=error_message.data)
                 raise
 
             ids, vertices_to_run, graph = vertices_task.result()
@@ -387,10 +389,11 @@ async def build_flow(
             try:
                 ids, vertices_to_run, graph = await build_graph_and_get_order()
             except Exception as e:
-                if isinstance(e, HTTPException):
-                    event_manager.on_error(data={"error": str(e.detail), "statusCode": e.status_code})
-                    raise
-                event_manager.on_error(data={"error": str(e)})
+                error_message = ErrorMessage(
+                    flow_id=flow_id,
+                    exception=e,
+                )
+                event_manager.on_error(data=error_message.data)
                 raise
         event_manager.on_vertices_sorted(data={"ids": ids, "to_run": vertices_to_run})
         await client_consumed_queue.get()
@@ -408,7 +411,15 @@ async def build_flow(
             return
         except Exception as e:
             logger.error(f"Error building vertices: {e}")
-            event_manager.on_error(data={"error": str(e)})
+            custom_component = graph.get_vertex(vertex_id).custom_component
+            trace_name = getattr(custom_component, "trace_name", None)
+            error_message = ErrorMessage(
+                flow_id=flow_id,
+                exception=e,
+                session_id=graph.session_id,
+                trace_name=trace_name,
+            )
+            event_manager.on_error(data=error_message.data)
             raise
         event_manager.on_end(data={})
         await event_manager.queue.put((None, None, time.time))
