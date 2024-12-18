@@ -71,11 +71,10 @@ test(
     await page.getByText("Close").last().click();
 
     await page.getByText("Prompt", { exact: true }).click();
+
     await page.getByTestId("more-options-modal").click();
 
     await page.getByText("Freeze", { exact: true }).last().click();
-
-    await page.locator('//*[@id="react-flow-id"]').click();
 
     await page.waitForSelector(".border-ring-frozen", { timeout: 3000 });
 
