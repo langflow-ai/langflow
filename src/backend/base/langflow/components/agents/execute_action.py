@@ -27,7 +27,8 @@ class ExecuteActionComponent(Component):
             self.agent_context.last_action_result = data
             self.agent_context.update_context("Action Result", data)
         else:
-            error_msg = f"Error: Action '{action}' not found in available tools."
+            data = f"Action '{action}' not found in available tools."
+            error_msg = f"Error: {data}"
             self.agent_context.last_action_result = error_msg
             self.agent_context.update_context("Action Result", error_msg)
         tool_call_result = f"Tool: {action.tool} called with input: {action.tool_input} and returned: {data}"
