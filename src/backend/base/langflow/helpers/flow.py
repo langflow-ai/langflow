@@ -70,7 +70,8 @@ async def load_flow(
 
 async def find_flow(flow_name: str, user_id: str) -> str | None:
     async with async_session_scope() as session:
-        stmt = select(Flow).where(Flow.name == flow_name).where(Flow.user_id == user_id)
+        uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
+        stmt = select(Flow).where(Flow.name == flow_name).where(Flow.user_id == uuid_user_id)
         flow = (await session.exec(stmt)).first()
         return flow.id if flow else None
 
@@ -284,7 +285,8 @@ async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: UUID | 
             endpoint_name = flow_id_or_name
             stmt = select(Flow).where(Flow.endpoint_name == endpoint_name)
             if user_id:
-                stmt = stmt.where(Flow.user_id == user_id)
+                uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
+                stmt = stmt.where(Flow.user_id == uuid_user_id)
             flow = (await session.exec(stmt)).first()
         if flow is None:
             raise HTTPException(status_code=404, detail=f"Flow identifier {flow_id_or_name} not found")
