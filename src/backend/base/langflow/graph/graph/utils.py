@@ -24,7 +24,11 @@ def find_start_component_id(vertices):
 
 def find_last_node(nodes, edges):
     """This function receives a flow and returns the last node."""
-    return next((n for n in nodes if all(e["source"] != n["id"] for e in edges)), None)
+    source_ids = {edge["source"] for edge in edges}
+    for node in nodes:
+        if node["id"] not in source_ids:
+            return node
+    return None
 
 
 def add_parent_node_id(nodes, parent_node_id) -> None:
@@ -431,13 +435,14 @@ def should_continue(yielded_counts: dict[str, int], max_iterations: int | None) 
 
 
 def find_cycle_vertices(edges):
-    # Create a directed graph from the edges
     graph = nx.DiGraph(edges)
 
-    # Find all simple cycles in the graph
-    cycles = list(nx.simple_cycles(graph))
+    # Initialize a set to collect vertices part of any cycle
+    cycle_vertices = set()
 
-    # Flatten the list of cycles and remove duplicates
-    cycle_vertices = {vertex for cycle in cycles for vertex in cycle}
+    # Utilize the strong component feature in NetworkX to find cycles
+    for component in nx.strongly_connected_components(graph):
+        if len(component) > 1 or graph.has_edge(tuple(component)[0], tuple(component)[0]):  # noqa: RUF015
+            cycle_vertices.update(component)
 
     return sorted(cycle_vertices)

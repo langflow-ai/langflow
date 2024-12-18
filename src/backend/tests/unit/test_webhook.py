@@ -1,5 +1,4 @@
-import tempfile
-
+import aiofiles
 import anyio
 import pytest
 
@@ -17,7 +16,7 @@ async def test_webhook_endpoint(client, added_webhook_test):
     endpoint_name = added_webhook_test["endpoint_name"]
     endpoint = f"api/v1/webhook/{endpoint_name}"
     # Create a temporary file
-    with tempfile.TemporaryDirectory() as tmp:
+    async with aiofiles.tempfile.TemporaryDirectory() as tmp:
         file_path = anyio.Path(tmp) / "test_file.txt"
 
         payload = {"path": str(file_path)}

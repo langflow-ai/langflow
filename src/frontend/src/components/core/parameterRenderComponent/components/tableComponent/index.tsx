@@ -8,6 +8,7 @@ import {
 } from "@/constants/constants";
 import { useDarkStore } from "@/stores/darkStore";
 import "@/style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
+import { TableOptionsTypeAPI } from "@/types/api";
 import { cn } from "@/utils/utils";
 import { ColDef } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
@@ -36,6 +37,7 @@ export interface TableComponentProps extends AgGridReactProps {
   onDelete?: () => void;
   onDuplicate?: () => void;
   addRow?: () => void;
+  tableOptions?: TableOptionsTypeAPI;
 }
 
 const TableComponent = forwardRef<
@@ -55,12 +57,23 @@ const TableComponent = forwardRef<
       let newCol = {
         ...col,
       };
-      if (props.onSelectionChanged && index === 0) {
+      if (props.rowSelection && props.onSelectionChanged && index === 0) {
         newCol = {
           ...newCol,
           checkboxSelection: true,
           headerCheckboxSelection: true,
           headerCheckboxSelectionFilteredOnly: true,
+        };
+      }
+      if (
+        (typeof props.tableOptions?.block_hide === "boolean" &&
+          props.tableOptions?.block_hide) ||
+        (Array.isArray(props.tableOptions?.block_hide) &&
+          props.tableOptions?.block_hide.includes(newCol.field ?? ""))
+      ) {
+        newCol = {
+          ...newCol,
+          lockVisible: true,
         };
       }
       if (
@@ -206,8 +219,9 @@ const TableComponent = forwardRef<
             }
           }}
         />
-        {props.pagination && (
+        {!props.tableOptions?.hide_options && (
           <TableOptions
+            tableOptions={props.tableOptions}
             stateChange={columnStateChange}
             hasSelection={realRef.current?.api?.getSelectedRows().length > 0}
             duplicateRow={props.onDuplicate ? props.onDuplicate : undefined}
