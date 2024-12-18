@@ -52,13 +52,31 @@ def blockbuster(request):
                 "io.BufferedWriter.write",
                 "io.TextIOWrapper.read",
                 "io.TextIOWrapper.write",
+                "os.mkdir",
+                "os.stat",
+                "os.path.abspath",
             ]:
-                bb.functions[func].can_block_functions.append(("settings/service.py", {"initialize"}))
+                bb.functions[func].can_block_in("settings/service.py", "initialize")
             for func in [
                 "io.BufferedReader.read",
                 "io.TextIOWrapper.read",
             ]:
-                bb.functions[func].can_block_functions.append(("importlib_metadata/__init__.py", {"metadata"}))
+                bb.functions[func].can_block_in("importlib_metadata/__init__.py", "metadata")
+
+            # TODO: make set_class_code async
+            bb.functions["os.stat"].can_block_in("langflow/custom/custom_component/component.py", "set_class_code")
+
+            # TODO: follow discussion in https://github.com/encode/httpx/discussions/3456
+            bb.functions["os.stat"].can_block_in("httpx/_client.py", "_init_transport")
+
+            bb.functions["os.stat"].can_block_in("rich/traceback.py", "_render_stack")
+            bb.functions["os.stat"].can_block_in("langchain_core/_api/internal.py", "is_caller_internal")
+
+            (
+                bb.functions["os.path.abspath"]
+                .can_block_in("loguru/_better_exceptions.py", {"_get_lib_dirs", "_format_exception"})
+                .can_block_in("sqlalchemy/dialects/sqlite/pysqlite.py", "create_connect_args")
+            )
             yield bb
 
 

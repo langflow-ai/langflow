@@ -39,7 +39,7 @@ on:
         default: "['3.10']"
   pull_request:
     types: [synchronize, labeled]
-
+  merge_group:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -80,7 +80,7 @@ jobs:
     name: Should Run CI
     runs-on: ubuntu-latest
     outputs:
-      should-run-ci: ${{ (needs.check-nightly-status.outputs.should-proceed == 'true') && ((contains( github.event.pull_request.labels.*.name, 'lgtm') && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call')) }}
+      should-run-ci: ${{ (needs.check-nightly-status.outputs.should-proceed == 'true') && ((contains( github.event.pull_request.labels.*.name, 'lgtm') && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || github.event_name == 'merge_group')) }}
     steps:
       #  Do anything just to make the job run
       - run: echo "Debug CI Condition"
