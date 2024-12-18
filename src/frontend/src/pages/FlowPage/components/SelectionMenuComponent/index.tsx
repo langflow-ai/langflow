@@ -80,6 +80,7 @@ export default function SelectionMenu({
                 }`}
                 onClick={onClick}
                 disabled={disable}
+                data-testid="error-group-node"
               >
                 <GradientGroup
                   strokeWidth={1.5}
@@ -100,6 +101,7 @@ export default function SelectionMenu({
               }`}
               onClick={onClick}
               disabled={disable}
+              data-testid="group-node"
             >
               <GradientGroup
                 strokeWidth={1.5}
