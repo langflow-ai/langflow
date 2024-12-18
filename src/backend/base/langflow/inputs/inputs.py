@@ -86,7 +86,7 @@ class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeM
     field_type: SerializableFieldTypes = FieldTypes.PROMPT
 
 
-class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
+class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
     field_type: SerializableFieldTypes = FieldTypes.CODE
 
 
@@ -144,7 +144,7 @@ class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTr
         return [cls._validate_value(vv, info) for vv in v] if is_list else cls._validate_value(v, info)
 
 
-class MessageInput(StrInput, InputTraceMixin, ToolModeMixin):
+class MessageInput(StrInput, InputTraceMixin):
     input_types: list[str] = ["Message"]
 
     @staticmethod
@@ -475,7 +475,7 @@ class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixi
     field_type: SerializableFieldTypes = FieldTypes.FILE
 
 
-class LinkInput(BaseInputMixin, LinkMixin, ToolModeMixin):
+class LinkInput(BaseInputMixin, LinkMixin):
     field_type: SerializableFieldTypes = FieldTypes.LINK
 
 
