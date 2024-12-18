@@ -301,7 +301,10 @@ export type FieldParserType =
   | "pascal_case"
   | "kebab_case"
   | "lowercase"
-  | "uppercase";
+  | "uppercase"
+  | "no_blank"
+  | "valid_csv"
+  | "commands";
 
 export type TableOptionsTypeAPI = {
   block_add?: boolean;

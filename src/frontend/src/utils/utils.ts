@@ -24,6 +24,7 @@ import { AllNodeType, NodeDataType } from "../types/flow";
 import { FlowState } from "../types/tabs";
 import { isErrorLog } from "../types/utils/typeCheckingUtils";
 import { parseString } from "./stringManipulation";
+import useAlertStore from "@/stores/alertStore";
 
 export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
@@ -528,15 +529,23 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       filter: col.filterable,
       cellClass: col.disable_edit ? "cell-disable-edit" : "",
       valueParser: (params: ValueParserParams) => {
-        const { context, newValue, colDef } = params;
+        const { context, newValue, colDef,oldValue } = params;
         if (
           context.field_parsers &&
           context.field_parsers[colDef.field ?? ""]
         ) {
-          return parseString(
-            newValue,
-            context.field_parsers[colDef.field ?? ""],
-          );
+          try {
+            return parseString(
+              newValue,
+              context.field_parsers[colDef.field ?? ""],
+            );
+          } catch (error:any) {
+            useAlertStore.getState().setErrorData({
+              title: "Error parsing string",
+              list: [String(error.message ?? error)],
+            });
+            return oldValue;
+          }
         }
         return newValue;
       },
