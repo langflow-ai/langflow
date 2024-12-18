@@ -411,7 +411,8 @@ async def build_flow(
             return
         except Exception as e:
             logger.error(f"Error building vertices: {e}")
-            trace_name = graph.get_vertex(vertex_id).custom_component.trace_name
+            custom_component = graph.get_vertex(vertex_id).custom_component
+            trace_name = custom_component.trace_name if custom_component else None
             error_message = ErrorMessage(
                 flow_id=flow_id,
                 exception=e,
