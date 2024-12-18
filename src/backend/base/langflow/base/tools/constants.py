@@ -20,7 +20,7 @@ TOOL_TABLE_SCHEMA = [
         "description": "Describe the purpose of the tool.",
         "sortable": False,
         "filterable": False,
-        "edit_mode": EditMode.INLINE,
+        "edit_mode": EditMode.POPOVER,
     },
     {
         "name": "tags",

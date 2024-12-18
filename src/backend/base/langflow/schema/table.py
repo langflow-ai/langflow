@@ -15,6 +15,7 @@ class FormatterType(str, Enum):
 
 class EditMode(str, Enum):
     MODAL = "modal"
+    POPOVER = "popover"
     INLINE = "inline"
 
 
