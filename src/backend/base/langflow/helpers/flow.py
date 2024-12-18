@@ -69,7 +69,7 @@ async def load_flow(
 
 
 async def find_flow(flow_name: str, user_id: str) -> str | None:
-    async with async_session_scope() as session:
+    async with session_scope() as session:
         uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
         stmt = select(Flow).where(Flow.name == flow_name).where(Flow.user_id == uuid_user_id)
         flow = (await session.exec(stmt)).first()
