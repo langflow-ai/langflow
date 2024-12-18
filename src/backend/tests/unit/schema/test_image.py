@@ -56,7 +56,7 @@ def test_get_file_paths__empty():
 
 
 @pytest.mark.asyncio
-async def test_get_files(file_image, file_txt, caplog):
+async def test_get_files(file_image, file_txt, caplog):  # noqa: ARG001
     file_paths = [file_image, file_txt]
 
     result = await get_files(file_paths)
@@ -67,7 +67,7 @@ async def test_get_files(file_image, file_txt, caplog):
 
 
 @pytest.mark.asyncio
-async def test_get_files__convert_to_base64(file_image, file_txt, caplog):
+async def test_get_files__convert_to_base64(file_image, file_txt, caplog):  # noqa: ARG001
     file_paths = [file_image, file_txt]
 
     result = await get_files(file_paths, convert_to_base64=True)
