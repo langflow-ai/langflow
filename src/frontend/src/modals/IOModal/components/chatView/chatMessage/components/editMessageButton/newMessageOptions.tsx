@@ -2,12 +2,6 @@ import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select-custom";
 import { ButtonHTMLAttributes, useState } from "react";
 
 export function EditMessageButton({

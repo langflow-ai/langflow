@@ -3,7 +3,7 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { handleKeyDown } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";
 
 export default function NodeDescription({
@@ -58,6 +58,25 @@ export default function NodeDescription({
   useEffect(() => {
     setNodeDescription(description);
   }, [description]);
+
+  const MemoizedMarkdown = memo(Markdown);
+  const renderedDescription = useMemo(
+    () =>
+      description === "" || !description ? (
+        emptyPlaceholder
+      ) : (
+        <MemoizedMarkdown
+          linkTarget="_blank"
+          className={cn(
+            "markdown prose flex w-full flex-col text-[13px] leading-5 word-break-break-word [&_pre]:whitespace-break-spaces [&_pre]:!bg-code-description-background [&_pre_code]:!bg-code-description-background",
+            mdClassName,
+          )}
+        >
+          {String(description)}
+        </MemoizedMarkdown>
+      ),
+    [description, emptyPlaceholder, mdClassName],
+  );
 
   return (
     <div
@@ -138,19 +157,7 @@ export default function NodeDescription({
             takeSnapshot();
           }}
         >
-          {description === "" || !description ? (
-            emptyPlaceholder
-          ) : (
-            <Markdown
-              linkTarget="_blank"
-              className={cn(
-                "markdown prose flex w-full flex-col text-[13px] leading-5 word-break-break-word [&_pre]:whitespace-break-spaces [&_pre]:!bg-code-description-background [&_pre_code]:!bg-code-description-background",
-                mdClassName,
-              )}
-            >
-              {String(description)}
-            </Markdown>
-          )}
+          {renderedDescription}
         </div>
       )}
     </div>

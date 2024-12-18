@@ -13,6 +13,7 @@ from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi_pagination import add_pagination
 from loguru import logger
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from pydantic import PydanticDeprecatedSince20
@@ -229,6 +230,7 @@ def create_app():
 
     FastAPIInstrumentor.instrument_app(app)
 
+    add_pagination(app)
     return app
 
 

@@ -1,6 +1,6 @@
 import TableAutoCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAutoCellRender";
 import { ColumnField, FormatterType } from "@/types/utils/functions";
-import { ColDef, ColGroupDef } from "ag-grid-community";
+import { ColDef, ColGroupDef, ValueParserParams } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import {
@@ -9,7 +9,12 @@ import {
   MODAL_CLASSES,
   SHORTCUT_KEYS,
 } from "../constants/constants";
-import { APIDataType, InputFieldType, VertexDataTypeAPI } from "../types/api";
+import {
+  APIDataType,
+  InputFieldType,
+  TableOptionsTypeAPI,
+  VertexDataTypeAPI,
+} from "../types/api";
 import {
   groupedObjType,
   nodeGroupedObjType,
@@ -18,6 +23,7 @@ import {
 import { NodeDataType, NodeType } from "../types/flow";
 import { FlowState } from "../types/tabs";
 import { isErrorLog } from "../types/utils/typeCheckingUtils";
+import { parseString } from "./stringManipulation";
 
 export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
@@ -515,6 +521,20 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       field: col.name,
       sortable: col.sortable,
       filter: col.filterable,
+      editable: !col.disable_edit,
+      valueParser: (params: ValueParserParams) => {
+        const { context, newValue, colDef } = params;
+        if (
+          context.field_parsers &&
+          context.field_parsers[colDef.field ?? ""]
+        ) {
+          return parseString(
+            newValue,
+            context.field_parsers[colDef.field ?? ""],
+          );
+        }
+        return newValue;
+      },
     };
     if (!col.formatter) {
       col.formatter = FormatterType.text;
@@ -525,7 +545,17 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       newCol.cellRendererParams = {
         formatter: col.formatter,
       };
-      newCol.cellRenderer = TableAutoCellRender;
+      if (col.formatter !== FormatterType.text || col.edit_mode !== "inline") {
+        newCol.cellRenderer = TableAutoCellRender;
+      } else {
+        newCol.wrapText = true;
+        newCol.autoHeight = true;
+        newCol.cellEditor = "agLargeTextCellEditor";
+        newCol.cellEditorPopup = true;
+        newCol.cellEditorParams = {
+          maxLength: 100000000,
+        };
+      }
     }
     return newCol;
   });
@@ -533,14 +563,17 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
   return colDefs;
 }
 
-export function generateBackendColumnsFromValue(rows: Object[]): ColumnField[] {
+export function generateBackendColumnsFromValue(
+  rows: Object[],
+  tableOptions?: TableOptionsTypeAPI,
+): ColumnField[] {
   const columns = extractColumnsFromRows(rows, "union");
   return columns.map((column) => {
     const newColumn: ColumnField = {
       name: column.field ?? "",
       display_name: column.headerName ?? "",
-      sortable: true,
-      filterable: true,
+      sortable: !tableOptions?.block_sort,
+      filterable: !tableOptions?.block_filter,
       default: null, // Initialize default to null or appropriate value
     };
 
@@ -683,3 +716,5 @@ export const isStringArray = (value: unknown): value is string[] => {
     Array.isArray(value) && value.every((item) => typeof item === "string")
   );
 };
+
+export const stringToBool = (str) => (str === "false" ? false : true);
