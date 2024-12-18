@@ -142,7 +142,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(data.to_lc_document())
             else:
                 error_message = "Vector Store Inputs must be Data objects."
-                logger.error(error_message)
+                self.log(error_message)
                 raise TypeError(error_message)
         return documents
 
@@ -167,7 +167,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
             search_type = self.search_type.lower()
             if search_type not in {"similarity", "mmr"}:
                 msg = f"Invalid search type: {self.search_type}"
-                logger.error(msg)
+                self.log(msg)
                 raise ValueError(msg)
             try:
                 if search_type == "similarity":
@@ -179,7 +179,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
                     "Error occurred while querying the Elasticsearch VectorStore,"
                     " there is no Data into the VectorStore."
                 )
-                logger.exception(msg)
+                self.log(msg)
                 raise ValueError(msg) from e
             return [
                 {"page_content": doc.page_content, "metadata": doc.metadata, "score": score} for doc, score in results
