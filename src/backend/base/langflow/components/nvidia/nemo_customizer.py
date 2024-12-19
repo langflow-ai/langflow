@@ -325,7 +325,7 @@ class NVIDIANeMoCustomizerComponent(Component):
             await asyncio.gather(*tasks)
 
             logger.info("All data has been processed and uploaded successfully.")
-        return dataset_name
+            return dataset_name
 
         except Exception:
             logger.exception("An error occurred")
