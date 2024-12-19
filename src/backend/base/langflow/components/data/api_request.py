@@ -21,9 +21,9 @@ from langflow.io import (
     DropdownInput,
     IntInput,
     MessageTextInput,
+    MultilineInput,
     Output,
     TableInput,
-    MultilineInput,
 )
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict

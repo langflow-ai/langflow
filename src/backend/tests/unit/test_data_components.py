@@ -53,13 +53,9 @@ def test_parse_curl(api_request):
     # Assert
     assert new_build_config["method"]["value"] == "GET"
     assert new_build_config["urls"]["value"] == ["https://example.com/api/test"]
-    expected_headers = [
-        {"key": "Content-Type", "value": "application/json"}
-    ]
+    expected_headers = [{"key": "Content-Type", "value": "application/json"}]
     assert new_build_config["headers"]["value"] == expected_headers
-    expected_body = [
-        {"key": "key", "value": "value"}
-    ]
+    expected_body = [{"key": "key", "value": "value"}]
     assert new_build_config["body"]["value"] == expected_body
 
 
