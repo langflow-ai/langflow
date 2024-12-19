@@ -73,6 +73,15 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             advanced=os.getenv("ASTRA_ENHANCED", "false").lower() == "true",
             real_time_refresh=True,
         ),
+        SecretStrInput(
+            name="api_endpoint",
+            display_name="API Endpoint",
+            info="The Astra DB API Endpoint to use. Overrides selection of database.",
+            required=True,
+            refresh_button=True,
+            real_time_refresh=True,
+            advanced=True,
+        ),
         DropdownInput(
             name="database_name",
             display_name="Database",
@@ -80,8 +89,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             required=True,
             refresh_button=True,
             real_time_refresh=True,
-            has_dialog=True,  # New
-            dialog_input=[NewDatabaseInput(name="database_input").__dict__],
+            dialog_inputs=[NewDatabaseInput(name="database_input").__dict__],
             options=[],
             value="",
         ),
@@ -92,8 +100,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             required=True,
             refresh_button=True,
             real_time_refresh=True,
-            has_dialog=True,
-            dialog_input=[NewCollectionInput(name="collection_input").__dict__],
+            dialog_inputs=[NewCollectionInput(name="collection_input").__dict__],
             options=[],
             value="",
         ),
@@ -176,7 +183,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         }
 
     def get_api_endpoint(self):
-        # If the database is not set, get the first database in the list
+        # If the API endpoint is set, return it
+        if self.api_endpoint:
+            return self.api_endpoint
+
+        # If the database is not set, nothing we can do.
         if not self.database_name:
             return None
 
@@ -195,6 +206,19 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             self.log(f"Error getting database: {e}")
 
             return None
+
+    def collection_exists(self):
+        try:
+            client = DataAPIClient(token=self.token)
+            database = client.get_database(
+                self.get_api_endpoint(),
+                token=self.token,
+            )
+            return self.collection_name in list(database.list_collections())
+        except Exception as e:  # noqa: BLE001
+            self.log(f"Error getting collection status: {e}")
+
+            return False
 
     def _initialize_database_options(self):
         try:
@@ -247,8 +271,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             )
             raise ImportError(msg) from e
 
-        # Get the embedding model
-        embedding_params = {"embedding": self.embedding_model} if self.embedding_choice == "Embedding Model" else {}
+        # Get the embedding model and additional params
+        embedding_params = {"embedding": self.embedding_model} if self.embedding_model else {}
+        additional_params = self.astradb_vectorstore_kwargs or {}
 
         # Get the running environment for Langflow
         environment = (
@@ -263,7 +288,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Bundle up the auto-detect parameters
         autodetect_params = {
-            "autodetect_collection": True,  # TODO: May want to expose this option
+            "autodetect_collection": self.collection_exists(),  # TODO: May want to expose this option
             "content_field": self.content_field or None,
             "ignore_invalid_documents": self.ignore_invalid_documents,
         }
@@ -282,7 +307,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 # Astra DB Vector Store Parameters
                 **autodetect_params,
                 **embedding_params,
-                **self.astradb_vectorstore_kwargs,
+                **additional_params,
             )
         except Exception as e:
             msg = f"Error initializing AstraDBVectorStore: {e}"
