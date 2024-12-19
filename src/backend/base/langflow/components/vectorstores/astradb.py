@@ -1,13 +1,12 @@
 import os
-from collections import defaultdict
 
-from astrapy import AstraDBAdmin, DataAPIClient
+from astrapy import DataAPIClient
 from astrapy.admin import parse_api_endpoint
 from langchain_astradb import AstraDBVectorStore
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers import docs_to_data
-from langflow.inputs import DictInput, FloatInput, NestedDictInput
+from langflow.inputs import DictInput, FloatInput, MessageTextInput, NestedDictInput
 from langflow.io import (
     BoolInput,
     DataInput,
@@ -221,7 +220,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     "name": col.name,
                     "records": 0,
                     "provider": col.options.vector.service.provider if col.options.vector else "",
-                    "model": col.options.vector.service.model_name if col.options.vector else ""
+                    "model": col.options.vector.service.model_name if col.options.vector else "",
                 }
                 for col in collection_list
             ]
@@ -253,9 +252,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Get the running environment for Langflow
         environment = (
-            parse_api_endpoint(self.get_api_endpoint()).environment
-            if self.get_api_endpoint() is not None
-            else None
+            parse_api_endpoint(self.get_api_endpoint()).environment if self.get_api_endpoint() is not None else None
         )
 
         # Get Langflow version and platform information
