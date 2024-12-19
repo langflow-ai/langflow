@@ -1,11 +1,10 @@
-name: Codeflash Optimizations
+name: Codeflash
 
 on:
   pull_request:
     paths:
-      - "src/backend/base/**" # TODO: add langflow/ to the path
+      - "src/backend/base/langflow/**"
   workflow_dispatch:
-
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -17,7 +16,7 @@ jobs:
     if: ${{ github.actor != 'codeflash-ai[bot]' }}
     runs-on: ubuntu-latest
     env:
-      CODEFLASH_API_KEY: 'cf-qCBhQ7wIKJcIriS2md00gy5nPKJBLCBkPNc38jrKiJiMQIOSZURU4QJWi1x_roJe'
+      CODEFLASH_API_KEY: ${{ secrets.CODEFLASH_API_KEY }}
       CODEFLASH_PR_NUMBER: ${{ github.event.number }}
     steps:
       - uses: actions/checkout@v4
