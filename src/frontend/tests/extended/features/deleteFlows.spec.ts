@@ -3,7 +3,7 @@ import * as dotenv from "dotenv";
 import path from "path";
 
 test(
-  "should delete a flow",
+  "should delete a flow (requires store API key)",
   { tag: ["@release", "@api"] },
   async ({ page }) => {
     test.skip(

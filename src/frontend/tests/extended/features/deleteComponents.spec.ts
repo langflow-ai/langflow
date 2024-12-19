@@ -3,7 +3,7 @@ import * as dotenv from "dotenv";
 import path from "path";
 
 test(
-  "should delete a component",
+  "should delete a component (requires store API key)",
   { tag: ["@release", "@api"] },
   async ({ page }) => {
     test.skip(
