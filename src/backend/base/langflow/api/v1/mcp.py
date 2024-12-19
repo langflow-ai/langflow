@@ -1,11 +1,11 @@
 import asyncio
 import base64
-from urllib.parse import quote, urlparse, unquote
 import json
 import logging
 import traceback
 from contextvars import ContextVar
 from typing import Annotated
+from urllib.parse import quote, unquote, urlparse
 from uuid import UUID, uuid4
 
 import pydantic
@@ -20,11 +20,11 @@ from starlette.background import BackgroundTasks
 
 from langflow.api.v1.chat import build_flow
 from langflow.api.v1.schemas import InputValueRequest
+from langflow.helpers.flow import json_schema_from_flow
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models import Flow, User
 from langflow.services.deps import get_db_service, get_session, get_settings_service, get_storage_service
 from langflow.services.storage.utils import build_content_type_from_extension
-from langflow.helpers.flow import json_schema_from_flow
 
 logger = logging.getLogger(__name__)
 if False:
@@ -53,6 +53,9 @@ server = Server("langflow-mcp-server")
 # Create a context variable to store the current user
 current_user_ctx: ContextVar[User] = ContextVar("current_user_ctx")
 
+# Define constants
+MAX_RETRIES = 2
+
 
 @server.list_prompts()
 async def handle_list_prompts():
@@ -61,6 +64,7 @@ async def handle_list_prompts():
 
 @server.list_resources()
 async def handle_list_resources():
+    resources = []
     try:
         session = await anext(get_session())
         storage_service = get_storage_service()
@@ -73,7 +77,6 @@ async def handle_list_resources():
         base_url = f"http://{host}:{port}".rstrip("/")
 
         flows = (await session.exec(select(Flow))).all()
-        resources = []
 
         for flow in flows:
             if flow.id:
@@ -89,16 +92,17 @@ async def handle_list_resources():
                             mimeType=build_content_type_from_extension(file_name),
                         )
                         resources.append(resource)
-                except Exception as e:
-                    logger.debug(f"Error listing files for flow {flow.id}: {e}")
+                except FileNotFoundError as e:
+                    msg = f"Error listing files for flow {flow.id}: {e}"
+                    logger.debug(msg)
                     continue
-
-        return resources
     except Exception as e:
-        logger.error(f"Error in listing resources: {e!s}")
+        msg = f"Error in listing resources: {e!s}"
+        logger.exception(msg)
         trace = traceback.format_exc()
-        logger.error(trace)
+        logger.exception(trace)
         raise
+    return resources
 
 
 @server.read_resource()
@@ -113,8 +117,10 @@ async def handle_read_resource(uri: str) -> bytes:
         path_parts = [p for p in path_parts if p]
 
         # The flow_id and filename should be the last two parts
-        if len(path_parts) < 2:
-            raise ValueError(f"Invalid URI format: {uri}")
+        two = 2
+        if len(path_parts) < two:
+            msg = f"Invalid URI format: {uri}"
+            raise ValueError(msg)
 
         flow_id = path_parts[-2]
         filename = unquote(path_parts[-1])  # URL decode the filename
@@ -124,27 +130,30 @@ async def handle_read_resource(uri: str) -> bytes:
         # Read the file content
         content = await storage_service.get_file(flow_id=flow_id, file_name=filename)
         if not content:
-            raise ValueError(f"File {filename} not found in flow {flow_id}")
+            msg = f"File {filename} not found in flow {flow_id}"
+            raise ValueError(msg)
 
         # Ensure content is base64 encoded
         if isinstance(content, str):
             content = content.encode()
         return base64.b64encode(content)
     except Exception as e:
-        logger.error(f"Error reading resource {uri}: {e!s}")
+        msg = f"Error reading resource {uri}: {e!s}"
+        logger.exception(msg)
         trace = traceback.format_exc()
-        logger.error(trace)
+        logger.exception(trace)
         raise
 
 
 @server.list_tools()
 async def handle_list_tools():
+    tools = []
     try:
         session = await anext(get_session())
         flows = (await session.exec(select(Flow))).all()
-        tools = []
 
         for flow in flows:
+            tools = []
             if flow.user_id is None:
                 continue
 
@@ -156,13 +165,13 @@ async def handle_list_tools():
                 inputSchema=json_schema_from_flow(flow),
             )
             tools.append(tool)
-
-        return tools
     except Exception as e:
-        logger.error(f"Error in listing tools: {e!s}")
+        msg = f"Error in listing tools: {e!s}"
+        logger.exception(msg)
         trace = traceback.format_exc()
-        logger.error(trace)
-        raise e
+        logger.exception(trace)
+        raise
+    return tools
 
 
 @server.call_tool()
@@ -172,20 +181,15 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
         session = await anext(get_session())
         background_tasks = BackgroundTasks()
 
-        try:
-            current_user = current_user_ctx.get()
-        except LookupError:
-            raise ValueError("No authenticated user found in context")
-
+        current_user = current_user_ctx.get()
         flow = (await session.exec(select(Flow).where(Flow.id == UUID(name)))).first()
 
         if not flow:
-            raise ValueError(f"Flow with id '{name}' not found")
+            msg = f"Flow with id '{name}' not found"
+            raise ValueError(msg)
 
         # Process inputs
-        processed_inputs = {}
-        for key, value in arguments.items():
-            processed_inputs[key] = value
+        processed_inputs = dict(arguments)
 
         # Initial progress notification
         if enable_progress_notifications and (progress_token := server.request_context.meta.progressToken):
@@ -250,7 +254,8 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                                 if message:
                                     collected_results.append(types.TextContent(type="text", text=str(message)))
                         except json.JSONDecodeError:
-                            logger.warning(f"Failed to parse event data: {line}")
+                            msg = f"Failed to parse event data: {line}"
+                            logger.warning(msg)
                             continue
 
                     return collected_results
@@ -261,7 +266,8 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                     except asyncio.CancelledError:
                         pass
             except Exception as e:
-                logger.error(f"Error in async session: {e}")
+                msg = f"Error in async session: {e}"
+                logger.exception(msg)
                 raise
 
     except Exception as e:
@@ -271,13 +277,29 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
             await server.request_context.session.send_progress_notification(
                 progress_token=progress_token, progress=1.0, total=1.0
             )
-        logger.error(f"Error executing tool {name}: {e!s}")
+        msg = f"Error executing tool {name}: {e!s}"
+        logger.exception(msg)
         trace = traceback.format_exc()
-        logger.error(trace)
+        logger.exception(trace)
         raise
 
 
 sse = SseServerTransport("/api/v1/mcp/")
+
+
+def find_validation_error(exc):
+    """Recursively searches for a pydantic.ValidationError in nested exceptions."""
+    if isinstance(exc, pydantic.ValidationError):
+        return exc
+
+    # Check for nested exceptions in __cause__ or __context__
+    if hasattr(exc, "__cause__") and exc.__cause__:
+        return find_validation_error(exc.__cause__)
+    if hasattr(exc, "__context__") and exc.__context__:
+        return find_validation_error(exc.__context__)
+
+    # No validation error found
+    return None
 
 
 @router.get("/sse", response_class=StreamingResponse)
@@ -286,53 +308,44 @@ async def handle_sse(request: Request, current_user: Annotated[User, Depends(get
     try:
         async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
             try:
-                logger.debug("Starting SSE connection")
-                logger.debug(f"Stream types: read={type(streams[0])}, write={type(streams[1])}")
+                msg = "Starting SSE connection"
+                logger.debug(msg)
+                msg = f"Stream types: read={type(streams[0])}, write={type(streams[1])}"
+                logger.debug(msg)
 
                 notification_options = NotificationOptions(
                     prompts_changed=True, resources_changed=True, tools_changed=True
                 )
                 init_options = server.create_initialization_options(notification_options)
-                logger.debug(f"Initialization options: {init_options}")
+                msg = f"Initialization options: {init_options}"
+                logger.debug(msg)
 
                 try:
                     await server.run(streams[0], streams[1], init_options)
-                except (pydantic.ValidationError, ExceptionGroup) as exc:
-                    validation_error = None
-
-                    # For ExceptionGroup, find the validation error if present
-                    if isinstance(exc, ExceptionGroup):
-                        for inner_exc in exc.exceptions:
-                            if isinstance(inner_exc, pydantic.ValidationError):
-                                validation_error = inner_exc
-                                break
-                    elif isinstance(exc, pydantic.ValidationError):
-                        validation_error = exc
-
-                    # Handle the validation error if found
-                    if validation_error and any("cancelled" in err["input"] for err in validation_error.errors()):
-                        logger.debug("Ignoring validation error for cancelled notification")
+                except Exception as exc:  # noqa: BLE001
+                    validation_error = find_validation_error(exc)
+                    if validation_error:
+                        msg = "Validation error in MCP:" + str(validation_error)
+                        logger.debug(msg)
                     else:
-                        # For other errors, log as error but don't crash
-                        logger.error(f"Validation error in MCP: {exc}")
-                        logger.debug(f"Failed message type: {type(exc).__name__}")
-                        if validation_error:
-                            logger.debug(f"Validation error details: {validation_error.errors()}")
-                    return
+                        msg = f"Error in MCP: {exc!s}"
+                        logger.debug(msg)
+                        return
             except BrokenResourceError:
                 # Handle gracefully when client disconnects
                 logger.info("Client disconnected from SSE connection")
             except asyncio.CancelledError:
                 logger.info("SSE connection was cancelled")
             except Exception as e:
-                logger.error(f"Error in MCP: {e!s}")
+                msg = f"Error in MCP: {e!s}"
+                logger.exception(msg)
                 trace = traceback.format_exc()
-                logger.error(trace)
+                logger.exception(trace)
                 raise
     finally:
         current_user_ctx.reset(token)
 
 
 @router.post("/")
-async def handle_messages(request: Request, current_user: Annotated[User, Depends(get_current_active_user)]):
+async def handle_messages(request: Request):
     await sse.handle_post_message(request.scope, request.receive, request._send)

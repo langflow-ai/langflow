@@ -4,12 +4,11 @@ from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
 from typing import Any
 
-from anthropic import Anthropic, BaseModel
 from dotenv import load_dotenv
 from langchain_core.tools import StructuredTool
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from pydantic import Field, create_model
+from pydantic import BaseModel, Field, create_model
 
 from langflow.custom import Component
 from langflow.io import MessageTextInput, Output
@@ -22,11 +21,11 @@ class MCPStdioClient:
         # Initialize session and client objects
         self.session: ClientSession | None = None
         self.exit_stack = AsyncExitStack()
-        self.anthropic = Anthropic()
 
-    async def connect_to_server(self, command: str):
+    async def connect_to_server(self, command_str: str):
+        command = command_str.split(" ")
         server_params = StdioServerParameters(
-            command="uvx", args=["mcp-sse-shim"], env={"DEBUG": "true", "PATH": os.environ["PATH"]}
+            command=command[0], args=command[1:], env={"DEBUG": "true", "PATH": os.environ["PATH"]}
         )
 
         stdio_transport = await self.exit_stack.enter_async_context(stdio_client(server_params))
@@ -37,9 +36,7 @@ class MCPStdioClient:
 
         # List available tools
         response = await self.session.list_tools()
-        tools = response.tools
-        print("\nConnected to server with tools:", [tool.name for tool in tools])
-        return tools
+        return response.tools
 
 
 def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseModel]:
@@ -49,7 +46,8 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
     :return: A Pydantic model class.
     """
     if schema.get("type") != "object":
-        raise ValueError("JSON schema must be of type 'object' at the root level.")
+        msg = "JSON schema must be of type 'object' at the root level."
+        raise ValueError(msg)
 
     fields = {}
     properties = schema.get("properties", {})
@@ -106,7 +104,7 @@ class MCPStdio(Component):
     ]
 
     def create_tool_coroutine(self, tool_name: str) -> Callable[[dict], Awaitable]:
-        async def tool_coroutine(*args, **kwargs):
+        async def tool_coroutine(**kwargs):
             return await self.client.session.call_tool(tool_name, arguments=kwargs)
 
         return tool_coroutine

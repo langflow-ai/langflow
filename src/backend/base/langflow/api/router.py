@@ -1,6 +1,5 @@
 # Router for base api
 from fastapi import APIRouter
-from langflow.services.deps import get_settings_service
 
 from langflow.api.v1 import (
     api_key_router,
@@ -18,6 +17,7 @@ from langflow.api.v1 import (
     validate_router,
     variables_router,
 )
+from langflow.services.deps import get_settings_service
 
 router = APIRouter(
     prefix="/api/v1",
