@@ -140,11 +140,11 @@ class NVIDIANeMoCustomizerComponent(Component):
         except httpx.HTTPStatusError as exc:
             error_msg = f"HTTP error {exc.response.status_code} on {models_url}"
             self.log(error_msg)
-            raise ValueError(error_msg)
+            raise ValueError(error_msg) from exc
         except (httpx.RequestError, ValueError) as exc:
-            error_msg = f"Error refreshing model names: {str(exc)}"
+            error_msg = "Error refreshing model names: %s" % str(exc)
             self.log(error_msg)
-            raise ValueError(error_msg)
+            raise ValueError(error_msg) from exc
 
 
     async def customize(self) -> dict:
@@ -191,26 +191,27 @@ class NVIDIANeMoCustomizerComponent(Component):
                 self.log(f"Received successful response: {formatted_result}")
 
                 result_dict = {**result}
-                id = result_dict["id"]
-                result_dict["url"] = f"{customizations_url}/{id}"
+                id_value = result_dict["id"]
+                result_dict["url"] = f"{customizations_url}/{id_value}"
                 return result_dict
 
         except httpx.TimeoutException:
             error_msg = f"Request to {customizations_url} timed out"
             self.log(error_msg)
-            raise ValueError(error_msg)
+            raise ValueError(error_msg) from exc
+
 
         except httpx.HTTPStatusError as exc:
             status_code = exc.response.status_code
             response_content = exc.response.text
             error_msg = f"HTTP error {status_code} on URL: {customizations_url}. Response content: {response_content}"
             self.log(error_msg)
-            raise ValueError(error_msg)
+            raise ValueError(error_msg) from exc
 
         except (httpx.RequestError, ValueError) as exc:
             error_msg = f"An unexpected error occurred on URL {customizations_url}: {str(exc)}"
             self.log(error_msg)
-            raise ValueError(error_msg)
+            raise ValueError(error_msg) from exc
 
     def get_dataset_name(self, user_dataset_name=None):
         # Generate a default dataset name using the current date and time
@@ -222,16 +223,15 @@ class NVIDIANeMoCustomizerComponent(Component):
         return dataset_name
 
     async def get_dataset_id(self, tenant_id: str, user_dataset_name: str) -> str:
-        """
-        Fetches the dataset ID by checking if a dataset with the constructed name exists.
+        """Fetches the dataset ID by checking if a dataset with the constructed name exists.
         If the dataset does not exist, creates a new dataset and returns its ID.
 
         Args:
             tenant_id (str): The tenant ID.
 
         Returns:
-            str: The dataset ID if found or created, or None if an error occurs.
-        """
+            str: The dataset ID if found or created, or None if an error occurs."""
+
         appender = self.get_dataset_name(user_dataset_name)
         tenant = tenant_id if tenant_id else "tenant"
         dataset_name = f"{tenant}-{appender}"
@@ -242,7 +242,8 @@ class NVIDIANeMoCustomizerComponent(Component):
             async with httpx.AsyncClient() as client:
                 while True:
                     response = await client.get(f"{url}?page_size=10&page={page}")
-                    if response.status_code == 422:
+                    no_more_pages = 422
+                    if response.status_code == no_more_pages:
                         self.log(f"No more pages to fetch, page: {page}")
                         break
                     response.raise_for_status()
@@ -271,10 +272,9 @@ class NVIDIANeMoCustomizerComponent(Component):
             return None
 
     async def process_and_upload_dataset(self) -> str:
-        """
-        Asynchronously processes and uploads the dataset to the API in chunks.
-        Returns the upload status.
-        """
+        """Asynchronously processes and uploads the dataset to the API in chunks.
+        Returns the upload status."""
+
         try:
             # Inputs
             user_dataset_name = getattr(self, "dataset", None)
@@ -282,7 +282,8 @@ class NVIDIANeMoCustomizerComponent(Component):
             chunk_size = 10000  # Ensure chunk_size is an integer
             self.log(f"dataset_name : {dataset_name}")
             if not dataset_name:
-                raise ValueError("dataset_name must be provided.")
+                err_msg = "dataset_name must be provided."
+                raise ValueError(err_msg)
 
             # Endpoint configuration
             url = f"{self.datastore_base_url}/v1"
@@ -343,18 +344,18 @@ class NVIDIANeMoCustomizerComponent(Component):
             url = f"{base_url}/datasets/{dataset_id}/files/contents/{filepath}"
 
             files = {"file": (file_name, file_in_memory, "application/json")}
-            logger.info(f"Chunk %s uploaded successfully!", chunk_number)
+            logger.info("Chunk %s uploaded successfully!", chunk_number)
             async with httpx.AsyncClient() as client:
                 response = await client.post(url, files=files)
 
-            HTTP_STATUS_OK = 200
-            if response.status_code == HTTP_STATUS_OK:
-                logger.info(f"Chunk %s uploaded successfully!", chunk_number)
+            status_ok = 200
+            if response.status_code == status_ok:
+                logger.info("Chunk %s uploaded successfully!", chunk_number)
             else:
-                logger.warning(f"Failed to upload chunk %s. Status code: %s", chunk_number, response.status_code)
+                logger.warning("Failed to upload chunk %s. Status code: %s", chunk_number, response.status_code)
                 logger.warning(response.text)
 
         except Exception:
-            logger.exception(f"An error occurred while uploading chunk %s", chunk_number)
+            logger.exception("An error occurred while uploading chunk %s", chunk_number)
         finally:
             file_in_memory.close()
