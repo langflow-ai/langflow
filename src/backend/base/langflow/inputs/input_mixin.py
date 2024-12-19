@@ -72,6 +72,9 @@ class BaseInputMixin(BaseModel, validate_assignment=True):  # type: ignore[call-
     dynamic: bool = False
     """Specifies if the field is dynamic. Defaults to False."""
 
+    dialog_inputs: list[Any] | None = None
+    """List of dialog inputs for the field. Default is an empty list."""
+
     info: str | None = ""
     """Additional information about the field to be shown in the tooltip. Defaults to an empty string."""
 
