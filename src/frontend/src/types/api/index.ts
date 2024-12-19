@@ -311,7 +311,10 @@ export type FieldParserType =
   | "pascal_case"
   | "kebab_case"
   | "lowercase"
-  | "uppercase";
+  | "uppercase"
+  | "no_blank"
+  | "valid_csv"
+  | "commands";
 
 export type TableOptionsTypeAPI = {
   block_add?: boolean;
@@ -326,4 +329,5 @@ export type TableOptionsTypeAPI = {
     FieldValidatorType | { [key: string]: FieldValidatorType }
   >;
   field_parsers?: Array<FieldParserType | { [key: string]: FieldParserType }>;
+  description?: string;
 };
