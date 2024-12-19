@@ -10,6 +10,7 @@ export default function DropdownComponent({
   combobox,
   options,
   name,
+  hasDialog,
 }: InputProps<string, DropDownComponentType>) {
   const onChange = (value: any, dbValue?: boolean, skipSnapshot?: boolean) => {
     handleOnNewValue({ value, load_from_db: dbValue }, { skipSnapshot });
@@ -24,6 +25,7 @@ export default function DropdownComponent({
       value={value || ""}
       id={`dropdown_${id}`}
       name={name}
+      hasDialog={hasDialog}
     />
   );
 }
