@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 from fastapi import HTTPException
+from loguru import logger
 from pydantic.v1 import BaseModel, Field, create_model
 from sqlmodel import select
 
@@ -314,3 +315,46 @@ async def generate_unique_flow_name(flow_name, user_id, session):
         # If a flow with the name already exists, append (n) to the name and increment n
         flow_name = f"{original_name} ({n})"
         n += 1
+
+
+def json_schema_from_flow(flow: Flow) -> dict:
+    """Generate JSON schema from flow input nodes."""
+    from langflow.graph.graph.base import Graph
+
+    # Get the flow's data which contains the nodes and their configurations
+    flow_data = flow.data if flow.data else {}
+
+    graph = Graph.from_payload(flow_data)
+    input_nodes = [vertex for vertex in graph.vertices if vertex.is_input]
+
+    properties = {}
+    required = []
+    for node in input_nodes:
+        node_data = node.data["node"]
+        template = node_data["template"]
+
+        for field_name, field_data in template.items():
+            if field_data != "Component" and field_data.get("show", False) and not field_data.get("advanced", False):
+                field_type = field_data.get("type", "string")
+                properties[field_name] = {
+                    "type": field_type,
+                    "description": field_data.get("info", f"Input for {field_name}"),
+                }
+                # Update field_type in properties after determining the JSON Schema type
+                if field_type == "str":
+                    field_type = "string"
+                elif field_type == "int":
+                    field_type = "integer"
+                elif field_type == "float":
+                    field_type = "number"
+                elif field_type == "bool":
+                    field_type = "boolean"
+                else:
+                    logger.warning(f"Unknown field type: {field_type} defaulting to string")
+                    field_type = "string"
+                properties[field_name]["type"] = field_type
+
+                if field_data.get("required", False):
+                    required.append(field_name)
+
+    return {"type": "object", "properties": properties, "required": required}
