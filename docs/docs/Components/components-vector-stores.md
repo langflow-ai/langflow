@@ -569,7 +569,7 @@ This component leverages Vectara's Retrieval Augmented Generation (RAG) capabili
 | reranker_k            | Integer      | Number of results to rerank (1 to 100)                     |
 | diversity_bias        | Float        | Diversity bias for MMR reranker (0 to 1)                   |
 | max_results           | Integer      | Maximum number of search results to summarize (1 to 100)   |
-| response_lang         | String       | Language code for the response (e.g., "eng", "auto")       |
+| response_lang         | String       | Language code for the response (for example, "eng", "auto")       |
 | prompt                | String       | Prompt name for summarization                              |
 
 ### Outputs

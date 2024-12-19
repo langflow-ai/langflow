@@ -1,6 +1,5 @@
 ---
-title: How to create custom components
-sidebar_position: 8
+title: Create custom components
 slug: /components-custom-components
 ---
 
