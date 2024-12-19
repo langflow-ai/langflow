@@ -137,7 +137,7 @@ async def test_update_variable(service, session: AsyncSession):
     assert result.value != old_value
     assert result.value != new_value
     assert result.default_fields == []
-    assert result.type == GENERIC_TYPE
+    assert result.type == CREDENTIAL_TYPE
     assert isinstance(result.created_at, datetime)
     assert isinstance(result.updated_at, datetime)
 
