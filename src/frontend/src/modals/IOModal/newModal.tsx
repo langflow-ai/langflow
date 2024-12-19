@@ -258,7 +258,7 @@ export default function IOModal({
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
       <BaseModal.Content overflowHidden className="h-full">
-        <div className="flex-max-width h-full">
+        {open && (<div className="flex-max-width h-full">
           <div
             className={cn(
               "flex h-full flex-shrink-0 flex-col justify-start transition-all duration-300",
@@ -334,7 +334,7 @@ export default function IOModal({
               setOpen={setOpen}
             />
           </div>
-        </div>
+        </div>)}
       </BaseModal.Content>
     </BaseModal>
   );

@@ -100,9 +100,7 @@
             "fieldName": "tools",
             "id": "Agent-9Wf58",
             "inputTypes": [
-              "Tool",
-              "BaseTool",
-              "StructuredTool"
+              "Tool"
             ],
             "type": "other"
           }
@@ -112,7 +110,7 @@
         "source": "TavilyAISearch-AN1Hv",
         "sourceHandle": "{œdataTypeœ: œTavilyAISearchœ, œidœ: œTavilyAISearch-AN1Hvœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-9Wf58",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-9Wf58œ, œinputTypesœ: [œToolœ, œBaseToolœ, œStructuredToolœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-9Wf58œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -1840,7 +1838,7 @@
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
                 "input_types": [
-                  "BaseChatMessageHistory"
+                  "Memory"
                 ],
                 "list": false,
                 "name": "memory",
@@ -2099,9 +2097,7 @@
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
                 "input_types": [
-                  "Tool",
-                  "BaseTool",
-                  "StructuredTool"
+                  "Tool"
                 ],
                 "list": true,
                 "name": "tools",

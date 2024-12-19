@@ -65,7 +65,6 @@ import {
   CopyPlus,
   CornerDownLeft,
   Cpu,
-  CpuIcon,
   Database,
   DatabaseZap,
   Delete,
@@ -477,6 +476,7 @@ export const nodeColorsName: { [char: string]: string } = {
   Tool: "cyan",
   BaseChatMemory: "cyan",
   BaseChatMessageHistory: "orange",
+  Memory: "orange",
 };
 
 export const SIDEBAR_CATEGORIES = [
@@ -513,6 +513,7 @@ export const SIDEBAR_BUNDLES = [
     name: "astra_assistants",
     icon: "AstraDB",
   },
+  { display_name: "LangWatch", name: "langwatch", icon: "Langwatch" },
   { display_name: "Notion", name: "Notion", icon: "Notion" },
   { display_name: "Needle", name: "needle", icon: "Needle" },
   { display_name: "NVIDIA", name: "nvidia", icon: "NVIDIA" },

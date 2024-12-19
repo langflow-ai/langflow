@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "User should be able to use components as tool",
@@ -113,16 +114,21 @@ test(
 
     await page.getByTestId("disclosure-agents").click();
 
+    await page.getByTestId("fit_view").click();
+
+    await zoomOut(page, 4);
+
     await page.waitForSelector('[data-testid="agentsAgent"]', {
       timeout: 3000,
       state: "visible",
     });
     await page
       .getByTestId("agentsAgent")
-      .hover()
-      .then(async () => {
-        await page.getByTestId("add-component-button-agent").click();
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 350, y: 100 },
       });
+
+    await page.getByTestId("fit_view").click();
 
     // Move the Agent node a bit
 

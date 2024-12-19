@@ -10,9 +10,9 @@ import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-t
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import { APIClassType } from "@/types/api";
+import { useUpdateNodeInternals } from "@xyflow/react";
 import _, { cloneDeep } from "lodash";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useUpdateNodeInternals } from "reactflow";
 import IconComponent from "../../../../components/common/genericIconComponent";
 import {
   Select,
