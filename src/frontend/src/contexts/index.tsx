@@ -1,8 +1,8 @@
 import { GradientWrapper } from "@/components/common/GradientWrapper";
 import { CustomWrapper } from "@/customization/custom-wrapper";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactFlowProvider } from "@xyflow/react";
 import { ReactNode } from "react";
-import { ReactFlowProvider } from "reactflow";
 import { TooltipProvider } from "../components/ui/tooltip";
 import { ApiInterceptor } from "../controllers/API/api";
 import { AuthProvider } from "./authContext";

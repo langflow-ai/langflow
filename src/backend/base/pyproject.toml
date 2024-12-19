@@ -80,6 +80,15 @@ dev-dependencies = [
     "pytest-github-actions-annotate-failures>=0.2.0",
     "types-aiofiles>=24.1.0.20240626",
 ]
+[tool.codeflash]
+# All paths are relative to this pyproject.toml's directory.
+module-root = "langflow"
+tests-root = "../tests/unit"
+test-framework = "pytest"
+ignore-paths = []
+formatter-cmds = ["ruff check --exit-zero --fix $file", "ruff format $file"]
+#disable plugins that might interfere with runtime measurement
+pytest-cmd = "pytest -p no:profiling -p no:sugar -p no:xdist -p no:cov -p no:split"
 
 [build-system]
 requires = ["hatchling"]
@@ -89,7 +98,7 @@ build-backend = "hatchling.build"
 name = "langflow-base"
 version = "0.1.1"
 description = "A Python package with a built-in web application"
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.10,<3.14"
 license = "MIT"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 readme = "README.md"
@@ -111,14 +120,15 @@ dependencies = [
     "httpx[http2]>=0.27,<1.0.0",
     "uvicorn>=0.30.0,<1.0.0",
     "gunicorn>=22.0.0,<24.0.0",
-    "langchain~=0.3.3",
+    "langchain~=0.3.10",
+    "langchain-community~=0.3.10",
     "langchain-core~=0.3.15",
     "langchainhub~=0.1.15",
-    "sqlmodel==0.0.18",
     "loguru>=0.7.1,<1.0.0",
     "rich>=13.7.0,<14.0.0",
     "langchain-experimental>=0.0.61,<1.0.0",
-    "pydantic~=2.7.0",
+    "sqlmodel==0.0.22",
+    "pydantic~=2.10.1",
     "pydantic-settings>=2.2.0,<3.0.0",
     "typer>=0.13.0,<1.0.0",
     "cachetools>=5.5.0,<6.0.0",
@@ -155,7 +165,6 @@ dependencies = [
     "nanoid>=2.0.0,<3.0.0",
     "filelock>=3.15.4,<4.0.0",
     "grandalf>=0.8.0,<1.0.0",
-    "crewai~=0.80.0",
     "spider-client>=0.0.27,<1.0.0",
     "diskcache>=5.6.3,<6.0.0",
     "clickhouse-connect==0.7.19",
@@ -222,7 +231,8 @@ dev = [
     "pytest-split>=0.9.0",
     "devtools>=0.12.2",
     "pytest-flakefinder>=1.1.0",
-    "types-markdown>=3.7.0.20240822"
+    "types-markdown>=3.7.0.20240822",
+    "codeflash>=0.8.4"
 ]
 
 [project.scripts]

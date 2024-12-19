@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { updateOldComponents } from "../../utils/update-old-components";
+import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "user must be able to check similarity between embedding texts",
@@ -9,25 +12,7 @@ test(
       "OPENAI_API_KEY required to run this test",
     );
 
-    await page.goto("/");
-
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForSelector('[data-testid="modal-title"]', {
-        timeout: 3000,
-      });
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
+    await awaitBootstrapTest(page);
 
     await page.getByTestId("blank-flow").click();
 
@@ -40,18 +25,11 @@ test(
 
     await page
       .getByText("OpenAI Embeddings", { exact: true })
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-    await page.getByTestId("zoom_out").click();
-    await page
-      .locator('//*[@id="react-flow-id"]')
-      .hover()
-      .then(async () => {
-        await page.mouse.down();
-        await page.mouse.move(-50, 50);
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 0, y: 0 },
       });
 
-    await page.mouse.up();
+    await zoomOut(page, 5);
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text embedder");
@@ -61,35 +39,17 @@ test(
 
     await page
       .getByTestId("embeddingsText Embedder")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-    await page.getByTestId("zoom_out").click();
-    await page
-      .locator('//*[@id="react-flow-id"]')
-      .hover()
-      .then(async () => {
-        await page.mouse.down();
-        await page.mouse.move(-50, 50);
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 100, y: 400 },
       });
-
-    await page.mouse.up();
 
     //fourth component
 
     await page
       .getByTestId("embeddingsText Embedder")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-    await page.getByTestId("zoom_out").click();
-    await page
-      .locator('//*[@id="react-flow-id"]')
-      .hover()
-      .then(async () => {
-        await page.mouse.down();
-        await page.mouse.move(-50, 50);
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 300, y: 400 },
       });
-
-    await page.mouse.up();
 
     //fifth component
 
@@ -101,18 +61,9 @@ test(
 
     await page
       .getByTestId("embeddingsEmbedding Similarity")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-    await page.getByTestId("zoom_out").click();
-    await page
-      .locator('//*[@id="react-flow-id"]')
-      .hover()
-      .then(async () => {
-        await page.mouse.down();
-        await page.mouse.move(-50, 50);
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 350, y: 100 },
       });
-
-    await page.mouse.up();
 
     //sisxth component
 
@@ -124,18 +75,9 @@ test(
 
     await page
       .getByTestId("processingParse Data")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-    await page.getByTestId("zoom_out").click();
-    await page
-      .locator('//*[@id="react-flow-id"]')
-      .hover()
-      .then(async () => {
-        await page.mouse.down();
-        await page.mouse.move(-50, 50);
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 50, y: 100 },
       });
-
-    await page.mouse.up();
 
     //seventh component
 
@@ -147,18 +89,9 @@ test(
 
     await page
       .getByTestId("outputsText Output")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-    await page.getByTestId("zoom_out").click();
-    await page
-      .locator('//*[@id="react-flow-id"]')
-      .hover()
-      .then(async () => {
-        await page.mouse.down();
-        await page.mouse.move(-50, 50);
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 500, y: 100 },
       });
-
-    await page.mouse.up();
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("filter data");
@@ -168,33 +101,11 @@ test(
 
     await page
       .getByTestId("processingFilter Data")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-    await page.getByTestId("zoom_out").click();
-    await page
-      .locator('//*[@id="react-flow-id"]')
-      .hover()
-      .then(async () => {
-        await page.mouse.down();
-        await page.mouse.move(-50, 50);
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 600, y: 200 },
       });
 
-    await page.mouse.up();
-
-    let outdatedComponents = await page
-      .getByTestId("icon-AlertTriangle")
-      .count();
-
-    while (outdatedComponents > 0) {
-      await page.getByTestId("icon-AlertTriangle").first().click();
-      outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
-    }
-
-    let filledApiKey = await page.getByTestId("remove-icon-badge").count();
-    while (filledApiKey > 0) {
-      await page.getByTestId("remove-icon-badge").first().click();
-      filledApiKey = await page.getByTestId("remove-icon-badge").count();
-    }
+    await updateOldComponents(page);
 
     await page.getByTestId("fit_view").click();
 

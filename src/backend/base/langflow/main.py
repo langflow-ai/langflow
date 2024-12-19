@@ -8,10 +8,12 @@ from http import HTTPStatus
 from pathlib import Path
 from urllib.parse import urlencode
 
+import anyio
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi_pagination import add_pagination
 from loguru import logger
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from pydantic import PydanticDeprecatedSince20
@@ -104,7 +106,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             setup_llm_caching()
             await initialize_super_user_if_needed()
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
-            await asyncio.to_thread(create_or_update_starter_projects, all_types_dict)
+            await create_or_update_starter_projects(all_types_dict)
             telemetry_service.start()
             await load_flows_from_directory()
             yield
@@ -228,6 +230,7 @@ def create_app():
 
     FastAPIInstrumentor.instrument_app(app)
 
+    add_pagination(app)
     return app
 
 
@@ -260,9 +263,9 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
 
     @app.exception_handler(404)
     async def custom_404_handler(_request, _exc):
-        path = static_files_dir / "index.html"
+        path = anyio.Path(static_files_dir) / "index.html"
 
-        if not path.exists():
+        if not await path.exists():
             msg = f"File at path {path} does not exist."
             raise RuntimeError(msg)
         return FileResponse(path)

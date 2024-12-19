@@ -24,7 +24,11 @@ def find_start_component_id(vertices):
 
 def find_last_node(nodes, edges):
     """This function receives a flow and returns the last node."""
-    return next((n for n in nodes if all(e["source"] != n["id"] for e in edges)), None)
+    source_ids = {edge["source"] for edge in edges}
+    for node in nodes:
+        if node["id"] not in source_ids:
+            return node
+    return None
 
 
 def add_parent_node_id(nodes, parent_node_id) -> None:
@@ -162,15 +166,15 @@ def set_new_target_handle(proxy_id, new_edge, target_handle, node) -> None:
         None
     """
     new_edge["target"] = proxy_id
-    _type = target_handle.get("type")
-    if _type is None:
+    type_ = target_handle.get("type")
+    if type_ is None:
         msg = "The 'type' key must be present in target_handle."
         raise KeyError(msg)
 
     field = target_handle["proxy"]["field"]
     new_target_handle = {
         "fieldName": field,
-        "type": _type,
+        "type": type_,
         "id": proxy_id,
     }
     if node["data"]["node"].get("flow"):
@@ -431,13 +435,14 @@ def should_continue(yielded_counts: dict[str, int], max_iterations: int | None) 
 
 
 def find_cycle_vertices(edges):
-    # Create a directed graph from the edges
     graph = nx.DiGraph(edges)
 
-    # Find all simple cycles in the graph
-    cycles = list(nx.simple_cycles(graph))
+    # Initialize a set to collect vertices part of any cycle
+    cycle_vertices = set()
 
-    # Flatten the list of cycles and remove duplicates
-    cycle_vertices = {vertex for cycle in cycles for vertex in cycle}
+    # Utilize the strong component feature in NetworkX to find cycles
+    for component in nx.strongly_connected_components(graph):
+        if len(component) > 1 or graph.has_edge(tuple(component)[0], tuple(component)[0]):  # noqa: RUF015
+            cycle_vertices.update(component)
 
     return sorted(cycle_vertices)
