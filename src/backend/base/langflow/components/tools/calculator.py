@@ -98,4 +98,3 @@ class CalculatorToolComponent(LCToolComponent):
             error_message = f"Error: {e}"
             self.status = error_message
             return [Data(data={"error": error_message, "input": expression})]
-
