@@ -135,8 +135,6 @@ class NVIDIANeMoCustomizerComponent(Component):
                     build_config["model_name"]["options"] = model_names
 
                     self.log("Updated model_name dropdown options.")
-            return build_config
-
         except httpx.HTTPStatusError as exc:
             error_msg = f"HTTP error {exc.response.status_code} on {models_url}"
             self.log(error_msg)
@@ -146,6 +144,8 @@ class NVIDIANeMoCustomizerComponent(Component):
             error_msg = f"Error refreshing model names: {exception_str}"
             self.log(error_msg)
             raise ValueError(error_msg) from exc
+
+        return build_config
 
     async def customize(self) -> dict:
         dataset_name = self.dataset
@@ -326,11 +326,11 @@ class NVIDIANeMoCustomizerComponent(Component):
             await asyncio.gather(*tasks)
 
             logger.info("All data has been processed and uploaded successfully.")
-            return dataset_name
-
         except Exception:
             logger.exception("An error occurred")
             return "An error occurred"
+
+        return dataset_name
 
     async def upload_chunk(self, chunk_df, chunk_number, file_name_prefix, dataset_id, base_url):
         """Asynchronously uploads a chunk of data to the REST API."""
