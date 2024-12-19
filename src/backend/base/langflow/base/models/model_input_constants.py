@@ -53,6 +53,7 @@ def _get_openai_inputs_and_fields():
         raise ImportError(msg) from e
     return openai_inputs, {input_.name: input_ for input_ in openai_inputs}
 
+
 def _get_sambanova_inputs_and_fields():
     try:
         from langflow.components.models.sambanova import SambaNovaComponent
@@ -62,6 +63,7 @@ def _get_sambanova_inputs_and_fields():
         msg = "SambaNova is not installed. Please install it with `pip install langchain-sambanova`."
         raise ImportError(msg) from e
     return sambanova_inputs, create_input_fields_dict(sambanova_inputs, "")
+
 
 def _get_azure_inputs_and_fields():
     try:
