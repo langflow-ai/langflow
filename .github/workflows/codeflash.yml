@@ -19,10 +19,6 @@ jobs:
     name: Optimize new Python code in this PR
     if: ${{ github.actor != 'codeflash-ai[bot]' }}
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version:
-          - "3.12"
     env:
       CODEFLASH_API_KEY: ${{ secrets.CODEFLASH_API_KEY }}
       CODEFLASH_PR_NUMBER: ${{ github.event.number }}
@@ -33,6 +29,7 @@ jobs:
       - uses: astral-sh/setup-uv@v4
         with:
           enable-cache: true
+          python-version: "3.12"
       - run: uv sync --extra dev
       - name: Run Codeflash Optimizer
         run: uv run codeflash
