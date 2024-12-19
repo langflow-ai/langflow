@@ -8,7 +8,6 @@ from composio.client.exceptions import NoItemsFound
 from composio_langchain import Action, App, ComposioToolSet
 from langchain_core.tools import Tool
 from loguru import logger
-from typing_extensions import override
 
 # Local imports
 from langflow.base.langchain_utilities.model import LCToolComponent
@@ -31,6 +30,7 @@ class ComposioAPIComponent(LCToolComponent):
             display_name="Composio API Key",
             required=True,
             info="Refer to https://docs.composio.dev/faq/api_key/api_key",
+            real_time_refresh=True,
         ),
         DropdownInput(
             name="app_names",
@@ -49,6 +49,7 @@ class ComposioAPIComponent(LCToolComponent):
             dynamic=True,
             show=False,
             info="Credentials for app authentication (API Key, Password, etc)",
+            load_from_db=False,
         ),
         MessageTextInput(
             name="username",
@@ -220,8 +221,7 @@ class ComposioAPIComponent(LCToolComponent):
         """
         return self.app_names.replace(" ✅", "").replace("_connected", "")
 
-    @override
-    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
+    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:  # noqa: ARG002
         # First, ensure all dynamic fields are hidden by default
         dynamic_fields = ["app_credentials", "username", "auth_link", "auth_status", "action_names"]
         for field in dynamic_fields:
@@ -229,6 +229,7 @@ class ComposioAPIComponent(LCToolComponent):
                 if build_config[field]["value"] is None or build_config[field]["value"] == "":
                     build_config[field]["show"] = False
                     build_config[field]["advanced"] = True
+                    build_config[field]["load_from_db"] = False
                 else:
                     build_config[field]["show"] = True
                     build_config[field]["advanced"] = False
