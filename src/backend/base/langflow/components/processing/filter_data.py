@@ -3,6 +3,7 @@ import subprocess
 import tempfile
 from typing import Any, cast
 
+import jq
 import pandas as pd
 from loguru import logger
 
@@ -195,49 +196,30 @@ class FilterDataComponent(Component):
                     error_msg = f"Invalid or unsafe JQ query: {self.jq_query}"
                     raise ValueError(error_msg)
 
-                # Create temporary file
-                with tempfile.NamedTemporaryFile(mode="w", suffix=".json") as temp_file:
-                    # Write DataFrame to JSON file
-                    json.dump(dataframe.to_dict(orient="records"), temp_file)
-                    temp_file.flush()
+                try:
+                    # Convert DataFrame to JSON string
+                    json_str = json.dumps(dataframe.to_dict(orient="records"))
 
-                    try:
-                        # Run JQ command with -c to get compact output
-                        # Input is validated by _is_safe_jq_query to prevent command injection
-                        command = ["jq", "-c", self.jq_query, temp_file.name]
-                        # nosec B603 - Input is validated by _is_safe_jq_query
-                        result = subprocess.check_output(
-                            command,
-                            text=True,
-                            stderr=subprocess.PIPE,
-                        )
-                        # Security: This subprocess call is safe because the input is validated by _is_safe_jq_query
+                    # Apply JQ query using jq library
+                    result = jq.compile(self.jq_query).input(json.loads(json_str)).first()
 
-                        # Parse output
-                        output_str = result.strip()
-                        if not output_str:
-                            return None
+                    if result is None:
+                        return None
 
-                        try:
-                            result = json.loads(output_str)
-                        except json.JSONDecodeError as e:
-                            error_msg = f"Error parsing JQ output: {e!s}"
-                            raise ValueError(error_msg) from e
-
-                        # Handle primitive values from JQ query
-                        if isinstance(result, int | float | str | bool):
-                            return Data(data=result)
-
-                        # Handle array results from JQ query with array operators
-                        if isinstance(result, list):
-                            return [Data(data=item) for item in result]
-
-                        # Handle object results from JQ query
+                    # Handle primitive values from JQ query
+                    if isinstance(result, int | float | str | bool):
                         return Data(data=result)
 
-                    except subprocess.CalledProcessError as e:
-                        error_msg = f"Error executing JQ command: {e!s}"
-                        raise ValueError(error_msg) from e
+                    # Handle array results from JQ query with array operators
+                    if isinstance(result, list):
+                        return [Data(data=item) for item in result]
+
+                    # Handle object results from JQ query
+                    return Data(data=result)
+
+                except ValueError as e:
+                    error_msg = f"Error executing JQ query: {e!s}"
+                    raise ValueError(error_msg) from e
 
             # Return filtered DataFrame as list of Data objects
             records = dataframe.to_dict(orient="records")
