@@ -14,7 +14,7 @@ from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 class MessageRetrieverComponent(Component):
     display_name = "Message Retriever"
     description = "Retrieves stored chat messages from Langflow tables or an external memory."
-    icon = "save"
+    icon = "message-square-text"
     name = "Memory"
 
     inputs = [
