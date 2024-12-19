@@ -142,7 +142,8 @@ class NVIDIANeMoCustomizerComponent(Component):
             self.log(error_msg)
             raise ValueError(error_msg) from exc
         except (httpx.RequestError, ValueError) as exc:
-            error_msg = f"Error refreshing model names: {str(exc)}"
+            exception_str = str(exc)
+            error_msg = f"Error refreshing model names: {exception_str}"
             self.log(error_msg)
             raise ValueError(error_msg) from exc
 
@@ -197,18 +198,18 @@ class NVIDIANeMoCustomizerComponent(Component):
         except httpx.TimeoutException as exc:
             error_msg = f"Request to {customizations_url} timed out"
             self.log(error_msg)
-            raise ValueError(error_msg) from None
+            raise ValueError(error_msg) from exc
 
         except httpx.HTTPStatusError as exc:
             status_code = exc.response.status_code
             response_content = exc.response.text
-            error_msg = "HTTP error {} on URL: {}. Response content: {}".format(status_code, customizations_url,
-                                                                                response_content)
+            error_msg = f"HTTP error {status_code} on URL: {customizations_url}. Response content: {response_content}"
             self.log(error_msg)
             raise ValueError(error_msg) from exc
 
         except (httpx.RequestError, ValueError) as exc:
-            error_msg = f"An unexpected error occurred on URL {customizations_url}: {str(exc)}"
+            exception_str = str(exc)
+            error_msg = f"An unexpected error occurred on URL {customizations_url}: {exception_str}"
             self.log(error_msg)
             raise ValueError(error_msg) from exc
 
@@ -220,6 +221,7 @@ class NVIDIANeMoCustomizerComponent(Component):
 
     async def get_dataset_id(self, tenant_id: str, user_dataset_name: str) -> str:
         """Fetches the dataset ID by checking if a dataset with the constructed name exists.
+
         If the dataset does not exist, creates a new dataset and returns its ID.
 
         Args:
