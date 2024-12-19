@@ -1,8 +1,9 @@
 ---
-title: Vector Stores
-sidebar_position: 7
+title: Vector stores
 slug: /components-vector-stores
 ---
+
+# Vector store components in Langflow
 
 Vector databases store vector data, which backs AI workloads like chatbots and Retrieval Augmented Generation.
 

@@ -4,6 +4,8 @@ sidebar_position: 10
 slug: /components-loaders
 ---
 
+# Loader components in Langflow
+
 :::info
 As of Langflow 1.1, loader components are now found in the **Components** menu under **Bundles**.
 :::

@@ -4,6 +4,8 @@ sidebar_position: 2
 slug: /components-prompts
 ---
 
+# Prompt components in Langflow
+
 A prompt is a structured input to a language model that instructs the model how to handle user inputs and variables.
 
 Prompt components create prompt templates with custom fields and dynamic variables for providing your model structured, repeatable prompts.

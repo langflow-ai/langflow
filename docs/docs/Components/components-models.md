@@ -4,6 +4,8 @@ sidebar_position: 5
 slug: /components-models
 ---
 
+# Model components in Langflow
+
 Model components generate text using large language models.
 
 Refer to your specific component's documentation for more information on parameters.

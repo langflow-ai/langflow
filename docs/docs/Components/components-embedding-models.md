@@ -4,6 +4,8 @@ sidebar_position: 6
 slug: /components-embedding-models
 ---
 
+# Embeddings models in Langflow
+
 Embeddings models convert text into numerical vectors. These embeddings capture semantic meaning of the input text, and allow LLMs to understand context.
 
 Refer to your specific component's documentation for more information on parameters.

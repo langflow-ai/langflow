@@ -4,6 +4,8 @@ sidebar_position: 4
 slug: /components-helpers
 ---
 
+# Helper components in Langflow
+
 Helper components provide utility functions to help manage data, tasks, and other components in your flow.
 
 ## Use a helper component in a flow

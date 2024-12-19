@@ -1,4 +1,9 @@
-# Tools
+---
+title: Tools
+slug: /components-tools
+---
+
+# Tool components in Langflow
 
 Tools are typically connected to agent components at the **Tools** port. Agents use LLMs as a reasoning engine to decide which of the connected tool components to use to solve a problem.
 

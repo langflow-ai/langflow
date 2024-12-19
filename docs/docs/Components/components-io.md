@@ -1,8 +1,10 @@
 ---
-title: Inputs & Outputs
+title: Inputs and outputs
 sidebar_position: 1
 slug: /components-io
 ---
+
+# Input and output components in Langflow
 
 This category of components defines where data enters and exits your flow. They dynamically alter the Playground and can be renamed to facilitate building and maintaining your flows.
 

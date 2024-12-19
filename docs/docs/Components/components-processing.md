@@ -3,6 +3,8 @@ title: Processing
 slug: /components-processing
 ---
 
+# Processing components in Langflow
+
 Processing components process and transform data within a flow.
 
 ## Use a processing component in a flow
