@@ -7,10 +7,10 @@ from langflow.template import Output
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
 
 
-class StoreMessageComponent(Component):
-    display_name = "Store Message"
+class MessageStoreComponent(Component):
+    display_name = "Message Store"
     description = "Stores a chat message or text into Langflow tables or an external memory."
-    icon = "save"
+    icon = "message-square-text"
     name = "StoreMessage"
 
     inputs = [
@@ -46,7 +46,7 @@ class StoreMessageComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Stored Message", name="stored_message", method="store_message"),
+        Output(display_name="Stored Messages", name="stored_messages", method="store_message", hidden=True),
     ]
 
     async def store_message(self) -> Message:
