@@ -7,8 +7,8 @@ from langchain_community.document_loaders.git import GitLoader
 
 from langflow.custom import Component
 from langflow.io import (
-    MessageTextInput,
     DropdownInput,
+    MessageTextInput,
     Output,
 )
 from langflow.schema import Data
