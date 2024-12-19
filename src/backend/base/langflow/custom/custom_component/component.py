@@ -22,13 +22,17 @@ from langflow.base.tools.constants import (
     TOOLS_METADATA_INPUT_NAME,
 )
 from langflow.custom.tree_visitor import RequiredInputsVisitor
+from langflow.events.event_manager import EventManager
 from langflow.exceptions.component import StreamingError
 from langflow.field_typing import Tool  # noqa: TC001 Needed by _add_toolkit_output
+from langflow.graph.edge.schema import EdgeData
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
+from langflow.inputs.inputs import InputTypes
 from langflow.memory import astore_message, aupdate_messages, delete_message
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
+from langflow.schema.log import LoggableType
 from langflow.schema.message import ErrorMessage, Message
 from langflow.schema.properties import Source
 from langflow.schema.table import FieldParserType, TableOptions
@@ -996,16 +1000,14 @@ class Component(CustomComponent):
             message (LoggableType | list[LoggableType]): The message to log.
             name (str, optional): The name of the log. Defaults to None.
         """
-        if name is None:
-            name = f"Log {len(self._logs) + 1}"
+        name = name or f"Log {len(self._logs) + 1}"
         log = Log(message=message, type=get_artifact_type(message), name=name)
         self._logs.append(log)
         if self._tracing_service and self._vertex:
             self._tracing_service.add_log(trace_name=self.trace_name, log=log)
-        if self._event_manager is not None and self._current_output:
+        if self._event_manager and self._current_output:
             data = log.model_dump()
-            data["output"] = self._current_output
-            data["component_id"] = self._id
+            data.update({"output": self._current_output, "component_id": self._id})
             self._event_manager.on_log(data=data)
 
     def _append_tool_output(self) -> None:
