@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from io import BytesIO
 
 import httpx
@@ -217,7 +217,6 @@ class NVIDIANeMoCustomizerComponent(Component):
     def get_dataset_name(self, user_dataset_name=None):
         # Generate a default dataset name using the current date and time
         default_name = f"dataset-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
-
         # Use the user-provided name if available, otherwise the default
         return user_dataset_name if user_dataset_name else default_name
 
