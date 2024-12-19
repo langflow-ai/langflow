@@ -203,15 +203,19 @@ class FlowHeader(BaseModel):
     id: UUID = Field(description="Unique identifier for the flow")
     name: str = Field(description="The name of the flow")
     folder_id: UUID | None = Field(
-        None, description="The ID of the folder containing the flow. None if not associated with a folder"
+        None,
+        description="The ID of the folder containing the flow. None if not associated with a folder",
     )
     is_component: bool | None = Field(None, description="Flag indicating whether the flow is a component")
     endpoint_name: str | None = Field(None, description="The name of the endpoint associated with this flow")
     description: str | None = Field(None, description="A description of the flow")
+    data: dict | None = Field(None, description="The data of the component, if is_component is True")
 
     @model_validator(mode="before")
     @classmethod
-    def validate_flow_header(cls, data: dict):
+    def validate_flow_header(cls, data: Flow):
+        if not data.is_component:
+            data.data = None
         return data
 
 
