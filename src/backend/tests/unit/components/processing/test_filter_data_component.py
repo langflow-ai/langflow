@@ -1,6 +1,7 @@
 from typing import Any
 
 import pytest
+
 from tests.base import ComponentTestBaseWithoutClient
 from tests.integration.utils import build_component_instance_for_tests
 
