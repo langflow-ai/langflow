@@ -258,83 +258,87 @@ export default function IOModal({
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
       <BaseModal.Content overflowHidden className="h-full">
-        {open && (<div className="flex-max-width h-full">
-          <div
-            className={cn(
-              "flex h-full flex-shrink-0 flex-col justify-start transition-all duration-300",
-              sidebarOpen
-                ? "absolute z-50 lg:relative lg:w-1/5 lg:max-w-[280px]"
-                : "w-0",
-            )}
-          >
-            <div className="flex h-full flex-col overflow-y-auto border-r border-border bg-muted p-4 text-center custom-scroll dark:bg-canvas">
-              <div className="flex items-center gap-2 pb-8">
-                <ShadTooltip
-                  styleClasses="z-50"
-                  side="right"
-                  content="Hide sidebar"
-                >
-                  <Button
-                    variant="ghost"
-                    className="flex h-8 w-8 items-center justify-center !p-0"
-                    onClick={() => setSidebarOpen(!sidebarOpen)}
+        {open && (
+          <div className="flex-max-width h-full">
+            <div
+              className={cn(
+                "flex h-full flex-shrink-0 flex-col justify-start transition-all duration-300",
+                sidebarOpen
+                  ? "absolute z-50 lg:relative lg:w-1/5 lg:max-w-[280px]"
+                  : "w-0",
+              )}
+            >
+              <div className="flex h-full flex-col overflow-y-auto border-r border-border bg-muted p-4 text-center custom-scroll dark:bg-canvas">
+                <div className="flex items-center gap-2 pb-8">
+                  <ShadTooltip
+                    styleClasses="z-50"
+                    side="right"
+                    content="Hide sidebar"
                   >
-                    <IconComponent
-                      name={sidebarOpen ? "PanelLeftClose" : "PanelLeftOpen"}
-                      className="h-[18px] w-[18px] text-ring"
-                    />
-                  </Button>
-                </ShadTooltip>
-                {sidebarOpen && <div className="font-semibold">Playground</div>}
+                    <Button
+                      variant="ghost"
+                      className="flex h-8 w-8 items-center justify-center !p-0"
+                      onClick={() => setSidebarOpen(!sidebarOpen)}
+                    >
+                      <IconComponent
+                        name={sidebarOpen ? "PanelLeftClose" : "PanelLeftOpen"}
+                        className="h-[18px] w-[18px] text-ring"
+                      />
+                    </Button>
+                  </ShadTooltip>
+                  {sidebarOpen && (
+                    <div className="font-semibold">Playground</div>
+                  )}
+                </div>
+                {sidebarOpen && (
+                  <SidebarOpenView
+                    sessions={sessions}
+                    setSelectedViewField={setSelectedViewField}
+                    setvisibleSession={setvisibleSession}
+                    handleDeleteSession={handleDeleteSession}
+                    visibleSession={visibleSession}
+                    selectedViewField={selectedViewField}
+                  />
+                )}
               </div>
-              {sidebarOpen && (
-                <SidebarOpenView
-                  sessions={sessions}
-                  setSelectedViewField={setSelectedViewField}
-                  setvisibleSession={setvisibleSession}
-                  handleDeleteSession={handleDeleteSession}
-                  visibleSession={visibleSession}
+            </div>
+            <div className="flex h-full min-w-96 flex-grow bg-background">
+              {selectedViewField && (
+                <SelectedViewField
                   selectedViewField={selectedViewField}
+                  setSelectedViewField={setSelectedViewField}
+                  haveChat={haveChat}
+                  inputs={inputs}
+                  outputs={outputs}
+                  sessions={sessions}
+                  currentFlowId={currentFlowId}
+                  nodes={nodes}
                 />
               )}
-            </div>
-          </div>
-          <div className="flex h-full min-w-96 flex-grow bg-background">
-            {selectedViewField && (
-              <SelectedViewField
+              <ChatViewWrapper
                 selectedViewField={selectedViewField}
+                visibleSession={visibleSession}
+                sessions={sessions}
+                sidebarOpen={sidebarOpen}
+                currentFlowId={currentFlowId}
+                setSidebarOpen={setSidebarOpen}
+                isPlayground={isPlayground}
+                setvisibleSession={setvisibleSession}
                 setSelectedViewField={setSelectedViewField}
                 haveChat={haveChat}
-                inputs={inputs}
-                outputs={outputs}
-                sessions={sessions}
-                currentFlowId={currentFlowId}
-                nodes={nodes}
+                messagesFetched={messagesFetched}
+                sessionId={sessionId}
+                sendMessage={sendMessage}
+                chatValue={chatValue}
+                setChatValue={setChatValue}
+                lockChat={lockChat}
+                setLockChat={setLockChat}
+                canvasOpen={canvasOpen}
+                setOpen={setOpen}
               />
-            )}
-            <ChatViewWrapper
-              selectedViewField={selectedViewField}
-              visibleSession={visibleSession}
-              sessions={sessions}
-              sidebarOpen={sidebarOpen}
-              currentFlowId={currentFlowId}
-              setSidebarOpen={setSidebarOpen}
-              isPlayground={isPlayground}
-              setvisibleSession={setvisibleSession}
-              setSelectedViewField={setSelectedViewField}
-              haveChat={haveChat}
-              messagesFetched={messagesFetched}
-              sessionId={sessionId}
-              sendMessage={sendMessage}
-              chatValue={chatValue}
-              setChatValue={setChatValue}
-              lockChat={lockChat}
-              setLockChat={setLockChat}
-              canvasOpen={canvasOpen}
-              setOpen={setOpen}
-            />
+            </div>
           </div>
-        </div>)}
+        )}
       </BaseModal.Content>
     </BaseModal>
   );
