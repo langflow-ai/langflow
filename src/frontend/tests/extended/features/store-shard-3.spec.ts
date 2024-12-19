@@ -3,7 +3,7 @@ import * as dotenv from "dotenv";
 import path from "path";
 
 test(
-  "should order the visualization",
+  "should order the visualization (requires store API key)",
   { tag: ["@release"] },
   async ({ page }) => {
     test.skip(
@@ -50,7 +50,7 @@ test(
   },
 );
 
-test("should filter by type", { tag: ["@release"] }, async ({ page }) => {
+test("should filter by type (requires store API key)", { tag: ["@release"] }, async ({ page }) => {
   test.skip(
     !process?.env?.STORE_API_KEY,
     "STORE_API_KEY required to run this test",
