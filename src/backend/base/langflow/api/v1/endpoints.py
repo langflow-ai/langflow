@@ -622,7 +622,7 @@ async def custom_component_update(
             load_from_db_fields = [
                 field_name
                 for field_name, field_dict in template.items()
-                if isinstance(field_dict, dict) and field_dict.get("load_from_db")
+                if isinstance(field_dict, dict) and field_dict.get("load_from_db") and field_dict.get("value")
             ]
             params = await update_params_with_load_from_db_fields(cc_instance, params, load_from_db_fields)
             cc_instance.set_attributes(params)

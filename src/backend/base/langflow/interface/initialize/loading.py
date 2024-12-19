@@ -111,7 +111,7 @@ async def update_params_with_load_from_db_fields(
     fallback_to_env_vars=False,
 ):
     for field in load_from_db_fields:
-        if field not in params:
+        if field not in params or not params[field]:
             continue
 
         try:
