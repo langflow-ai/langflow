@@ -29,7 +29,7 @@ jobs:
       - uses: astral-sh/setup-uv@v4
         with:
           enable-cache: true
-      - run: uv sync --dev
+      - run: uv sync --extra dev --frozen
       - name: Run Codeflash Optimizer
         run: uv run codeflash
       - name: Minimize uv cache
