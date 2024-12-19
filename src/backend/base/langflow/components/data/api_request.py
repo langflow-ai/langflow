@@ -23,6 +23,7 @@ from langflow.io import (
     MessageTextInput,
     Output,
     TableInput,
+    MultilineInput,
 )
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
@@ -63,7 +64,7 @@ class APIRequestComponent(Component):
             info="Enable cURL mode to populate fields from a cURL command.",
             real_time_refresh=True,
         ),
-        MessageTextInput(
+        MultilineInput(
             name="curl",
             display_name="cURL",
             info=(
