@@ -13,7 +13,7 @@ GREEN=\033[0;32m
 
 log_level ?= debug
 host ?= 0.0.0.0
-port ?= 80
+port ?= 7860
 env ?= .env
 open_browser ?= true
 path = src/backend/base/langflow/frontend
@@ -46,6 +46,7 @@ check_tools:
 	@command -v uv >/dev/null 2>&1 || { echo >&2 "$(RED)uv is not installed. Aborting.$(NC)"; exit 1; }
 	@command -v npm >/dev/null 2>&1 || { echo >&2 "$(RED)NPM is not installed. Aborting.$(NC)"; exit 1; }
 	@echo "$(GREEN)All required tools are installed.$(NC)"
+
 
 help: ## show this help message
 	@echo '----'
@@ -93,7 +94,7 @@ clean_python_cache:
 	find . -type f -name '*.py[cod]' -exec rm -f {} +
 	find . -type f -name '*~' -exec rm -f {} +
 	find . -type f -name '.*~' -exec rm -f {} +
-	$(call CLEAR_DIRS,.mypy_cache)
+	$(call CLEAR_DIRS,.mypy_cache )
 	@echo "$(GREEN)Python cache cleaned.$(NC)"
 
 clean_npm_cache:
@@ -426,6 +427,7 @@ endif
 alembic-revision: ## generate a new migration
 	@echo 'Generating a new Alembic revision'
 	cd src/backend/base/langflow/ && uv run alembic revision --autogenerate -m "$(message)"
+
 
 alembic-upgrade: ## upgrade database to the latest version
 	@echo 'Upgrading database to the latest version'
