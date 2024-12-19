@@ -101,7 +101,6 @@ class LangWatchComponent(Component):
             data = response.json()
             return data.get("evaluators", {})
         except httpx.RequestError as e:
-            logger.exception("Error fetching evaluators")
             self.status = f"Error fetching evaluators: {e}"
             return {}
 
@@ -166,7 +165,6 @@ class LangWatchComponent(Component):
             return build_config
 
         except (KeyError, AttributeError, ValueError) as e:
-            logger.exception("Error updating component")
             self.status = f"Error updating component: {e!s}"
             return build_config
         else:
@@ -225,14 +223,10 @@ class LangWatchComponent(Component):
 
                 dynamic_inputs[setting_name] = input_type(**input_params)
 
-            return dynamic_inputs
-
-        except Exception as e:
-            logger.exception("Error creating dynamic inputs")
+        except (KeyError, AttributeError, ValueError, TypeError) as e:
             self.status = f"Error creating dynamic inputs: {e!s}"
             return {}
-        else:
-            return dynamic_inputs
+        return dynamic_inputs
 
     async def evaluate(self) -> Data:
         if not self.api_key:
@@ -277,7 +271,7 @@ class LangWatchComponent(Component):
                 and self._tracing_service._tracers
                 and "langwatch" in self._tracing_service._tracers
             ):
-                payload["trace_id"] = str(self._tracing_service._tracers["langwatch"].trace_id)
+                payload["trace_id"] = str(self._tracing_service._tracers["langwatch"].trace_id)  # type: ignore[assignment]
 
             for setting_name in self.dynamic_inputs:
                 payload["settings"][setting_name] = getattr(self, setting_name, None)
@@ -294,9 +288,5 @@ class LangWatchComponent(Component):
 
         except (httpx.RequestError, KeyError, AttributeError, ValueError) as e:
             error_message = f"Evaluation error: {e!s}"
-            logger.exception("Evaluation error")
             self.status = error_message
             return Data(data={"error": error_message})
-
-    async def build(self) -> dict[str, Any]:
-        return {"evaluation_result": await self.evaluate()}
