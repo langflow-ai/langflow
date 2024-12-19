@@ -4,7 +4,7 @@ from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
 
 import httpx
-from anthropic import Anthropic, BaseModel
+from anthropic import Anthropic
 from dotenv import load_dotenv
 from langchain_core.tools import StructuredTool
 from mcp import ClientSession
