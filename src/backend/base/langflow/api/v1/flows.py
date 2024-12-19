@@ -228,7 +228,7 @@ async def read_flows(
                         "folder_id": flow.folder_id,
                         "is_component": flow.is_component,
                         "description": flow.description,
-                        "endpoint_name": flow.endpoint_name
+                        "endpoint_name": flow.endpoint_name,
                     }
                     for flow in flows
                 ]
