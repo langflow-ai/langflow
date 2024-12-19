@@ -118,10 +118,8 @@ class NVIDIANeMoCustomizerComponent(Component):
         Output(display_name="Job Result", name="data", method="customize"),
     ]
 
-    async def update_build_config(self, build_config, field_value, field_name=None):
-        """
-        Updates the component's configuration based on the selected option or refresh button.
-        """
+    async def update_build_config(self, build_config, _field_value, field_name=None):
+        """Updates the component's configuration based on the selected option or refresh button."""
         models_url = f"{self.base_url}/v2/availableParentModels"
         try:
             if field_name == "model_name":
