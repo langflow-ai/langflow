@@ -1,5 +1,5 @@
+import { ReactFlowJsonObject } from "@xyflow/react";
 import { ReactElement, ReactNode } from "react";
-import { ReactFlowJsonObject } from "reactflow";
 import { InputOutput } from "../../constants/enums";
 import {
   APIClassType,
@@ -8,7 +8,12 @@ import {
   OutputFieldProxyType,
 } from "../api";
 import { ChatMessageType } from "../chat";
-import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
+import {
+  AllNodeType,
+  FlowStyleType,
+  FlowType,
+  NodeDataType,
+} from "../flow/index";
 import { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
   name?: string;
@@ -692,11 +697,11 @@ export type tabsArrayType = {
 
 export type codeTabsPropsType = {
   open?: boolean;
-  tabs: Array<tabsArrayType>;
+  tabs: tabsArrayType[];
   activeTab: string;
   setActiveTab: (value: string) => void;
   isMessage?: boolean;
-  tweaksNodes?: Array<NodeType>;
+  tweaksNodes?: AllNodeType[];
   activeTweaks?: boolean;
   setActiveTweaks?: (value: boolean) => void;
 };

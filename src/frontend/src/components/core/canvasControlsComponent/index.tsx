@@ -4,8 +4,6 @@ import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
-import { cloneDeep } from "lodash";
-import { useEffect } from "react";
 import {
   ControlButton,
   Panel,
@@ -13,7 +11,9 @@ import {
   useStore,
   useStoreApi,
   type ReactFlowState,
-} from "reactflow";
+} from "@xyflow/react";
+import { cloneDeep } from "lodash";
+import { useEffect } from "react";
 import { shallow } from "zustand/shallow";
 
 type CustomControlButtonProps = {
@@ -106,7 +106,7 @@ const CanvasControls = ({ children }) => {
   return (
     <Panel
       data-testid="canvas_controls"
-      className="react-flow__controls !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent"
+      className="react-flow__controls !m-2 flex !flex-row gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent"
       position="bottom-left"
     >
       {/* Zoom In */}

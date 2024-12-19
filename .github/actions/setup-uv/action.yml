@@ -1,6 +1,11 @@
 name: "Setup uv"
 description: "Checks out code, installs uv, and sets up Python environment"
 
+inputs:
+  python-version:
+    description: "Python version to use"
+    default: "3.12"
+
 runs:
   using: "composite"
   steps:
@@ -13,7 +18,7 @@ runs:
     - name: "Set up Python"
       uses: actions/setup-python@v5
       with:
-        python-version-file: "pyproject.toml"
+        python-version: ${{ inputs.python-version }}
 
     - name: Restore uv cache
       uses: actions/cache@v4

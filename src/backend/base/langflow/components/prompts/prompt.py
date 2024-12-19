@@ -45,9 +45,9 @@ class PromptComponent(Component):
         )
         return frontend_node
 
-    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
+    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):
         """This function is called after the code validation is done."""
-        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
+        frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)
         template = frontend_node["template"]["template"]["value"]
         # Kept it duplicated for backwards compatibility
         _ = process_prompt_template(
