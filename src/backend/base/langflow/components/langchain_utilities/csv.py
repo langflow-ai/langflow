@@ -49,6 +49,7 @@ class CSVAgentComponent(LCAgentComponent):
             display_name="Pandas Kwargs",
             info="Pandas Kwargs to be passed to the agent.",
             advanced=True,
+            is_list=True,
         ),
     ]
 
