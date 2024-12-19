@@ -9,7 +9,7 @@ from sqlmodel import select
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
-from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableUpdate
+from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
 from langflow.services.variable.base import VariableService
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 
@@ -79,9 +79,20 @@ class DatabaseVariableService(VariableService, Service):
         # we decrypt the value
         return auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
 
-    async def get_all(self, user_id: UUID | str, session: AsyncSession) -> list[Variable | None]:
+    async def get_all(self, user_id: UUID | str, session: AsyncSession) -> list[VariableRead]:
         stmt = select(Variable).where(Variable.user_id == user_id)
-        return list((await session.exec(stmt)).all())
+        variables = list((await session.exec(stmt)).all())
+        # If the variable is of type 'Generic' we decrypt the value
+        variables_read = []
+        for variable in variables:
+            value = None
+            if variable.type == GENERIC_TYPE:
+                value = auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
+
+            variable_read = VariableRead.model_validate(variable, from_attributes=True)
+            variable_read.value = value
+            variables_read.append(variable_read)
+        return variables_read
 
     async def list_variables(self, user_id: UUID | str, session: AsyncSession) -> list[str | None]:
         variables = await self.get_all(user_id=user_id, session=session)
@@ -160,7 +171,7 @@ class DatabaseVariableService(VariableService, Service):
         value: str,
         *,
         default_fields: Sequence[str] = (),
-        type_: str = GENERIC_TYPE,
+        type_: str = CREDENTIAL_TYPE,
         session: AsyncSession,
     ):
         variable_base = VariableCreate(
