@@ -41,20 +41,15 @@ class CalculatorToolComponent(LCToolComponent):
         )
 
     def _eval_expr(self, node):
-        # Define the allowed operators
-        operators = {
-            ast.Add: operator.add,
-            ast.Sub: operator.sub,
-            ast.Mult: operator.mul,
-            ast.Div: operator.truediv,
-            ast.Pow: operator.pow,
-        }
         if isinstance(node, ast.Num):
             return node.n
         if isinstance(node, ast.BinOp):
-            return operators[type(node.op)](self._eval_expr(node.left), self._eval_expr(node.right))
+            left_val = self._eval_expr(node.left)
+            right_val = self._eval_expr(node.right)
+            return self.operators[type(node.op)](left_val, right_val)
         if isinstance(node, ast.UnaryOp):
-            return operators[type(node.op)](self._eval_expr(node.operand))
+            operand_val = self._eval_expr(node.operand)
+            return self.operators[type(node.op)](operand_val)
         if isinstance(node, ast.Call):
             msg = (
                 "Function calls like sqrt(), sin(), cos() etc. are not supported. "
@@ -95,3 +90,13 @@ class CalculatorToolComponent(LCToolComponent):
             error_message = f"Error: {e}"
             self.status = error_message
             return [Data(data={"error": error_message, "input": expression})]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.operators = {
+            ast.Add: operator.add,
+            ast.Sub: operator.sub,
+            ast.Mult: operator.mul,
+            ast.Div: operator.truediv,
+            ast.Pow: operator.pow,
+        }

@@ -308,7 +308,6 @@ endif
 
 build_langflow_base:
 	cd src/backend/base && uv build $(args)
-	$(call CLEAR_DIRS,src/backend/base/langflow/frontend)
 
 build_langflow_backup:
 	uv lock && uv build

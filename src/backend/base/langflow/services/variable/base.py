@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.base import Service
-from langflow.services.database.models.variable.model import Variable
+from langflow.services.database.models.variable.model import Variable, VariableRead
 
 
 class VariableService(Service):
@@ -107,4 +107,13 @@ class VariableService(Service):
 
         Returns:
             The created variable.
+        """
+
+    @abc.abstractmethod
+    async def get_all(self, user_id: UUID | str, session: AsyncSession) -> list[VariableRead]:
+        """Get all variables.
+
+        Args:
+            user_id: The user ID.
+            session: The database session.
         """

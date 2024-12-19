@@ -49,7 +49,7 @@ def rag_graph():
     chat_input.get_output("message").value = "What is the meaning of life?"
     rag_vector_store = AstraDBVectorStoreComponent(_id="rag-vector-store-123")
     rag_vector_store.set(
-        search_input=chat_input.message_response,
+        search_query=chat_input.message_response,
         api_endpoint="https://astra.example.com",
         token="token",  # noqa: S106
         embedding_model=openai_embeddings.build_embeddings,
