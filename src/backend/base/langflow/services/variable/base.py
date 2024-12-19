@@ -108,3 +108,12 @@ class VariableService(Service):
         Returns:
             The created variable.
         """
+
+    @abc.abstractmethod
+    async def get_all(self, user_id: UUID | str, session: AsyncSession) -> list[Variable]:
+        """Get all variables.
+
+        Args:
+            user_id: The user ID.
+            session: The database session.
+        """
