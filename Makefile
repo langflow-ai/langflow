@@ -28,7 +28,7 @@ all: help
 ######################
 
 # Some directories may be mount points as in devcontainer, so we need to clear their
-# contents rather than remove the entire directory. But we must also be mindful that 
+# contents rather than remove the entire directory. But we must also be mindful that
 # we are not running in a devcontainer, so need to ensure the directories exist.
 # See https://code.visualstudio.com/remote/advancedcontainers/improve-performance
 CLEAR_DIRS = $(foreach dir,$1,$(shell mkdir -p $(dir) && find $(dir) -mindepth 1 -delete))
@@ -309,7 +309,6 @@ endif
 
 build_langflow_base:
 	cd src/backend/base && uv build $(args)
-	$(call CLEAR_DIRS,src/backend/base/langflow/frontend)
 
 build_langflow_backup:
 	uv lock && uv build
