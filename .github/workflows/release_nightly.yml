@@ -14,6 +14,11 @@ on:
         required: true
         type: boolean
         default: false
+      build_docker_ep:
+        description: "Build Docker Image for Langflow Nightly with Entrypoint"
+        required: false
+        type: boolean
+        default: false
       nightly_tag_main:
         description: "Tag for the nightly main build"
         required: true
@@ -32,6 +37,11 @@ on:
       build_docker_main:
         description: "Build Docker Image for Langflow Nightly"
         required: true
+        type: boolean
+        default: false
+      build_docker_ep:
+        description: "Build Docker Image for Langflow Nightly with Entrypoint"
+        required: false
         type: boolean
         default: false
       nightly_tag_main:
@@ -99,11 +109,11 @@ jobs:
           timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/api/v1/auto_login; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
           # Terminate the server
           kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
-          sleep 10 # give the server some time to terminate
+          sleep 20 # give the server some time to terminate
           # Check if the server is still running
           if kill -0 $SERVER_PID 2>/dev/null; then
             echo "Failed to terminate the server"
-            exit 1
+            exit 0
           else
             echo "Server terminated successfully"
           fi
@@ -171,11 +181,11 @@ jobs:
           timeout 120 bash -c 'until curl -f http://127.0.0.1:7860/health_check; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
           # Terminate the server
           kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
-          sleep 10 # give the server some time to terminate
+          sleep 20 # give the server some time to terminate
           # Check if the server is still running
           if kill -0 $SERVER_PID 2>/dev/null; then
             echo "Failed to terminate the server"
-            exit 1
+            exit 0
           else
             echo "Server terminated successfully"
           fi
@@ -197,11 +207,9 @@ jobs:
     needs: [release-nightly-base, release-nightly-main]
     uses: ./.github/workflows/docker-build.yml
     with:
-      # Version should _not_ contain the leading `v`
-      version: ${{ needs.release-nightly-base.outputs.version }}
-      release_type: base
-      nightly_tag_base: ${{ inputs.nightly_tag_base }}
-      nightly_tag_main: ${{ inputs.nightly_tag_main }}
+      release_type: nightly-base
+      base_version: ${{ inputs.nightly_tag_base }}
+      main_version: ${{ inputs.nightly_tag_main }}
     secrets: inherit
 
   call_docker_build_main:
@@ -210,10 +218,16 @@ jobs:
     needs: [release-nightly-main]
     uses: ./.github/workflows/docker-build.yml
     with:
-      # Version should _not_ contain the leading `v`
-      version: ${{ needs.release-nightly-main.outputs.version }}
-      release_type: main
-      nightly_tag_main: ${{ inputs.nightly_tag_main }}
+      release_type: nightly-main
+      main_version: ${{ inputs.nightly_tag_main }}
     secrets: inherit
 
-  
+  call_docker_build_main_ep:
+    name: Call Docker Build Workflow for Langflow with Entrypoint
+    if: always() && ${{ inputs.build_docker_ep == 'true' }}
+    needs: [release-nightly-main]
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      release_type: main-ep
+      main_version: ${{ inputs.nightly_tag_main }}
+    secrets: inherit

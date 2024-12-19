@@ -7,12 +7,12 @@ from langflow.template.field.base import Output
 class AssistantsListAssistants(ComponentWithCache):
     display_name = "List Assistants"
     description = "Returns a list of assistant id's"
-
+    icon = "AstraDB"
     outputs = [
         Output(display_name="Assistants", name="assistants", method="process_inputs"),
     ]
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.client = get_patched_openai_client(self._shared_component_cache)
 

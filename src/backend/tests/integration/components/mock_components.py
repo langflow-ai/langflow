@@ -1,8 +1,7 @@
 import json
-from typing import List
 
 from langflow.custom import Component
-from langflow.inputs import StrInput, BoolInput
+from langflow.inputs import BoolInput, StrInput
 from langflow.schema import Data
 from langflow.template import Output
 
@@ -21,5 +20,5 @@ class TextToData(Component):
             return Data(data=json.loads(text))
         return Data(text=text)
 
-    def create_data(self) -> List[Data]:
+    def create_data(self) -> list[Data]:
         return [self._to_data(t) for t in self.text_data]

@@ -7,7 +7,6 @@ class Service(ABC):
 
     def get_schema(self):
         """Build a dictionary listing all methods, their parameters, types, return types and documentation."""
-
         schema = {}
         ignore = ["teardown", "set_ready"]
         for method in dir(self):
@@ -22,8 +21,8 @@ class Service(ABC):
             }
         return schema
 
-    async def teardown(self):
+    async def teardown(self) -> None:
         return
 
-    def set_ready(self):
+    def set_ready(self) -> None:
         self.ready = True

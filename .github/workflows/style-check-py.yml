@@ -3,10 +3,8 @@ name: Ruff Style Check
 on:
   pull_request:
     types: [opened, synchronize, reopened, auto_merge_enabled]
-
-
-
-
+    paths:
+      - "**/*.py"
 
 jobs:
   lint:

@@ -87,12 +87,11 @@ class NotionPageUpdate(LCToolComponent):
 
         try:
             logger.info(f"Sending request to Notion API: URL: {url}, Data: {json.dumps(data)}")
-            response = requests.patch(url, headers=headers, json=data)
+            response = requests.patch(url, headers=headers, json=data, timeout=10)
             response.raise_for_status()
             updated_page = response.json()
 
             logger.info(f"Successfully updated Notion page. Response: {json.dumps(updated_page)}")
-            return updated_page
         except requests.exceptions.HTTPError as e:
             error_message = f"HTTP Error occurred: {e}"
             if e.response is not None:
@@ -108,6 +107,8 @@ class NotionPageUpdate(LCToolComponent):
             error_message = f"An unexpected error occurred: {e}"
             logger.exception(error_message)
             return error_message
+
+        return updated_page
 
     def __call__(self, *args, **kwargs):
         return self._update_notion_page(*args, **kwargs)

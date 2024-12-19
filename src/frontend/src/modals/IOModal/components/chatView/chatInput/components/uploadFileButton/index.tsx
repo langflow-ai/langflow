@@ -1,4 +1,4 @@
-import ForwardedIconComponent from "../../../../../../../components/genericIconComponent";
+import ForwardedIconComponent from "../../../../../../../components/common/genericIconComponent";
 import { Button } from "../../../../../../../components/ui/button";
 
 const UploadFileButton = ({
@@ -18,7 +18,7 @@ const UploadFileButton = ({
       />
       <Button
         disabled={lockChat}
-        className={`font-bold text-white transition-all ${
+        className={`font-bold transition-all dark:text-white ${
           lockChat ? "cursor-not-allowed" : "hover:text-muted-foreground"
         }`}
         onClick={handleButtonClick}

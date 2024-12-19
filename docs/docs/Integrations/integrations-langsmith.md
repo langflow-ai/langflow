@@ -1,6 +1,6 @@
 ---
 title: LangSmith
-sidebar_position: 0
+sidebar_position: 3
 slug: /integrations-langsmith
 ---
 
@@ -25,11 +25,9 @@ or export the environment variables in your terminal:
 
 `export LANGCHAIN_API_KEY="your-api-key"export LANGCHAIN_PROJECT="your-project-name"`
 
-1. Restart Langflow using `langflow run --env-file .env`
-2. Run any project and check the LangSmith dashboard for monitoring and observability.
+3. Restart Langflow using `langflow run --env-file .env`
+4. Run a project in Langflow.
+5. View the Langsmith dashboard for monitoring and observability.
 
-![](./965098683.png)
-
-
-![](./1641825585.png)
+![](/img/langsmith-dashboard.png)
 

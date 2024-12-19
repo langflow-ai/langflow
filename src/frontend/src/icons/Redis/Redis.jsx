@@ -6,6 +6,7 @@ export const SvgRedis = (props) => (
     height="35"
     version="1"
     viewBox="0 0 750 750"
+    {...props}
   >
     <defs>
       <filter id="959fca5e72" width="100%" height="100%" x="0%" y="0%">

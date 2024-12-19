@@ -1,6 +1,7 @@
 from langflow.inputs import (
     BoolInput,
     CodeInput,
+    DataFrameInput,
     DataInput,
     DefaultPromptField,
     DictInput,
@@ -18,6 +19,7 @@ from langflow.inputs import (
     NestedDictInput,
     PromptInput,
     SecretStrInput,
+    SliderInput,
     StrInput,
     TableInput,
 )
@@ -26,7 +28,9 @@ from langflow.template import Output
 __all__ = [
     "BoolInput",
     "CodeInput",
+    "DataFrameInput",
     "DataInput",
+    "DefaultPromptField",
     "DefaultPromptField",
     "DictInput",
     "DropdownInput",
@@ -34,6 +38,7 @@ __all__ = [
     "FloatInput",
     "HandleInput",
     "IntInput",
+    "LinkInput",
     "LinkInput",
     "MessageInput",
     "MessageTextInput",
@@ -44,6 +49,7 @@ __all__ = [
     "Output",
     "PromptInput",
     "SecretStrInput",
+    "SliderInput",
     "StrInput",
     "TableInput",
 ]

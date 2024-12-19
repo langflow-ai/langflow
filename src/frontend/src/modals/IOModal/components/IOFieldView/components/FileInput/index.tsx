@@ -5,7 +5,7 @@ import { createFileUpload } from "@/helpers/create-file-upload";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
 import { useEffect, useState } from "react";
-import IconComponent from "../../../../../../components/genericIconComponent";
+import IconComponent from "../../../../../../components/common/genericIconComponent";
 import {
   ALLOWED_IMAGE_INPUT_EXTENSIONS,
   BASE_URL_API,

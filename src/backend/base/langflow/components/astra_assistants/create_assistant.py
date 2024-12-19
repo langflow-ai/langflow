@@ -8,7 +8,7 @@ from langflow.template import Output
 
 
 class AssistantsCreateAssistant(ComponentWithCache):
-    icon = "bot"
+    icon = "AstraDB"
     display_name = "Create Assistant"
     description = "Creates an Assistant and returns it's id"
 
@@ -45,7 +45,7 @@ class AssistantsCreateAssistant(ComponentWithCache):
         Output(display_name="Assistant ID", name="assistant_id", method="process_inputs"),
     ]
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.client = get_patched_openai_client(self._shared_component_cache)
 

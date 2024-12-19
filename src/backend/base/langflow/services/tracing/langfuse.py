@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
+from typing_extensions import override
 
 from langflow.services.tracing.base import BaseTracer
 
@@ -57,12 +58,13 @@ class LangFuseTracer(BaseTracer):
             logger.exception("Could not import langfuse. Please install it with `pip install langfuse`.")
             return False
 
-        except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error setting up LangSmith tracer")
+        except Exception as e:  # noqa: BLE001
+            logger.debug(f"Error setting up LangSmith tracer: {e}")
             return False
 
         return True
 
+    @override
     def add_trace(
         self,
         trace_id: str,
@@ -71,20 +73,20 @@ class LangFuseTracer(BaseTracer):
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
-    ):
+    ) -> None:
         start_time = datetime.now(tz=timezone.utc)
         if not self._ready:
             return
 
-        _metadata: dict = {}
-        _metadata |= {"trace_type": trace_type} if trace_type else {}
-        _metadata |= metadata or {}
+        metadata_: dict = {}
+        metadata_ |= {"trace_type": trace_type} if trace_type else {}
+        metadata_ |= metadata or {}
 
-        _name = trace_name.removesuffix(f" ({trace_id})")
+        name = trace_name.removesuffix(f" ({trace_id})")
         content_span = {
-            "name": _name,
+            "name": name,
             "input": inputs,
-            "metadata": _metadata,
+            "metadata": metadata_,
             "start_time": start_time,
         }
 
@@ -93,6 +95,7 @@ class LangFuseTracer(BaseTracer):
         self.last_span = span
         self.spans[trace_id] = span
 
+    @override
     def end_trace(
         self,
         trace_id: str,
@@ -100,27 +103,28 @@ class LangFuseTracer(BaseTracer):
         outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
         logs: Sequence[Log | dict] = (),
-    ):
+    ) -> None:
         end_time = datetime.now(tz=timezone.utc)
         if not self._ready:
             return
 
         span = self.spans.get(trace_id, None)
         if span:
-            _output: dict = {}
-            _output |= outputs or {}
-            _output |= {"error": str(error)} if error else {}
-            _output |= {"logs": list(logs)} if logs else {}
-            content = {"output": _output, "end_time": end_time}
+            output: dict = {}
+            output |= outputs or {}
+            output |= {"error": str(error)} if error else {}
+            output |= {"logs": list(logs)} if logs else {}
+            content = {"output": output, "end_time": end_time}
             span.update(**content)
 
+    @override
     def end(
         self,
         inputs: dict[str, Any],
         outputs: dict[str, Any],
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
-    ):
+    ) -> None:
         if not self._ready:
             return
 

@@ -1,43 +1,38 @@
-from langflow.graph.utils import rewrite_file_path
 import pytest
+from langflow.base.data.utils import format_directory_path
 
 
 @pytest.mark.parametrize(
-    "file_path, expected",
+    ("input_path", "expected"),
     [
-        # Test case 1: Standard path with multiple directories
-        ("/home/user/documents/file.txt", ["documents/file.txt"]),
-        # Test case 2: Path with only one directory
-        ("/documents/file.txt", ["documents/file.txt"]),
-        # Test case 3: Path with no directories (just filename)
-        ("file.txt", ["file.txt"]),
-        # Test case 4: Path with multiple levels and special characters
-        ("/home/user/my-docs/special_file!.pdf", ["my-docs/special_file!.pdf"]),
-        # Test case 5: Path with trailing slash
-        ("/home/user/documents/", ["user/documents"]),
-        # Test case 6: Empty path
-        ("", [""]),
-        # Test case 7: Path with only slashes
-        ("///", [""]),
-        # Test case 8: Path with dots
-        ("/home/user/../documents/./file.txt", ["./file.txt"]),
-        # Test case 9: Windows-style path
-        ("C:\\Users\\Documents\\file.txt", ["Documents/file.txt"]),
-        # Test case 10: Windows path with trailing backslash
-        ("C:\\Users\\Documents\\", ["Users/Documents"]),
-        # Test case 11: Mixed separators
-        ("C:/Users\\Documents/file.txt", ["Documents/file.txt"]),
-        # Test case 12: Network path (UNC)
-        ("\\\\server\\share\\file.txt", ["share/file.txt"]),
+        # Test case 1: Standard path with no newlines
+        ("/home/user/documents/file.txt", "/home/user/documents/file.txt"),
+        # Test case 2: Path with newline character
+        ("/home/user/docu\nments/file.txt", "/home/user/docu\\nments/file.txt"),
+        # Test case 3: Path with multiple newline characters
+        ("/home/user/\ndocu\nments/file.txt", "/home/user/\\ndocu\\nments/file.txt"),
+        # Test case 4: Path with only newline characters
+        ("\n\n\n", "\\n\\n\\n"),
+        # Test case 5: Empty path
+        ("", ""),
+        # Test case 6: Path with mixed newlines and other special characters
+        ("/home/user/my-\ndocs/special_file!.pdf", "/home/user/my-\\ndocs/special_file!.pdf"),
+        # Test case 7: Windows-style path with newline
+        ("C:\\Users\\\nDocuments\\file.txt", "C:\\Users\\\\nDocuments\\file.txt"),
+        # Test case 8: Path with trailing newline
+        ("/home/user/documents/\n", "/home/user/documents/\\n"),
+        # Test case 9: Path with leading newline
+        ("\n/home/user/documents/", "\\n/home/user/documents/"),
+        # Test case 10: Path with multiple consecutive newlines
+        ("/home/user/docu\n\nments/file.txt", "/home/user/docu\\n\\nments/file.txt"),
     ],
 )
-def test_rewrite_file_path(file_path, expected):
-    result = rewrite_file_path(file_path)
+def test_format_directory_path(input_path, expected):
+    result = format_directory_path(input_path)
     assert result == expected
 
 
 # Additional test for type checking
-def test_rewrite_file_path_type():
-    result = rewrite_file_path("/home/user/file.txt")
-    assert isinstance(result, list)
-    assert all(isinstance(item, str) for item in result)
+def test_format_directory_path_type():
+    result = format_directory_path("/home/user/file.txt")
+    assert isinstance(result, str)

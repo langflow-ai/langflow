@@ -10,7 +10,7 @@ else:
 _InputTypesMap: dict[str, type["InputTypes"]] | None = None
 
 
-def get_InputTypesMap():
+def get_input_types_map():
     global _InputTypesMap  # noqa: PLW0603
     if _InputTypesMap is None:
         from langflow.inputs.inputs import InputTypesMap
@@ -20,9 +20,9 @@ def get_InputTypesMap():
 
 
 def instantiate_input(input_type: str, data: dict) -> InputTypes:
-    InputTypesMap = get_InputTypesMap()
+    input_types_map = get_input_types_map()
 
-    input_type_class = InputTypesMap.get(input_type)
+    input_type_class = input_types_map.get(input_type)
     if "type" in data:
         # Replace with field_type
         data["field_type"] = data.pop("type")

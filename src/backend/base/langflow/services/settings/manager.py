@@ -24,11 +24,11 @@ class SettingsService(Service):
         if "/" not in file_path:
             # Get current path
             current_path = Path(__file__).resolve().parent
-            _file_path = Path(current_path) / file_path
+            file_path_ = Path(current_path) / file_path
         else:
-            _file_path = Path(file_path)
+            file_path_ = Path(file_path)
 
-        with _file_path.open() as f:
+        with file_path_.open(encoding="utf-8") as f:
             settings_dict = yaml.safe_load(f)
             settings_dict = {k.upper(): v for k, v in settings_dict.items()}
 

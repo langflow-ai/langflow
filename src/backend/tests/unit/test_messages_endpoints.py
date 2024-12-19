@@ -1,9 +1,9 @@
+from datetime import datetime, timezone
 from uuid import UUID
 
 import pytest
 from httpx import AsyncClient
-
-from langflow.memory import add_messagetables
+from langflow.memory import aadd_messagetables
 
 # Assuming you have these imports available
 from langflow.services.database.models.message import MessageCreate, MessageRead, MessageUpdate
@@ -11,28 +11,25 @@ from langflow.services.database.models.message.model import MessageTable
 from langflow.services.deps import session_scope
 
 
-@pytest.fixture()
+@pytest.fixture
 async def created_message():
-    with session_scope() as session:
+    async with session_scope() as session:
         message = MessageCreate(text="Test message", sender="User", sender_name="User", session_id="session_id")
         messagetable = MessageTable.model_validate(message, from_attributes=True)
-        messagetables = add_messagetables([messagetable], session)
-        message_read = MessageRead.model_validate(messagetables[0], from_attributes=True)
-        return message_read
+        messagetables = await aadd_messagetables([messagetable], session)
+        return MessageRead.model_validate(messagetables[0], from_attributes=True)
 
 
-@pytest.fixture()
-def created_messages(session):
-    with session_scope() as session:
+@pytest.fixture
+async def created_messages(session):  # noqa: ARG001
+    async with session_scope() as _session:
         messages = [
             MessageCreate(text="Test message 1", sender="User", sender_name="User", session_id="session_id2"),
             MessageCreate(text="Test message 2", sender="User", sender_name="User", session_id="session_id2"),
-            MessageCreate(text="Test message 3", sender="User", sender_name="User", session_id="session_id2"),
+            MessageCreate(text="Test message 3", sender="AI", sender_name="AI", session_id="session_id2"),
         ]
         messagetables = [MessageTable.model_validate(message, from_attributes=True) for message in messages]
-        message_list = add_messagetables(messagetables, session)
-
-        return message_list
+        return await aadd_messagetables(messagetables, _session)
 
 
 @pytest.mark.api_key_required
@@ -81,7 +78,8 @@ async def test_delete_messages_session(client: AsyncClient, created_messages, lo
 
 
 # Successfully update session ID for all messages with the old session ID
-async def test_successfully_update_session_id(client, session, logged_in_headers, created_messages):
+@pytest.mark.usefixtures("session")
+async def test_successfully_update_session_id(client, logged_in_headers, created_messages):
     old_session_id = "session_id2"
     new_session_id = "new_session_id"
 
@@ -102,12 +100,24 @@ async def test_successfully_update_session_id(client, session, logged_in_headers
     )
     assert response.status_code == 200
     assert len(response.json()) == len(created_messages)
-    for message in response.json():
+    messages = response.json()
+    for message in messages:
         assert message["session_id"] == new_session_id
+        response_timestamp = message["timestamp"]
+        timestamp = datetime.strptime(response_timestamp, "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
+        timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S %Z")
+        assert timestamp_str == response_timestamp
+
+    # Check if the messages ordered by timestamp are in the correct order
+    # User, User, AI
+    assert messages[0]["sender"] == "User"
+    assert messages[1]["sender"] == "User"
+    assert messages[2]["sender"] == "AI"
 
 
 # No messages found with the given session ID
-async def test_no_messages_found_with_given_session_id(client, session, logged_in_headers):
+@pytest.mark.usefixtures("session")
+async def test_no_messages_found_with_given_session_id(client, logged_in_headers):
     old_session_id = "non_existent_session_id"
     new_session_id = "new_session_id"
 

@@ -1,14 +1,6 @@
-import pytest
-
 from langflow.graph import Graph
 from langflow.initial_setup.setup import load_starter_projects
-from langflow.load import load_flow_from_json
-
-
-@pytest.fixture
-def client():
-    pass
-
+from langflow.load import aload_flow_from_json
 
 # TODO: UPDATE BASIC EXAMPLE
 # def test_load_flow_from_json():
@@ -26,10 +18,10 @@ def client():
 #     assert isinstance(loaded, Graph)
 
 
-def test_load_flow_from_json_object():
-    """Test loading a flow from a json file and applying tweaks"""
-    _, projects = zip(*load_starter_projects())
-    project = projects[0]
-    loaded = load_flow_from_json(project)
+async def test_load_flow_from_json_object():
+    """Test loading a flow from a json file and applying tweaks."""
+    result = await load_starter_projects()
+    project = result[0][1]
+    loaded = await aload_flow_from_json(project)
     assert loaded is not None
     assert isinstance(loaded, Graph)

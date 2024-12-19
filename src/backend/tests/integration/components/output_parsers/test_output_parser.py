@@ -1,13 +1,13 @@
 import os
-import pytest
 
-from langflow.components.models.OpenAIModel import OpenAIModelComponent
-from langflow.components.output_parsers.OutputParser import OutputParserComponent
-from langflow.components.prompts.Prompt import PromptComponent
+import pytest
+from langflow.components.helpers import OutputParserComponent
+from langflow.components.models import OpenAIModelComponent
+from langflow.components.prompts import PromptComponent
+
 from tests.integration.utils import ComponentInputHandle, run_single_component
 
 
-@pytest.mark.asyncio
 @pytest.mark.api_key_required
 async def test_csv_output_parser_openai():
     format_instructions = ComponentInputHandle(

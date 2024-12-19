@@ -12,13 +12,13 @@ from pydantic import (
 
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs.validators import CoalesceBool
-from langflow.schema.table import Column, TableSchema
+from langflow.schema.table import Column, TableOptions, TableSchema
 
 
 class FieldTypes(str, Enum):
     TEXT = "str"
     INTEGER = "int"
-    PASSWORD = "str"  # noqa: PIE796
+    PASSWORD = "str"  # noqa: PIE796, S105
     FLOAT = "float"
     BOOLEAN = "bool"
     DICT = "dict"
@@ -29,6 +29,7 @@ class FieldTypes(str, Enum):
     OTHER = "other"
     TABLE = "table"
     LINK = "link"
+    SLIDER = "slider"
 
 
 SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
@@ -105,6 +106,10 @@ class BaseInputMixin(BaseModel, validate_assignment=True):  # type: ignore[call-
         return dump
 
 
+class ToolModeMixin(BaseModel):
+    tool_mode: bool = False
+
+
 class InputTraceMixin(BaseModel):
     trace_as_input: bool = True
 
@@ -167,8 +172,21 @@ class LinkMixin(BaseModel):
     """Text to be displayed in the link."""
 
 
+class SliderMixin(BaseModel):
+    min_label: str = Field(default="")
+    max_label: str = Field(default="")
+    min_label_icon: str = Field(default="")
+    max_label_icon: str = Field(default="")
+    slider_buttons: bool = Field(default=False)
+    slider_buttons_options: list[str] = Field(default=[])
+    slider_input: bool = Field(default=False)
+
+
 class TableMixin(BaseModel):
     table_schema: TableSchema | list[Column] | None = None
+    trigger_text: str = Field(default="Open table")
+    trigger_icon: str = Field(default="Table")
+    table_options: TableOptions | None = None
 
     @field_validator("table_schema")
     @classmethod

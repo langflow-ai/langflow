@@ -8,7 +8,7 @@ from langflow.template import Output
 class AssistantsGetAssistantName(ComponentWithCache):
     display_name = "Get Assistant name"
     description = "Assistant by id"
-
+    icon = "AstraDB"
     inputs = [
         StrInput(
             name="assistant_id",
@@ -26,7 +26,7 @@ class AssistantsGetAssistantName(ComponentWithCache):
         Output(display_name="Assistant Name", name="assistant_name", method="process_inputs"),
     ]
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.client = get_patched_openai_client(self._shared_component_cache)
 

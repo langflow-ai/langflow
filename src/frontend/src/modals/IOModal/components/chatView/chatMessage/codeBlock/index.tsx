@@ -1,7 +1,7 @@
 import { IconCheck, IconClipboard, IconDownload } from "@tabler/icons-react";
 import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { tomorrow } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { programmingLanguages } from "../../../../../../constants/constants";
 import { Props } from "../../../../../../types/components";
 
@@ -61,7 +61,7 @@ export function CodeBlock({ language, value }: Props): JSX.Element {
       <SyntaxHighlighter
         className="overflow-auto"
         language={language}
-        style={oneDark}
+        style={tomorrow}
         customStyle={{ margin: 0 }}
       >
         {value}

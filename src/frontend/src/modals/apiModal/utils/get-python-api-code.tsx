@@ -12,6 +12,7 @@ export default function getPythonApiCode({
   flowId,
   tweaksBuildedObject,
   endpointName,
+  activeTweaks,
 }: GetCodeType): string {
   let tweaksString = "{}";
   if (tweaksBuildedObject)
@@ -61,7 +62,7 @@ def run_flow(message: str,
     api_url = f"{BASE_API_URL}/api/v1/run/{endpoint}"
 
     payload = {
-        "input_value": message,
+        ${!activeTweaks ? `"input_value": message,` : ""}
         "output_type": output_type,
         "input_type": input_type,
     }

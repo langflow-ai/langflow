@@ -1,23 +1,23 @@
 /* set the background color of many elements across the grid */
 .ag-theme-shadcn {
-  --ag-foreground-color: hsl(var(--foreground));
-  --ag-background-color: hsl(var(--background));
-  --ag-secondary-foreground-color: hsl(var(--secondary-foreground));
-  --ag-data-color: hsl(var(--foreground));
-  --ag-header-foreground-color: hsl(var(--muted-foreground));
-  --ag-header-background-color: hsl(var(--background));
-  --ag-tooltip-background-color: hsl(var(--muted));
-  --ag-disabled-foreground-color: hsl(var(--muted-foreground));
-  --ag-border-color: hsl(var(--border));
-  --ag-selected-row-background-color: hsl(var(--accent));
-  --ag-menu-background-color: hsl(var(--accent));
-  --ag-panel-background-color: hsl(var(--accent));
-  --ag-row-hover-color: hsl(var(--accent));
-  --ag-header-height: 2.5rem;
+  --ag-foreground-color: hsl(var(--foreground)) !important;
+  --ag-background-color: hsl(var(--background)) !important;
+  --ag-secondary-foreground-color: hsl(var(--secondary-foreground)) !important;
+  --ag-data-color: hsl(var(--foreground)) !important;
+  --ag-header-foreground-color: hsl(var(--muted-foreground)) !important;
+  --ag-header-background-color: hsl(var(--background)) !important;
+  --ag-tooltip-background-color: hsl(var(--muted)) !important;
+  --ag-disabled-foreground-color: hsl(var(--muted-foreground)) !important;
+  --ag-border-color: hsl(var(--border)) !important;
+  --ag-selected-row-background-color: hsl(var(--accent)) !important;
+  --ag-menu-background-color: hsl(var(--accent)) !important;
+  --ag-panel-background-color: hsl(var(--accent)) !important;
+  --ag-row-hover-color: hsl(var(--primary-foreground)) !important;
+  --ag-header-height: 2.5rem !important;
 }
 
 .ag-theme-shadcn .ag-paging-panel {
-  height: 3rem;
+  height: 3rem !important;
 }
 
 .ag-row .ag-cell {
@@ -68,7 +68,7 @@
 
 .ag-body-horizontal-scroll-viewport::-webkit-scrollbar-thumb:hover,
 .ag-body-vertical-scroll-viewport::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--ring));
+  background-color: hsl(var(--placeholder-foreground));
 }
 
 .ag-paging-page-size {

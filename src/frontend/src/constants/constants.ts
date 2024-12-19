@@ -651,28 +651,31 @@ export const LANGFLOW_SUPPORTED_TYPES = new Set([
   "NestedDict",
   "table",
   "link",
+  "slider",
 ]);
+
+export const FLEX_VIEW_TYPES = ["bool"];
 
 export const priorityFields = new Set(["code", "template"]);
 
 export const INPUT_TYPES = new Set([
   "ChatInput",
-  "TextInput",
-  "KeyPairInput",
-  "JsonInput",
-  "StringListInput",
+  // "TextInput",
+  // "KeyPairInput",
+  // "JsonInput",
+  // "StringListInput",
 ]);
 export const OUTPUT_TYPES = new Set([
   "ChatOutput",
-  "TextOutput",
-  "PDFOutput",
-  "ImageOutput",
-  "CSVOutput",
-  "JsonOutput",
-  "KeyPairOutput",
-  "StringListOutput",
-  "DataOutput",
-  "TableOutput",
+  // "TextOutput",
+  // "PDFOutput",
+  // "ImageOutput",
+  // "CSVOutput",
+  // "JsonOutput",
+  // "KeyPairOutput",
+  // "StringListOutput",
+  // "DataOutput",
+  // "TableOutput",
 ]);
 
 export const CHAT_FIRST_INITIAL_TEXT =
@@ -682,6 +685,9 @@ export const TOOLTIP_OUTDATED_NODE =
   "Your component is outdated. Click to update (data may be lost)";
 
 export const CHAT_SECOND_INITIAL_TEXT = "to inspect previous messages.";
+
+export const TOOLTIP_OPEN_HIDDEN_OUTPUTS = "Show hidden outputs";
+export const TOOLTIP_HIDDEN_OUTPUTS = "Hide outputs";
 
 export const ZERO_NOTIFICATIONS = "No new notifications";
 
@@ -734,6 +740,8 @@ export const BUNDLES_SIDEBAR_FOLDER_NAMES = [
   "Notion",
   "AssemblyAI",
   "assemblyai",
+  "LangWatch",
+  "langwatch",
 ];
 
 export const AUTHORIZED_DUPLICATE_REQUESTS = [
@@ -754,100 +762,139 @@ export const IS_MAC = navigator.userAgent.toUpperCase().includes("MAC");
 
 export const defaultShortcuts = [
   {
+    display_name: "Controls",
     name: "Advanced Settings",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + A`,
+    shortcut: "mod+shift+a",
   },
   {
+    display_name: "Search Components on Sidebar",
+    name: "Search Components Sidebar",
+    shortcut: "/",
+  },
+  {
+    display_name: "Minimize",
     name: "Minimize",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Q`,
+    shortcut: "mod+.",
   },
   {
+    display_name: "Code",
     name: "Code",
-    shortcut: `Space`,
+    shortcut: "space",
   },
   {
+    display_name: "Copy",
     name: "Copy",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + C`,
+    shortcut: "mod+c",
   },
   {
+    display_name: "Duplicate",
     name: "Duplicate",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + D`,
+    shortcut: "mod+d",
   },
   {
+    display_name: "Component Share",
     name: "Component Share",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + S`,
+    shortcut: "mod+shift+s",
   },
   {
+    display_name: "Docs",
     name: "Docs",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + D`,
+    shortcut: "mod+shift+d",
   },
   {
+    display_name: "Changes Save",
     name: "Changes Save",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + S`,
+    shortcut: "mod+s",
   },
   {
+    display_name: "Save Component",
     name: "Save Component",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Alt + S`,
+    shortcut: "mod+alt+s",
   },
   {
+    display_name: "Delete",
     name: "Delete",
-    shortcut: "Backspace",
+    shortcut: "backspace",
   },
   {
+    display_name: "Open playground",
     name: "Open playground",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + K`,
+    shortcut: "mod+k",
   },
   {
+    display_name: "Undo",
     name: "Undo",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Z`,
+    shortcut: "mod+z",
   },
   {
+    display_name: "Redo",
     name: "Redo",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Y`,
+    shortcut: "mod+y",
   },
   {
+    display_name: "Group",
     name: "Group",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + G`,
+    shortcut: "mod+g",
   },
   {
+    display_name: "Cut",
     name: "Cut",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + X`,
+    shortcut: "mod+x",
   },
   {
+    display_name: "Paste",
     name: "Paste",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + V`,
+    shortcut: "mod+v",
   },
   {
+    display_name: "API",
     name: "API",
-    shortcut: `R`,
+    shortcut: "r",
   },
   {
+    display_name: "Download",
     name: "Download",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + J`,
+    shortcut: "mod+j",
   },
   {
+    display_name: "Update",
     name: "Update",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + U`,
+    shortcut: "mod+u",
   },
   {
+    display_name: "Freeze",
     name: "Freeze",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + F`,
+    shortcut: "mod+f",
   },
   {
+    display_name: "Freeze Path",
     name: "Freeze Path",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + F`,
+    shortcut: "mod+shift+f",
   },
   {
+    display_name: "Flow Share",
     name: "Flow Share",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + B`,
+    shortcut: "mod+shift+b",
   },
   {
+    display_name: "Play",
     name: "Play",
-    shortcut: `P`,
+    shortcut: "p",
   },
   {
+    display_name: "Output Inspection",
     name: "Output Inspection",
-    shortcut: `O`,
+    shortcut: "o",
+  },
+  {
+    display_name: "Tool Mode",
+    name: "Tool Mode",
+    shortcut: "mod+shift+m",
+  },
+  {
+    display_name: "Toggle Sidebar",
+    name: "Toggle Sidebar",
+    shortcut: "mod+b",
   },
 ];
 
@@ -865,7 +912,7 @@ export const LOCATIONS_TO_RETURN = ["/flow/", "/settings/"];
 export const MAX_BATCH_SIZE = 50;
 
 export const MODAL_CLASSES =
-  "nopan nodelete nodrag  noflow fixed inset-0 bottom-0 left-0 right-0 top-0 z-50 overflow-auto bg-blur-shared backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0";
+  "nopan nodelete nodrag  noflow fixed inset-0 bottom-0 left-0 right-0 top-0 z-50 overflow-auto bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0";
 
 export const ALLOWED_IMAGE_INPUT_EXTENSIONS = ["png", "jpg", "jpeg"];
 
@@ -885,7 +932,7 @@ export const EMPTY_INPUT_SEND_MESSAGE = "No input message provided.";
 export const EMPTY_OUTPUT_SEND_MESSAGE = "Message empty.";
 
 export const TABS_ORDER = [
-  "run curl",
+  "curl",
   "python api",
   "js api",
   "python code",
@@ -902,10 +949,10 @@ export const LANGFLOW_ACCESS_TOKEN_EXPIRE_SECONDS_ENV =
   Number(process.env.ACCESS_TOKEN_EXPIRE_SECONDS) -
   Number(process.env.ACCESS_TOKEN_EXPIRE_SECONDS) * 0.1;
 export const TEXT_FIELD_TYPES: string[] = ["str", "SecretStr"];
-export const NODE_WIDTH = 400;
+export const NODE_WIDTH = 384;
 export const NODE_HEIGHT = NODE_WIDTH * 3;
 
-export const SHORTCUT_KEYS = ["cmd", "ctrl", "alt", "shift"];
+export const SHORTCUT_KEYS = ["cmd", "ctrl", "mod", "alt", "shift"];
 
 export const SERVER_HEALTH_INTERVAL = 10000;
 export const REFETCH_SERVER_HEALTH_INTERVAL = 20000;
@@ -920,20 +967,34 @@ export const NOTE_NODE_MAX_HEIGHT = 800;
 export const NOTE_NODE_MAX_WIDTH = 600;
 
 export const COLOR_OPTIONS = {
-  default: "var(--note-default)",
-  indigo: "var(--note-indigo)",
-  emerald: "var(--note-emerald)",
-  amber: "var(--note-amber)",
-  red: "var(--note-red)",
-};
-
-export const SHADOW_COLOR_OPTIONS = {
-  default: "var(--note-default-opacity)",
-  indigo: "var(--note-indigo-opacity)",
-  emerald: "var(--note-emerald-opacity)",
-  amber: "var(--note-amber-opacity)",
-  red: "var(--note-red-opacity)",
+  amber: "hsl(var(--note-amber))",
+  neutral: "hsl(var(--note-neutral))",
+  rose: "hsl(var(--note-rose))",
+  blue: "hsl(var(--note-blue))",
+  lime: "hsl(var(--note-lime))",
+  transparent: null,
 };
 
 export const maxSizeFilesInBytes = 10 * 1024 * 1024; // 10MB in bytes
 export const MAX_TEXT_LENGTH = 99999;
+
+export const SEARCH_TABS = ["All", "Flows", "Components"];
+export const PAGINATION_SIZE = 12;
+export const PAGINATION_PAGE = 1;
+
+export const STORE_PAGINATION_SIZE = 12;
+export const STORE_PAGINATION_PAGE = 1;
+
+export const PAGINATION_ROWS_COUNT = [12, 24, 48, 96];
+export const STORE_PAGINATION_ROWS_COUNT = [12, 24, 48, 96];
+
+export const GRADIENT_CLASS =
+  "linear-gradient(to right, hsl(var(--background) / 0.3), hsl(var(--background)))";
+
+export const RECEIVING_INPUT_VALUE = "Receiving input";
+
+export const ICON_STROKE_WIDTH = 1.25;
+
+export const DEFAULT_PLACEHOLDER = "Type something...";
+
+export const DEFAULT_TOOLSET_PLACEHOLDER = "Used as a tool";

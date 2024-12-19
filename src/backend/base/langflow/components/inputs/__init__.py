@@ -1,4 +1,4 @@
-from .ChatInput import ChatInput
-from .TextInput import TextInputComponent
+from .chat import ChatInput
+from .text import TextInputComponent
 
 __all__ = ["ChatInput", "TextInputComponent"]

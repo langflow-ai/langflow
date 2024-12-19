@@ -4,7 +4,7 @@ from langflow.services.state.service import InMemoryStateService
 
 
 class StateServiceFactory(ServiceFactory):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(InMemoryStateService)
 
     def create(self, settings_service: SettingsService):

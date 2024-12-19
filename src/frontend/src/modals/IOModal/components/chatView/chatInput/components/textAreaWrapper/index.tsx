@@ -35,10 +35,7 @@ const TextAreaWrapper = ({
       ? "form-modal-no-input bg-input"
       : "form-modal-lock-false bg-background";
 
-  const fileClass =
-    files.length > 0
-      ? "rounded-b-lg ring-0 focus:ring-0 focus:border-2 rounded-t-none border-t-0 border-border focus:border-t-0 focus:border-ring"
-      : "rounded-md border-t border-border focus:ring-0 focus:border-2 focus:border-ring";
+  const fileClass = files.length > 0 ? "!rounded-t-none border-t-0" : "";
 
   const additionalClassNames = "form-modal-lockchat pl-14";
 
@@ -53,7 +50,6 @@ const TextAreaWrapper = ({
       data-testid="input-chat-playground"
       onFocus={(e) => {
         setInputFocus(true);
-        e.target.style.borderTopWidth = "0";
       }}
       onBlur={() => setInputFocus(false)}
       onKeyDown={(event) => {

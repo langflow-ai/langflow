@@ -69,22 +69,24 @@ def flatten_list(list_of_lists: list[list | Any]) -> list:
 
 
 def serialize_field(value):
-    """Unified serialization function for handling both BaseModel and Document types,
-    including handling lists of these types."""
+    """Serialize field.
 
+    Unified serialization function for handling both BaseModel and Document types,
+    including handling lists of these types.
+    """
     if isinstance(value, list | tuple):
         return [serialize_field(v) for v in value]
     if isinstance(value, Document):
         return value.to_json()
     if isinstance(value, BaseModel):
-        return value.model_dump()
+        return serialize_field(value.model_dump())
+    if isinstance(value, dict):
+        return {k: serialize_field(v) for k, v in value.items()}
     if isinstance(value, V1BaseModel):
         if hasattr(value, "to_json"):
             return value.to_json()
         return value.dict()
-    if isinstance(value, str):
-        return {"result": value}
-    return value
+    return str(value)
 
 
 def get_artifact_type(value, build_result) -> str:
@@ -121,9 +123,7 @@ def post_process_raw(raw, artifact_type: str):
 
 
 def _vertex_to_primitive_dict(target: Vertex) -> dict:
-    """
-    Cleans the parameters of the target vertex.
-    """
+    """Cleans the parameters of the target vertex."""
     # Removes all keys that the values aren't python types like str, int, bool, etc.
     params = {
         key: value for key, value in target.params.items() if isinstance(value, str | int | bool | float | list | dict)
@@ -157,24 +157,26 @@ async def log_transaction(
             error=error,
             flow_id=flow_id if isinstance(flow_id, UUID) else UUID(flow_id),
         )
-        with session_getter(get_db_service()) as session:
-            inserted = crud_log_transaction(session, transaction)
+        async with session_getter(get_db_service()) as session:
+            inserted = await crud_log_transaction(session, transaction)
             logger.debug(f"Logged transaction: {inserted.id}")
     except Exception:  # noqa: BLE001
         logger.exception("Error logging transaction")
 
 
-def log_vertex_build(
+async def log_vertex_build(
+    *,
     flow_id: str,
     vertex_id: str,
     valid: bool,
     params: Any,
     data: ResultDataResponse,
     artifacts: dict | None = None,
-):
+) -> None:
     try:
         if not get_settings_service().settings.vertex_builds_storage_enabled:
             return
+
         vertex_build = VertexBuildBase(
             flow_id=flow_id,
             id=vertex_id,
@@ -185,8 +187,8 @@ def log_vertex_build(
             # ugly hack to get the model dump with weird datatypes
             artifacts=json.loads(json.dumps(artifacts, default=str)),
         )
-        with session_getter(get_db_service()) as session:
-            inserted = crud_log_vertex_build(session, vertex_build)
+        async with session_getter(get_db_service()) as session:
+            inserted = await crud_log_vertex_build(session, vertex_build)
             logger.debug(f"Logged vertex build: {inserted.build_id}")
     except Exception:  # noqa: BLE001
         logger.exception("Error logging vertex build")

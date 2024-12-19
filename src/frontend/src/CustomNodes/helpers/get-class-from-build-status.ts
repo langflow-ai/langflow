@@ -4,16 +4,14 @@ import { VertexBuildTypeAPI } from "../../types/api";
 export const getSpecificClassFromBuildStatus = (
   buildStatus: BuildStatus | undefined,
   validationStatus: VertexBuildTypeAPI | null,
-  isDark: boolean,
-) => {
+  isBuilding: boolean,
+): string => {
   let isInvalid = validationStatus && !validationStatus.valid;
-  if (
-    (buildStatus === BuildStatus.BUILT && isInvalid) ||
-    buildStatus === BuildStatus.ERROR
-  ) {
-    return isDark ? "built-invalid-status-dark" : "built-invalid-status";
-  } else if (buildStatus === BuildStatus.BUILDING) {
-    return "building-status";
+
+  if (BuildStatus.BUILDING === buildStatus) {
+    return "border-foreground border-[1px] ring-[0.75px] ring-foreground";
+  } else if ((isInvalid || buildStatus === BuildStatus.ERROR) && !isBuilding) {
+    return "border-destructive border-[1px] ring-[0.75px] ring-destructive";
   } else {
     return "";
   }

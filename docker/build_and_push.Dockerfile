@@ -24,6 +24,7 @@ RUN apt-get update \
     && apt-get install --no-install-recommends -y \
     # deps for building python deps
     build-essential \
+    git \
     # npm
     npm \
     # gcc
@@ -53,6 +54,7 @@ RUN --mount=type=cache,target=/root/.npm \
 WORKDIR /app
 ADD ./pyproject.toml /app/pyproject.toml
 ADD ./uv.lock /app/uv.lock
+ADD ./README.md /app/README.md
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-editable

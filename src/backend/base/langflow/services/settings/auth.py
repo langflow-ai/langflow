@@ -57,7 +57,7 @@ class AuthSettings(BaseSettings):
         extra = "ignore"
         env_prefix = "LANGFLOW_"
 
-    def reset_credentials(self):
+    def reset_credentials(self) -> None:
         self.SUPERUSER = DEFAULT_SUPERUSER
         self.SUPERUSER_PASSWORD = DEFAULT_SUPERUSER_PASSWORD
 
@@ -110,4 +110,4 @@ class AuthSettings(BaseSettings):
                 write_secret_to_file(secret_key_path, value)
                 logger.debug("Saved secret key")
 
-        return value if isinstance(value, SecretStr) else SecretStr(value)
+        return value if isinstance(value, SecretStr) else SecretStr(value).get_secret_value()

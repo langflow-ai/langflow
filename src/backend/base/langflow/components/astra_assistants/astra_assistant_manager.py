@@ -18,7 +18,7 @@ from langflow.template import Output
 class AstraAssistantManager(ComponentWithCache):
     display_name = "Astra Assistant Manager"
     description = "Manages Assistant Interactions"
-    icon = "bot"
+    icon = "AstraDB"
 
     inputs = [
         StrInput(
@@ -67,44 +67,44 @@ class AstraAssistantManager(ComponentWithCache):
         Output(display_name="Assistant Id", name="output_assistant_id", method="get_assistant_id"),
     ]
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.lock = asyncio.Lock()
-        self.initialized = False
-        self.assistant_response = None
-        self.tool_output = None
-        self.thread_id = None
-        self.assistant_id = None
+        self.initialized: bool = False
+        self._assistant_response: Message = None  # type: ignore[assignment]
+        self._tool_output: Message = None  # type: ignore[assignment]
+        self._thread_id: Message = None  # type: ignore[assignment]
+        self._assistant_id: Message = None  # type: ignore[assignment]
         self.client = get_patched_openai_client(self._shared_component_cache)
 
     async def get_assistant_response(self) -> Message:
         await self.initialize()
-        return self.assistant_response
+        return self._assistant_response
 
     async def get_tool_output(self) -> Message:
         await self.initialize()
-        return self.tool_output
+        return self._tool_output
 
     async def get_thread_id(self) -> Message:
         await self.initialize()
-        return self.thread_id
+        return self._thread_id
 
     async def get_assistant_id(self) -> Message:
         await self.initialize()
-        return self.assistant_id
+        return self._assistant_id
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         async with self.lock:
             if not self.initialized:
                 await self.process_inputs()
                 self.initialized = True
 
-    async def process_inputs(self):
+    async def process_inputs(self) -> None:
         logger.info(f"env_set is {self.env_set}")
         logger.info(self.tool)
         tools = []
         tool_obj = None
-        if self.tool is not None and self.tool != "":
+        if self.tool:
             tool_cls = tools_and_names[self.tool]
             tool_obj = tool_cls()
             tools.append(tool_obj)
@@ -126,10 +126,10 @@ class AstraAssistantManager(ComponentWithCache):
 
         content = self.user_message
         result = await assistant_manager.run_thread(content=content, tool=tool_obj)
-        self.assistant_response = Message(text=result["text"])
+        self._assistant_response = Message(text=result["text"])
         if "decision" in result:
-            self.tool_output = Message(text=str(result["decision"].is_complete))
+            self._tool_output = Message(text=str(result["decision"].is_complete))
         else:
-            self.tool_output = Message(text=result["text"])
-        self.thread_id = Message(text=assistant_manager.thread.id)
-        self.assistant_id = Message(text=assistant_manager.assistant.id)
+            self._tool_output = Message(text=result["text"])
+        self._thread_id = Message(text=assistant_manager.thread.id)
+        self._assistant_id = Message(text=assistant_manager.assistant.id)

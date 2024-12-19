@@ -1,13 +1,11 @@
-from .AmazonKendra import AmazonKendraRetrieverComponent
-from .MetalRetriever import MetalRetrieverComponent
-from .MultiQueryRetriever import MultiQueryRetrieverComponent
-from .VectaraSelfQueryRetriver import VectaraSelfQueryRetriverComponent
-from .VectorStoreRetriever import VectoStoreRetrieverComponent
+from .amazon_kendra import AmazonKendraRetrieverComponent
+from .metal import MetalRetrieverComponent
+from .multi_query import MultiQueryRetrieverComponent
+from .needle import NeedleRetriever
 
 __all__ = [
     "AmazonKendraRetrieverComponent",
     "MetalRetrieverComponent",
     "MultiQueryRetrieverComponent",
-    "VectaraSelfQueryRetriverComponent",
-    "VectoStoreRetrieverComponent",
+    "NeedleRetriever",
 ]

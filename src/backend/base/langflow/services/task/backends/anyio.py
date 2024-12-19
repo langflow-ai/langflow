@@ -9,11 +9,11 @@ from langflow.services.task.backends.base import TaskBackend
 
 
 class AnyIOTaskResult:
-    def __init__(self, scope):
+    def __init__(self, scope) -> None:
         self._scope = scope
         self._status = "PENDING"
         self._result = None
-        self._exception = None
+        self._exception: Exception | None = None
 
     @property
     def status(self) -> str:
@@ -34,7 +34,7 @@ class AnyIOTaskResult:
     def ready(self) -> bool:
         return self._status == "DONE"
 
-    async def run(self, func, *args, **kwargs):
+    async def run(self, func, *args, **kwargs) -> None:
         try:
             self._result = await func(*args, **kwargs)
         except Exception as e:  # noqa: BLE001
@@ -47,14 +47,13 @@ class AnyIOTaskResult:
 class AnyIOBackend(TaskBackend):
     name = "anyio"
 
-    def __init__(self):
-        self.tasks = {}
+    def __init__(self) -> None:
+        self.tasks: dict[str, AnyIOTaskResult] = {}
 
     async def launch_task(
         self, task_func: Callable[..., Any], *args: Any, **kwargs: Any
     ) -> tuple[str | None, AnyIOTaskResult | None]:
-        """
-        Launch a new task in an asynchronous manner.
+        """Launch a new task in an asynchronous manner.
 
         Parameters:
             task_func: The asynchronous function to run.
@@ -68,13 +67,14 @@ class AnyIOBackend(TaskBackend):
             try:
                 task_result = AnyIOTaskResult(tg)
                 tg.start_soon(task_result.run, task_func, *args, **kwargs)
-                task_id = str(id(task_result))
-                self.tasks[task_id] = task_result
-                logger.info(f"Task {task_id} started.")
-                return task_id, task_result
             except Exception:  # noqa: BLE001
                 logger.exception("An error occurred while launching the task")
                 return None, None
+
+            task_id = str(id(task_result))
+            self.tasks[task_id] = task_result
+            logger.info(f"Task {task_id} started.")
+            return task_id, task_result
 
     def get_task(self, task_id: str) -> Any:
         return self.tasks.get(task_id)

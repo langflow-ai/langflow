@@ -1,4 +1,5 @@
-from unittest.mock import MagicMock, patch
+import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from langflow.services.settings.constants import (
     DEFAULT_SUPERUSER,
@@ -91,7 +92,7 @@ from langflow.services.utils import teardown_superuser
 
 @patch("langflow.services.deps.get_settings_service")
 @patch("langflow.services.deps.get_session")
-def test_teardown_superuser_default_superuser(mock_get_session, mock_get_settings_service):
+async def test_teardown_superuser_default_superuser(mock_get_session, mock_get_settings_service):
     mock_settings_service = MagicMock()
     mock_settings_service.auth_settings.AUTO_LOGIN = True
     mock_settings_service.auth_settings.SUPERUSER = DEFAULT_SUPERUSER
@@ -104,29 +105,28 @@ def test_teardown_superuser_default_superuser(mock_get_session, mock_get_setting
     mock_session.query.return_value.filter.return_value.first.return_value = mock_user
     mock_get_session.return_value = iter([mock_session])
 
-    teardown_superuser(mock_settings_service, mock_session)
+    await teardown_superuser(mock_settings_service, mock_session)
 
     mock_session.query.assert_not_called()
 
 
-@patch("langflow.services.deps.get_settings_service")
-@patch("langflow.services.deps.get_session")
-def test_teardown_superuser_no_default_superuser(mock_get_session, mock_get_settings_service):
-    ADMIN_USER_NAME = "admin_user"
+async def test_teardown_superuser_no_default_superuser():
+    admin_user_name = "admin_user"
     mock_settings_service = MagicMock()
     mock_settings_service.auth_settings.AUTO_LOGIN = False
-    mock_settings_service.auth_settings.SUPERUSER = ADMIN_USER_NAME
-    mock_settings_service.auth_settings.SUPERUSER_PASSWORD = "password"
-    mock_get_settings_service.return_value = mock_settings_service
+    mock_settings_service.auth_settings.SUPERUSER = admin_user_name
+    mock_settings_service.auth_settings.SUPERUSER_PASSWORD = "password"  # noqa: S105
 
-    mock_session = MagicMock()
+    mock_session = AsyncMock(return_value=asyncio.Future())
     mock_user = MagicMock()
     mock_user.is_superuser = False
-    mock_session.query.return_value.filter.return_value.first.return_value = mock_user
-    mock_get_session.return_value = [mock_session]
+    mock_user.last_login_at = None
 
-    teardown_superuser(mock_settings_service, mock_session)
+    mock_result = MagicMock()
+    mock_result.first.return_value = mock_user
+    mock_session.exec.return_value = mock_result
 
-    mock_session.query.assert_not_called()
-    mock_session.delete.assert_not_called()
-    mock_session.commit.assert_not_called()
+    await teardown_superuser(mock_settings_service, mock_session)
+
+    mock_session.delete.assert_not_awaited()
+    mock_session.commit.assert_not_awaited()
