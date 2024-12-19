@@ -1,14 +1,21 @@
 import asyncio
 import copy
+import io
 import json
 import os
 import shutil
+import tempfile
+import uuid
+import zipfile
 from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime, timezone
+from pathlib import Path
+from typing import AnyStr
 from uuid import UUID
 
 import anyio
+import httpx
 import orjson
 from aiofile import async_open
 from emoji import demojize, purely_emoji
@@ -16,6 +23,7 @@ from loguru import logger
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBUTES, ORJSON_OPTIONS
 from langflow.initial_setup.constants import STARTER_FOLDER_DESCRIPTION, STARTER_FOLDER_NAME
@@ -549,66 +557,111 @@ async def load_flows_from_directory() -> None:
         if user is None:
             msg = "Superuser not found in the database"
             raise NoResultFound(msg)
-        user_id = user.id
-        flows_path_ = anyio.Path(flows_path)
-        files = [f async for f in flows_path_.iterdir() if await f.is_file()]
-        for file_path in files:
-            if file_path.suffix != ".json":
+        async for file_path in anyio.Path(flows_path).iterdir():
+            if not await file_path.is_file() or file_path.suffix != ".json":
                 continue
             logger.info(f"Loading flow from file: {file_path.name}")
             async with async_open(str(file_path), "r", encoding="utf-8") as f:
                 content = await f.read()
-            flow = orjson.loads(content)
-            no_json_name = file_path.stem
-            flow_endpoint_name = flow.get("endpoint_name")
-            if _is_valid_uuid(no_json_name):
-                flow["id"] = no_json_name
-            flow_id = flow.get("id")
+            await upsert_flow_from_file(content, file_path.stem, session, user.id)
 
-            if isinstance(flow_id, str):
-                try:
-                    flow_id = UUID(flow_id)
-                except ValueError:
-                    logger.error(f"Invalid UUID string: {flow_id}")
-                    return
 
-            existing = await find_existing_flow(session, flow_id, flow_endpoint_name)
-            if existing:
-                logger.debug(f"Found existing flow: {existing.name}")
-                logger.info(f"Updating existing flow: {flow_id} with endpoint name {flow_endpoint_name}")
-                for key, value in flow.items():
-                    if hasattr(existing, key):
-                        # flow dict from json and db representation are not 100% the same
-                        setattr(existing, key, value)
-                existing.updated_at = datetime.now(tz=timezone.utc).astimezone()
-                existing.user_id = user_id
+async def load_bundles_from_urls() -> tuple[list[tempfile.TemporaryDirectory], list[str]]:
+    component_paths: set[str] = set()
+    temp_dirs = []
+    settings_service = get_settings_service()
+    bundle_urls = settings_service.settings.bundle_urls
+    if not bundle_urls:
+        return [], []
+    if not settings_service.auth_settings.AUTO_LOGIN:
+        logger.warning("AUTO_LOGIN is disabled, not loading flows from URLs")
 
-                # Generally, folder_id should not be None, but we must check this due to the previous
-                # behavior where flows could be added and folder_id was None, orphaning
-                # them within Langflow.
-                if existing.folder_id is None:
-                    folder_id = await get_default_folder_id(session, user_id)
-                    existing.folder_id = folder_id
+    async with session_scope() as session:
+        user = await get_user_by_username(session, settings_service.auth_settings.SUPERUSER)
+        if user is None:
+            msg = "Superuser not found in the database"
+            raise NoResultFound(msg)
+        user_id = user.id
 
-                if isinstance(existing.id, str):
-                    try:
-                        existing.id = UUID(existing.id)
-                    except ValueError:
-                        logger.error(f"Invalid UUID string: {existing.id}")
-                        return
+        for url in bundle_urls:
+            async with httpx.AsyncClient(follow_redirects=True) as client:
+                response = await client.get(url)
+                response.raise_for_status()
 
-                session.add(existing)
-            else:
-                logger.info(f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}")
+            with zipfile.ZipFile(io.BytesIO(response.content)) as zfile:
+                dir_names = [f.filename for f in zfile.infolist() if f.is_dir() and "/" not in f.filename[:-1]]
+                temp_dir = None
+                for filename in zfile.namelist():
+                    path = Path(filename)
+                    for dir_name in dir_names:
+                        if (
+                            settings_service.auth_settings.AUTO_LOGIN
+                            and path.is_relative_to(f"{dir_name}flows/")
+                            and path.suffix == ".json"
+                        ):
+                            file_content = zfile.read(filename)
+                            await upsert_flow_from_file(file_content, path.stem, session, user_id)
+                        elif path.is_relative_to(f"{dir_name}components/"):
+                            if temp_dir is None:
+                                temp_dir = await asyncio.to_thread(tempfile.TemporaryDirectory)
+                                temp_dirs.append(temp_dir)
+                            component_paths.add(str(Path(temp_dir.name) / f"{dir_name}components"))
+                            await asyncio.to_thread(zfile.extract, filename, temp_dir.name)
 
-                # Current behavior loads all new flows into default folder
-                folder_id = await get_default_folder_id(session, user_id)
-                flow["user_id"] = user_id
-                flow["folder_id"] = folder_id
-                flow = Flow.model_validate(flow, from_attributes=True)
-                flow.updated_at = datetime.now(tz=timezone.utc).astimezone()
+    return temp_dirs, list(component_paths)
 
-                session.add(flow)
+
+async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: AsyncSession, user_id: UUID) -> None:
+    flow = orjson.loads(file_content)
+    flow_endpoint_name = flow.get("endpoint_name")
+    if _is_valid_uuid(filename):
+        flow["id"] = filename
+    flow_id = flow.get("id")
+
+    if isinstance(flow_id, str):
+        try:
+            flow_id = UUID(flow_id)
+        except ValueError:
+            logger.error(f"Invalid UUID string: {flow_id}")
+            return
+
+    existing = await find_existing_flow(session, flow_id, flow_endpoint_name)
+    if existing:
+        logger.debug(f"Found existing flow: {existing.name}")
+        logger.info(f"Updating existing flow: {flow_id} with endpoint name {flow_endpoint_name}")
+        for key, value in flow.items():
+            if hasattr(existing, key):
+                # flow dict from json and db representation are not 100% the same
+                setattr(existing, key, value)
+        existing.updated_at = datetime.now(tz=timezone.utc).astimezone()
+        existing.user_id = user_id
+
+        # Generally, folder_id should not be None, but we must check this due to the previous
+        # behavior where flows could be added and folder_id was None, orphaning
+        # them within Langflow.
+        if existing.folder_id is None:
+            folder_id = await get_default_folder_id(session, user_id)
+            existing.folder_id = folder_id
+
+        if isinstance(existing.id, str):
+            try:
+                existing.id = UUID(existing.id)
+            except ValueError:
+                logger.error(f"Invalid UUID string: {existing.id}")
+                return
+
+        session.add(existing)
+    else:
+        logger.info(f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}")
+
+        # Current behavior loads all new flows into default folder
+        folder_id = await get_default_folder_id(session, user_id)
+        flow["user_id"] = user_id
+        flow["folder_id"] = folder_id
+        flow = Flow.model_validate(flow, from_attributes=True)
+        flow.updated_at = datetime.now(tz=timezone.utc).astimezone()
+
+        session.add(flow)
 
 
 async def find_existing_flow(session, flow_id, flow_endpoint_name):
@@ -619,7 +672,8 @@ async def find_existing_flow(session, flow_id, flow_endpoint_name):
             logger.debug(f"Found existing flow by endpoint name: {existing.name}")
             return existing
 
-    stmt = select(Flow).where(Flow.id == flow_id)
+    flow_id_uuid = uuid.UUID(flow_id)
+    stmt = select(Flow).where(Flow.id == flow_id_uuid)
     if existing := (await session.exec(stmt)).first():
         logger.debug(f"Found existing flow by id: {flow_id}")
         return existing
