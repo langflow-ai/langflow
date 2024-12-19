@@ -27,5 +27,5 @@ export interface ColumnField {
   description?: string;
   disable_edit?: boolean;
   default?: any; // Add this line
-  edit_mode?: "modal" | "inline";
+  edit_mode?: "modal" | "inline" | "popover";
 }

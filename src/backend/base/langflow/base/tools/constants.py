@@ -20,7 +20,7 @@ TOOL_TABLE_SCHEMA = [
         "description": "Describe the purpose of the tool.",
         "sortable": False,
         "filterable": False,
-        "edit_mode": EditMode.INLINE,
+        "edit_mode": EditMode.POPOVER,
     },
     {
         "name": "tags",
@@ -37,4 +37,4 @@ TOOL_TABLE_SCHEMA = [
     },
 ]
 
-TOOLS_METADATA_INFO = "Use the table to configure the tools."
+TOOLS_METADATA_INFO = "Modify tool names and descriptions to help agents understand when to use each tool."

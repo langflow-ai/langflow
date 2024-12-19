@@ -526,7 +526,7 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       field: col.name,
       sortable: col.sortable,
       filter: col.filterable,
-      editable: !col.disable_edit,
+      cellClass: col.disable_edit ? "cell-disable-edit" : "",
       valueParser: (params: ValueParserParams) => {
         const { context, newValue, colDef } = params;
         if (
@@ -551,15 +551,17 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
         formatter: col.formatter,
       };
       if (col.formatter !== FormatterType.text || col.edit_mode !== "inline") {
-        newCol.cellRenderer = TableAutoCellRender;
-      } else {
-        newCol.wrapText = true;
-        newCol.autoHeight = true;
-        newCol.cellEditor = "agLargeTextCellEditor";
-        newCol.cellEditorPopup = true;
-        newCol.cellEditorParams = {
-          maxLength: 100000000,
-        };
+        if (col.edit_mode === "popover") {
+          newCol.wrapText = true;
+          newCol.autoHeight = true;
+          newCol.cellEditor = "agLargeTextCellEditor";
+          newCol.cellEditorPopup = true;
+          newCol.cellEditorParams = {
+            maxLength: 100000000,
+          };
+        } else {
+          newCol.cellRenderer = TableAutoCellRender;
+        }
       }
     }
     return newCol;
