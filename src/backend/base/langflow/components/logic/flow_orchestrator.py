@@ -10,6 +10,12 @@ from langflow.helpers.flow import get_flow_inputs
 from langflow.io import DropdownInput, Output
 from langflow.schema import Data, dotdict
 
+default_keys = [
+    "code",
+    "_type",
+    "flow_name_selected",
+]
+
 
 class FlowOrchestrator(Component):
     display_name = "Flow Orchestrator"
@@ -46,49 +52,81 @@ class FlowOrchestrator(Component):
         if field_name == "flow_name_selected":
             build_config["flow_name_selected"]["options"] = await self.get_flow_names()
 
-        # for key in list(build_config.keys()):
-        #     if key not in [x.name for x in self.inputs] + ["code", "_type", "get_final_results_only"]:
-        #         del build_config[key]
-        if field_value is not None and field_name == "flow_name_selected":
-            try:
-                flow_data = await self.get_flow(field_value)
-            except Exception:  # noqa: BLE001
-                logger.exception(f"Error getting flow {field_value}")
-            else:
-                if not flow_data:
-                    msg = f"Flow {field_value} not found."
-                    logger.error(msg)
+            # for key in list(build_config.keys()):
+            #     if key not in [x.name for x in self.inputs] + ["code", "_type", "get_final_results_only"]:
+            #         del build_config[key]
+            missing_keys = [key for key in default_keys if key not in build_config]
+            if missing_keys:
+                msg = f"Missing required keys in build_config: {missing_keys}"
+                raise ValueError(msg)
+            if field_value is not None:
+                try:
+                    flow_data = await self.get_flow(field_value)
+                except Exception:  # noqa: BLE001
+                    logger.exception(f"Error getting flow {field_value}")
                 else:
-                    try:
-                        graph = Graph.from_payload(flow_data.data["data"])
-                        # Get all inputs from the graph
-                        inputs = get_flow_inputs(graph)
-                        # Add inputs to the build config
-                        build_config = self.add_inputs_to_build_config(inputs, build_config)
-                    except Exception:  # noqa: BLE001
-                        logger.exception(f"Error building graph for flow {field_value}")
+                    if not flow_data:
+                        msg = f"Flow {field_value} not found."
+                        logger.error(msg)
+                    else:
+                        try:
+                            graph = Graph.from_payload(flow_data.data["data"])
+                            # Get all inputs from the graph
+                            inputs = get_flow_inputs(graph)
+                            # Add inputs to the build config
+                            new_fields = self.get_new_fields(inputs)
+                            old_fields = self.get_old_fields(build_config, new_fields)
+                            self.delete_fields(build_config, old_fields)
+                            build_config = self.add_new_fields(build_config, new_fields)
+
+                        except Exception:  # noqa: BLE001
+                            logger.exception(f"Error building graph for flow {field_value}")
 
         return build_config
 
-    def add_inputs_to_build_config(self, inputs_vertex: list[Vertex], build_config: dotdict):
+    def get_new_fields(self, inputs_vertex: list[Vertex]) -> list[dotdict]:
         new_fields: list[dotdict] = []
 
         for vertex in inputs_vertex:
-            new_vertex_inputs = []
-            field_template = vertex.data["node"]["template"]
-            for inp in field_template:
-                if inp not in {"code", "_type"}:
-                    field_template[inp]["display_name"] = (
-                        vertex.display_name + " - " + field_template[inp]["display_name"]
-                    )
-                    field_template[inp]["name"] = vertex.id + "|" + inp
-                    new_vertex_inputs.append(field_template[inp])
+            field_template = vertex.data.get("node", {}).get("template", {})
+            field_order = vertex.data.get("node", {}).get("field_order", [])
+            new_vertex_inputs = [
+                {
+                    **field_template[input_name],
+                    "display_name": vertex.display_name + " - " + field_template[input_name]["display_name"],
+                    "name": vertex.id + "|" + input_name,
+                    "tool_mode": bool(
+                        field_template[input_name].get("advanced", False)
+                        or field_template[input_name].get("tool_mode", True)
+                        or field_template[input_name].get("required", False)
+                    ),
+                }
+                for input_name in field_order
+            ]
             new_fields += new_vertex_inputs
+
+        return new_fields
+
+    def add_new_fields(self, build_config: dotdict, new_fields: list[dotdict]) -> dotdict:
+        """Add new fields to the build_config."""
         for field in new_fields:
             build_config[field["name"]] = field
         return build_config
 
+    def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:
+        """Delete specified fields from build_config."""
+        if isinstance(fields, dict):
+            fields = list(fields.keys())
+        for field in fields:
+            build_config.pop(field, None)
 
+    def get_old_fields(self, build_config: dotdict, new_fields: list[str]) -> list[str]:
+        """Get fields that are in build_config but not in new_fields."""
+        return [
+            field
+            for field in build_config
+            if field not in [new_field["name"] for new_field in new_fields] + default_keys
+        ]
 
     async def generate_results(self) -> list[Data]:
         tweaks: dict = {}
