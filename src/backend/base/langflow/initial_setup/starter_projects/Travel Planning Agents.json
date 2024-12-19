@@ -1477,7 +1477,7 @@
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
                 "input_types": [
-                  "BaseChatMessageHistory"
+                  "Memory"
                 ],
                 "list": false,
                 "name": "memory",
@@ -2053,7 +2053,7 @@
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
                 "input_types": [
-                  "BaseChatMessageHistory"
+                  "Memory"
                 ],
                 "list": false,
                 "name": "memory",
@@ -2629,7 +2629,7 @@
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
                 "input_types": [
-                  "BaseChatMessageHistory"
+                  "Memory"
                 ],
                 "list": false,
                 "name": "memory",
