@@ -1,0 +1,34 @@
+name: Codeflash
+
+on:
+  pull_request:
+    paths:
+      - "src/backend/base/langflow/**"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  optimize:
+    name: Optimize new Python code in this PR
+    if: ${{ github.actor != 'codeflash-ai[bot]' }}
+    runs-on: ubuntu-latest
+    env:
+      CODEFLASH_API_KEY: ${{ secrets.CODEFLASH_API_KEY }}
+      CODEFLASH_PR_NUMBER: ${{ github.event.number }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          python-version: "3.12"
+      - run: uv sync --extra dev
+      - name: Run Codeflash Optimizer
+        working-directory: ./src/backend/base
+        run: uv run codeflash
+      - name: Minimize uv cache
+        run: uv cache prune --ci

@@ -182,6 +182,7 @@ dev-dependencies = [
     "pytest-codspeed>=3.0.0",
     "blockbuster>=1.5.2,<1.6",
     "types-aiofiles>=24.1.0.20240626",
+    "codeflash>=0.8.4",
 ]
 
 
