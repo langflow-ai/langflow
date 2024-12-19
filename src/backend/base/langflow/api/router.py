@@ -1,5 +1,6 @@
 # Router for base api
 from fastapi import APIRouter
+from langflow.services.deps import get_settings_service
 
 from langflow.api.v1 import (
     api_key_router,
@@ -34,4 +35,6 @@ router.include_router(files_router)
 router.include_router(monitor_router)
 router.include_router(folders_router)
 router.include_router(starter_projects_router)
-router.include_router(mcp_router)
+
+if get_settings_service().settings.mcp_server_enabled:
+    router.include_router(mcp_router)

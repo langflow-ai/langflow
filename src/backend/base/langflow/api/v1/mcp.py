@@ -1,4 +1,6 @@
 import asyncio
+import base64
+from urllib.parse import quote, urlparse, unquote
 import json
 import logging
 import traceback
@@ -11,9 +13,8 @@ from anyio import BrokenResourceError
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from mcp import types
-from mcp.server import Server, NotificationOptions
+from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
-from pydantic import ValidationError
 from sqlmodel import select
 from starlette.background import BackgroundTasks
 
@@ -22,7 +23,8 @@ from langflow.api.v1.schemas import InputValueRequest
 from langflow.graph import Graph
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models import Flow, User
-from langflow.services.deps import get_db_service, get_session
+from langflow.services.deps import get_db_service, get_session, get_settings_service, get_storage_service
+from langflow.services.storage.utils import build_content_type_from_extension
 
 logger = logging.getLogger(__name__)
 if False:
@@ -41,6 +43,8 @@ if False:
         mcp_logger.addHandler(handler)
 
     logger.debug("MCP module loaded - debug logging enabled")
+
+enable_progress_notifications = get_settings_service().settings.mcp_server_enable_progress_notifications
 
 router = APIRouter(prefix="/mcp", tags=["mcp"])
 
@@ -98,7 +102,80 @@ async def handle_list_prompts():
 
 @server.list_resources()
 async def handle_list_resources():
-    return []
+    try:
+        session = await anext(get_session())
+        storage_service = get_storage_service()
+        settings_service = get_settings_service()
+
+        # Build full URL from settings
+        host = getattr(settings_service.settings, "holst", "localhost")
+        port = getattr(settings_service.settings, "port", 3000)
+
+        base_url = f"http://{host}:{port}".rstrip("/")
+
+        flows = (await session.exec(select(Flow))).all()
+        resources = []
+
+        for flow in flows:
+            if flow.id:
+                try:
+                    files = await storage_service.list_files(flow_id=str(flow.id))
+                    for file_name in files:
+                        # URL encode the filename
+                        safe_filename = quote(file_name)
+                        resource = types.Resource(
+                            uri=f"{base_url}/api/v1/files/{flow.id}/{safe_filename}",
+                            name=file_name,
+                            description=f"File in flow: {flow.name}",
+                            mimeType=build_content_type_from_extension(file_name),
+                        )
+                        resources.append(resource)
+                except Exception as e:
+                    logger.debug(f"Error listing files for flow {flow.id}: {e}")
+                    continue
+
+        return resources
+    except Exception as e:
+        logger.error(f"Error in listing resources: {e!s}")
+        trace = traceback.format_exc()
+        logger.error(trace)
+        raise
+
+
+@server.read_resource()
+async def handle_read_resource(uri: str) -> bytes:
+    """Handle resource read requests."""
+    try:
+        # Parse the URI properly
+        parsed_uri = urlparse(str(uri))
+        # Path will be like /api/v1/files/{flow_id}/{filename}
+        path_parts = parsed_uri.path.split("/")
+        # Remove empty strings from split
+        path_parts = [p for p in path_parts if p]
+
+        # The flow_id and filename should be the last two parts
+        if len(path_parts) < 2:
+            raise ValueError(f"Invalid URI format: {uri}")
+
+        flow_id = path_parts[-2]
+        filename = unquote(path_parts[-1])  # URL decode the filename
+
+        storage_service = get_storage_service()
+
+        # Read the file content
+        content = await storage_service.get_file(flow_id=flow_id, file_name=filename)
+        if not content:
+            raise ValueError(f"File {filename} not found in flow {flow_id}")
+
+        # Ensure content is base64 encoded
+        if isinstance(content, str):
+            content = content.encode()
+        return base64.b64encode(content)
+    except Exception as e:
+        logger.error(f"Error reading resource {uri}: {e!s}")
+        trace = traceback.format_exc()
+        logger.error(trace)
+        raise
 
 
 @server.list_tools()
@@ -160,8 +237,8 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
         for key, value in arguments.items():
             processed_inputs[key] = value
 
-        # Send initial progress notification
-        if progress_token := server.request_context.meta.progressToken:
+        # Initial progress notification
+        if enable_progress_notifications and (progress_token := server.request_context.meta.progressToken):
             await server.request_context.session.send_progress_notification(
                 progress_token=progress_token, progress=0.0, total=1.0
             )
@@ -172,7 +249,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
         )
 
         async def send_progress_updates():
-            if not (progress_token := server.request_context.meta.progressToken):
+            if not (enable_progress_notifications and server.request_context.meta.progressToken):
                 return
 
             try:
@@ -185,9 +262,10 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                     await asyncio.sleep(1.0)
             except asyncio.CancelledError:
                 # Send final 100% progress
-                await server.request_context.session.send_progress_notification(
-                    progress_token=progress_token, progress=1.0, total=1.0
-                )
+                if enable_progress_notifications:
+                    await server.request_context.session.send_progress_notification(
+                        progress_token=progress_token, progress=1.0, total=1.0
+                    )
                 raise
 
         db_service = get_db_service()
@@ -239,7 +317,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
     except Exception as e:
         context = server.request_context
         # Send error progress if there's an exception
-        if progress_token := context.meta.progressToken:
+        if enable_progress_notifications and (progress_token := context.meta.progressToken):
             await server.request_context.session.send_progress_notification(
                 progress_token=progress_token, progress=1.0, total=1.0
             )
