@@ -1,12 +1,22 @@
 ---
-title: Embedding Models
+title: Embeddings
 sidebar_position: 6
 slug: /components-embedding-models
 ---
 
-# Embedding Models
+# Embeddings models in Langflow
 
-Embeddings models are used to convert text into numerical vectors. These vectors can be used for various tasks such as similarity search, clustering, and classification.
+Embeddings models convert text into numerical vectors. These embeddings capture semantic meaning of the input text, and allow LLMs to understand context.
+
+Refer to your specific component's documentation for more information on parameters.
+
+## Use an embeddings model component in a flow
+
+In this example of a document ingestion pipeline, the **OpenAI** embeddings model is connected to a vector database. The component converts the text chunks into vectors and stores them in the vector database. The vectorized data can be used to inform AI workloads like chatbots, similarity searches, and agents.
+
+This embeddings component uses an OpenAI API key for authentication. Refer to your specific embeddings component's documentation for more information on authentication.
+
+![URL component in a data ingestion pipeline](/img/url-component.png)
 
 ## AI/ML
 
