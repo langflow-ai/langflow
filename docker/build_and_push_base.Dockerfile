@@ -37,7 +37,6 @@ RUN apt-get update \
 # We need to mount the root uv.lock and pyproject.toml to build the base with uv because we're still using uv workspaces
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
-    --mount=type=bind,source=src/backend/base/uv.lock,target=src/backend/base/uv.lock \
     --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=README.md,target=README.md \
@@ -59,7 +58,6 @@ WORKDIR /app/src/backend/base
 ADD ./pyproject.toml /app/pyproject.toml
 ADD ./uv.lock /app/uv.lock
 ADD ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
-ADD ./src/backend/base/uv.lock /app/src/backend/base/uv.lock
 ADD ./src/backend/base/README.md /app/src/backend/base/README.md
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable
