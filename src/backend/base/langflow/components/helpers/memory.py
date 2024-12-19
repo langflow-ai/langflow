@@ -18,7 +18,7 @@ class MemoryComponent(Component):
         HandleInput(
             name="memory",
             display_name="External Memory",
-            input_types=["BaseChatMessageHistory"],
+            input_types=["Memory"],
             info="Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
         ),
         DropdownInput(
