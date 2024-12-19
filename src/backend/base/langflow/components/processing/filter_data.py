@@ -53,7 +53,7 @@ class FilterDataComponent(Component):
             name="filtered_data",
             display_name="Filtered Data",
             description="The filtered data.",
-            output_types=["Data", "list[Data]"],
+            output_types=["Data"],
             method="process_data",
         ),
         Output(
@@ -155,7 +155,7 @@ class FilterDataComponent(Component):
         safe_chars = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.[]() +-*/<>=|,")
         return all(c in safe_chars for c in query) and len(query) < self.max_query_length
 
-    def process_data(self) -> Data | list[Data]:
+    def process_data(self) -> Data:
         """Process data and return as Data object or list of Data objects."""
         try:
             if not self.input_value:
