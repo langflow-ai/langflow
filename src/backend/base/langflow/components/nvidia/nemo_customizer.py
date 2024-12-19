@@ -325,16 +325,14 @@ class NVIDIANeMoCustomizerComponent(Component):
             await asyncio.gather(*tasks)
 
             logger.info("All data has been processed and uploaded successfully.")
-            return dataset_name
+        return dataset_name
 
         except Exception:
             logger.exception("An error occurred")
             return "An error occurred"
 
     async def upload_chunk(self, chunk_df, chunk_number, file_name_prefix, dataset_id, base_url):
-        """
-        Asynchronously uploads a chunk of data to the REST API.
-        """
+        """Asynchronously uploads a chunk of data to the REST API."""
         try:
             # Serialize the chunk DataFrame to JSONL format
             json_content = chunk_df.to_json(orient="records", lines=True)
@@ -345,17 +343,18 @@ class NVIDIANeMoCustomizerComponent(Component):
             url = f"{base_url}/datasets/{dataset_id}/files/contents/{filepath}"
 
             files = {"file": (file_name, file_in_memory, "application/json")}
-
+            logger.info(f"Chunk %s uploaded successfully!", chunk_number)
             async with httpx.AsyncClient() as client:
                 response = await client.post(url, files=files)
 
-            if response.status_code == 200:
-                logger.info(f"Chunk {chunk_number} uploaded successfully!")
+            HTTP_STATUS_OK = 200
+            if response.status_code == HTTP_STATUS_OK:
+                logger.info(f"Chunk %s uploaded successfully!", chunk_number)
             else:
-                logger.warning(f"Failed to upload chunk {chunk_number}. Status code: {response.status_code}")
+                logger.warning(f"Failed to upload chunk %s. Status code: %s", chunk_number, response.status_code)
                 logger.warning(response.text)
 
         except Exception:
-            logger.exception(f"An error occurred while uploading chunk {chunk_number}")
+            logger.exception(f"An error occurred while uploading chunk %s", chunk_number)
         finally:
             file_in_memory.close()
