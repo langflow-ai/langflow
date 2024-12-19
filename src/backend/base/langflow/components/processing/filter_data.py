@@ -161,7 +161,7 @@ class FilterDataComponent(Component):
     def _filter_by_columns(self, dataframe: pd.DataFrame) -> pd.DataFrame:
         """Filter DataFrame by selected columns."""
         if self.select_columns:
-            return dataframe[self.select_columns]
+            return dataframe[list(self.select_columns)]
         return dataframe
 
     def _is_safe_jq_query(self, query: str) -> bool:
