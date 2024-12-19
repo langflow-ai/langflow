@@ -15,7 +15,6 @@ class VectaraSelfQueryRetriverComponent(CustomComponent):
 
     display_name: str = "Vectara Self Query Retriever for Vectara Vector Store"
     description: str = "Implementation of Vectara Self Query Retriever"
-    documentation = "https://python.langchain.com/docs/integrations/retrievers/self_query/vectara_self_query"
     name = "VectaraSelfQueryRetriver"
     icon = "Vectara"
     legacy = True
@@ -60,7 +59,7 @@ class VectaraSelfQueryRetriverComponent(CustomComponent):
             metadata_field_obj.append(attribute_info)
 
         return cast(
-            Retriever,
+            "Retriever",
             SelfQueryRetriever.from_llm(
                 llm, vectorstore, document_content_description, metadata_field_obj, verbose=True
             ),

@@ -1,6 +1,6 @@
 import { useMutationFunctionType } from "@/types/api";
 import { UseMutationResult } from "@tanstack/react-query";
-import { ReactFlowJsonObject } from "reactflow";
+import { ReactFlowJsonObject } from "@xyflow/react";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -12,6 +12,7 @@ interface IPatchUpdateFlow {
   description: string;
   folder_id: string | null | undefined;
   endpoint_name: string | null | undefined;
+  locked?: boolean | null | undefined;
 }
 
 export const usePatchUpdateFlow: useMutationFunctionType<
@@ -27,6 +28,7 @@ export const usePatchUpdateFlow: useMutationFunctionType<
       description: payload.description,
       folder_id: payload.folder_id || null,
       endpoint_name: payload.endpoint_name || null,
+      locked: payload.locked || null,
     });
 
     return response.data;

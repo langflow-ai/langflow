@@ -10,7 +10,7 @@ import argparse
 import sys
 
 from huggingface_hub import HfApi, list_models  # Import required functions and classes from huggingface-hub.
-from rich import print  # Import print function from the rich library for enhanced output.
+from rich import print  # noqa: A004
 
 # Fetch and list all models available on the Hugging Face Hub.
 # This part is unrelated to restarting a space but demonstrates the usage of list_models.

@@ -88,11 +88,7 @@ class BaseFileComponent(Component, ABC):
                 text_preview = f"text_preview='{text_preview}'"
             else:
                 text_preview = f"{len(self.data)} data objects"
-            return (
-                f"BaseFile(path={self.path}"
-                f", delete_after_processing={self.delete_after_processing}"
-                f", {text_preview}"
-            )
+            return f"BaseFile(path={self.path}, delete_after_processing={self.delete_after_processing}, {text_preview}"
 
     # Subclasses can override these class variables
     VALID_EXTENSIONS: list[str] = []  # To be overridden by child classes
@@ -119,6 +115,7 @@ class BaseFileComponent(Component, ABC):
             fileTypes=[],  # Dynamically set in __init__
             info="",  # Dynamically set in __init__
             required=False,
+            value="",
         ),
         HandleInput(
             name="file_path",

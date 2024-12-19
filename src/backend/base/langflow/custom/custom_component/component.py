@@ -7,23 +7,31 @@ from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, get_type_hints
+from uuid import UUID
 
 import nanoid
 import yaml
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, ValidationError
 
-from langflow.base.tools.constants import TOOL_OUTPUT_DISPLAY_NAME, TOOL_OUTPUT_NAME
+from langflow.base.tools.constants import (
+    TOOL_OUTPUT_DISPLAY_NAME,
+    TOOL_OUTPUT_NAME,
+    TOOL_TABLE_SCHEMA,
+    TOOLS_METADATA_INFO,
+    TOOLS_METADATA_INPUT_NAME,
+)
 from langflow.custom.tree_visitor import RequiredInputsVisitor
 from langflow.exceptions.component import StreamingError
-from langflow.field_typing import Tool  # noqa: TCH001 Needed by _add_toolkit_output
+from langflow.field_typing import Tool  # noqa: TC001 Needed by _add_toolkit_output
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
-from langflow.memory import delete_message, store_message, update_messages
+from langflow.memory import astore_message, aupdate_messages, delete_message
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import ErrorMessage, Message
 from langflow.schema.properties import Source
+from langflow.schema.table import FieldParserType, TableOptions
 from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
@@ -39,7 +47,6 @@ if TYPE_CHECKING:
     from langflow.graph.edge.schema import EdgeData
     from langflow.graph.vertex.base import Vertex
     from langflow.inputs.inputs import InputTypes
-    from langflow.schema import dotdict
     from langflow.schema.log import LoggableType
 
 
@@ -86,16 +93,27 @@ class Component(CustomComponent):
     inputs: list[InputTypes] = []
     outputs: list[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
-    _output_logs: dict[str, list[Log]] = {}
-    _current_output: str = ""
-    _metadata: dict = {}
-    _ctx: dict = {}
-    _code: str | None = None
-    _logs: list[Log] = []
 
     def __init__(self, **kwargs) -> None:
-        # if key starts with _ it is a config
-        # else it is an input
+        # Initialize instance-specific attributes first
+        self._output_logs: dict[str, list[Log]] = {}
+        self._current_output: str = ""
+        self._metadata: dict = {}
+        self._ctx: dict = {}
+        self._code: str | None = None
+        self._logs: list[Log] = []
+
+        # Initialize component-specific collections
+        self._inputs: dict[str, InputTypes] = {}
+        self._outputs_map: dict[str, Output] = {}
+        self._results: dict[str, Any] = {}
+        self._attributes: dict[str, Any] = {}
+        self._edges: list[EdgeData] = []
+        self._components: list[Component] = []
+        self._event_manager: EventManager | None = None
+        self._state_model = None
+
+        # Process input kwargs
         inputs = {}
         config = {}
         for key, value in kwargs.items():
@@ -105,34 +123,35 @@ class Component(CustomComponent):
                 config[key[1:]] = value
             else:
                 inputs[key] = value
-        self._inputs: dict[str, InputTypes] = {}
-        self._outputs_map: dict[str, Output] = {}
-        self._results: dict[str, Any] = {}
-        self._attributes: dict[str, Any] = {}
+
         self._parameters = inputs or {}
-        self._edges: list[EdgeData] = []
-        self._components: list[Component] = []
-        self._current_output = ""
-        self._event_manager: EventManager | None = None
-        self._state_model = None
         self.set_attributes(self._parameters)
-        self._output_logs = {}
-        config = config or {}
-        if "_id" not in config:
-            config |= {"_id": f"{self.__class__.__name__}-{nanoid.generate(size=5)}"}
+
+        # Store original inputs and config for reference
         self.__inputs = inputs
-        self.__config = config
-        self._reset_all_output_values()
-        super().__init__(**config)
+        self.__config = config or {}
+
+        # Add unique ID if not provided
+        if "_id" not in self.__config:
+            self.__config |= {"_id": f"{self.__class__.__name__}-{nanoid.generate(size=5)}"}
+
+        # Initialize base class
+        super().__init__(**self.__config)
+
+        # Post-initialization setup
         if hasattr(self, "_trace_type"):
             self.trace_type = self._trace_type
         if not hasattr(self, "trace_type"):
             self.trace_type = "chain"
+
+        # Setup inputs and outputs
+        self._reset_all_output_values()
         if self.inputs is not None:
             self.map_inputs(self.inputs)
         if self.outputs is not None:
             self.map_outputs(self.outputs)
-        # Set output types
+
+        # Final setup
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
         self._set_output_required_inputs()
@@ -386,20 +405,17 @@ class Component(CustomComponent):
         self._validate_inputs(params)
         self._validate_outputs()
 
-    def update_inputs(
-        self,
-        build_config: dotdict,
-        field_value: Any,
-        field_name: str | None = None,
-    ):
-        return self.update_build_config(build_config, field_value, field_name)
-
     def run_and_validate_update_outputs(self, frontend_node: dict, field_name: str, field_value: Any):
         frontend_node = self.update_outputs(frontend_node, field_name, field_value)
         if field_name == "tool_mode" or frontend_node.get("tool_mode"):
             is_tool_mode = field_value or frontend_node.get("tool_mode")
             frontend_node["outputs"] = [self._build_tool_output()] if is_tool_mode else frontend_node["outputs"]
-
+            if is_tool_mode:
+                frontend_node.setdefault("template", {})
+                frontend_node["template"][TOOLS_METADATA_INPUT_NAME] = self._build_tools_metadata_input().to_dict()
+            elif "template" in frontend_node:
+                frontend_node["template"].pop(TOOLS_METADATA_INPUT_NAME, None)
+        self.tools_metadata = frontend_node.get("template", {}).get(TOOLS_METADATA_INPUT_NAME, {}).get("value")
         return self._validate_frontend_node(frontend_node)
 
     def _validate_frontend_node(self, frontend_node: dict):
@@ -407,20 +423,20 @@ class Component(CustomComponent):
         for index, output in enumerate(frontend_node["outputs"]):
             if isinstance(output, dict):
                 try:
-                    _output = Output(**output)
-                    self._set_output_return_type(_output)
-                    _output_dict = _output.model_dump()
+                    output_ = Output(**output)
+                    self._set_output_return_type(output_)
+                    output_dict = output_.model_dump()
                 except ValidationError as e:
                     msg = f"Invalid output: {e}"
                     raise ValueError(msg) from e
             elif isinstance(output, Output):
                 # we need to serialize it
                 self._set_output_return_type(output)
-                _output_dict = output.model_dump()
+                output_dict = output.model_dump()
             else:
                 msg = f"Invalid output type: {type(output)}"
                 raise TypeError(msg)
-            frontend_node["outputs"][index] = _output_dict
+            frontend_node["outputs"][index] = output_dict
         return frontend_node
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:  # noqa: ARG002
@@ -547,7 +563,7 @@ class Component(CustomComponent):
         return getattr(value, output.method)
 
     def _process_connection_or_parameter(self, key, value) -> None:
-        _input = self._get_or_create_input(key)
+        input_ = self._get_or_create_input(key)
         # We need to check if callable AND if it is a method from a class that inherits from Component
         if isinstance(value, Component):
             # We need to find the Output that can connect to an input of the current component
@@ -560,7 +576,7 @@ class Component(CustomComponent):
             except ValueError as e:
                 msg = f"Method {value.__name__} is not a valid output of {value.__self__.__class__.__name__}"
                 raise ValueError(msg) from e
-            self._connect_to_component(key, value, _input)
+            self._connect_to_component(key, value, input_)
         else:
             self._set_parameter_or_attribute(key, value)
 
@@ -579,18 +595,18 @@ class Component(CustomComponent):
         try:
             return self._inputs[key]
         except KeyError:
-            _input = self._get_fallback_input(name=key, display_name=key)
-            self._inputs[key] = _input
-            self.inputs.append(_input)
-            return _input
+            input_ = self._get_fallback_input(name=key, display_name=key)
+            self._inputs[key] = input_
+            self.inputs.append(input_)
+            return input_
 
-    def _connect_to_component(self, key, value, _input) -> None:
+    def _connect_to_component(self, key, value, input_) -> None:
         component = value.__self__
         self._components.append(component)
         output = component.get_output_by_method(value)
-        self._add_edge(component, key, output, _input)
+        self._add_edge(component, key, output, input_)
 
-    def _add_edge(self, component, key, output, _input) -> None:
+    def _add_edge(self, component, key, output, input_) -> None:
         self._edges.append(
             {
                 "source": component._id,
@@ -605,8 +621,8 @@ class Component(CustomComponent):
                     "targetHandle": {
                         "fieldName": key,
                         "id": self._id,
-                        "inputTypes": _input.input_types,
-                        "type": _input.field_type,
+                        "inputTypes": input_.input_types,
+                        "type": input_.field_type,
                     },
                 },
             }
@@ -615,10 +631,7 @@ class Component(CustomComponent):
     def _set_parameter_or_attribute(self, key, value) -> None:
         if isinstance(value, Component):
             methods = ", ".join([f"'{output.method}'" for output in value.outputs])
-            msg = (
-                f"You set {value.display_name} as value for `{key}`. "
-                f"You should pass one of the following: {methods}"
-            )
+            msg = f"You set {value.display_name} as value for `{key}`. You should pass one of the following: {methods}"
             raise TypeError(msg)
         self._set_input_value(key, value)
         self._parameters[key] = value
@@ -775,7 +788,7 @@ class Component(CustomComponent):
 
     def set_attributes(self, params: dict) -> None:
         self._validate_inputs(params)
-        _attributes = {}
+        attributes = {}
         for key, value in params.items():
             if key in self.__dict__ and value != getattr(self, key):
                 msg = (
@@ -783,11 +796,11 @@ class Component(CustomComponent):
                     f"that is a reserved word and cannot be used."
                 )
                 raise ValueError(msg)
-            _attributes[key] = value
+            attributes[key] = value
         for key, input_obj in self._inputs.items():
-            if key not in _attributes and key not in self._attributes:
-                _attributes[key] = input_obj.value or None
-        self._attributes.update(_attributes)
+            if key not in attributes and key not in self._attributes:
+                attributes[key] = input_obj.value or None
+        self._attributes.update(attributes)
 
     def _set_outputs(self, outputs: list[dict]) -> None:
         self.outputs = [Output(**output) for output in outputs]
@@ -816,10 +829,10 @@ class Component(CustomComponent):
         inputs = self.get_trace_as_inputs()
         metadata = self.get_trace_as_metadata()
         async with self._tracing_service.trace_context(self, self.trace_name, inputs, metadata):
-            _results, _artifacts = await self._build_results()
-            self._tracing_service.set_outputs(self.trace_name, _results)
+            results, artifacts = await self._build_results()
+            self._tracing_service.set_outputs(self.trace_name, results)
 
-        return _results, _artifacts
+        return results, artifacts
 
     async def _build_without_tracing(self):
         return await self._build_results()
@@ -837,7 +850,7 @@ class Component(CustomComponent):
                 return await self._build_with_tracing()
             return await self._build_without_tracing()
         except StreamingError as e:
-            self.send_error(
+            await self.send_error(
                 exception=e.cause,
                 session_id=session_id,
                 trace_name=getattr(self, "trace_name", None),
@@ -845,7 +858,7 @@ class Component(CustomComponent):
             )
             raise e.cause  # noqa: B904
         except Exception as e:
-            self.send_error(
+            await self.send_error(
                 exception=e,
                 session_id=session_id,
                 source=Source(id=self._id, display_name=self.display_name, source=self.display_name),
@@ -854,8 +867,8 @@ class Component(CustomComponent):
             raise
 
     async def _build_results(self) -> tuple[dict, dict]:
-        _results = {}
-        _artifacts = {}
+        results = {}
+        artifacts = {}
         if hasattr(self, "_pre_run_setup"):
             self._pre_run_setup()
         if hasattr(self, "outputs"):
@@ -875,7 +888,7 @@ class Component(CustomComponent):
                     self._current_output = output.name
                     method: Callable = getattr(self, output.method)
                     if output.cache and output.value != UNDEFINED:
-                        _results[output.name] = output.value
+                        results[output.name] = output.value
                         result = output.value
                     else:
                         # If the method is asynchronous, we need to await it
@@ -890,7 +903,7 @@ class Component(CustomComponent):
                             and self._vertex.graph.flow_id is not None
                         ):
                             result.set_flow_id(self._vertex.graph.flow_id)
-                        _results[output.name] = result
+                        results[output.name] = result
                         output.value = result
 
                     custom_repr = self.custom_repr()
@@ -917,15 +930,15 @@ class Component(CustomComponent):
                     artifact_type = get_artifact_type(artifact_value, result)
                     raw, artifact_type = post_process_raw(raw, artifact_type)
                     artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
-                    _artifacts[output.name] = artifact
+                    artifacts[output.name] = artifact
                     self._output_logs[output.name] = self._logs
                     self._logs = []
                     self._current_output = ""
-        self._artifacts = _artifacts
-        self._results = _results
+        self._artifacts = artifacts
+        self._results = results
         if self._tracing_service:
-            self._tracing_service.set_outputs(self.trace_name, _results)
-        return _results, _artifacts
+            self._tracing_service.set_outputs(self.trace_name, results)
+        return results, artifacts
 
     def custom_repr(self):
         if self.repr_value == "":
@@ -966,7 +979,10 @@ class Component(CustomComponent):
 
     def to_toolkit(self) -> list[Tool]:
         component_toolkit = _get_component_toolkit()
-        return component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
+        tools = component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
+        if hasattr(self, TOOLS_METADATA_INPUT_NAME):
+            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
+        return tools
 
     def get_project_name(self):
         if hasattr(self, "_tracing_service") and self._tracing_service:
@@ -1003,10 +1019,15 @@ class Component(CustomComponent):
                 )
             )
 
-    def send_message(self, message: Message, id_: str | None = None):
+    async def send_message(self, message: Message, id_: str | None = None):
         if (hasattr(self, "graph") and self.graph.session_id) and (message is not None and not message.session_id):
-            message.session_id = self.graph.session_id
-        stored_message = self._store_message(message)
+            session_id = (
+                UUID(self.graph.session_id) if isinstance(self.graph.session_id, str) else self.graph.session_id
+            )
+            message.session_id = session_id
+        if hasattr(message, "flow_id") and isinstance(message.flow_id, str):
+            message.flow_id = UUID(message.flow_id)
+        stored_message = await self._store_message(message)
 
         self._stored_message_id = stored_message.id
         try:
@@ -1016,41 +1037,48 @@ class Component(CustomComponent):
                 and message is not None
                 and isinstance(message.text, AsyncIterator | Iterator)
             ):
-                complete_message = self._stream_message(message.text, stored_message)
+                complete_message = await self._stream_message(message.text, stored_message)
                 stored_message.text = complete_message
-                stored_message = self._update_stored_message(stored_message)
+                stored_message = await self._update_stored_message(stored_message)
             else:
                 # Only send message event for non-streaming messages
-                self._send_message_event(stored_message, id_=id_)
+                await self._send_message_event(stored_message, id_=id_)
         except Exception:
             # remove the message from the database
-            delete_message(stored_message.id)
+            await delete_message(stored_message.id)
             raise
         self.status = stored_message
         return stored_message
 
-    def _store_message(self, message: Message) -> Message:
-        flow_id = self.graph.flow_id if hasattr(self, "graph") else None
-        messages = store_message(message, flow_id=flow_id)
-        if len(messages) != 1:
+    async def _store_message(self, message: Message) -> Message:
+        flow_id: str | None = None
+        if hasattr(self, "graph"):
+            # Convert UUID to str if needed
+            flow_id = str(self.graph.flow_id) if self.graph.flow_id else None
+        stored_messages = await astore_message(message, flow_id=flow_id)
+        if len(stored_messages) != 1:
             msg = "Only one message can be stored at a time."
             raise ValueError(msg)
+        stored_message = stored_messages[0]
+        return await Message.create(**stored_message.model_dump())
 
-        return messages[0]
-
-    def _send_message_event(self, message: Message, id_: str | None = None, category: str | None = None) -> None:
+    async def _send_message_event(self, message: Message, id_: str | None = None, category: str | None = None) -> None:
         if hasattr(self, "_event_manager") and self._event_manager:
             data_dict = message.data.copy() if hasattr(message, "data") else message.model_dump()
             if id_ and not data_dict.get("id"):
                 data_dict["id"] = id_
             category = category or data_dict.get("category", None)
-            match category:
-                case "error":
-                    self._event_manager.on_error(data=data_dict)
-                case "remove_message":
-                    self._event_manager.on_remove_message(data={"id": data_dict["id"]})
-                case _:
-                    self._event_manager.on_message(data=data_dict)
+
+            def _send_event():
+                match category:
+                    case "error":
+                        self._event_manager.on_error(data=data_dict)
+                    case "remove_message":
+                        self._event_manager.on_remove_message(data={"id": data_dict["id"]})
+                    case _:
+                        self._event_manager.on_message(data=data_dict)
+
+            await asyncio.to_thread(_send_event)
 
     def _should_stream_message(self, stored_message: Message, original_message: Message) -> bool:
         return bool(
@@ -1060,26 +1088,36 @@ class Component(CustomComponent):
             and not isinstance(original_message.text, str)
         )
 
-    def _update_stored_message(self, stored_message: Message) -> Message:
-        message_tables = update_messages(stored_message)
-        if len(message_tables) != 1:
-            msg = "Only one message can be updated at a time."
+    async def _update_stored_message(self, message: Message) -> Message:
+        """Update the stored message."""
+        if hasattr(self, "_vertex") and self._vertex is not None and hasattr(self._vertex, "graph"):
+            flow_id = (
+                UUID(self._vertex.graph.flow_id)
+                if isinstance(self._vertex.graph.flow_id, str)
+                else self._vertex.graph.flow_id
+            )
+
+            message.flow_id = flow_id
+
+        message_tables = await aupdate_messages(message)
+        if not message_tables:
+            msg = "Failed to update message"
             raise ValueError(msg)
         message_table = message_tables[0]
-        return Message(**message_table.model_dump())
+        return await Message.create(**message_table.model_dump())
 
-    def _stream_message(self, iterator: AsyncIterator | Iterator, message: Message) -> str:
+    async def _stream_message(self, iterator: AsyncIterator | Iterator, message: Message) -> str:
         if not isinstance(iterator, AsyncIterator | Iterator):
             msg = "The message must be an iterator or an async iterator."
             raise TypeError(msg)
 
         if isinstance(iterator, AsyncIterator):
-            return run_until_complete(self._handle_async_iterator(iterator, message.id, message))
+            return await self._handle_async_iterator(iterator, message.id, message)
         try:
             complete_message = ""
             first_chunk = True
             for chunk in iterator:
-                complete_message = self._process_chunk(
+                complete_message = await self._process_chunk(
                     chunk.content, complete_message, message.id, message, first_chunk=first_chunk
                 )
                 first_chunk = False
@@ -1092,13 +1130,13 @@ class Component(CustomComponent):
         complete_message = ""
         first_chunk = True
         async for chunk in iterator:
-            complete_message = self._process_chunk(
+            complete_message = await self._process_chunk(
                 chunk.content, complete_message, message_id, message, first_chunk=first_chunk
             )
             first_chunk = False
         return complete_message
 
-    def _process_chunk(
+    async def _process_chunk(
         self, chunk: str, complete_message: str, message_id: str, message: Message, *, first_chunk: bool = False
     ) -> str:
         complete_message += chunk
@@ -1107,16 +1145,17 @@ class Component(CustomComponent):
                 # Send the initial message only on the first chunk
                 msg_copy = message.model_copy()
                 msg_copy.text = complete_message
-                self._send_message_event(msg_copy, id_=message_id)
-            self._event_manager.on_token(
+                await self._send_message_event(msg_copy, id_=message_id)
+            await asyncio.to_thread(
+                self._event_manager.on_token,
                 data={
                     "chunk": chunk,
                     "id": str(message_id),
-                }
+                },
             )
         return complete_message
 
-    def send_error(
+    async def send_error(
         self,
         exception: Exception,
         session_id: str,
@@ -1132,11 +1171,48 @@ class Component(CustomComponent):
             trace_name=trace_name,
             source=source,
         )
-        self.send_message(error_message)
+        await self.send_message(error_message)
         return error_message
 
     def _append_tool_to_outputs_map(self):
         self._outputs_map[TOOL_OUTPUT_NAME] = self._build_tool_output()
+        # add a new input for the tool schema
+        # self.inputs.append(self._build_tool_schema())
 
     def _build_tool_output(self) -> Output:
         return Output(name=TOOL_OUTPUT_NAME, display_name=TOOL_OUTPUT_DISPLAY_NAME, method="to_toolkit", types=["Tool"])
+
+    def _build_tools_metadata_input(self):
+        tools = self.to_toolkit()
+        tool_data = (
+            self.tools_metadata
+            if hasattr(self, TOOLS_METADATA_INPUT_NAME)
+            else [{"name": tool.name, "description": tool.description, "tags": tool.tags} for tool in tools]
+        )
+        try:
+            from langflow.io import TableInput
+        except ImportError as e:
+            msg = "Failed to import TableInput from langflow.io"
+            raise ImportError(msg) from e
+
+        return TableInput(
+            name=TOOLS_METADATA_INPUT_NAME,
+            info=TOOLS_METADATA_INFO,
+            display_name="Toolset configuration",
+            real_time_refresh=True,
+            table_schema=TOOL_TABLE_SCHEMA,
+            value=tool_data,
+            trigger_icon="Hammer",
+            trigger_text="Open toolset",
+            table_options=TableOptions(
+                block_add=True,
+                block_delete=True,
+                block_edit=True,
+                block_sort=True,
+                block_filter=True,
+                block_hide=True,
+                block_select=True,
+                hide_options=True,
+                field_parsers={"name": FieldParserType.SNAKE_CASE},
+            ),
+        )
