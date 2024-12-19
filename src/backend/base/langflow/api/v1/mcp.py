@@ -184,25 +184,16 @@ async def handle_list_tools():
         session = await anext(get_session())
         flows = (await session.exec(select(Flow))).all()
         tools = []
-        name_count = {}  # Track name occurrences
 
         for flow in flows:
             if flow.user_id is None:
                 continue
-            # Generate unique name by appending _N if needed
-            base_name = flow.name
-            if base_name in name_count:
-                name_count[base_name] += 1
-                unique_name = f"{base_name}_{name_count[base_name]}"
-            else:
-                name_count[base_name] = 0
-                unique_name = base_name
 
             tool = types.Tool(
                 name=str(flow.id),  # Use flow.id instead of name
-                description=f"{unique_name}: {flow.description}"
+                description=f"{flow.name}: {flow.description}"
                 if flow.description
-                else f"Tool generated from flow: {unique_name}",
+                else f"Tool generated from flow: {flow.name}",
                 inputSchema=json_schema_from_flow(flow),
             )
             tools.append(tool)
@@ -385,5 +376,4 @@ async def handle_sse(request: Request, current_user: Annotated[User, Depends(get
 
 @router.post("/")
 async def handle_messages(request: Request, current_user: Annotated[User, Depends(get_current_active_user)]):
-    print(f"Handling message request {request}")
     await sse.handle_post_message(request.scope, request.receive, request._send)
