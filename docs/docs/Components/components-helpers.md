@@ -114,7 +114,7 @@ This component transforms LLM responses into structured data formats.
 | Name | Display Name | Info |
 |------|--------------|------|
 | llm | Language Model | The language model to use to generate the structured output. |
-| input_value | Input message | The input message to be processed by the language model. |
+| input_value | Input message | The input message for the language model to process. |
 | schema_name | Schema Name | Provide a name for the output data schema. |
 | output_schema | Output Schema | Define the structure and data types for the model's output. |
 | multiple | Generate Multiple | Set to True if the model should generate a list of outputs instead of a single output. |
