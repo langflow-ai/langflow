@@ -70,8 +70,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             ],
         },
     )
-    
-
 
     inputs = [
         SecretStrInput(
@@ -102,7 +100,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             options=["+ Create new collection"],
             value="+ Create new collection",
         ),
-        
         StrInput(
             name="collection_name_new",
             display_name="Collection Name",
