@@ -1,6 +1,4 @@
 import json
-import subprocess
-import tempfile
 from typing import Any, cast
 
 import jq
@@ -82,51 +80,36 @@ class FilterDataComponent(Component):
     def _apply_jq_query(self, data_str: str, jq_query: str) -> Any:
         """Apply JQ query to data string."""
         try:
-            # Create a temporary file to store the data
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".json") as temp_file:
-                temp_file.write(data_str)
-                temp_file.flush()
+            # Parse input data string to JSON
+            data = json.loads(data_str)
 
-                # Run JQ command with -c to get compact output
-                # Input is validated by _is_safe_jq_query to prevent command injection
-                command = ["jq", "-c", jq_query, temp_file.name]
-                # nosec B603 - Input is validated by _is_safe_jq_query
-                result = subprocess.check_output(
-                    command,
-                    text=True,
-                    stderr=subprocess.PIPE,
-                )
-                # Security: This subprocess call is safe because the input is validated by _is_safe_jq_query
+            # Apply JQ query using jq library
+            result = jq.compile(jq_query).input(data).first()
 
-                # Parse output
-                output_str = result.strip()
-                if not output_str:
-                    return None
+            if result is None:
+                return None
 
-                # If there are multiple lines, parse each line separately
-                if "\n" in output_str:
-                    results = []
-                    for line in output_str.split("\n"):
-                        try:
-                            results.append(json.loads(line))
-                        except json.JSONDecodeError:
-                            results.append(line)
-                    return results
+            # Handle primitive values from JQ query
+            if isinstance(result, int | float | str | bool):
+                return result
 
-                # Try to parse single line as JSON
-                try:
-                    return json.loads(output_str)
-                except json.JSONDecodeError:
-                    return output_str
+            # Handle array results from JQ query
+            if isinstance(result, list):
+                return result
 
-        except subprocess.CalledProcessError as e:
-            error_msg = f"Error running JQ query: {e!s}"
-            logger.error("Error running JQ command: %s", e)
+        except json.JSONDecodeError as e:
+            error_msg = f"Error parsing JSON data: {e!s}"
+            logger.error("Error parsing JSON data: %s", e)
+            raise ValueError(error_msg) from e
+        except ValueError as e:
+            error_msg = f"Error executing JQ query: {e!s}"
+            logger.error("Error executing JQ query: %s", e)
             raise ValueError(error_msg) from e
         except Exception as e:  # pylint: disable=broad-except
             error_msg = f"Error applying JQ query: {e!s}"
             logger.error("Error applying JQ query: %s", e)
             raise ValueError(error_msg) from e
+        return result
 
     def _apply_column_filter(self, data: Any, columns: list[str]) -> Any:
         """Filter data by specified columns."""
@@ -196,30 +179,25 @@ class FilterDataComponent(Component):
                     error_msg = f"Invalid or unsafe JQ query: {self.jq_query}"
                     raise ValueError(error_msg)
 
-                try:
-                    # Convert DataFrame to JSON string
-                    json_str = json.dumps(dataframe.to_dict(orient="records"))
+                # Convert DataFrame to JSON string
+                json_str = json.dumps(dataframe.to_dict(orient="records"))
 
-                    # Apply JQ query using jq library
-                    result = jq.compile(self.jq_query).input(json.loads(json_str)).first()
+                # Apply JQ query and get result
+                result = self._apply_jq_query(json_str, self.jq_query)
 
-                    if result is None:
-                        return None
+                if result is None:
+                    return None
 
-                    # Handle primitive values from JQ query
-                    if isinstance(result, int | float | str | bool):
-                        return Data(data=result)
-
-                    # Handle array results from JQ query with array operators
-                    if isinstance(result, list):
-                        return [Data(data=item) for item in result]
-
-                    # Handle object results from JQ query
+                # Handle primitive values from JQ query
+                if isinstance(result, int | float | str | bool):
                     return Data(data=result)
 
-                except ValueError as e:
-                    error_msg = f"Error executing JQ query: {e!s}"
-                    raise ValueError(error_msg) from e
+                # Handle array results from JQ query
+                if isinstance(result, list):
+                    return [Data(data=item) for item in result]
+
+                # Handle object results from JQ query
+                return Data(data=result)
 
             # Return filtered DataFrame as list of Data objects
             records = dataframe.to_dict(orient="records")
