@@ -221,35 +221,42 @@ export default function ShareModal({
           />
         </BaseModal.Header>
         <BaseModal.Content>
-          <div className="w-full rounded-lg border border-border p-4">
-            <EditFlowSettings name={name} description={description} />
-          </div>
-          <div className="mt-3 flex h-8 w-full">
-            <TagsSelector
-              tags={tags ?? []}
-              loadingTags={false}
-              disabled={false}
-              selectedTags={selectedTags}
-              setSelectedTags={setSelectedTags}
-            />
-          </div>
-          <div className="mb-2 mt-5 flex items-center space-x-2">
-            <Checkbox
-              id="public"
-              checked={sharePublic}
-              onCheckedChange={(event: boolean) => {
-                setSharePublic(event);
-              }}
-              data-testid="public-checkbox"
-            />
-            <label htmlFor="public" className="export-modal-save-api text-sm">
-              Set {nameComponent} status to public
-            </label>
-          </div>
-          <span className="text-xs text-destructive">
-            <b>Attention:</b> API keys in specified fields are automatically
-            removed upon sharing.
-          </span>
+          {open && (
+            <>
+              <div className="w-full rounded-lg border border-border p-4">
+                <EditFlowSettings name={name} description={description} />
+              </div>
+              <div className="mt-3 flex h-8 w-full">
+                <TagsSelector
+                  tags={tags ?? []}
+                  loadingTags={false}
+                  disabled={false}
+                  selectedTags={selectedTags}
+                  setSelectedTags={setSelectedTags}
+                />
+              </div>
+              <div className="mb-2 mt-5 flex items-center space-x-2">
+                <Checkbox
+                  id="public"
+                  checked={sharePublic}
+                  onCheckedChange={(event: boolean) => {
+                    setSharePublic(event);
+                  }}
+                  data-testid="public-checkbox"
+                />
+                <label
+                  htmlFor="public"
+                  className="export-modal-save-api text-sm"
+                >
+                  Set {nameComponent} status to public
+                </label>
+              </div>
+              <span className="text-xs text-destructive">
+                <b>Attention:</b> API keys in specified fields are automatically
+                removed upon sharing.
+              </span>
+            </>
+          )}
         </BaseModal.Content>
 
         <BaseModal.Footer
