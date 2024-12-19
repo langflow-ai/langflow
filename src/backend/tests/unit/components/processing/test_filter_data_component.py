@@ -1,23 +1,26 @@
 from typing import Any
 
 import pytest
-from langflow.components.processing import FilterDataComponent
-from langflow.schema import Data
-
 from tests.base import ComponentTestBaseWithoutClient
+from tests.integration.utils import build_component_instance_for_tests
 
 
 class TestFilterDataComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self):
-        return FilterDataComponent
+        # Instead of direct import, use the build_component_instance_for_tests
+        return build_component_instance_for_tests(
+            version="1.0.19",  # Use the latest version from file_names_mapping
+            module="processing",
+            file_name="filter_data",
+        ).__class__
 
     @pytest.fixture
     def file_names_mapping(self):
         return [
-            {"version": "1.0.17", "module": "helpers", "file_name": "FilterData"},
-            {"version": "1.0.18", "module": "helpers", "file_name": "FilterData"},
-            {"version": "1.0.19", "module": "helpers", "file_name": "FilterData"},
+            {"version": "1.0.17", "module": "processing", "file_name": "filter_data"},
+            {"version": "1.0.18", "module": "processing", "file_name": "filter_data"},
+            {"version": "1.0.19", "module": "processing", "file_name": "filter_data"},
         ]
 
     @pytest.fixture
