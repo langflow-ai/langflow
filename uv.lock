@@ -4035,6 +4035,7 @@ local = [
 dev = [
     { name = "asgi-lifespan" },
     { name = "blockbuster" },
+    { name = "codeflash" },
     { name = "dictdiffer" },
     { name = "httpx" },
     { name = "ipykernel" },
@@ -4173,6 +4174,7 @@ requires-dist = [
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
     { name = "blockbuster", specifier = ">=1.5.2,<1.6" },
+    { name = "codeflash", specifier = ">=0.8.4" },
     { name = "dictdiffer", specifier = ">=0.9.0" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "ipykernel", specifier = ">=6.29.0" },

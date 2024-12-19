@@ -6,6 +6,10 @@ on:
       - "src/backend/base/**" # TODO: add langflow/ to the path
   workflow_dispatch:
 
+#defaults:
+#  run:
+#    working-directory: "./src/backend/base"
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
