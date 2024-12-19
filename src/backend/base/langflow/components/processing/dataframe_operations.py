@@ -181,32 +181,32 @@ class DataFrameOperationsComponent(Component):
 
     # Existing methods
     def filter_rows_by_value(self, df: DataFrame) -> DataFrame:
-        return df[df[self.column_name] == self.filter_value]
+        return DataFrame(df[df[self.column_name] == self.filter_value])
 
     def sort_by_column(self, df: DataFrame) -> DataFrame:
-        return df.sort_values(by=self.column_name, ascending=self.ascending)
+        return DataFrame(df.sort_values(by=self.column_name, ascending=self.ascending))
 
     def drop_column(self, df: DataFrame) -> DataFrame:
-        return df.drop(columns=[self.column_name])
+        return DataFrame(df.drop(columns=[self.column_name]))
 
     def rename_column(self, df: DataFrame) -> DataFrame:
-        return df.rename(columns={self.column_name: self.new_column_name})
+        return DataFrame(df.rename(columns={self.column_name: self.new_column_name}))
 
     def add_column(self, df: DataFrame) -> DataFrame:
         df[self.new_column_name] = [self.new_column_value] * len(df)
-        return df
+        return DataFrame(df)
 
     def select_columns(self, df: DataFrame) -> DataFrame:
         columns = [col.strip() for col in self.columns_to_select]
-        return df[columns]
+        return DataFrame(df[columns])
 
     # New methods
     def head(self, df: DataFrame) -> DataFrame:
-        return df.head(self.num_rows)
+        return DataFrame(df.head(self.num_rows))
 
     def tail(self, df: DataFrame) -> DataFrame:
-        return df.tail(self.num_rows)
+        return DataFrame(df.tail(self.num_rows))
 
     def replace_values(self, df: DataFrame) -> DataFrame:
         df[self.column_name] = df[self.column_name].replace(self.replace_value, self.replacement_value)
-        return df
+        return DataFrame(df)
