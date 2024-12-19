@@ -18,14 +18,6 @@ class CalculatorToolComponent(LCToolComponent):
     icon = "calculator"
     name = "CalculatorTool"
 
-    operators = {
-        ast.Add: operator.add,
-        ast.Sub: operator.sub,
-        ast.Mult: operator.mul,
-        ast.Div: operator.truediv,
-        ast.Pow: operator.pow,
-    }
-
     inputs = [
         MessageTextInput(
             name="expression",
@@ -98,3 +90,13 @@ class CalculatorToolComponent(LCToolComponent):
             error_message = f"Error: {e}"
             self.status = error_message
             return [Data(data={"error": error_message, "input": expression})]
+
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        self.operators = {
+            ast.Add: operator.add,
+            ast.Sub: operator.sub,
+            ast.Mult: operator.mul,
+            ast.Div: operator.truediv,
+            ast.Pow: operator.pow,
+        }
