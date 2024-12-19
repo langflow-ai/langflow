@@ -75,6 +75,9 @@ class BaseInputMixin(BaseModel, validate_assignment=True):  # type: ignore[call-
     has_dialog: bool = False
     """Specifies if the field has a dialog extension. Defaults to False."""
 
+    dialog_input: list[Any] | None = None
+    """List of dialog inputs for the field. Default is an empty list."""
+
     info: str | None = ""
     """Additional information about the field to be shown in the tooltip. Defaults to an empty string."""
 
