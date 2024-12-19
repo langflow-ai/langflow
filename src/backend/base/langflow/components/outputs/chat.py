@@ -3,7 +3,11 @@ from langflow.inputs import BoolInput
 from langflow.io import DropdownInput, MessageInput, MessageTextInput, Output
 from langflow.schema.message import Message
 from langflow.schema.properties import Source
-from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_USER
+from langflow.utils.constants import (
+    MESSAGE_SENDER_AI,
+    MESSAGE_SENDER_NAME_AI,
+    MESSAGE_SENDER_USER,
+)
 
 
 class ChatOutput(ChatComponent):
@@ -11,6 +15,7 @@ class ChatOutput(ChatComponent):
     description = "Display a chat message in the Playground."
     icon = "MessagesSquare"
     name = "ChatOutput"
+    minimized = True
 
     inputs = [
         MessageInput(
