@@ -153,7 +153,6 @@ async def handle_list_tools():
         flows = (await session.exec(select(Flow))).all()
 
         for flow in flows:
-            tools = []
             if flow.user_id is None:
                 continue
 
@@ -224,7 +223,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
 
         db_service = get_db_service()
         collected_results = []
-        async with db_service.with_async_session() as async_session:
+        async with db_service.with_session() as async_session:
             try:
                 progress_task = asyncio.create_task(send_progress_updates())
 
