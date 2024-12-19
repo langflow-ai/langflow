@@ -142,7 +142,7 @@ class NVIDIANeMoCustomizerComponent(Component):
             self.log(error_msg)
             raise ValueError(error_msg) from exc
         except (httpx.RequestError, ValueError) as exc:
-            error_msg = "Error refreshing model names: %s" % str(exc)
+            error_msg = "Error refreshing model names: {}".format(str(exc))
             self.log(error_msg)
             raise ValueError(error_msg) from exc
 
@@ -198,13 +198,14 @@ class NVIDIANeMoCustomizerComponent(Component):
         except httpx.TimeoutException:
             error_msg = f"Request to {customizations_url} timed out"
             self.log(error_msg)
-            raise ValueError(error_msg) from exc
+            raise ValueError(error_msg)
 
 
         except httpx.HTTPStatusError as exc:
             status_code = exc.response.status_code
             response_content = exc.response.text
-            error_msg = f"HTTP error {status_code} on URL: {customizations_url}. Response content: {response_content}"
+            error_msg = "HTTP error %s on URL: %s. Response content: %s" % (
+            status_code, customizations_url, response_content)
             self.log(error_msg)
             raise ValueError(error_msg) from exc
 
@@ -215,22 +216,23 @@ class NVIDIANeMoCustomizerComponent(Component):
 
     def get_dataset_name(self, user_dataset_name=None):
         # Generate a default dataset name using the current date and time
-        default_name = f"dataset-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        default_name = f"dataset-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
 
         # Use the user-provided name if available, otherwise the default
-        dataset_name = user_dataset_name if user_dataset_name else default_name
-
-        return dataset_name
+        return user_dataset_name if user_dataset_name else default_name
 
     async def get_dataset_id(self, tenant_id: str, user_dataset_name: str) -> str:
         """Fetches the dataset ID by checking if a dataset with the constructed name exists.
+
         If the dataset does not exist, creates a new dataset and returns its ID.
 
         Args:
             tenant_id (str): The tenant ID.
+            user_dataset_name (str): The user-provided dataset name.
 
         Returns:
-            str: The dataset ID if found or created, or None if an error occurs."""
+            str: The dataset ID if found or created, or None if an error occurs.
+        """
 
         appender = self.get_dataset_name(user_dataset_name)
         tenant = tenant_id if tenant_id else "tenant"
@@ -273,7 +275,9 @@ class NVIDIANeMoCustomizerComponent(Component):
 
     async def process_and_upload_dataset(self) -> str:
         """Asynchronously processes and uploads the dataset to the API in chunks.
-        Returns the upload status."""
+
+        Returns the upload status.
+        """
 
         try:
             # Inputs
