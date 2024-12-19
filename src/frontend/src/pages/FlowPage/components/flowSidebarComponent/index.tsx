@@ -2,25 +2,14 @@ import Fuse from "fuse.js";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook"; // Import useHotkeys
 
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import {
-  Disclosure,
-  DisclosureContent,
-  DisclosureTrigger,
-} from "@/components/ui/disclosure";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useAddComponent } from "@/hooks/useAddComponent";
+import { useShortcutsStore } from "@/stores/shortcuts";
 import { useStoreStore } from "@/stores/storeStore";
 import { checkChatInput } from "@/utils/reactflowUtils";
 import {
@@ -34,12 +23,12 @@ import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
 import sensitiveSort from "../extraSidebarComponent/utils/sensitive-sort";
+import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
 import { CategoryGroup } from "./components/categoryGroup";
 import NoResultsMessage from "./components/emptySearchComponent";
 import MemoizedSidebarGroup from "./components/sidebarBundles";
 import SidebarMenuButtons from "./components/sidebarFooterButtons";
 import { SidebarHeaderComponent } from "./components/sidebarHeader";
-import SidebarItemsList from "./components/sidebarItemsList";
 import { applyBetaFilter } from "./helpers/apply-beta-filter";
 import { applyEdgeFilter } from "./helpers/apply-edge-filter";
 import { applyLegacyFilter } from "./helpers/apply-legacy-filter";
@@ -119,15 +108,6 @@ export function FlowSidebarComponent() {
     setFuse(new Fuse(fuseData, fuseOptions));
   }, [data]);
 
-  // Event handlers
-  const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    if (event.key === "/") {
-      event.preventDefault();
-      searchInputRef.current?.focus();
-      setOpen(true);
-    }
-  }, []);
-
   const handleKeyDownInput = (
     e: React.KeyboardEvent<HTMLDivElement>,
     name: string,
@@ -141,11 +121,6 @@ export function FlowSidebarComponent() {
       );
     }
   };
-
-  useEffect(() => {
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
 
   const [isInputFocused, setIsInputFocused] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -165,12 +140,22 @@ export function FlowSidebarComponent() {
 
   const { setOpen } = useSidebar();
 
-  useHotkeys("/", (event) => {
-    event.preventDefault();
-    searchInputRef.current?.focus();
+  const searchComponentsSidebar = useShortcutsStore(
+    (state) => state.searchComponentsSidebar,
+  );
 
-    setOpen(true);
-  });
+  useHotkeys(
+    searchComponentsSidebar,
+    (e: KeyboardEvent) => {
+      if (isWrappedWithClass(e, "noflow")) return;
+      e.preventDefault();
+      searchInputRef.current?.focus();
+      setOpen(true);
+    },
+    {
+      preventDefault: true,
+    },
+  );
 
   useHotkeys(
     "esc",
