@@ -109,7 +109,7 @@ class NVIDIANeMoCustomizerComponent(Component):
 
         try:
             if field_name == "model_name":
-                self.log(f"Refreshing model names from endpoint {models_url}", name="NeMoCustomizerComponent")
+                self.log(f"Refreshing model names from endpoint {models_url}", name="NVIDIANeMoCustomizerComponent")
 
                 async with httpx.AsyncClient(timeout=5.0) as client:
                     response = await client.get(models_url, headers=self.headers)
@@ -120,22 +120,22 @@ class NVIDIANeMoCustomizerComponent(Component):
 
                     build_config["model_name"]["options"] = model_names
 
-                    self.log("Updated model_name dropdown options.", name="NeMoCustomizerComponent")
+                    self.log("Updated model_name dropdown options.", name="NVIDIANeMoCustomizerComponent")
             return build_config
         except httpx.HTTPStatusError as exc:
             error_msg = f"HTTP error {exc.response.status_code} on {models_url}"
-            self.log(error_msg, name="NeMoCustomizerComponent")
+            self.log(error_msg, name="NVIDIANeMoCustomizerComponent")
             raise ValueError(error_msg)
         except Exception as exc:
             error_msg = f"Error refreshing model names: {str(exc)}"
-            self.log(error_msg, name="NeMoCustomizerComponent")
+            self.log(error_msg, name="NVIDIANeMoCustomizerComponent")
             raise ValueError(error_msg)
 
     async def customize(self) -> dict:
         dataset_name = self.dataset
         if self.training_data is not None:
             dataset_name = await self.process_and_upload_dataset()
-        self.log(f"dataset_name: {dataset_name}")
+        self.log(f"dataset_name: {dataset_name}", name="NVIDIANeMoCustomizerComponent")
         data = {
             "parent_model_id": self.model_name,
             "dataset": dataset_name,
@@ -152,7 +152,7 @@ class NVIDIANeMoCustomizerComponent(Component):
         try:
             formatted_data = json.dumps(data, indent=2)
 
-            self.log(f"Sending customization request to endpoint {customizations_url} with data: {formatted_data}", name="NeMoCustomizerComponent")
+            self.log(f"Sending customization request to endpoint {customizations_url} with data: {formatted_data}", name="NVIDIANeMoCustomizerComponent")
 
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.post(customizations_url, headers=self.headers, json=data)
@@ -160,7 +160,7 @@ class NVIDIANeMoCustomizerComponent(Component):
 
                 result = response.json()
                 formatted_result = json.dumps(result, indent=2)
-                self.log(f"Received successful response: {formatted_result}", name="NeMoCustomizerComponent")
+                self.log(f"Received successful response: {formatted_result}", name="NVIDIANeMoCustomizerComponent")
 
                 result_dict = {**result}
                 id = result_dict["id"]
@@ -169,19 +169,19 @@ class NVIDIANeMoCustomizerComponent(Component):
 
         except httpx.TimeoutException:
             error_msg = f"Request to {customizations_url} timed out"
-            self.log(error_msg, name="NeMoCustomizerComponent")
+            self.log(error_msg, name="NVIDIANeMoCustomizerComponent")
             raise ValueError(error_msg)
 
         except httpx.HTTPStatusError as exc:
             status_code = exc.response.status_code
             response_content = exc.response.text
             error_msg = f"HTTP error {status_code} on URL: {customizations_url}. Response content: {response_content}"
-            self.log(error_msg, name="NeMoCustomizerComponent")
+            self.log(error_msg, name="NVIDIANeMoCustomizerComponent")
             raise ValueError(error_msg)
 
         except Exception as exc:
             error_msg = f"An unexpected error occurred on URL {customizations_url}: {str(exc)}"
-            self.log(error_msg, name="NeMoCustomizerComponent")
+            self.log(error_msg, name="NVIDIANeMoCustomizerComponent")
             raise ValueError(error_msg)
 
     def get_dataset_name(self, user_dataset_name=None):
@@ -215,7 +215,7 @@ class NVIDIANeMoCustomizerComponent(Component):
                 while True:
                     response = await client.get(f"{url}?page_size=10&page={page}")
                     if response.status_code == 422:
-                        self.log(f"No more pages to fetch, page: {page}")
+                        self.log(f"No more pages to fetch, page: {page}", name="NVIDIANeMoCustomizerComponent")
                         break;
                     response.raise_for_status()
 
@@ -239,7 +239,7 @@ class NVIDIANeMoCustomizerComponent(Component):
                 return created_dataset.get("id")
 
         except httpx.HTTPStatusError as e:
-            self.log(f"Error processing datasets: {e}")
+            self.log(f"Error processing datasets: {e}", name="NVIDIANeMoCustomizerComponent")
             return None
 
     async def process_and_upload_dataset(self) -> str:
@@ -252,7 +252,7 @@ class NVIDIANeMoCustomizerComponent(Component):
             user_dataset_name = getattr(self, 'dataset', None)
             dataset_name = await self.get_dataset_id(self.tenant_id, user_dataset_name)
             chunk_size = 10000  # Ensure chunk_size is an integer
-            self.log(f"dataset_name : {dataset_name}")
+            self.log(f"dataset_name : {dataset_name}", name="NVIDIANeMoCustomizerComponent")
             if not dataset_name:
                 raise ValueError("dataset_name must be provided.")
 
@@ -266,7 +266,7 @@ class NVIDIANeMoCustomizerComponent(Component):
             for data_obj in self.training_data or []:
                 # Check if the object is an instance of Data
                 if not isinstance(data_obj, Data):
-                    self.log(f"Skipping non-Data object in training data, but got: {data_obj}")
+                    self.log(f"Skipping non-Data object in training data, but got: {data_obj}", name="NVIDIANeMoCustomizerComponent")
                     continue
 
                 # Extract only 'input' and 'completion' fields if present
@@ -296,11 +296,11 @@ class NVIDIANeMoCustomizerComponent(Component):
             # Await all upload tasks
             await asyncio.gather(*tasks)
 
-            logger.info("All data has been processed and uploaded successfully.")
+            logger.info("All data has been processed and uploaded successfully.", name="NVIDIANeMoCustomizerComponent")
             return dataset_name
 
         except Exception as e:
-            logger.error(f"An error occurred: {str(e)}")
+            logger.error(f"An error occurred: {str(e)}", name="NVIDIANeMoCustomizerComponent")
             return f"An error occurred: {str(e)}"
 
     async def upload_chunk(self, chunk_df, chunk_number, file_name_prefix, dataset_id, base_url):
@@ -322,12 +322,12 @@ class NVIDIANeMoCustomizerComponent(Component):
                 response = await client.post(url, files=files)
 
             if response.status_code == 200:
-                logger.info(f"Chunk {chunk_number} uploaded successfully!")
+                logger.info(f"Chunk {chunk_number} uploaded successfully!", name="NVIDIANeMoCustomizerComponent")
             else:
-                logger.warning(f"Failed to upload chunk {chunk_number}. Status code: {response.status_code}")
-                logger.warning(response.text)
+                logger.warning(f"Failed to upload chunk {chunk_number}. Status code: {response.status_code}", name="NVIDIANeMoCustomizerComponent")
+                logger.warning(response.text, name="NVIDIANeMoCustomizerComponent")
 
         except Exception as e:
-            logger.error(f"An error occurred while uploading chunk {chunk_number}: {str(e)}")
+            logger.error(f"An error occurred while uploading chunk {chunk_number}: {str(e)}", name="NVIDIANeMoCustomizerComponent")
         finally:
             file_in_memory.close()
