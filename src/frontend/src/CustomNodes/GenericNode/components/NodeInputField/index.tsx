@@ -7,8 +7,8 @@ import {
 } from "@/customization/components/custom-parameter";
 import { cn } from "@/utils/utils";
 import { useEffect, useRef } from "react";
-import { default as IconComponent } from "../../../../components/genericIconComponent";
-import ShadTooltip from "../../../../components/shadTooltipComponent";
+import { default as IconComponent } from "../../../../components/common/genericIconComponent";
+import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import {
   DEFAULT_TOOLSET_PLACEHOLDER,
   FLEX_VIEW_TYPES,
@@ -49,6 +49,7 @@ export default function NodeInputField({
     node: data.node!,
     nodeId: data.id,
     parameterId: name,
+    tool_mode: data.node!.tool_mode ?? false,
   });
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const { handleNodeClass } = useHandleNodeClass(data.id);

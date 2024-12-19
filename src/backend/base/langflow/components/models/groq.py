@@ -5,7 +5,6 @@ from typing_extensions import override
 from langflow.base.models.groq_constants import GROQ_MODELS
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.inputs.inputs import HandleInput
 from langflow.io import DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
 
 
@@ -51,13 +50,6 @@ class GroqModel(LCModelComponent):
             options=GROQ_MODELS,
             value="llama-3.1-8b-instant",
             refresh_button=True,
-        ),
-        HandleInput(
-            name="output_parser",
-            display_name="Output Parser",
-            info="The parser to use to parse the output of the model",
-            advanced=True,
-            input_types=["OutputParser"],
         ),
     ]
 

@@ -2,18 +2,19 @@ import { countHandlesFn } from "@/CustomNodes/helpers/count-handles";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
-import ToggleShadComponent from "@/components/parameterRenderComponent/components/toggleShadComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
+import ToggleShadComponent from "@/components/core/parameterRenderComponent/components/toggleShadComponent";
 import { Button } from "@/components/ui/button";
+import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import CodeAreaModal from "@/modals/codeAreaModal";
 import { APIClassType } from "@/types/api";
 import _, { cloneDeep } from "lodash";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useUpdateNodeInternals } from "reactflow";
-import IconComponent from "../../../../components/genericIconComponent";
-import ShadTooltip from "../../../../components/shadTooltipComponent";
+import IconComponent from "../../../../components/common/genericIconComponent";
 import {
   Select,
   SelectContentWithoutPortal,
@@ -32,6 +33,7 @@ import { useStoreStore } from "../../../../stores/storeStore";
 import { nodeToolbarPropsType } from "../../../../types/components";
 import { FlowType } from "../../../../types/flow";
 import {
+  checkHasToolMode,
   createFlowComponent,
   downloadNode,
   expandGroupNode,
@@ -71,8 +73,11 @@ export default function NodeToolbarComponent({
   const [openModal, setOpenModal] = useState(false);
   const isGroup = data.node?.flow ? true : false;
   const frozen = data.node?.frozen ?? false;
+  const currentFlow = useFlowStore((state) => state.currentFlow);
 
   const addFlow = useAddFlow();
+
+  const { mutate: patchUpdateFlow } = usePatchUpdateFlow();
 
   const isMinimal = countHandlesFn(data) <= 1 && numberOfOutputHandles <= 1;
   function activateToolMode() {
@@ -80,14 +85,33 @@ export default function NodeToolbarComponent({
     setToolMode(newValue);
 
     updateToolMode(data.id, newValue);
+    data.node!.tool_mode = newValue;
+
     mutateTemplate(
       newValue,
       data.node!,
       handleNodeClass,
       postToolModeValue,
-      setNoticeData,
+      setErrorData,
       "tool_mode",
+      () => {
+        const node = currentFlow?.data?.nodes.find(
+          (node) => node.id === data.id,
+        );
+        const index = currentFlow?.data?.nodes.indexOf(node!)!;
+        currentFlow!.data!.nodes[index]!.data.node.tool_mode = newValue;
+
+        patchUpdateFlow({
+          id: currentFlow?.id!,
+          name: currentFlow?.name!,
+          data: currentFlow?.data!,
+          description: currentFlow?.description!,
+          folder_id: currentFlow?.folder_id!,
+          endpoint_name: currentFlow?.endpoint_name!,
+        });
+      },
     );
+
     updateNodeInternals(data.id);
   }
   function minimize() {
@@ -145,9 +169,7 @@ export default function NodeToolbarComponent({
   }
   // Check if any of the data.node.template fields have tool_mode as True
   // if so we can show the tool mode button
-  const hasToolMode =
-    data.node?.template &&
-    Object.values(data.node.template).some((field) => field.tool_mode);
+  const hasToolMode = checkHasToolMode(data.node?.template ?? {});
 
   function openDocs() {
     if (data.node?.documentation) {
@@ -189,6 +211,7 @@ export default function NodeToolbarComponent({
     ungroup: handleungroup,
     minimizeFunction: minimize,
     activateToolMode: activateToolMode,
+    hasToolMode,
   });
 
   const paste = useFlowStore((state) => state.paste);
@@ -222,6 +245,7 @@ export default function NodeToolbarComponent({
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
 
   useEffect(() => {
     setFlowComponent(createFlowComponent(cloneDeep(data), version));
@@ -368,7 +392,30 @@ export default function NodeToolbarComponent({
     node: data.node!,
     nodeId: data.id,
     parameterId: "tool_mode",
+    tool_mode: data.node!.tool_mode ?? false,
   });
+
+  const handleConfirm = useCallback(() => {
+    addFlow({
+      flow: flowComponent,
+      override: true,
+    });
+    setSuccessData({ title: `${data.id} successfully overridden!` });
+    setShowOverrideModal(false);
+  }, [flowComponent, setSuccessData, setShowOverrideModal]);
+
+  const handleClose = useCallback(() => {
+    setShowOverrideModal(false);
+  }, []);
+
+  const handleCancel = useCallback(() => {
+    addFlow({
+      flow: flowComponent,
+      override: true,
+    });
+    setSuccessData({ title: "New component successfully saved!" });
+    setShowOverrideModal(false);
+  }, [flowComponent, setSuccessData, setShowOverrideModal]);
 
   return (
     <>
@@ -517,13 +564,13 @@ export default function NodeToolbarComponent({
           >
             <SelectTrigger className="w-62">
               <ShadTooltip content="Show More" side="top">
-                <div>
+                <div data-testid="more-options-modal">
                   <Button
                     className="node-toolbar-buttons h-[2rem] w-[2rem]"
                     variant="ghost"
                     onClick={handleButtonClick}
                     size="node-toolbar"
-                    data-testid="more-options-modal"
+                    asChild
                   >
                     <IconComponent name="MoreHorizontal" className="h-4 w-4" />
                   </Button>
@@ -729,29 +776,15 @@ export default function NodeToolbarComponent({
 
         <ConfirmationModal
           open={showOverrideModal}
-          title={`Replace`}
+          title="Replace"
+          onConfirm={handleConfirm}
+          onClose={handleClose}
+          onCancel={handleCancel}
           cancelText="Create New"
           confirmationText="Replace"
           size={"x-small"}
           icon={"SaveAll"}
           index={6}
-          onConfirm={() => {
-            addFlow({
-              flow: flowComponent,
-              override: true,
-            });
-            setSuccessData({ title: `${data.id} successfully overridden!` });
-            setShowOverrideModal(false);
-          }}
-          onClose={() => setShowOverrideModal(false)}
-          onCancel={() => {
-            addFlow({
-              flow: flowComponent,
-              override: true,
-            });
-            setSuccessData({ title: "New component successfully saved!" });
-            setShowOverrideModal(false);
-          }}
         >
           <ConfirmationModal.Content>
             <span>

@@ -1,95 +1,83 @@
 import { expect, Page, test } from "@playwright/test";
-import uaParser from "ua-parser-js";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 // TODO: This test might not be needed anymore
-test("user should interact with link component", async ({ context, page }) => {
-  await page.goto("/");
-  await page.waitForSelector('[data-testid="mainpage_title"]', {
-    timeout: 30000,
-  });
+test(
+  "user should interact with link component",
+  { tag: ["@release", "@workspace"] },
+  async ({ context, page }) => {
+    await awaitBootstrapTest(page);
 
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 30000,
-  });
+    await page.waitForSelector('[data-testid="blank-flow"]', {
+      timeout: 30000,
+    });
+    await page.getByTestId("blank-flow").click();
 
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
-    }
-  } catch (error) {
-    modalCount = 0;
-  }
-
-  while (modalCount === 0) {
-    await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
-
-  const getUA = await page.evaluate(() => navigator.userAgent);
-  const userAgentInfo = uaParser(getUA);
-
-  await page.waitForSelector('[data-testid="blank-flow"]', {
-    timeout: 30000,
-  });
-  await page.getByTestId("blank-flow").click();
-
-  await page.waitForTimeout(1000);
-
-  await page.getByTestId("sidebar-custom-component-button").click();
-  await page.getByTitle("fit view").click();
-  await page.getByTitle("zoom out").click();
-
-  await page.getByTestId("title-Custom Component").first().click();
-
-  await page.waitForTimeout(500);
-  await page.getByTestId("code-button-modal").click();
-  await page.waitForTimeout(500);
-
-  let cleanCode = await extractAndCleanCode(page);
-
-  // Use regex pattern to match the imports section more flexibly
-  cleanCode = updateComponentCode(cleanCode, {
-    imports: ["MessageTextInput", "Output", "LinkInput"],
-    inputs: [
+    await page.waitForSelector(
+      '[data-testid="sidebar-custom-component-button"]',
       {
-        name: "MessageTextInput",
-        config: {
-          name: "input_value",
-          display_name: "Input Value",
-          info: "This is a custom component Input",
-          value: "Hello, World!",
-          tool_mode: true,
-        },
+        timeout: 3000,
       },
-      {
-        name: "LinkInput",
-        config: {
-          name: "link",
-          display_name: "BUTTON",
-          value: "https://www.datastax.com",
-          text: "Click me",
+    );
+
+    await page.getByTestId("sidebar-custom-component-button").click();
+    await page.getByTitle("fit view").click();
+    await page.getByTitle("zoom out").click();
+
+    await page.getByTestId("title-Custom Component").first().click();
+
+    await page.waitForSelector('[data-testid="code-button-modal"]', {
+      timeout: 3000,
+    });
+
+    await page.getByTestId("code-button-modal").click();
+
+    let cleanCode = await extractAndCleanCode(page);
+
+    // Use regex pattern to match the imports section more flexibly
+    cleanCode = updateComponentCode(cleanCode, {
+      imports: ["MessageTextInput", "Output", "LinkInput"],
+      inputs: [
+        {
+          name: "MessageTextInput",
+          config: {
+            name: "input_value",
+            display_name: "Input Value",
+            info: "This is a custom component Input",
+            value: "Hello, World!",
+            tool_mode: true,
+          },
         },
-      },
-    ],
-  });
+        {
+          name: "LinkInput",
+          config: {
+            name: "link",
+            display_name: "BUTTON",
+            value: "https://www.datastax.com",
+            text: "Click me",
+          },
+        },
+      ],
+    });
 
-  await page.locator("textarea").last().press(`ControlOrMeta+a`);
-  await page.keyboard.press("Backspace");
-  await page.locator("textarea").last().fill(cleanCode);
-  await page.locator('//*[@id="checkAndSaveBtn"]').click();
-  await page.waitForTimeout(500);
+    await page.locator("textarea").last().press(`ControlOrMeta+a`);
+    await page.keyboard.press("Backspace");
+    await page.locator("textarea").last().fill(cleanCode);
+    await page.locator('//*[@id="checkAndSaveBtn"]').click();
 
-  await page.getByTestId("fit_view").click();
-  await page.getByTestId("zoom_out").click();
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 3000,
+    });
 
-  expect(await page.getByText("BUTTON").isVisible()).toBeTruthy();
-  expect(await page.getByText("Click me").isVisible()).toBeTruthy();
-  expect(await page.getByTestId("link_link_link")).toBeEnabled();
-  await page.getByTestId("link_link_link").click();
-});
+    await page.getByTestId("fit_view").click();
+    await page.getByTestId("zoom_out").click();
+
+    expect(await page.getByText("BUTTON").isVisible()).toBeTruthy();
+    expect(await page.getByText("Click me").isVisible()).toBeTruthy();
+    expect(await page.getByTestId("link_link_link")).toBeEnabled();
+    await page.getByTestId("link_link_link").click();
+  },
+);
 
 async function extractAndCleanCode(page: Page): Promise<string> {
   const outerHTML = await page

@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from langflow.api.utils import AsyncDbSession, CurrentActiveUser, DbSession
+from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import UsersResponse
 from langflow.services.auth.utils import (
     get_current_active_superuser,
@@ -25,7 +25,7 @@ router = APIRouter(tags=["Users"], prefix="/users")
 @router.post("/", response_model=UserRead, status_code=201)
 async def add_user(
     user: UserCreate,
-    session: AsyncDbSession,
+    session: DbSession,
 ) -> User:
     """Add a new user to the database."""
     new_user = User.model_validate(user, from_attributes=True)
@@ -58,7 +58,7 @@ async def read_all_users(
     *,
     skip: int = 0,
     limit: int = 10,
-    session: AsyncDbSession,
+    session: DbSession,
 ) -> UsersResponse:
     """Retrieve a list of users from the database with pagination."""
     query: SelectOfScalar = select(User).offset(skip).limit(limit)
@@ -78,7 +78,7 @@ async def patch_user(
     user_id: UUID,
     user_update: UserUpdate,
     user: CurrentActiveUser,
-    session: AsyncDbSession,
+    session: DbSession,
 ) -> User:
     """Update an existing user's data."""
     update_password = bool(user_update.password)
@@ -105,7 +105,7 @@ async def reset_password(
     user_id: UUID,
     user_update: UserUpdate,
     user: CurrentActiveUser,
-    session: AsyncDbSession,
+    session: DbSession,
 ) -> User:
     """Reset a user's password."""
     if user_id != user.id:
@@ -135,11 +135,12 @@ async def delete_user(
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Permission denied")
 
-    user_db = session.exec(select(User).where(User.id == user_id)).first()
+    stmt = select(User).where(User.id == user_id)
+    user_db = (await session.exec(stmt)).first()
     if not user_db:
         raise HTTPException(status_code=404, detail="User not found")
 
-    session.delete(user_db)
-    session.commit()
+    await session.delete(user_db)
+    await session.commit()
 
     return {"detail": "User deleted"}

@@ -54,6 +54,24 @@ class Data(BaseModel):
         """
         return self.data.get(self.text_key, self.default_value)
 
+    def set_text(self, text: str | None) -> str:
+        r"""Sets the text value in the data dictionary.
+
+        The object's `text` value is set to `text parameter as given, with the following modifications:
+
+         - `text` value of `None` is converted to an empty string.
+         - `text` value is converted to `str` type.
+
+        Args:
+            text (str): The text to be set in the data dictionary.
+
+        Returns:
+            str: The text value that was set in the data dictionary.
+        """
+        new_text = "" if text is None else str(text)
+        self.data[self.text_key] = new_text
+        return new_text
+
     @classmethod
     def from_document(cls, document: Document) -> "Data":
         """Converts a Document to a Data.
@@ -79,7 +97,7 @@ class Data(BaseModel):
             Data: The converted Data.
         """
         data: dict = {"text": message.content}
-        data["metadata"] = cast(dict, message.to_json())
+        data["metadata"] = cast("dict", message.to_json())
         return cls(data=data, text_key="text")
 
     def __add__(self, other: "Data") -> "Data":
@@ -112,7 +130,9 @@ class Data(BaseModel):
         """
         data_copy = self.data.copy()
         text = data_copy.pop(self.text_key, self.default_value)
-        return Document(page_content=text, metadata=data_copy)
+        if isinstance(text, str):
+            return Document(page_content=text, metadata=data_copy)
+        return Document(page_content=str(text), metadata=data_copy)
 
     def to_lc_message(
         self,
@@ -204,7 +224,7 @@ class Data(BaseModel):
     def __contains__(self, key) -> bool:
         return key in self.data
 
-    def __eq__(self, other):
+    def __eq__(self, /, other):
         return isinstance(other, Data) and self.data == other.data
 
 

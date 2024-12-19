@@ -7,7 +7,6 @@ from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs import DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
-from langflow.inputs.inputs import HandleInput
 
 
 class AIMLModelComponent(LCModelComponent):
@@ -49,18 +48,11 @@ class AIMLModelComponent(LCModelComponent):
             value="AIML_API_KEY",
         ),
         FloatInput(name="temperature", display_name="Temperature", value=0.1),
-        HandleInput(
-            name="output_parser",
-            display_name="Output Parser",
-            info="The parser to use to parse the output of the model",
-            advanced=True,
-            input_types=["OutputParser"],
-        ),
     ]
 
     @override
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
-        if field_name in ("api_key", "aiml_api_base", "model_name"):
+        if field_name in {"api_key", "aiml_api_base", "model_name"}:
             aiml = AimlModels()
             aiml.get_aiml_models()
             build_config["model_name"]["options"] = aiml.chat_models

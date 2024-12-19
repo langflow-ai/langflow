@@ -1,9 +1,9 @@
 import Fuse from "fuse.js";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook"; // Import useHotkeys
 
-import ForwardedIconComponent from "@/components/genericIconComponent";
-import ShadTooltip from "@/components/shadTooltipComponent";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import {
   Disclosure,
@@ -156,8 +156,11 @@ export function FlowSidebarComponent() {
   }, [search, getFilterEdge]);
 
   const hasResults = useMemo(() => {
-    return Object.values(dataFilter).some(
-      (category) => Object.keys(category).length > 0,
+    return Object.entries(dataFilter).some(
+      ([category, items]) =>
+        Object.keys(items).length > 0 &&
+        (CATEGORIES.find((c) => c.name === category) ||
+          BUNDLES.find((b) => b.name === category)),
     );
   }, [dataFilter]);
   const [sortedCategories, setSortedCategories] = useState<string[]>([]);
@@ -191,13 +194,13 @@ export function FlowSidebarComponent() {
         setSortedCategories(
           Object.keys(filteredData)
             .filter(
-              (category) => Object.keys(filteredData[category]).length > 0,
+              (category) =>
+                Object.keys(filteredData[category]).length > 0 &&
+                (CATEGORIES.find((c) => c.name === category) ||
+                  BUNDLES.find((b) => b.name === category)),
             )
-            .toSorted(
-              (a, b) =>
-                fuseCategories.findIndex((value) => value === a) ??
-                0 - fuseCategories.findIndex((value) => value === b) ??
-                0,
+            .toSorted((a, b) =>
+              fuseCategories.indexOf(b) < fuseCategories.indexOf(a) ? 1 : -1,
             ),
         );
       }
@@ -286,6 +289,27 @@ export function FlowSidebarComponent() {
   const nodes = useFlowStore((state) => state.nodes);
   const chatInputAdded = checkChatInput(nodes);
 
+  const handleInputFocus = useCallback(
+    (event: React.FocusEvent<HTMLInputElement>) => {
+      setIsInputFocused(true);
+    },
+    [],
+  );
+
+  const handleInputBlur = useCallback(
+    (event: React.FocusEvent<HTMLInputElement>) => {
+      setIsInputFocused(false);
+    },
+    [],
+  );
+
+  const handleInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      handleSearchInput(event.target.value);
+    },
+    [],
+  );
+
   return (
     <Sidebar
       collapsible="offcanvas"
@@ -336,10 +360,10 @@ export function FlowSidebarComponent() {
             data-testid="sidebar-search-input"
             className="w-full rounded-lg bg-background pl-8 text-sm"
             placeholder=""
-            onFocus={() => setIsInputFocused(true)}
-            onBlur={() => setIsInputFocused(false)}
+            onFocus={handleInputFocus}
+            onBlur={handleInputBlur}
+            onChange={handleInputChange}
             value={search}
-            onChange={(e) => handleSearchInput(e.target.value)}
           />
           {!isInputFocused && search === "" && (
             <div className="pointer-events-none absolute inset-y-0 left-8 top-1/2 flex w-4/5 -translate-y-1/2 items-center justify-between gap-2 text-sm text-muted-foreground">

@@ -1,3 +1,4 @@
+import os
 from typing import Any
 
 from astrapy import Collection, DataAPIClient, Database
@@ -10,7 +11,7 @@ from langflow.schema import Data
 
 
 class AstraDBToolComponent(LCToolComponent):
-    display_name: str = "Astra DB"
+    display_name: str = "Astra DB Tool"
     description: str = "Create a tool to get transactional data from DataStax Astra DB Collection"
     documentation: str = "https://docs.langflow.org/Components/components-tools#astra-db-tool"
     icon: str = "AstraDB"
@@ -48,9 +49,9 @@ class AstraDBToolComponent(LCToolComponent):
             value="ASTRA_DB_APPLICATION_TOKEN",
             required=True,
         ),
-        StrInput(
+        SecretStrInput(
             name="api_endpoint",
-            display_name="API Endpoint",
+            display_name="Database" if os.getenv("ASTRA_ENHANCED", "false").lower() == "true" else "API Endpoint",
             info="API endpoint URL for the Astra DB service.",
             value="ASTRA_DB_API_ENDPOINT",
             required=True,
@@ -93,9 +94,9 @@ class AstraDBToolComponent(LCToolComponent):
         if self._cached_collection:
             return self._cached_collection
 
-        _cached_client = DataAPIClient(self.token)
-        _cached_db = _cached_client.get_database(self.api_endpoint, namespace=self.namespace)
-        self._cached_collection = _cached_db.get_collection(self.collection_name)
+        cached_client = DataAPIClient(self.token)
+        cached_db = cached_client.get_database(self.api_endpoint, namespace=self.namespace)
+        self._cached_collection = cached_db.get_collection(self.collection_name)
         return self._cached_collection
 
     def create_args_schema(self) -> dict[str, BaseModel]:

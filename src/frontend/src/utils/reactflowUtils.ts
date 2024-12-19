@@ -413,6 +413,7 @@ export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
   return Object.keys(template).reduce((errors: Array<string>, t) => {
     if (
       template[t].required &&
+      !(template[t].tool_mode && node?.data?.node?.tool_mode) &&
       template[t].show &&
       (template[t].value === undefined ||
         template[t].value === null ||
@@ -1658,7 +1659,6 @@ export function updateGroupRecursion(
     updateEdgesIds(flowEdges, idsMap);
   }
 }
-
 export function updateGlobalVariables(
   node: APIClassType | undefined,
   unavailableFields:
@@ -1735,4 +1735,8 @@ export function someFlowTemplateFields(
       return validateFn((node.data.node?.template ?? {})[field]);
     });
   });
+}
+
+export function checkHasToolMode(template: APITemplateType) {
+  return template && Object.values(template).some((field) => field.tool_mode);
 }

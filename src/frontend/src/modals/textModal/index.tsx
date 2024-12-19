@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import JsonView from "react18-json-view";
 import "react18-json-view/src/dark.css";
 import "react18-json-view/src/style.css";
-import IconComponent from "../../components/genericIconComponent";
+import IconComponent from "../../components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
 import {
   CODE_DICT_DIALOG_SUBTITLE,
@@ -70,9 +70,6 @@ export default function TextModal({
               Save
             </Button>
           )}
-          <Button className="flex gap-2 px-3" onClick={() => setOpen(false)}>
-            Close
-          </Button>
         </div>
       </BaseModal.Footer>
     </BaseModal>

@@ -1,4 +1,4 @@
-import { ForwardedIconComponent } from "@/components/genericIconComponent";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { processNodeAdvancedFields } from "@/CustomNodes/helpers/process-node-advanced-fields";
@@ -116,7 +116,7 @@ export default function UpdateAllComponents() {
         />
         <span>
           {componentsToUpdate.length} component
-          {componentsToUpdate.length > 1 ? "s" : ""} are ready to update
+          {componentsToUpdate.length > 1 ? "s are" : " is"} ready to update
         </span>
       </div>
       <div className="flex items-center gap-4">
@@ -136,6 +136,7 @@ export default function UpdateAllComponents() {
           className="shrink-0"
           onClick={handleUpdateAllComponents}
           loading={loadingUpdate}
+          data-testid="update-all-button"
         >
           Update All
         </Button>

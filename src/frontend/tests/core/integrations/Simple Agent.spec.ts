@@ -1,98 +1,44 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
-import uaParser from "ua-parser-js";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
-test("Simple Agent", async ({ page }) => {
-  test.skip(
-    !process?.env?.OPENAI_API_KEY,
-    "OPENAI_API_KEY required to run this test",
-  );
+test(
+  "Simple Agent",
+  { tag: ["@release", "@starter-project"] },
+  async ({ page }) => {
+    test.skip(
+      !process?.env?.OPENAI_API_KEY,
 
-  if (!process.env.CI) {
-    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-  }
+      "OPENAI_API_KEY required to run this test",
+    );
 
-  await page.goto("/");
-  await page.waitForSelector('[data-testid="mainpage_title"]', {
-    timeout: 30000,
-  });
-
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 30000,
-  });
-
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
+    if (!process.env.CI) {
+      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
-  } catch (error) {
-    modalCount = 0;
-  }
 
-  while (modalCount === 0) {
-    await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
+    await awaitBootstrapTest(page);
 
-  const getUA = await page.evaluate(() => navigator.userAgent);
-  const userAgentInfo = uaParser(getUA);
+    await page.getByTestId("side_nav_options_all-templates").click();
+    await page.getByRole("heading", { name: "Simple Agent" }).first().click();
+    await initialGPTsetup(page);
 
-  await page.getByTestId("side_nav_options_all-templates").click();
-  await page.getByRole("heading", { name: "Simple Agent" }).first().click();
+    await page.getByTestId("button_run_chat output").last().click();
 
-  await page.waitForSelector('[data-testid="fit_view"]', {
-    timeout: 100000,
-  });
+    await page.waitForSelector("text=built successfully", {
+      timeout: 10000 * 60 * 3,
+    });
 
-  await page.getByTestId("fit_view").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
-  await page.getByTestId("zoom_out").click();
+    await page.getByTestId("playground-btn-flow-io").click();
 
-  let outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
+    const textContents = await page
+      .getByTestId("div-chat-message")
+      .allTextContents();
 
-  while (outdatedComponents > 0) {
-    await page.getByTestId("icon-AlertTriangle").first().click();
-    await page.waitForTimeout(1000);
-    outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
-  }
+    const concatAllText = textContents.join(" ").toLowerCase();
 
-  let filledApiKey = await page.getByTestId("remove-icon-badge").count();
-  while (filledApiKey > 0) {
-    await page.getByTestId("remove-icon-badge").first().click();
-    await page.waitForTimeout(1000);
-    filledApiKey = await page.getByTestId("remove-icon-badge").count();
-  }
-
-  await page
-    .getByTestId("popover-anchor-input-api_key")
-    .fill(process.env.OPENAI_API_KEY ?? "");
-
-  await page.getByTestId("fit_view").click();
-
-  await page.getByTestId("dropdown_str_model_name").click();
-  await page.getByTestId("gpt-4o-1-option").click();
-
-  await page.waitForTimeout(500);
-
-  await page.getByTestId("button_run_chat output").last().click();
-
-  await page.waitForSelector("text=built successfully", {
-    timeout: 10000 * 60 * 3,
-  });
-
-  await page.getByTestId("playground-btn-flow-io").click();
-
-  const textContents = await page
-    .getByTestId("div-chat-message")
-    .allTextContents();
-
-  const concatAllText = textContents.join(" ").toLowerCase();
-
-  expect(concatAllText).toContain("hello! how can i assist you today?");
-  expect(concatAllText.length).toBeGreaterThan(20);
-});
+    expect(concatAllText).toContain("hello! how can i assist you today?");
+    expect(concatAllText.length).toBeGreaterThan(20);
+  },
+);
