@@ -142,10 +142,9 @@ class NVIDIANeMoCustomizerComponent(Component):
             self.log(error_msg)
             raise ValueError(error_msg) from exc
         except (httpx.RequestError, ValueError) as exc:
-            error_msg = "Error refreshing model names: {}".format(str(exc))
+            error_msg = f"Error refreshing model names: {str(exc)}"
             self.log(error_msg)
             raise ValueError(error_msg) from exc
-
 
     async def customize(self) -> dict:
         dataset_name = self.dataset
@@ -195,17 +194,16 @@ class NVIDIANeMoCustomizerComponent(Component):
                 result_dict["url"] = f"{customizations_url}/{id_value}"
                 return result_dict
 
-        except httpx.TimeoutException:
+        except httpx.TimeoutException as exc:
             error_msg = f"Request to {customizations_url} timed out"
             self.log(error_msg)
-            raise ValueError(error_msg)
-
+            raise ValueError(error_msg) from None
 
         except httpx.HTTPStatusError as exc:
             status_code = exc.response.status_code
             response_content = exc.response.text
-            error_msg = "HTTP error %s on URL: %s. Response content: %s" % (
-            status_code, customizations_url, response_content)
+            error_msg = "HTTP error {} on URL: {}. Response content: {}".format(status_code, customizations_url,
+                                                                                response_content)
             self.log(error_msg)
             raise ValueError(error_msg) from exc
 
@@ -222,7 +220,6 @@ class NVIDIANeMoCustomizerComponent(Component):
 
     async def get_dataset_id(self, tenant_id: str, user_dataset_name: str) -> str:
         """Fetches the dataset ID by checking if a dataset with the constructed name exists.
-
         If the dataset does not exist, creates a new dataset and returns its ID.
 
         Args:
@@ -232,7 +229,6 @@ class NVIDIANeMoCustomizerComponent(Component):
         Returns:
             str: The dataset ID if found or created, or None if an error occurs.
         """
-
         appender = self.get_dataset_name(user_dataset_name)
         tenant = tenant_id if tenant_id else "tenant"
         dataset_name = f"{tenant}-{appender}"
@@ -277,7 +273,6 @@ class NVIDIANeMoCustomizerComponent(Component):
 
         Returns the upload status.
         """
-
         try:
             # Inputs
             user_dataset_name = getattr(self, "dataset", None)
