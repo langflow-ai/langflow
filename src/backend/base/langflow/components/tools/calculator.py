@@ -91,8 +91,8 @@ class CalculatorToolComponent(LCToolComponent):
             self.status = error_message
             return [Data(data={"error": error_message, "input": expression})]
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.operators = {
             ast.Add: operator.add,
             ast.Sub: operator.sub,
