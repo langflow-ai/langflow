@@ -60,10 +60,13 @@ The future of AI is both exciting and uncertain. As the technology continues to 
     await page.locator(".generic-node-desc-text").last().dblclick();
     await page.getByTestId("textarea").fill(noteText);
 
-    expect(await page.getByText("2500/2500")).toBeVisible();
+    expect(page.getByText("2500/2500")).toHaveCount(1);
 
     await targetElement.click();
-    const textMarkdown = await page.locator(".markdown").innerText();
+    await page.keyboard.press("Escape");
+    const textMarkdown = await page
+      .getByTestId("generic-node-desc")
+      .innerText();
 
     const textLength = textMarkdown.length;
     const noteTextLength = noteText.length;

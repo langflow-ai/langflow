@@ -10,7 +10,7 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
-import { noteDataType } from "@/types/flow";
+import { NoteDataType } from "@/types/flow";
 import { classNames, cn, openInNewTab } from "@/utils/utils";
 import { cloneDeep } from "lodash";
 import { memo, useCallback, useMemo } from "react";
@@ -22,7 +22,7 @@ const NoteToolbarComponent = memo(function NoteToolbarComponent({
   data,
   bgColor,
 }: {
-  data: noteDataType;
+  data: NoteDataType;
   bgColor: string;
 }) {
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
@@ -69,21 +69,18 @@ const NoteToolbarComponent = memo(function NoteToolbarComponent({
           setLastCopiedSelection({ nodes: cloneDeep(node), edges: [] });
           break;
         case "duplicate":
-          const targetNode = nodes.find((node) => node.id === data.id);
-          if (targetNode) {
-            paste(
-              {
-                nodes: [targetNode],
-                edges: [],
-              },
-              {
-                x: 50,
-                y: 10,
-                paneX: targetNode.position.x,
-                paneY: targetNode.position.y,
-              },
-            );
-          }
+          paste(
+            {
+              nodes: [nodes.find((node) => node.id === data.id)!],
+              edges: [],
+            },
+            {
+              x: 50,
+              y: 10,
+              paneX: nodes.find((node) => node.id === data.id)?.position.x,
+              paneY: nodes.find((node) => node.id === data.id)?.position.y,
+            },
+          );
           break;
       }
     },

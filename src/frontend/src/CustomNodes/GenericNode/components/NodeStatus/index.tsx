@@ -5,13 +5,7 @@ import useValidationStatusString from "@/CustomNodes/hooks/use-validation-status
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  ICON_STROKE_WIDTH,
-  RUN_TIMESTAMP_PREFIX,
-  STATUS_BUILD,
-  STATUS_BUILDING,
-  STATUS_INACTIVE,
-} from "@/constants/constants";
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { BuildStatus } from "@/constants/enums";
 import { track } from "@/customization/utils/analytics";
 import { useDarkStore } from "@/stores/darkStore";
@@ -43,7 +37,7 @@ export default function NodeStatus({
 }: {
   nodeId: string;
   display_name: string;
-  selected: boolean;
+  selected?: boolean;
   setBorderColor: (color: string) => void;
   frozen?: boolean;
   showNode: boolean;
@@ -101,8 +95,7 @@ export default function NodeStatus({
     return cn(frozen ? frozenClass : className, updateClass);
   };
   const getNodeBorderClassName = (
-    selected: boolean,
-    showNode: boolean,
+    selected: boolean | undefined,
     buildStatus: BuildStatus | undefined,
     validationStatus: VertexBuildTypeAPI | null,
   ) => {
@@ -119,7 +112,7 @@ export default function NodeStatus({
 
   useEffect(() => {
     setBorderColor(
-      getNodeBorderClassName(selected, showNode, buildStatus, validationStatus),
+      getNodeBorderClassName(selected, buildStatus, validationStatus),
     );
   }, [
     selected,
