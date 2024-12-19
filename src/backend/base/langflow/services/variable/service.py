@@ -79,7 +79,7 @@ class DatabaseVariableService(VariableService, Service):
         # we decrypt the value
         return auth_utils.decrypt_api_key(variable.value, settings_service=self.settings_service)
 
-    async def get_all(self, user_id: UUID | str, session: AsyncSession) -> list[Variable | None]:
+    async def get_all(self, user_id: UUID | str, session: AsyncSession) -> list[VariableRead]:
         stmt = select(Variable).where(Variable.user_id == user_id)
         variables = list((await session.exec(stmt)).all())
         # If the variable is of type 'Generic' we decrypt the value

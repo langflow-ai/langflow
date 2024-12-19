@@ -172,7 +172,7 @@ class KubernetesSecretService(VariableService, Service):
         return Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
 
     @override
-    async def get_all(self, user_id: UUID | str, session: AsyncSession) -> list[Variable | None]:
+    async def get_all(self, user_id: UUID | str, session: AsyncSession) -> list[VariableRead]:
         secret_name = encode_user_id(user_id)
         variables = await asyncio.to_thread(self.kubernetes_secrets.get_secret, name=secret_name)
         if not variables:
