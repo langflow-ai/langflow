@@ -1,10 +1,22 @@
-import httpx
-import json
-from langflow.custom import Component
-from langflow.io import MessageTextInput, Output, DropdownInput, IntInput, FloatInput, StrInput, DataInput
-from langflow.schema import Data, DataFrame
-import pandas as pd
 import asyncio
+import json
+from datetime import datetime
+from io import BytesIO
+
+import httpx
+import pandas as pd
+
+from langflow.custom import Component
+from langflow.io import (
+    DataInput,
+    DropdownInput,
+    FloatInput,
+    IntInput,
+    MessageTextInput,
+    Output,
+    StrInput,
+)
+from langflow.schema import Data
 
 class NVIDIANeMoCustomizerComponent(Component):
     display_name = "Customizer"
@@ -14,8 +26,8 @@ class NVIDIANeMoCustomizerComponent(Component):
     beta = True
 
     headers = {
-        'accept': 'application/json',
-        'Content-Type': 'application/json'
+        "accept": "application/json",
+        "Content-Type": "application/json"
     }
     chunk_number = 1
 
@@ -249,7 +261,7 @@ class NVIDIANeMoCustomizerComponent(Component):
         """
         try:
             # Inputs
-            user_dataset_name = getattr(self, 'dataset', None)
+            user_dataset_name = getattr(self, "dataset", None)
             dataset_name = await self.get_dataset_id(self.tenant_id, user_dataset_name)
             chunk_size = 10000  # Ensure chunk_size is an integer
             self.log(f"dataset_name : {dataset_name}", name="NVIDIANeMoCustomizerComponent")
@@ -269,7 +281,7 @@ class NVIDIANeMoCustomizerComponent(Component):
                     self.log(f"Skipping non-Data object in training data, but got: {data_obj}", name="NVIDIANeMoCustomizerComponent")
                     continue
 
-                # Extract only 'input' and 'completion' fields if present
+                # Extract only "input" and "completion" fields if present
                 filtered_data = {
                     "input": getattr(data_obj, "input", None),
                     "completion": getattr(data_obj, "completion", None)
@@ -311,12 +323,12 @@ class NVIDIANeMoCustomizerComponent(Component):
             # Serialize the chunk DataFrame to JSONL format
             json_content = chunk_df.to_json(orient="records", lines=True)
             file_name = f"{file_name_prefix}_chunk_{chunk_number}.jsonl"
-            file_in_memory = BytesIO(json_content.encode('utf-8'))
+            file_in_memory = BytesIO(json_content.encode("utf-8"))
 
             filepath = f"training/{file_name}"
             url = f"{base_url}/datasets/{dataset_id}/files/contents/{filepath}"
 
-            files = {'file': (file_name, file_in_memory, 'application/json')}
+            files = {"file": (file_name, file_in_memory, "application/json")}
 
             async with httpx.AsyncClient() as client:
                 response = await client.post(url, files=files)
