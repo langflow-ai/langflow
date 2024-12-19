@@ -4,7 +4,7 @@ import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test.skip(
-  "should like and add components and flows",
+  "should like and add components and flows (requires store API key)",
   { tag: ["@release"] },
   async ({ page }) => {
     test.skip(
@@ -84,7 +84,7 @@ test.skip(
 );
 
 test.skip(
-  "should find a searched Component on Store",
+  "should find a searched Component on Store (requires store API key)",
   { tag: ["@release"] },
   async ({ page }) => {
     test.skip(

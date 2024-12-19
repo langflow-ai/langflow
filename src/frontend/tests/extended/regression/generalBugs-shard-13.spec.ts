@@ -4,8 +4,8 @@ import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
-  "should be able to share a component on the store by clicking on the share button on the canvas",
-  { tag: ["@release"] },
+  "should be able to share a component on the store by clicking on the share button on the canvas (requires store API key)",
+  { tag: ["@release", "@api"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.STORE_API_KEY,
