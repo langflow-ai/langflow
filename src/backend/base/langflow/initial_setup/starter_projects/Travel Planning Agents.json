@@ -98,9 +98,7 @@
             "fieldName": "tools",
             "id": "Agent-uVWaZ",
             "inputTypes": [
-              "Tool",
-              "BaseTool",
-              "StructuredTool"
+              "Tool"
             ],
             "type": "other"
           }
@@ -109,7 +107,7 @@
         "source": "SearchAPI-zMZv7",
         "sourceHandle": "{œdataTypeœ: œSearchAPIœ, œidœ: œSearchAPI-zMZv7œ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-uVWaZ",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-uVWaZœ, œinputTypesœ: [œToolœ, œBaseToolœ, œStructuredToolœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-uVWaZœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -127,9 +125,7 @@
             "fieldName": "tools",
             "id": "Agent-qPNh7",
             "inputTypes": [
-              "Tool",
-              "BaseTool",
-              "StructuredTool"
+              "Tool"
             ],
             "type": "other"
           }
@@ -138,7 +134,7 @@
         "source": "url_content_fetcher-p0SUP",
         "sourceHandle": "{œdataTypeœ: œurl_content_fetcherœ, œidœ: œurl_content_fetcher-p0SUPœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-qPNh7",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-qPNh7œ, œinputTypesœ: [œToolœ, œBaseToolœ, œStructuredToolœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-qPNh7œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -156,9 +152,7 @@
             "fieldName": "tools",
             "id": "Agent-LAoR7",
             "inputTypes": [
-              "Tool",
-              "BaseTool",
-              "StructuredTool"
+              "Tool"
             ],
             "type": "other"
           }
@@ -167,7 +161,7 @@
         "source": "CalculatorTool-v71XZ",
         "sourceHandle": "{œdataTypeœ: œCalculatorToolœ, œidœ: œCalculatorTool-v71XZœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-LAoR7",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-LAoR7œ, œinputTypesœ: [œToolœ, œBaseToolœ, œStructuredToolœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-LAoR7œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -1483,7 +1477,7 @@
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
                 "input_types": [
-                  "BaseChatMessageHistory"
+                  "Memory"
                 ],
                 "list": false,
                 "name": "memory",
@@ -1742,9 +1736,7 @@
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
                 "input_types": [
-                  "Tool",
-                  "BaseTool",
-                  "StructuredTool"
+                  "Tool"
                 ],
                 "list": true,
                 "name": "tools",
@@ -2061,7 +2053,7 @@
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
                 "input_types": [
-                  "BaseChatMessageHistory"
+                  "Memory"
                 ],
                 "list": false,
                 "name": "memory",
@@ -2320,9 +2312,7 @@
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
                 "input_types": [
-                  "Tool",
-                  "BaseTool",
-                  "StructuredTool"
+                  "Tool"
                 ],
                 "list": true,
                 "name": "tools",
@@ -2639,7 +2629,7 @@
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
                 "input_types": [
-                  "BaseChatMessageHistory"
+                  "Memory"
                 ],
                 "list": false,
                 "name": "memory",
@@ -2898,9 +2888,7 @@
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
                 "input_types": [
-                  "Tool",
-                  "BaseTool",
-                  "StructuredTool"
+                  "Tool"
                 ],
                 "list": true,
                 "name": "tools",

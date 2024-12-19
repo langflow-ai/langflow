@@ -20,7 +20,7 @@ import {
   nodeGroupedObjType,
   tweakType,
 } from "../types/components";
-import { NodeDataType, NodeType } from "../types/flow";
+import { AllNodeType, NodeDataType } from "../types/flow";
 import { FlowState } from "../types/tabs";
 import { isErrorLog } from "../types/utils/typeCheckingUtils";
 import { parseString } from "./stringManipulation";
@@ -243,7 +243,7 @@ export function groupByFamily(
   data: APIDataType,
   baseClasses: string,
   left: boolean,
-  flow?: NodeType[],
+  flow?: AllNodeType[],
 ): groupedObjType[] {
   const baseClassesSet = new Set(baseClasses.split("\n"));
   let arrOfPossibleInputs: Array<{
@@ -278,7 +278,12 @@ export function groupByFamily(
     // se existir o flow
     for (const node of flow) {
       // para cada node do flow
-      if (node!.data!.node!.flow || !node!.data!.node!.template) break; // não faz nada se o node for um group
+      if (
+        node!.type !== "genericNode" ||
+        !node!.data!.node!.flow ||
+        !node!.data!.node!.template
+      )
+        break; // não faz nada se o node for um group
       const nodeData = node.data;
 
       const foundNode = checkedNodes.get(nodeData.type); // verifica se o tipo do node já foi checado
