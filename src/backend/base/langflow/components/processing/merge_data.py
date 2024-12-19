@@ -1,14 +1,15 @@
 from enum import Enum
+
 from loguru import logger
 
 from langflow.custom import Component
 from langflow.io import DataInput, DropdownInput, Output
-from langflow.schema import DataFrame, Data
+from langflow.schema import DataFrame
 
 
 class MergeOperation(str, Enum):
     CONCATENATE = "concatenate"
-    APPEND = "append" 
+    APPEND = "append"
     MERGE = "merge"
     JOIN = "join"
 
@@ -24,7 +25,7 @@ class DataMergerComponent(Component):
         DataInput(name="data_inputs", display_name="Data Inputs", info="Dados para combinar", is_list=True),
         DropdownInput(
             name="operation",
-            display_name="Merge Operation", 
+            display_name="Merge Operation",
             options=[op.value for op in MergeOperation],
             value=MergeOperation.CONCATENATE.value,
         ),
@@ -34,7 +35,7 @@ class DataMergerComponent(Component):
 
     def merge_data(self) -> DataFrame:
         if not self.data_inputs or len(self.data_inputs) < self.MIN_INPUTS_REQUIRED:
-            empty_dataframe = DataFrame() 
+            empty_dataframe = DataFrame()
             self.status = empty_dataframe
             return empty_dataframe
 
