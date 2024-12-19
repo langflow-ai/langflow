@@ -1,7 +1,6 @@
 import os
-from collections import defaultdict
 
-from astrapy import AstraDBAdmin, DataAPIClient
+from astrapy import DataAPIClient
 from astrapy.admin import parse_api_endpoint
 from langchain_astradb import AstraDBVectorStore
 
@@ -164,17 +163,20 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Get the admin object
         client = DataAPIClient(token=self.token)
         admin_client = client.get_admin(token=self.token)
-        db_list = list(admin_client.list_databases())
+        db_list = admin_client.list_databases()  # Use iterator directly
 
-        # Generate the api endpoint for each database
-        return {
-            db.info.name: {
-                "api_endpoint": f"https://{db.info.id}-{db.info.region}.apps.astra.datastax.com",
-                "collections": len(list(client.get_database(db.info.id, token=self.token).list_collection_names())),
+        result = {}
+        for db in db_list:
+            db_info = db.info
+            collections_count = client.get_database(db_info.id, token=self.token).list_collection_names()
+
+            result[db_info.name] = {
+                "api_endpoint": f"https://{db_info.id}-{db_info.region}.apps.astra.datastax.com",
+                "collections": len(collections_count),
                 "records": 0,
             }
-            for db in db_list
-        }
+
+        return result
 
     def get_api_endpoint(self):
         # If the database is not set, get the first database in the list
@@ -221,7 +223,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     "name": col.name,
                     "records": 0,
                     "provider": col.options.vector.service.provider if col.options.vector else "",
-                    "model": col.options.vector.service.model_name if col.options.vector else ""
+                    "model": col.options.vector.service.model_name if col.options.vector else "",
                 }
                 for col in collection_list
             ]
@@ -253,9 +255,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Get the running environment for Langflow
         environment = (
-            parse_api_endpoint(self.get_api_endpoint()).environment
-            if self.get_api_endpoint() is not None
-            else None
+            parse_api_endpoint(self.get_api_endpoint()).environment if self.get_api_endpoint() is not None else None
         )
 
         # Get Langflow version and platform information
