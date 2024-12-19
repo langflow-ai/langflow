@@ -2,19 +2,16 @@ import os
 
 import orjson
 from astrapy.admin import parse_api_endpoint
-from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers import docs_to_data
 from langflow.inputs import (
     BoolInput,
-    DataInput,
     DictInput,
     DropdownInput,
     FloatInput,
     HandleInput,
     IntInput,
-    MultilineInput,
     SecretStrInput,
     StrInput,
 )
@@ -24,7 +21,6 @@ from langflow.schema import Data
 class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
     display_name: str = "Astra DB Graph"
     description: str = "Implementation of Graph Vector Store using Astra DB"
-    documentation: str = "https://python.langchain.com/api_reference/astradb/graph_vectorstores/langchain_astradb.graph_vectorstores.AstraDBGraphVectorStore.html"
     name = "AstraDBGraph"
     icon: str = "AstraDB"
 
@@ -56,15 +52,7 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
             info="Metadata key used for incoming links.",
             advanced=True,
         ),
-        MultilineInput(
-            name="search_input",
-            display_name="Search Input",
-        ),
-        DataInput(
-            name="ingest_data",
-            display_name="Ingest Data",
-            is_list=True,
-        ),
+        *LCVectorStoreComponent.inputs,
         StrInput(
             name="keyspace",
             display_name="Keyspace",
@@ -129,14 +117,14 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
             display_name="Metadata Indexing Include",
             info="Optional list of metadata fields to include in the indexing.",
             advanced=True,
-            is_list=True,
+            list=True,
         ),
         StrInput(
             name="metadata_indexing_exclude",
             display_name="Metadata Indexing Exclude",
             info="Optional list of metadata fields to exclude from the indexing.",
             advanced=True,
-            is_list=True,
+            list=True,
         ),
         StrInput(
             name="collection_indexing_policy",
@@ -205,7 +193,7 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
             raise ValueError(msg) from e
 
         try:
-            logger.debug(f"Initializing Graph Vector Store {self.collection_name}")
+            self.log(f"Initializing Graph Vector Store {self.collection_name}")
 
             vector_store = AstraDBGraphVectorStore(
                 embedding=self.embedding_model,
@@ -232,7 +220,7 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
             msg = f"Error initializing AstraDBGraphVectorStore: {e}"
             raise ValueError(msg) from e
 
-        logger.debug(f"Vector Store initialized: {vector_store.astra_env.collection_name}")
+        self.log(f"Vector Store initialized: {vector_store.astra_env.collection_name}")
         self._add_documents_to_vector_store(vector_store)
 
         return vector_store
@@ -247,14 +235,14 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
                 raise TypeError(msg)
 
         if documents:
-            logger.debug(f"Adding {len(documents)} documents to the Vector Store.")
+            self.log(f"Adding {len(documents)} documents to the Vector Store.")
             try:
                 vector_store.add_documents(documents)
             except Exception as e:
                 msg = f"Error adding documents to AstraDBGraphVectorStore: {e}"
                 raise ValueError(msg) from e
         else:
-            logger.debug("No documents to add to the Vector Store.")
+            self.log("No documents to add to the Vector Store.")
 
     def _map_search_type(self) -> str:
         match self.search_type:
@@ -287,21 +275,21 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
         if not vector_store:
             vector_store = self.build_vector_store()
 
-        logger.debug("Searching for documents in AstraDBGraphVectorStore.")
-        logger.debug(f"Search input: {self.search_input}")
-        logger.debug(f"Search type: {self.search_type}")
-        logger.debug(f"Number of results: {self.number_of_results}")
+        self.log("Searching for documents in AstraDBGraphVectorStore.")
+        self.log(f"Search query: {self.search_query}")
+        self.log(f"Search type: {self.search_type}")
+        self.log(f"Number of results: {self.number_of_results}")
 
-        if self.search_input and isinstance(self.search_input, str) and self.search_input.strip():
+        if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             try:
                 search_type = self._map_search_type()
                 search_args = self._build_search_args()
 
-                docs = vector_store.search(query=self.search_input, search_type=search_type, **search_args)
+                docs = vector_store.search(query=self.search_query, search_type=search_type, **search_args)
 
                 # Drop links from the metadata. At this point the links don't add any value for building the
                 # context and haven't been restored to json which causes the conversion to fail.
-                logger.debug("Removing links from metadata.")
+                self.log("Removing links from metadata.")
                 for doc in docs:
                     if "links" in doc.metadata:
                         doc.metadata.pop("links")
@@ -310,15 +298,15 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
                 msg = f"Error performing search in AstraDBGraphVectorStore: {e}"
                 raise ValueError(msg) from e
 
-            logger.debug(f"Retrieved documents: {len(docs)}")
+            self.log(f"Retrieved documents: {len(docs)}")
 
             data = docs_to_data(docs)
 
-            logger.debug(f"Converted documents to data: {len(data)}")
+            self.log(f"Converted documents to data: {len(data)}")
 
             self.status = data
             return data
-        logger.debug("No search input provided. Skipping search.")
+        self.log("No search input provided. Skipping search.")
         return []
 
     def get_retriever_kwargs(self):

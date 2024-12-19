@@ -1,7 +1,7 @@
 import os
 from collections import defaultdict
 
-from astrapy import DataAPIClient
+from astrapy import AstraDBAdmin, DataAPIClient
 from astrapy.admin import parse_api_endpoint
 from langchain_astradb import AstraDBVectorStore
 
@@ -14,7 +14,6 @@ from langflow.io import (
     DropdownInput,
     HandleInput,
     IntInput,
-    MultilineInput,
     SecretStrInput,
     StrInput,
 )
@@ -24,8 +23,8 @@ from langflow.utils.version import get_version_info
 
 class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     display_name: str = "Astra DB"
-    description: str = "Implementation of Vector Store using Astra DB with search capabilities"
-    documentation: str = "https://docs.langflow.org/starter-projects-vector-store-rag"
+    description: str = "Ingest and search documents in Astra DB"
+    documentation: str = "https://docs.datastax.com/en/langflow/astra-components.html"
     name = "AstraDB"
     icon: str = "AstraDB"
 
@@ -48,45 +47,22 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         similarity_metrics: list[str] = []
         icon: str = "Collection"
 
-    VECTORIZE_PROVIDERS_MAPPING = defaultdict(
-        list,
-        {
-            "Azure OpenAI": [
-                "azureOpenAI",
-                ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"],
-            ],
-            "Hugging Face - Dedicated": ["huggingfaceDedicated", ["endpoint-defined-model"]],
-            "Hugging Face - Serverless": [
-                "huggingface",
-                [
-                    "sentence-transformers/all-MiniLM-L6-v2",
-                    "intfloat/multilingual-e5-large",
-                    "intfloat/multilingual-e5-large-instruct",
-                    "BAAI/bge-small-en-v1.5",
-                    "BAAI/bge-base-en-v1.5",
-                    "BAAI/bge-large-en-v1.5",
-                ],
-            ],
-            "Jina AI": [
-                "jinaAI",
-                [
-                    "jina-embeddings-v2-base-en",
-                    "jina-embeddings-v2-base-de",
-                    "jina-embeddings-v2-base-es",
-                    "jina-embeddings-v2-base-code",
-                    "jina-embeddings-v2-base-zh",
-                ],
-            ],
-            "Mistral AI": ["mistral", ["mistral-embed"]],
-            "Nvidia": ["nvidia", ["NV-Embed-QA"]],
-            "OpenAI": ["openai", ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"]],
-            "Upstage": ["upstageAI", ["solar-embedding-1-large"]],
-            "Voyage AI": [
-                "voyageAI",
-                ["voyage-large-2-instruct", "voyage-law-2", "voyage-code-2", "voyage-large-2", "voyage-2"],
-            ],
-        },
-    )
+    base_inputs = LCVectorStoreComponent.inputs
+    if "search_query" not in [input_.name for input_ in base_inputs]:
+        base_inputs.append(
+            MessageTextInput(
+                name="search_query",
+                display_name="Search Query",
+                tool_mode=True,
+            )
+        )
+    if "ingest_data" not in [input_.name for input_ in base_inputs]:
+        base_inputs.append(
+            DataInput(
+                name="ingest_data",
+                display_name="Ingest Data",
+            )
+        )
 
     inputs = [
         SecretStrInput(
@@ -134,15 +110,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             input_types=["Embeddings"],
             info="Allows an embedding model configuration.",
         ),
-        DataInput(
-            name="ingest_data",
-            display_name="Ingest Data",
-        ),
-        MultilineInput(
-            name="search_input",
-            display_name="Search Query",
-            tool_mode=True,
-        ),
+        *base_inputs,
         IntInput(
             name="number_of_results",
             display_name="Number of Search Results",
@@ -354,7 +322,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return "similarity"
 
     def _build_search_args(self):
-        query = self.search_input if isinstance(self.search_input, str) and self.search_input.strip() else None
+        query = self.search_query if isinstance(self.search_query, str) and self.search_query.strip() else None
 
         if query:
             args = {
@@ -379,7 +347,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     def search_documents(self, vector_store=None) -> list[Data]:
         vector_store = vector_store or self.build_vector_store()
 
-        self.log(f"Search input: {self.search_input}")
+        self.log(f"Search input: {self.search_query}")
         self.log(f"Search type: {self.search_type}")
         self.log(f"Number of results: {self.number_of_results}")
 
