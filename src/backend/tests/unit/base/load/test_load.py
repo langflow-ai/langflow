@@ -1,8 +1,8 @@
-import pytest
-import os
-from dotenv import load_dotenv
-
 import inspect
+import os
+
+import pytest
+from dotenv import load_dotenv
 from langflow.load import run_flow_from_json
 
 
@@ -78,4 +78,3 @@ def test_run_flow_with_fake_env_TWEAKS(fake_env_file):
     # Extract and check the output data
     output_data = result[0].outputs[0].results["message"].data["text"]
     assert output_data == "TESTWORKS"
-
