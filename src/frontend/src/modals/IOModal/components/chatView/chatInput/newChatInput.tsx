@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import Loading from "@/components/ui/loading";
+import { VoiceAssistant } from "@/components/VoiceAssistant";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
@@ -249,7 +250,8 @@ export default function ChatInput({
               handleButtonClick={handleButtonClick}
             />
           </div>
-          <div className="">
+          <div className="flex items-center gap-2">
+            <VoiceAssistant flowId={currentFlowId} />
             <ButtonSendWrapper
               send={send}
               lockChat={lockChat}
