@@ -106,11 +106,7 @@ class ChatInput(ChatComponent):
                 "icon": icon,
             },
         )
-        if (
-            self.session_id
-            and isinstance(message, Message)
-            and self.should_store_message
-        ):
+        if self.session_id and isinstance(message, Message) and self.should_store_message:
             stored_message = await self.send_message(
                 message,
             )

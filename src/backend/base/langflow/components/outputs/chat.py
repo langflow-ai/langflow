@@ -85,9 +85,7 @@ class ChatOutput(ChatComponent):
         ),
     ]
 
-    def _build_source(
-        self, id_: str | None, display_name: str | None, source: str | None
-    ) -> Source:
+    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:
         source_dict = {}
         if id_:
             source_dict["id"] = id_
@@ -98,18 +96,12 @@ class ChatOutput(ChatComponent):
         return Source(**source_dict)
 
     async def message_response(self) -> Message:
-        source, icon, display_name, source_id = (
-            self.get_properties_from_source_component()
-        )
+        source, icon, display_name, source_id = self.get_properties_from_source_component()
         background_color = self.background_color
         text_color = self.text_color
         if self.chat_icon:
             icon = self.chat_icon
-        message = (
-            self.input_value
-            if isinstance(self.input_value, Message)
-            else Message(text=self.input_value)
-        )
+        message = self.input_value if isinstance(self.input_value, Message) else Message(text=self.input_value)
         message.sender = self.sender
         message.sender_name = self.sender_name
         message.session_id = self.session_id
@@ -118,11 +110,7 @@ class ChatOutput(ChatComponent):
         message.properties.icon = icon
         message.properties.background_color = background_color
         message.properties.text_color = text_color
-        if (
-            self.session_id
-            and isinstance(message, Message)
-            and self.should_store_message
-        ):
+        if self.session_id and isinstance(message, Message) and self.should_store_message:
             stored_message = await self.send_message(
                 message,
             )
