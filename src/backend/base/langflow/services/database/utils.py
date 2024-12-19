@@ -61,7 +61,7 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
 @asynccontextmanager
 async def session_getter(db_service: DatabaseService):
     try:
-        session = AsyncSession(db_service.async_engine, expire_on_commit=False)
+        session = AsyncSession(db_service.engine, expire_on_commit=False)
         yield session
     except Exception:
         logger.exception("Session rollback because of exception")
