@@ -11,7 +11,6 @@ class FlowOrchestratorComponent(Component):
     display_name = "Flow Orchestrator"
     description = "A component to orchestrate flows."
     name = "FlowOrchestrator"
-    legacy: bool = True
     icon = "workflow"
     inputs = [
         DropdownInput(
