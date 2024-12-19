@@ -81,7 +81,7 @@ This component retrieves and manages chat messages from Langflow tables or an ex
 |------|--------------|------|
 | messages | Messages (Data) | Retrieved messages as Data objects. |
 | messages_text | Messages (Text) | Retrieved messages formatted as text. |
-| lc_memory | Memory | Built LangChain memory object. |
+| lc_memory | Memory | A constructed Langchain [ConversationBufferMemory](https://api.python.langchain.com/en/latest/memory/langchain.memory.buffer.ConversationBufferMemory.html) object  |
 
 ## Store Message
 
