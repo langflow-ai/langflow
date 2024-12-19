@@ -5,14 +5,13 @@ from langchain_community.vectorstores import MongoDBAtlasVectorSearch
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, DataInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput
+from langflow.io import BoolInput, HandleInput, IntInput, SecretStrInput, StrInput
 from langflow.schema import Data
 
 
 class MongoVectorStoreComponent(LCVectorStoreComponent):
     display_name = "MongoDB Atlas"
     description = "MongoDB Atlas Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/mongodb_atlas"
     name = "MongoDBAtlasVector"
     icon = "MongoDB"
 
@@ -30,12 +29,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
         StrInput(name="db_name", display_name="Database Name", required=True),
         StrInput(name="collection_name", display_name="Collection Name", required=True),
         StrInput(name="index_name", display_name="Index Name", required=True),
-        MultilineInput(name="search_query", display_name="Search Query"),
-        DataInput(
-            name="ingest_data",
-            display_name="Ingest Data",
-            is_list=True,
-        ),
+        *LCVectorStoreComponent.inputs,
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         IntInput(
             name="number_of_results",

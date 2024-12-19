@@ -4,11 +4,9 @@ from langchain_community.vectorstores import Qdrant
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import (
-    DataInput,
     DropdownInput,
     HandleInput,
     IntInput,
-    MultilineInput,
     SecretStrInput,
     StrInput,
 )
@@ -18,7 +16,6 @@ from langflow.schema import Data
 class QdrantVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Qdrant"
     description = "Qdrant Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/qdrant"
     icon = "Qdrant"
 
     inputs = [
@@ -40,12 +37,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
         ),
         StrInput(name="content_payload_key", display_name="Content Payload Key", value="page_content", advanced=True),
         StrInput(name="metadata_payload_key", display_name="Metadata Payload Key", value="metadata", advanced=True),
-        MultilineInput(name="search_query", display_name="Search Query"),
-        DataInput(
-            name="ingest_data",
-            display_name="Ingest Data",
-            is_list=True,
-        ),
+        *LCVectorStoreComponent.inputs,
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         IntInput(
             name="number_of_results",

@@ -1,9 +1,8 @@
 from langchain_community.vectorstores import FAISS
-from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, DataInput, HandleInput, IntInput, MultilineInput, StrInput
+from langflow.io import BoolInput, HandleInput, IntInput, StrInput
 from langflow.schema import Data
 
 
@@ -12,7 +11,6 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
 
     display_name: str = "FAISS"
     description: str = "FAISS Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/faiss"
     name = "FAISS"
     icon = "FAISS"
 
@@ -27,15 +25,7 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
             display_name="Persist Directory",
             info="Path to save the FAISS index. It will be relative to where Langflow is running.",
         ),
-        MultilineInput(
-            name="search_query",
-            display_name="Search Query",
-        ),
-        DataInput(
-            name="ingest_data",
-            display_name="Ingest Data",
-            is_list=True,
-        ),
+        *LCVectorStoreComponent.inputs,
         BoolInput(
             name="allow_dangerous_deserialization",
             display_name="Allow Dangerous Deserialization",
@@ -93,8 +83,8 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
             msg = "Failed to load the FAISS index."
             raise ValueError(msg)
 
-        logger.debug(f"Search input: {self.search_query}")
-        logger.debug(f"Number of results: {self.number_of_results}")
+        self.log(f"Search input: {self.search_query}")
+        self.log(f"Number of results: {self.number_of_results}")
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             docs = vector_store.similarity_search(
@@ -102,11 +92,11 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
                 k=self.number_of_results,
             )
 
-            logger.debug(f"Retrieved documents: {len(docs)}")
+            self.log(f"Retrieved documents: {len(docs)}")
 
             data = docs_to_data(docs)
-            logger.debug(f"Converted documents to data: {len(data)}")
-            logger.debug(data)
+            self.log(f"Converted documents to data: {len(data)}")
+            self.log(data)
             return data  # Return the search results data
-        logger.debug("No search input provided. Skipping search.")
+        self.log("No search input provided. Skipping search.")
         return []
