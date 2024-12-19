@@ -1,11 +1,13 @@
 import json
-from typing import Any
+import subprocess
+import tempfile
+from typing import Any, cast
 
-import jq
+import pandas as pd
 from loguru import logger
 
 from langflow.custom import Component
-from langflow.io import DataInput, IntInput, MessageTextInput, Output
+from langflow.io import DataInput, IntInput, MultilineInput, Output
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
 
@@ -17,141 +19,230 @@ class FilterDataComponent(Component):
     description = "Filter data using various methods like index, JQ query, and column selection."
     icon = "filter"
     name = "FilterData"
-
-    def __init__(self) -> None:
-        """Initialize the component."""
-        super().__init__()
-        self.input_value: Any = None
-        self.index: int | None = None
-        self.jq_query: str | None = None
-        self.select_columns: list[str] | None = None
-        self.status: Data | None = None
+    max_query_length = 1000  # Maximum length for JQ queries
 
     inputs = [
         DataInput(
             name="input_value",
-            display_name="Input Value",
-            info="The input data to filter.",
+            display_name="Input",
+            info="The input data to filter. Can be a single Data object or a list of Data objects.",
+            input_types=["Data"],
+        ),
+        MultilineInput(
+            name="select_columns",
+            display_name="Select Columns",
+            info="List of columns to select from the data.",
+            list=True,
+            required=False,
+        ),
+        MultilineInput(
+            name="jq_query",
+            display_name="JQ Query",
+            info="JQ query to filter the data.",
+            required=False,
         ),
         IntInput(
             name="index",
             display_name="Index",
-            info="(Optional) Index to filter (for list inputs).",
+            info="Index to select from the data.",
             required=False,
-            advanced=True,
-        ),
-        MessageTextInput(
-            name="jq_query",
-            display_name="JQ Query",
-            info=(
-                "(Optional) JQ query to transform the data. "
-                "See https://stedolan.github.io/jq/manual/ for syntax. "
-                "Example: '.[] | select(.field == \"value\")' "
-                "Note: When JQ query returns a list, results will be wrapped in a 'results' field."
-            ),
-        ),
-        MessageTextInput(
-            name="select_columns",
-            display_name="Select Columns",
-            info="(Optional) List of column names to keep from the result. Leave empty to keep all columns.",
-            is_list=True,
         ),
     ]
 
     outputs = [
-        Output(display_name="Filtered Results", name="filtered_data", method="process_data"),
-        Output(display_name="Filtered DataFrame", name="dataframe", method="process_dataframe"),
+        Output(
+            name="filtered_data",
+            display_name="Filtered Data",
+            description="The filtered data.",
+            output_types=["Data", "list[Data]"],
+            method="process_data",
+        ),
+        Output(
+            name="dataframe",
+            display_name="DataFrame",
+            description="The filtered data as a DataFrame.",
+            output_types=["DataFrame"],
+            method="process_dataframe",
+        ),
     ]
 
-    def _parse_data(self, input_value: Data | str | dict | Any) -> str:
-        """Parse input data into a string format."""
-        if isinstance(input_value, Data):
-            return json.dumps(input_value.data)
-        if isinstance(input_value, (dict | list)):
-            return json.dumps(input_value)
-        if isinstance(input_value, str):
-            return input_value
-        return str(input_value)
+    def _parse_data(self, data: Data) -> str:
+        """Parse data object to string."""
+        if not isinstance(data, Data):
+            error_msg = "Input must be a Data object"
+            raise TypeError(error_msg)
 
-    def _apply_index_filter(self, data: list, index: int) -> Any:
-        """Apply index filter to list data."""
         try:
-            return data[index]
-        except IndexError:
-            return []
+            return json.dumps(data.data)
+        except (TypeError, ValueError) as e:
+            logger.error("Error parsing data: %s", e)
+            return ""
 
-    def _apply_jq_query(self, data: str, query: str) -> Any:
-        """Apply JQ query to data."""
+    def _apply_jq_query(self, data_str: str, jq_query: str) -> Any:
+        """Apply JQ query to data string."""
         try:
-            program = jq.compile(query)
-            return program.input(text=data).first()
-        except ValueError as e:
-            logger.exception("Error applying JQ query: %s", e)
-            return data
+            # Create a temporary file to store the data
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json") as temp_file:
+                temp_file.write(data_str)
+                temp_file.flush()
+
+                # Run JQ command with -c to get compact output
+                # Input is validated by _is_safe_jq_query to prevent command injection
+                command = ["jq", "-c", jq_query, temp_file.name]
+                # nosec B603 - Input is validated by _is_safe_jq_query
+                result = subprocess.check_output(
+                    command,
+                    text=True,
+                    stderr=subprocess.PIPE,
+                )
+                # Security: This subprocess call is safe because the input is validated by _is_safe_jq_query
+
+                # Parse output
+                output_str = result.strip()
+                if not output_str:
+                    return None
+
+                # If there are multiple lines, parse each line separately
+                if "\n" in output_str:
+                    results = []
+                    for line in output_str.split("\n"):
+                        try:
+                            results.append(json.loads(line))
+                        except json.JSONDecodeError:
+                            results.append(line)
+                    return results
+
+                # Try to parse single line as JSON
+                try:
+                    return json.loads(output_str)
+                except json.JSONDecodeError:
+                    return output_str
+
+        except subprocess.CalledProcessError as e:
+            error_msg = f"Error running JQ query: {e!s}"
+            logger.error("Error running JQ command: %s", e)
+            raise ValueError(error_msg) from e
+        except Exception as e:  # pylint: disable=broad-except
+            error_msg = f"Error applying JQ query: {e!s}"
+            logger.error("Error applying JQ query: %s", e)
+            raise ValueError(error_msg) from e
 
     def _apply_column_filter(self, data: Any, columns: list[str]) -> Any:
         """Filter data by specified columns."""
-        try:
-            if isinstance(data, dict):
-                return {k: v for k, v in data.items() if k in columns}
-            if isinstance(data, list):
-                return [{k: item[k] for k in columns if k in item} for item in data]
-        except (KeyError, TypeError):
+        if not isinstance(data, dict):
             return data
-        else:
-            return data
+
+        return {k: v for k, v in data.items() if k in columns}
 
     def process_dataframe(self) -> DataFrame:
         """Process data and return as DataFrame."""
+        result = self.process_data()
+        data_list = [result.data] if isinstance(result, Data) else [item.data for item in result]
+        dataframe = pd.DataFrame(data_list)
+        return cast(DataFrame, dataframe)
+
+    def _convert_to_dataframe(self) -> pd.DataFrame:
+        """Convert input data to DataFrame."""
+        if not self.input_value:
+            return pd.DataFrame()
+
+        if isinstance(self.input_value, Data):
+            return pd.DataFrame([self.input_value.data])
+
+        data_list = [item.data for item in self.input_value]
+        return pd.DataFrame(data_list)
+
+    def _filter_by_index(self, dataframe: pd.DataFrame) -> pd.DataFrame:
+        """Filter DataFrame by index."""
+        if self.index is not None:
+            return dataframe.iloc[[self.index]]
+        return dataframe
+
+    def _filter_by_columns(self, dataframe: pd.DataFrame) -> pd.DataFrame:
+        """Filter DataFrame by selected columns."""
+        if self.select_columns:
+            return dataframe[self.select_columns]
+        return dataframe
+
+    def _is_safe_jq_query(self, query: str) -> bool:
+        """Validate JQ query for security."""
+        # Basic validation - only allow alphanumeric characters, dots, brackets,
+        # spaces, and common JQ operators
+        safe_chars = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.[]() +-*/<>=|,")
+        return all(c in safe_chars for c in query) and len(query) < self.max_query_length
+
+    def process_data(self) -> Data | list[Data]:
+        """Process data and return as Data object or list of Data objects."""
         try:
-            to_filter = self.input_value
-            if not to_filter:
-                return DataFrame()
+            if not self.input_value:
+                return None
 
-            # Handle list input
-            if isinstance(to_filter, list):
-                to_filter = [self._parse_data(f) for f in to_filter]
-                to_filter = f"[{','.join(to_filter)}]"
-            else:
-                to_filter = self._parse_data(to_filter)
+            # Convert input to DataFrame
+            dataframe = self._convert_to_dataframe()
 
-            filtered_data = json.loads(to_filter)
+            # Apply filtering based on index
+            if self.index is not None:
+                dataframe = self._filter_by_index(dataframe)
 
-            # Convert to DataFrame
-            if isinstance(filtered_data, dict):
-                filtered_frame = DataFrame([filtered_data])
-            elif isinstance(filtered_data, list):
-                filtered_frame = DataFrame(filtered_data)
-            else:
-                filtered_frame = DataFrame([{"value": filtered_data}])
-
-            # Apply index filter if provided
-            if isinstance(self.index, int) and len(filtered_frame) > 0:
-                if 0 <= self.index < len(filtered_frame):
-                    filtered_frame = filtered_frame.iloc[[self.index]]
-                else:
-                    return DataFrame()
-
-            # Apply column filtering if needed
+            # Apply filtering based on selected columns
             if self.select_columns:
-                valid_columns = [col for col in self.select_columns if col in filtered_frame.columns]
-                return filtered_frame[valid_columns] if valid_columns else DataFrame()
-        except (ValueError, TypeError, KeyError) as e:
-            logger.exception("Error processing DataFrame: %s", e)
-            return DataFrame()
-        else:
-            return filtered_frame
+                dataframe = self._filter_by_columns(dataframe)
 
-    def process_data(self) -> Data:
-        """Process data and return as Data object."""
-        try:
-            filtered_frame = self.process_dataframe()
-            if filtered_frame.empty:
-                return Data(data={"results": []})
-        except (ValueError, TypeError, KeyError) as e:
-            error_data = Data(data={"error": str(e)})
-            self.status = error_data
-            logger.exception("Error processing data: %s", e)
-            return error_data
-        else:
-            return Data(data={"results": filtered_frame.to_dict(orient="records")})
+            # Apply JQ query filtering if provided
+            if self.jq_query:
+                # Validate JQ query for security
+                if not self._is_safe_jq_query(self.jq_query):
+                    error_msg = f"Invalid or unsafe JQ query: {self.jq_query}"
+                    raise ValueError(error_msg)
+
+                # Create temporary file
+                with tempfile.NamedTemporaryFile(mode="w", suffix=".json") as temp_file:
+                    # Write DataFrame to JSON file
+                    json.dump(dataframe.to_dict(orient="records"), temp_file)
+                    temp_file.flush()
+
+                    try:
+                        # Run JQ command with -c to get compact output
+                        # Input is validated by _is_safe_jq_query to prevent command injection
+                        command = ["jq", "-c", self.jq_query, temp_file.name]
+                        # nosec B603 - Input is validated by _is_safe_jq_query
+                        result = subprocess.check_output(
+                            command,
+                            text=True,
+                            stderr=subprocess.PIPE,
+                        )
+                        # Security: This subprocess call is safe because the input is validated by _is_safe_jq_query
+
+                        # Parse output
+                        output_str = result.strip()
+                        if not output_str:
+                            return None
+
+                        try:
+                            result = json.loads(output_str)
+                        except json.JSONDecodeError as e:
+                            error_msg = f"Error parsing JQ output: {e!s}"
+                            raise ValueError(error_msg) from e
+
+                        # Handle primitive values from JQ query
+                        if isinstance(result, int | float | str | bool):
+                            return Data(data=result)
+
+                        # Handle array results from JQ query with array operators
+                        if isinstance(result, list):
+                            return [Data(data=item) for item in result]
+
+                        # Handle object results from JQ query
+                        return Data(data=result)
+
+                    except subprocess.CalledProcessError as e:
+                        error_msg = f"Error executing JQ command: {e!s}"
+                        raise ValueError(error_msg) from e
+
+            # Return filtered DataFrame as list of Data objects
+            records = dataframe.to_dict(orient="records")
+            return [Data(data=record) for record in records]
+
+        except Exception as e:
+            error_msg = f"Error in FilterDataComponent: {e!s}"
+            raise ValueError(error_msg) from e

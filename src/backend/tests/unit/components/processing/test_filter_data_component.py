@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 from langflow.components.processing import FilterDataComponent
 from langflow.schema import Data
@@ -28,6 +30,9 @@ class TestFilterDataComponent(ComponentTestBaseWithoutClient):
             "index": None,
             "select_columns": [],
             "jq_query": "",
+            "_session_id": "test_session",
+            "_sender": "Filter Data Test",
+            "_sender_name": "Filter Data Test",
         }
 
     def test_basic_filtering(self, component_class, default_kwargs):
@@ -240,3 +245,9 @@ class TestFilterDataComponent(ComponentTestBaseWithoutClient):
         assert result.data["results"][0]["passed"] is True
         assert isinstance(result.data["results"][0]["average"], int | float)
         assert result.data["results"][1]["name"] == "Bob"
+
+    def test_latest_version(self, component_class: type[Any], default_kwargs: dict[str, Any]) -> None:
+        """Test that the component works with the latest version."""
+        component = component_class(**default_kwargs)
+        result = component.process_data()
+        assert result is not None, "Component returned None for the latest version."
