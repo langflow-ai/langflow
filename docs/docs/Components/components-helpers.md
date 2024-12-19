@@ -14,7 +14,7 @@ Chat memory in Langflow is stored either in local Langflow tables with `LCBuffer
 
 The **Store Message** helper component stores chat memories as [Data](/guides-data-message) objects, and the **Message History** helper component retrieves chat messages as data objects or strings.
 
-This example flow stores and retrieves chat history from an [AstraDBChatMemory](/Components/components-memories#astradbchatmemory-component) component with **Store Message** and **Chat Memory** components.
+This example flow stores and retrieves chat history from an [AstraDBChatMemory](/components-memories#astradbchatmemory-component) component with **Store Message** and **Chat Memory** components.
 
 ![Sample Flow storing Chat Memory in AstraDB](/img/astra_db_chat_memory_rounded.png)
 

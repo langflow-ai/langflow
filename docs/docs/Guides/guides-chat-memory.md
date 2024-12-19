@@ -59,9 +59,9 @@ Chat memory is retrieved from an external database or vector store using the [Ch
 
 Chat memory is stored to an external database or vector store using the [Store Message](/components-helpers#store-message) component.
 
-The [**Chat Memories**](/Components/components-memories) components provide access to their respective external databases **as memory**. This allows AIs to access external memory for persistence and context retention. For example, connect the **Chat Memory** component to an **AstraDBChatMemory** component to store the message history in an external Astra DB database.
+The [**Chat Memories**](/components-memories) components provide access to their respective external databases **as memory**. This allows AIs to access external memory for persistence and context retention. For example, connect the **Chat Memory** component to an **AstraDBChatMemory** component to store the message history in an external Astra DB database.
 
-This example stores and retrieves chat history from an [AstraDBChatMemory](/Components/components-memories#astradbchatmemory-component) component with **Store Message** and **Chat Memory** components.
+This example stores and retrieves chat history from an [AstraDBChatMemory](/components-memories#astradbchatmemory-component) component with **Store Message** and **Chat Memory** components.
 
 ### Prerequisites
 
@@ -76,7 +76,7 @@ This example stores and retrieves chat history from an [AstraDBChatMemory](/Comp
 This starter project extends the basic prompting flow to include a chat memory component.
 2. Add the [Store Message](/components-helpers#store-message) component to the flow.
 The **Store message** component stores messages in the external database.
-3. Add the [AstraDBChatMemory Component](/Components/components-memories#astradbchatmemory-component) to the flow.
+3. Add the [AstraDBChatMemory Component](/components-memories#astradbchatmemory-component) to the flow.
 The **Astra DB Chat Memory** component stores and retrieves messages from **Astra DB**.
 4. Configure the **AstraDBChatMemory** component with your AstraDB instance details.
 	1. In the **Astra DB Application Token** field, add your Astra token. (`AstraCS:...`)
