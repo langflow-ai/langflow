@@ -6,14 +6,15 @@ from langflow.base.flow_processing.utils import build_data_from_result_data
 from langflow.custom import Component
 from langflow.graph.graph.base import Graph
 from langflow.graph.vertex.base import Vertex
-from langflow.helpers.flow import get_flow_inputs
-from langflow.io import DropdownInput, Output
+from langflow.helpers.flow import get_flow_inputs, run_flow
+from langflow.io import DropdownInput, MessageInput, Output
 from langflow.schema import Data, dotdict
 
 default_keys = [
     "code",
     "_type",
     "flow_name_selected",
+    "session_id",
 ]
 
 
@@ -29,9 +30,15 @@ class FlowOrchestrator(Component):
             display_name="Flow Name",
             info="The name of the flow to run.",
             options=[],
-            refresh_button=True,
             real_time_refresh=True,
             value=None,
+        ),
+        MessageInput(
+            name="session_id",
+            display_name="Session ID",
+            info="The session ID to run the flow in.",
+            value="",
+            advanced=True,
         ),
     ]
 
@@ -75,6 +82,7 @@ class FlowOrchestrator(Component):
                             inputs = get_flow_inputs(graph)
                             # Add inputs to the build config
                             new_fields = self.get_new_fields(inputs)
+                            print(f"New Fields {new_fields}")
                             old_fields = self.get_old_fields(build_config, new_fields)
                             self.delete_fields(build_config, old_fields)
                             build_config = self.add_new_fields(build_config, new_fields)
@@ -90,20 +98,19 @@ class FlowOrchestrator(Component):
         for vertex in inputs_vertex:
             field_template = vertex.data.get("node", {}).get("template", {})
             field_order = vertex.data.get("node", {}).get("field_order", [])
-            new_vertex_inputs = [
-                {
-                    **field_template[input_name],
-                    "display_name": vertex.display_name + " - " + field_template[input_name]["display_name"],
-                    "name": vertex.id + "|" + input_name,
-                    "tool_mode": bool(
-                        field_template[input_name].get("advanced", False)
-                        or field_template[input_name].get("tool_mode", True)
-                        or field_template[input_name].get("required", False)
-                    ),
-                }
-                for input_name in field_order
-            ]
-            new_fields += new_vertex_inputs
+            if field_order and field_template:
+                new_vertex_inputs = [
+                    {
+                        **field_template[input_name],
+                        "display_name": vertex.display_name + " - " + field_template[input_name]["display_name"],
+                        "name": vertex.id + "|" + input_name,
+                        "tool_mode": not (
+                            field_template[input_name].get("advanced", False)
+                        ),
+                    }
+                    for input_name in field_order
+                ]
+                new_fields += new_vertex_inputs
 
         return new_fields
 
@@ -137,10 +144,16 @@ class FlowOrchestrator(Component):
                     tweaks[node] = {}
                 tweaks[node][name] = self._attributes[field]
         flow_name_selected = self._attributes.get("flow_name_selected")
-        run_outputs = await self.run_flow(
-            tweaks=tweaks,
-            flow_name=flow_name_selected,
+
+        run_outputs = await run_flow(
+            inputs=None,
             output_type="all",
+            flow_id=None,
+            flow_name=flow_name_selected,
+            tweaks=tweaks,
+            user_id=str(self.user_id),
+            run_id=self.graph.run_id,
+            session_id=self.graph.session_id or self.session_id,
         )
         data: list[Data] = []
         if not run_outputs:
