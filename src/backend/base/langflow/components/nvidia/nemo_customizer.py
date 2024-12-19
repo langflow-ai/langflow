@@ -136,14 +136,16 @@ class NVIDIANeMoCustomizerComponent(Component):
 
                     self.log("Updated model_name dropdown options.")
             return build_config
+
         except httpx.HTTPStatusError as exc:
             error_msg = f"HTTP error {exc.response.status_code} on {models_url}"
             self.log(error_msg)
             raise ValueError(error_msg)
-        except Exception as exc:
+        except (httpx.RequestError, ValueError) as exc:
             error_msg = f"Error refreshing model names: {str(exc)}"
             self.log(error_msg)
             raise ValueError(error_msg)
+
 
     async def customize(self) -> dict:
         dataset_name = self.dataset
@@ -205,7 +207,7 @@ class NVIDIANeMoCustomizerComponent(Component):
             self.log(error_msg)
             raise ValueError(error_msg)
 
-        except Exception as exc:
+        except (httpx.RequestError, ValueError) as exc:
             error_msg = f"An unexpected error occurred on URL {customizations_url}: {str(exc)}"
             self.log(error_msg)
             raise ValueError(error_msg)
