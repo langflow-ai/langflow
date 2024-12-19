@@ -3,7 +3,7 @@ name: Codeflash Optimizations
 on:
   pull_request:
     paths:
-      - "src/backend/base/**"
+      - "src/backend/base/**" # TODO: add langflow/ to the path
   workflow_dispatch:
 
 concurrency:
@@ -26,9 +26,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: "Setup Environment"
-        uses: ./.github/actions/setup-uv
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+      - run: uv sync --dev
       - name: Run Codeflash Optimizer
         run: uv run codeflash
       - name: Minimize uv cache
