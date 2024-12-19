@@ -765,6 +765,11 @@ export const defaultShortcuts = [
     shortcut: "mod+shift+a",
   },
   {
+    display_name: "Search Components on Sidebar",
+    name: "Search Components Sidebar",
+    shortcut: "/",
+  },
+  {
     display_name: "Minimize",
     name: "Minimize",
     shortcut: "mod+.",
