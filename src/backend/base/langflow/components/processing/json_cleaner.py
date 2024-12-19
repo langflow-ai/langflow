@@ -97,7 +97,7 @@ class JSONCleaner(Component):
             raise ValueError(msg) from e
         return s
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         # Create a translation table that maps control characters to None
-        super().__init__()
+        super().__init__(*args, **kwargs)
         self.translation_table = str.maketrans("", "", "".join(chr(i) for i in range(32)) + chr(127))
