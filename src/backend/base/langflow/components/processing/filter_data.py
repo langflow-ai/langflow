@@ -159,7 +159,7 @@ class FilterDataComponent(Component):
         """Process data and return as Data object or list of Data objects."""
         try:
             if not self.input_value:
-                return None
+                return Data(data={})
 
             # Convert input to DataFrame
             dataframe = self._convert_to_dataframe()
@@ -186,7 +186,7 @@ class FilterDataComponent(Component):
                 result = self._apply_jq_query(json_str, self.jq_query)
 
                 if result is None:
-                    return None
+                    return Data(data={})
 
                 # Handle primitive values from JQ query
                 if isinstance(result, int | float | str | bool):
@@ -194,14 +194,14 @@ class FilterDataComponent(Component):
 
                 # Handle array results from JQ query
                 if isinstance(result, list):
-                    return [Data(data=item) for item in result]
+                    return Data(data={"results": result})
 
                 # Handle object results from JQ query
                 return Data(data=result)
 
             # Return filtered DataFrame as list of Data objects
             records = dataframe.to_dict(orient="records")
-            return [Data(data=record) for record in records]
+            return Data(data={"results": records})
 
         except Exception as e:
             error_msg = f"Error in FilterDataComponent: {e!s}"
