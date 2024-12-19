@@ -3,7 +3,7 @@ import os
 from astrapy.admin import parse_api_endpoint
 
 from langflow.base.memory.model import LCChatMemoryComponent
-from langflow.field_typing import BaseChatMessageHistory
+from langflow.field_typing.constants import Memory
 from langflow.inputs import MessageTextInput, SecretStrInput, StrInput
 
 
@@ -49,7 +49,7 @@ class AstraDBChatMemory(LCChatMemoryComponent):
         ),
     ]
 
-    def build_message_history(self) -> BaseChatMessageHistory:
+    def build_message_history(self) -> Memory:
         try:
             from langchain_astradb.chat_message_histories import AstraDBChatMessageHistory
         except ImportError as e:

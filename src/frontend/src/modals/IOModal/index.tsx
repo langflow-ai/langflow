@@ -1,12 +1,10 @@
+import AccordionComponent from "@/components/common/accordionComponent";
 import {
   useDeleteMessages,
   useGetMessagesQuery,
 } from "@/controllers/API/queries/messages";
 import { useUtilityStore } from "@/stores/utilityStore";
-import { someFlowTemplateFields } from "@/utils/reactflowUtils";
 import { useEffect, useState } from "react";
-import ShortUniqueId from "short-unique-id";
-import AccordionComponent from "../../components/accordionComponent";
 import IconComponent from "../../components/common/genericIconComponent";
 import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Badge } from "../../components/ui/badge";
@@ -24,7 +22,7 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useMessagesStore } from "../../stores/messagesStore";
 import { IOModalPropsType } from "../../types/components";
-import { NodeType } from "../../types/flow";
+import { AllNodeType } from "../../types/flow";
 import { cn } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import IOFieldView from "./components/IOFieldView";
@@ -168,7 +166,7 @@ export default function IOModal({
     // refetch();
     setLockChat(false);
     if (chatInput) {
-      setNode(chatInput.id, (node: NodeType) => {
+      setNode(chatInput.id, (node: AllNodeType) => {
         const newNode = { ...node };
 
         newNode.data.node!.template["input_value"].value = chatValue;

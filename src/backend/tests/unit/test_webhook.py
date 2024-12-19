@@ -1,6 +1,5 @@
-import tempfile
-from pathlib import Path
-
+import aiofiles
+import anyio
 import pytest
 
 
@@ -17,22 +16,22 @@ async def test_webhook_endpoint(client, added_webhook_test):
     endpoint_name = added_webhook_test["endpoint_name"]
     endpoint = f"api/v1/webhook/{endpoint_name}"
     # Create a temporary file
-    with tempfile.TemporaryDirectory() as tmp:
-        file_path = Path(tmp) / "test_file.txt"
+    async with aiofiles.tempfile.TemporaryDirectory() as tmp:
+        file_path = anyio.Path(tmp) / "test_file.txt"
 
         payload = {"path": str(file_path)}
 
         response = await client.post(endpoint, json=payload)
         assert response.status_code == 202
-        assert file_path.exists()
+        assert await file_path.exists()
 
-    assert not file_path.exists()
+    assert not await file_path.exists()
 
     # Send an invalid payload
     payload = {"invalid_key": "invalid_value"}
     response = await client.post(endpoint, json=payload)
     assert response.status_code == 202
-    assert not file_path.exists()
+    assert not await file_path.exists()
 
 
 async def test_webhook_flow_on_run_endpoint(client, added_webhook_test, created_api_key):

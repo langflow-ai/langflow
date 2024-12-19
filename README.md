@@ -20,6 +20,7 @@
   <a href="./README.zh_CN.md"><img alt="README in Simplified Chinese" src="https://img.shields.io/badge/简体中文-d9d9d9"></a>
   <a href="./README.ja.md"><img alt="README in Japanese" src="https://img.shields.io/badge/日本語-d9d9d9"></a>
   <a href="./README.KR.md"><img alt="README in KOREAN" src="https://img.shields.io/badge/한국어-d9d9d9"></a>
+  <a href="./README.FR.md"><img alt="README in French" src="https://img.shields.io/badge/Français-d9d9d9"></a>
 </div>
 
 ## ✨ Core features
@@ -39,16 +40,16 @@
 
 ## 📦 Quickstart
 
+- **Install with uv (recommended)** (Python 3.10 to 3.12):
+
+```shell
+uv pip install langflow
+```
+
 - **Install with pip** (Python 3.10 to 3.12):
 
 ```shell
 pip install langflow
-```
-
-- **Install with uv** (Python 3.10 to 3.12):
-
-```shell
-uv pip install langflow
 ```
 
 - **Cloud:** DataStax Langflow is a hosted environment with zero setup. [Sign up for a free account.](https://astra.datastax.com/signup?type=langflow)

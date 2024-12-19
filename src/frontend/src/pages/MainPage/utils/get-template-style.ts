@@ -6,7 +6,10 @@ export const useGetTemplateStyle = (
   flowData: FlowType,
 ): { getIcon: () => string } => {
   const getIcon = () => {
-    if (flowData.is_component) {
+    if (
+      flowData.is_component &&
+      flowData.data?.nodes[0].type === "genericNode"
+    ) {
       const dataType = flowData.data?.nodes[0].data.type;
       const isGroup = !!flowData.data?.nodes[0].data.node?.flow;
       const icon = flowData.data?.nodes[0].data.node?.icon;
