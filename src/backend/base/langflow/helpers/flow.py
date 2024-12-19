@@ -4,14 +4,14 @@ from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 from fastapi import HTTPException
+from loguru import logger
 from pydantic.v1 import BaseModel, Field, create_model
 from sqlmodel import select
-from loguru import logger
 
 from langflow.schema.schema import INPUT_FIELD_NAME
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.flow.model import FlowRead
-from langflow.services.deps import async_session_scope, get_settings_service
+from langflow.services.deps import get_settings_service, session_scope
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -33,7 +33,7 @@ async def list_flows(*, user_id: str | None = None) -> list[Data]:
         msg = "Session is invalid"
         raise ValueError(msg)
     try:
-        async with async_session_scope() as session:
+        async with session_scope() as session:
             uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
             stmt = select(Flow).where(Flow.user_id == uuid_user_id).where(Flow.is_component == False)  # noqa: E712
             flows = (await session.exec(stmt)).all()
@@ -59,7 +59,7 @@ async def load_flow(
             msg = f"Flow {flow_name} not found"
             raise ValueError(msg)
 
-    async with async_session_scope() as session:
+    async with session_scope() as session:
         graph_data = flow.data if (flow := await session.get(Flow, flow_id)) else None
     if not graph_data:
         msg = f"Flow {flow_id} not found"
@@ -70,8 +70,9 @@ async def load_flow(
 
 
 async def find_flow(flow_name: str, user_id: str) -> str | None:
-    async with async_session_scope() as session:
-        stmt = select(Flow).where(Flow.name == flow_name).where(Flow.user_id == user_id)
+    async with session_scope() as session:
+        uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
+        stmt = select(Flow).where(Flow.name == flow_name).where(Flow.user_id == uuid_user_id)
         flow = (await session.exec(stmt)).first()
         return flow.id if flow else None
 
@@ -275,8 +276,8 @@ def get_arg_names(inputs: list[Vertex]) -> list[dict[str, str]]:
     ]
 
 
-async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: UUID | None = None) -> FlowRead | None:
-    async with async_session_scope() as session:
+async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: str | UUID | None = None) -> FlowRead | None:
+    async with session_scope() as session:
         endpoint_name = None
         try:
             flow_id = UUID(flow_id_or_name)
@@ -285,7 +286,8 @@ async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: UUID | 
             endpoint_name = flow_id_or_name
             stmt = select(Flow).where(Flow.endpoint_name == endpoint_name)
             if user_id:
-                stmt = stmt.where(Flow.user_id == user_id)
+                uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
+                stmt = stmt.where(Flow.user_id == uuid_user_id)
             flow = (await session.exec(stmt)).first()
         if flow is None:
             raise HTTPException(status_code=404, detail=f"Flow identifier {flow_id_or_name} not found")
@@ -318,6 +320,7 @@ async def generate_unique_flow_name(flow_name, user_id, session):
 def json_schema_from_flow(flow: Flow) -> dict:
     """Generate JSON schema from flow input nodes."""
     from langflow.graph.graph.base import Graph
+
     # Get the flow's data which contains the nodes and their configurations
     flow_data = flow.data if flow.data else {}
 

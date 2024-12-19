@@ -15,6 +15,7 @@ import { ZepMemoryIcon } from "@/icons/ZepMemory";
 import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import { GlobeOkIcon } from "@/icons/globe-ok";
+import { ThumbDownIconCustom, ThumbUpIconCustom } from "@/icons/thumbs";
 import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import {
   AlertCircle,
@@ -64,7 +65,6 @@ import {
   CopyPlus,
   CornerDownLeft,
   Cpu,
-  CpuIcon,
   Database,
   DatabaseZap,
   Delete,
@@ -205,6 +205,8 @@ import {
   TextCursorInput,
   TextSearch,
   TextSearchIcon,
+  ThumbsDown,
+  ThumbsUp,
   ToyBrick,
   Trash2,
   Type,
@@ -474,6 +476,7 @@ export const nodeColorsName: { [char: string]: string } = {
   Tool: "cyan",
   BaseChatMemory: "cyan",
   BaseChatMessageHistory: "orange",
+  Memory: "orange",
 };
 
 export const SIDEBAR_CATEGORIES = [
@@ -510,6 +513,7 @@ export const SIDEBAR_BUNDLES = [
     name: "astra_assistants",
     icon: "AstraDB",
   },
+  { display_name: "LangWatch", name: "langwatch", icon: "Langwatch" },
   { display_name: "Notion", name: "Notion", icon: "Notion" },
   { display_name: "Needle", name: "needle", icon: "Needle" },
   { display_name: "NVIDIA", name: "nvidia", icon: "NVIDIA" },
@@ -927,4 +931,8 @@ export const nodeIconsLucide: iconsType = {
   Cog,
   ArrowRightLeft,
   FolderSync,
+  ThumbsUp,
+  ThumbsDown,
+  ThumbDownIconCustom,
+  ThumbUpIconCustom,
 };

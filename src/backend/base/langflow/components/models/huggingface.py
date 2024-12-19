@@ -7,7 +7,6 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 #  Need to update to langchain_huggingface, but have dependency with langchain_core 0.3.0
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.inputs.inputs import HandleInput
 from langflow.io import DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
 
 
@@ -75,13 +74,6 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
         SecretStrInput(name="huggingfacehub_api_token", display_name="API Token", password=True),
         DictInput(name="model_kwargs", display_name="Model Keyword Arguments", advanced=True),
         IntInput(name="retry_attempts", display_name="Retry Attempts", value=1, advanced=True),
-        HandleInput(
-            name="output_parser",
-            display_name="Output Parser",
-            info="The parser to use to parse the output of the model",
-            advanced=True,
-            input_types=["OutputParser"],
-        ),
     ]
 
     def get_api_url(self) -> str:
