@@ -93,7 +93,6 @@ export const ChatViewWrapper = ({
       >
         {messagesFetched && (
           <ChatView
-            messageFetched={messagesFetched}
             focusChat={sessionId}
             sendMessage={sendMessage}
             chatValue={chatValue}

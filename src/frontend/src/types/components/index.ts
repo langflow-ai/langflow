@@ -771,7 +771,6 @@ export type chatViewProps = {
   visibleSession?: string;
   focusChat?: string;
   closeChat?: () => void;
-  messageFetched?: boolean;
 };
 
 export type IOFileInputProps = {
