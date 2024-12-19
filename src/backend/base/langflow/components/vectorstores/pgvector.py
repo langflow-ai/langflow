@@ -2,7 +2,7 @@ from langchain_community.vectorstores import PGVector
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
-from langflow.io import DataInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput
+from langflow.io import HandleInput, IntInput, SecretStrInput, StrInput
 from langflow.schema import Data
 from langflow.utils.connection_string_parser import transform_connection_string
 
@@ -10,19 +10,13 @@ from langflow.utils.connection_string_parser import transform_connection_string
 class PGVectorStoreComponent(LCVectorStoreComponent):
     display_name = "PGVector"
     description = "PGVector Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/pgvector/"
     name = "pgvector"
     icon = "cpu"
 
     inputs = [
         SecretStrInput(name="pg_server_url", display_name="PostgreSQL Server Connection String", required=True),
         StrInput(name="collection_name", display_name="Table", required=True),
-        MultilineInput(name="search_query", display_name="Search Query"),
-        DataInput(
-            name="ingest_data",
-            display_name="Ingestion Data",
-            is_list=True,
-        ),
+        *LCVectorStoreComponent.inputs,
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         IntInput(
             name="number_of_results",

@@ -3,7 +3,6 @@ from langchain_community.vectorstores import UpstashVectorStore
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import (
-    DataInput,
     HandleInput,
     IntInput,
     MultilineInput,
@@ -16,7 +15,6 @@ from langflow.schema import Data
 class UpstashVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Upstash"
     description = "Upstash Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/upstash/"
     name = "Upstash"
     icon = "Upstash"
 
@@ -45,16 +43,11 @@ class UpstashVectorStoreComponent(LCVectorStoreComponent):
             display_name="Namespace",
             info="Leave empty for default namespace.",
         ),
-        MultilineInput(name="search_query", display_name="Search Query"),
+        *LCVectorStoreComponent.inputs,
         MultilineInput(
             name="metadata_filter",
             display_name="Metadata Filter",
             info="Filters documents by metadata. Look at the documentation for more information.",
-        ),
-        DataInput(
-            name="ingest_data",
-            display_name="Ingest Data",
-            is_list=True,
         ),
         HandleInput(
             name="embedding",
