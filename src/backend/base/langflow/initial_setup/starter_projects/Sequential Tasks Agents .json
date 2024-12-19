@@ -98,9 +98,7 @@
             "fieldName": "tools",
             "id": "Agent-rH74C",
             "inputTypes": [
-              "Tool",
-              "BaseTool",
-              "StructuredTool"
+              "Tool"
             ],
             "type": "other"
           }
@@ -109,7 +107,7 @@
         "source": "CalculatorTool-xo5ux",
         "sourceHandle": "{œdataTypeœ: œCalculatorToolœ, œidœ: œCalculatorTool-xo5uxœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-rH74C",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-rH74Cœ, œinputTypesœ: [œToolœ, œBaseToolœ, œStructuredToolœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-rH74Cœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -127,9 +125,7 @@
             "fieldName": "tools",
             "id": "Agent-vIPAK",
             "inputTypes": [
-              "Tool",
-              "BaseTool",
-              "StructuredTool"
+              "Tool"
             ],
             "type": "other"
           }
@@ -138,7 +134,7 @@
         "source": "YahooFinanceTool-YmOKx",
         "sourceHandle": "{œdataTypeœ: œYahooFinanceToolœ, œidœ: œYahooFinanceTool-YmOKxœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-vIPAK",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-vIPAKœ, œinputTypesœ: [œToolœ, œBaseToolœ, œStructuredToolœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-vIPAKœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -238,9 +234,7 @@
             "fieldName": "tools",
             "id": "Agent-uaR2o",
             "inputTypes": [
-              "Tool",
-              "BaseTool",
-              "StructuredTool"
+              "Tool"
             ],
             "type": "other"
           }
@@ -249,7 +243,7 @@
         "source": "TavilyAISearch-YfG8u",
         "sourceHandle": "{œdataTypeœ: œTavilyAISearchœ, œidœ: œTavilyAISearch-YfG8uœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-uaR2o",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-uaR2oœ, œinputTypesœ: [œToolœ, œBaseToolœ, œStructuredToolœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-uaR2oœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -854,7 +848,7 @@
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
                 "input_types": [
-                  "BaseChatMessageHistory"
+                  "Memory"
                 ],
                 "list": false,
                 "name": "memory",
@@ -1113,9 +1107,7 @@
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
                 "input_types": [
-                  "Tool",
-                  "BaseTool",
-                  "StructuredTool"
+                  "Tool"
                 ],
                 "list": true,
                 "name": "tools",
@@ -1432,7 +1424,7 @@
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
                 "input_types": [
-                  "BaseChatMessageHistory"
+                  "Memory"
                 ],
                 "list": false,
                 "name": "memory",
@@ -1691,9 +1683,7 @@
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
                 "input_types": [
-                  "Tool",
-                  "BaseTool",
-                  "StructuredTool"
+                  "Tool"
                 ],
                 "list": true,
                 "name": "tools",
@@ -3325,7 +3315,7 @@
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
                 "input_types": [
-                  "BaseChatMessageHistory"
+                  "Memory"
                 ],
                 "list": false,
                 "name": "memory",
@@ -3584,9 +3574,7 @@
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
                 "input_types": [
-                  "Tool",
-                  "BaseTool",
-                  "StructuredTool"
+                  "Tool"
                 ],
                 "list": true,
                 "name": "tools",
