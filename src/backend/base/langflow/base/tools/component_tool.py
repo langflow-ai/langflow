@@ -11,7 +11,7 @@ from loguru import logger
 from pydantic import BaseModel
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
-from langflow.io.schema import create_input_schema
+from langflow.io.schema import create_input_schema,create_input_schema_from_dict
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 
@@ -170,7 +170,7 @@ class ComponentToolkit:
         tool_name: str | None = None,
         tool_description: str | None = None,
         callbacks: Callbacks | None = None,
-        tool_mode_inputs: list[dotdict] | None = None,
+        flow_mode_inputs: list[dotdict] | None = None,
     ) -> list[BaseTool]:
         tools = []
         for output in self.component.outputs:
@@ -183,9 +183,10 @@ class ComponentToolkit:
 
             output_method: Callable = getattr(self.component, output.method)
             args_schema = None
-            if not tool_mode_inputs:
-                tool_mode_inputs = [_input for _input in self.component.inputs if getattr(_input, "tool_mode", False)]
-            if output.required_inputs:
+            tool_mode_inputs = [_input for _input in self.component.inputs if getattr(_input, "tool_mode", False)]
+            if flow_mode_inputs:
+                args_schema = create_input_schema_from_dict(flow_mode_inputs)
+            elif output.required_inputs:
                 inputs = [
                     self.component._inputs[input_name]
                     for input_name in output.required_inputs
@@ -209,7 +210,9 @@ class ComponentToolkit:
                     raise ValueError(msg)
                 args_schema = create_input_schema(inputs)
             elif tool_mode_inputs:
+                print(f"TOOL_MODE_INPUTS {tool_mode_inputs}")
                 args_schema = create_input_schema(tool_mode_inputs)
+                print(f"ARGS_SCHEMA {args_schema}")
             else:
                 args_schema = create_input_schema(self.component.inputs)
             name = f"{self.component.name}.{output.method}"

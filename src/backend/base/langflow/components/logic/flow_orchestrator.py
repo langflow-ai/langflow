@@ -58,7 +58,7 @@ class FlowOrchestrator(Component):
             display_name="Flow JSON",
             info="The flow JSON to run.",
             value="",
-            file_types=["json", "JSON"],
+            file_types=["json"],
             advanced=True,
             refresh_button=True,
         ),
@@ -195,7 +195,9 @@ class FlowOrchestrator(Component):
                 if node not in tweaks:
                     tweaks[node] = {}
                 tweaks[node][name] = self._attributes[field]
-
+        print("IN GENERATE RESULTS")
+        tweaks= {"ChatInput-xNZ0a": {"input_value": "add 1+1"}}
+        print(f"tweaks______________: {tweaks}")
         run_outputs = await run_flow(
             inputs=None,
             output_type="all",
@@ -206,6 +208,7 @@ class FlowOrchestrator(Component):
             run_id=self.graph.run_id,
             session_id=self.graph.session_id or self.session_id,
         )
+        print(f"run_outputs______________: {run_outputs}")
         data: list[Data] = []
         if not run_outputs:
             return data
@@ -223,16 +226,27 @@ class FlowOrchestrator(Component):
             if flow_data.data["name"] == flow_name_selected:
                 graph = Graph.from_payload(flow_data.data["data"])
                 new_fields = self.get_new_fields_from_graph(graph)
+                new_fields = self.update_input_types(new_fields)
                 return [field for field in new_fields if field.get("tool_mode") is True]
         return None
 
+    def update_input_types(self, fields: list[dotdict]) -> list[dotdict]:
+        for field in fields:
+            if isinstance(field, dict):
+                if field.get("input_types") is None:
+                    field["input_types"] = []
+            elif hasattr(field, "input_types") and field.input_types is None:
+                field.input_types = []
+        return fields
+
+
     async def to_toolkit(self) -> list[Tool]:
         component_toolkit = _get_component_toolkit()
-        tool_mode_inputs = self.get_required_data(self.flow_name_selected)
+        tool_mode_inputs = await self.get_required_data(self.flow_name_selected)
         # # convert list of dicts to list of dotdicts
         tool_mode_inputs = [dotdict(field) for field in tool_mode_inputs]
         tools = component_toolkit(component=self).get_tools(
-            callbacks=self.get_langchain_callbacks(), tool_mode_inputs=tool_mode_inputs
+            callbacks=self.get_langchain_callbacks(), flow_mode_inputs=tool_mode_inputs
         )
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
