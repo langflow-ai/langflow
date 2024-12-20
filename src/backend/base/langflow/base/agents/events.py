@@ -25,16 +25,8 @@ class InputDict(TypedDict):
 
 
 def _build_agent_input_text_content(agent_input_dict: InputDict) -> str:
-    chat_history = agent_input_dict.get("chat_history", [])
-    messages = [
-        f"**{message.type.upper()}**: {message.content}"
-        for message in chat_history
-        if isinstance(message, BaseMessage) and message.content
-    ]
     final_input = agent_input_dict.get("input", "")
-    if messages and final_input not in messages[-1]:
-        messages.append(f"**HUMAN**: {final_input}")
-    return "  \n".join(messages)
+    return f"**Input**: {final_input}"
 
 
 def _calculate_duration(start_time: float) -> int:
