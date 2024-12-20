@@ -96,7 +96,7 @@ class ArizeAIDatastoreComponent(Component):
                                                                                   str) else input_messages
                         output_messages = json.loads(output_messages) if isinstance(output_messages,
                                                                                     str) else output_messages
-                    except (json.JSONDecodeError, TypeError) as e:
+                    except (json.JSONDecodeError, TypeError):
                         logger.exception("Error parsing JSON for row %s", row.name)
                         input_messages = []
                         output_messages = []
@@ -130,12 +130,14 @@ class ArizeAIDatastoreComponent(Component):
                 for _, row in new_df.iterrows()
             ]
             length = len(data_objects)
-            logger.info(f"Created {length} Data objects for dataset: {data_objects}")
+            message = f"Created {length} Data objects for dataset: {data_objects}"
+            logger.info(message)
             return data_objects
 
 
         except (httpx.RequestError, ValueError) as exc:
             logger.exception("Error fetching or processing datasets")
+        else:
             return []
 
     def process_messages(self, input_messages, output_messages):
@@ -171,7 +173,6 @@ class ArizeAIDatastoreComponent(Component):
             if datasets.empty:
                 logger.warning("No datasets found.")
                 return pd.DataFrame(columns=["dataset_id", "dataset_name"])
-            logger.info(f"Fetched datasets: {datasets}")
 
         except (httpx.RequestError, ValueError):
             logger.exception("Error fetching datasets")
@@ -195,7 +196,6 @@ class ArizeAIDatastoreComponent(Component):
                 build_config["dataset_metadata"]["value"] = datasets_dict
                 # Populate the dropdown with dataset names
                 build_config["dataset_name"]["options"] = datasets_df["dataset_name"].tolist()
-                logger.info(f"Dropdown options updated: {build_config['dataset_name']['options']}")
             else:
                 # If no datasets, clear the dropdown and DictInput
                 build_config["dataset_name"]["options"] = []
@@ -214,7 +214,7 @@ class ArizeAIDatastoreComponent(Component):
                 api_key=api_key
             )
             logger.info("Successfully initialized ArizeDatasetsClient.")
-        except Exception as exc:
+        except Exception:
             logger.exception("Failed to initialize ArizeDatasetsClient")
             raise
         else:
