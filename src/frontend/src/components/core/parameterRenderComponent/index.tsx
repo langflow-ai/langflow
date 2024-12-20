@@ -1,13 +1,10 @@
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
-import { TEXT_FIELD_TYPES } from "@/constants/constants";
-import { APIClassType, InputFieldType } from "@/types/api";
-import { memo, useCallback, useMemo } from "react";
-import { InputProps } from "./types";
-
-// Import components
 import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
 import CodeAreaComponent from "@/components/core/parameterRenderComponent/components/codeAreaComponent";
 import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
+import { TEXT_FIELD_TYPES } from "@/constants/constants";
+import { APIClassType, InputFieldType } from "@/types/api";
+import { useMemo } from "react";
 import DictComponent from "./components/dictComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import FloatComponent from "./components/floatComponent";
@@ -21,38 +18,9 @@ import PromptAreaComponent from "./components/promptComponent";
 import { RefreshParameterComponent } from "./components/refreshParameterComponent";
 import { StrRenderComponent } from "./components/strRenderComponent";
 import ToggleShadComponent from "./components/toggleShadComponent";
+import { InputProps } from "./types";
 
-const MemoizedTableNode = memo(TableNodeComponent);
-const MemoizedCodeArea = memo(CodeAreaComponent);
-const MemoizedSlider = memo(SliderComponent);
-const MemoizedDict = memo(DictComponent);
-const MemoizedEmpty = memo(EmptyParameterComponent);
-const MemoizedFloat = memo(FloatComponent);
-const MemoizedInputFile = memo(InputFileComponent);
-const MemoizedInputList = memo(InputListComponent);
-const MemoizedInt = memo(IntComponent);
-const MemoizedKeypairList = memo(KeypairListComponent);
-const MemoizedLink = memo(LinkComponent);
-const MemoizedMultiselect = memo(MultiselectComponent);
-const MemoizedPromptArea = memo(PromptAreaComponent);
-const MemoizedStrRender = memo(StrRenderComponent);
-const MemoizedToggleShad = memo(ToggleShadComponent);
-
-interface ParameterRenderProps {
-  handleOnNewValue: handleOnNewValueType;
-  name: string;
-  nodeId: string;
-  templateData: Partial<InputFieldType>;
-  templateValue: any;
-  editNode: boolean;
-  handleNodeClass: (value: any, code?: string, type?: string) => void;
-  nodeClass: APIClassType;
-  disabled: boolean;
-  placeholder?: string;
-  isToolMode?: boolean;
-}
-
-export const ParameterRenderComponent = memo(function ParameterRenderComponent({
+export function ParameterRenderComponent({
   handleOnNewValue,
   name,
   nodeId,
@@ -64,20 +32,28 @@ export const ParameterRenderComponent = memo(function ParameterRenderComponent({
   disabled,
   placeholder,
   isToolMode,
-}: ParameterRenderProps) {
-  const id = useMemo(
-    () =>
-      (
-        templateData.type +
-        "_" +
-        (editNode ? "edit_" : "") +
-        templateData.name
-      ).toLowerCase(),
-    [templateData.type, templateData.name, editNode],
-  );
+}: {
+  handleOnNewValue: handleOnNewValueType;
+  name: string;
+  nodeId: string;
+  templateData: Partial<InputFieldType>;
+  templateValue: any;
+  editNode: boolean;
+  handleNodeClass: (value: any, code?: string, type?: string) => void;
+  nodeClass: APIClassType;
+  disabled: boolean;
+  placeholder?: string;
+  isToolMode?: boolean;
+}) {
+  const id = (
+    templateData.type +
+    "_" +
+    (editNode ? "edit_" : "") +
+    templateData.name
+  ).toLowerCase();
 
-  const baseInputProps = useMemo(
-    () => ({
+  const renderComponent = (): React.ReactElement<InputProps> => {
+    const baseInputProps: InputProps = {
       id,
       value: templateValue,
       editNode,
@@ -88,27 +64,12 @@ export const ParameterRenderComponent = memo(function ParameterRenderComponent({
       readonly: templateData.readonly,
       placeholder,
       isToolMode,
-    }),
-    [
-      id,
-      templateValue,
-      editNode,
-      handleOnNewValue,
-      disabled,
-      nodeClass,
-      handleNodeClass,
-      templateData.readonly,
-      placeholder,
-      isToolMode,
-    ],
-  );
-
-  const renderComponent = useCallback((): React.ReactElement<InputProps> => {
+    };
     if (TEXT_FIELD_TYPES.includes(templateData.type ?? "")) {
       if (templateData.list) {
         if (!templateData.options) {
           return (
-            <MemoizedInputList
+            <InputListComponent
               {...baseInputProps}
               componentName={name}
               id={`inputlist_${id}`}
@@ -117,7 +78,7 @@ export const ParameterRenderComponent = memo(function ParameterRenderComponent({
         }
         if (!!templateData.options) {
           return (
-            <MemoizedMultiselect
+            <MultiselectComponent
               {...baseInputProps}
               combobox={templateData.combobox}
               options={
@@ -131,7 +92,7 @@ export const ParameterRenderComponent = memo(function ParameterRenderComponent({
         }
       }
       return (
-        <MemoizedStrRender
+        <StrRenderComponent
           {...baseInputProps}
           templateData={templateData}
           name={name}
@@ -140,11 +101,10 @@ export const ParameterRenderComponent = memo(function ParameterRenderComponent({
         />
       );
     }
-
     switch (templateData.type) {
       case "NestedDict":
         return (
-          <MemoizedDict
+          <DictComponent
             name={name ?? ""}
             {...baseInputProps}
             id={`dict_${id}`}
@@ -152,7 +112,7 @@ export const ParameterRenderComponent = memo(function ParameterRenderComponent({
         );
       case "dict":
         return (
-          <MemoizedKeypairList
+          <KeypairListComponent
             {...baseInputProps}
             isList={templateData.list ?? false}
             id={`keypair_${id}`}
@@ -160,7 +120,7 @@ export const ParameterRenderComponent = memo(function ParameterRenderComponent({
         );
       case "bool":
         return (
-          <MemoizedToggleShad
+          <ToggleShadComponent
             size="medium"
             {...baseInputProps}
             id={`toggle_${id}`}
@@ -168,7 +128,7 @@ export const ParameterRenderComponent = memo(function ParameterRenderComponent({
         );
       case "link":
         return (
-          <MemoizedLink
+          <LinkComponent
             {...baseInputProps}
             icon={templateData.icon}
             text={templateData.text}
@@ -177,7 +137,7 @@ export const ParameterRenderComponent = memo(function ParameterRenderComponent({
         );
       case "float":
         return (
-          <MemoizedFloat
+          <FloatComponent
             {...baseInputProps}
             id={`float_${id}`}
             rangeSpec={templateData.range_spec}
@@ -185,7 +145,7 @@ export const ParameterRenderComponent = memo(function ParameterRenderComponent({
         );
       case "int":
         return (
-          <MemoizedInt
+          <IntComponent
             {...baseInputProps}
             rangeSpec={templateData.range_spec}
             id={`int_${id}`}
@@ -193,7 +153,7 @@ export const ParameterRenderComponent = memo(function ParameterRenderComponent({
         );
       case "file":
         return (
-          <MemoizedInputFile
+          <InputFileComponent
             {...baseInputProps}
             fileTypes={templateData.fileTypes}
             id={`inputfile_${id}`}
@@ -201,7 +161,7 @@ export const ParameterRenderComponent = memo(function ParameterRenderComponent({
         );
       case "prompt":
         return (
-          <MemoizedPromptArea
+          <PromptAreaComponent
             {...baseInputProps}
             readonly={!!nodeClass.flow}
             field_name={name}
@@ -209,10 +169,10 @@ export const ParameterRenderComponent = memo(function ParameterRenderComponent({
           />
         );
       case "code":
-        return <MemoizedCodeArea {...baseInputProps} id={`codearea_${id}`} />;
+        return <CodeAreaComponent {...baseInputProps} id={`codearea_${id}`} />;
       case "table":
         return (
-          <MemoizedTableNode
+          <TableNodeComponent
             {...baseInputProps}
             description={templateData.info || "Add or edit data"}
             columns={templateData?.table_schema?.columns}
@@ -224,7 +184,7 @@ export const ParameterRenderComponent = memo(function ParameterRenderComponent({
         );
       case "slider":
         return (
-          <MemoizedSlider
+          <SliderComponent
             {...baseInputProps}
             value={templateValue}
             rangeSpec={templateData.range_spec}
@@ -239,21 +199,24 @@ export const ParameterRenderComponent = memo(function ParameterRenderComponent({
           />
         );
       default:
-        return <MemoizedEmpty {...baseInputProps} />;
+        return <EmptyParameterComponent {...baseInputProps} />;
     }
-  }, [templateData, baseInputProps, name, id, nodeClass.flow]);
+  };
 
-  return (
-    <RefreshParameterComponent
-      templateData={templateData}
-      disabled={disabled}
-      nodeId={nodeId}
-      editNode={editNode}
-      nodeClass={nodeClass}
-      handleNodeClass={handleNodeClass}
-      name={name}
-    >
-      {useMemo(() => renderComponent(), [renderComponent])}
-    </RefreshParameterComponent>
+  return useMemo(
+    () => (
+      <RefreshParameterComponent
+        templateData={templateData}
+        disabled={disabled}
+        nodeId={nodeId}
+        editNode={editNode}
+        nodeClass={nodeClass}
+        handleNodeClass={handleNodeClass}
+        name={name}
+      >
+        {renderComponent()}
+      </RefreshParameterComponent>
+    ),
+    [templateData, disabled, nodeId, editNode, nodeClass, name, templateValue],
   );
-});
+}

@@ -3,7 +3,7 @@ import * as dotenv from "dotenv";
 import path from "path";
 
 test(
-  "should delete a flow",
+  "should delete a flow (requires store API key)",
   { tag: ["@release", "@api"] },
   async ({ page }) => {
     test.skip(
@@ -20,7 +20,9 @@ test(
     await page.getByTestId("button-store").click();
     await page.waitForTimeout(1000);
 
-    await page.getByTestId("api-key-button-store").click();
+    await page.getByTestId("api-key-button-store").click({
+      timeout: 200000,
+    });
 
     await page
       .getByPlaceholder("Insert your API Key")
