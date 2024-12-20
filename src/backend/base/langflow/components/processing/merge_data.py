@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import cast
 
 from loguru import logger
 
@@ -51,12 +52,12 @@ class DataMergerComponent(Component):
 
     def _process_operation(self, operation: MergeOperation) -> DataFrame:
         if operation == MergeOperation.CONCATENATE:
-            combined_data = {}
+            combined_data: dict[str, str | object] = {}
             for data_input in self.data_inputs:
                 for key, value in data_input.data.items():
                     if key in combined_data:
                         if isinstance(combined_data[key], str) and isinstance(value, str):
-                            combined_data[key] = combined_data[key] + "\n" + value
+                            combined_data[key] = f"{combined_data[key]}\n{value}"
                         else:
                             combined_data[key] = value
                     else:
@@ -68,16 +69,17 @@ class DataMergerComponent(Component):
             return DataFrame(rows)
 
         if operation == MergeOperation.MERGE:
-            combined_data = {}
+            result_data: dict[str, str | list[str] | object] = {}
             for data_input in self.data_inputs:
                 for key, value in data_input.data.items():
-                    if key in combined_data and isinstance(value, str):
-                        if not isinstance(combined_data[key], list):
-                            combined_data[key] = [combined_data[key]]
-                        combined_data[key].append(value)
+                    if key in result_data and isinstance(value, str):
+                        if isinstance(result_data[key], list):
+                            cast(list[str], result_data[key]).append(value)
+                        else:
+                            result_data[key] = [result_data[key], value]
                     else:
-                        combined_data[key] = value
-            return DataFrame([combined_data])
+                        result_data[key] = value
+            return DataFrame([result_data])
 
         if operation == MergeOperation.JOIN:
             combined_data = {}
