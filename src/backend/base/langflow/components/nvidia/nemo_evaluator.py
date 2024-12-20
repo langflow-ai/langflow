@@ -1,7 +1,11 @@
-from langflow.custom import Component
-from langflow.io import DropdownInput, StrInput, IntInput, FloatInput, MultiselectInput, SecretStrInput, BoolInput, SliderInput, Output
-from langflow.field_typing.range_spec import RangeSpec
 import json
+
+from langflow.custom import Component
+from langflow.field_typing.range_spec import RangeSpec
+from langflow.io import (BoolInput, DropdownInput, FloatInput, IntInput,
+                         MultiselectInput, Output, SecretStrInput, SliderInput,
+                         StrInput)
+
 
 class NVIDIANeMoEvaluatorComponent(Component):
     display_name = "NVIDIA NeMo Evaluator"
@@ -302,11 +306,11 @@ class NVIDIANeMoEvaluatorComponent(Component):
         except httpx.HTTPStatusError as exc:
             error_msg = f"HTTP error {exc.response.status_code} on URL {self.url}."
             self.log(error_msg, name="NeMoEvaluatorComponent")
-            raise ValueError(error_msg)
+            raise ValueError(error_msg) from exc
         except Exception as exc:
             error_msg = f"Unexpected error on URL {self.url}: {str(exc)}"
             self.log(error_msg, name="NeMoEvaluatorComponent")
-            raise ValueError(error_msg)
+            raise ValueError(error_msg) from exc
 
 
     def _generate_lm_evaluation_body(self) -> dict:
@@ -371,10 +375,12 @@ class NVIDIANeMoEvaluatorComponent(Component):
                             },
                             "run_inference": getattr(self, "310_run_inference", True),
                             "inference_params": inference_params,
-                            "output_file": getattr(self, "320_output_file", "") if not getattr(self, "310_run_inference", True) else None,
+                            "output_file": getattr(self, "320_output_file", "") if not getattr(
+                                self, "310_run_inference", True) else None,
                         }
                     ],
                 }
             ],
             "tag": getattr(self, "001_tag", ""),
         }
+    
