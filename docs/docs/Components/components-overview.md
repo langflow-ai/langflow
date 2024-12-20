@@ -18,7 +18,7 @@ Each component is unique, but all have a menu bar at the top that looks somethin
 
 <img src="/img/openai-model-component.png" alt="Open AI component" style={{display: 'block', margin: 'auto', width: 300}} />
 
-These controls allow users to perform the following:
+Use these controls to do the following:
 
 - **Code** — Modify the component's Python code and save your changes.
 - **Controls** — Adjust all component parameters.
@@ -71,15 +71,15 @@ To modify a component's name or description, double-click in the **Name** or **D
 
 ### Component shortcuts
 
-These keyboard shortcuts are available when a component is selected.
+The following keyboard shortcuts are available when a component is selected.
 
 | Menu Item | Mac Shortcut | Description |
 |-----------|----------|-------------|
 | Code | ⌘ + C | Opens the code editor for the component. |
-| Advanced | ⌘ + A | Opens advanced settings for component. |
+| Advanced | ⌘ + A | Opens advanced settings for the component. |
 | Save | ⌘ + S | Saves the current state of the component to Saved components in the sidebar. |
 | Duplicate | ⌘ + D | Creates a duplicate of the component. |
-| Copy | ⌘ + C | Copies the selected component. Can be pasted in the workspace with ⌘ + V. |
+| Copy | ⌘ + C | Copies the selected component. Paste it in the workspace with ⌘ + V. |
 | Docs | ⌘ + D | Opens related documentation. |
 | Minimize | ⌘ + Q | Minimizes the current component. |
 | Freeze | ⌘ + F | Freezes the current component state. |

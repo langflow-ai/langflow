@@ -54,55 +54,55 @@ This component converts and extracts JSON fields using JQ queries.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| input_value | Input | Data object to filter. Can be a Message or Data object. |
+| input_value | Input | Data object to filter. Can be a message or data object. |
 | query | JQ Query | JQ Query to filter the data. The input is always a JSON list. |
 
 ### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| filtered_data | Filtered Data | Filtered data as a list of Data objects. |
+| filtered_data | Filtered Data | Filtered data as a list of data objects. |
 
-## Merge Data
+## Merge Data component
 
 This component combines multiple data sources into a single unified Data object.
 
-The component iterates through the input list of Data objects, merging them into a single Data object. If the input list is empty, it returns an empty Data object. If there's only one input Data object, it returns that object unchanged. The merging process uses the addition operator to combine Data objects.
+The component iterates through the input list of data objects, merging them into a single data object. If the input list is empty, it returns an empty data object. If there's only one input data object, it returns that object unchanged. The merging process uses the addition operator to combine data objects.
 
 ### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | A list of Data objects to be merged |
+| data | Data | A list of data objects to be merged |
 
 ### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| merged_data | Merged Data | A single Data object containing the combined information from all input Data objects |
+| merged_data | Merged Data | A single data object containing the combined information from all input data objects |
 
 
-## Parse Data
+## Parse Data component
 
-The ParseData component converts Data objects into plain text using a specified template.
+The ParseData component converts data objects into plain text using a specified template.
 This component transforms structured data into human-readable text formats, allowing for customizable output through the use of templates.
 
 ### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | The data to convert to text |
-| template | Template | The template to use for formatting the data. It can contain the keys `{text}`, `{data}` or any other key in the Data |
-| sep | Separator | The separator to use between multiple data items |
+| data | Data | The data to convert to text. |
+| template | Template | The template to use for formatting the data. It can contain the keys `{text}`, `{data}` or any other key in the data. |
+| sep | Separator | The separator to use between multiple data items. |
 
 ### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| text | Text | The resulting formatted text string as a Message object |
+| text | Text | The resulting formatted text string as a message object. |
 
 
-## Split Text
+## Split Text component
 
 This component splits text into chunks of a specified length.
 
@@ -112,6 +112,6 @@ This component splits text into chunks of a specified length.
 |------|--------------|------|
 | texts | Texts | Texts to split. |
 | separators | Separators | Characters to split on. Defaults to a space. |
-| max_chunk_size | Max Chunk Size | The maximum length (in characters) of each chunk. |
+| max_chunk_size | Max Chunk Size | The maximum length, in characters, of each chunk. |
 | chunk_overlap | Chunk Overlap | The amount of character overlap between chunks. |
 | recursive | Recursive | Whether to split recursively. |

@@ -68,7 +68,7 @@ The Chat Output component creates a [Message](/guides-data-message) object that 
 |sender|Sender Type|Type of sender.|DropdownInput|
 |sender_name|Sender Name|Name of the sender.|MessageTextInput|
 |session_id|Session ID|The session ID of the chat. If empty, the current session ID parameter will be used.|MessageTextInput|
-|data_template|Data Template|Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.|MessageTextInput|
+|data_template|Data Template|Template to convert data to text. If left empty, it will be dynamically set to the data's text key.|MessageTextInput|
 |background_color|Background Color|The background color of the icon.|MessageTextInput|
 |chat_icon|Icon|The icon of the message.|MessageTextInput|
 |text_color|Text Color|The text color of the name|MessageTextInput|
