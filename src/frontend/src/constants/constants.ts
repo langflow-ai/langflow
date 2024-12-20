@@ -998,3 +998,5 @@ export const ICON_STROKE_WIDTH = 1.25;
 export const DEFAULT_PLACEHOLDER = "Type something...";
 
 export const DEFAULT_TOOLSET_PLACEHOLDER = "Used as a tool";
+
+export const SAVE_API_KEY_ALERT = "API key saved successfully";
