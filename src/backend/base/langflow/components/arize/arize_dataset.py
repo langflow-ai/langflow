@@ -1,19 +1,25 @@
 import json
+import logging
 from arize.experimental.datasets import ArizeDatasetsClient
-from langflow.custom import Component
-from langflow.io import DropdownInput, Output, DictInput
+import httpx
 import pandas as pd
+from langflow.custom import Component
+from langflow.io import (
+    DictInput,
+    DropdownInput,
+    MessageTextInput,
+    Output,
+    SecretStrInput,
+)
 from langflow.schema import Data
 
-
+logger = logging.getLogger(__name__)
 class ArizeAIDatastoreComponent(Component):
     display_name = "Arize AI Datastore"
     description = "Fetch available datasets and display details"
     icon = "Arize"
     name = "ArizeAIDatastoreComponent"
     beta = True
-
-    logger = logging.getLogger(__name__)
 
     # Inputs: A dropdown for dataset selection and a dictionary to store dataset metadata
     inputs = [
@@ -60,8 +66,8 @@ class ArizeAIDatastoreComponent(Component):
         space_id = getattr(self, "space_id", None)
         selected_dataset_name = getattr(self, "dataset_name", None)
         self.log(f"selected_dataset_name {selected_dataset_name}")
-        dict = getattr(self, "dataset_metadata", None)
-        dataset_info = dict.get(selected_dataset_name)
+        dataset_metadata = getattr(self, "dataset_metadata", None)
+        dataset_info = dataset_metadata.get(selected_dataset_name)
         self.log(f"dataset_info {dataset_info}")
         if not selected_dataset_name:
             logger.warning("No dataset selected. Please select a dataset from the dropdown.")
@@ -90,8 +96,8 @@ class ArizeAIDatastoreComponent(Component):
                                                                                   str) else input_messages
                         output_messages = json.loads(output_messages) if isinstance(output_messages,
                                                                                     str) else output_messages
-                    except Exception as e:
-                        logger.error(f"Error parsing JSON for row {row.name}: {e}")
+                    except (json.JSONDecodeError, TypeError) as e:
+                        logger.exception("Error parsing JSON for row %s", row.name)
                         input_messages = []
                         output_messages = []
 
@@ -99,12 +105,12 @@ class ArizeAIDatastoreComponent(Component):
                     input_message, output_message = self.process_messages(input_messages, output_messages)
                 else:
                     # Fallback to attributes.input.value and attributes.output.value if messages don't exist
-                    input_message = row.get('attributes.input.value', None)
-                    output_message = row.get('attributes.output.value', None)
+                    input_message = row.get("attributes.input.value", None)
+                    output_message = row.get("attributes.output.value", None)
 
                 new_data.append({
-                    'input': input_message,
-                    'completion': output_message
+                    "input": input_message,
+                    "completion": output_message
                 })
 
             # Create new DataFrame with the mapped values
@@ -123,25 +129,26 @@ class ArizeAIDatastoreComponent(Component):
                 )
                 for _, row in new_df.iterrows()
             ]
-
-            logger.info(f"Created {len(data_objects)} Data objects for dataset: {data_objects}")
+            length = len(data_objects)
+            logger.info(f"Created {length} Data objects for dataset: {data_objects}")
             return data_objects
 
-        except Exception as exc:
-            self.log(f"Error fetching or processing datasets: {str(exc)}")
+
+        except (httpx.RequestError, ValueError) as exc:
+            logger.exception("Error fetching or processing datasets")
             return []
 
     def process_messages(self, input_messages, output_messages):
-        """
-        Extracts 'user' and 'assistant' messages from the input and output messages.
+        """Extracts 'user' and 'assistant' messages from the input and output messages.
+
         Returns the extracted user input and assistant output.
         """
         # Extract 'user' message from input messages
-        user_input = next((msg['message.content'] for msg in input_messages if msg['message.role'] == 'user'), None)
+        user_input = next((msg["message.content"] for msg in input_messages if msg["message.role"] == "user"), None)
 
-        # Extract 'assistant' message from output messages
+        # Extract "assistant" message from output messages
         assistant_output = next(
-            (msg['message.content'] for msg in output_messages if msg['message.role'] == 'assistant'), None)
+            (msg["message.content"] for msg in output_messages if msg["message.role"] == "assistant"), None)
 
         # If no messages found, return fallback from 'attributes.input.value' and 'attributes.output.value'
         if not user_input:
@@ -165,15 +172,15 @@ class ArizeAIDatastoreComponent(Component):
                 logger.warning("No datasets found.")
                 return pd.DataFrame(columns=["dataset_id", "dataset_name"])
             logger.info(f"Fetched datasets: {datasets}")
-            return datasets
-        except Exception as exc:
-            logger.error(f"Error fetching datasets: {str(exc)}")
+
+        except (httpx.RequestError, ValueError):
+            logger.exception("Error fetching datasets")
             return pd.DataFrame(columns=["dataset_id", "dataset_name"])
 
-    def update_build_config(self, build_config, field_value, field_name=None):
-        """
-        Update the build configuration and store datasets in DictInput when the dropdown is updated.
-        """
+        return datasets
+
+    def update_build_config(self, build_config, _field_value, field_name=None):
+        """Update the build configuration and store datasets in DictInput when the dropdown is updated."""
         if field_name == "dataset_name":
             logger.info("Fetching datasets and storing them in DictInput...")
             # Fetch datasets
@@ -198,8 +205,7 @@ class ArizeAIDatastoreComponent(Component):
         return build_config
 
     def get_client(self):
-        """Initialize and return an instance of ArizeDatasetsClient.
-        """
+        """Initialize and return an instance of ArizeDatasetsClient."""
         try:
             developer_key = getattr(self, "developer_key", None)
             api_key = getattr(self, "developer_key", None)
@@ -209,7 +215,7 @@ class ArizeAIDatastoreComponent(Component):
             )
             logger.info("Successfully initialized ArizeDatasetsClient.")
         except Exception as exc:
-            logger.exception("Failed to initialize ArizeDatasetsClient: %s", str(exc))
+            logger.exception("Failed to initialize ArizeDatasetsClient")
             raise
         else:
             return client
