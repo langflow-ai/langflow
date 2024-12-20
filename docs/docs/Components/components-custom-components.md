@@ -1,10 +1,7 @@
 ---
-title: Custom Components
-sidebar_position: 8
+title: Create custom components
 slug: /components-custom-components
 ---
-
-# Custom Components
 
 Custom components are created within Langflow and extend the platform's functionality with custom, reusable Python code.
 
@@ -12,7 +9,7 @@ Since Langflow operates with Python behind the scenes, you can implement any Pyt
 
 Custom Components create reusable and configurable components to enhance the capabilities of Langflow, making it a powerful tool for developing complex processing between user and AI messages.
 
-## How to Create Custom Components
+## Create a custom component in Langflow
 
 Creating custom components in Langflow involves creating a Python class that defines the component's functionality, inputs, and outputs.
 The default code provides a working structure for your custom component.
