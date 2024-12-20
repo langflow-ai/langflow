@@ -7,7 +7,7 @@ In Langflow, the Data and Message objects are Pydantic models that serve as stru
 
 ## Data object
 
-The `Data` object is a Pydantic model that serves as a container for storing and manipulating data. It carries `data`—a dictionary that can be accessed as attributes—and uses `text_key` to specify which key in the dictionary should be considered the primary text content.
+The `Data` object is a [Pydantic](https://docs.pydantic.dev/latest/api/base_model/) model that serves as a container for storing and manipulating data. It carries `data`—a dictionary that can be accessed as attributes—and uses `text_key` to specify which key in the dictionary should be considered the primary text content.
 
 - **Main Attributes:**
   - `text_key`: Specifies the key to retrieve the primary text data.
