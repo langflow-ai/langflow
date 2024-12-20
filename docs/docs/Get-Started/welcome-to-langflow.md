@@ -20,9 +20,9 @@ Langflow is an intuitive visual flow builder. This drag-and-drop interface allow
 
 Langflow can be used for a wide range of AI applications, including:
 
-* [Craft intelligent chatbots](/starter-projects-memory-chatbot)
-* [Build document analysis systems](/starter-projects-document-qa)
-* [Generate compelling content](/starter-projects-blog-writer)
+* [Craft intelligent chatbots](/use-cases-memory-chatbot)
+* [Build document analysis systems](/use-cases-document-qa)
+* [Generate compelling content](/use-cases-blog-writer)
 * [Orchestrate multi-agent applications](/starter-projects-simple-agent)
 
 ## Community and support

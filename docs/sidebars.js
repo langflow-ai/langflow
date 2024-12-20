@@ -14,13 +14,19 @@ module.exports = {
       label: "Starter Projects",
       items: [
         'Starter-Projects/starter-projects-basic-prompting',
-        'Starter-Projects/starter-projects-blog-writer',
-        'Starter-Projects/starter-projects-document-qa',
-        'Starter-Projects/starter-projects-memory-chatbot',
-        'Starter-Projects/starter-projects-simple-agent',
         'Starter-Projects/starter-projects-vector-store-rag',
-        'Starter-Projects/starter-projects-sequential-agent',
-        'Starter-Projects/starter-projects-travel-planning-agent',
+        'Starter-Projects/starter-projects-simple-agent',
+      ],
+    },
+    {
+      type: "category",
+      label: "Use Cases",
+      items: [
+        'Use-Cases/use-cases-blog-writer',
+        'Use-Cases/use-cases-document-qa',
+        'Use-Cases/use-cases-memory-chatbot',
+        'Use-Cases/use-cases-sequential-agent',
+        'Use-Cases/use-cases-travel-planning-agent',
       ],
     },
     {

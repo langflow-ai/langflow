@@ -107,7 +107,7 @@ const config = {
             from: "/getting-started-quickstart",
           },
           {
-            to: "/starter-projects-travel-planning-agent",
+            to: "/use-cases-travel-planning-agent",
             from: "/starter-projects-dynamic-agent/",
           },
           {
