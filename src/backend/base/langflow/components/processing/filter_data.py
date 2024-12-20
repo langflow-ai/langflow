@@ -150,10 +150,15 @@ class FilterDataComponent(Component):
 
     def _is_safe_jq_query(self, query: str) -> bool:
         """Validate JQ query for security."""
-        # Basic validation - only allow alphanumeric characters, dots, brackets,
-        # spaces, and common JQ operators
-        safe_chars = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.[]() +-*/<>=|,")
-        return all(c in safe_chars for c in query) and len(query) < self.max_query_length
+        if len(query) >= self.max_query_length:
+            return False
+        safe_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.[]() +-*/<>=|,"
+        for c in query:
+            if c not in safe_chars:
+                return False
+
+        return True
+
 
     def process_data(self) -> Data:
         """Process data and return as Data object or list of Data objects."""
