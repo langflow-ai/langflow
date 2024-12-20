@@ -108,7 +108,10 @@ const config = {
           },
           {
             to: "/use-cases-travel-planning-agent",
-            from: "/starter-projects-dynamic-agent/",
+            from: [
+              "/starter-projects-dynamic-agent/",
+              "/starter-projects-travel-planning-agent",
+            ],
           },
           {
             to: "/workspace-overview",
@@ -126,6 +129,22 @@ const config = {
           {
             to: "/configuration-global-variables",
             from: "/settings-global-variables",
+          },
+          {
+            to: "/use-cases-sequential-agent",
+            from: "/starter-projects-sequential-agent",
+          },
+          {
+            to: "/use-cases-blog-writer",
+            from: "/starter-projects-blog-writer",
+          },
+          {
+            to: "/use-cases-memory-chatbot",
+            from: "/starter-projects-memory-chatbot",
+          },
+          {
+            to: "/use-cases-document-qa",
+            from: "/starter-projects-document-qa",
           },
           // add more redirects like this
           // {
