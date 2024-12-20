@@ -116,8 +116,7 @@ class FilterDataComponent(Component):
         if not isinstance(data, dict):
             return data
 
-        columns_set = set(columns)
-        return {k: v for k, v in data.items() if k in columns_set}
+        return {k: data[k] for k in columns if k in data}
 
     def process_dataframe(self) -> DataFrame:
         """Process data and return as DataFrame."""
