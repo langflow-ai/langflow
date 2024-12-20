@@ -24,9 +24,9 @@ class TestPromptComponent(ComponentTestBaseWithClient):
             {"version": "1.0.19", "module": "prompts", "file_name": "Prompt"},
         ]
 
-    def test_post_code_processing(self, component_class, default_kwargs):
+    async def test_post_code_processing(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
-        frontend_node = component.to_frontend_node()
+        frontend_node = await component.to_frontend_node()
         node_data = frontend_node["data"]["node"]
         assert node_data["template"]["template"]["value"] == "Hello {name}!"
         assert "name" in node_data["custom_fields"]["template"]
