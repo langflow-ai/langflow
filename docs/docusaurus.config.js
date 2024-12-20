@@ -146,6 +146,10 @@ const config = {
             to: "/use-cases-document-qa",
             from: "/starter-projects-document-qa",
           },
+          {
+            to: "/components-vector-stores",
+            from: "/components-rag",
+          },
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',
