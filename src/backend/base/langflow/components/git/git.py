@@ -2,8 +2,8 @@ import asyncio
 import re
 import tempfile
 from contextlib import asynccontextmanager
+from fnmatch import fnmatch
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import anyio
 from langchain_community.document_loaders.git import GitLoader
@@ -11,9 +11,6 @@ from langchain_community.document_loaders.git import GitLoader
 from langflow.custom import Component
 from langflow.io import DropdownInput, MessageTextInput, Output
 from langflow.schema import Data
-
-if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
 
 
 class GitLoaderComponent(Component):
@@ -98,7 +95,7 @@ class GitLoaderComponent(Component):
             yield temp_dir
         finally:
             if temp_dir:
-                await anyio.Path(temp_dir).remove()
+                await anyio.Path(temp_dir).rmdir()
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         # Hide fields by default
@@ -121,43 +118,55 @@ class GitLoaderComponent(Component):
         file_filter_patterns = getattr(self, "file_filter", None)
         content_filter_pattern = getattr(self, "content_filter", None)
 
-        file_filters: list[Callable[[Path], bool] | Callable[[Path], Awaitable[bool]]] = []
-        if file_filter_patterns:
-            patterns = [pattern.strip() for pattern in file_filter_patterns.split(",")]
+        def is_binary(file_path: str | Path) -> bool:
+            """Check if a file is binary by looking for null bytes."""
+            try:
+                with Path(file_path).open("rb") as file:
+                    content = file.read(1024)
+                    return b"\x00" in content
+            except Exception:  # noqa: BLE001
+                return True
 
-            def file_filter(file_path: Path) -> bool:
-                if len(patterns) == 1 and patterns[0].startswith("!"):
-                    return not file_path.match(patterns[0][1:])
-                included = any(file_path.match(pattern) for pattern in patterns if not pattern.startswith("!"))
-                excluded = any(file_path.match(pattern[1:]) for pattern in patterns if pattern.startswith("!"))
-                return included and not excluded
+        def combined_filter(file_path: str) -> bool:
+            try:
+                path = Path(file_path)
+                if is_binary(file_path):
+                    return False
 
-            file_filters.append(file_filter)
+                # Apply file pattern filters
+                if file_filter_patterns:
+                    patterns = [pattern.strip() for pattern in file_filter_patterns.split(",")]
+                    path_str = str(path)
 
-        if content_filter_pattern:
-            content_regex = re.compile(content_filter_pattern)
+                    # Handle single exclusion pattern
+                    if len(patterns) == 1 and patterns[0].startswith("!"):
+                        return not fnmatch(path_str, patterns[0][1:])
 
-            async def content_filter(file_path: Path) -> bool:
-                path = anyio.Path(file_path)
-                content = await path.read_text()
-                return bool(content_regex.search(content))
+                    # Handle multiple patterns
+                    included = any(fnmatch(path_str, pattern) for pattern in patterns if not pattern.startswith("!"))
+                    excluded = any(fnmatch(path_str, pattern[1:]) for pattern in patterns if pattern.startswith("!"))
 
-            file_filters.append(content_filter)
+                    # If no include patterns, treat as include all
+                    if not any(not pattern.startswith("!") for pattern in patterns):
+                        included = True
 
-        async def combined_filter(file_path: str) -> bool:
-            path = Path(file_path)
-            if await self.is_binary(file_path):
+                    if not included or excluded:
+                        return False
+
+                # Apply content filter
+                if content_filter_pattern:
+                    try:
+                        content_regex = re.compile(content_filter_pattern)
+                        with Path(file_path).open() as file:
+                            content = file.read()
+                        if not content_regex.search(content):
+                            return False
+                    except (OSError, UnicodeDecodeError):
+                        return False
+
+            except Exception:  # noqa: BLE001
                 return False
-
-            results = []
-            for f in file_filters:
-                if asyncio.iscoroutinefunction(f):
-                    result = await f(path)
-                else:
-                    result = f(path)
-                results.append(result)
-
-            return all(results) if results else True
+            return True
 
         repo_source = getattr(self, "repo_source", None)
         if repo_source == "Local":
@@ -178,7 +187,6 @@ class GitLoaderComponent(Component):
 
     async def load_documents(self) -> list[Data]:
         gitloader = await self.build_gitloader()
-        documents = list(gitloader.lazy_load())
-        data = [Data.from_document(doc) for doc in documents]
+        data = [Data.from_document(doc) for doc in await asyncio.to_thread(gitloader.lazy_load)]
         self.status = data
         return data
