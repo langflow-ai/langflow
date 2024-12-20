@@ -1,4 +1,3 @@
-import asyncio
 import re
 import tempfile
 from contextlib import asynccontextmanager
@@ -80,11 +79,122 @@ class GitLoaderComponent(Component):
     ]
 
     @staticmethod
-    async def is_binary(file_path: str | Path) -> bool:
+    def is_binary(file_path: str | Path) -> bool:
         """Check if a file is binary by looking for null bytes."""
-        path = anyio.Path(file_path)
-        content = await path.read_bytes()
-        return b"\x00" in content[:1024]
+        try:
+            with Path(file_path).open("rb") as file:
+                content = file.read(1024)
+                return b"\x00" in content
+        except Exception:  # noqa: BLE001
+            return True
+
+    @staticmethod
+    def check_file_patterns(file_path: str | Path, patterns: str) -> bool:
+        """Check if a file matches the given patterns.
+
+        Args:
+            file_path: Path to the file to check
+            patterns: Comma-separated list of glob patterns
+
+        Returns:
+            bool: True if file should be included, False if excluded
+        """
+        # Handle empty or whitespace-only patterns
+        if not patterns or patterns.isspace():
+            return True
+
+        path_str = str(file_path)
+        file_name = Path(path_str).name
+        patterns = [pattern.strip() for pattern in patterns.split(",") if pattern.strip()]
+
+        # If no valid patterns after stripping, treat as include all
+        if not patterns:
+            return True
+
+        # Process exclusion patterns first
+        for pattern in patterns:
+            if pattern.startswith("!"):
+                # For exclusions, match against both full path and filename
+                exclude_pattern = pattern[1:]
+                if fnmatch(path_str, exclude_pattern) or fnmatch(file_name, exclude_pattern):
+                    return False
+
+        # Then check inclusion patterns
+        include_patterns = [p for p in patterns if not p.startswith("!")]
+        # If no include patterns, treat as include all
+        if not include_patterns:
+            return True
+
+        # For inclusions, match against both full path and filename
+        return any(fnmatch(path_str, pattern) or fnmatch(file_name, pattern) for pattern in include_patterns)
+
+    @staticmethod
+    def check_content_pattern(file_path: str | Path, pattern: str) -> bool:
+        """Check if file content matches the given regex pattern.
+
+        Args:
+            file_path: Path to the file to check
+            pattern: Regex pattern to match against content
+
+        Returns:
+            bool: True if content matches, False otherwise
+        """
+        try:
+            # Check if file is binary
+            with Path(file_path).open("rb") as file:
+                content = file.read(1024)
+                if b"\x00" in content:
+                    return False
+
+            # Try to compile the regex pattern first
+            try:
+                # Use the MULTILINE flag to better handle text content
+                content_regex = re.compile(pattern, re.MULTILINE)
+                # Test the pattern with a simple string to catch syntax errors
+                content_regex.search("test\nstring")
+            except (re.error, TypeError, ValueError):
+                return False
+
+            # If not binary and regex is valid, check content
+            with Path(file_path).open() as file:
+                content = file.read()
+            return bool(content_regex.search(content))
+        except (OSError, UnicodeDecodeError):
+            return False
+
+    def build_combined_filter(self, file_filter_patterns: str | None = None, content_filter_pattern: str | None = None):
+        """Build a combined filter function from file and content patterns.
+
+        Args:
+            file_filter_patterns: Comma-separated glob patterns
+            content_filter_pattern: Regex pattern for content
+
+        Returns:
+            callable: Filter function that takes a file path and returns bool
+        """
+
+        def combined_filter(file_path: str) -> bool:
+            try:
+                path = Path(file_path)
+
+                # Check if file exists and is readable
+                if not path.exists():
+                    return False
+
+                # Check if file is binary
+                if self.is_binary(path):
+                    return False
+
+                # Apply file pattern filters
+                if file_filter_patterns and not self.check_file_patterns(path, file_filter_patterns):
+                    return False
+
+                # Apply content filter
+                return not (content_filter_pattern and not self.check_content_pattern(path, content_filter_pattern))
+            except Exception:  # noqa: BLE001
+                return False
+
+        return combined_filter
 
     @asynccontextmanager
     async def temp_clone_dir(self):
@@ -118,55 +228,7 @@ class GitLoaderComponent(Component):
         file_filter_patterns = getattr(self, "file_filter", None)
         content_filter_pattern = getattr(self, "content_filter", None)
 
-        def is_binary(file_path: str | Path) -> bool:
-            """Check if a file is binary by looking for null bytes."""
-            try:
-                with Path(file_path).open("rb") as file:
-                    content = file.read(1024)
-                    return b"\x00" in content
-            except Exception:  # noqa: BLE001
-                return True
-
-        def combined_filter(file_path: str) -> bool:
-            try:
-                path = Path(file_path)
-                if is_binary(file_path):
-                    return False
-
-                # Apply file pattern filters
-                if file_filter_patterns:
-                    patterns = [pattern.strip() for pattern in file_filter_patterns.split(",")]
-                    path_str = str(path)
-
-                    # Handle single exclusion pattern
-                    if len(patterns) == 1 and patterns[0].startswith("!"):
-                        return not fnmatch(path_str, patterns[0][1:])
-
-                    # Handle multiple patterns
-                    included = any(fnmatch(path_str, pattern) for pattern in patterns if not pattern.startswith("!"))
-                    excluded = any(fnmatch(path_str, pattern[1:]) for pattern in patterns if pattern.startswith("!"))
-
-                    # If no include patterns, treat as include all
-                    if not any(not pattern.startswith("!") for pattern in patterns):
-                        included = True
-
-                    if not included or excluded:
-                        return False
-
-                # Apply content filter
-                if content_filter_pattern:
-                    try:
-                        content_regex = re.compile(content_filter_pattern)
-                        with Path(file_path).open() as file:
-                            content = file.read()
-                        if not content_regex.search(content):
-                            return False
-                    except (OSError, UnicodeDecodeError):
-                        return False
-
-            except Exception:  # noqa: BLE001
-                return False
-            return True
+        combined_filter = self.build_combined_filter(file_filter_patterns, content_filter_pattern)
 
         repo_source = getattr(self, "repo_source", None)
         if repo_source == "Local":
@@ -178,15 +240,21 @@ class GitLoaderComponent(Component):
             async with self.temp_clone_dir() as temp_dir:
                 repo_path = temp_dir
 
+        # Only pass branch if it's explicitly set
+        branch = getattr(self, "branch", None)
+        if not branch:
+            branch = None
+
         return GitLoader(
             repo_path=repo_path,
             clone_url=clone_url if repo_source == "Remote" else None,
-            branch=self.branch,
+            branch=branch,
             file_filter=combined_filter,
         )
 
     async def load_documents(self) -> list[Data]:
         gitloader = await self.build_gitloader()
-        data = [Data.from_document(doc) for doc in await asyncio.to_thread(gitloader.lazy_load)]
+        # Run lazy_load in a separate thread to avoid blocking
+        data = [Data.from_document(doc) for doc in await gitloader.alazy_load()]
         self.status = data
         return data
