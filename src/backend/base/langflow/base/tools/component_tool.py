@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from langflow.inputs.inputs import InputTypes
     from langflow.io import Output
     from langflow.schema.content_block import ContentBlock
+    from langflow.schema.dotdict import dotdict
 
 
 TOOL_TYPES_SET = {"Tool", "BaseTool", "StructuredTool"}
@@ -165,7 +166,11 @@ class ComponentToolkit:
         self.metadata = metadata
 
     def get_tools(
-        self, tool_name: str | None = None, tool_description: str | None = None, callbacks: Callbacks | None = None
+        self,
+        tool_name: str | None = None,
+        tool_description: str | None = None,
+        callbacks: Callbacks | None = None,
+        tool_mode_inputs: list[dotdict] | None = None,
     ) -> list[BaseTool]:
         tools = []
         for output in self.component.outputs:
@@ -178,7 +183,8 @@ class ComponentToolkit:
 
             output_method: Callable = getattr(self.component, output.method)
             args_schema = None
-            tool_mode_inputs = [_input for _input in self.component.inputs if getattr(_input, "tool_mode", False)]
+            if not tool_mode_inputs:
+                tool_mode_inputs = [_input for _input in self.component.inputs if getattr(_input, "tool_mode", False)]
             if output.required_inputs:
                 inputs = [
                     self.component._inputs[input_name]
@@ -280,3 +286,10 @@ class ComponentToolkit:
                     msg = f"Expected a StructuredTool or BaseTool, got {type(tool)}"
                     raise TypeError(msg)
         return tools
+
+    # async def get_flow_tools(self,flow_name_selected,callbacks):
+    #     # flow_data = await self.component.get_flow(flow_name_selected)
+    #     self.tool_mode_inputs = self.component.get_required_data(flow_name_selected)
+    #     # convert list of dicts to list of dotdicts
+    #     self.tool_mode_inputs = [dotdict(field) for field in self.tool_mode_inputs]
+    #     return self.get_tools(callbacks=callbacks,tool_mode_inputs=self.tool_mode_inputs)

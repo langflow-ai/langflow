@@ -6,7 +6,10 @@ from aiofile import async_open
 from loguru import logger
 
 from langflow.base.flow_processing.utils import build_data_from_result_data
+from langflow.base.tools.constants import TOOLS_METADATA_INPUT_NAME
 from langflow.custom import Component
+from langflow.custom.custom_component.component import _get_component_toolkit
+from langflow.field_typing import Tool
 from langflow.graph.graph.base import Graph
 from langflow.graph.vertex.base import Vertex
 from langflow.helpers.flow import get_flow_inputs, run_flow
@@ -20,6 +23,7 @@ default_keys = [
     "session_id",
     "flow_json",
 ]
+FLOW_INPUTS: list[dotdict] = []
 
 
 class FlowOrchestrator(Component):
@@ -28,6 +32,10 @@ class FlowOrchestrator(Component):
     name = "FlowOrchestrator"
     beta: bool = True
     icon = "Workflow"
+    # async def __init__(self, *args: Any, **kwargs: Any):
+    #     await super().__init__(*args, **kwargs)
+    #     self.flow_data= await self.alist_flows()
+
     inputs = [
         DropdownInput(
             name="flow_name_selected",
@@ -35,6 +43,7 @@ class FlowOrchestrator(Component):
             info="The name of the flow to run.",
             options=[],
             real_time_refresh=True,
+            refresh_button=True,
             value=None,
         ),
         MessageInput(
@@ -58,10 +67,12 @@ class FlowOrchestrator(Component):
     outputs = [Output(name="flow_outputs", display_name="Flow Outputs", method="generate_results")]
 
     async def get_flow_names(self) -> list[str]:
+        # TODO: get flfow ID with flow name
         flow_data = await self.alist_flows()
         return [flow_data.data["name"] for flow_data in flow_data]
 
     async def get_flow(self, flow_name_selected: str) -> Data | None:
+        # get flow from flow id
         flow_datas = await self.alist_flows()
         for flow_data in flow_datas:
             if flow_data.data["name"] == flow_name_selected:
@@ -89,13 +100,15 @@ class FlowOrchestrator(Component):
             raise ValueError(msg)
         return None
 
+    def get_new_fields_from_graph(self, graph: Graph) -> list[dotdict]:
+        inputs = get_flow_inputs(graph)
+        return self.get_new_fields(inputs)
+
     def update_build_config_from_graph(self, build_config: dotdict, graph: Graph):
         try:
             # Get all inputs from the graph
-            inputs = get_flow_inputs(graph)
-            # Add inputs to the build config
-            new_fields = self.get_new_fields(inputs)
-            # print(f"New Fields {new_fields}")
+            new_fields = self.get_new_fields_from_graph(graph)
+            # tool_mode_inputs = [field for field in new_fields if field.get("tool_mode") is True]
             old_fields = self.get_old_fields(build_config, new_fields)
             self.delete_fields(build_config, old_fields)
             build_config = self.add_new_fields(build_config, new_fields)
@@ -148,7 +161,6 @@ class FlowOrchestrator(Component):
                     for input_name in field_order
                 ]
                 new_fields += new_vertex_inputs
-
         return new_fields
 
     def add_new_fields(self, build_config: dotdict, new_fields: list[dotdict]) -> dotdict:
@@ -174,13 +186,15 @@ class FlowOrchestrator(Component):
 
     async def generate_results(self) -> list[Data]:
         tweaks: dict = {}
+
+        flow_name_selected = self._attributes.get("flow_name_selected")
+
         for field in self._attributes:
-            if field != "flow_name_selected" and "|" in field:
+            if field not in default_keys and "|" in field:
                 [node, name] = field.split("|")
                 if node not in tweaks:
                     tweaks[node] = {}
                 tweaks[node][name] = self._attributes[field]
-        flow_name_selected = self._attributes.get("flow_name_selected")
 
         run_outputs = await run_flow(
             inputs=None,
@@ -202,3 +216,24 @@ class FlowOrchestrator(Component):
                 if output:
                     data.extend(build_data_from_result_data(output))
         return data
+
+    async def get_required_data(self, flow_name_selected):
+        self.flow_data = await self.alist_flows()
+        for flow_data in self.flow_data:
+            if flow_data.data["name"] == flow_name_selected:
+                graph = Graph.from_payload(flow_data.data["data"])
+                new_fields = self.get_new_fields_from_graph(graph)
+                return [field for field in new_fields if field.get("tool_mode") is True]
+        return None
+
+    async def to_toolkit(self) -> list[Tool]:
+        component_toolkit = _get_component_toolkit()
+        tool_mode_inputs = self.get_required_data(self.flow_name_selected)
+        # # convert list of dicts to list of dotdicts
+        tool_mode_inputs = [dotdict(field) for field in tool_mode_inputs]
+        tools = component_toolkit(component=self).get_tools(
+            callbacks=self.get_langchain_callbacks(), tool_mode_inputs=tool_mode_inputs
+        )
+        if hasattr(self, TOOLS_METADATA_INPUT_NAME):
+            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
+        return tools
