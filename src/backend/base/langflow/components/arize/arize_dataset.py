@@ -180,10 +180,11 @@ class ArizeAIDatastoreComponent(Component):
 
         return datasets
 
-    def update_build_config(self, build_config, _field_value, field_name=None):
+    def update_build_config(self, build_config, field_value, field_name=None):
         """Update the build configuration and store datasets in DictInput when the dropdown is updated."""
         if field_name == "dataset_name":
-            logger.info("Fetching datasets and storing them in DictInput...")
+            log_message = f"Fetching datasets and storing them in DictInput {field_value}"
+            logger.info(log_message)
             # Fetch datasets
             client = self.get_client()  # Assuming you have a method to initialize the client
             datasets_df = self.fetch_datasets(client)
