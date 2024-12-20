@@ -407,25 +407,25 @@ def find_all_cycle_edges(entry_point: str, edges: list[tuple[str, str]]) -> list
         graph[u].append(v)
 
     # Utility function to perform DFS
-    def dfs(v, visited, rec_stack):
+    def dfs(v, visited, rec_stack, cycle_edges):
         visited.add(v)
         rec_stack.add(v)
 
-        cycle_edges = []
-
         for neighbor in graph[v]:
             if neighbor not in visited:
-                cycle_edges += dfs(neighbor, visited, rec_stack)
+                dfs(neighbor, visited, rec_stack, cycle_edges)
             elif neighbor in rec_stack:
                 cycle_edges.append((v, neighbor))  # This edge causes a cycle
 
         rec_stack.remove(v)
-        return cycle_edges
 
     visited: set[str] = set()
     rec_stack: set[str] = set()
+    cycle_edges: list[tuple[str, str]] = []
 
-    return dfs(entry_point, visited, rec_stack)
+    dfs(entry_point, visited, rec_stack, cycle_edges)
+
+    return cycle_edges
 
 
 def should_continue(yielded_counts: dict[str, int], max_iterations: int | None) -> bool:
