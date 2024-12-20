@@ -59,4 +59,4 @@ Every chat component in Langflow comes with a `SessionID`. It defaults to the
 
 :::
 
-Learn more about memories in the [Chat Memory](/components-chat-memory) section.
+Learn more about memories in the [Memory](/components-memories) section.

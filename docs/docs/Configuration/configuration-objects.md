@@ -1,10 +1,9 @@
 ---
-title: Langflow Objects
-sidebar_position: 1
+title: Langflow objects
 slug: /configuration-objects
 ---
 
-In Langflow, the Data and Message objects serve as structured, functional, representations of data that enhance the capabilities and reliability of the platform.
+In Langflow, the Data and Message objects are Pydantic models that serve as structured, functional representations of data.
 
 ## Data object
 
@@ -15,9 +14,9 @@ The `Data` object is a Pydantic model that serves as a container for storing a
   - `data`: A dictionary to store additional data.
   - `default_value`: default value when the `text_key` is not present in the `data` dictionary.
 
-### Creating a Data Object {#3540b7e651f74b558febebbe43380660}
+### Create a Data Object
 
-You can create a `Data` object by directly assigning key-value pairs to it. For example:
+Create a `Data` object by directly assigning key-value pairs to it. For example:
 
 ```python
 from langflow.schema import Data
@@ -46,8 +45,7 @@ print(data.title)  # Outputs: "Hello, World!" because "title" key is in the data
 
 The `Data` object is also convenient for visualization of outputs, since the output preview has visual elements to inspect data as a table and its cells as pop ups for basic types. The idea is to create a unified way to work and visualize complex information in Langflow.
 
-To receive `Data` objects in a component input, you can use the `DataInput` input type.
-
+To receive `Data` objects in a component input, use the `DataInput` input type.
 
 ## Message object
 
@@ -74,7 +72,11 @@ The `Message` object extends the functionality of `Data` and includes additi
   - `edit`: Boolean indicating if the message was edited
   - `category`: Message category ("message", "error", "warning", "info")
 
-The `Message` object can be used to send, store, and manipulate chat messages within Langflow. You can create a `Message` object by directly assigning key-value pairs to it. For example:
+The `Message` object can be used to send, store, and manipulate chat messages within Langflow.
+
+### Create a Message object
+
+You can create a `Message` object by directly assigning key-value pairs to it. For example:
 
 ```python
 from langflow.schema.message import Message
@@ -83,3 +85,54 @@ message = Message(text="Hello, AI!", sender="User", sender_name="John Doe")
 ```
 
 To receive `Message` objects in a component input, you can use the `MessageInput` input type or `MessageTextInput` when the goal is to extract just the `text` field of the `Message` object.
+
+## DataFrame object
+
+The `DataFrame` class is a custom extension of the pandas' [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) class, specifically designed to work seamlessly with Langflow's `Data` objects.
+
+Key Features
+
+A `DataFrame` object accepts various input formats, including lists of `Data` objects, dictionaries, and existing pandas DataFrames. I
+Seamless Integration: Provides methods to convert between DataFrame and lists of Data objects.
+Enhanced Functionality: Offers additional methods for adding rows and manipulating data in the context of Langflow.
+
+
+### Create a DataFrame object
+
+You can create a DataFrame object using different data formats:
+```python
+from langflow.schema import Data
+from langflow.schema.data import DataFrame
+
+# From a list of Data objects
+data_list = [Data(data={"name": "John"}), Data(data={"name": "Jane"})]
+df = DataFrame(data_list)
+
+# From a list of dictionaries
+dict_list = [{"name": "John"}, {"name": "Jane"}]
+df = DataFrame(dict_list)
+
+# From a dictionary of lists
+data_dict = {"name": ["John", "Jane"], "age": [30, 25]}
+df = DataFrame(data_dict)
+Key Methods
+to_data_list(): Converts the DataFrame back to a list of Data objects.
+add_row(data): Adds a single row (either a Data object or a dictionary) to the DataFrame.
+add_rows(data): Adds multiple rows (list of Data objects or dictionaries) to the DataFrame.
+Usage Example
+python
+# Create a DataFrame
+df = DataFrame([Data(data={"name": "John"}), Data(data={"name": "Jane"})])
+
+# Add a new row
+df = df.add_row({"name": "Alice"})
+
+# Convert back to a list of Data objects
+data_list = df.to_data_list()
+
+# Use pandas functionality
+filtered_df = df[df["name"].str.startswith("J")]
+```
+
+The DataFrame class provides a powerful interface for working with structured data in Langflow, combining the flexibility of Data objects with the robust data manipulation capabilities of pandas.
+To use DataFrame objects in a component input, you can use the DataFrameInput input type.

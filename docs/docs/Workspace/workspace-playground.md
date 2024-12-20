@@ -18,7 +18,7 @@ Notice how the **Playground's** window arrangement changes depending on what com
 
 :::
 
-## Memory Management {#821a5ee2a8a44d35b49943cba630511c}
+## Memory Management
 
 ---
 
@@ -32,7 +32,7 @@ To view messages by session ID, from the Playground, click the Options menu of a
 
 Individual messages in chat memory can be edited or deleted. Modifying these memories will influence the behavior of the chatbot responses.
 
-To learn more about memories in Langflow, see [Chat Memory](/components-chat-memory).
+To learn more about chat memories in Langflow, see [Memory components](/components-memories).
 
 ## Use custom Session IDs for multiple user interactions
 

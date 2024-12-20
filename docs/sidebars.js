@@ -79,15 +79,6 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Guides",
-      items: [
-        "Guides/guides-chat-memory",
-        "Guides/guides-data-message",
-        "Guides/guides-new-to-llms",
-      ],
-    },
-    {
-      type: "category",
       label: "Deployment",
       items: [
         "Deployment/deployment-docker",

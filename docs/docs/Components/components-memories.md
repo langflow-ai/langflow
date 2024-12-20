@@ -1,4 +1,9 @@
-# Memories
+---
+title: Memories
+slug: /components-memories
+---
+
+# Memory components in Langflow
 
 Chat memory components store and retrieve chat messages by `session_id`.
 
