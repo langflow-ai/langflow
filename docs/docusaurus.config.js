@@ -107,7 +107,7 @@ const config = {
             from: "/getting-started-quickstart",
           },
           {
-            to: "/use-cases-travel-planning-agent",
+            to: "/tutorials-travel-planning-agent",
             from: [
               "/starter-projects-dynamic-agent/",
               "/starter-projects-travel-planning-agent",
@@ -131,19 +131,19 @@ const config = {
             from: "/settings-global-variables",
           },
           {
-            to: "/use-cases-sequential-agent",
+            to: "/tutorials-sequential-agent",
             from: "/starter-projects-sequential-agent",
           },
           {
-            to: "/use-cases-blog-writer",
+            to: "/tutorials-blog-writer",
             from: "/starter-projects-blog-writer",
           },
           {
-            to: "/use-cases-memory-chatbot",
+            to: "/tutorials-memory-chatbot",
             from: "/starter-projects-memory-chatbot",
           },
           {
-            to: "/use-cases-document-qa",
+            to: "/tutorials-document-qa",
             from: "/starter-projects-document-qa",
           },
           {

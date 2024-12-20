@@ -20,13 +20,13 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Use Cases",
+      label: "Tutorials",
       items: [
-        'Use-Cases/use-cases-blog-writer',
-        'Use-Cases/use-cases-document-qa',
-        'Use-Cases/use-cases-memory-chatbot',
-        'Use-Cases/use-cases-sequential-agent',
-        'Use-Cases/use-cases-travel-planning-agent',
+        'Tutorials/tutorials-blog-writer',
+        'Tutorials/tutorials-document-qa',
+        'Tutorials/tutorials-memory-chatbot',
+        'Tutorials/tutorials-sequential-agent',
+        'Tutorials/tutorials-travel-planning-agent',
       ],
     },
     {

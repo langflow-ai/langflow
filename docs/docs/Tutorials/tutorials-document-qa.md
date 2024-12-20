@@ -1,7 +1,7 @@
 ---
 title: Document QA
 sidebar_position: 2
-slug: /use-cases-document-qa
+slug: /tutorials-document-qa
 ---
 
 

@@ -1,7 +1,7 @@
 ---
 title: Memory Chatbot
 sidebar_position: 3
-slug: /use-cases-memory-chatbot
+slug: /tutorials-memory-chatbot
 ---
 
 
