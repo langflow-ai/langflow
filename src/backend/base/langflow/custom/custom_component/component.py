@@ -249,7 +249,7 @@ class Component(CustomComponent):
         memo[id(self)] = new_component
         return new_component
 
-    def set_class_code(self) -> None:
+    async def set_class_code(self) -> None:
         # Get the source code of the calling class
         if self._code:
             return
@@ -726,7 +726,7 @@ class Component(CustomComponent):
     def _update_template(self, frontend_node: dict):
         return frontend_node
 
-    def to_frontend_node(self):
+    async def to_frontend_node(self):
         # ! This part here is clunky but we need it like this for
         # ! backwards compatibility. We can change how prompt component
         # ! works and then update this later
@@ -742,7 +742,7 @@ class Component(CustomComponent):
 
         frontend_node = ComponentFrontendNode.from_dict(frontend_node_dict)
         if not self._code:
-            self.set_class_code()
+            await self.set_class_code()
         code_field = Input(
             dynamic=True,
             required=True,
