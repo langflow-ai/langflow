@@ -1,8 +1,9 @@
 from langchain.schema.agent import AgentFinish
 
-from langflow.base.agents.context import AgentContext
 from langflow.custom import Component
-from langflow.io import HandleInput, IntInput, Output
+from langflow.io import IntInput, Output
+from langflow.schema.data import Data
+from langflow.schema.message import Message
 
 
 class AgentActionRouter(Component):
@@ -14,7 +15,6 @@ class AgentActionRouter(Component):
         self.__iteration_updated = False
 
     inputs = [
-        HandleInput(name="agent_context", display_name="Agent Context", input_types=["AgentContext"], required=True),
         IntInput(name="max_iterations", display_name="Max Iterations", required=True, value=5),
     ]
 
@@ -25,31 +25,59 @@ class AgentActionRouter(Component):
 
     def _pre_run_setup(self):
         self.__iteration_updated = False
+        # Initialize context if not already set
+        if "iteration" not in self.ctx:
+            self.update_ctx(
+                {
+                    "iteration": 0,
+                    "max_iterations": self.max_iterations,
+                    "thought": "",
+                    "last_action": None,
+                    "last_action_result": None,
+                    "final_answer": "",
+                }
+            )
 
     def _get_context_message_and_route_to_stop(self) -> tuple[str, str]:
-        if (
-            isinstance(self.agent_context.last_action, AgentFinish)
-            or self.agent_context.iteration >= self.agent_context.max_iterations
+        ctx = self.ctx
+        if isinstance(ctx.get("last_action"), AgentFinish) or ctx.get("iteration", 0) >= ctx.get(
+            "max_iterations", self.max_iterations
         ):
             return "Provide Final Answer", "execute_tool"
         return "Execute Tool", "final_answer"
 
     def iterate_and_stop_once(self, route_to_stop: str):
         if not self.__iteration_updated:
-            self.agent_context.iteration += 1
+            current_iteration = self.ctx.get("iteration", 0)
+            self.update_ctx({"iteration": current_iteration + 1})
             self.__iteration_updated = True
             self.stop(route_to_stop)
 
-    def route_to_execute_tool(self) -> AgentContext:
-        context_message, route_to_stop = self._get_context_message_and_route_to_stop()
-        self.agent_context.update_context("Router Decision", context_message)
-        self.iterate_and_stop_once(route_to_stop)
-        self.status = self.agent_context.to_data_repr()
-        return self.agent_context
+    def _create_status_data(self) -> list[Data]:
+        ctx = self.ctx
+        return [
+            Data(
+                name="Agent State",
+                value=f"""
+Iteration: {ctx.get('iteration', 0)}
+Last Action: {ctx.get('last_action')}
+Last Result: {ctx.get('last_action_result')}
+Thought: {ctx.get('thought', '')}
+Final Answer: {ctx.get('final_answer', '')}
+""",
+            )
+        ]
 
-    def route_to_final_answer(self) -> AgentContext:
+    def route_to_execute_tool(self) -> Message:
         context_message, route_to_stop = self._get_context_message_and_route_to_stop()
-        self.agent_context.update_context("Router Decision", context_message)
+        self.update_ctx({"router_decision": context_message})
         self.iterate_and_stop_once(route_to_stop)
-        self.status = self.agent_context.to_data_repr()
-        return self.agent_context
+        self.status = self._create_status_data()
+        return Message(text=context_message, type="routing_decision")
+
+    def route_to_final_answer(self) -> Message:
+        context_message, route_to_stop = self._get_context_message_and_route_to_stop()
+        self.update_ctx({"router_decision": context_message})
+        self.iterate_and_stop_once(route_to_stop)
+        self.status = self._create_status_data()
+        return Message(text=context_message, type="routing_decision")
