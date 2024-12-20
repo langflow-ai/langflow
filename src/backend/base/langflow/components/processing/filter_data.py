@@ -159,7 +159,6 @@ class FilterDataComponent(Component):
 
         return True
 
-
     def process_data(self) -> Data:
         """Process data and return as Data object or list of Data objects."""
         try:
