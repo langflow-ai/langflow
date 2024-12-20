@@ -1,8 +1,9 @@
 import json
 import logging
-from arize.experimental.datasets import ArizeDatasetsClient
+
 import httpx
 import pandas as pd
+from arize.experimental.datasets import ArizeDatasetsClient
 from langflow.custom import Component
 from langflow.io import (
     DictInput,
@@ -135,7 +136,7 @@ class ArizeAIDatastoreComponent(Component):
             return data_objects
 
 
-        except (httpx.RequestError, ValueError) as exc:
+        except (httpx.RequestError, ValueError):
             logger.exception("Error fetching or processing datasets")
         else:
             return []
