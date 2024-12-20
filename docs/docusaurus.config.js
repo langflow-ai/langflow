@@ -136,6 +136,10 @@ const config = {
             to: "/configuration-objects",
             from: "/guides-data-message",
           },
+          {
+            to: "/components-vector-stores",
+            from: "/components-rag",
+          },
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',
