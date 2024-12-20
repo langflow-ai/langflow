@@ -62,15 +62,13 @@ const CustomInputPopover = ({
     }
   };
 
-  console.log(placeholder, value, id);
-
   return (
     <Popover modal open={showOptions} onOpenChange={setShowOptions}>
       <PopoverAnchor>
         <div
           data-testid={`anchor-${id}`}
           className={cn(
-            "primary-input noflow nowheel nopan nodelete nodrag border-1 flex h-full min-h-[2.375rem] cursor-default flex-wrap items-center px-2",
+            "primary-input noflow nopan nodelete nodrag border-1 flex h-full min-h-[2.375rem] cursor-default flex-wrap items-center px-2",
             editNode && "min-h-7 p-0 px-1",
             editNode && disabled && "min-h-5 border-muted",
             disabled && "bg-muted text-muted",
@@ -131,12 +129,12 @@ const CustomInputPopover = ({
               disabled={disabled}
               required={required}
               className={cn(
-                "popover-input nodrag truncate px-1 pr-4",
+                "popover-input nodrag w-full truncate px-1 pr-4",
                 editNode && "px-2",
                 editNode && disabled && "h-fit w-fit",
                 disabled &&
                   "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
-                password && "max-w-64 text-clip pr-14",
+                password && "text-clip pr-14",
               )}
               placeholder={
                 selectedOptions?.length > 0 || selectedOption ? "" : placeholder

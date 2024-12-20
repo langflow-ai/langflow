@@ -5,18 +5,18 @@ import {
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
-import { noteDataType } from "@/types/flow";
+import { NoteDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
+import { NodeResizer } from "@xyflow/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { NodeResizer } from "reactflow";
 import NodeDescription from "../GenericNode/components/NodeDescription";
 import NoteToolbarComponent from "./NoteToolbarComponent";
 function NoteNode({
   data,
   selected,
 }: {
-  data: noteDataType;
-  selected: boolean;
+  data: NoteDataType;
+  selected?: boolean;
 }) {
   const bgColor =
     Object.keys(COLOR_OPTIONS).find(
@@ -85,7 +85,7 @@ function NoteNode({
         >
           <NodeDescription
             inputClassName={cn(
-              "border-0 ring-transparent resize-none shadow-none rounded-sm h-full w-full",
+              "border-0 ring-0 focus:ring-0 resize-none shadow-none rounded-sm h-full w-full",
               COLOR_OPTIONS[bgColor] === null
                 ? ""
                 : "dark:!ring-background dark:text-background",

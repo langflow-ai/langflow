@@ -27,15 +27,15 @@ INPUT_TYPE_MAP = {
 }
 
 
-def list_flows(*, user_id: str | None = None) -> list[Data]:
+async def list_flows(*, user_id: str | None = None) -> list[Data]:
     if not user_id:
         msg = "Session is invalid"
         raise ValueError(msg)
     try:
-        with session_scope() as session:
-            flows = session.exec(
-                select(Flow).where(Flow.user_id == user_id).where(Flow.is_component == False)  # noqa: E712
-            ).all()
+        async with session_scope() as session:
+            uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
+            stmt = select(Flow).where(Flow.user_id == uuid_user_id).where(Flow.is_component == False)  # noqa: E712
+            flows = (await session.exec(stmt)).all()
 
             return [flow.to_data() for flow in flows]
     except Exception as e:
@@ -53,13 +53,13 @@ async def load_flow(
         msg = "Flow ID or Flow Name is required"
         raise ValueError(msg)
     if not flow_id and flow_name:
-        flow_id = find_flow(flow_name, user_id)
+        flow_id = await find_flow(flow_name, user_id)
         if not flow_id:
             msg = f"Flow {flow_name} not found"
             raise ValueError(msg)
 
-    with session_scope() as session:
-        graph_data = flow.data if (flow := session.get(Flow, flow_id)) else None
+    async with session_scope() as session:
+        graph_data = flow.data if (flow := await session.get(Flow, flow_id)) else None
     if not graph_data:
         msg = f"Flow {flow_id} not found"
         raise ValueError(msg)
@@ -68,9 +68,11 @@ async def load_flow(
     return Graph.from_payload(graph_data, flow_id=flow_id, user_id=user_id)
 
 
-def find_flow(flow_name: str, user_id: str) -> str | None:
-    with session_scope() as session:
-        flow = session.exec(select(Flow).where(Flow.name == flow_name).where(Flow.user_id == user_id)).first()
+async def find_flow(flow_name: str, user_id: str) -> str | None:
+    async with session_scope() as session:
+        uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
+        stmt = select(Flow).where(Flow.name == flow_name).where(Flow.user_id == uuid_user_id)
+        flow = (await session.exec(stmt)).first()
         return flow.id if flow else None
 
 
@@ -105,7 +107,7 @@ async def run_flow(
     inputs_components = []
     types = []
     for input_dict in inputs:
-        inputs_list.append({INPUT_FIELD_NAME: cast(str, input_dict.get("input_value"))})
+        inputs_list.append({INPUT_FIELD_NAME: cast("str", input_dict.get("input_value"))})
         inputs_components.append(input_dict.get("components", []))
         types.append(input_dict.get("type", "chat"))
 
@@ -273,18 +275,19 @@ def get_arg_names(inputs: list[Vertex]) -> list[dict[str, str]]:
     ]
 
 
-def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: UUID | None = None) -> FlowRead | None:
-    with session_scope() as session:
+async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: str | UUID | None = None) -> FlowRead | None:
+    async with session_scope() as session:
         endpoint_name = None
         try:
             flow_id = UUID(flow_id_or_name)
-            flow = session.get(Flow, flow_id)
+            flow = await session.get(Flow, flow_id)
         except ValueError:
             endpoint_name = flow_id_or_name
             stmt = select(Flow).where(Flow.endpoint_name == endpoint_name)
             if user_id:
-                stmt = stmt.where(Flow.user_id == user_id)
-            flow = session.exec(stmt).first()
+                uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
+                stmt = stmt.where(Flow.user_id == uuid_user_id)
+            flow = (await session.exec(stmt)).first()
         if flow is None:
             raise HTTPException(status_code=404, detail=f"Flow identifier {flow_id_or_name} not found")
         return FlowRead.model_validate(flow, from_attributes=True)

@@ -1,5 +1,5 @@
 import useHandleNewValue from "@/CustomNodes/hooks/use-handle-new-value";
-import { NodeType } from "@/types/flow";
+import { AllNodeType } from "@/types/flow";
 import { cloneDeep } from "lodash";
 import { useState } from "react";
 import ImageViewer from "../../../../components/common/ImageViewer";
@@ -35,7 +35,9 @@ export default function IOFieldView({
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
   const flowPool = useFlowStore((state) => state.flowPool);
-  const node: NodeType | undefined = nodes.find((node) => node.id === fieldId);
+  const node: AllNodeType | undefined = nodes.find(
+    (node) => node.id === fieldId,
+  );
   const flowPoolNode = (flowPool[node!.id] ?? [])[
     (flowPool[node!.id]?.length ?? 1) - 1
   ];
