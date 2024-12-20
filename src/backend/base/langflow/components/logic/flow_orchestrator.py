@@ -1,5 +1,8 @@
+import json
+from pathlib import Path
 from typing import Any
 
+from aiofile import async_open
 from loguru import logger
 
 from langflow.base.flow_processing.utils import build_data_from_result_data
@@ -7,7 +10,7 @@ from langflow.custom import Component
 from langflow.graph.graph.base import Graph
 from langflow.graph.vertex.base import Vertex
 from langflow.helpers.flow import get_flow_inputs, run_flow
-from langflow.io import DropdownInput, MessageInput, Output
+from langflow.io import DropdownInput, FileInput, MessageInput, Output
 from langflow.schema import Data, dotdict
 
 default_keys = [
@@ -15,6 +18,7 @@ default_keys = [
     "_type",
     "flow_name_selected",
     "session_id",
+    "flow_json",
 ]
 
 
@@ -40,6 +44,15 @@ class FlowOrchestrator(Component):
             value="",
             advanced=True,
         ),
+        FileInput(
+            name="flow_json",
+            display_name="Flow JSON",
+            info="The flow JSON to run.",
+            value="",
+            file_types=["json", "JSON"],
+            advanced=True,
+            refresh_button=True,
+        ),
     ]
 
     outputs = [Output(name="flow_outputs", display_name="Flow Outputs", method="generate_results")]
@@ -55,40 +68,66 @@ class FlowOrchestrator(Component):
                 return flow_data
         return None
 
+    async def get_graph(self, flow_name_selected: str | None = None) -> Graph:
+        if self.flow_json and isinstance(self.flow_json, str | Path):
+            try:
+                if self.flow_json:
+                    # resolved_path = self.resolve_path(self.flow_json)
+                    file_path = Path(self.flow_json)
+                    async with async_open(file_path, encoding="utf-8") as f:
+                        content = await f.read()
+                        flow_graph = json.loads(content)
+                        return Graph.from_payload(flow_graph["data"])
+            except Exception as e:
+                msg = "Error loading flow from JSON"
+                raise ValueError(msg) from e
+        if flow_name_selected:
+            flow_data = await self.get_flow(flow_name_selected)
+            if flow_data:
+                return Graph.from_payload(flow_data.data["data"])
+            msg = "Flow not found"
+            raise ValueError(msg)
+        return None
+
+    def update_build_config_from_graph(self, build_config: dotdict, graph: Graph):
+        try:
+            # Get all inputs from the graph
+            inputs = get_flow_inputs(graph)
+            # Add inputs to the build config
+            new_fields = self.get_new_fields(inputs)
+            # print(f"New Fields {new_fields}")
+            old_fields = self.get_old_fields(build_config, new_fields)
+            self.delete_fields(build_config, old_fields)
+            build_config = self.add_new_fields(build_config, new_fields)
+
+        except Exception as e:
+            msg = "Error updating build config from graph"
+            logger.exception(msg)
+            raise RuntimeError(msg) from e
+
     async def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "flow_name_selected":
             build_config["flow_name_selected"]["options"] = await self.get_flow_names()
-
-            # for key in list(build_config.keys()):
-            #     if key not in [x.name for x in self.inputs] + ["code", "_type", "get_final_results_only"]:
-            #         del build_config[key]
             missing_keys = [key for key in default_keys if key not in build_config]
             if missing_keys:
                 msg = f"Missing required keys in build_config: {missing_keys}"
                 raise ValueError(msg)
             if field_value is not None:
                 try:
-                    flow_data = await self.get_flow(field_value)
-                except Exception:  # noqa: BLE001
-                    logger.exception(f"Error getting flow {field_value}")
-                else:
-                    if not flow_data:
-                        msg = f"Flow {field_value} not found."
-                        logger.error(msg)
-                    else:
-                        try:
-                            graph = Graph.from_payload(flow_data.data["data"])
-                            # Get all inputs from the graph
-                            inputs = get_flow_inputs(graph)
-                            # Add inputs to the build config
-                            new_fields = self.get_new_fields(inputs)
-                            print(f"New Fields {new_fields}")
-                            old_fields = self.get_old_fields(build_config, new_fields)
-                            self.delete_fields(build_config, old_fields)
-                            build_config = self.add_new_fields(build_config, new_fields)
-
-                        except Exception:  # noqa: BLE001
-                            logger.exception(f"Error building graph for flow {field_value}")
+                    graph = await self.get_graph(field_value)
+                    build_config = self.update_build_config_from_graph(build_config, graph)
+                except Exception as e:
+                    msg = f"Error building graph for flow {field_value}"
+                    logger.exception(msg)
+                    raise RuntimeError(msg) from e
+        if field_name == "flow_json" and field_value:
+            try:
+                graph = await self.get_graph()
+                build_config = self.update_build_config_from_graph(build_config, graph)
+            except Exception as e:
+                msg = f"Error building graph for flow {field_value}"
+                logger.exception(msg)
+                raise RuntimeError(msg) from e
 
         return build_config
 
@@ -104,9 +143,7 @@ class FlowOrchestrator(Component):
                         **field_template[input_name],
                         "display_name": vertex.display_name + " - " + field_template[input_name]["display_name"],
                         "name": vertex.id + "|" + input_name,
-                        "tool_mode": not (
-                            field_template[input_name].get("advanced", False)
-                        ),
+                        "tool_mode": not (field_template[input_name].get("advanced", False)),
                     }
                     for input_name in field_order
                 ]
