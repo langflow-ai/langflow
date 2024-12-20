@@ -5,7 +5,7 @@ import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import useTabVisibility from "../../../../shared/hooks/use-tab-visibility";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import useFlowStore from "../../../../stores/flowStore";
@@ -16,6 +16,13 @@ import ChatInput from "./chatInput/chat-input";
 import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 import { useFileHandler } from "./chatInput/hooks/use-file-handler";
 import ChatMessage from "./chatMessage/chat-message";
+
+const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
+  return (
+    prevProps.chat.message === nextProps.chat.message &&
+    prevProps.chat.id === nextProps.chat.id
+  );
+});
 
 export default function ChatView({
   sendMessage,
@@ -143,20 +150,6 @@ export default function ChatView({
 
   const flowRunningSkeletonMemo = useMemo(() => <FlowRunningSqueleton />, []);
 
-  const memoChatHistory = useMemo(() => {
-    return chatHistory?.map((chat, index) => (
-      <ChatMessage
-        setLockChat={setLockChat}
-        lockChat={lockChat}
-        chat={chat}
-        lastMessage={chatHistory.length - 1 === index ? true : false}
-        key={`${chat.id}-${index}`}
-        updateChat={updateChat}
-        closeChat={closeChat}
-      />
-    ));
-  }, [chatHistory]);
-
   return (
     <div
       className="flex h-full w-full flex-col rounded-md"
@@ -168,7 +161,19 @@ export default function ChatView({
       <div ref={messagesRef} className="chat-message-div">
         {chatHistory &&
           (lockChat || chatHistory?.length > 0 ? (
-            <>{memoChatHistory}</>
+            <>
+              {chatHistory?.map((chat, index) => (
+                <MemoizedChatMessage
+                  setLockChat={setLockChat}
+                  lockChat={lockChat}
+                  chat={chat}
+                  lastMessage={chatHistory.length - 1 === index}
+                  key={`${chat.id}-${index}`}
+                  updateChat={updateChat}
+                  closeChat={closeChat}
+                />
+              ))}
+            </>
           ) : (
             <div className="flex h-full w-full flex-col items-center justify-center">
               <div className="flex flex-col items-center justify-center gap-4 p-8">
