@@ -10,7 +10,7 @@ A component is a single building block within a flow with inputs, outputs, fun
 
 To add a component to a flow, drag it from the **Component** menu to the **Workspace**.
 
-Learn more about components and how they work below.
+Learn more about components and how they work on this page.
 
 ## Component menu
 

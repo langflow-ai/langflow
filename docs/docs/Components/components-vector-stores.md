@@ -9,11 +9,11 @@ Vector databases store vector data, which backs AI workloads like chatbots and R
 
 Vector database components establish connections to existing vector databases or create in-memory vector stores for storing and retrieving vector data.
 
-Vector database components are distinct from [memory components](/components-memories), which are are built specifically for storing and retrieving chat messages from external databases.
+Vector database components are distinct from [memory components](/components-memories), which are built specifically for storing and retrieving chat messages from external databases.
 
 ## Use a vector store component in a flow
 
-Vector databases can be populated from within Langflow with document ingestion pipelines, like this one.
+Vector databases can be populated from within Langflow with document ingestion pipelines, like the following
 
 ![](/img/vector-store-document-ingestion.png)
 
