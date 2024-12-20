@@ -118,12 +118,12 @@ class NVIDIANeMoCustomizerComponent(Component):
         Output(display_name="Job Result", name="data", method="customize"),
     ]
 
-    async def update_build_config(self, build_config, _field_value, field_name=None):
+    async def update_build_config(self, build_config, field_value, field_name=None):
         """Updates the component's configuration based on the selected option or refresh button."""
         models_url = f"{self.base_url}/v2/availableParentModels"
         try:
             if field_name == "model_name":
-                self.log(f"Refreshing model names from endpoint {models_url}")
+                self.log(f"Refreshing model names from endpoint {models_url}, value: {field_value}")
 
                 async with httpx.AsyncClient(timeout=5.0) as client:
                     response = await client.get(models_url, headers=self.headers)
