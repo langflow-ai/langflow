@@ -3,7 +3,7 @@ from langchain_community.document_loaders.youtube import TranscriptFormat
 
 from langflow.custom import Component
 from langflow.inputs import DropdownInput, IntInput, MultilineInput
-from langflow.schema import Data
+from langflow.schema import Message
 from langflow.template import Output
 
 
@@ -27,8 +27,7 @@ class YouTubeTranscriptsComponent(Component):
             display_name="Transcript Format",
             options=["text", "chunks"],
             value="text",
-            info="The format of the transcripts. Either 'text' for a single output "
-            "or 'chunks' for timestamped chunks.",
+            info="The format of the transcripts. Either 'text' for a single output or 'chunks' for timestamped chunks.",
             advanced=True,
         ),
         IntInput(
@@ -179,8 +178,7 @@ class YouTubeTranscriptsComponent(Component):
             ],
             value="en",
             info=(
-                "Specify to make sure the transcripts are retrieved in your desired language. "
-                "Defaults to English: 'en'"
+                "Specify to make sure the transcripts are retrieved in your desired language. Defaults to English: 'en'"
             ),
         ),
         DropdownInput(
@@ -188,29 +186,36 @@ class YouTubeTranscriptsComponent(Component):
             display_name="Translation Language",
             advanced=True,
             options=["", "en", "es", "fr", "de", "it", "pt", "ru", "ja", "ko", "hi", "ar", "id"],
-            info="Translate the transcripts to the specified language. " "Leave empty for no translation.",
+            info="Translate the transcripts to the specified language. Leave empty for no translation.",
         ),
     ]
 
     outputs = [
-        Output(name="transcripts", display_name="Data", method="build_youtube_transcripts"),
+        Output(name="transcripts", display_name="Transcription", method="build_youtube_transcripts"),
     ]
 
-    def build_youtube_transcripts(self) -> Data | list[Data]:
-        """Method to build transcripts from the provided YouTube URL.
+    def build_youtube_transcripts(self) -> Message:
+        """Method to extracts transcripts from a YouTube video URL.
 
         Returns:
-            Data | list[Data]: The transcripts of the video, either as a single
-            Data object or a list of Data objects.
+            Message: The transcripts of the video as a text string. If 'transcript_format'
+            is 'text', the transcripts are returned as a single continuous string. If
+            'transcript_format' is 'chunks', the transcripts are returned as a string
+            with timestamped segments.
+
+        Raises:
+            Exception: Returns an error message if transcript retrieval fails.
         """
         try:
+            # Attempt to load transcripts in the specified language, fallback to any available language
+            languages = [self.language] if self.language else None
             loader = YoutubeLoader.from_youtube_url(
                 self.url,
                 transcript_format=TranscriptFormat.TEXT
                 if self.transcript_format == "text"
                 else TranscriptFormat.CHUNKS,
                 chunk_size_seconds=self.chunk_size_seconds,
-                language=[self.language],
+                language=languages,
                 translation=self.translation or None,
             )
 
@@ -218,10 +223,21 @@ class YouTubeTranscriptsComponent(Component):
 
             if self.transcript_format == "text":
                 # Extract only the page_content from the Document
-                return Data(data={"transcripts": transcripts[0].page_content})
-            # For chunks, extract page_content and metadata separately
-            return [Data(data={"content": doc.page_content, "metadata": doc.metadata}) for doc in transcripts]
+                result = transcripts[0].page_content
+                return Message(text=result)
+
+            # For chunks, format the output with timestamps
+            formatted_chunks = []
+            for doc in transcripts:
+                start_seconds = int(doc.metadata["start_seconds"])
+                start_minutes = start_seconds // 60
+                start_seconds %= 60
+                timestamp = f"{start_minutes:02d}:{start_seconds:02d}"
+                formatted_chunks.append(f"{timestamp} {doc.page_content}")
+                result = "\n".join(formatted_chunks)
+            return Message(text=result)
 
         except Exception as exc:  # noqa: BLE001
             # Using a specific error type for the return value
-            return Data(data={"error": f"Failed to get YouTube transcripts: {exc!s}"})
+            error_msg = f"Failed to get YouTube transcripts: {exc!s}"
+            return Message(text=error_msg)

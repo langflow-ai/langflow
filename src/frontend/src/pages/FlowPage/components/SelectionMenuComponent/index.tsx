@@ -1,6 +1,6 @@
+import { NodeToolbar } from "@xyflow/react";
 import { useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { NodeToolbar } from "reactflow";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import { Button } from "../../../../components/ui/button";
 import { GradientGroup } from "../../../../icons/GradientSparkles";
@@ -80,6 +80,7 @@ export default function SelectionMenu({
                 }`}
                 onClick={onClick}
                 disabled={disable}
+                data-testid="error-group-node"
               >
                 <GradientGroup
                   strokeWidth={1.5}
@@ -100,6 +101,7 @@ export default function SelectionMenu({
               }`}
               onClick={onClick}
               disabled={disable}
+              data-testid="group-node"
             >
               <GradientGroup
                 strokeWidth={1.5}

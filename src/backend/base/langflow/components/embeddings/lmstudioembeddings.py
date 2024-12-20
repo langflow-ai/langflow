@@ -16,24 +16,25 @@ class LMStudioEmbeddingsComponent(LCEmbeddingsModel):
     icon = "LMStudio"
 
     @override
-    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
+    async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
         if field_name == "model":
             base_url_dict = build_config.get("base_url", {})
             base_url_load_from_db = base_url_dict.get("load_from_db", False)
             base_url_value = base_url_dict.get("value")
             if base_url_load_from_db:
-                base_url_value = self.variables(base_url_value)
+                base_url_value = await self.get_variables(base_url_value, field_name)
             elif not base_url_value:
                 base_url_value = "http://localhost:1234/v1"
-            build_config["model"]["options"] = self.get_model(base_url_value)
+            build_config["model"]["options"] = await self.get_model(base_url_value)
 
         return build_config
 
-    def get_model(self, base_url_value: str) -> list[str]:
+    @staticmethod
+    async def get_model(base_url_value: str) -> list[str]:
         try:
             url = urljoin(base_url_value, "/v1/models")
-            with httpx.Client() as client:
-                response = client.get(url)
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url)
                 response.raise_for_status()
                 data = response.json()
 

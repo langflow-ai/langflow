@@ -1,11 +1,10 @@
 import abc
 from uuid import UUID
 
-from sqlmodel import Session
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.base import Service
-from langflow.services.database.models.variable.model import Variable
+from langflow.services.database.models.variable.model import Variable, VariableRead
 
 
 class VariableService(Service):
@@ -23,8 +22,8 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    def get_variable(self, user_id: UUID | str, name: str, field: str, session: Session) -> str:
-        """Get a variable value.
+    async def get_variable(self, user_id: UUID | str, name: str, field: str, session: AsyncSession) -> str:
+        """Async get a variable value.
 
         Args:
             user_id: The user ID.
@@ -34,18 +33,6 @@ class VariableService(Service):
 
         Returns:
             The value of the variable.
-        """
-
-    @abc.abstractmethod
-    def list_variables_sync(self, user_id: UUID | str, session: Session) -> list[str | None]:
-        """List all variables.
-
-        Args:
-            user_id: The user ID.
-            session: The database session.
-
-        Returns:
-            A list of variable names.
         """
 
     @abc.abstractmethod
@@ -120,4 +107,13 @@ class VariableService(Service):
 
         Returns:
             The created variable.
+        """
+
+    @abc.abstractmethod
+    async def get_all(self, user_id: UUID | str, session: AsyncSession) -> list[VariableRead]:
+        """Get all variables.
+
+        Args:
+            user_id: The user ID.
+            session: The database session.
         """
