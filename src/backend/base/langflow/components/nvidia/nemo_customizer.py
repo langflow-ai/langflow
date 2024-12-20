@@ -164,18 +164,6 @@ class NVIDIANeMoCustomizerComponent(Component):
             },
             "sha": "main"
         }
-        data = {
-            "parent_model_id": self.model_name,
-            "dataset": dataset_name,
-            "hyperparameters": {
-                "training_type": self.training_type,
-                "epochs": int(self.epochs),
-                "batch_size": int(self.batch_size),
-                "learning_rate": float(self.learning_rate),
-                "adapter_dim": 16
-            },
-            "sha": "main"
-        }
         customizations_url = f"{self.base_url}/v2/customizations"
         try:
             formatted_data = json.dumps(data, indent=2)
