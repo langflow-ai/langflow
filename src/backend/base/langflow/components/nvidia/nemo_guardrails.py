@@ -10,8 +10,10 @@ from langflow.schema import Data
 
 class NVIDIANemoGuardrailsComponent(Component):
     display_name = "NVIDIA NeMo Guardrails"
-    description = "Apply guardrails to LLM interactions. Load guardrail definitions from a YAML file," \
-                  " or provide directly as multiline text"
+    description = (
+        "Apply guardrails to LLM interactions. Load guardrail definitions from a YAML file, "
+        "or provide directly as multiline text"
+    )
     icon = "NVIDIA"
     name = "NVIDIANemoGuardrails"
     beta = True
@@ -44,7 +46,7 @@ class NVIDIANemoGuardrailsComponent(Component):
                 data_dict = yaml.safe_load(yaml_content)
                 return Data(data={"text": yaml_content, "parsed_data": data_dict})
             except yaml.YAMLError as e:
-                err_msg=f"Invalid YAML syntax"
+                err_msg="Invalid YAML syntax"
                 raise ValueError(err_msg) from e
 
         # Fall back to FileInput
@@ -64,5 +66,5 @@ class NVIDIANemoGuardrailsComponent(Component):
             data_dict = yaml.safe_load(text)
             return Data(data={"file_path": resolved_path, "text": text, "parsed_data": data_dict})
         except yaml.YAMLError as e:
-            error_msg = f"Invalid YAML syntax in file"
+            error_msg = "Invalid YAML syntax in file"
             raise ValueError(error_msg) from e
