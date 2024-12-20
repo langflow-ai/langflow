@@ -63,7 +63,6 @@ def blockbuster(request):
             ]:
                 bb.functions[func].can_block_in("importlib_metadata/__init__.py", "metadata")
 
-
             (
                 bb.functions["os.stat"]
                 # TODO: make set_class_code async
