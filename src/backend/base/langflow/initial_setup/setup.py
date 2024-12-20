@@ -570,7 +570,7 @@ async def load_flows_from_directory() -> None:
                     flow_id = UUID(flow_id)
                 except ValueError:
                     logger.error(f"Invalid UUID string: {flow_id}")
-                    return None
+                    return
 
             existing = await find_existing_flow(session, flow_id, flow_endpoint_name)
             if existing:
@@ -595,7 +595,7 @@ async def load_flows_from_directory() -> None:
                         existing.id = UUID(existing.id)
                     except ValueError:
                         logger.error(f"Invalid UUID string: {existing.id}")
-                        return None
+                        return
 
                 session.add(existing)
             else:
