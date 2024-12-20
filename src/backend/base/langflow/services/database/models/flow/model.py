@@ -9,7 +9,12 @@ import emoji
 from emoji import purely_emoji
 from fastapi import HTTPException, status
 from loguru import logger
-from pydantic import BaseModel, field_serializer, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ValidationInfo,
+    field_serializer,
+    field_validator,
+)
 from sqlalchemy import Text, UniqueConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
@@ -27,14 +32,20 @@ HEX_COLOR_LENGTH = 7
 
 class FlowBase(SQLModel):
     name: str = Field(index=True)
-    description: str | None = Field(default=None, sa_column=Column(Text, index=True, nullable=True))
+    description: str | None = Field(
+        default=None, sa_column=Column(Text, index=True, nullable=True)
+    )
     icon: str | None = Field(default=None, nullable=True)
     icon_bg_color: str | None = Field(default=None, nullable=True)
     gradient: str | None = Field(default=None, nullable=True)
     data: dict | None = Field(default=None, nullable=True)
     is_component: bool | None = Field(default=False, nullable=True)
-    updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=True)
-    webhook: bool | None = Field(default=False, nullable=True, description="Can be used on the webhook endpoint")
+    updated_at: datetime | None = Field(
+        default_factory=lambda: datetime.now(timezone.utc), nullable=True
+    )
+    webhook: bool | None = Field(
+        default=False, nullable=True, description="Can be used on the webhook endpoint"
+    )
     endpoint_name: str | None = Field(default=None, nullable=True, index=True)
     tags: list[str] | None = None
     locked: bool | None = Field(default=False, nullable=True)
@@ -163,7 +174,9 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     icon: str | None = Field(default=None, nullable=True)
     tags: list[str] | None = Field(sa_column=Column(JSON), default=[])
     locked: bool | None = Field(default=False, nullable=True)
-    folder_id: UUID | None = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
+    folder_id: UUID | None = Field(
+        default=None, foreign_key="folder.id", nullable=True, index=True
+    )
     folder: Optional["Folder"] = Relationship(back_populates="flows")
     messages: list["MessageTable"] = Relationship(back_populates="flow")
     transactions: list["TransactionTable"] = Relationship(back_populates="flow")
@@ -206,17 +219,23 @@ class FlowHeader(BaseModel):
         None,
         description="The ID of the folder containing the flow. None if not associated with a folder",
     )
-    is_component: bool | None = Field(None, description="Flag indicating whether the flow is a component")
-    endpoint_name: str | None = Field(None, description="The name of the endpoint associated with this flow")
+    is_component: bool | None = Field(
+        None, description="Flag indicating whether the flow is a component"
+    )
+    endpoint_name: str | None = Field(
+        None, description="The name of the endpoint associated with this flow"
+    )
     description: str | None = Field(None, description="A description of the flow")
-    data: dict | None = Field(None, description="The data of the component, if is_component is True")
+    data: dict | None = Field(
+        None, description="The data of the component, if is_component is True"
+    )
 
-    @model_validator(mode="before")
+    @field_validator("data", mode="before")
     @classmethod
-    def validate_flow_header(cls, data: Flow):
-        if not data.is_component:
-            data.data = None
-        return data
+    def validate_flow_header(cls, value: dict, info: ValidationInfo):
+        if not info.data["is_component"]:
+            return None
+        return value
 
 
 class FlowUpdate(SQLModel):
