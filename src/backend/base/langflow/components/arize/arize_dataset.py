@@ -9,10 +9,11 @@ from langflow.schema import Data
 class ArizeAIDatastoreComponent(Component):
     display_name = "Arize AI Datastore"
     description = "Fetch available datasets and display details"
-    documentation: str = "http://docs.langflow.org/components/custom"
     icon = "Arize"
     name = "ArizeAIDatastoreComponent"
     beta = True
+
+    logger = logging.getLogger(__name__)
 
     # Inputs: A dropdown for dataset selection and a dictionary to store dataset metadata
     inputs = [
@@ -207,7 +208,8 @@ class ArizeAIDatastoreComponent(Component):
                 api_key=api_key
             )
             logger.info("Successfully initialized ArizeDatasetsClient.")
-            return client
         except Exception as exc:
-            logger.error(f"Failed to initialize ArizeDatasetsClient: {str(exc)}")
+            logger.exception("Failed to initialize ArizeDatasetsClient: %s", str(exc))
             raise
+        else:
+            return client
