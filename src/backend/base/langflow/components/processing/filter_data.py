@@ -153,11 +153,7 @@ class FilterDataComponent(Component):
         if len(query) >= self.max_query_length:
             return False
         safe_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.[]() +-*/<>=|,"
-        for c in query:
-            if c not in safe_chars:
-                return False
-
-        return True
+        return all(c in safe_chars for c in query)
 
     def process_data(self) -> Data:
         """Process data and return as Data object or list of Data objects."""
