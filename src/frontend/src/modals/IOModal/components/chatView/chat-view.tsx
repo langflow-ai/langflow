@@ -20,7 +20,10 @@ import ChatMessage from "./chatMessage/chat-message";
 const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
   return (
     prevProps.chat.message === nextProps.chat.message &&
-    prevProps.chat.id === nextProps.chat.id
+    prevProps.chat.id === nextProps.chat.id &&
+    prevProps.chat.session === nextProps.chat.session &&
+    prevProps.chat.content_blocks === nextProps.chat.content_blocks &&
+    prevProps.chat.properties === nextProps.chat.properties
   );
 });
 
