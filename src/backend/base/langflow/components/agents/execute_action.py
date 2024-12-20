@@ -1,7 +1,8 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from langflow.custom import Component
-from langflow.io import HandleInput, Output
+from langflow.io import Output
+from langflow.schema.data import Data
 from langflow.schema.message import Message
 
 if TYPE_CHECKING:
@@ -10,27 +11,47 @@ if TYPE_CHECKING:
 
 class ExecuteActionComponent(Component):
     display_name = "Execute Action"
-    description = "Executes the decided action using available tools."
+    description = "Executes the selected action using available tools."
 
-    inputs = [
-        HandleInput(name="agent_context", display_name="Agent Context", input_types=["AgentContext"], required=True),
-    ]
+    outputs = [Output(name="action_result", display_name="Action Result", method="execute_action")]
 
-    outputs = [Output(name="action_execution", display_name="Agent Context", method="execute_action")]
+    def _format_result(self, result: Any) -> str:
+        if hasattr(result, "content"):
+            return result.content
+        if hasattr(result, "log"):
+            return result.log
+        return str(result)
 
     def execute_action(self) -> Message:
-        action: AgentAction = self.agent_context.last_action
+        # Get the action from context
+        action: AgentAction = self.ctx.get("last_action")
+        if not action:
+            msg = "No action found in context to execute"
+            raise ValueError(msg)
 
-        tools = self.agent_context.tools
+        # Get tools from context
+        tools = self.ctx.get("tools", {})
+
+        # Execute the action using the appropriate tool
         if action.tool in tools:
-            data = tools[action.tool](action.tool_input)
-            self.agent_context.last_action_result = data
-            self.agent_context.update_context("Action Result", data)
+            result = tools[action.tool](action.tool_input)
+            formatted_result = self._format_result(result)
+            self.update_ctx({"last_action_result": formatted_result})
         else:
-            data = f"Action '{action}' not found in available tools."
-            error_msg = f"Error: {data}"
-            self.agent_context.last_action_result = error_msg
-            self.agent_context.update_context("Action Result", error_msg)
-        tool_call_result = f"Tool: {action.tool} called with input: {action.tool_input} and returned: {data}"
-        self.status = self.agent_context.to_data_repr()
-        return Message(text=tool_call_result)
+            error_msg = f"Action '{action}' not found in available tools."
+            formatted_result = f"Error: {error_msg}"
+            self.update_ctx({"last_action_result": formatted_result})
+
+        # Create status data
+        self.status = [
+            Data(
+                name="Action Execution",
+                value=f"""
+Tool: {action.tool}
+Input: {action.tool_input}
+Result: {formatted_result}
+""",
+            )
+        ]
+
+        return Message(text=formatted_result)
