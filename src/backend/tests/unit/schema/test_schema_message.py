@@ -1,4 +1,5 @@
 import shutil
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -154,11 +155,16 @@ def test_message_without_sender():
 
 def test_message_serialization():
     """Test message serialization to dict."""
+    # Create a timestamp with timezone
     message = Message(text="Test message", sender=MESSAGE_SENDER_USER)
+    timestamp_str = message.timestamp
+    timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
     serialized = message.model_dump()
 
     assert serialized["text"] == "Test message"
     assert serialized["sender"] == MESSAGE_SENDER_USER
+    assert serialized["timestamp"] == timestamp
+    assert serialized["timestamp"].tzinfo == timezone.utc
 
 
 def test_message_to_lc_without_sender():
@@ -168,6 +174,24 @@ def test_message_to_lc_without_sender():
     lc_message = message.to_lc_message()
     assert isinstance(lc_message, HumanMessage)
     assert lc_message.content == "Test message"
+
+
+def test_timestamp_serialization():
+    """Test timestamp serialization with different formats."""
+    # Test with timezone
+    msg1 = Message(text="Test message", sender=MESSAGE_SENDER_USER, timestamp="2023-12-25 15:30:45 UTC")
+    serialized1 = msg1.model_dump()
+    assert serialized1["timestamp"].tzinfo == timezone.utc
+
+    # Test without timezone
+    msg2 = Message(text="Test message", sender=MESSAGE_SENDER_USER, timestamp="2023-12-25 15:30:45")
+    serialized2 = msg2.model_dump()
+    assert serialized2["timestamp"].tzinfo == timezone.utc
+
+    # Test that both formats result in equivalent UTC times when appropriate
+    msg_with_tz = Message(text="Test message", sender=MESSAGE_SENDER_USER, timestamp="2023-12-25 15:30:45 UTC")
+    msg_without_tz = Message(text="Test message", sender=MESSAGE_SENDER_USER, timestamp="2023-12-25 15:30:45")
+    assert msg_with_tz.model_dump()["timestamp"] == msg_without_tz.model_dump()["timestamp"]
 
 
 # Clean up the cache directory after all tests

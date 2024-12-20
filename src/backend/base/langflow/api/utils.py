@@ -16,7 +16,7 @@ from langflow.services.database.models import User
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
-from langflow.services.deps import async_session_scope, get_session
+from langflow.services.deps import get_session, session_scope
 from langflow.services.store.utils import get_lf_version_from_pypi
 
 if TYPE_CHECKING:
@@ -141,7 +141,7 @@ def format_elapsed_time(elapsed_time: float) -> str:
 
 
 async def _get_flow_name(flow_id: uuid.UUID) -> str:
-    async with async_session_scope() as session:
+    async with session_scope() as session:
         flow = await session.get(Flow, flow_id)
         if flow is None:
             msg = f"Flow {flow_id} not found"

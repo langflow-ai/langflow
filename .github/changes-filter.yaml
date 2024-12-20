@@ -3,7 +3,9 @@ python:
   - "src/backend/**"
   - "src/backend/**.py"
   - "pyproject.toml"
-  - "poetry.lock"
+  - "uv.lock"
+  - "src/backend/base/pyproject.toml"
+  - "src/backend/base/uv.lock"
   - "**/python_test.yml"
 components-changes:
   - "src/backend/base/langflow/components/**"
