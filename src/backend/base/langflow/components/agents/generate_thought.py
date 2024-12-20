@@ -2,9 +2,10 @@ from typing import TYPE_CHECKING
 
 from langchain.agents.output_parsers.tools import parse_ai_message_to_tool_action
 
-from langflow.base.agents.context import AgentContext
 from langflow.custom import Component
-from langflow.io import HandleInput, MessageTextInput, Output
+from langflow.io import MessageTextInput, Output
+from langflow.schema.data import Data
+from langflow.schema.message import Message
 
 if TYPE_CHECKING:
     from langchain_core.messages import AIMessage
@@ -15,12 +16,6 @@ class GenerateThoughtComponent(Component):
     description = "Generates a thought based on the current context."
 
     inputs = [
-        HandleInput(
-            name="agent_context",
-            display_name="Agent Context",
-            input_types=["AgentContext"],
-            required=True,
-        ),
         MessageTextInput(
             name="prompt",
             display_name="Prompt",
@@ -29,12 +24,38 @@ class GenerateThoughtComponent(Component):
         ),
     ]
 
-    outputs = [Output(name="processed_agent_context", display_name="Agent Context", method="generate_thought")]
+    outputs = [Output(name="thought", display_name="Generated Thought", method="generate_thought")]
 
-    def generate_thought(self) -> AgentContext:
-        # Append the prompt after the accumulated context following ReAct format
-        full_prompt = f"{self.agent_context.get_full_context()}\n{self.prompt}\nThought:"
-        thought: AIMessage = self.agent_context.llm.invoke(full_prompt)
+    def _format_context(self) -> str:
+        ctx = self.ctx
+        context_parts = []
+
+        # Add router decision if exists
+        if "router_decision" in ctx:
+            context_parts.append(f"Decision: {ctx['router_decision']}")
+
+        # Add thought if exists
+        if ctx.get("thought"):
+            context_parts.append(f"Previous Thought: {ctx['thought']}")
+
+        # Add last action and result if they exist
+        if ctx.get("last_action"):
+            context_parts.append(f"Last Action: {ctx['last_action']}")
+            if ctx.get("last_action_result"):
+                context_parts.append(f"Action Result: {ctx['last_action_result']}")
+
+        # Add iteration info
+        context_parts.append(f"Current Iteration: {ctx.get('iteration', 0)}/{ctx.get('max_iterations', 5)}")
+
+        return "\n".join(context_parts)
+
+    def generate_thought(self) -> Message:
+        # Format the full context
+        full_prompt = f"{self._format_context()}\n{self.prompt}\nThought:"
+
+        # Generate thought using LLM
+        thought: AIMessage = self.ctx["llm"].invoke(full_prompt)
+
         if not thought.content:
             action = parse_ai_message_to_tool_action(thought)
             if action:
@@ -44,7 +65,22 @@ class GenerateThoughtComponent(Component):
                     "Please check the prompt and LLM configuration. Maybe use a better model."
                 )
                 raise ValueError(msg)
-        self.agent_context.thought = thought
-        self.agent_context.update_context("Thought", thought)
-        self.status = self.agent_context.to_data_repr()
-        return self.agent_context
+
+        # Update context with new thought using update_ctx
+        self.update_ctx({"thought": thought.content})
+
+        # Create status data
+        self.status = [
+            Data(
+                name="Generated Thought",
+                value=f"""
+Context Used:
+{self._format_context()}
+
+New Thought:
+{thought.content}
+""",
+            )
+        ]
+
+        return Message(text=thought.content)
