@@ -41,16 +41,21 @@ class OutputValue(BaseModel):
 
 
 def get_type(payload):
-    if isinstance(payload, Message):
-        return LogType.MESSAGE
-    if isinstance(payload, Data):
-        return LogType.DATA
-    if isinstance(payload, dict):
-        return LogType.OBJECT
-    if isinstance(payload, (list | DataFrame)):
-        return LogType.ARRAY
-    if isinstance(payload, str):
-        return LogType.TEXT
+    match payload:
+        case Message():
+            return LogType.MESSAGE
+
+        case Data():
+            return LogType.DATA
+
+        case dict():
+            return LogType.OBJECT
+
+        case list() | DataFrame():
+            return LogType.ARRAY
+
+        case str():
+            return LogType.TEXT
 
     if (payload and isinstance(payload, Generator)) or (
         isinstance(payload, Message) and isinstance(payload.text, Generator)
@@ -86,16 +91,18 @@ def build_output_logs(vertex, result) -> dict:
         message = get_message(payload)
         type_ = get_type(payload)
 
-        if type_ == LogType.STREAM:
-            message = StreamURL(location=message["stream_url"]) if "stream_url" in message else ""
-        elif type_ == LogType.MESSAGE and hasattr(message, "message"):
-            message = message.message
-        elif type_ == LogType.UNKNOWN:
-            message = ""
-        elif type_ == LogType.ARRAY:
-            if isinstance(message, DataFrame):
-                message = message.to_dict(orient="records")
-            message = [recursive_serialize_or_str(item) for item in message]
+        match type_:
+            case LogType.STREAM:
+                message = StreamURL(location=message["stream_url"]) if "stream_url" in message else ""
+            case LogType.MESSAGE if hasattr(message, "message"):
+                message = message.message
+            case LogType.UNKNOWN:
+                message = ""
+
+            case LogType.ARRAY:
+                if isinstance(message, DataFrame):
+                    message = message.to_dict(orient="records")
+                message = [recursive_serialize_or_str(item) for item in message]
 
         name = output.get("name", f"output_{index}")
         outputs[name] = OutputValue(message=message, type=type_).model_dump()
