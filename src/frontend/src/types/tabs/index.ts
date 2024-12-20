@@ -1,4 +1,4 @@
-import { XYPosition } from "reactflow";
+import { XYPosition } from "@xyflow/react";
 import { FlowType, NodeDataType } from "../flow";
 
 type OnChange<ChangesType> = (changes: ChangesType[]) => void;

@@ -33,7 +33,7 @@ def rag_graph():
     chat_input = ChatInput()
     rag_vector_store = AstraDBVectorStoreComponent()
     rag_vector_store.set(
-        search_input=chat_input.message_response,
+        search_query=chat_input.message_response,
         embedding_model=openai_embeddings.build_embeddings,
     )
 

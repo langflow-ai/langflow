@@ -4,16 +4,15 @@ import {
 } from "@/constants/constants";
 import { track } from "@/customization/utils/analytics";
 import { brokenEdgeMessage } from "@/utils/utils";
-import { cloneDeep, zip } from "lodash";
 import {
-  Edge,
   EdgeChange,
   Node,
   NodeChange,
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
-} from "reactflow";
+} from "@xyflow/react";
+import { cloneDeep, zip } from "lodash";
 import { create } from "zustand";
 import {
   FLOW_BUILD_SUCCESS_ALERT,
@@ -23,8 +22,9 @@ import { BuildStatus } from "../constants/enums";
 import { VertexBuildTypeAPI } from "../types/api";
 import { ChatInputType, ChatOutputType } from "../types/chat";
 import {
+  AllNodeType,
+  EdgeType,
   NodeDataType,
-  NodeType,
   sourceHandleType,
   targetHandleType,
 } from "../types/flow";
@@ -46,6 +46,8 @@ import { getInputsAndOutputs } from "../utils/storeUtils";
 import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
+import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
+import { useMessagesStore } from "./messagesStore";
 import { useTypesStore } from "./typesStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
@@ -66,16 +68,19 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     let outdatedNodes: string[] = [];
     const templates = useTypesStore.getState().templates;
     for (let i = 0; i < nodes.length; i++) {
-      const currentCode = templates[nodes[i].data?.type]?.template?.code?.value;
-      const thisNodesCode = nodes[i].data?.node!.template?.code?.value;
-      if (
-        currentCode &&
-        thisNodesCode &&
-        currentCode !== thisNodesCode &&
-        !nodes[i].data?.node?.edited &&
-        !componentsToIgnoreUpdate.includes(nodes[i].data?.type)
-      ) {
-        outdatedNodes.push(nodes[i].id);
+      let node = nodes[i];
+      if (node.type === "genericNode") {
+        const currentCode = templates[node.data?.type]?.template?.code?.value;
+        const thisNodesCode = node.data?.node!.template?.code?.value;
+        if (
+          currentCode &&
+          thisNodesCode &&
+          currentCode !== thisNodesCode &&
+          !node.data?.node?.edited &&
+          !componentsToIgnoreUpdate.includes(node.data?.type)
+        ) {
+          outdatedNodes.push(node.id);
+        }
       }
     }
     set({ componentsToUpdate: outdatedNodes });
@@ -83,6 +88,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   onFlowPage: false,
   lockChat: false,
   setLockChat: (lockChat) => {
+    useMessagesStore.setState({ displayLoadingMessage: lockChat });
     set({ lockChat });
   },
   setOnFlowPage: (FlowPage) => set({ onFlowPage: FlowPage }),
@@ -119,10 +125,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ flowPool });
   },
   updateToolMode: (nodeId: string, toolMode: boolean) => {
-    get().setNode(nodeId, (node) => ({
-      ...node,
-      data: { ...node.data, node: { ...node.data.node, tool_mode: toolMode } },
-    }));
+    get().setNode(nodeId, (node) => {
+      let newNode = cloneDeep(node);
+      if (newNode.type === "genericNode") {
+        newNode.data.node!.tool_mode = toolMode;
+      }
+      return newNode;
+    });
   },
   updateFreezeStatus: (nodeIds: string[], freeze: boolean) => {
     get().setNodes((oldNodes) => {
@@ -220,12 +229,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setReactFlowInstance: (newState) => {
     set({ reactFlowInstance: newState });
   },
-  onNodesChange: (changes: NodeChange[]) => {
+  onNodesChange: (changes: NodeChange<AllNodeType>[]) => {
     set({
       nodes: applyNodeChanges(changes, get().nodes),
     });
   },
-  onEdgesChange: (changes: EdgeChange[]) => {
+  onEdgesChange: (changes: EdgeChange<EdgeType>[]) => {
     set({
       edges: applyEdgeChanges(changes, get().edges),
     });
@@ -261,7 +270,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   setNode: (
     id: string,
-    change: Node | ((oldState: Node) => Node),
+    change: AllNodeType | ((oldState: AllNodeType) => AllNodeType),
     isUserChange: boolean = true,
     callback?: () => void,
   ) => {
@@ -302,8 +311,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   deleteNode: (nodeId) => {
     const { filteredNodes, deletedNode } = get().nodes.reduce<{
-      filteredNodes: Node[];
-      deletedNode: Node | null;
+      filteredNodes: AllNodeType[];
+      deletedNode: AllNodeType | null;
     }>(
       (acc, node) => {
         const isMatch =
@@ -359,7 +368,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     let minimumX = Infinity;
     let minimumY = Infinity;
     let idsMap = {};
-    let newNodes: Node<NodeDataType>[] = get().nodes;
+    let newNodes: AllNodeType[] = get().nodes;
     let newEdges = get().edges;
     selection.nodes.forEach((node: Node) => {
       if (node.position.y < minimumY) {
@@ -377,15 +386,15 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           y: position.y,
         });
 
-    selection.nodes.forEach((node: NodeType) => {
+    selection.nodes.forEach((node: AllNodeType) => {
       // Generate a unique node ID
       let newId = getNodeId(node.data.type);
       idsMap[node.id] = newId;
 
-      // Create a new node object
-      const newNode: NodeType = {
+      // Create a new node object with the correct type
+      const newNode = {
         id: newId,
-        type: node.type,
+        type: node.type as "genericNode" | "noteNode",
         position: {
           x: insidePosition.x + node.position!.x - minimumX,
           y: insidePosition.y + node.position!.y - minimumY,
@@ -394,8 +403,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           ...cloneDeep(node.data),
           id: newId,
         },
-      };
-      updateGroupRecursion(newNode, selection.edges);
+      } as AllNodeType;
+
+      updateGroupRecursion(
+        newNode,
+        selection.edges,
+        useGlobalVariablesStore.getState().unavailableFields,
+        useGlobalVariablesStore.getState().globalVariablesEntries,
+      );
 
       // Add the new node to the list of nodes in state
       newNodes = newNodes
@@ -404,7 +419,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
     get().setNodes(newNodes);
 
-    selection.edges.forEach((edge: Edge) => {
+    selection.edges.forEach((edge: EdgeType) => {
       let source = idsMap[edge.source];
       let target = idsMap[edge.target];
       const sourceHandleObject: sourceHandleType = scapeJSONParse(
@@ -416,7 +431,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       });
       sourceHandleObject.id = source;
 
-      edge.data.sourceHandle = sourceHandleObject;
       const targetHandleObject: targetHandleType = scapeJSONParse(
         edge.targetHandle!,
       );
@@ -425,7 +439,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         id: target,
       });
       targetHandleObject.id = target;
-      edge.data.targetHandle = targetHandleObject;
+
+      edge.data = {
+        sourceHandle: sourceHandleObject,
+        targetHandle: targetHandleObject,
+      };
+
       let id = getHandleId(source, sourceHandle, target, targetHandle);
       newEdges = addEdge(
         {
@@ -508,7 +527,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     //   isIoOut = outputTypes.has(sourceType);
     // }
 
-    let newEdges: Edge[] = [];
+    let newEdges: EdgeType[] = [];
     get().setEdges((oldEdges) => {
       newEdges = addEdge(
         {
@@ -725,7 +744,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
         const edges = get().edges;
         const newEdges = edges.map((edge) => {
-          if (idList.includes(edge.data.targetHandle.id)) {
+          if (
+            edge.data?.targetHandle &&
+            idList.includes(edge.data.targetHandle.id ?? "")
+          ) {
             edge.className = "ran";
           }
           return edge;
@@ -751,7 +773,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   updateEdgesRunningByNodes: (ids: string[], running: boolean) => {
     const edges = get().edges;
     const newEdges = edges.map((edge) => {
-      if (ids.includes(edge.data.sourceHandle.id)) {
+      if (
+        edge.data?.sourceHandle &&
+        ids.includes(edge.data.sourceHandle.id ?? "")
+      ) {
         edge.animated = running;
         edge.className = running ? "running" : "";
       } else {

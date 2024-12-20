@@ -7,16 +7,8 @@ from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
 import sqlalchemy as sa
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    Body,
-    Depends,
-    HTTPException,
-    Request,
-    UploadFile,
-    status,
-)
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
+from fastapi.encoders import jsonable_encoder
 from loguru import logger
 from sqlmodel import select
 
@@ -33,8 +25,9 @@ from langflow.api.v1.schemas import (
     UploadFileResponse,
 )
 from langflow.custom.custom_component.component import Component
-from langflow.custom.utils import build_custom_component_template, get_instance_name
+from langflow.custom.utils import build_custom_component_template, get_instance_name, update_component_build_config
 from langflow.exceptions.api import APIException, InvalidChatInputError
+from langflow.exceptions.serialization import SerializationError
 from langflow.graph.graph.base import Graph
 from langflow.graph.schema import RunOutputs
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
@@ -46,9 +39,7 @@ from langflow.services.auth.utils import api_key_security, get_current_active_us
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.flow.model import FlowRead
-from langflow.services.database.models.flow.utils import (
-    get_all_webhook_components_in_flow,
-)
+from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_session_service, get_settings_service, get_task_service, get_telemetry_service
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
@@ -511,8 +502,7 @@ async def process() -> None:
     )
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
-        detail="The /process endpoint is deprecated and will be removed in a future version. "
-        "Please use /run instead.",
+        detail="The /process endpoint is deprecated and will be removed in a future version. Please use /run instead.",
     )
 
 
@@ -582,7 +572,7 @@ async def custom_component(
 
     built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
     if raw_code.frontend_node is not None:
-        built_frontend_node = component_instance.post_code_processing(built_frontend_node, raw_code.frontend_node)
+        built_frontend_node = await component_instance.update_frontend_node(built_frontend_node, raw_code.frontend_node)
 
     type_ = get_instance_name(component_instance)
     return CustomComponentResponse(data=built_frontend_node, type=type_)
@@ -606,6 +596,9 @@ async def custom_component_update(
     Returns:
         dict: The updated custom component node.
 
+    Raises:
+        HTTPException: If there's an error building or updating the component
+        SerializationError: If there's an error serializing the component to JSON
     """
     try:
         component = Component(_code=code_request.code)
@@ -629,12 +622,13 @@ async def custom_component_update(
             load_from_db_fields = [
                 field_name
                 for field_name, field_dict in template.items()
-                if isinstance(field_dict, dict) and field_dict.get("load_from_db")
+                if isinstance(field_dict, dict) and field_dict.get("load_from_db") and field_dict.get("value")
             ]
-            params = update_params_with_load_from_db_fields(cc_instance, params, load_from_db_fields)
+            params = await update_params_with_load_from_db_fields(cc_instance, params, load_from_db_fields)
             cc_instance.set_attributes(params)
         updated_build_config = code_request.get_template()
-        cc_instance.update_build_config(
+        await update_component_build_config(
+            cc_instance,
             build_config=updated_build_config,
             field_value=code_request.field_value,
             field_name=code_request.field,
@@ -649,7 +643,11 @@ async def custom_component_update(
 
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return component_node
+
+    try:
+        return jsonable_encoder(component_node)
+    except Exception as exc:
+        raise SerializationError.from_exception(exc, data=component_node) from exc
 
 
 @router.get("/config", response_model=ConfigResponse)

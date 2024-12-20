@@ -1,3 +1,4 @@
+import { cn } from "@/utils/utils";
 import DOMPurify from "dompurify";
 import { forwardRef } from "react";
 import { SanitizedHTMLWrapperType } from "../../../types/components";
@@ -15,7 +16,7 @@ const SanitizedHTMLWrapper = forwardRef<
       dangerouslySetInnerHTML={{ __html: sanitizedHTML }}
       suppressContentEditableWarning={suppressWarning}
       {...props}
-      className="m-1 w-full"
+      className={cn("m-1 w-full", props.className)}
     />
   );
 });

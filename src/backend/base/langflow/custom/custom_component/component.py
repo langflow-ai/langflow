@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, get_type_hints
+from uuid import UUID
 
 import nanoid
 import yaml
@@ -17,6 +18,7 @@ from langflow.base.tools.constants import (
     TOOL_OUTPUT_DISPLAY_NAME,
     TOOL_OUTPUT_NAME,
     TOOL_TABLE_SCHEMA,
+    TOOLS_METADATA_INFO,
     TOOLS_METADATA_INPUT_NAME,
 )
 from langflow.custom.tree_visitor import RequiredInputsVisitor
@@ -29,6 +31,7 @@ from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import ErrorMessage, Message
 from langflow.schema.properties import Source
+from langflow.schema.table import FieldParserType, TableOptions
 from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
@@ -44,7 +47,6 @@ if TYPE_CHECKING:
     from langflow.graph.edge.schema import EdgeData
     from langflow.graph.vertex.base import Vertex
     from langflow.inputs.inputs import InputTypes
-    from langflow.schema import dotdict
     from langflow.schema.log import LoggableType
 
 
@@ -91,16 +93,27 @@ class Component(CustomComponent):
     inputs: list[InputTypes] = []
     outputs: list[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
-    _output_logs: dict[str, list[Log]] = {}
-    _current_output: str = ""
-    _metadata: dict = {}
-    _ctx: dict = {}
-    _code: str | None = None
-    _logs: list[Log] = []
 
     def __init__(self, **kwargs) -> None:
-        # if key starts with _ it is a config
-        # else it is an input
+        # Initialize instance-specific attributes first
+        self._output_logs: dict[str, list[Log]] = {}
+        self._current_output: str = ""
+        self._metadata: dict = {}
+        self._ctx: dict = {}
+        self._code: str | None = None
+        self._logs: list[Log] = []
+
+        # Initialize component-specific collections
+        self._inputs: dict[str, InputTypes] = {}
+        self._outputs_map: dict[str, Output] = {}
+        self._results: dict[str, Any] = {}
+        self._attributes: dict[str, Any] = {}
+        self._edges: list[EdgeData] = []
+        self._components: list[Component] = []
+        self._event_manager: EventManager | None = None
+        self._state_model = None
+
+        # Process input kwargs
         inputs = {}
         config = {}
         for key, value in kwargs.items():
@@ -110,34 +123,35 @@ class Component(CustomComponent):
                 config[key[1:]] = value
             else:
                 inputs[key] = value
-        self._inputs: dict[str, InputTypes] = {}
-        self._outputs_map: dict[str, Output] = {}
-        self._results: dict[str, Any] = {}
-        self._attributes: dict[str, Any] = {}
+
         self._parameters = inputs or {}
-        self._edges: list[EdgeData] = []
-        self._components: list[Component] = []
-        self._current_output = ""
-        self._event_manager: EventManager | None = None
-        self._state_model = None
         self.set_attributes(self._parameters)
-        self._output_logs = {}
-        config = config or {}
-        if "_id" not in config:
-            config |= {"_id": f"{self.__class__.__name__}-{nanoid.generate(size=5)}"}
+
+        # Store original inputs and config for reference
         self.__inputs = inputs
-        self.__config = config
-        self._reset_all_output_values()
-        super().__init__(**config)
+        self.__config = config or {}
+
+        # Add unique ID if not provided
+        if "_id" not in self.__config:
+            self.__config |= {"_id": f"{self.__class__.__name__}-{nanoid.generate(size=5)}"}
+
+        # Initialize base class
+        super().__init__(**self.__config)
+
+        # Post-initialization setup
         if hasattr(self, "_trace_type"):
             self.trace_type = self._trace_type
         if not hasattr(self, "trace_type"):
             self.trace_type = "chain"
+
+        # Setup inputs and outputs
+        self._reset_all_output_values()
         if self.inputs is not None:
             self.map_inputs(self.inputs)
         if self.outputs is not None:
             self.map_outputs(self.outputs)
-        # Set output types
+
+        # Final setup
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
         self._set_output_required_inputs()
@@ -391,14 +405,6 @@ class Component(CustomComponent):
         self._validate_inputs(params)
         self._validate_outputs()
 
-    def update_inputs(
-        self,
-        build_config: dotdict,
-        field_value: Any,
-        field_name: str | None = None,
-    ):
-        return self.update_build_config(build_config, field_value, field_name)
-
     def run_and_validate_update_outputs(self, frontend_node: dict, field_name: str, field_value: Any):
         frontend_node = self.update_outputs(frontend_node, field_name, field_value)
         if field_name == "tool_mode" or frontend_node.get("tool_mode"):
@@ -625,10 +631,7 @@ class Component(CustomComponent):
     def _set_parameter_or_attribute(self, key, value) -> None:
         if isinstance(value, Component):
             methods = ", ".join([f"'{output.method}'" for output in value.outputs])
-            msg = (
-                f"You set {value.display_name} as value for `{key}`. "
-                f"You should pass one of the following: {methods}"
-            )
+            msg = f"You set {value.display_name} as value for `{key}`. You should pass one of the following: {methods}"
             raise TypeError(msg)
         self._set_input_value(key, value)
         self._parameters[key] = value
@@ -1018,7 +1021,12 @@ class Component(CustomComponent):
 
     async def send_message(self, message: Message, id_: str | None = None):
         if (hasattr(self, "graph") and self.graph.session_id) and (message is not None and not message.session_id):
-            message.session_id = self.graph.session_id
+            session_id = (
+                UUID(self.graph.session_id) if isinstance(self.graph.session_id, str) else self.graph.session_id
+            )
+            message.session_id = session_id
+        if hasattr(message, "flow_id") and isinstance(message.flow_id, str):
+            message.flow_id = UUID(message.flow_id)
         stored_message = await self._store_message(message)
 
         self._stored_message_id = stored_message.id
@@ -1043,13 +1051,16 @@ class Component(CustomComponent):
         return stored_message
 
     async def _store_message(self, message: Message) -> Message:
-        flow_id = self.graph.flow_id if hasattr(self, "graph") else None
-        messages = await astore_message(message, flow_id=flow_id)
-        if len(messages) != 1:
+        flow_id: str | None = None
+        if hasattr(self, "graph"):
+            # Convert UUID to str if needed
+            flow_id = str(self.graph.flow_id) if self.graph.flow_id else None
+        stored_messages = await astore_message(message, flow_id=flow_id)
+        if len(stored_messages) != 1:
             msg = "Only one message can be stored at a time."
             raise ValueError(msg)
-
-        return messages[0]
+        stored_message = stored_messages[0]
+        return await Message.create(**stored_message.model_dump())
 
     async def _send_message_event(self, message: Message, id_: str | None = None, category: str | None = None) -> None:
         if hasattr(self, "_event_manager") and self._event_manager:
@@ -1077,10 +1088,20 @@ class Component(CustomComponent):
             and not isinstance(original_message.text, str)
         )
 
-    async def _update_stored_message(self, stored_message: Message) -> Message:
-        message_tables = await aupdate_messages(stored_message)
-        if len(message_tables) != 1:
-            msg = "Only one message can be updated at a time."
+    async def _update_stored_message(self, message: Message) -> Message:
+        """Update the stored message."""
+        if hasattr(self, "_vertex") and self._vertex is not None and hasattr(self._vertex, "graph"):
+            flow_id = (
+                UUID(self._vertex.graph.flow_id)
+                if isinstance(self._vertex.graph.flow_id, str)
+                else self._vertex.graph.flow_id
+            )
+
+            message.flow_id = flow_id
+
+        message_tables = await aupdate_messages(message)
+        if not message_tables:
+            msg = "Failed to update message"
             raise ValueError(msg)
         message_table = message_tables[0]
         return await Message.create(**message_table.model_dump())
@@ -1166,7 +1187,7 @@ class Component(CustomComponent):
         tool_data = (
             self.tools_metadata
             if hasattr(self, TOOLS_METADATA_INPUT_NAME)
-            else [{"name": tool.name, "description": tool.description} for tool in tools]
+            else [{"name": tool.name, "description": tool.description, "tags": tool.tags} for tool in tools]
         )
         try:
             from langflow.io import TableInput
@@ -1176,8 +1197,22 @@ class Component(CustomComponent):
 
         return TableInput(
             name=TOOLS_METADATA_INPUT_NAME,
-            display_name="Tools Metadata",
+            info=TOOLS_METADATA_INFO,
+            display_name="Toolset configuration",
             real_time_refresh=True,
             table_schema=TOOL_TABLE_SCHEMA,
             value=tool_data,
+            trigger_icon="Hammer",
+            trigger_text="Open toolset",
+            table_options=TableOptions(
+                block_add=True,
+                block_delete=True,
+                block_edit=True,
+                block_sort=True,
+                block_filter=True,
+                block_hide=True,
+                block_select=True,
+                hide_options=True,
+                field_parsers={"name": FieldParserType.SNAKE_CASE},
+            ),
         )
