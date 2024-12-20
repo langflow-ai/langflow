@@ -270,9 +270,9 @@ class NVIDIANeMoEvaluatorComponent(Component):
 
             logger.info("Build config update completed successfully.")
         except (httpx.RequestError, ValueError) as exc:
-            logger.exception("Error occurred during build config update")
-            raise ValueError("Error occurred during build config update") from exc
-
+            error_msg = f"Unexpected error on URL {self.url}"
+            logger.exception(error_msg)
+            raise ValueError(error_msg) from exc
         return build_config
 
     async def evaluate(self) -> dict:
