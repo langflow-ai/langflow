@@ -15,12 +15,13 @@ class MergeOperation(str, Enum):
     JOIN = "join"
 
 
+MIN_INPUTS_REQUIRED = 2
+
+
 class MergeDataComponent(Component):
     display_name = "Merge Data"
     description = "Combines data using merge operations"
     icon = "merge"
-
-    MIN_INPUTS_REQUIRED = 2
 
     inputs = [
         DataInput(name="data_inputs", display_name="Data Inputs", info="Dados para combinar", is_list=True),
@@ -35,7 +36,7 @@ class MergeDataComponent(Component):
     outputs = [Output(display_name="DataFrame", name="merged_data", method="merge_data")]
 
     def merge_data(self) -> DataFrame:
-        if not self.data_inputs or len(self.data_inputs) < self.MIN_INPUTS_REQUIRED:
+        if not self.data_inputs or len(self.data_inputs) < MIN_INPUTS_REQUIRED:
             empty_dataframe = DataFrame()
             self.status = empty_dataframe
             return empty_dataframe
@@ -45,7 +46,7 @@ class MergeDataComponent(Component):
             merged_dataframe = self._process_operation(operation)
             self.status = merged_dataframe
         except Exception as e:
-            logger.error(f"Erro durante operação {operation}: {e!s}")
+            logger.error(f"Error during operation {operation}: {e!s}")
             raise
         else:
             return merged_dataframe
