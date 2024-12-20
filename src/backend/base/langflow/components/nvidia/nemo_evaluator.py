@@ -1,4 +1,7 @@
 import json
+import logging
+
+import httpx
 
 from langflow.custom import Component
 from langflow.field_typing.range_spec import RangeSpec
@@ -6,6 +9,7 @@ from langflow.io import (BoolInput, DropdownInput, FloatInput, IntInput,
                          MultiselectInput, Output, SecretStrInput, SliderInput,
                          StrInput)
 
+logger = logging.getLogger(__name__)
 
 class NVIDIANeMoEvaluatorComponent(Component):
     display_name = "NVIDIA NeMo Evaluator"
@@ -22,8 +26,8 @@ class NVIDIANeMoEvaluatorComponent(Component):
     inference_url = "http://nemo-nim.default.svc.cluster.local:8000/v1"
 
     headers = {
-        'accept': 'application/json',
-        'Content-Type': 'application/json'
+        "accept": "application/json",
+        "Content-Type": "application/json"
     }
 
     # Define initial static inputs
@@ -64,7 +68,7 @@ class NVIDIANeMoEvaluatorComponent(Component):
         StrInput(
             name="110_task_name",
             display_name="Task Name",
-            info="Task selected from https://github.com/EleutherAI/lm-evaluation-harness/tree/v0.4.3/lm_eval/tasks#tasks",
+            info="Task from https://github.com/EleutherAI/lm-evaluation-harness/tree/v0.4.3/lm_eval/tasks#tasks",
         ),
         IntInput(
             name="112_few_shot_examples",
@@ -190,15 +194,12 @@ class NVIDIANeMoEvaluatorComponent(Component):
     ]
 
     def fetch_models(self):
-        """
-        Fetch models from the specified API endpoint and return a list of model names.
-        """
+        """Fetch models from the specified API endpoint and return a list of model names."""
         try:
             response = httpx.get(self.model_url, headers=self.headers)
             response.raise_for_status()
             models_data = response.json()
-            models = [model['id'] for model in models_data.get("data", [])]
-            return models
+            return [model["id"] for model in models_data.get("data", [])]
         except httpx.RequestError as exc:
             self.log(f"An error occurred while requesting models: {exc}")
             return []
@@ -207,24 +208,23 @@ class NVIDIANeMoEvaluatorComponent(Component):
             return []
 
     def clear_dynamic_inputs(self, build_config, saved_values):
-        """
-        Clears dynamically added fields by referring to a special marker in build_config.
-        """
+        """Clears dynamically added fields by referring to a special marker in build_config."""
         dynamic_fields = build_config.get("_dynamic_fields", [])
-        print(f"Clearing dynamic inputs. Number of fields to remove: {len(dynamic_fields)}")
+        length_dynamic_fields =  len(dynamic_fields)
+        message = f"Clearing dynamic inputs. Number of fields to remove: {length_dynamic_fields}"
+        logger.info(message)
 
         for field in dynamic_fields:
             if field in build_config:
-                print(f"Removing dynamic field: {field}")
+                message=f"Removing dynamic field: {field}"
+                logger.info(message)
                 saved_values[field] = build_config[field].get("value", None)
                 del build_config[field]
 
         build_config["_dynamic_fields"] = []
 
     def add_inputs_with_saved_values(self, build_config, input_definitions, saved_values):
-        """
-        Adds inputs to build_config and restores any saved values.
-        """
+        """Adds inputs to build_config and restores any saved values."""
         for input_def in input_definitions:
             # Check if input_def is already a dict or needs conversion
             input_dict = input_def if isinstance(input_def, dict) else input_def.to_dict()
@@ -234,27 +234,23 @@ class NVIDIANeMoEvaluatorComponent(Component):
             build_config.setdefault("_dynamic_fields", []).append(input_name)
 
     def add_evaluation_inputs(self, build_config, saved_values, evaluation_type):
-        """
-        Adds inputs based on the evaluation type (LM Evaluation or Custom Evaluation).
-        """
+        """Adds inputs based on the evaluation type (LM Evaluation or Custom Evaluation)."""
         if evaluation_type == "LM Evaluation Harness":
             self.add_inputs_with_saved_values(build_config, self.lm_evaluation_inputs, saved_values)
         elif evaluation_type == "Custom Evaluation":
             self.add_inputs_with_saved_values(build_config, self.custom_evaluation_inputs, saved_values)
 
     def update_build_config(self, build_config, field_value, field_name=None):
-        """
-        Updates the component's configuration based on the selected option.
-        """
+        """Updates the component's configuration based on the selected option."""
         try:
-            print(f"Updating build config: field_name={field_name}, field_value={field_value}")
+            message=f"Updating build config: field_name={field_name}, field_value={field_value}"
+            logger.info(message)
 
             saved_values = {}
 
             if field_name == "000_llm_name":
                 # Refresh model options for LLM Name dropdown
                 build_config["000_llm_name"]["options"] = self.fetch_models()
-                print("Updated LLM Name options:", build_config["000_llm_name"]["options"])
 
             elif field_name == "002_evaluation_type":
                 self.clear_dynamic_inputs(build_config, saved_values)
@@ -263,15 +259,19 @@ class NVIDIANeMoEvaluatorComponent(Component):
             elif field_name == "310_run_inference":
                 run_inference = field_value == "True"
                 self.clear_dynamic_inputs(build_config, saved_values)
-                self.add_inputs_with_saved_values(build_config, [self.custom_evaluation_inputs[3]], saved_values)  # Run Inference Toggle
+                # Run Inference Toggle
+                self.add_inputs_with_saved_values(build_config, [self.custom_evaluation_inputs[3]], saved_values)
                 if run_inference:
-                    self.add_inputs_with_saved_values(build_config, self.custom_evaluation_inputs[4:7], saved_values)  # Inference params
+                    # Inference params
+                    self.add_inputs_with_saved_values(build_config, self.custom_evaluation_inputs[4:7], saved_values)
                 else:
-                    self.add_inputs_with_saved_values(build_config, [self.custom_evaluation_inputs[7]], saved_values)  # Output file
+                    # Output file
+                    self.add_inputs_with_saved_values(build_config, [self.custom_evaluation_inputs[7]], saved_values)
 
-            print("Build config update completed successfully.")
-        except Exception as e:
-            print(f"Error occurred during build config update: {e}")
+            logger.info("Build config update completed successfully.")
+        except (httpx.RequestError, ValueError) as exc:
+            logger.exception("Error occurred during build config update")
+            raise ValueError("Error occurred during build config update") from exc
 
         return build_config
 
@@ -284,7 +284,8 @@ class NVIDIANeMoEvaluatorComponent(Component):
         elif evaluation_type == "Custom Evaluation":
             data = self._generate_custom_evaluation_body()
         else:
-            raise ValueError(f"Unsupported evaluation type: {evaluation_type}")
+            error_message =f"Unsupported evaluation type: {evaluation_type}"
+            raise ValueError(error_message)
 
         # Send the request and log the output
         try:
@@ -305,11 +306,11 @@ class NVIDIANeMoEvaluatorComponent(Component):
                 return result
         except httpx.HTTPStatusError as exc:
             error_msg = f"HTTP error {exc.response.status_code} on URL {self.url}."
-            self.log(error_msg, name="NeMoEvaluatorComponent")
+            self.log(error_msg)
             raise ValueError(error_msg) from exc
         except Exception as exc:
-            error_msg = f"Unexpected error on URL {self.url}: {str(exc)}"
-            self.log(error_msg, name="NeMoEvaluatorComponent")
+            error_msg = f"Unexpected error on URL {self.url}"
+            logger.exception(error_msg)
             raise ValueError(error_msg) from exc
 
 
@@ -383,4 +384,3 @@ class NVIDIANeMoEvaluatorComponent(Component):
             ],
             "tag": getattr(self, "001_tag", ""),
         }
-    
