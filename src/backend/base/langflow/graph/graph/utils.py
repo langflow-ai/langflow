@@ -168,7 +168,8 @@ def set_new_target_handle(proxy_id, new_edge, target_handle, node) -> None:
     new_edge["target"] = proxy_id
     type_ = target_handle.get("type")
     if type_ is None:
-        raise KeyError("The 'type' key must be present in target_handle.")
+        msg = "The 'type' key must be present in target_handle."
+        raise KeyError(msg)
 
     field = target_handle["proxy"]["field"]
     new_target_handle = {
