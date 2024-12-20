@@ -77,7 +77,7 @@ jobs:
           uv lock
           cd src/backend/base && uv lock && cd ../../..
 
-          git add pyproject.toml src/backend/base/pyproject.toml uv.lock src/backend/base/uv.lock
+          git add pyproject.toml src/backend/base/pyproject.toml uv.lock
           git commit -m "Update version and project name"
 
           echo "Tagging main with $MAIN_TAG"
