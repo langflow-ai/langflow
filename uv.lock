@@ -532,7 +532,7 @@ name = "blessed"
 version = "1.20.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "jinxed", marker = "platform_system == 'Windows'" },
+    { name = "jinxed", marker = "sys_platform == 'win32'" },
     { name = "six" },
     { name = "wcwidth" },
 ]
@@ -543,14 +543,14 @@ wheels = [
 
 [[package]]
 name = "blockbuster"
-version = "1.5.2"
+version = "1.5.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "forbiddenfruit" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a7/3a/07f9c267527c561cb0bdca99147d84f7e0c0551b00869bc63a4906280f2b/blockbuster-1.5.2.tar.gz", hash = "sha256:3588dd4d6f18ec1a64e0c9b9fe13eec79e5b16cf4e49504956d8168a33738583", size = 10751 }
+sdist = { url = "https://files.pythonhosted.org/packages/44/f8/a91788ed4a26cbabb5d00d2d67ca2ea241ec44faacf4764558ae831f7725/blockbuster-1.5.5.tar.gz", hash = "sha256:4221bd262dbd5cbb9c2793b7dc10b455ee25dfefa3cf5244df350504b6849619", size = 10850 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bb/8f/7faccc4f7353606606fab3851bf4652f915348f368e71f8d6910474b7f7c/blockbuster-1.5.2-py3-none-any.whl", hash = "sha256:7853b05bf6650c74b2f07324bd56c277f4ef3d7dcc2d4e6b7cf21a758de706bf", size = 8743 },
+    { url = "https://files.pythonhosted.org/packages/5a/8f/c1c3025714edd494164370940f922903ecc9802fa5bdd28da115155a4e5e/blockbuster-1.5.5-py3-none-any.whl", hash = "sha256:e2b2a974f3e35b0f456ef0e732131752c37c78de4bb8b0d84fef9b85e72ab966", size = 8765 },
 ]
 
 [[package]]
@@ -962,7 +962,7 @@ name = "click"
 version = "8.1.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "platform_system == 'Windows'" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/96/d3/f04c7bfcf5c1862a2a5b845c6b2b360488cf47af55dfa79c98f6a6bf98b5/click-8.1.7.tar.gz", hash = "sha256:ca9853ad459e787e2192211578cc907e7594e294c7ccc834310722b41b9ca6de", size = 336121 }
 wheels = [
@@ -1157,7 +1157,7 @@ wheels = [
 
 [[package]]
 name = "composio-core"
-version = "0.5.42"
+version = "0.6.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -1177,14 +1177,14 @@ dependencies = [
     { name = "sentry-sdk" },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/83/b9/a66a7646564f91937e2ac9a72c12308a37aac76dea88ea1d727a061bf153/composio_core-0.5.42.tar.gz", hash = "sha256:b38ea94e25807a6da813efb2c53ea8e01f71e54f0275ecfa55225887b36b6537", size = 295930 }
+sdist = { url = "https://files.pythonhosted.org/packages/5f/21/730e8e305489d88f49d44d25630779fa79601d4add08ec00cb3c576f30fb/composio_core-0.6.3.tar.gz", hash = "sha256:13098b20d8832e74453ca194889305c935432156fc07be91dfddf76561ad591b", size = 305588 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/00/7a/45acb7b6bcca477712f89bd43888393f365dca0270062e97389e3653aec8/composio_core-0.5.42-py3-none-any.whl", hash = "sha256:351ddee8ac8203ea8039098c8afce7c43b1cf4a97eccbb2046c489a3a53afa54", size = 457643 },
+    { url = "https://files.pythonhosted.org/packages/3f/33/e696eccb062d24182740b3203b53114aa633c9d8ded5a5799f5ff6ef5808/composio_core-0.6.3-py3-none-any.whl", hash = "sha256:981a9856781b791242f947a9685a18974d8a012ac7fab2c09438e1b19610d6a2", size = 468385 },
 ]
 
 [[package]]
 name = "composio-langchain"
-version = "0.5.42"
+version = "0.6.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "composio-core" },
@@ -1193,9 +1193,9 @@ dependencies = [
     { name = "langchainhub" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/18/3e/fa76297c590405d17ca8183396a51ae461845f82e232e64f68f383e2f804/composio_langchain-0.5.42.tar.gz", hash = "sha256:ed95acce4603099eccc022cd42f75df876dc566ecd0ed509bb33d18d0c541358", size = 4281 }
+sdist = { url = "https://files.pythonhosted.org/packages/e7/cc/c6b48d16081c8a90f6e73e339b2cac26d8bae875622b853442bbd3cab525/composio_langchain-0.6.3.tar.gz", hash = "sha256:2036f94bfe60974b31f2be0bfdb33dd75a1d43435f275141219b3376587bf49d", size = 4252 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/da/a4/4d65985c49db8d828ef39843003c443919fa9a285d3244dba3aaedbd4fd1/composio_langchain-0.5.42-py3-none-any.whl", hash = "sha256:ddbffa94c5ad7105bdc877e0103a5633cca8c736a7b6853230078e143e718700", size = 4701 },
+    { url = "https://files.pythonhosted.org/packages/ad/01/cad5fd344f79b3c86e0baa7092d16dff8b38ea83640bcfc8350139d4b6aa/composio_langchain-0.6.3-py3-none-any.whl", hash = "sha256:0e749a1603dc0562293412d0a6429f88b75152b01a313cca859732070d762a6b", size = 4676 },
 ]
 
 [[package]]
@@ -3143,7 +3143,7 @@ name = "ipykernel"
 version = "6.29.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "appnope", marker = "platform_system == 'Darwin'" },
+    { name = "appnope", marker = "sys_platform == 'darwin'" },
     { name = "comm" },
     { name = "debugpy" },
     { name = "ipython" },
@@ -3234,7 +3234,7 @@ name = "jinxed"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ansicon", marker = "platform_system == 'Windows'" },
+    { name = "ansicon", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/20/d0/59b2b80e7a52d255f9e0ad040d2e826342d05580c4b1d7d7747cfb8db731/jinxed-1.3.0.tar.gz", hash = "sha256:1593124b18a41b7a3da3b078471442e51dbad3d77b4d4f2b0c26ab6f7d660dbf", size = 80981 }
 wheels = [
@@ -3933,6 +3933,7 @@ dependencies = [
     { name = "boto3" },
     { name = "certifi" },
     { name = "chromadb" },
+    { name = "composio-core" },
     { name = "composio-langchain" },
     { name = "crewai" },
     { name = "dspy-ai" },
@@ -4087,7 +4088,8 @@ requires-dist = [
     { name = "certifi", specifier = ">=2023.11.17,<2025.0.0" },
     { name = "chromadb", specifier = "==0.5.23" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse-connect'", specifier = "==0.7.19" },
-    { name = "composio-langchain", specifier = "==0.5.42" },
+    { name = "composio-core", specifier = "==0.6.3" },
+    { name = "composio-langchain", specifier = "==0.6.3" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "crewai", specifier = "~=0.86.0" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
@@ -4173,7 +4175,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
-    { name = "blockbuster", specifier = ">=1.5.2,<1.6" },
+    { name = "blockbuster", specifier = ">=1.5.5,<1.6" },
     { name = "codeflash", specifier = ">=0.8.4" },
     { name = "dictdiffer", specifier = ">=0.9.0" },
     { name = "httpx", specifier = ">=0.27.0" },
@@ -6096,7 +6098,7 @@ name = "portalocker"
 version = "2.10.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pywin32", marker = "platform_system == 'Windows'" },
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ed/d3/c6c64067759e87af98cc668c1cc75171347d0f1577fab7ca3749134e3cd4/portalocker-2.10.1.tar.gz", hash = "sha256:ef1bf844e878ab08aee7e40184156e1151f228f103aa5c6bd0724cc330960f8f", size = 40891 }
 wheels = [
@@ -8573,19 +8575,19 @@ dependencies = [
     { name = "fsspec" },
     { name = "jinja2" },
     { name = "networkx" },
-    { name = "nvidia-cublas-cu12", marker = "platform_machine == 'x86_64' and platform_system == 'Linux'" },
-    { name = "nvidia-cuda-cupti-cu12", marker = "platform_machine == 'x86_64' and platform_system == 'Linux'" },
-    { name = "nvidia-cuda-nvrtc-cu12", marker = "platform_machine == 'x86_64' and platform_system == 'Linux'" },
-    { name = "nvidia-cuda-runtime-cu12", marker = "platform_machine == 'x86_64' and platform_system == 'Linux'" },
-    { name = "nvidia-cudnn-cu12", marker = "platform_machine == 'x86_64' and platform_system == 'Linux'" },
-    { name = "nvidia-cufft-cu12", marker = "platform_machine == 'x86_64' and platform_system == 'Linux'" },
-    { name = "nvidia-curand-cu12", marker = "platform_machine == 'x86_64' and platform_system == 'Linux'" },
-    { name = "nvidia-cusolver-cu12", marker = "platform_machine == 'x86_64' and platform_system == 'Linux'" },
-    { name = "nvidia-cusparse-cu12", marker = "platform_machine == 'x86_64' and platform_system == 'Linux'" },
-    { name = "nvidia-nccl-cu12", marker = "platform_machine == 'x86_64' and platform_system == 'Linux'" },
-    { name = "nvidia-nvtx-cu12", marker = "platform_machine == 'x86_64' and platform_system == 'Linux'" },
+    { name = "nvidia-cublas-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cuda-cupti-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cuda-nvrtc-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cuda-runtime-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cudnn-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cufft-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-curand-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cusolver-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-cusparse-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-nccl-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "nvidia-nvtx-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "sympy" },
-    { name = "triton", marker = "python_full_version < '3.13' and platform_machine == 'x86_64' and platform_system == 'Linux'" },
+    { name = "triton", marker = "python_full_version < '3.13' and platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "typing-extensions" },
 ]
 wheels = [
@@ -8626,7 +8628,7 @@ name = "tqdm"
 version = "4.67.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "platform_system == 'Windows'" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e4ab51796dd745cdba7ed47ad142a9f4a1eb8e0c744d/tqdm-4.67.1.tar.gz", hash = "sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2", size = 169737 }
 wheels = [
