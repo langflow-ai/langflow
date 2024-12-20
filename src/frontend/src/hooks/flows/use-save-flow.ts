@@ -5,7 +5,7 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { FlowType } from "@/types/flow";
 import { customStringify } from "@/utils/reactflowUtils";
-import { ReactFlowJsonObject } from "reactflow";
+import { ReactFlowJsonObject } from "@xyflow/react";
 
 const useSaveFlow = () => {
   const flows = useFlowsManagerStore((state) => state.flows);

@@ -5,6 +5,7 @@ import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useEffect, useMemo, useRef, useState } from "react";
+import useTabVisibility from "../../../../shared/hooks/use-tab-visibility";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { ChatMessageType } from "../../../../types/chat";
@@ -36,9 +37,14 @@ export default function ChatView({
   const nodes = useFlowStore((state) => state.nodes);
   const chatInput = inputs.find((input) => input.type === "ChatInput");
   const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
+  const displayLoadingMessage = useMessagesStore(
+    (state) => state.displayLoadingMessage,
+  );
 
   const inputTypes = inputs.map((obj) => obj.type);
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
+
+  const isTabHidden = useTabVisibility();
 
   //build chat history
   useEffect(() => {
@@ -83,9 +89,11 @@ export default function ChatView({
       return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
     });
 
-    if (messages.length === 0 && !lockChat && chatInputNode)
+    if (messages.length === 0 && !lockChat && chatInputNode) {
       setChatValue(chatInputNode.data.node.template["input_value"].value ?? "");
-    else setChatValue("");
+    } else {
+      isTabHidden ? setChatValue("") : null;
+    }
 
     setChatHistory(finalChatHistory);
   }, [flowPool, messages, visibleSession]);
@@ -174,7 +182,10 @@ export default function ChatView({
                   <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
                     New chat
                   </h3>
-                  <p className="text-lg text-muted-foreground">
+                  <p
+                    className="text-lg text-muted-foreground"
+                    data-testid="new-chat-text"
+                  >
                     <TextEffectPerChar>
                       Test your flow with a chat prompt
                     </TextEffectPerChar>
@@ -185,13 +196,13 @@ export default function ChatView({
           ))}
         <div
           className={
-            lockChat
-              ? "m-auto w-full max-w-[768px] py-4 word-break-break-word md:w-5/6"
+            displayLoadingMessage
+              ? "w-full max-w-[768px] py-4 word-break-break-word md:w-5/6"
               : ""
           }
           ref={ref}
         >
-          {lockChat &&
+          {displayLoadingMessage &&
             !(chatHistory?.[chatHistory.length - 1]?.category === "error") &&
             flowRunningSkeletonMemo}
         </div>

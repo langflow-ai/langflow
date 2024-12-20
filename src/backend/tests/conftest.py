@@ -52,17 +52,32 @@ def blockbuster(request):
                 "io.BufferedWriter.write",
                 "io.TextIOWrapper.read",
                 "io.TextIOWrapper.write",
+                "os.mkdir",
+                "os.stat",
+                "os.path.abspath",
             ]:
-                bb.functions[func].can_block_functions.append(("settings/service.py", {"initialize"}))
+                bb.functions[func].can_block_in("settings/service.py", "initialize")
             for func in [
                 "io.BufferedReader.read",
                 "io.TextIOWrapper.read",
             ]:
-                bb.functions[func].can_block_functions.append(("importlib_metadata/__init__.py", {"metadata"}))
+                bb.functions[func].can_block_in("importlib_metadata/__init__.py", "metadata")
 
-            for func in bb.functions:
-                if func.startswith("sqlite3."):
-                    bb.functions[func].deactivate()
+            (
+                bb.functions["os.stat"]
+                # TODO: make set_class_code async
+                .can_block_in("langflow/custom/custom_component/component.py", "set_class_code")
+                # TODO: follow discussion in https://github.com/encode/httpx/discussions/3456
+                .can_block_in("httpx/_client.py", "_init_transport")
+                .can_block_in("rich/traceback.py", "_render_stack")
+                .can_block_in("langchain_core/_api/internal.py", "is_caller_internal")
+            )
+
+            (
+                bb.functions["os.path.abspath"]
+                .can_block_in("loguru/_better_exceptions.py", {"_get_lib_dirs", "_format_exception"})
+                .can_block_in("sqlalchemy/dialects/sqlite/pysqlite.py", "create_connect_args")
+            )
             yield bb
 
 
@@ -386,7 +401,7 @@ async def test_user(client):
 @pytest.fixture
 async def active_user(client):  # noqa: ARG001
     db_manager = get_db_service()
-    async with db_manager.with_async_session() as session:
+    async with db_manager.with_session() as session:
         user = User(
             username="activeuser",
             password=get_password_hash("testpassword"),
@@ -404,7 +419,7 @@ async def active_user(client):  # noqa: ARG001
     yield user
     # Clean up
     # Now cleanup transactions, vertex_build
-    async with db_manager.with_async_session() as session:
+    async with db_manager.with_session() as session:
         user = await session.get(User, user.id, options=[selectinload(User.flows)])
         await _delete_transactions_and_vertex_builds(session, user.flows)
         await session.delete(user)
@@ -425,7 +440,7 @@ async def logged_in_headers(client, active_user):
 @pytest.fixture
 async def active_super_user(client):  # noqa: ARG001
     db_manager = get_db_service()
-    async with db_manager.with_async_session() as session:
+    async with db_manager.with_session() as session:
         user = User(
             username="activeuser",
             password=get_password_hash("testpassword"),
@@ -443,7 +458,7 @@ async def active_super_user(client):  # noqa: ARG001
     yield user
     # Clean up
     # Now cleanup transactions, vertex_build
-    async with db_manager.with_async_session() as session:
+    async with db_manager.with_session() as session:
         user = await session.get(User, user.id, options=[selectinload(User.flows)])
         await _delete_transactions_and_vertex_builds(session, user.flows)
         await session.delete(user)

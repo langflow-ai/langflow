@@ -1,6 +1,7 @@
 import asyncio
 import copy
 import json
+import os
 import shutil
 from collections import defaultdict
 from copy import deepcopy
@@ -27,10 +28,10 @@ from langflow.services.database.models.folder.utils import (
 )
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.deps import (
-    async_session_scope,
     get_settings_service,
     get_storage_service,
     get_variable_service,
+    session_scope,
 )
 from langflow.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
 from langflow.utils.util import escape_json_dump
@@ -543,7 +544,7 @@ async def load_flows_from_directory() -> None:
         logger.warning("AUTO_LOGIN is disabled, not loading flows from directory")
         return
 
-    async with async_session_scope() as session:
+    async with session_scope() as session:
         user = await get_user_by_username(session, settings_service.auth_settings.SUPERUSER)
         if user is None:
             msg = "Superuser not found in the database"
@@ -610,8 +611,14 @@ async def find_existing_flow(session, flow_id, flow_endpoint_name):
     return None
 
 
-async def create_or_update_starter_projects(all_types_dict: dict) -> None:
-    async with async_session_scope() as session:
+async def create_or_update_starter_projects(all_types_dict: dict, *, do_create: bool = True) -> None:
+    """Create or update starter projects.
+
+    Args:
+        all_types_dict (dict): Dictionary containing all component types and their templates
+        do_create (bool, optional): Whether to create new projects. Defaults to True.
+    """
+    async with session_scope() as session:
         new_folder = await create_starter_folder(session)
         starter_projects = await load_starter_projects()
         await delete_start_projects(session, new_folder.id)
@@ -628,16 +635,17 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
                 project_gradient,
                 project_tags,
             ) = get_project_data(project)
-            updated_project_data = update_projects_components_with_latest_component_versions(
-                project_data.copy(), all_types_dict
-            )
-            updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
-            if updated_project_data != project_data:
-                project_data = updated_project_data
-                # We also need to update the project data in the file
-
-                await update_project_file(project_path, project, updated_project_data)
-            if project_name and project_data:
+            do_update_starter_projects = os.environ.get("LANGFLOW_UPDATE_STARTER_PROJECTS", "true").lower() == "true"
+            if do_update_starter_projects:
+                updated_project_data = update_projects_components_with_latest_component_versions(
+                    project_data.copy(), all_types_dict
+                )
+                updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
+                if updated_project_data != project_data:
+                    project_data = updated_project_data
+                    # We also need to update the project data in the file
+                    await update_project_file(project_path, project, updated_project_data)
+            if do_create and project_name and project_data:
                 for existing_project in await get_all_flows_similar_to_project(session, new_folder.id):
                     await session.delete(existing_project)
 
@@ -666,7 +674,7 @@ async def initialize_super_user_if_needed() -> None:
         msg = "SUPERUSER and SUPERUSER_PASSWORD must be set in the settings if AUTO_LOGIN is true."
         raise ValueError(msg)
 
-    async with async_session_scope() as async_session:
+    async with session_scope() as async_session:
         super_user = await create_super_user(db=async_session, username=username, password=password)
         await get_variable_service().initialize_user_variables(super_user.id, async_session)
         await create_default_folder_if_it_doesnt_exist(async_session, super_user.id)

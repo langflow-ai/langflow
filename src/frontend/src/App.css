@@ -137,6 +137,9 @@ body {
   stroke: var(--selected) !important;
   stroke-width: 2px !important;
 }
+.react-flow__controls-button svg {
+  fill: none !important;
+}
 
 .react-flow__edge .react-flow__edge-path {
   transition: color;
@@ -196,4 +199,13 @@ code {
 .arrow-hide::-webkit-outer-spin-button {
   appearance: none;
   margin: 0;
+}
+
+.ag-large-text-input.ag-text-area.ag-input-field {
+  background-color: hsl(var(--background)) !important;
+}
+
+.ag-large-text-input.ag-text-area.ag-input-field textarea {
+  resize: none !important;
+  height: 100% !important;
 }
