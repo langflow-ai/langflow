@@ -1,7 +1,6 @@
 from .alter_metadata import AlterMetadataComponent
 from .combine_text import CombineTextComponent
 from .create_data import CreateDataComponent
-from .data_merger import DataMergerComponent
 from .extract_key import ExtractDataKeyComponent
 from .filter_data_values import DataFilterComponent
 from .json_cleaner import JSONCleaner
@@ -18,7 +17,6 @@ __all__ = [
     "CombineTextComponent",
     "CreateDataComponent",
     "DataFilterComponent",
-    "DataMergerComponent",
     "ExtractDataKeyComponent",
     "JSONCleaner",
     "MergeDataComponent",
