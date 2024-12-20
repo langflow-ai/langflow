@@ -1,7 +1,7 @@
 ---
 title: Sequential tasks agent
 sidebar_position: 4
-slug: /starter-projects-sequential-agent
+slug: /tutorials-sequential-agent
 ---
 
 Build a **Sequential Tasks Agent** flow for a multi-agent application using multiple **Agent** components.

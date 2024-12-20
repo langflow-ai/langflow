@@ -1,7 +1,7 @@
 ---
 title: Blog Writer
 sidebar_position: 1
-slug: /starter-projects-blog-writer
+slug: /tutorials-blog-writer
 ---
 
 Build a Blog Writer flow for a one-shot application using OpenAI.
