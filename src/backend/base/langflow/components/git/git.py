@@ -105,14 +105,14 @@ class GitLoaderComponent(Component):
 
         path_str = str(file_path)
         file_name = Path(path_str).name
-        patterns = [pattern.strip() for pattern in patterns.split(",") if pattern.strip()]
+        pattern_list: list[str] = [pattern.strip() for pattern in patterns.split(",") if pattern.strip()]
 
         # If no valid patterns after stripping, treat as include all
-        if not patterns:
+        if not pattern_list:
             return True
 
         # Process exclusion patterns first
-        for pattern in patterns:
+        for pattern in pattern_list:
             if pattern.startswith("!"):
                 # For exclusions, match against both full path and filename
                 exclude_pattern = pattern[1:]
@@ -120,7 +120,7 @@ class GitLoaderComponent(Component):
                     return False
 
         # Then check inclusion patterns
-        include_patterns = [p for p in patterns if not p.startswith("!")]
+        include_patterns = [p for p in pattern_list if not p.startswith("!")]
         # If no include patterns, treat as include all
         if not include_patterns:
             return True
@@ -151,14 +151,17 @@ class GitLoaderComponent(Component):
                 # Use the MULTILINE flag to better handle text content
                 content_regex = re.compile(pattern, re.MULTILINE)
                 # Test the pattern with a simple string to catch syntax errors
-                content_regex.search("test\nstring")
+                test_str = "test\nstring"
+                if not content_regex.search(test_str):
+                    # Pattern is valid but doesn't match test string
+                    pass
             except (re.error, TypeError, ValueError):
                 return False
 
             # If not binary and regex is valid, check content
-            with Path(file_path).open() as file:
-                content = file.read()
-            return bool(content_regex.search(content))
+            with Path(file_path).open(encoding="utf-8") as file:
+                file_content = file.read()
+            return bool(content_regex.search(file_content))
         except (OSError, UnicodeDecodeError):
             return False
 
@@ -254,7 +257,6 @@ class GitLoaderComponent(Component):
 
     async def load_documents(self) -> list[Data]:
         gitloader = await self.build_gitloader()
-        # Run lazy_load in a separate thread to avoid blocking
         data = [Data.from_document(doc) for doc in await gitloader.alazy_load()]
         self.status = data
         return data
