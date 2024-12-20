@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
   "user must be able to send an image on chat using advanced tool on ChatInputComponent",
@@ -15,63 +17,11 @@ test(
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
 
-    await page.goto("/");
-
-    await page.waitForTimeout(1000);
-
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
+    await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-
-    let outdatedComponents = await page
-      .getByTestId("icon-AlertTriangle")
-      .count();
-
-    while (outdatedComponents > 0) {
-      await page.getByTestId("icon-AlertTriangle").first().click();
-      await page.waitForTimeout(1000);
-      outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
-    }
-
-    let filledApiKey = await page.getByTestId("remove-icon-badge").count();
-    while (filledApiKey > 0) {
-      await page.getByTestId("remove-icon-badge").first().click();
-      await page.waitForTimeout(1000);
-      filledApiKey = await page.getByTestId("remove-icon-badge").count();
-    }
-
-    const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
-    const isApiKeyInputVisible = await apiKeyInput.isVisible();
-
-    if (isApiKeyInputVisible) {
-      await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
-    }
-
-    await page.getByTestId("dropdown_str_model_name").click();
-    await page.getByTestId("gpt-4o-1-option").click();
+    await initialGPTsetup(page);
 
     await page.waitForSelector("text=Chat Input", { timeout: 30000 });
 
@@ -80,8 +30,6 @@ test(
     await page.getByTestId("advanced-button-modal").click();
     await page.getByTestId("showfiles").click();
     await page.getByText("Close").last().click();
-
-    await page.waitForTimeout(500);
 
     const userQuestion = "What is this image?";
     await page.getByTestId("textarea_str_input_value").fill(userQuestion);
@@ -105,8 +53,6 @@ test(
     });
 
     await page.getByText("Playground", { exact: true }).last().click();
-
-    await page.waitForTimeout(500);
 
     await page.waitForSelector('[data-testid="button-send"]', {
       timeout: 100000,

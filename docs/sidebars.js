@@ -53,6 +53,7 @@ module.exports = {
         "Configuration/configuration-global-variables",
         "Configuration/environment-variables",
         "Configuration/configuration-objects",
+        "Configuration/configuration-security-best-practices"
       ],
     },
     {
@@ -62,7 +63,6 @@ module.exports = {
         "Components/components-overview",
         "Components/components-agents",
         "Components/components-custom-components",
-        "Components/components-chat-memory",
         "Components/components-data",
         "Components/components-embedding-models",
         "Components/components-helpers",
@@ -75,6 +75,15 @@ module.exports = {
         "Components/components-rag",
         "Components/components-tools",
         "Components/components-vector-stores",
+      ],
+    },
+    {
+      type: "category",
+      label: "Guides",
+      items: [
+        "Guides/guides-chat-memory",
+        "Guides/guides-data-message",
+        "Guides/guides-new-to-llms",
       ],
     },
     {
@@ -94,14 +103,16 @@ module.exports = {
       label: "Integrations",
       items: [
         "Integrations/integrations-assemblyai",
+        "Integrations/Composio/integrations-composio",
         "Integrations/integrations-langfuse",
         "Integrations/integrations-langsmith",
         "Integrations/integrations-langwatch",
         {
-          type: "category",
-          label: "Google",
+          type: 'category',
+          label: 'Google',
           items: [
-            "Integrations/Google/integrations-setup-google-oauth-langflow",
+            'Integrations/Google/integrations-setup-google-oauth-langflow',
+            'Integrations/Google/integrations-setup-google-cloud-vertex-ai-langflow',
           ],
         },
         {

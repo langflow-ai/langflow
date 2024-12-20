@@ -113,7 +113,11 @@ const Footer: React.FC<{
           {children ?? <div />}
           <div className="flex items-center gap-3">
             <DialogClose asChild>
-              <Button variant="outline" type="button">
+              <Button
+                variant="outline"
+                type="button"
+                data-testid="btn-cancel-modal"
+              >
                 Cancel
               </Button>
             </DialogClose>
@@ -134,7 +138,9 @@ const Footer: React.FC<{
       )}
       {close && (
         <DialogClose asChild>
-          <Button type="button">Close</Button>
+          <Button data-testid="btn-close-modal" type="button">
+            Close
+          </Button>
         </DialogClose>
       )}
     </div>
@@ -172,7 +178,7 @@ interface BaseModalProps {
   className?: string;
   disable?: boolean;
   onChangeOpenModal?: (open?: boolean) => void;
-  type?: "modal" | "dialog";
+  type?: "modal" | "dialog" | "full-screen";
   onSubmit?: () => void;
   onEscapeKeyDown?: (e: KeyboardEvent) => void;
 }
@@ -231,6 +237,8 @@ function BaseModal({
           {triggerChild}
           <ModalContent className={contentClasses}>{modalContent}</ModalContent>
         </Modal>
+      ) : type === "full-screen" ? (
+        <div className="min-h-full w-full flex-1">{modalContent}</div>
       ) : (
         <Dialog open={open} onOpenChange={setOpen}>
           {triggerChild}
