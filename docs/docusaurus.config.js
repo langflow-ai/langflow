@@ -129,7 +129,7 @@ const config = {
             from: "/settings-global-variables",
           },
           {
-            to: "/components-chat-memory",
+            to: "/workspace-playground",
             from: "/guides-chat-memory",
           },
           {
