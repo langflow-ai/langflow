@@ -1,7 +1,6 @@
 from loguru import logger
 
 from langflow.components.agents.agent_action_router import AgentActionRouter
-from langflow.components.agents.agent_context import AgentContextBuilder
 from langflow.components.agents.decide_action import DecideActionComponent
 from langflow.components.agents.execute_action import ExecuteActionComponent
 from langflow.components.agents.generate_thought import GenerateThoughtComponent
@@ -51,17 +50,9 @@ class LangflowAgent(Component):
         # Chat input initialization
         chat_input = ChatInput().set(input_value=self.user_prompt)
 
-        # Agent Context Builder
-        agent_context = AgentContextBuilder().set(
-            initial_context=chat_input.message_response,
-            tools=self.tools,
-            llm=self.llm,
-            max_iterations=self.max_iterations,
-        )
-
         # Generate Thought
         generate_thought = GenerateThoughtComponent().set(
-            agent_context=agent_context.build_context,
+            prompt="Based on the provided context, generate your next thought.",
         )
 
         # Decide Action
@@ -96,8 +87,23 @@ class LangflowAgent(Component):
         chat_output = ChatOutput().set(input_value=final_answer.get_final_answer)
         agent_output_model = create_state_model("AgentOutput", output=chat_output.message_response)
         output_model = agent_output_model()
+
         # Build the graph
         graph = Graph(chat_input, chat_output)
+        # Initialize the context
+        graph.context = {
+            "llm": self.llm,
+            "tools": self.tools,
+            "initial_message": chat_input.message_response,
+            "system_prompt": self.system_prompt,
+            "max_iterations": self.max_iterations,
+            "iteration": 0,
+            "thought": "",
+            "last_action": None,
+            "last_action_result": None,
+            "final_answer": "",
+        }
+
         async for result in graph.async_start(max_iterations=self.max_iterations):
             if self.verbose:
                 logger.info(result)
