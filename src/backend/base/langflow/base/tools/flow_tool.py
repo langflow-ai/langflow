@@ -57,11 +57,13 @@ class FlowTool(BaseTool):
             msg = "Number of arguments does not match the number of inputs. Pass keyword arguments instead."
             raise ToolException(msg)
         tweaks = {arg["component_name"]: kwargs[arg["arg_name"]] for arg in args_names}
+        inputs = self.build_inputs_dict(args, kwargs)
 
         run_outputs = run_until_complete(
             run_flow(
                 graph=self.graph,
                 tweaks={key: {"input_value": value} for key, value in tweaks.items()},
+                inputs=inputs,
                 flow_id=self.flow_id,
                 user_id=self.user_id,
                 session_id=self.session_id,
@@ -99,6 +101,24 @@ class FlowTool(BaseTool):
         kwargs = self.validate_inputs(args_names=args_names, args=args, kwargs=kwargs)
         return {arg["component_name"]: kwargs[arg["arg_name"]] for arg in args_names}
 
+    def build_inputs_dict(self, args, kwargs) -> list[dict[str, Any]]:
+        inputs = self.inputs
+        components = [input_.display_name for input_ in inputs]
+        if len(args) == len(inputs):
+            return [
+                {"components": components, "type": input_.vertex_type.lower(), "input_value": value}
+                for input_, value in zip(inputs, args, strict=False)
+            ]
+
+        return [
+            {
+                "components": components,
+                "type": input_.vertex_type.lower(),
+                "input_value": kwargs[input_.display_name.lower().strip().replace(" ", "_")],
+            }
+            for input_ in inputs
+        ]
+
     async def _arun(
         self,
         *args: Any,
@@ -106,12 +126,14 @@ class FlowTool(BaseTool):
     ) -> str:
         """Use the tool asynchronously."""
         tweaks = self.build_tweaks_dict(args, kwargs)
+        inputs = self.build_inputs_dict(args, kwargs)
         try:
             run_id = self.graph.run_id if hasattr(self, "graph") and self.graph else None
         except Exception:  # noqa: BLE001
             logger.opt(exception=True).warning("Failed to set run_id")
             run_id = None
         run_outputs = await run_flow(
+            inputs=inputs,
             tweaks={key: {"input_value": value} for key, value in tweaks.items()},
             flow_id=self.flow_id,
             user_id=self.user_id,
