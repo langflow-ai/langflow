@@ -63,9 +63,6 @@ def blockbuster(request):
             ]:
                 bb.functions[func].can_block_in("importlib_metadata/__init__.py", "metadata")
 
-            # TODO: make set_class_code async
-            bb.functions["os.stat"].can_block_in("langflow/custom/custom_component/component.py", "set_class_code")
-
             # TODO: follow discussion in https://github.com/encode/httpx/discussions/3456
             bb.functions["os.stat"].can_block_in("httpx/_client.py", "_init_transport")
 
