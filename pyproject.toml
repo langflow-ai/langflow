@@ -76,7 +76,8 @@ dependencies = [
     "yfinance==0.2.50",
     "wolframalpha==5.1.3",
     "astra-assistants[tools]~=2.2.6",
-    "composio-langchain==0.5.42",
+    "composio-langchain==0.6.3",
+    "composio-core==0.6.3",
     "spider-client==0.1.24",
     "nltk==3.9.1",
     "lark==1.2.2",
@@ -180,7 +181,7 @@ dev-dependencies = [
     "asgi-lifespan>=2.1.0",
     "pytest-github-actions-annotate-failures>=0.2.0",
     "pytest-codspeed>=3.0.0",
-    "blockbuster>=1.5.2,<1.6",
+    "blockbuster>=1.5.5,<1.6",
     "types-aiofiles>=24.1.0.20240626",
     "codeflash>=0.8.4",
 ]
