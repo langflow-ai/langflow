@@ -5,15 +5,16 @@ import logging
 # Third-party imports
 import httpx
 import pandas as pd
+
 # Local application imports
 from arize.experimental.datasets import ArizeDatasetsClient
 
 from langflow.custom import Component
-from langflow.io import (DictInput, DropdownInput, MessageTextInput, Output,
-                         SecretStrInput)
+from langflow.io import DictInput, DropdownInput, MessageTextInput, Output, SecretStrInput
 from langflow.schema import Data
 
 logger = logging.getLogger(__name__)
+
 
 class ArizeAIDatastoreComponent(Component):
     display_name = "Arize AI Datastore"
@@ -47,20 +48,18 @@ class ArizeAIDatastoreComponent(Component):
             display_name="Dataset Name",
             info="Select a dataset from the available list",
             options=[],  # Dynamically populated
-            refresh_button=True  # Allow the dropdown to be refreshed
+            refresh_button=True,  # Allow the dropdown to be refreshed
         ),
         DictInput(
             name="dataset_metadata",
             display_name="Dataset Metadata",
             info="Dictionary storing metadata for the datasets",
-            advanced=True  # This is the advanced field we populate dynamically
+            advanced=True,  # This is the advanced field we populate dynamically
         ),
     ]
 
     # Outputs: A list of Data objects
-    outputs = [
-        Output(name="data_list", display_name="Data List", method="get_dataset_data_list")
-    ]
+    outputs = [Output(name="data_list", display_name="Data List", method="get_dataset_data_list")]
 
     def fetch_and_process_datasets(self, client) -> list[Data]:
         """Fetch and process the selected dataset, and return a list of Data objects."""
@@ -93,10 +92,12 @@ class ArizeAIDatastoreComponent(Component):
                 if input_messages and output_messages:
                     # Parse the messages if they exist and are valid JSON
                     try:
-                        input_messages = json.loads(input_messages) if isinstance(input_messages,
-                                                                                  str) else input_messages
-                        output_messages = json.loads(output_messages) if isinstance(output_messages,
-                                                                                    str) else output_messages
+                        input_messages = (
+                            json.loads(input_messages) if isinstance(input_messages, str) else input_messages
+                        )
+                        output_messages = (
+                            json.loads(output_messages) if isinstance(output_messages, str) else output_messages
+                        )
                     except (json.JSONDecodeError, TypeError):
                         logger.exception("Error parsing JSON for row %s", row.name)
                         input_messages = []
@@ -109,10 +110,7 @@ class ArizeAIDatastoreComponent(Component):
                     input_message = row.get("attributes.input.value", None)
                     output_message = row.get("attributes.output.value", None)
 
-                new_data.append({
-                    "input": input_message,
-                    "completion": output_message
-                })
+                new_data.append({"input": input_message, "completion": output_message})
 
             # Create new DataFrame with the mapped values
             new_df = pd.DataFrame(new_data)
@@ -120,13 +118,10 @@ class ArizeAIDatastoreComponent(Component):
             # Create a list of Data objects, one for each row
             data_objects = [
                 Data(
-                    data={
-                        "input": row["input"],
-                        "completion": row["completion"]
-                    },
+                    data={"input": row["input"], "completion": row["completion"]},
                     dataset_name=selected_dataset_name,
                     document_type="Arize dataset",
-                    description=""
+                    description="",
                 )
                 for _, row in new_df.iterrows()
             ]
@@ -134,7 +129,6 @@ class ArizeAIDatastoreComponent(Component):
             message = f"Created {length} Data objects for dataset: {data_objects}"
             logger.info(message)
             return data_objects
-
 
         except (httpx.RequestError, ValueError):
             logger.exception("Error fetching or processing datasets")
@@ -151,7 +145,8 @@ class ArizeAIDatastoreComponent(Component):
 
         # Extract "assistant" message from output messages
         assistant_output = next(
-            (msg["message.content"] for msg in output_messages if msg["message.role"] == "assistant"), None)
+            (msg["message.content"] for msg in output_messages if msg["message.role"] == "assistant"), None
+        )
 
         # If no messages found, return fallback from 'attributes.input.value' and 'attributes.output.value'
         if not user_input:
@@ -211,10 +206,7 @@ class ArizeAIDatastoreComponent(Component):
         try:
             developer_key = getattr(self, "developer_key", None)
             api_key = getattr(self, "developer_key", None)
-            client = ArizeDatasetsClient(
-                developer_key=developer_key,
-                api_key=api_key
-            )
+            client = ArizeDatasetsClient(developer_key=developer_key, api_key=api_key)
             logger.info("Successfully initialized ArizeDatasetsClient.")
         except Exception:
             logger.exception("Failed to initialize ArizeDatasetsClient")

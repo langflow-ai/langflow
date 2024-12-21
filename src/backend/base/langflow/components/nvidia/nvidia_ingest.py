@@ -1,21 +1,19 @@
-import time
 import logging
-
+import time
 from pathlib import Path
 from urllib.parse import urlparse
 
 from nv_ingest_client.client import NvIngestClient
 from nv_ingest_client.primitives import JobSpec
 from nv_ingest_client.primitives.tasks import ExtractTask, SplitTask
-from nv_ingest_client.util.file_processing.extract import (
-    EXTENSION_TO_DOCUMENT_TYPE, extract_file_content)
+from nv_ingest_client.util.file_processing.extract import EXTENSION_TO_DOCUMENT_TYPE, extract_file_content
 
 from langflow.custom import Component
-from langflow.io import (BoolInput, FileInput, IntInput, MessageTextInput,
-                         Output, StrInput)
+from langflow.io import BoolInput, FileInput, IntInput, MessageTextInput, Output, StrInput
 from langflow.schema import Data
 
 logger = logging.getLogger(__name__)
+
 
 class NVIDIAIngestComponent(Component):
     display_name = "NV-Ingest"
@@ -93,14 +91,14 @@ class NVIDIAIngestComponent(Component):
 
     def load_file(self) -> Data:
         if not self.path:
-            err_msg="Please, upload a file to use this component."
+            err_msg = "Please, upload a file to use this component."
             raise ValueError(err_msg)
         resolved_path = self.resolve_path(self.path)
 
         extension = Path(resolved_path).suffix[1:].lower()
 
         if extension not in self.file_types:
-            err_msg=f"Unsupported file type: {extension}"
+            err_msg = f"Unsupported file type: {extension}"
             raise ValueError(err_msg)
 
         file_content, file_type = extract_file_content(resolved_path)
@@ -133,7 +131,7 @@ class NVIDIAIngestComponent(Component):
             job_spec.add_task(split_task)
 
         parsed_url = urlparse(self.base_url)
-        message =f"creating NvIngestClient for host: {parsed_url.hostname}, port: {parsed_url.port}"
+        message = f"creating NvIngestClient for host: {parsed_url.hostname}, port: {parsed_url.port}"
         self.log(message, name="NVIDIAIngestComponent")
         client = NvIngestClient(message_client_hostname=parsed_url.hostname, message_client_port=parsed_url.port)
 
@@ -150,18 +148,24 @@ class NVIDIAIngestComponent(Component):
 
         for element in result[0]:
             if element["document_type"] == "text":
-                data.append(Data(
-                    text=element["metadata"]["content"],
-                    file_path=element["metadata"]["source_metadata"]["source_name"],
-                    document_type=element["document_type"],
-                    description=element["metadata"]["content_metadata"]["description"]))
+                data.append(
+                    Data(
+                        text=element["metadata"]["content"],
+                        file_path=element["metadata"]["source_metadata"]["source_name"],
+                        document_type=element["document_type"],
+                        description=element["metadata"]["content_metadata"]["description"],
+                    )
+                )
             elif element["document_type"] == "structured":
-                data.append(Data(
-                    text=element["metadata"]["table_metadata"]["table_content"],
-                    file_path=element["metadata"]["source_metadata"]["source_name"],
-                    document_type=element["document_type"],
-                    description=element["metadata"]["content_metadata"]["description"]))
-            #TODO: handle images
+                data.append(
+                    Data(
+                        text=element["metadata"]["table_metadata"]["table_content"],
+                        file_path=element["metadata"]["source_metadata"]["source_name"],
+                        document_type=element["document_type"],
+                        description=element["metadata"]["content_metadata"]["description"],
+                    )
+                )
+            # TODO: handle images
 
         self.status = data if data else "No data"
         return data or Data()
