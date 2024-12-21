@@ -8,7 +8,7 @@ from langflow.io import FileInput, MultilineInput, Output
 from langflow.schema import Data
 
 
-class NVIDIANemoGuardrailsComponent(Component):
+class NVIDIANeMoGuardrailsComponent(Component):
     display_name = "NVIDIA NeMo Guardrails"
     description = (
         "Apply guardrails to LLM interactions. Load guardrail definitions from a YAML file, "
