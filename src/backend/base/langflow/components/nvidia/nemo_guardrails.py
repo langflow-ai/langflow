@@ -22,16 +22,9 @@ class NVIDIANeMoGuardrailsComponent(Component):
 
     inputs = [
         MultilineInput(
-            name="yaml_content",
-            display_name="YAML Content (takes precedence)",
-            info="Enter YAML content here"
+            name="yaml_content", display_name="YAML Content (takes precedence)", info="Enter YAML content here"
         ),
-        FileInput(
-            name="path",
-            display_name="YAML File Path",
-            file_types=file_types,
-            info="yaml files"
-        ),
+        FileInput(name="path", display_name="YAML File Path", file_types=file_types, info="yaml files"),
     ]
 
     outputs = [
@@ -46,19 +39,19 @@ class NVIDIANeMoGuardrailsComponent(Component):
                 data_dict = yaml.safe_load(yaml_content)
                 return Data(data={"text": yaml_content, "parsed_data": data_dict})
             except yaml.YAMLError as e:
-                err_msg="Invalid YAML syntax"
+                err_msg = "Invalid YAML syntax"
                 raise ValueError(err_msg) from e
 
         # Fall back to FileInput
         if not self.path:
-            err_msg="Please, upload a file or provide YAML content."
+            err_msg = "Please, upload a file or provide YAML content."
             raise ValueError(err_msg)
 
         resolved_path = self.resolve_path(self.path)
         extension = Path(resolved_path).suffix[1:].lower()
 
         if extension not in self.file_types:
-            err_msg=f"Unsupported file type: {extension}"
+            err_msg = f"Unsupported file type: {extension}"
             raise ValueError(err_msg)
 
         text = read_text_file(resolved_path)

@@ -7,7 +7,7 @@ from .nvidia_rerank import NvidiaRerankComponent
 __all__ = [
     "NVIDIAIngestComponent",
     "NVIDIANeMoCustomizerComponent",
-    "NVIDIANeMoGuardrailsComponent",
     "NVIDIANeMoEvaluatorComponent",
+    "NVIDIANeMoGuardrailsComponent",
     "NvidiaRerankComponent",
 ]
