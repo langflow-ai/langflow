@@ -92,7 +92,8 @@ const config = {
             from: [
               "/whats-new-a-new-chapter-langflow",
               "/👋 Welcome-to-Langflow",
-              "/getting-started-welcome-to-langflow"
+              "/getting-started-welcome-to-langflow",
+              "/guides-new-to-llms"
             ],
           },
           {
@@ -126,6 +127,14 @@ const config = {
           {
             to: "/configuration-global-variables",
             from: "/settings-global-variables",
+          },
+          {
+            to: "/workspace-playground",
+            from: "/guides-chat-memory",
+          },
+          {
+            to: "/configuration-objects",
+            from: "/guides-data-message",
           },
           {
             to: "/components-vector-stores",
