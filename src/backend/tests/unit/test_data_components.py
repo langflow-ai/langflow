@@ -44,8 +44,8 @@ def test_parse_curl(api_request):
     build_config = {
         "method": {"value": ""},
         "urls": {"value": []},
-        "headers": {},
-        "body": {},
+        "headers": {"value": []},
+        "body": {"value": []},
     }
     # Act
     new_build_config = api_request.parse_curl(field_value, build_config.copy())
@@ -53,8 +53,10 @@ def test_parse_curl(api_request):
     # Assert
     assert new_build_config["method"]["value"] == "GET"
     assert new_build_config["urls"]["value"] == ["https://example.com/api/test"]
-    assert new_build_config["headers"]["value"] == {"Content-Type": "application/json"}
-    assert new_build_config["body"]["value"] == {"key": "value"}
+    expected_headers = [{"key": "Content-Type", "value": "application/json"}]
+    assert new_build_config["headers"]["value"] == expected_headers
+    expected_body = [{"key": "key", "value": "value"}]
+    assert new_build_config["body"]["value"] == expected_body
 
 
 @respx.mock
