@@ -113,6 +113,7 @@ dependencies = [
     "pydantic-ai>=0.0.19",
     "nv-ingest-client @ git+https://github.com/NVIDIA/nv-ingest.git@04aa2802094a9ee563b45db35b7b11a453548363#egg=nv-ingest-client&subdirectory=client",
     "python-pptx==0.6.23",
+    "arize[Datasets]>=1.0.0",
 ]
 
 [tool.uv.sources]
