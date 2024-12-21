@@ -529,6 +529,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Unstructured", name: "unstructured", icon: "Unstructured" },
   { display_name: "Git", name: "git", icon: "GitLoader" },
   { display_name: "Confluence", name: "confluence", icon: "Confluence" },
+  { display_name: "Arize", name: "arize", icon: "Arize" },
   { display_name: "Mem0", name: "mem0", icon: "Mem0" },
 ];
 
