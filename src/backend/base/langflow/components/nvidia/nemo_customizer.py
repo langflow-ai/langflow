@@ -29,10 +29,7 @@ class NVIDIANeMoCustomizerComponent(Component):
     name = "NVIDIANeMoCustomizer"
     beta = True
 
-    headers = {
-        "accept": "application/json",
-        "Content-Type": "application/json"
-    }
+    headers = {"accept": "application/json", "Content-Type": "application/json"}
     chunk_number = 1
 
     inputs = [
@@ -45,20 +42,20 @@ class NVIDIANeMoCustomizerComponent(Component):
             name="datastore_base_url",
             display_name="NVIDIA NeMo Datastore Base URL",
             info="The nemo datastore base URL of the NVIDIA NeMo Datastore API.",
-            advanced=True
+            advanced=True,
         ),
         StrInput(
             name="tenant_id",
             display_name="Tenant ID",
             info="Tenant id for dataset creation, if not provided default value `tenant` is used.",
             advanced=True,
-            value="tenant"
+            value="tenant",
         ),
         MessageTextInput(
             name="dataset",
             display_name="Dataset",
             info="Enter the dataset ID or name used to train the model",
-            value="dataset-RWZGSkCGdeP35SDAxqTtvy"
+            value="dataset-RWZGSkCGdeP35SDAxqTtvy",
         ),
         DataInput(
             name="training_data",
@@ -82,10 +79,10 @@ class NVIDIANeMoCustomizerComponent(Component):
                 "meta/llama3-70b-instruct",
                 "meta/llama3-8b-instruct",
                 "mistral-7b",
-                "mixtral-8x7b"
+                "mixtral-8x7b",
             ],
             value="mixtral-8x7b",
-            refresh_button=True
+            refresh_button=True,
         ),
         DropdownInput(
             name="training_type",
@@ -95,22 +92,19 @@ class NVIDIANeMoCustomizerComponent(Component):
             value="lora",  # Default value
         ),
         IntInput(
-            name="epochs",
-            display_name="Epochs",
-            info="Number of times to cycle through the training data",
-            value=5
+            name="epochs", display_name="Epochs", info="Number of times to cycle through the training data", value=5
         ),
         IntInput(
             name="batch_size",
             display_name="Batch size",
             info="The number of samples used in each training iteration",
-            value=16
+            value=16,
         ),
         FloatInput(
             name="learning_rate",
             display_name="Learning rate",
             info="The number of samples used in each training iteration",
-            value=0.0001
+            value=0.0001,
         ),
     ]
 
@@ -160,9 +154,9 @@ class NVIDIANeMoCustomizerComponent(Component):
                 "epochs": int(self.epochs),
                 "batch_size": int(self.batch_size),
                 "learning_rate": float(self.learning_rate),
-                "adapter_dim": 16
+                "adapter_dim": 16,
             },
-            "sha": "main"
+            "sha": "main",
         }
         customizations_url = f"{self.base_url}/v2/customizations"
         try:
@@ -245,10 +239,7 @@ class NVIDIANeMoCustomizerComponent(Component):
                     page += 1
 
                 # If dataset not found, create it
-                create_payload = {
-                    "name": dataset_name,
-                    "description": f"{dataset_name} for {tenant_id}"
-                }
+                create_payload = {"name": dataset_name, "description": f"{dataset_name} for {tenant_id}"}
                 create_response = await client.post(url, json=create_payload)
                 create_response.raise_for_status()
                 created_dataset = create_response.json()
@@ -289,7 +280,7 @@ class NVIDIANeMoCustomizerComponent(Component):
                 # Extract only "input" and "completion" fields if present
                 filtered_data = {
                     "input": getattr(data_obj, "input", None),
-                    "completion": getattr(data_obj, "completion", None)
+                    "completion": getattr(data_obj, "completion", None),
                 }
 
                 # Check if both fields are present
