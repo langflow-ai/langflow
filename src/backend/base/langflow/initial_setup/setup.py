@@ -565,6 +565,13 @@ async def load_flows_from_directory() -> None:
                 flow["id"] = no_json_name
             flow_id = flow.get("id")
 
+            if isinstance(flow_id, str):
+                try:
+                    flow_id = UUID(flow_id)
+                except ValueError:
+                    logger.error(f"Invalid UUID string: {flow_id}")
+                    return
+
             existing = await find_existing_flow(session, flow_id, flow_endpoint_name)
             if existing:
                 logger.debug(f"Found existing flow: {existing.name}")
@@ -583,17 +590,24 @@ async def load_flows_from_directory() -> None:
                     folder_id = await get_default_folder_id(session, user_id)
                     existing.folder_id = folder_id
 
+                if isinstance(existing.id, str):
+                    try:
+                        existing.id = UUID(existing.id)
+                    except ValueError:
+                        logger.error(f"Invalid UUID string: {existing.id}")
+                        return
+
                 session.add(existing)
             else:
                 logger.info(f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}")
 
                 # Current behavior loads all new flows into default folder
                 folder_id = await get_default_folder_id(session, user_id)
-
                 flow["user_id"] = user_id
                 flow["folder_id"] = folder_id
                 flow = Flow.model_validate(flow, from_attributes=True)
                 flow.updated_at = datetime.now(tz=timezone.utc).astimezone()
+
                 session.add(flow)
 
 
@@ -604,6 +618,7 @@ async def find_existing_flow(session, flow_id, flow_endpoint_name):
         if existing := (await session.exec(stmt)).first():
             logger.debug(f"Found existing flow by endpoint name: {existing.name}")
             return existing
+
     stmt = select(Flow).where(Flow.id == flow_id)
     if existing := (await session.exec(stmt)).first():
         logger.debug(f"Found existing flow by id: {flow_id}")
