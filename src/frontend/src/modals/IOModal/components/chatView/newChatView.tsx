@@ -91,8 +91,8 @@ export default function ChatView({
 
     if (messages.length === 0 && !lockChat && chatInputNode) {
       setChatValue(chatInputNode.data.node.template["input_value"].value ?? "");
-    } else if (isTabHidden) {
-      setChatValue("");
+    } else {
+      isTabHidden ? setChatValue("") : null;
     }
 
     setChatHistory(finalChatHistory);
