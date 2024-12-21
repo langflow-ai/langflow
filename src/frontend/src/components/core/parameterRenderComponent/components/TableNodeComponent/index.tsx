@@ -20,6 +20,7 @@ export default function TableNodeComponent({
   table_options,
   trigger_icon = "Table",
   trigger_text = "Open Table",
+  table_icon,
 }: InputProps<any[], TableComponentType>): JSX.Element {
   const dataTypeDefinitions: {
     [cellDataType: string]: DataTypeDefinition<any>;
@@ -107,7 +108,7 @@ export default function TableNodeComponent({
     .map((column) => {
       const isCustomEdit =
         column.formatter &&
-        ((column.formatter === "text" && column.edit_mode !== "inline") ||
+        ((column.formatter === "text" && column.edit_mode === "modal") ||
           column.formatter === "json");
       return {
         field: column.name,
@@ -128,6 +129,8 @@ export default function TableNodeComponent({
     >
       <div className="flex w-full items-center gap-3" data-testid={"div-" + id}>
         <TableModal
+          stopEditingWhenCellsLoseFocus={true}
+          tableIcon={table_icon}
           tableOptions={table_options}
           dataTypeDefinitions={dataTypeDefinitions}
           autoSizeStrategy={{ type: "fitGridWidth", defaultMinWidth: 100 }}
