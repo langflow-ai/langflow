@@ -127,6 +127,10 @@ const config = {
             to: "/configuration-global-variables",
             from: "/settings-global-variables",
           },
+          {
+            to: "/components-vector-stores",
+            from: "/components-rag",
+          },
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',
