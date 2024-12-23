@@ -181,6 +181,12 @@ class Settings(BaseSettings):
     max_vertex_builds_to_keep: int = 3000
     """The maximum number of vertex builds to keep in the database."""
 
+    # MCP Server
+    mcp_server_enabled: bool = True
+    """If set to False, Langflow will not enable the MCP server."""
+    mcp_server_enable_progress_notifications: bool = False
+    """If set to False, Langflow will not send progress notifications in the MCP server."""
+
     @field_validator("dev")
     @classmethod
     def set_dev(cls, value):
