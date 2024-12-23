@@ -42,6 +42,7 @@ async def test_post_validate_prompt(client: AsyncClient):
             "outputs": [],
             "field_order": [],
             "beta": False,
+            "minimized": False,
             "error": "string",
             "edited": False,
             "metadata": {},

@@ -64,6 +64,7 @@ ATTR_FUNC_MAPPING: dict[str, Callable] = {
     "legacy": getattr_return_bool,
     "documentation": getattr_return_str,
     "icon": validate_icon,
+    "minimized": getattr_return_bool,
     "frozen": getattr_return_bool,
     "is_input": getattr_return_bool,
     "is_output": getattr_return_bool,
