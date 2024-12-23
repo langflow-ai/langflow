@@ -1,7 +1,3 @@
-import Fuse from "fuse.js";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useHotkeys } from "react-hotkeys-hook"; // Import useHotkeys
-
 import {
   Sidebar,
   SidebarContent,
@@ -17,7 +13,10 @@ import {
   SIDEBAR_BUNDLES,
   SIDEBAR_CATEGORIES,
 } from "@/utils/styleUtils";
+import Fuse from "fuse.js";
 import { cloneDeep } from "lodash";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
@@ -39,6 +38,11 @@ import { traditionalSearchMetadata } from "./helpers/traditional-search-metadata
 
 const CATEGORIES = SIDEBAR_CATEGORIES;
 const BUNDLES = SIDEBAR_BUNDLES;
+
+interface FlowSidebarComponentProps {
+  showLegacy: boolean;
+  setShowLegacy: (value: boolean) => void;
+}
 
 export function FlowSidebarComponent() {
   const { data, templates } = useTypesStore(
@@ -64,34 +68,158 @@ export function FlowSidebarComponent() {
   );
 
   const hasStore = useStoreStore((state) => state.hasStore);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const { setOpen } = useSidebar();
+  const addComponent = useAddComponent();
 
-  // Memoized values
+  // State
+  const [dataFilter, setFilterData] = useState(data);
+  const [search, setSearch] = useState("");
+  const [fuse, setFuse] = useState<Fuse<any> | null>(null);
+  const [openCategories, setOpenCategories] = useState<string[]>([]);
+  const [showConfig, setShowConfig] = useState(false);
+  const [showBeta, setShowBeta] = useState(true);
+  const [showLegacy, setShowLegacy] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
+
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
   const chatInputAdded = useMemo(() => checkChatInput(nodes), [nodes]);
 
   const customComponent = useMemo(() => {
     return data?.["custom_component"]?.["CustomComponent"] ?? null;
   }, [data]);
 
-  const getFilteredData = useCallback(
-    (searchTerm: string, sourceData: any, fuseInstance: Fuse<any> | null) => {
-      if (!searchTerm) return sourceData;
+  const searchResults = useMemo(() => {
+    if (!search || !fuse) return null;
 
-      let filteredData = cloneDeep(sourceData);
-      // ... rest of your filtering logic
-      return filteredData;
+    const searchTerm = normalizeString(search);
+    const fuseResults = fuse.search(search).map((result) => ({
+      ...result,
+      item: { ...result.item, score: result.score },
+    }));
+
+    return {
+      fuseResults,
+      fuseCategories: fuseResults.map((result) => result.item.category),
+      combinedResults: combinedResultsFn(fuseResults, data),
+      traditionalResults: traditionalSearchMetadata(data, searchTerm),
+    };
+  }, [search, fuse, data]);
+
+  const searchFilteredData = useMemo(() => {
+    if (!search || !searchResults) return cloneDeep(data);
+
+    return filteredDataFn(
+      data,
+      searchResults.combinedResults,
+      searchResults.traditionalResults,
+    );
+  }, [data, search, searchResults]);
+
+  const sortedCategories = useMemo(() => {
+    if (!searchResults || !searchFilteredData) return [];
+
+    return Object.keys(searchFilteredData)
+      .filter(
+        (category) =>
+          Object.keys(searchFilteredData[category]).length > 0 &&
+          (CATEGORIES.find((c) => c.name === category) ||
+            BUNDLES.find((b) => b.name === category)),
+      )
+      .toSorted((a, b) =>
+        searchResults.fuseCategories.indexOf(b) <
+        searchResults.fuseCategories.indexOf(a)
+          ? 1
+          : -1,
+      );
+  }, [searchResults, searchFilteredData, CATEGORIES, BUNDLES]);
+
+  const finalFilteredData = useMemo(() => {
+    let filteredData = searchFilteredData;
+
+    if (getFilterEdge?.length > 0) {
+      filteredData = applyEdgeFilter(filteredData, getFilterEdge);
+    }
+
+    if (!showBeta) {
+      filteredData = applyBetaFilter(filteredData);
+    }
+
+    if (!showLegacy) {
+      filteredData = applyLegacyFilter(filteredData);
+    }
+
+    return filteredData;
+  }, [searchFilteredData, getFilterEdge, showBeta, showLegacy]);
+
+  const hasResults = useMemo(() => {
+    return Object.entries(dataFilter).some(
+      ([category, items]) =>
+        Object.keys(items).length > 0 &&
+        (CATEGORIES.find((c) => c.name === category) ||
+          BUNDLES.find((b) => b.name === category)),
+    );
+  }, [dataFilter]);
+
+  const handleKeyDownInput = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>, name: string) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        setOpenCategories((prev) =>
+          prev.includes(name)
+            ? prev.filter((cat) => cat !== name)
+            : [...prev, name],
+        );
+      }
     },
     [],
   );
 
-  // Effect optimizations
+  const handleClearSearch = useCallback(() => {
+    setSearch("");
+    setFilterData(data);
+    setOpenCategories([]);
+  }, [data]);
+
+  const handleInputFocus = useCallback(() => {
+    setIsInputFocused(true);
+  }, []);
+
+  const handleInputBlur = useCallback(() => {
+    setIsInputFocused(false);
+  }, []);
+
+  const handleSearchInput = useCallback((value: string) => {
+    setSearch(value);
+  }, []);
+
+  const handleInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      handleSearchInput(event.target.value);
+    },
+    [handleSearchInput],
+  );
+
   useEffect(() => {
     if (filterType) {
       setOpen(true);
     }
-  }, [filterType]);
+  }, [filterType, setOpen]);
 
   useEffect(() => {
-    const fuseOptions = {
+    setFilterData(finalFilteredData);
+
+    if (search !== "" || filterType || getFilterEdge.length > 0) {
+      const newOpenCategories = Object.keys(finalFilteredData).filter(
+        (cat) => Object.keys(finalFilteredData[cat]).length > 0,
+      );
+      setOpenCategories(newOpenCategories);
+    }
+  }, [finalFilteredData, search, filterType, getFilterEdge]);
+
+  useEffect(() => {
+    const options = {
       keys: ["display_name", "description", "type", "category"],
       threshold: 0.2,
       includeScore: true,
@@ -105,40 +233,20 @@ export function FlowSidebarComponent() {
       })),
     );
 
-    setFuse(new Fuse(fuseData, fuseOptions));
+    setFuse(new Fuse(fuseData, options));
   }, [data]);
 
-  const handleKeyDownInput = (
-    e: React.KeyboardEvent<HTMLDivElement>,
-    name: string,
-  ) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      setOpenCategories((prev) =>
-        prev.includes(name)
-          ? prev.filter((cat) => cat !== name)
-          : [...prev, name],
-      );
+  useEffect(() => {
+    if (getFilterEdge.length !== 0) {
+      setSearch("");
     }
-  };
+  }, [getFilterEdge, data]);
 
-  const [isInputFocused, setIsInputFocused] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
-
-  const setErrorData = useAlertStore((state) => state.setErrorData);
-  const [dataFilter, setFilterData] = useState(data);
-  const [search, setSearch] = useState("");
-  const addComponent = useAddComponent();
-
-  const [fuse, setFuse] = useState<Fuse<any> | null>(null);
-
-  const [openCategories, setOpenCategories] = useState<string[]>([]);
-
-  const [showConfig, setShowConfig] = useState(false);
-  const [showBeta, setShowBeta] = useState(true);
-  const [showLegacy, setShowLegacy] = useState(false);
-
-  const { setOpen } = useSidebar();
+  useEffect(() => {
+    if (search === "" && getFilterEdge.length === 0) {
+      setOpenCategories([]);
+    }
+  }, [search, getFilterEdge]);
 
   const searchComponentsSidebar = useShortcutsStore(
     (state) => state.searchComponentsSidebar,
@@ -169,195 +277,42 @@ export function FlowSidebarComponent() {
     },
   );
 
-  useEffect(() => {
-    if (filterType) {
-      setOpen(true);
-    }
-  }, [filterType]);
-
-  useEffect(() => {
-    filterComponents();
-  }, [data, search, filterType, getFilterEdge, showBeta, showLegacy]);
-
-  useEffect(() => {
-    // show components with error on load
-    let errors: string[] = [];
-    Object.keys(templates).forEach((component) => {
-      if (templates[component].error) {
-        errors.push(component);
-      }
-    });
-    if (errors.length > 0)
-      setErrorData({ title: " Components with errors: ", list: errors });
-  }, []);
-
-  useEffect(() => {
-    if (getFilterEdge.length !== 0) {
-      setSearch("");
-    }
-  }, [getFilterEdge, data]);
-
-  useEffect(() => {
-    const options = {
-      keys: ["display_name", "description", "type", "category"],
-      threshold: 0.2,
-      includeScore: true,
-    };
-
-    const fuseData = Object.entries(data).flatMap(([category, items]) =>
-      Object.entries(items).map(([key, value]) => ({
-        ...value,
-        category,
-        key,
-      })),
-    );
-
-    setFuse(new Fuse(fuseData, options));
-    handleSearchInput(search);
-  }, [data]);
-
-  useEffect(() => {
-    if (search === "" && getFilterEdge.length === 0) {
-      setOpenCategories([]);
-    }
-  }, [search, getFilterEdge]);
-
-  const hasResults = useMemo(() => {
-    return Object.entries(dataFilter).some(
-      ([category, items]) =>
-        Object.keys(items).length > 0 &&
-        (CATEGORIES.find((c) => c.name === category) ||
-          BUNDLES.find((b) => b.name === category)),
-    );
-  }, [dataFilter]);
-  const [sortedCategories, setSortedCategories] = useState<string[]>([]);
-
-  const filterComponents = () => {
-    let filteredData = cloneDeep(data);
-
-    if (search) {
-      const searchTerm = normalizeString(search);
-      let combinedResults = {};
-
-      if (fuse) {
-        const fuseResults = fuse.search(search).map((result) => ({
-          ...result,
-          item: { ...result.item, score: result.score },
-        }));
-        const fuseCategories = fuseResults.map(
-          (result) => result.item.category,
-        );
-        setSortedCategories(fuseCategories);
-        combinedResults = combinedResultsFn(fuseResults, data);
-
-        const traditionalResults = traditionalSearchMetadata(data, searchTerm);
-
-        filteredData = filteredDataFn(
-          data,
-          combinedResults,
-          traditionalResults,
-        );
-
-        setSortedCategories(
-          Object.keys(filteredData)
-            .filter(
-              (category) =>
-                Object.keys(filteredData[category]).length > 0 &&
-                (CATEGORIES.find((c) => c.name === category) ||
-                  BUNDLES.find((b) => b.name === category)),
-            )
-            .toSorted((a, b) =>
-              fuseCategories.indexOf(b) < fuseCategories.indexOf(a) ? 1 : -1,
-            ),
-        );
-      }
-    }
-
-    // Apply edge filter
-    if (getFilterEdge?.length > 0) {
-      filteredData = applyEdgeFilter(filteredData, getFilterEdge);
-    }
-
-    // Apply beta filter
-    if (!showBeta) {
-      filteredData = applyBetaFilter(filteredData);
-    }
-
-    // Apply legacy filter
-    if (!showLegacy) {
-      filteredData = applyLegacyFilter(filteredData);
-    }
-
-    setFilterData(filteredData);
-    if (search !== "" || filterType || getFilterEdge.length > 0) {
-      setOpenCategories(
-        Object.keys(filteredData).filter(
-          (cat) => Object.keys(filteredData[cat]).length > 0,
-        ),
-      );
-    }
-  };
-
-  const handleSearchInput = useCallback(
-    (value: string) => {
-      setSearch(value);
-      const filtered = getFilteredData(value, data, fuse);
-      setFilterData(filtered);
-    },
-    [data, fuse],
-  );
-
-  function onDragStart(
-    event: React.DragEvent<any>,
-    data: { type: string; node?: APIClassType },
-  ): void {
-    //start drag event
-    var crt = event.currentTarget.cloneNode(true);
-    crt.style.position = "absolute";
-    crt.style.width = "215px";
-    crt.style.top = "-500px";
-    crt.style.right = "-500px";
-    crt.classList.add("cursor-grabbing");
-    document.body.appendChild(crt);
-    event.dataTransfer.setDragImage(crt, 0, 0);
-    event.dataTransfer.setData("genericNode", JSON.stringify(data));
-  }
-
-  const hasBundleItems = BUNDLES.some(
-    (item) =>
-      dataFilter[item.name] && Object.keys(dataFilter[item.name]).length > 0,
-  );
-
-  const hasCategoryItems = CATEGORIES.some(
-    (item) =>
-      dataFilter[item.name] && Object.keys(dataFilter[item.name]).length > 0,
-  );
-
-  function handleClearSearch() {
-    setSearch("");
-    setFilterData(data);
-    setOpenCategories([]);
-  }
-
-  const handleInputFocus = useCallback(
-    (event: React.FocusEvent<HTMLInputElement>) => {
-      setIsInputFocused(true);
+  const onDragStart = useCallback(
+    (
+      event: React.DragEvent<any>,
+      data: { type: string; node?: APIClassType },
+    ) => {
+      var crt = event.currentTarget.cloneNode(true);
+      crt.style.position = "absolute";
+      crt.style.width = "215px";
+      crt.style.top = "-500px";
+      crt.style.right = "-500px";
+      crt.classList.add("cursor-grabbing");
+      document.body.appendChild(crt);
+      event.dataTransfer.setDragImage(crt, 0, 0);
+      event.dataTransfer.setData("genericNode", JSON.stringify(data));
     },
     [],
   );
 
-  const handleInputBlur = useCallback(
-    (event: React.FocusEvent<HTMLInputElement>) => {
-      setIsInputFocused(false);
-    },
-    [],
+  const hasBundleItems = useMemo(
+    () =>
+      BUNDLES.some(
+        (item) =>
+          dataFilter[item.name] &&
+          Object.keys(dataFilter[item.name]).length > 0,
+      ),
+    [dataFilter],
   );
 
-  const handleInputChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      handleSearchInput(event.target.value);
-    },
-    [],
+  const hasCategoryItems = useMemo(
+    () =>
+      CATEGORIES.some(
+        (item) =>
+          dataFilter[item.name] &&
+          Object.keys(dataFilter[item.name]).length > 0,
+      ),
+    [dataFilter],
   );
 
   return (
@@ -434,4 +389,15 @@ export function FlowSidebarComponent() {
 
 FlowSidebarComponent.displayName = "FlowSidebarComponent";
 
-export default memo(FlowSidebarComponent);
+export default memo(
+  FlowSidebarComponent,
+  (
+    prevProps: FlowSidebarComponentProps,
+    nextProps: FlowSidebarComponentProps,
+  ) => {
+    return (
+      prevProps.showLegacy === nextProps.showLegacy &&
+      prevProps.setShowLegacy === nextProps.setShowLegacy
+    );
+  },
+);
