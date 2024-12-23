@@ -59,6 +59,10 @@ def blockbuster(request):
                 "os.path.abspath",
             ]:
                 bb.functions[func].can_block_in("settings/service.py", "initialize")
+                if func == "os.path.abspath":
+                    bb.functions[func].can_block_in(
+                        "pydevd/pydevd_file_utils.py", "get_abs_path_real_path_and_base_from_file"
+                    )
             for func in [
                 "io.BufferedReader.read",
                 "io.TextIOWrapper.read",
