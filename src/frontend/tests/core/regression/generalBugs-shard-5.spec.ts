@@ -113,19 +113,13 @@ test(
 
     const hasGradientUnlocked = await unlockedHandle?.evaluate((el) => {
       const style = window.getComputedStyle(el);
-      return (
-        style.backgroundImage.includes("conic-gradient") &&
-        style.backgroundImage.includes("rgb(79, 70, 229)")
-      );
+      return style.backgroundColor === "rgb(79, 70, 229)";
     });
 
     const secondHasGradientUnlocked = await secondUnlockedHandle?.evaluate(
       (el) => {
         const style = window.getComputedStyle(el);
-        return (
-          style.backgroundImage.includes("conic-gradient") &&
-          style.backgroundImage.includes("rgb(79, 70, 229)")
-        );
+        return style.backgroundColor === "rgb(79, 70, 229)";
       },
     );
 
@@ -137,10 +131,7 @@ test(
     const fourthHasGradientUnlocked = await fourthUnlockedHandle?.evaluate(
       (el) => {
         const style = window.getComputedStyle(el);
-        return (
-          style.backgroundImage.includes("conic-gradient") &&
-          style.backgroundImage.includes("rgb(79, 70, 229)")
-        );
+        return style.backgroundColor === "rgb(79, 70, 229)";
       },
     );
 
