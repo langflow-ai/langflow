@@ -91,7 +91,7 @@ class ServiceManager:
         """Initialize all the services."""
         for service in self.services.values():
             result = service.setup()
-            if inspect.iscoroutinefunction(result):
+            if inspect.iscoroutine(result):
                 await result
 
     async def teardown(self) -> None:
