@@ -15,7 +15,7 @@ In any project, as long as there are [**Chat**](/components-io) being used, memo
 To see and access this history of messages, Langflow features a component called [Message history](/components-helpers#memory-history). It retrieves previous messages and outputs them in structured format or parsed.
 
 
-To learn the basics about memory in Langflow, check out the [Memory Chatbot](/starter-projects-memory-chatbot) starter example.
+To learn the basics about memory in Langflow, check out the [Memory Chatbot](/tutorials-memory-chatbot) starter example.
 
 
 Memories can be visualized and managed directly from the **Playground**. You can edit and remove previous messages to inspect and validate the AI’s response behavior. You can remove or edit previous messages to get your models acting just right.
@@ -72,7 +72,7 @@ This example stores and retrieves chat history from an [AstraDBChatMemory](/comp
 
 ### Connect the chat memory component to an external database
 
-1. Load the [Memory Chatbot](/starter-projects-memory-chatbot) starter project.
+1. Load the [Memory Chatbot](/tutorials-memory-chatbot) starter project.
 This starter project extends the basic prompting flow to include a chat memory component.
 2. Add the [Store Message](/components-helpers#store-message) component to the flow.
 The **Store message** component stores messages in the external database.
