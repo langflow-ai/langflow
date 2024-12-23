@@ -49,6 +49,18 @@ class APIRequestComponent(Component):
             list=True,
             info="Enter one or more URLs, separated by commas.",
             required=True,
+            advanced=False,
+        ),
+        MultilineInput(
+            name="curl",
+            display_name="cURL",
+            info=(
+                "Paste a curl command to populate the fields. "
+                "This will fill in the dictionary fields for headers and body."
+            ),
+            required=True,
+            advanced=True,
+            real_time_refresh=True,
         ),
         DropdownInput(
             name="method",
@@ -63,15 +75,6 @@ class APIRequestComponent(Component):
             value=False,
             info="Enable cURL mode to populate fields from a cURL command.",
             real_time_refresh=True,
-        ),
-        MultilineInput(
-            name="curl",
-            display_name="cURL",
-            info=(
-                "Paste a curl command to populate the fields. "
-                "This will fill in the dictionary fields for headers and body."
-            ),
-            advanced=True,
         ),
         DataInput(
             name="query_params",
@@ -100,6 +103,7 @@ class APIRequestComponent(Component):
             value=[],
             input_types=["Data"],
             tool_mode=True,
+            advanced=True,
         ),
         TableInput(
             name="headers",
@@ -285,11 +289,10 @@ class APIRequestComponent(Component):
             build_config = self._update_method_fields(build_config, field_value)
         elif field_name == "curl" and self.use_curl and field_value:
             build_config = self.parse_curl(field_value, build_config)
-
         return build_config
 
     def _update_curl_mode(self, build_config: dotdict, *, use_curl: bool) -> dotdict:
-        always_visible = ["urls", "method", "use_curl"]
+        always_visible = ["method", "use_curl"]
 
         for field in self.inputs:
             field_name = field.name
@@ -297,6 +300,8 @@ class APIRequestComponent(Component):
             if isinstance(field_config, dict):
                 if field_name in always_visible:
                     field_config["advanced"] = False
+                elif field_name == "urls":
+                    field_config["advanced"] = use_curl
                 elif field_name == "curl":
                     field_config["advanced"] = not use_curl
                     field_config["real_time_refresh"] = use_curl
