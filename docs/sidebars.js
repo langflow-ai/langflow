@@ -148,7 +148,12 @@ module.exports = {
       items: [
         {
           type: "link",
-          label: "API Documentation",
+          label: "API examples",
+          href: "API-Reference/api-examples",
+        },
+        {
+          type: "link",
+          label: "API documentation",
           href: "/api",
         },
       ],

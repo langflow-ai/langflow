@@ -1,6 +1,6 @@
 ---
-title: API Reference
-slug: /api-reference
+title: API examples
+slug: /API-Reference/api-examples
 ---
 
 import Tabs from '@theme/Tabs';
@@ -28,6 +28,243 @@ export FLOW_ID="359cd752-07ea-46f2-9d3b-a4407ef618da"
 ```
 
 The examples in this guide use environment variables for these values.
+
+
+## Flows
+
+### Create Flow
+
+Create a new flow.
+
+<Tabs>
+   <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'POST' \
+   '$LANGFLOW_URL/api/v1/flows/' \
+   -H 'accept: application/json' \
+   -H 'Content-Type: application/json' \
+   -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+   -d '{
+       // Flow creation details
+     }'
+```
+
+   </TabItem>
+   <TabItem value="result" label="Result">
+
+```plain
+result
+```
+
+   </TabItem>
+</Tabs>
+
+### Read Flows
+
+Retrieve a list of flows with pagination support.
+
+<Tabs>
+   <TabItem value="curl" label="curl" default>
+
+```bash
+curl -X GET "$LANGFLOW_URL/api/v1/flows/"
+-H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+   </TabItem>
+
+<TabItem value="result" label="Result">
+
+```plain
+result
+```
+
+   </TabItem>
+</Tabs>
+
+### Read Flow
+
+Read a specific flow by its ID.
+
+<Tabs>
+<TabItem value="curl" label="curl" default>
+
+```bash
+ curl-X GET "$ LANGFLOW_URL /api /v1 /flows /{flow_id}"
+-H “ Authorization : Bearer YOUR_ACCESS_TOKEN”
+ ```
+
+</TabItem>
+
+<TabItem value="result" label="Result">
+
+```plain
+result
+```
+
+   </TabItem>
+</Tabs>
+
+### Update Flow
+
+Update an existing flow by its ID.
+
+<Tabs>
+<TabItem value="curl" label="curl" default>
+
+ ```bash
+ curl-X PATCH "$ LANGFLOW_URL /api /v1 /flows /{flow_id}"
+-H “ Authorization : Bearer YOUR_ACCESS_TOKEN”
+-d '{
+      // Updated flow details
+}'
+ ```
+
+</TabItem>
+<TabItem value="result" label="Result">
+
+```plain
+result
+```
+
+   </TabItem>
+</Tabs>
+
+### Delete Flow
+
+Delete a specific flow by its ID.
+
+<Tabs>
+    <TabItem value="curl" label="curl" default>
+
+ ```bash
+ curl-X DELETE "$ LANGFLOW_URL /api /v1 /flows /{flow_id}"
+-H “ Authorization : Bearer YOUR_ACCESS_TOKEN”
+ ```
+
+</TabItem>
+
+<TabItem value="result" label="Result">
+
+```plain
+result
+```
+
+   </TabItem>
+</Tabs>
+
+### Create Flows
+
+Create multiple new flows.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'POST' \
+  '$LANGFLOW_URL/api/v1/flows/batch/' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+  -d '{
+    // FlowListCreate object
+  }'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+[
+  {
+    // FlowRead objects
+  }
+]
+```
+
+  </TabItem>
+</Tabs>
+
+### Upload File
+
+Upload flows from a file.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'POST' \
+  '$LANGFLOW_URL/api/v1/flows/upload/?folder_id=OPTIONAL_FOLDER_ID' \
+  -H 'accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+  -H 'Content-Type: multipart/form-data' \
+  -F 'file=@/path/to/your/file'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+[
+  {
+    // FlowRead objects
+  }
+]
+```
+
+  </TabItem>
+</Tabs>
+
+### Download Multiple Files
+
+Download multiple flows as a zip file.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'POST' \
+  '$LANGFLOW_URL/api/v1/flows/download/' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
+  -d '["FLOW_ID_1", "FLOW_ID_2"]'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+// Binary file content (ZIP)
+```
+
+  </TabItem>
+</Tabs>
+
+### Read Basic Examples
+
+Retrieve a list of basic example flows.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/flows/basic_examples/' \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+A list of example flows.
+```
+
+  </TabItem>
+</Tabs>
+
 
 ## Chat
 
@@ -820,240 +1057,6 @@ reuslt
    </TabItem>
 </Tabs>
 
-## Flows
-
-### Create Flow
-
-Create a new flow.
-
-<Tabs>
-   <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-   '$LANGFLOW_URL/api/v1/flows/' \
-   -H 'accept: application/json' \
-   -H 'Content-Type: application/json' \
-   -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
-   -d '{
-       // Flow creation details
-     }'
-```
-
-   </TabItem>
-   <TabItem value="result" label="Result">
-
-```plain
-result
-```
-
-   </TabItem>
-</Tabs>
-
-### Read Flows
-
-Retrieve a list of flows with pagination support.
-
-<Tabs>
-   <TabItem value="curl" label="curl" default>
-
-```bash
-curl -X GET "$LANGFLOW_URL/api/v1/flows/"
--H "Authorization: Bearer YOUR_ACCESS_TOKEN"
-```
-
-   </TabItem>
-
-<TabItem value="result" label="Result">
-
-```plain
-result
-```
-
-   </TabItem>
-</Tabs>
-
-### Read Flow
-
-Read a specific flow by its ID.
-
-<Tabs>
-<TabItem value="curl" label="curl" default>
-
-```bash
- curl-X GET "$ LANGFLOW_URL /api /v1 /flows /{flow_id}"
--H “ Authorization : Bearer YOUR_ACCESS_TOKEN”
- ```
-
-</TabItem>
-
-<TabItem value="result" label="Result">
-
-```plain
-result
-```
-
-   </TabItem>
-</Tabs>
-
-### Update Flow
-
-Update an existing flow by its ID.
-
-<Tabs>
-<TabItem value="curl" label="curl" default>
-
- ```bash
- curl-X PATCH "$ LANGFLOW_URL /api /v1 /flows /{flow_id}"
--H “ Authorization : Bearer YOUR_ACCESS_TOKEN”
--d '{
-      // Updated flow details
-}'
- ```
-
-</TabItem>
-<TabItem value="result" label="Result">
-
-```plain
-result
-```
-
-   </TabItem>
-</Tabs>
-
-### Delete Flow
-
-Delete a specific flow by its ID.
-
-<Tabs>
-    <TabItem value="curl" label="curl" default>
-
- ```bash
- curl-X DELETE "$ LANGFLOW_URL /api /v1 /flows /{flow_id}"
--H “ Authorization : Bearer YOUR_ACCESS_TOKEN”
- ```
-
-</TabItem>
-
-<TabItem value="result" label="Result">
-
-```plain
-result
-```
-
-   </TabItem>
-</Tabs>
-
-### Create Flows
-
-Create multiple new flows.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/flows/batch/' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
-  -d '{
-    // FlowListCreate object
-  }'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-[
-  {
-    // FlowRead objects
-  }
-]
-```
-
-  </TabItem>
-</Tabs>
-
-### Upload File
-
-Upload flows from a file.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/flows/upload/?folder_id=OPTIONAL_FOLDER_ID' \
-  -H 'accept: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
-  -H 'Content-Type: multipart/form-data' \
-  -F 'file=@/path/to/your/file'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-[
-  {
-    // FlowRead objects
-  }
-]
-```
-
-  </TabItem>
-</Tabs>
-
-### Download Multiple Files
-
-Download multiple flows as a zip file.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/flows/download/' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
-  -d '["FLOW_ID_1", "FLOW_ID_2"]'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-// Binary file content (ZIP)
-```
-
-  </TabItem>
-</Tabs>
-
-### Read Basic Examples
-
-Retrieve a list of basic example flows.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/flows/basic_examples/' \
-  -H 'accept: application/json'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-A list of example flows.
-```
-
-  </TabItem>
-</Tabs>
 
 ## Users
 
