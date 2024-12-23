@@ -1,16 +1,16 @@
 # from langflow.field_typing import Data
 import os
-from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
 from typing import Any
 
 from dotenv import load_dotenv
-from langchain_core.tools import StructuredTool
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from pydantic import BaseModel, Field, create_model
 
+from langflow.base.mcp.util import create_tool_coroutine, create_tool_func
 from langflow.custom import Component
+from langflow.field_typing import Tool
 from langflow.io import MessageTextInput, Output
 
 load_dotenv()  # load environment variables from .env
@@ -94,22 +94,16 @@ class MCPStdio(Component):
             name="command",
             display_name="mcp command",
             info="mcp command",
-            value="uv mcp-sse-shim@latest",
+            value="uvx mcp-sse-shim@latest",
             tool_mode=True,
         ),
     ]
 
     outputs = [
-        Output(display_name="Output", name="output", method="build_output"),
+        Output(display_name="Tools", name="tools", method="build_output"),
     ]
 
-    def create_tool_coroutine(self, tool_name: str) -> Callable[[dict], Awaitable]:
-        async def tool_coroutine(**kwargs):
-            return await self.client.session.call_tool(tool_name, arguments=kwargs)
-
-        return tool_coroutine
-
-    async def build_output(self) -> list[StructuredTool]:
+    async def build_output(self) -> list[Tool]:
         if self.client.session is None:
             self.tools = await self.client.connect_to_server(self.command)
 
@@ -117,18 +111,13 @@ class MCPStdio(Component):
 
         for tool in self.tools:
             args_schema = create_input_schema_from_json_schema(tool.inputSchema)
-            callbacks = self.get_langchain_callbacks()
             tool_list.append(
-                StructuredTool(
-                    name=tool.name,  # maybe format this
+                Tool(
+                    name=tool.name,
                     description=tool.description,
-                    coroutine=self.create_tool_coroutine(tool.name),
-                    args_schema=args_schema,
-                    # args_schema=DataSchema,
-                    handle_tool_error=True,
-                    callbacks=callbacks,
+                    coroutine=create_tool_coroutine(tool.name, args_schema, self.client.session),
+                    func=create_tool_func(tool.name, args_schema, self.client.session),
                 )
             )
-
         self.tool_names = [tool.name for tool in self.tools]
         return tool_list

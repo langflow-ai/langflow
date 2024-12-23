@@ -1,15 +1,15 @@
 # from langflow.field_typing import Data
-from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
 
 import httpx
 from dotenv import load_dotenv
-from langchain_core.tools import StructuredTool
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 
+from langflow.base.mcp.util import create_tool_coroutine, create_tool_func
 from langflow.components.tools.mcp_stdio import create_input_schema_from_json_schema
 from langflow.custom import Component
+from langflow.field_typing import Tool
 from langflow.io import MessageTextInput, Output
 
 load_dotenv()  # load environment variables from .env
@@ -72,33 +72,23 @@ class MCPSse(Component):
     ]
 
     outputs = [
-        Output(display_name="Output", name="output", method="build_output"),
+        Output(display_name="Tools", name="tools", method="build_output"),
     ]
 
-    def create_tool_coroutine(self, tool_name: str) -> Callable[[dict], Awaitable]:
-        async def tool_coroutine(**kwargs):
-            return await self.client.session.call_tool(tool_name, arguments=kwargs)
-
-        return tool_coroutine
-
-    async def build_output(self) -> list[StructuredTool]:
+    async def build_output(self) -> list[Tool]:
         if self.client.session is None:
-            self.tools = await self.client.connect_to_server(self.url)
+            self.tools = await self.client.connect_to_server(self.url, {})
 
         tool_list = []
 
         for tool in self.tools:
             args_schema = create_input_schema_from_json_schema(tool.inputSchema)
-            callbacks = self.get_langchain_callbacks()
             tool_list.append(
-                StructuredTool(
+                Tool(
                     name=tool.name,  # maybe format this
                     description=tool.description,
-                    coroutine=self.create_tool_coroutine(tool.name),
-                    args_schema=args_schema,
-                    # args_schema=DataSchema,
-                    handle_tool_error=True,
-                    callbacks=callbacks,
+                    coroutine=create_tool_coroutine(tool.name, args_schema, self.client.session),
+                    func=create_tool_func(tool.name, args_schema, self.client.session),
                 )
             )
 
