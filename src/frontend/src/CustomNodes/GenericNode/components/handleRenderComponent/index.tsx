@@ -281,7 +281,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     const handleColorName = connectedEdge
       ? connectedColor
       : colorName!.length > 1
-        ? "foreground"
+        ? "secondary-foreground"
         : "datatype-" + colorName![0];
 
     const handleColor = isNullHandle
@@ -291,13 +291,13 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
       : connectedEdge
         ? "hsl(var(--datatype-" + connectedColor + "))"
         : colorName!.length > 1
-          ? "hsl(var(--foreground))"
+          ? "hsl(var(--secondary-foreground))"
           : "hsl(var(--datatype-" + colorName![0] + "))";
 
     const accentForegroundColorName = connectedEdge
       ? "hsl(var(--datatype-" + connectedColor + "-foreground))"
       : colorName!.length > 1
-        ? "hsl(var(--primary-foreground))"
+        ? "hsl(var(--input))"
         : "hsl(var(--datatype-" + colorName![0] + "-foreground))";
 
     const currentFilter = left
