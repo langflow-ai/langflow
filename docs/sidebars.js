@@ -149,7 +149,7 @@ module.exports = {
         {
           type: "link",
           label: "API examples",
-          href: "API-Reference/api-examples",
+          href: "/API-Reference/api-examples",
         },
         {
           type: "link",
