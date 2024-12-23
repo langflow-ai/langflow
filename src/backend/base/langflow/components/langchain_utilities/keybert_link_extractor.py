@@ -2,6 +2,7 @@ from typing import Any
 from gliner import GLiNER
 from loguru import logger
 
+from langchain_community.graph_vectorstores.extractors import KeybertLinkExtractor
 from langchain_community.graph_vectorstores.extractors import GLiNERLinkExtractor
 from langchain_community.graph_vectorstores.links import Link
 from langchain_community.graph_vectorstores.links import add_links
@@ -12,11 +13,11 @@ from langflow.inputs import DataInput, StrInput, BoolInput
 from langflow.io import Output
 from langflow.schema import Data
     
-class GlinerLinkExtractorComponent(Component):
-    display_name = "Gliner Link Extractor"
-    description = "Extract links from text content."
-    documentation = "https://python.langchain.com/v0.2/api_reference/community/graph_vectorstores/langchain_community.graph_vectorstores.extractors.html_link_extractor.GlinerExtractor.html"
-    name = "GlinerExtractor"
+class KeybertLinkExtractorComponent(Component):
+    display_name = "Keybert Link Extractor"
+    description = "Extract keywords using keybert."
+    documentation = "https://python.langchain.com/v0.2/api_reference/community/graph_vectorstores/langchain_community.graph_vectorstores.extractors.html_link_extractor.KeybertExtractor.html"
+    name = "KeybertExtractor"
     icon = "LangChain"
 
     inputs = [
@@ -25,13 +26,6 @@ class GlinerLinkExtractorComponent(Component):
             display_name="Input",
             info="The texts from which to extract links.",
             input_types=["Document", "Data"],
-        ),
-        StrInput(
-            name="labels",
-            display_name="Labels for Extraction",
-            info="Labels to be used by Gliner to extract links.",
-            refresh_button=True,
-            required=True,
         ),
         StrInput(
             name="sep",
@@ -62,7 +56,7 @@ class GlinerLinkExtractorComponent(Component):
 
     def process_output(self) -> list[Data]:
         """
-        Processes the input data to extract links using the GLiNERLinkExtractor.
+        Processes the input data to extract links using the KeybertLinkExtractor.
         Returns:
             list[Data]: A list of Data objects with extracted links added as metadata.
         Raises:
@@ -75,13 +69,10 @@ class GlinerLinkExtractorComponent(Component):
         if not isinstance(data_input, list):
             data_input = [data_input]
             
-        logger.debug("Building Gliner Link Extractor")
+        logger.debug("Building Keybert Link Extractor")
         
-        # Creates Extractor object based in input labels
-        labels_list = self.labels.split()
-        extractor = GLiNERLinkExtractor(
-            labels=labels_list
-        )
+        # Keybert extractor us BERT-embeddings to extract keywords
+        extractor = KeybertLinkExtractor()
 
         # For each inout text, extract links
         documents = []
@@ -106,4 +97,3 @@ class GlinerLinkExtractorComponent(Component):
             logger.debug(documents)
                 
         return documents
-

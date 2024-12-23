@@ -3134,6 +3134,21 @@ wheels = [
 ]
 
 [[package]]
+name = "keybert"
+version = "0.8.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "rich" },
+    { name = "scikit-learn" },
+    { name = "sentence-transformers" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ac/a6/28ece89c550f0698585ea254eb5f7263433a1796b0b5ce98233f1249404d/keybert-0.8.5.tar.gz", hash = "sha256:4b8e4b4d129b319b6266c77b9c8ed34e94e5db42a977c977c8ae58f57343995f", size = 30185 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/38/b6/0258658e776c747765a1584cbd3861303f9ba34ee6beea6d6b8b21d47630/keybert-0.8.5-py3-none-any.whl", hash = "sha256:005e0eab30c8e85c249ccc6eaad7741357e692591b3eaebe64c40f12614c2ca9", size = 37463 },
+]
+
+[[package]]
 name = "kombu"
 version = "5.4.2"
 source = { registry = "https://pypi.org/simple" }
@@ -3601,6 +3616,7 @@ dependencies = [
     { name = "huggingface-hub", extra = ["inference"] },
     { name = "jq" },
     { name = "json-repair" },
+    { name = "keybert" },
     { name = "kubernetes" },
     { name = "langchain" },
     { name = "langchain-anthropic" },
@@ -3756,6 +3772,7 @@ requires-dist = [
     { name = "huggingface-hub", extras = ["inference"], specifier = ">=0.23.2,<1.0.0" },
     { name = "jq", specifier = "==1.8.0" },
     { name = "json-repair", specifier = "==0.30.3" },
+    { name = "keybert", specifier = ">=0.8.5" },
     { name = "kubernetes", specifier = "==31.0.0" },
     { name = "langchain", specifier = "==0.3.10" },
     { name = "langchain-anthropic", specifier = "==0.3.0" },

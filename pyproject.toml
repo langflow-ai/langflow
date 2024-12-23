@@ -115,6 +115,7 @@ dependencies = [
     "openinference-instrumentation-langchain==0.1.29",
     "crewai~=0.86.0",
     "gliner>=0.2.12",
+    "keybert>=0.8.5",
 ]
 
 [project.urls]
