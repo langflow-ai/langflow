@@ -267,6 +267,18 @@ wheels = [
 ]
 
 [[package]]
+name = "apscheduler"
+version = "3.11.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "tzlocal" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4e/00/6d6814ddc19be2df62c8c898c4df6b5b1914f3bd024b780028caa392d186/apscheduler-3.11.0.tar.gz", hash = "sha256:4c622d250b0955a65d5d0eb91c33e6d43fd879834bf541e0a18661ae60460133", size = 107347 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d0/ae/9a053dd9229c0fde6b1f1f33f609ccff1ee79ddda364c756a924c6d8563b/APScheduler-3.11.0-py3-none-any.whl", hash = "sha256:fc134ca32e50f5eadcc4938e3a4545ab19131435e851abb40b34d63d5141c6da", size = 64004 },
+]
+
+[[package]]
 name = "arize-phoenix-otel"
 version = "0.6.1"
 source = { registry = "https://pypi.org/simple" }
@@ -543,14 +555,14 @@ wheels = [
 
 [[package]]
 name = "blockbuster"
-version = "1.5.8"
+version = "1.5.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "forbiddenfruit" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ef/d9/c117da06f9dee8ca4179e6a2fd3d413f6e4f7fcffd09652d2f2cda9d22da/blockbuster-1.5.8.tar.gz", hash = "sha256:0018080fd735e84f0b138f15ff0a339f99444ecdc0045f16056c7b23db92706b", size = 33990 }
+sdist = { url = "https://files.pythonhosted.org/packages/54/d0/247e33eebc009939c1a145223577b49d8bba3bd3d035948dae09635d65b8/blockbuster-1.5.6.tar.gz", hash = "sha256:d6e95f87b41d891dc9eb6e2f50548abf864bb4eecbc63cbe1c19fdfd99307390", size = 33804 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1a/61/1c154c6f4e2994d7b1a9fa9cc40d7614c9fc0fe07cc55c1e1ac956404033/blockbuster-1.5.8-py3-none-any.whl", hash = "sha256:ea0352823acbd837872785a96ec87701f1c7938410d66c6a8857ae11646d9744", size = 11700 },
+    { url = "https://files.pythonhosted.org/packages/4a/48/708a91335c8b00916ec6c72c8f373952338ce770033dd3c552c78a7c2d7b/blockbuster-1.5.6-py3-none-any.whl", hash = "sha256:e24b29fb9dd8f0fecfa38cea1897bfcc00bbd5ada1c2ce64dcde4244d7bbd7d4", size = 11671 },
 ]
 
 [[package]]
@@ -4178,7 +4190,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
-    { name = "blockbuster", specifier = ">=1.5.8,<1.6" },
+    { name = "blockbuster", specifier = ">=1.5.6,<1.6" },
     { name = "codeflash", specifier = ">=0.8.4" },
     { name = "dictdiffer", specifier = ">=0.9.0" },
     { name = "httpx", specifier = ">=0.27.0" },
@@ -4222,6 +4234,7 @@ source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofiles" },
     { name = "alembic" },
+    { name = "apscheduler" },
     { name = "assemblyai" },
     { name = "asyncer" },
     { name = "bcrypt" },
@@ -4344,6 +4357,7 @@ dev = [
 requires-dist = [
     { name = "aiofiles", specifier = ">=24.1.0,<25.0.0" },
     { name = "alembic", specifier = ">=1.13.0,<2.0.0" },
+    { name = "apscheduler", specifier = "==3.11.0" },
     { name = "assemblyai", specifier = ">=0.33.0,<1.0.0" },
     { name = "asyncer", specifier = ">=0.0.5,<1.0.0" },
     { name = "bcrypt", specifier = "==4.0.1" },
@@ -9040,6 +9054,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/e1/34/943888654477a574a86a98e9896bae89c7aa15078ec29f490fef2f1e5384/tzdata-2024.2.tar.gz", hash = "sha256:7d85cc416e9382e69095b7bdf4afd9e3880418a2413feec7069d533d6b4e31cc", size = 193282 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a6/ab/7e5f53c3b9d14972843a647d8d7a853969a58aecc7559cb3267302c94774/tzdata-2024.2-py2.py3-none-any.whl", hash = "sha256:a48093786cdcde33cad18c2555e8532f34422074448fbc874186f0abd79565cd", size = 346586 },
+]
+
+[[package]]
+name = "tzlocal"
+version = "5.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "tzdata", marker = "platform_system == 'Windows'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/04/d3/c19d65ae67636fe63953b20c2e4a8ced4497ea232c43ff8d01db16de8dc0/tzlocal-5.2.tar.gz", hash = "sha256:8d399205578f1a9342816409cc1e46a93ebd5755e39ea2d85334bea911bf0e6e", size = 30201 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/97/3f/c4c51c55ff8487f2e6d0e618dba917e3c3ee2caae6cf0fbb59c9b1876f2e/tzlocal-5.2-py3-none-any.whl", hash = "sha256:49816ef2fe65ea8ac19d19aa7a1ae0551c834303d5014c6d5a62e4cbda8047b8", size = 17859 },
 ]
 
 [[package]]
