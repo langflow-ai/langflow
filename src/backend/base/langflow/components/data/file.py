@@ -76,8 +76,8 @@ class FileComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Structured Data", name="structured_data", method="get_structured_data"),
-        Output(display_name="Raw Data", name="raw_data", method="get_raw_data"),
+        Output(display_name="DataFrame", name="dataframe", method="get_dataframe"),
+        Output(display_name="Raw Text", name="raw_text", method="get_raw_text"),
         Output(display_name="File Paths", name="file_paths", method="get_file_paths"),
     ]
 
@@ -132,15 +132,15 @@ class FileComponent(Component):
 
         return DataFrame(df_data)
 
-    def get_structured_data(self) -> DataFrame:
-        self.log("Getting structured data")
+    def get_dataframe(self) -> DataFrame:
+        self.log("Getting DataFrame")
         result = self._process_file(structured=True)
         dataframe = self._to_dataframe(result)
         self.status = dataframe
         return dataframe
 
-    def get_raw_data(self) -> Message:
-        self.log("Getting raw data")
+    def get_raw_text(self) -> Message:
+        self.log("Getting Raw Text")
         result = self._process_file(structured=False)
         raw_string = self._to_raw_string(result)
         self.status = raw_string
@@ -415,12 +415,12 @@ class FileComponent(Component):
                         text += " " + child.tail.strip()
                 return text.strip()
 
-            def extract_structured_data(element):
+            def extract_dataframe(element):
                 data = {"tag": element.tag, "attributes": dict(element.attrib), "text": (element.text or "").strip()}
 
                 children = []
                 for child in element:
-                    child_data = extract_structured_data(child)
+                    child_data = extract_dataframe(child)
                     if child_data:
                         children.append(child_data)
 
@@ -432,10 +432,10 @@ class FileComponent(Component):
 
                 return data
 
-            structured_data = {
+            dataframe = {
                 "title": title,
                 "text": extract_text(root),
-                "structure": extract_structured_data(root),
+                "structure": extract_dataframe(root),
                 "metadata": {
                     "links": [a.get("href") for a in root.findall(".//a") if a.get("href")],
                     "images": [img.get("src") for img in root.findall(".//img") if img.get("src")],
@@ -447,7 +447,7 @@ class FileComponent(Component):
                 },
             }
 
-            return Data(data=structured_data)
+            return Data(data=dataframe)
 
         except ElementTree.ParseError:
             return Data(data={"text": html_content})
@@ -461,7 +461,7 @@ class FileComponent(Component):
                 temp_file.write(content)
                 temp_path = temp_file.name
 
-            structured_data = {
+            dataframe = {
                 "metadata": {},
                 "styles": {},
                 "content": [],
@@ -477,7 +477,7 @@ class FileComponent(Component):
                     root = ElementTree.fromstring(core_xml)
                     for child in root:
                         tag = child.tag.split("}")[-1]
-                        structured_data["metadata"][tag] = child.text
+                        dataframe["metadata"][tag] = child.text
 
                 # Parse styles
                 if "word/styles.xml" in docx.namelist():
@@ -487,7 +487,7 @@ class FileComponent(Component):
                         style_id = style.get("{*}styleId", "")
                         style_name = style.find(".//{*}name")
                         if style_name is not None:
-                            structured_data["styles"][style_id] = style_name.get("{*}val", "")
+                            dataframe["styles"][style_id] = style_name.get("{*}val", "")
 
                 # Parse document content
                 if "word/document.xml" in docx.namelist():
@@ -498,7 +498,7 @@ class FileComponent(Component):
                     for elem in body:
                         elem_data = self._process_docx_element(elem)
                         if elem_data:
-                            structured_data["content"].append(elem_data)
+                            dataframe["content"].append(elem_data)
 
                 # Parse comments
                 if "word/comments.xml" in docx.namelist():
@@ -511,10 +511,10 @@ class FileComponent(Component):
                             "date": comment.get("{*}date"),
                             "text": "".join(t.text or "" for t in comment.findall(".//{*}t")),
                         }
-                        structured_data["comments"].append(comment_data)
+                        dataframe["comments"].append(comment_data)
 
             Path(temp_path).unlink()
-            return Data(data=structured_data)
+            return Data(data=dataframe)
 
         except Exception as e:
             msg = f"DOCX parsing error: {e!s}"
@@ -525,14 +525,14 @@ class FileComponent(Component):
 
     def _process_docx_element(self, elem: ET.Element) -> dict[str, Any] | None:
         tag = elem.tag.split("}")[-1]
-        structured_data: dict[str, Any] = {}
+        dataframe: dict[str, Any] = {}
 
         if tag == "p":
-            structured_data = self._process_docx_paragraph(elem)
+            dataframe = self._process_docx_paragraph(elem)
         elif tag == "tbl":
-            structured_data = self._process_docx_table(elem)
+            dataframe = self._process_docx_table(elem)
 
-        return structured_data if structured_data else None
+        return dataframe if dataframe else None
 
     def _process_docx_paragraph(self, p_elem: ET.Element) -> dict[str, Any]:
         p_data = {
