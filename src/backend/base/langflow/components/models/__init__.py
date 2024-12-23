@@ -10,8 +10,8 @@ from .huggingface import HuggingFaceEndpointsComponent
 from .lmstudiomodel import LMStudioModelComponent
 from .maritalk import MaritalkModelComponent
 from .mistral import MistralAIModelComponent
-from .nvidia import NVIDIAModelComponent
 from .novita import NovitaModelComponent
+from .nvidia import NVIDIAModelComponent
 from .ollama import ChatOllamaComponent
 from .openai import OpenAIModelComponent
 from .openrouter import OpenRouterComponent

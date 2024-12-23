@@ -3,11 +3,12 @@ from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
 from typing_extensions import override
 
-from langflow.base.models.novita_constants import MODEL_NAMES
 from langflow.base.models.model import LCModelComponent
+from langflow.base.models.novita_constants import MODEL_NAMES
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput
+from langflow.inputs import (BoolInput, DictInput, DropdownInput, IntInput,
+                             SecretStrInput, SliderInput)
 from langflow.inputs.inputs import HandleInput
 
 
@@ -101,10 +102,6 @@ class NovitaModelComponent(LCModelComponent):
         json_mode = self.json_mode
         seed = self.seed
 
-        print(f"Debug - API Key: {'*' * len(api_key) if api_key else 'None'}")
-        print(f"Debug - Model Name: {model_name}")
-        print(f"Debug - Base URL: https://api.novita.ai/v3/openai")
-
         try:
             output = ChatOpenAI(
                 model=model_name,
@@ -117,7 +114,6 @@ class NovitaModelComponent(LCModelComponent):
                 base_url="https://api.novita.ai/v3/openai",
             )
         except Exception as e:
-            print(f"Debug - Error: {str(e)}")
             msg = "Could not connect to Novita API."
             raise ValueError(msg) from e
 
