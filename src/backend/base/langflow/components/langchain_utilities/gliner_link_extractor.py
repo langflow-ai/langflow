@@ -11,7 +11,7 @@ from langflow.base.document_transformers.model import Component
 from langflow.inputs import DataInput, StrInput, BoolInput
 
 class GlinerLinkExtractorComponent(Component):
-    """ Extract links from text content using Gliner. """
+    """ Extract links from text content using Gliner. Note that this implementation does not use LCDocumentTransformerComponent. """
     display_name = "Gliner Link Extractor"
     description = "Extract links from text content."
     documentation = "https://python.langchain.com/v0.2/api_reference/community/graph_vectorstores/langchain_community.graph_vectorstores.extractors.html_link_extractor.GlinerExtractor.html"
