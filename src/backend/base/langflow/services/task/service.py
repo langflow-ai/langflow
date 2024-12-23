@@ -42,6 +42,11 @@ class TaskService(Service):
 
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
+        self._started = False
+        self.initialize()
+
+    def initialize(self):
+        """Initialize the scheduler."""
         self.scheduler = AsyncScheduler()
         self.job_store = AsyncSQLModelJobStore()
         self.scheduler.add_jobstore(self.job_store, "default")
