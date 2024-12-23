@@ -277,4 +277,3 @@ src/frontend/temp
 
 .dspy_cache/
 *.db
-src/backend/base/langflow/initial_setup/starter_projects/RagGraph.json
