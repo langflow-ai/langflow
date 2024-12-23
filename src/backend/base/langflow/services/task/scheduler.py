@@ -34,13 +34,16 @@ class AsyncScheduler(AsyncIOScheduler):
         wait_seconds = await self._process_jobs()
         self._start_timer(wait_seconds)
 
-    async def start(self, *, paused=False):
-        if not self._eventloop:
-            self._eventloop = asyncio.get_running_loop()
+    async def start(self, *, paused: bool = False):
+        """Start the scheduler.
 
-        await self._start(paused)
+        Args:
+            paused (bool, optional): If True, start in paused state. Defaults to False.
+        """
+        self._eventloop: asyncio.AbstractEventLoop | None = self._eventloop or asyncio.get_running_loop()
+        await self._start(paused=paused)
 
-    async def _start(self, *, paused=False):
+    async def _start(self, *, paused: bool = False):
         """Start the configured executors and job stores and begin processing scheduled jobs.
 
         :param bool paused: if ``True``, don't start job processing until :meth:`resume` is called
@@ -48,7 +51,7 @@ class AsyncScheduler(AsyncIOScheduler):
         :raises RuntimeError: if running under uWSGI with threads disabled
 
         """
-        if self.state != STATE_STOPPED:
+        if self.state != STATE_STOPPED:  # type: ignore[has-type]
             raise SchedulerAlreadyRunningError
 
         self._check_uwsgi()
