@@ -114,8 +114,17 @@ class AsyncSQLModelJobStore(BaseJobStore):
             flow = job.kwargs.get("flow")
             api_key_user = job.kwargs.get("api_key_user")
 
+            flow_id = flow.get("id") if isinstance(flow, dict) else flow.id
+            if isinstance(flow_id, str):
+                flow_id = UUID(flow_id)
+
+            api_key_user_id = api_key_user.get("id") if isinstance(api_key_user, dict) else api_key_user.id
+
+            if isinstance(api_key_user_id, str):
+                api_key_user_id = UUID(api_key_user_id)
+
             # Check for ids
-            if not isinstance(flow.id, UUID) or not isinstance(api_key_user.id, UUID):
+            if not isinstance(flow_id, UUID) or not isinstance(api_key_user_id, UUID):
                 msg = f"Job invalid: {job}"
                 raise TypeError(msg)
 
@@ -123,8 +132,8 @@ class AsyncSQLModelJobStore(BaseJobStore):
                 task = Job(
                     id=job.id,
                     name=job.name,
-                    flow_id=job.kwargs.get("flow").id,
-                    user_id=job.kwargs.get("api_key_user").id,
+                    flow_id=flow_id,
+                    user_id=api_key_user_id,
                     is_active=True,
                     next_run_time=job.next_run_time,
                     job_state=job_state,
