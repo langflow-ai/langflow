@@ -23,7 +23,7 @@ from apscheduler.util import undefined
 from loguru import logger
 
 if TYPE_CHECKING:
-    from langflow.services.scheduler.jobstore import AsyncSQLModelJobStore
+    from langflow.services.task.jobstore import AsyncSQLModelJobStore
 
 
 class AsyncScheduler(AsyncIOScheduler):
