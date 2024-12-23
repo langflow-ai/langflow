@@ -13,9 +13,9 @@ from loguru import logger
 from sqlmodel import select
 
 from langflow.services.base import Service
-from langflow.services.database.models.job.model import Job
+from langflow.services.database.models.job.model import Job, JobStatus
 from langflow.services.deps import session_scope
-from langflow.services.scheduler.jobstore import AsyncSQLModelJobStore
+from langflow.services.task.jobstore import AsyncSQLModelJobStore
 from langflow.services.task.scheduler import AsyncScheduler
 
 if TYPE_CHECKING:
@@ -72,19 +72,25 @@ class TaskService(Service):
     async def _handle_job_executed(self, event: JobExecutionEvent) -> None:
         """Handle job executed event."""
         await self._ensure_scheduler_running()
-        # JobExecutionEvent has retval
-        await event.job_store.update_job(event.job_id, TaskStatus.COMPLETED)
+        async with session_scope() as session:
+            stmt = select(Job).where(Job.id == event.job_id)
+            job = (await session.exec(stmt)).first()
+            if job:
+                job.status = JobStatus.COMPLETED
+                job.result = event.retval if isinstance(event.retval, dict) else {"output": str(event.retval)}
+                session.add(job)
+                await session.commit()
 
     async def _handle_job_error(self, event: JobEvent) -> None:
         """Handle job error event."""
         await self._ensure_scheduler_running()
         async with session_scope() as session:
             stmt = select(Job).where(Job.id == event.job_id)
-            task = (await session.exec(stmt)).first()
-            if task:
-                task.status = TaskStatus.FAILED
-                task.error = str(event.exception)
-                session.add(task)
+            job = (await session.exec(stmt)).first()
+            if job:
+                job.status = JobStatus.FAILED
+                job.error = str(event.exception)
+                session.add(job)
                 await session.commit()
 
     async def create_task(
@@ -97,6 +103,10 @@ class TaskService(Service):
     ) -> str:
         """Create a new task."""
         await self._ensure_scheduler_running()
+        if self.scheduler is None or self.job_store is None:
+            msg = "Scheduler or job store not initialized"
+            logger.error(msg)
+            raise ValueError(msg)
         task_id = str(uuid4())
         try:
             if run_at is None:
@@ -123,6 +133,10 @@ class TaskService(Service):
     async def get_task(self, task_id: str, user_id: UUID | None = None) -> APSJob | None:
         """Get task information."""
         await self._ensure_scheduler_running()
+        if self.job_store is None:
+            msg = "Job store not initialized"
+            logger.error(msg)
+            raise ValueError(msg)
         try:
             job = await self.job_store.lookup_job(task_id, user_id)
         except Exception as exc:
@@ -133,6 +147,10 @@ class TaskService(Service):
     async def cancel_task(self, task_id: str, user_id: UUID | None = None) -> bool:
         """Cancel a task."""
         await self._ensure_scheduler_running()
+        if self.scheduler is None or self.job_store is None:
+            msg = "Scheduler or job store not initialized"
+            logger.error(msg)
+            raise ValueError(msg)
         try:
             # Get the job from jobstore
             job = await self.job_store.lookup_job(task_id, user_id)
@@ -156,6 +174,10 @@ class TaskService(Service):
     ) -> list[dict]:
         """Get tasks with optional filters."""
         await self._ensure_scheduler_running()
+        if self.job_store is None:
+            msg = "Job store not initialized"
+            logger.error(msg)
+            raise ValueError(msg)
         try:
             if user_id:
                 return await self.job_store.get_user_jobs(user_id, pending)
@@ -169,6 +191,10 @@ class TaskService(Service):
     async def get_user_jobs(self, user_id: UUID) -> list[dict]:
         """Get all jobs for a specific user."""
         await self._ensure_scheduler_running()
+        if self.job_store is None:
+            msg = "Job store not initialized"
+            logger.error(msg)
+            raise ValueError(msg)
         try:
             return await self.job_store.get_user_jobs(user_id)
         except Exception as exc:
