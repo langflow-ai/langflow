@@ -45,7 +45,6 @@ interface FlowSidebarComponentProps {
 }
 
 export function FlowSidebarComponent() {
-  // Stores and Hooks
   const { data, templates } = useTypesStore(
     useCallback(
       (state) => ({
@@ -83,17 +82,14 @@ export function FlowSidebarComponent() {
   const [showLegacy, setShowLegacy] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
 
-  // Refs
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Memoized Values
   const chatInputAdded = useMemo(() => checkChatInput(nodes), [nodes]);
 
   const customComponent = useMemo(() => {
     return data?.["custom_component"]?.["CustomComponent"] ?? null;
   }, [data]);
 
-  // Optimized Filtering Logic
   const searchResults = useMemo(() => {
     if (!search || !fuse) return null;
 
@@ -157,7 +153,6 @@ export function FlowSidebarComponent() {
     return filteredData;
   }, [searchFilteredData, getFilterEdge, showBeta, showLegacy]);
 
-  // Results check
   const hasResults = useMemo(() => {
     return Object.entries(dataFilter).some(
       ([category, items]) =>
@@ -167,7 +162,6 @@ export function FlowSidebarComponent() {
     );
   }, [dataFilter]);
 
-  // Handlers
   const handleKeyDownInput = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>, name: string) => {
       if (e.key === "Enter" || e.key === " ") {
@@ -207,7 +201,6 @@ export function FlowSidebarComponent() {
     [handleSearchInput],
   );
 
-  // Effects
   useEffect(() => {
     if (filterType) {
       setOpen(true);
@@ -255,7 +248,6 @@ export function FlowSidebarComponent() {
     }
   }, [search, getFilterEdge]);
 
-  // Hotkeys setup
   const searchComponentsSidebar = useShortcutsStore(
     (state) => state.searchComponentsSidebar,
   );
@@ -285,7 +277,6 @@ export function FlowSidebarComponent() {
     },
   );
 
-  // Drag handling
   const onDragStart = useCallback(
     (
       event: React.DragEvent<any>,
@@ -304,7 +295,6 @@ export function FlowSidebarComponent() {
     [],
   );
 
-  // Bundle/Category checks
   const hasBundleItems = useMemo(
     () =>
       BUNDLES.some(
