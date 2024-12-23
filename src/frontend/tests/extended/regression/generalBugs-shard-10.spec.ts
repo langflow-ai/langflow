@@ -43,7 +43,7 @@ test(
     await page.locator('//*[@id="react-flow-id"]').hover();
 
     const elementChatOutput = await page
-      .getByTestId("handle-chatoutput-shownode-text-left")
+      .getByTestId("handle-chatoutput-noshownode-text-target")
       .first();
     await elementChatOutput.hover();
     await page.mouse.up();
