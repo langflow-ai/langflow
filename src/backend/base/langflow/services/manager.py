@@ -87,6 +87,13 @@ class ServiceManager:
             self.services.pop(service_name, None)
             self.get(service_name)
 
+    async def initialize(self) -> None:
+        """Initialize all the services."""
+        for service in self.services.values():
+            result = service.initialize()
+            if inspect.isawaitable(result):
+                await result
+
     async def teardown(self) -> None:
         """Teardown all the services."""
         for service in self.services.values():
