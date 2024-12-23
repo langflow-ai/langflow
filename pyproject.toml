@@ -113,6 +113,8 @@ dependencies = [
     "aiofile>=3.9.0,<4.0.0",
     "sseclient-py==1.8.0",
     "arize-phoenix-otel>=0.6.1",
+    "tld>=0.13",
+    "html2text>=2024.2.26",
     "openinference-instrumentation-langchain==0.1.29",
     "crewai~=0.86.0",
     "ag2",
