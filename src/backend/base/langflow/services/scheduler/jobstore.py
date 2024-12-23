@@ -12,7 +12,7 @@ from langflow.services.database.models.job import Job
 from langflow.services.deps import session_scope
 
 
-class LangFlowJobStore(BaseJobStore):
+class AsyncSQLModelJobStore(BaseJobStore):
     """A job store that uses SQLModel to store jobs in the Langflow database.
 
     Currently only supports one-off tasks.
