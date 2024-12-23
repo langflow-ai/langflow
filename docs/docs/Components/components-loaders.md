@@ -15,7 +15,7 @@ Loaders fetch data into Langflow from various sources, such as databases, websit
 ## Use a loader component in a flow
 
 This flow creates a question-and-answer chatbot for documents that are loaded into the flow.
-The [Unstructured.io](https://unstructured.io/) loader component loads files from your local machine, and then parses them into a list of structured [Data](/guides-data-message) objects. This loaded data informs the **Open AI** component's responses to your questions.
+The [Unstructured.io](https://unstructured.io/) loader component loads files from your local machine, and then parses them into a list of structured [Data](/configuration-objects) objects. This loaded data informs the **Open AI** component's responses to your questions.
 
 ![Sample Flow retrieving data with unstructured](/img/starter-flow-unstructured-qa.png)
 
@@ -63,7 +63,7 @@ The GitLoader component uses the GitLoader from LangChain to fetch and load docu
 
 ## Unstructured
 
-This component uses the [Unstructured.io](https://unstructured.io/) Serverless API to load and parse files into a list of structured [Data](/guides-data-message) objects.
+This component uses the [Unstructured.io](https://unstructured.io/) Serverless API to load and parse files into a list of structured [Data](/configuration-objects) objects.
 
 ### Inputs:
 

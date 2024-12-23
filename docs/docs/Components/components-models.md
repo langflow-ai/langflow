@@ -14,7 +14,7 @@ Refer to your specific component's documentation for more information on paramet
 
 Model components receive inputs and prompts for generating text, and the generated text is sent to an output component.
 
-The model output can also be sent to the **Language Model** port and on to a **Parse Data** component, where the output can be parsed into structured [Data](/guides-data-message) objects.
+The model output can also be sent to the **Language Model** port and on to a **Parse Data** component, where the output can be parsed into structured [Data](/configuration-objects) objects.
 
 This example has the OpenAI model in a chatbot flow. For more information, see the [Basic prompting flow](/starter-projects-basic-prompting).
 
