@@ -136,7 +136,7 @@ export default function GlobalVariableModal({
     >
       <BaseModal.Header
         description={
-          "This variable will be encrypted and will be available for you to use in any of your projects."
+          "This variable will be available for you to use in any of your projects."
         }
       >
         <span className="pr-2">
