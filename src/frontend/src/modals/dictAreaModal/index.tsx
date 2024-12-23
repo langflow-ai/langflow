@@ -89,8 +89,8 @@ export default function DictAreaModal({
           data={cloneDeep(componentValue)}
           onChange={onChange ? (data) => setComponentValue(data) : undefined}
           options={{
-            mode: 'tree',
-            modes: ['tree', 'code', 'form', 'text'],
+            mode: "tree",
+            modes: ["tree", "code", "form", "text"],
             search: true,
             navigationBar: true,
             statusBar: true,

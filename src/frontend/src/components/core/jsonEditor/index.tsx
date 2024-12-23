@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react';
-import JSONEditor from 'jsoneditor';
-import 'jsoneditor/dist/jsoneditor.css';
-import 'jsoneditor/dist/img/jsoneditor-icons.svg';
-import 'jsoneditor/dist/jsoneditor.min.css'
+import JSONEditor from "jsoneditor";
+import "jsoneditor/dist/img/jsoneditor-icons.svg";
+import "jsoneditor/dist/jsoneditor.css";
+import "jsoneditor/dist/jsoneditor.min.css";
+import { useEffect, useRef } from "react";
 
 interface JsonEditorProps {
   data?: object;
@@ -16,8 +16,8 @@ const JsonEditor = ({
   data = {},
   onChange,
   options = {},
-  width = '100%',
-  height = '400px'
+  width = "100%",
+  height = "400px",
 }: JsonEditorProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const jsonEditorRef = useRef<JSONEditor | null>(null);
@@ -33,9 +33,9 @@ const JsonEditor = ({
           const updatedData = editor.get();
           onChange?.(updatedData);
         } catch (error) {
-          console.error('Error getting JSON:', error);
+          console.error("Error getting JSON:", error);
         }
-      }
+      },
     });
 
     // Set initial data
@@ -59,12 +59,7 @@ const JsonEditor = ({
     }
   }, [data]);
 
-  return (
-    <div
-      ref={containerRef}
-      style={{ width, height }}
-    />
-  );
+  return <div ref={containerRef} style={{ width, height }} />;
 };
 
 export default JsonEditor;
