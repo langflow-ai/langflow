@@ -1,7 +1,7 @@
 from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES
 from langflow.base.io.chat import ChatComponent
-from langflow.inputs import BoolInput, StrInput
-from langflow.io import DropdownInput, FileInput, MessageTextInput, Output
+from langflow.inputs import BoolInput
+from langflow.io import DropdownInput, FileInput, MessageTextInput, MultilineInput, Output
 from langflow.schema.message import Message
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
 
@@ -13,11 +13,12 @@ class ChatInput(ChatComponent):
     name = "ChatInput"
 
     inputs = [
-        StrInput(
+        MultilineInput(
             name="input_value",
             display_name="Text",
             value="",
             info="Message to be passed as input.",
+            input_types=[],
         ),
         BoolInput(
             name="should_store_message",
