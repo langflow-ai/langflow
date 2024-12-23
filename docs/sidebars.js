@@ -14,13 +14,19 @@ module.exports = {
       label: "Starter Projects",
       items: [
         'Starter-Projects/starter-projects-basic-prompting',
-        'Starter-Projects/starter-projects-blog-writer',
-        'Starter-Projects/starter-projects-document-qa',
-        'Starter-Projects/starter-projects-memory-chatbot',
-        'Starter-Projects/starter-projects-simple-agent',
         'Starter-Projects/starter-projects-vector-store-rag',
-        'Starter-Projects/starter-projects-sequential-agent',
-        'Starter-Projects/starter-projects-travel-planning-agent',
+        'Starter-Projects/starter-projects-simple-agent',
+      ],
+    },
+    {
+      type: "category",
+      label: "Tutorials",
+      items: [
+        'Tutorials/tutorials-blog-writer',
+        'Tutorials/tutorials-document-qa',
+        'Tutorials/tutorials-memory-chatbot',
+        'Tutorials/tutorials-sequential-agent',
+        'Tutorials/tutorials-travel-planning-agent',
       ],
     },
     {
