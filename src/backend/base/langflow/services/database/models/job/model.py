@@ -1,8 +1,19 @@
 from datetime import datetime
+from enum import Enum
 from uuid import UUID
 
 import sqlalchemy as sa
-from sqlmodel import Boolean, Column, DateTime, Field, SQLModel
+from sqlmodel import JSON, Boolean, Column, DateTime, Field, SQLModel
+
+
+class JobStatus(str, Enum):
+    """Job status enum."""
+
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
 
 
 class Job(SQLModel, table=True):  # type: ignore[call-arg]
@@ -19,6 +30,9 @@ class Job(SQLModel, table=True):  # type: ignore[call-arg]
     job_state: bytes | None = Field(sa_column=Column(sa.LargeBinary), default=None)
 
     # Additional Langflow metadata
+    status: str = Field(default=JobStatus.PENDING)
+    result: dict | None = Field(sa_column=Column(JSON), default=None)
+    error: str | None = Field(default=None)
     name: str = Field(index=True)
     flow_id: UUID = Field(foreign_key="flow.id", index=True)
     user_id: UUID = Field(foreign_key="user.id", index=True)
@@ -35,6 +49,7 @@ class JobRead(SQLModel):
     id: str
     job_state: bytes | None
     next_run_time: datetime | None
+    status: str
 
     name: str
     flow_id: UUID
@@ -42,3 +57,4 @@ class JobRead(SQLModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    result: dict | None
