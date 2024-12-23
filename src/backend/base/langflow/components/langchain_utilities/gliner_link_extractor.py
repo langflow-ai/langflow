@@ -9,7 +9,9 @@ from langchain_core.documents import Document
 
 from langflow.base.document_transformers.model import Component
 from langflow.inputs import DataInput, StrInput, BoolInput
-
+from langflow.outputs import Output
+from langflow.schema import Data
+    
 class GlinerLinkExtractorComponent(Component):
     display_name = "Gliner Link Extractor"
     description = "Extract links from text content."

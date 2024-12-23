@@ -114,7 +114,7 @@ dependencies = [
     "arize-phoenix-otel>=0.6.1",
     "openinference-instrumentation-langchain==0.1.29",
     "crewai~=0.86.0",
-    "gliner>=0.2.13",
+    "gliner>=0.2.12",
 ]
 
 [project.urls]
