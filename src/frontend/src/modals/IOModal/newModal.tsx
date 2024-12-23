@@ -4,7 +4,7 @@ import {
   useGetMessagesQuery,
 } from "@/controllers/API/queries/messages";
 import { useUtilityStore } from "@/stores/utilityStore";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
 import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
@@ -118,7 +118,6 @@ export default function IOModal({
   const setLockChat = useFlowStore((state) => state.setLockChat);
   const [chatValue, setChatValue] = useState("");
   const isBuilding = useFlowStore((state) => state.isBuilding);
-  const setNode = useFlowStore((state) => state.setNode);
   const messages = useMessagesStore((state) => state.messages);
   const [sessions, setSessions] = useState<string[]>(
     Array.from(
@@ -129,7 +128,6 @@ export default function IOModal({
       ),
     ),
   );
-  const flowPool = useFlowStore((state) => state.flowPool);
   const [sessionId, setSessionId] = useState<string>(currentFlowId);
   const { isFetched: messagesFetched } = useGetMessagesQuery(
     {
@@ -139,33 +137,44 @@ export default function IOModal({
     { enabled: open },
   );
 
-  async function sendMessage({
-    repeat = 1,
-    files,
-  }: {
-    repeat: number;
-    files?: string[];
-  }): Promise<void> {
-    if (isBuilding) return;
-    setIsBuilding(true);
-    setLockChat(true);
-    setChatValue("");
-    for (let i = 0; i < repeat; i++) {
-      await buildFlow({
-        input_value: chatValue,
-        startNodeId: chatInput?.id,
-        files: files,
-        silent: true,
-        session: sessionId,
-        setLockChat,
-      }).catch((err) => {
-        console.error(err);
-        setLockChat(false);
-      });
-    }
-    // refetch();
-    setLockChat(false);
-  }
+  const sendMessage = useCallback(
+    async ({
+      repeat = 1,
+      files,
+    }: {
+      repeat: number;
+      files?: string[];
+    }): Promise<void> => {
+      if (isBuilding) return;
+      setIsBuilding(true);
+      setLockChat(true);
+      setChatValue("");
+      for (let i = 0; i < repeat; i++) {
+        await buildFlow({
+          input_value: chatValue,
+          startNodeId: chatInput?.id,
+          files: files,
+          silent: true,
+          session: sessionId,
+          setLockChat,
+        }).catch((err) => {
+          console.error(err);
+          setLockChat(false);
+        });
+      }
+      // refetch();
+      setLockChat(false);
+    },
+    [
+      isBuilding,
+      setIsBuilding,
+      setLockChat,
+      chatValue,
+      chatInput?.id,
+      sessionId,
+      buildFlow,
+    ],
+  );
 
   useEffect(() => {
     setSelectedTab(inputs.length > 0 ? 1 : outputs.length > 0 ? 2 : 0);

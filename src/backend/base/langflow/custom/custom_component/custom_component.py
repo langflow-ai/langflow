@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import uuid
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -233,19 +232,10 @@ class CustomComponent(BaseComponent):
         field_value: Any,
         field_name: str | None = None,
     ):
-        if type(self).aupdate_build_config != CustomComponent.aupdate_build_config:
-            raise NotImplementedError
-        build_config[field_name]["value"] = field_value
-        return build_config
+        """Updates the build configuration for the custom component.
 
-    async def aupdate_build_config(
-        self,
-        build_config: dotdict,
-        field_value: Any,
-        field_name: str | None = None,
-    ):
-        if type(self).update_build_config != CustomComponent.update_build_config:
-            return await asyncio.to_thread(self.update_build_config, build_config, field_value, field_name)
+        Do not call directly as implementation can be a coroutine.
+        """
         build_config[field_name]["value"] = field_value
         return build_config
 
@@ -426,7 +416,11 @@ class CustomComponent(BaseComponent):
             self._template_config = self.build_template_config()
         return self._template_config
 
-    async def variables(self, name: str, field: str):
+    def variables(self, name: str, field: str):
+        """DEPRECATED - This is kept for backward compatibility. Use get_variables instead."""
+        return run_until_complete(self.get_variables(name, field))
+
+    async def get_variables(self, name: str, field: str):
         """Returns the variable for the current user with the specified name.
 
         Raises:
@@ -440,9 +434,14 @@ class CustomComponent(BaseComponent):
             raise ValueError(msg)
         variable_service = get_variable_service()  # Get service instance
         # Retrieve and decrypt the variable by name for the current user
+        if isinstance(self.user_id, str):
+            user_id = uuid.UUID(self.user_id)
+        elif isinstance(self.user_id, uuid.UUID):
+            user_id = self.user_id
+        else:
+            msg = f"Invalid user id: {self.user_id}"
+            raise TypeError(msg)
         async with async_session_scope() as session:
-            if isinstance(self.user_id, str):
-                user_id = uuid.UUID(self.user_id)
             return await variable_service.get_variable(user_id=user_id, name=name, field=field, session=session)
 
     async def list_key_names(self):
@@ -510,7 +509,7 @@ class CustomComponent(BaseComponent):
         )
 
     def list_flows(self) -> list[Data]:
-        """This is kept for backward compatibility. Using alist_flows instead is recommended."""
+        """DEPRECATED - This is kept for backward compatibility. Using alist_flows instead is recommended."""
         return run_until_complete(self.alist_flows())
 
     async def alist_flows(self) -> list[Data]:
@@ -535,8 +534,15 @@ class CustomComponent(BaseComponent):
         """
         raise NotImplementedError
 
-    async def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
-        """This function is called after the code validation is done."""
+    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
+        """DEPRECATED - Kept for backward compatibility. Use update_frontend_node instead."""
+        run_until_complete(self.update_frontend_node(new_frontend_node, current_frontend_node))
+
+    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):
+        """Updates the given new frontend node with values from the current frontend node.
+
+        This function is called after the code validation is done.
+        """
         return update_frontend_node_with_template_values(
             frontend_node=new_frontend_node, raw_frontend_node=current_frontend_node
         )

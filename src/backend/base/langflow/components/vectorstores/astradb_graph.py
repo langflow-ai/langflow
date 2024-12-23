@@ -298,8 +298,8 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
                 search_args = self._build_search_args()
 
                 docs = vector_store.search(query=self.search_input, search_type=search_type, **search_args)
-                
-                # Drop links from the metadata. At this point the links don't add any value for building the 
+
+                # Drop links from the metadata. At this point the links don't add any value for building the
                 # context and haven't been restored to json which causes the conversion to fail.
                 logger.debug("Removing links from metadata.")
                 for doc in docs:
