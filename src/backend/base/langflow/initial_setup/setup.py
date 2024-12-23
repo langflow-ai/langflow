@@ -1,18 +1,20 @@
+import asyncio
 import copy
 import json
+import os
 import shutil
-import time
 from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime, timezone
-from pathlib import Path
 from uuid import UUID
 
+import anyio
 import orjson
 from aiofile import async_open
 from emoji import demojize, purely_emoji
 from loguru import logger
 from sqlalchemy.exc import NoResultFound
+from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBUTES, ORJSON_OPTIONS
@@ -26,7 +28,6 @@ from langflow.services.database.models.folder.utils import (
 )
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.deps import (
-    async_session_scope,
     get_settings_service,
     get_storage_service,
     get_variable_service,
@@ -165,8 +166,8 @@ def update_new_output(data):
         if "sourceHandle" in edge and "targetHandle" in edge:
             new_source_handle = scape_json_parse(edge["sourceHandle"])
             new_target_handle = scape_json_parse(edge["targetHandle"])
-            _id = new_source_handle["id"]
-            source_node_index = next((index for (index, d) in enumerate(nodes) if d["id"] == _id), -1)
+            id_ = new_source_handle["id"]
+            source_node_index = next((index for (index, d) in enumerate(nodes) if d["id"] == id_), -1)
             source_node = nodes[source_node_index] if source_node_index != -1 else None
 
             if "baseClasses" in new_source_handle:
@@ -361,13 +362,14 @@ def log_node_changes(node_changes_log) -> None:
         logger.debug("\n".join(formatted_messages))
 
 
-def load_starter_projects(retries=3, delay=1) -> list[tuple[Path, dict]]:
+async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, dict]]:
     starter_projects = []
-    folder = Path(__file__).parent / "starter_projects"
-    for file in folder.glob("*.json"):
+    folder = anyio.Path(__file__).parent / "starter_projects"
+    async for file in folder.glob("*.json"):
         attempt = 0
         while attempt < retries:
-            content = file.read_text(encoding="utf-8")
+            async with async_open(str(file), "r", encoding="utf-8") as f:
+                content = await f.read()
             try:
                 project = orjson.loads(content)
                 starter_projects.append((file, project))
@@ -378,27 +380,27 @@ def load_starter_projects(retries=3, delay=1) -> list[tuple[Path, dict]]:
                 if attempt >= retries:
                     msg = f"Error loading starter project {file}: {e}"
                     raise ValueError(msg) from e
-                time.sleep(delay)  # Wait before retrying
+                await asyncio.sleep(delay)  # Wait before retrying
     return starter_projects
 
 
-def copy_profile_pictures() -> None:
+async def copy_profile_pictures() -> None:
     config_dir = get_storage_service().settings_service.settings.config_dir
     if config_dir is None:
         msg = "Config dir is not set in the settings"
         raise ValueError(msg)
-    origin = Path(__file__).parent / "profile_pictures"
-    target = Path(config_dir) / "profile_pictures"
+    origin = anyio.Path(__file__).parent / "profile_pictures"
+    target = anyio.Path(config_dir) / "profile_pictures"
 
-    if not origin.exists():
+    if not await origin.exists():
         msg = f"The source folder '{origin}' does not exist."
         raise ValueError(msg)
 
-    if not target.exists():
-        target.mkdir(parents=True)
+    if not await target.exists():
+        await target.mkdir(parents=True)
 
     try:
-        shutil.copytree(origin, target, dirs_exist_ok=True)
+        await asyncio.to_thread(shutil.copytree, str(origin), str(target), dirs_exist_ok=True)
         logger.debug(f"Folder copied from '{origin}' to '{target}'")
 
     except Exception:  # noqa: BLE001
@@ -433,9 +435,10 @@ def get_project_data(project):
     )
 
 
-def update_project_file(project_path: Path, project: dict, updated_project_data) -> None:
+async def update_project_file(project_path: anyio.Path, project: dict, updated_project_data) -> None:
     project["data"] = updated_project_data
-    project_path.write_text(orjson.dumps(project, option=ORJSON_OPTIONS).decode(), encoding="utf-8")
+    async with async_open(str(project_path), "w", encoding="utf-8") as f:
+        await f.write(orjson.dumps(project, option=ORJSON_OPTIONS).decode())
     logger.info(f"Updated starter project {project['name']} file")
 
 
@@ -489,31 +492,34 @@ def create_new_project(
     session.add(db_flow)
 
 
-def get_all_flows_similar_to_project(session, folder_id):
-    return session.exec(select(Folder).where(Folder.id == folder_id)).first().flows
+async def get_all_flows_similar_to_project(session, folder_id):
+    stmt = select(Folder).options(selectinload(Folder.flows)).where(Folder.id == folder_id)
+    return (await session.exec(stmt)).first().flows
 
 
-def delete_start_projects(session, folder_id) -> None:
-    flows = session.exec(select(Folder).where(Folder.id == folder_id)).first().flows
+async def delete_start_projects(session, folder_id) -> None:
+    flows = await get_all_flows_similar_to_project(session, folder_id)
     for flow in flows:
-        session.delete(flow)
-    session.commit()
+        await session.delete(flow)
+    await session.commit()
 
 
-def folder_exists(session, folder_name):
-    folder = session.exec(select(Folder).where(Folder.name == folder_name)).first()
+async def folder_exists(session, folder_name):
+    stmt = select(Folder).where(Folder.name == folder_name)
+    folder = (await session.exec(stmt)).first()
     return folder is not None
 
 
-def create_starter_folder(session):
-    if not folder_exists(session, STARTER_FOLDER_NAME):
+async def create_starter_folder(session):
+    if not await folder_exists(session, STARTER_FOLDER_NAME):
         new_folder = FolderCreate(name=STARTER_FOLDER_NAME, description=STARTER_FOLDER_DESCRIPTION)
         db_folder = Folder.model_validate(new_folder, from_attributes=True)
         session.add(db_folder)
-        session.commit()
-        session.refresh(db_folder)
+        await session.commit()
+        await session.refresh(db_folder)
         return db_folder
-    return session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME)).first()
+    stmt = select(Folder).where(Folder.name == STARTER_FOLDER_NAME)
+    return (await session.exec(stmt)).first()
 
 
 def _is_valid_uuid(val):
@@ -538,19 +544,19 @@ async def load_flows_from_directory() -> None:
         logger.warning("AUTO_LOGIN is disabled, not loading flows from directory")
         return
 
-    async with async_session_scope() as session:
+    async with session_scope() as session:
         user = await get_user_by_username(session, settings_service.auth_settings.SUPERUSER)
         if user is None:
             msg = "Superuser not found in the database"
             raise NoResultFound(msg)
         user_id = user.id
-        _flows_path = Path(flows_path)
-        files = [f for f in _flows_path.iterdir() if f.is_file()]
+        flows_path_ = anyio.Path(flows_path)
+        files = [f async for f in flows_path_.iterdir() if await f.is_file()]
         for file_path in files:
             if file_path.suffix != ".json":
                 continue
             logger.info(f"Loading flow from file: {file_path.name}")
-            async with async_open(file_path, "r", encoding="utf-8") as f:
+            async with async_open(str(file_path), "r", encoding="utf-8") as f:
                 content = await f.read()
             flow = orjson.loads(content)
             no_json_name = file_path.stem
@@ -558,6 +564,13 @@ async def load_flows_from_directory() -> None:
             if _is_valid_uuid(no_json_name):
                 flow["id"] = no_json_name
             flow_id = flow.get("id")
+
+            if isinstance(flow_id, str):
+                try:
+                    flow_id = UUID(flow_id)
+                except ValueError:
+                    logger.error(f"Invalid UUID string: {flow_id}")
+                    return
 
             existing = await find_existing_flow(session, flow_id, flow_endpoint_name)
             if existing:
@@ -577,17 +590,24 @@ async def load_flows_from_directory() -> None:
                     folder_id = await get_default_folder_id(session, user_id)
                     existing.folder_id = folder_id
 
+                if isinstance(existing.id, str):
+                    try:
+                        existing.id = UUID(existing.id)
+                    except ValueError:
+                        logger.error(f"Invalid UUID string: {existing.id}")
+                        return
+
                 session.add(existing)
             else:
                 logger.info(f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}")
 
                 # Current behavior loads all new flows into default folder
                 folder_id = await get_default_folder_id(session, user_id)
-
                 flow["user_id"] = user_id
                 flow["folder_id"] = folder_id
                 flow = Flow.model_validate(flow, from_attributes=True)
                 flow.updated_at = datetime.now(tz=timezone.utc).astimezone()
+
                 session.add(flow)
 
 
@@ -598,6 +618,7 @@ async def find_existing_flow(session, flow_id, flow_endpoint_name):
         if existing := (await session.exec(stmt)).first():
             logger.debug(f"Found existing flow by endpoint name: {existing.name}")
             return existing
+
     stmt = select(Flow).where(Flow.id == flow_id)
     if existing := (await session.exec(stmt)).first():
         logger.debug(f"Found existing flow by id: {flow_id}")
@@ -605,12 +626,18 @@ async def find_existing_flow(session, flow_id, flow_endpoint_name):
     return None
 
 
-def create_or_update_starter_projects(all_types_dict: dict) -> None:
-    with session_scope() as session:
-        new_folder = create_starter_folder(session)
-        starter_projects = load_starter_projects()
-        delete_start_projects(session, new_folder.id)
-        copy_profile_pictures()
+async def create_or_update_starter_projects(all_types_dict: dict, *, do_create: bool = True) -> None:
+    """Create or update starter projects.
+
+    Args:
+        all_types_dict (dict): Dictionary containing all component types and their templates
+        do_create (bool, optional): Whether to create new projects. Defaults to True.
+    """
+    async with session_scope() as session:
+        new_folder = await create_starter_folder(session)
+        starter_projects = await load_starter_projects()
+        await delete_start_projects(session, new_folder.id)
+        await copy_profile_pictures()
         for project_path, project in starter_projects:
             (
                 project_name,
@@ -623,18 +650,19 @@ def create_or_update_starter_projects(all_types_dict: dict) -> None:
                 project_gradient,
                 project_tags,
             ) = get_project_data(project)
-            updated_project_data = update_projects_components_with_latest_component_versions(
-                project_data.copy(), all_types_dict
-            )
-            updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
-            if updated_project_data != project_data:
-                project_data = updated_project_data
-                # We also need to update the project data in the file
-
-                update_project_file(project_path, project, updated_project_data)
-            if project_name and project_data:
-                for existing_project in get_all_flows_similar_to_project(session, new_folder.id):
-                    session.delete(existing_project)
+            do_update_starter_projects = os.environ.get("LANGFLOW_UPDATE_STARTER_PROJECTS", "true").lower() == "true"
+            if do_update_starter_projects:
+                updated_project_data = update_projects_components_with_latest_component_versions(
+                    project_data.copy(), all_types_dict
+                )
+                updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
+                if updated_project_data != project_data:
+                    project_data = updated_project_data
+                    # We also need to update the project data in the file
+                    await update_project_file(project_path, project, updated_project_data)
+            if do_create and project_name and project_data:
+                for existing_project in await get_all_flows_similar_to_project(session, new_folder.id):
+                    await session.delete(existing_project)
 
                 create_new_project(
                     session=session,
@@ -661,7 +689,7 @@ async def initialize_super_user_if_needed() -> None:
         msg = "SUPERUSER and SUPERUSER_PASSWORD must be set in the settings if AUTO_LOGIN is true."
         raise ValueError(msg)
 
-    async with async_session_scope() as async_session:
+    async with session_scope() as async_session:
         super_user = await create_super_user(db=async_session, username=username, password=password)
         await get_variable_service().initialize_user_variables(super_user.id, async_session)
         await create_default_folder_if_it_doesnt_exist(async_session, super_user.id)

@@ -49,7 +49,7 @@ def rag_graph():
     chat_input.get_output("message").value = "What is the meaning of life?"
     rag_vector_store = AstraDBVectorStoreComponent(_id="rag-vector-store-123")
     rag_vector_store.set(
-        search_input=chat_input.message_response,
+        search_query=chat_input.message_response,
         api_endpoint="https://astra.example.com",
         token="token",  # noqa: S106
         embedding_model=openai_embeddings.build_embeddings,
@@ -215,10 +215,9 @@ def test_vector_store_rag_add(ingestion_graph: Graph, rag_graph: Graph):
         f"Vertices mismatch: {len(ingestion_graph_copy.vertices)} "
         f"!= {len(ingestion_graph.vertices)} + {len(rag_graph.vertices)}"
     )
-    assert len(ingestion_graph_copy.edges) == len(ingestion_graph.edges) + len(rag_graph.edges), (
-        f"Edges mismatch: {len(ingestion_graph_copy.edges)} "
-        f"!= {len(ingestion_graph.edges)} + {len(rag_graph.edges)}"
-    )
+    assert len(ingestion_graph_copy.edges) == len(ingestion_graph.edges) + len(
+        rag_graph.edges
+    ), f"Edges mismatch: {len(ingestion_graph_copy.edges)} != {len(ingestion_graph.edges)} + {len(rag_graph.edges)}"
 
     combined_graph_dump = ingestion_graph_copy.dump(
         name="Combined Graph", description="Graph for data ingestion and RAG", endpoint_name="combined"

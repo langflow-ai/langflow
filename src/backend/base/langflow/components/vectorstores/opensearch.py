@@ -2,12 +2,10 @@ import json
 from typing import Any
 
 from langchain_community.vectorstores import OpenSearchVectorSearch
-from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.io import (
     BoolInput,
-    DataInput,
     DropdownInput,
     FloatInput,
     HandleInput,
@@ -24,7 +22,6 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
 
     display_name: str = "OpenSearch"
     description: str = "OpenSearch Vector Store with advanced, customizable search capabilities."
-    documentation = "https://python.langchain.com/docs/integrations/vectorstores/opensearch"
     name = "OpenSearch"
     icon = "OpenSearch"
 
@@ -41,20 +38,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             value="langflow",
             info="The index name where the vectors will be stored in OpenSearch cluster.",
         ),
-        MultilineInput(
-            name="search_input",
-            display_name="Search Input",
-            info=(
-                "Enter a search query. Leave empty to retrieve all documents. "
-                "If you need a more advanced search consider using Hybrid Search Query instead."
-            ),
-            value="",
-        ),
-        DataInput(
-            name="ingest_data",
-            display_name="Ingest Data",
-            is_list=True,
-        ),
+        *LCVectorStoreComponent.inputs,
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         DropdownInput(
             name="search_type",
@@ -120,7 +104,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             from langchain_community.vectorstores import OpenSearchVectorSearch
         except ImportError as e:
             error_message = f"Failed to import required modules: {e}"
-            logger.exception(error_message)
+            self.log(error_message)
             raise ImportError(error_message) from e
 
         try:
@@ -136,7 +120,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             )
         except Exception as e:
             error_message = f"Failed to create OpenSearchVectorSearch instance: {e}"
-            logger.exception(error_message)
+            self.log(error_message)
             raise RuntimeError(error_message) from e
 
         if self.ingest_data:
@@ -152,19 +136,19 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(_input.to_lc_document())
             else:
                 error_message = f"Expected Data object, got {type(_input)}"
-                logger.error(error_message)
+                self.log(error_message)
                 raise TypeError(error_message)
 
         if documents and self.embedding is not None:
-            logger.debug(f"Adding {len(documents)} documents to the Vector Store.")
+            self.log(f"Adding {len(documents)} documents to the Vector Store.")
             try:
                 vector_store.add_documents(documents)
             except Exception as e:
                 error_message = f"Error adding documents to Vector Store: {e}"
-                logger.exception(error_message)
+                self.log(error_message)
                 raise RuntimeError(error_message) from e
         else:
-            logger.debug("No documents to add to the Vector Store.")
+            self.log("No documents to add to the Vector Store.")
 
     def search(self, query: str | None = None) -> list[dict[str, Any]]:
         """Search for similar documents in the vector store or retrieve all documents if no query is provided."""
@@ -178,7 +162,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                     hybrid_query = json.loads(self.hybrid_search_query)
                 except json.JSONDecodeError as e:
                     error_message = f"Invalid hybrid search query JSON: {e}"
-                    logger.exception(error_message)
+                    self.log(error_message)
                     raise ValueError(error_message) from e
 
                 results = vector_store.client.search(index=self.index_name, body=hybrid_query)
@@ -223,11 +207,11 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
 
         except Exception as e:
             error_message = f"Error during search: {e}"
-            logger.exception(error_message)
+            self.log(error_message)
             raise RuntimeError(error_message) from e
 
         error_message = f"Error during search. Invalid search type: {self.search_type}"
-        logger.error(error_message)
+        self.log(error_message)
         raise ValueError(error_message)
 
     def search_documents(self) -> list[Data]:
@@ -236,7 +220,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
         If no search input is provided, retrieve all documents.
         """
         try:
-            query = self.search_input.strip() if self.search_input else None
+            query = self.search_query.strip() if self.search_query else None
             results = self.search(query)
             retrieved_data = [
                 Data(
@@ -247,7 +231,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             ]
         except Exception as e:
             error_message = f"Error during document search: {e}"
-            logger.exception(error_message)
+            self.log(error_message)
             raise RuntimeError(error_message) from e
 
         self.status = retrieved_data

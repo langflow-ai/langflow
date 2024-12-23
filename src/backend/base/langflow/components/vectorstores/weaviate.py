@@ -3,14 +3,13 @@ from langchain_community.vectorstores import Weaviate
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, DataInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput
+from langflow.io import BoolInput, HandleInput, IntInput, SecretStrInput, StrInput
 from langflow.schema import Data
 
 
 class WeaviateVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Weaviate"
     description = "Weaviate Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/docs/modules/data_connection/vectorstores/integrations/weaviate"
     name = "Weaviate"
     icon = "Weaviate"
 
@@ -24,12 +23,7 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
             info="Requires capitalized index name.",
         ),
         StrInput(name="text_key", display_name="Text Key", value="text", advanced=True),
-        MultilineInput(name="search_query", display_name="Search Query"),
-        DataInput(
-            name="ingest_data",
-            display_name="Ingest Data",
-            is_list=True,
-        ),
+        *LCVectorStoreComponent.inputs,
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         IntInput(
             name="number_of_results",
