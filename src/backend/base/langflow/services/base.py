@@ -24,5 +24,8 @@ class Service(ABC):
     async def teardown(self) -> None:
         return
 
+    async def initialize(self) -> None:
+        return
+
     def set_ready(self) -> None:
         self.ready = True
