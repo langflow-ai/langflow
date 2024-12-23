@@ -1,7 +1,7 @@
 ---
 title: Memory Chatbot
 sidebar_position: 3
-slug: /starter-projects-memory-chatbot
+slug: /tutorials-memory-chatbot
 ---
 
 This flow extends the [basic prompting](/starter-projects-basic-prompting) flow to include a chat memory. This makes the AI remember previous user inputs.
