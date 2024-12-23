@@ -5,9 +5,9 @@ import {
   ENABLE_LANGFLOW_STORE,
 } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
+import { Panel } from "@xyflow/react";
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { Panel } from "reactflow";
 import ApiModal from "../../../modals/apiModal";
 import ShareModal from "../../../modals/shareModal";
 import useFlowStore from "../../../stores/flowStore";

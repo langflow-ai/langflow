@@ -371,10 +371,10 @@ class ErrorMessage(Message):
     def __init__(
         self,
         exception: BaseException,
-        session_id: str,
-        source: Source,
+        session_id: str | None = None,
+        source: Source | None = None,
         trace_name: str | None = None,
-        flow_id: str | None = None,
+        flow_id: UUID | str | None = None,
     ) -> None:
         # This is done to avoid circular imports
         if exception.__class__.__name__ == "ExceptionWithMessageError" and exception.__cause__ is not None:
@@ -400,8 +400,8 @@ class ErrorMessage(Message):
 
         super().__init__(
             session_id=session_id,
-            sender=source.display_name,
-            sender_name=source.display_name,
+            sender=source.display_name if source else None,
+            sender_name=source.display_name if source else None,
             text=reason,
             properties=Properties(
                 text_color="red",
@@ -420,7 +420,7 @@ class ErrorMessage(Message):
                     contents=[
                         ErrorContent(
                             type="error",
-                            component=source.display_name,
+                            component=source.display_name if source else None,
                             field=str(exception.field) if hasattr(exception, "field") else None,
                             reason=reason,
                             solution=str(exception.solution) if hasattr(exception, "solution") else None,

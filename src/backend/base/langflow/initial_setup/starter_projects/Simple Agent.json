@@ -73,9 +73,7 @@
             "fieldName": "tools",
             "id": "Agent-yGhD2",
             "inputTypes": [
-              "Tool",
-              "BaseTool",
-              "StructuredTool"
+              "Tool"
             ],
             "type": "other"
           }
@@ -85,7 +83,7 @@
         "source": "CalculatorTool-IfWT1",
         "sourceHandle": "{œdataTypeœ: œCalculatorToolœ, œidœ: œCalculatorTool-IfWT1œ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-yGhD2",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-yGhD2œ, œinputTypesœ: [œToolœ, œBaseToolœ, œStructuredToolœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-yGhD2œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -103,9 +101,7 @@
             "fieldName": "tools",
             "id": "Agent-yGhD2",
             "inputTypes": [
-              "Tool",
-              "BaseTool",
-              "StructuredTool"
+              "Tool"
             ],
             "type": "other"
           }
@@ -115,7 +111,7 @@
         "source": "URL-FOPyh",
         "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-FOPyhœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-yGhD2",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-yGhD2œ, œinputTypesœ: [œToolœ, œBaseToolœ, œStructuredToolœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-yGhD2œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -388,7 +384,7 @@
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
                 "input_types": [
-                  "BaseChatMessageHistory"
+                  "Memory"
                 ],
                 "list": false,
                 "name": "memory",
@@ -647,9 +643,7 @@
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
                 "input_types": [
-                  "Tool",
-                  "BaseTool",
-                  "StructuredTool"
+                  "Tool"
                 ],
                 "list": true,
                 "name": "tools",

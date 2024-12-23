@@ -11,7 +11,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.schema.message import Message
 from langflow.services.database.models.message.model import MessageRead, MessageTable
-from langflow.services.deps import async_session_scope
+from langflow.services.deps import session_scope
 from langflow.utils.async_helpers import run_until_complete
 
 
@@ -92,7 +92,7 @@ async def aget_messages(
     Returns:
         List[Data]: A list of Data objects representing the retrieved messages.
     """
-    async with async_session_scope() as session:
+    async with session_scope() as session:
         stmt = _get_variable_query(sender, sender_name, session_id, order_by, order, flow_id, limit)
         messages = await session.exec(stmt)
         return [await Message.create(**d.model_dump()) for d in messages]
@@ -118,7 +118,7 @@ async def aadd_messages(messages: Message | list[Message], flow_id: str | UUID |
 
     try:
         messages_models = [MessageTable.from_message(msg, flow_id=flow_id) for msg in messages]
-        async with async_session_scope() as session:
+        async with session_scope() as session:
             messages_models = await aadd_messagetables(messages_models, session)
         return [await Message.create(**message.model_dump()) for message in messages_models]
     except Exception as e:
@@ -130,7 +130,7 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
     if not isinstance(messages, list):
         messages = [messages]
 
-    async with async_session_scope() as session:
+    async with session_scope() as session:
         updated_messages: list[MessageTable] = []
         for message in messages:
             msg = await session.get(MessageTable, message.id)
@@ -186,7 +186,7 @@ async def adelete_messages(session_id: str) -> None:
     Args:
         session_id (str): The session ID associated with the messages to delete.
     """
-    async with async_session_scope() as session:
+    async with session_scope() as session:
         stmt = (
             delete(MessageTable)
             .where(col(MessageTable.session_id) == session_id)
@@ -201,7 +201,7 @@ async def delete_message(id_: str) -> None:
     Args:
         id_ (str): The ID of the message to delete.
     """
-    async with async_session_scope() as session:
+    async with session_scope() as session:
         message = await session.get(MessageTable, id_)
         if message:
             await session.delete(message)

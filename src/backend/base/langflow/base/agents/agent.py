@@ -200,7 +200,7 @@ class LCToolsAgentComponent(LCAgentComponent):
         HandleInput(
             name="tools",
             display_name="Tools",
-            input_types=["Tool", "BaseTool", "StructuredTool"],
+            input_types=["Tool"],
             is_list=True,
             required=False,
             info="These are the tools that the agent can use to help with tasks.",
