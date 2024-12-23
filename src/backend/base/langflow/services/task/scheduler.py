@@ -29,6 +29,10 @@ if TYPE_CHECKING:
 class AsyncScheduler(AsyncIOScheduler):
     """An improved version of AsyncIOScheduler that supports async jobstores."""
 
+    def __init__(self, *args, **kwargs):
+        self.timezone = timezone.utc
+        super().__init__(*args, **kwargs)
+
     async def wakeup(self):
         self._stop_timer()
         wait_seconds = await self._process_jobs()
