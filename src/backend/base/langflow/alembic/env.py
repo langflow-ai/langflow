@@ -1,9 +1,8 @@
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import engine_from_config, pool, text
 
-from langflow.services.database.models import *
 from langflow.services.database.service import SQLModel
 
 # this is the Alembic Config object, which provides
@@ -69,6 +68,9 @@ def run_migrations_online() -> None:
         context.configure(connection=connection, target_metadata=target_metadata, render_as_batch=True)
 
         with context.begin_transaction():
+            if connection.dialect.name == "postgresql":
+                connection.execute(text("SET LOCAL lock_timeout = '60s';"))
+                connection.execute(text("SELECT pg_advisory_xact_lock(112233);"))
             context.run_migrations()
 
 
