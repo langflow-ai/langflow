@@ -1,7 +1,7 @@
 ---
 title: Document QA
 sidebar_position: 2
-slug: /starter-projects-document-qa
+slug: /tutorials-document-qa
 ---
 
 
