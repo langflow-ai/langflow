@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import TYPE_CHECKING, Any
@@ -43,11 +44,12 @@ class TaskService(Service):
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
         self._started = False
-        self.initialize()
+        self.scheduler: AsyncScheduler | None = None
+        self.job_store: AsyncSQLModelJobStore | None = None
 
-    def initialize(self):
+    async def setup(self):
         """Initialize the scheduler."""
-        self.scheduler = AsyncScheduler()
+        self.scheduler = await asyncio.to_thread(AsyncScheduler)
         self.job_store = AsyncSQLModelJobStore()
         self.scheduler.add_jobstore(self.job_store, "default")
 
@@ -59,6 +61,8 @@ class TaskService(Service):
     async def _ensure_scheduler_running(self):
         """Ensure the scheduler is running."""
         if not self._started:
+            if self.scheduler is None:
+                await self.setup()
             try:
                 await self.scheduler.start(paused=False)
                 self._started = True
