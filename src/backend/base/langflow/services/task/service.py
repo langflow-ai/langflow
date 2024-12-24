@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timedelta, timezone
-from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
@@ -24,16 +23,6 @@ if TYPE_CHECKING:
     from apscheduler.job import Job as APSJob
 
     from langflow.services.settings.service import SettingsService
-
-
-class TaskStatus(str, Enum):
-    """Task status enum."""
-
-    PENDING = "PENDING"
-    RUNNING = "RUNNING"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
-    CANCELLED = "CANCELLED"
 
 
 class TaskService(Service):
@@ -93,7 +82,7 @@ class TaskService(Service):
                 session.add(job)
                 await session.commit()
 
-    async def create_task(
+    async def create_job(
         self,
         task_func: str | Callable[..., Any],
         run_at: datetime | None = None,
@@ -101,7 +90,7 @@ class TaskService(Service):
         args: list | None = None,
         kwargs: dict | None = None,
     ) -> str:
-        """Create a new task."""
+        """Create a new job."""
         await self._ensure_scheduler_running()
         if self.scheduler is None or self.job_store is None:
             msg = "Scheduler or job store not initialized"
@@ -130,22 +119,22 @@ class TaskService(Service):
             raise
         return task_id
 
-    async def get_task(self, task_id: str, user_id: UUID | None = None) -> APSJob | None:
-        """Get task information."""
+    async def get_job(self, job_id: str, user_id: UUID | None = None) -> APSJob | None:
+        """Get job information."""
         await self._ensure_scheduler_running()
         if self.job_store is None:
             msg = "Job store not initialized"
             logger.error(msg)
             raise ValueError(msg)
         try:
-            job = await self.job_store.lookup_job(task_id, user_id)
+            job = await self.job_store.lookup_job(job_id, user_id)
         except Exception as exc:
-            logger.error(f"Error getting task {task_id}: {exc}")
+            logger.error(f"Error getting job {job_id}: {exc}")
             raise
         return job
 
-    async def cancel_task(self, task_id: str, user_id: UUID | None = None) -> bool:
-        """Cancel a task."""
+    async def cancel_job(self, job_id: str, user_id: UUID | None = None) -> bool:
+        """Cancel a job."""
         await self._ensure_scheduler_running()
         if self.scheduler is None or self.job_store is None:
             msg = "Scheduler or job store not initialized"
@@ -153,21 +142,21 @@ class TaskService(Service):
             raise ValueError(msg)
         try:
             # Get the job from jobstore
-            job = await self.job_store.lookup_job(task_id, user_id)
+            job = await self.job_store.lookup_job(job_id, user_id)
             if not job:
                 return False
 
             # Remove from scheduler if not yet executed
-            scheduler_job = await self.scheduler.get_job(task_id)
+            scheduler_job = await self.scheduler.get_job(job_id)
             if scheduler_job is not None:
-                await self.scheduler.remove_job(task_id)
+                await self.scheduler.remove_job(job_id)
 
         except Exception as exc:
-            logger.error(f"Error cancelling task {task_id}: {exc}")
+            logger.error(f"Error cancelling job {job_id}: {exc}")
             raise
         return True
 
-    async def get_tasks(
+    async def get_jobs(
         self,
         user_id: UUID | None = None,
         pending: bool | None = None,

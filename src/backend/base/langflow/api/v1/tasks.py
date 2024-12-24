@@ -14,10 +14,10 @@ from langflow.services.database.models.flow import Flow
 from langflow.services.deps import get_task_service
 from langflow.services.task.service import TaskService
 
-router = APIRouter(prefix="/tasks", tags=["Tasks"])
+router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
 
-class CreateTaskRequest(BaseModel):
+class CreateJobRequest(BaseModel):
     """Request model for creating a task."""
 
     name: str | None = None
@@ -33,15 +33,15 @@ class TaskResponse(BaseModel):
 
 
 @router.post("/{flow_id_or_name}", response_model=str)
-async def create_task(
-    request: CreateTaskRequest,
+async def create_job(
+    request: CreateJobRequest,
     user: CurrentActiveUser,
     flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
 ) -> str:
-    """Create a new task."""
+    """Create a new job."""
     try:
         task_service = get_task_service()
-        return await task_service.create_task(
+        return await task_service.create_job(
             task_func=simple_run_flow_task,
             run_at=None,
             name=request.name,
@@ -63,7 +63,7 @@ async def get_task(
 ) -> TaskResponse:
     """Get task information."""
     task_service: TaskService = get_task_service()
-    task = await task_service.get_task(task_id, user.id)
+    task = await task_service.get_job(task_id, user.id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     logger.info(f"Task: {task}")
@@ -77,7 +77,7 @@ async def get_tasks(
     pending: bool | None = None,
 ) -> list[TaskResponse]:
     """Get all tasks for the current user."""
-    tasks = await task_service.get_tasks(user_id=user.id, pending=pending)
+    tasks = await task_service.get_jobs(user_id=user.id, pending=pending)
     return [TaskResponse.model_validate(task, from_attributes=True) for task in tasks]
 
 
@@ -88,7 +88,7 @@ async def cancel_task(
     task_service: Annotated[TaskService, Depends(get_task_service)],
 ) -> bool:
     """Cancel a task."""
-    success = await task_service.cancel_task(task_id, user.id)
+    success = await task_service.cancel_job(task_id, user.id)
     if not success:
         raise HTTPException(status_code=404, detail="Task not found")
     return True

@@ -26,7 +26,7 @@ def mock_task_func(**kwargs):
 @pytest.fixture
 async def sample_job(task_service: TaskService, active_user, simple_api_test):
     """Create a sample job for testing."""
-    task_id = await task_service.create_task(
+    task_id = await task_service.create_job(
         task_func=mock_task_func,
         run_at=None,
         name="Test Task",
