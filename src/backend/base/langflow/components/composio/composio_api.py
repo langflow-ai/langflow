@@ -35,7 +35,7 @@ class ComposioAPIComponent(LCToolComponent):
         DropdownInput(
             name="app_names",
             display_name="App Name",
-            options=[str(app).replace("App.", "") for app in App.all()],
+            options=[],
             value="",
             info="The app name to use. Please refresh after selecting app name",
             refresh_button=True,
@@ -223,6 +223,9 @@ class ComposioAPIComponent(LCToolComponent):
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:  # noqa: ARG002
         # First, ensure all dynamic fields are hidden by default
+        toolset = self._build_wrapper()
+        build_config["app_names"]["options"] = list(App.iter())
+
         dynamic_fields = ["app_credentials", "username", "auth_link", "auth_status", "action_names"]
         for field in dynamic_fields:
             if field in build_config:
