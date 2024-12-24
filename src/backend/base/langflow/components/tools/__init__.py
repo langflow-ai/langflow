@@ -15,7 +15,7 @@ from .search_api import SearchAPIComponent
 from .searxng import SearXNGToolComponent
 from .serp_api import SerpAPIComponent
 from .tavily_search import TavilySearchToolComponent
-from .wikidata_api import WikidataAPIComponent
+from .wikidata_api import WikidataComponent
 from .wikipedia_api import WikipediaAPIComponent
 from .wolfram_alpha_api import WolframAlphaAPIComponent
 from .yahoo_finance import YfinanceToolComponent
@@ -42,7 +42,7 @@ __all__ = [
     "SearchAPIComponent",
     "SerpAPIComponent",
     "TavilySearchToolComponent",
-    "WikidataAPIComponent",
+    "WikidataComponent",
     "WikipediaAPIComponent",
     "WolframAlphaAPIComponent",
     "YfinanceToolComponent",
