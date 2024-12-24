@@ -1,9 +1,9 @@
-from enum import Enum
 import httpx
 from loguru import logger
+
 from langflow.custom import Component
 from langflow.helpers.data import data_to_text
-from langflow.io import DropdownInput, MessageTextInput, Output, SecretStrInput, BoolInput, IntInput
+from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 from langflow.schema import Data
 from langflow.schema.message import Message
 
@@ -111,7 +111,7 @@ class TavilyComponent(Component):
                             "url": result.get("url"),
                             "content": content,
                             "score": result.get("score"),
-                        }
+                        },
                     )
                 )
 
@@ -122,7 +122,7 @@ class TavilyComponent(Component):
             return data_results
 
         except Exception as e:
-            error_message = f"Error: {str(e)}"
+            error_message = f"Error: {e!s}"
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
 
