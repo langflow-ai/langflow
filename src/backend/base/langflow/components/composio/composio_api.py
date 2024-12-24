@@ -222,11 +222,12 @@ class ComposioAPIComponent(LCToolComponent):
         return self.app_names.replace(" ✅", "").replace("_connected", "")
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:  # noqa: ARG002
-        # First, ensure all dynamic fields are hidden by default
+        # Update the available apps options from the API
         if hasattr(self, "app_names") and self.app_names != "":
             toolset = self._build_wrapper()
             build_config["app_names"]["options"] = list(App.iter())
 
+        # First, ensure all dynamic fields are hidden by default
         dynamic_fields = ["app_credentials", "username", "auth_link", "auth_status", "action_names"]
         for field in dynamic_fields:
             if field in build_config:
