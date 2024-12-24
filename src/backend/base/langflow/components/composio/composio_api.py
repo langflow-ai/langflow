@@ -223,7 +223,7 @@ class ComposioAPIComponent(LCToolComponent):
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:  # noqa: ARG002
         # Update the available apps options from the API
-        if hasattr(self, "app_names") and self.app_names != "":
+        if hasattr(self, "api_key") and self.api_key != "":
             toolset = self._build_wrapper()
             build_config["app_names"]["options"] = list(App.iter())
 
