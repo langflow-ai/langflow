@@ -1,8 +1,8 @@
-from typing import Any
 import httpx
+
 from langflow.custom import Component
 from langflow.helpers.data import data_to_text
-from langflow.io import Output, MultilineInput
+from langflow.io import MultilineInput, Output
 from langflow.schema import Data
 from langflow.schema.message import Message
 
@@ -37,16 +37,16 @@ class WikidataComponent(Component):
                 "search": self.query,
                 "language": "en",
             }
-            
+
             # Send request to Wikidata API
             wikidata_api_url = "https://www.wikidata.org/w/api.php"
             response = httpx.get(wikidata_api_url, params=params)
             response.raise_for_status()
             response_json = response.json()
-            
+
             # Extract search results
             results = response_json.get("search", [])
-            
+
             if not results:
                 return [Data(data={"error": "No search results found for the given query."})]
 
@@ -60,16 +60,16 @@ class WikidataComponent(Component):
                         "url": result.get("url"),
                         "description": result.get("description", ""),
                         "concepturi": result.get("concepturi"),
-                    }
+                    },
                 )
                 for result in results
             ]
-            
+
             self.status = data
             return data
 
         except Exception as e:
-            error_message = f"Error in Wikidata Search API: {str(e)}"
+            error_message = f"Error in Wikidata Search API: {e!s}"
             return [Data(data={"error": error_message})]
 
     def fetch_content_text(self) -> Message:
