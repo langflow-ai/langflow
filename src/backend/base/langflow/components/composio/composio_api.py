@@ -223,8 +223,9 @@ class ComposioAPIComponent(LCToolComponent):
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:  # noqa: ARG002
         # First, ensure all dynamic fields are hidden by default
-        toolset = self._build_wrapper()
-        build_config["app_names"]["options"] = list(App.iter())
+        if hasattr(self, "app_names") and self.app_names != "":
+            toolset = self._build_wrapper()
+            build_config["app_names"]["options"] = list(App.iter())
 
         dynamic_fields = ["app_credentials", "username", "auth_link", "auth_status", "action_names"]
         for field in dynamic_fields:
