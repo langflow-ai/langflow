@@ -1,10 +1,10 @@
 const SvgLangwatch = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width="380"
-    height="520"
+    width="1080"
+    height="1080"
     fill="none"
-    viewBox="0 0 38 52"
+    viewBox="0 0 1080 1080"
     {...props}
   >
     <g
