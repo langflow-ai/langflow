@@ -118,7 +118,7 @@ test(
     await parseDataOutput.hover();
     await page.mouse.down();
     const chatOutputInput = await page.getByTestId(
-      "handle-chatoutput-shownode-text-left",
+      "handle-chatoutput-noshownode-text-target",
     );
     await chatOutputInput.hover();
     await page.mouse.up();
