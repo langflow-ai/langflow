@@ -30,6 +30,9 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("sidebar-search-input").click();
+
+    await adjustScreenView(page, { numberOfZoomOut: 4 });
+
     await page.getByTestId("sidebar-search-input").fill("chat output");
 
     await page.waitForSelector('[data-testid="outputsChat Output"]', {
@@ -38,11 +41,9 @@ test(
 
     await page
       .getByTestId("outputsChat Output")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
-
-    await adjustScreenView(page, { numberOfZoomOut: 1 });
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 0, y: 0 },
+      });
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat input");
@@ -52,21 +53,28 @@ test(
 
     await page
       .getByTestId("inputsChat Input")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 50, y: 200 },
+      });
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai");
 
-    await adjustScreenView(page, { numberOfZoomOut: 1 });
-
     await page
       .getByTestId("modelsOpenAI")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 300, y: 200 },
+      });
 
+    await page.getByTestId("fit_view").click();
+
+    await page.getByTestId("title-Chat Input").click();
+    await page.keyboard.press("ControlOrMeta+.");
+
+    await page.getByTestId("title-Chat Output").click();
+    await page.keyboard.press("ControlOrMeta+.");
+
+    await initialGPTsetup(page);
     await initialGPTsetup(page);
 
     await page.waitForSelector('[data-testid="fit_view"]', {
@@ -74,10 +82,8 @@ test(
       state: "visible",
     });
 
-    await page.getByTestId("fit_view").click();
-
     const elementsChatInput = await page
-      .locator('[data-testid="handle-chatinput-noshownode-message-source"]')
+      .locator('[data-testid="handle-chatinput-shownode-message-right"]')
       .all();
 
     let visibleElementHandle;
@@ -88,8 +94,6 @@ test(
         break;
       }
     }
-
-    await page.locator(".react-flow__pane").click();
 
     await visibleElementHandle.hover();
     await page.mouse.down();
@@ -119,24 +123,14 @@ test(
       }
     }
 
-    // Click and hold on the first element
-    await visibleElementHandle.hover();
-    await page.mouse.down();
-
-    // Move to the second element
-    const elementsChatOutput = await page
-      .getByTestId("handle-chatoutput-noshownode-text-target")
-      .all();
-
-    for (const element of elementsChatOutput) {
-      if (await element.isVisible()) {
-        visibleElementHandle = element;
-        break;
-      }
-    }
-
-    await visibleElementHandle.hover();
-    await page.mouse.up();
+    await page
+      .getByTestId("handle-chatoutput-shownode-text-left")
+      .first()
+      .click();
+    await page
+      .getByTestId("handle-openaimodel-shownode-text-right")
+      .first()
+      .click();
 
     await page.getByTestId("fit_view").click();
     await page.getByText("Playground", { exact: true }).last().click();

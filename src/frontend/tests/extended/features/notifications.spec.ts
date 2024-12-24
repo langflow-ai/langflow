@@ -22,6 +22,10 @@ test(
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-chat-input").click();
+
+        await page.getByTestId("title-Chat Input").click();
+        await page.keyboard.press("ControlOrMeta+.");
+
         await page.getByTestId("button_run_chat input").click();
       });
 
