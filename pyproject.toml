@@ -117,6 +117,8 @@ dependencies = [
     "crewai~=0.86.0",
     "ag2",
     "pydantic-ai>=0.0.12",
+    "gliner>=0.2.13",
+    "keybert>=0.8.5",
 ]
 
 [project.urls]
