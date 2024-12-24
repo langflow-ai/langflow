@@ -2,11 +2,11 @@ from .character import CharacterTextSplitterComponent
 from .conversation import ConversationChainComponent
 from .csv import CSVAgentComponent
 from .fake_embeddings import FakeEmbeddingsComponent
-from .html_link_extractor import HtmlLinkExtractorComponent
 from .gliner_link_extractor import GlinerLinkExtractorComponent
-from .keybert_link_extractor import KeybertLinkExtractorComponent
+from .html_link_extractor import HtmlLinkExtractorComponent
 from .json import JsonAgentComponent
 from .json_document_builder import JSONDocumentBuilder
+from .keybert_link_extractor import KeybertLinkExtractorComponent
 from .langchain_hub import LangChainHubPromptComponent
 from .language_recursive import LanguageRecursiveTextSplitterComponent
 from .language_semantic import SemanticTextSplitterComponent
@@ -35,11 +35,11 @@ __all__ = [
     "CharacterTextSplitterComponent",
     "ConversationChainComponent",
     "FakeEmbeddingsComponent",
-    "HtmlLinkExtractorComponent",
     "GlinerLinkExtractorComponent",
-    "KeybertLinkExtractorComponent",
+    "HtmlLinkExtractorComponent",
     "JSONDocumentBuilder",
     "JsonAgentComponent",
+    "KeybertLinkExtractorComponent",
     "LLMCheckerChainComponent",
     "LLMMathChainComponent",
     "LangChainHubPromptComponent",
