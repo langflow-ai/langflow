@@ -11,21 +11,13 @@ class IteratorComponent(Component):
     icon = "infinity"
 
     inputs = [
-        DataInput(
-            name="data",
-            display_name="Data",
-            info="The initial list of Data objects to iterate over."
-        ),
-        DataInput(
-            name="loop",
-            display_name="Loop Input",
-            info="Data to aggregate during the iteration."
-        )
+        DataInput(name="data", display_name="Data", info="The initial list of Data objects to iterate over."),
+        DataInput(name="loop", display_name="Loop Input", info="Data to aggregate during the iteration."),
     ]
 
     outputs = [
         Output(display_name="Item", name="item", method="item_output"),
-        Output(display_name="Done", name="done", method="done_output")
+        Output(display_name="Done", name="done", method="done_output"),
     ]
 
     def initialize_data(self):
@@ -40,12 +32,14 @@ class IteratorComponent(Component):
                 raise ValueError("The 'data' input must be a list of Data objects or a single Data object.")
 
             # Store the initial data and context variables
-            self.update_ctx({
-                f"{self._id}_data": data_list,
-                f"{self._id}_index": 0,
-                f"{self._id}_aggregated": [],
-                f"{self._id}_initialized": True
-            })
+            self.update_ctx(
+                {
+                    f"{self._id}_data": data_list,
+                    f"{self._id}_index": 0,
+                    f"{self._id}_aggregated": [],
+                    f"{self._id}_initialized": True,
+                }
+            )
 
     def item_output(self) -> Data:
         """Output the next item in the list."""
@@ -61,10 +55,9 @@ class IteratorComponent(Component):
             self.update_ctx({f"{self._id}_index": current_index + 1})
             print("item_output:", current_item)
             return current_item
-        else:
-            # No more items to output
-            self.stop("item")
-            return
+        # No more items to output
+        self.stop("item")
+        return None
 
     def done_output(self) -> Data:
         """Return the aggregated list once all items are processed."""
@@ -85,7 +78,6 @@ class IteratorComponent(Component):
         if len(aggregated) >= len(data_list):
             print("done_output:", aggregated)
             return [data for data in aggregated]
-        else:
-            # Not all items have been processed yet
-            self.stop("done")
-            return
+        # Not all items have been processed yet
+        self.stop("done")
+        return None
