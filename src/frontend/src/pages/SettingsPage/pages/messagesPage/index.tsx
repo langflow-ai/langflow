@@ -1,5 +1,5 @@
 import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
-import SessionView from "@/modals/IOModal/components/SessionView";
+import SessionView from "@/modals/IOModal/components/session-view";
 import HeaderMessagesComponent from "./components/headerMessages";
 
 export default function MessagesPage() {

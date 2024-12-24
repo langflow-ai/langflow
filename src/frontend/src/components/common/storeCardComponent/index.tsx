@@ -1,8 +1,6 @@
 import { usePostLikeComponent } from "@/controllers/API/queries/store";
 import { useState } from "react";
 import { getComponent } from "../../../controllers/API";
-import IOModalOld from "../../../modals/IOModal";
-import IOModalNew from "../../../modals/IOModal/newModal";
 import useAlertStore from "../../../stores/alertStore";
 import useFlowsManagerStore from "../../../stores/flowsManagerStore";
 import { useStoreStore } from "../../../stores/storeStore";

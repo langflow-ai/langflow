@@ -14,8 +14,6 @@ export type ChatViewWrapperProps = {
   messagesFetched: boolean;
   sessionId: string;
   sendMessage: (options: { repeat: number; files?: string[] }) => Promise<void>;
-  chatValue: string;
-  setChatValue: (value: string) => void;
   lockChat: boolean;
   setLockChat: (locked: boolean) => void;
   canvasOpen: boolean | undefined;

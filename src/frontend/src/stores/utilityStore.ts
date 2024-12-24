@@ -3,6 +3,8 @@ import { UtilityStoreType } from "@/types/zustand/utility";
 import { create } from "zustand";
 
 export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
+  chatValueStore: "",
+  setChatValueStore: (value: string) => set({ chatValueStore: value }),
   selectedItems: [],
   setSelectedItems: (itemId) => {
     if (get().selectedItems.includes(itemId)) {

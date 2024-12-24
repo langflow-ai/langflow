@@ -1,6 +1,6 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
-import IOModal from "@/modals/IOModal/newModal";
+import IOModal from "@/modals/IOModal/new-modal";
 
 const PlaygroundButton = ({ hasIO, open, setOpen, canvasOpen }) => {
   const PlayIcon = () => (
