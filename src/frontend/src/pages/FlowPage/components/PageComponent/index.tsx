@@ -263,8 +263,8 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
       ) {
         takeSnapshot();
         paste(lastCopiedSelection, {
-          x: position.current.x,
-          y: position.current.y,
+          x: position.current.x + Math.random() * 100,
+          y: position.current.y + Math.random() * 100,
         });
       }
     }
