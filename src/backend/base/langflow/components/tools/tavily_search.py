@@ -117,14 +117,21 @@ class TavilyComponent(Component):
 
             if self.include_images and search_results.get("images"):
                 data_results.append(Data(text="Images found", data={"images": search_results["images"]}))
-
-            self.status = data_results
-            return data_results
-
-        except Exception as e:
-            error_message = f"Error: {e!s}"
+        except httpx.HTTPStatusError as exc:
+            error_message = f"HTTP error occurred: {exc.response.status_code} - {exc.response.text}"
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
+        except httpx.RequestError as exc:
+            error_message = f"Request error occurred: {exc}"
+            logger.error(error_message)
+            return [Data(text=error_message, data={"error": error_message})]
+        except ValueError as exc:
+            error_message = f"Invalid response format: {exc}"
+            logger.error(error_message)
+            return [Data(text=error_message, data={"error": error_message})]
+        else:
+            self.status = data_results
+            return data_results
 
     def fetch_content_text(self) -> Message:
         data = self.fetch_content()
