@@ -1,4 +1,5 @@
 import httpx
+from httpx import HTTPError
 
 from langflow.custom import Component
 from langflow.helpers.data import data_to_text
@@ -66,11 +67,17 @@ class WikidataComponent(Component):
             ]
 
             self.status = data
-            return data
-
-        except Exception as e:
-            error_message = f"Error in Wikidata Search API: {e!s}"
+        except HTTPError as e:
+            error_message = f"HTTP Error in Wikidata Search API: {e!s}"
             return [Data(data={"error": error_message})]
+        except KeyError as e:
+            error_message = f"Data parsing error in Wikidata API response: {e!s}"
+            return [Data(data={"error": error_message})]
+        except ValueError as e:
+            error_message = f"Value error in Wikidata API: {e!s}"
+            return [Data(data={"error": error_message})]
+        else:
+            return data
 
     def fetch_content_text(self) -> Message:
         data = self.fetch_content()
