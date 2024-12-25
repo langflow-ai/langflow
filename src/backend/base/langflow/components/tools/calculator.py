@@ -37,8 +37,8 @@ class CalculatorToolComponent(Component):
             ast.Div: operator.truediv,
             ast.Pow: operator.pow,
         }
-        if isinstance(node, ast.Num):
-            return node.n
+        if isinstance(node, (ast.Constant, ast.Num)):  # Support both for backwards compatibility
+            return node.value if isinstance(node, ast.Constant) else node.n
         if isinstance(node, ast.BinOp):
             return operators[type(node.op)](self._eval_expr(node.left), self._eval_expr(node.right))
         if isinstance(node, ast.UnaryOp):
