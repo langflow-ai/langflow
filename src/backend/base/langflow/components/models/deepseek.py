@@ -10,7 +10,7 @@ from langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, Secre
 DEEPSEEK_MODELS = ["deepseek-chat"]
 
 
-class DeepSeekModel(LCModelComponent):
+class DeepSeekModelComponent(LCModelComponent):
     display_name = "DeepSeek"
     description = "Generate text using DeepSeek LLMs."
     icon = "DeepSeek"
