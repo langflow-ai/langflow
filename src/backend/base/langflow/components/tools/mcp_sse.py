@@ -1,4 +1,5 @@
 # from langflow.field_typing import Data
+import asyncio
 from contextlib import AsyncExitStack
 
 import httpx
@@ -35,20 +36,24 @@ class MCPSseClient:
         return url  # Return the original URL if no redirect
 
     async def connect_to_server(
-        self, url: str, headers: dict[str, str] | None, timeout: int = 500, sse_read_timeout: int = 500
+        self, url: str, headers: dict[str, str] | None, timeout_seconds: int = 500, sse_read_timeout_seconds: int = 500
     ):
         if headers is None:
             headers = {}
         url = await self.pre_check_redirect(url)
-        sse_transport = await self.exit_stack.enter_async_context(sse_client(url, headers, timeout, sse_read_timeout))
-        self.sse, self.write = sse_transport
-        self.session = await self.exit_stack.enter_async_context(ClientSession(self.sse, self.write))
 
-        await self.session.initialize()
+        async with asyncio.timeout(timeout_seconds):
+            sse_transport = await self.exit_stack.enter_async_context(
+                sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds)
+            )
+            self.sse, self.write = sse_transport
+            self.session = await self.exit_stack.enter_async_context(ClientSession(self.sse, self.write))
 
-        # List available tools
-        response = await self.session.list_tools()
-        return response.tools
+            await self.session.initialize()
+
+            # List available tools
+            response = await self.session.list_tools()
+            return response.tools
 
 
 class MCPSse(Component):
@@ -88,7 +93,7 @@ class MCPSse(Component):
                     name=tool.name,  # maybe format this
                     description=tool.description,
                     coroutine=create_tool_coroutine(tool.name, args_schema, self.client.session),
-                    func=create_tool_func(tool.name, args_schema, self.client.session),
+                    func=create_tool_func(tool.name, self.client.session),
                 )
             )
 

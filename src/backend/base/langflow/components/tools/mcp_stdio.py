@@ -116,7 +116,7 @@ class MCPStdio(Component):
                     name=tool.name,
                     description=tool.description,
                     coroutine=create_tool_coroutine(tool.name, args_schema, self.client.session),
-                    func=create_tool_func(tool.name, args_schema, self.client.session),
+                    func=create_tool_func(tool.name, args_schema),
                 )
             )
         self.tool_names = [tool.name for tool in self.tools]
