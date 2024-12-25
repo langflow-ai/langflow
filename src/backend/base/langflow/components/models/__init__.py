@@ -4,6 +4,7 @@ from .anthropic import AnthropicModelComponent
 from .azure_openai import AzureChatOpenAIComponent
 from .baidu_qianfan_chat import QianfanChatEndpointComponent
 from .cohere import CohereComponent
+from .deepseek import DeepseekModelComponent
 from .google_generative_ai import GoogleGenerativeAIComponent
 from .groq import GroqModel
 from .huggingface import HuggingFaceEndpointsComponent
@@ -17,7 +18,6 @@ from .openrouter import OpenRouterComponent
 from .perplexity import PerplexityComponent
 from .sambanova import SambaNovaComponent
 from .vertexai import ChatVertexAIComponent
-from .deepseek import DeepseekModelComponent
 
 __all__ = [
     "AIMLModelComponent",

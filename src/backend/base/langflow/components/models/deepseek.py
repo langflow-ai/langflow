@@ -1,12 +1,14 @@
 import requests
 from pydantic.v1 import SecretStr
 from typing_extensions import override
+
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.inputs import DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput, BoolInput
+from langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
 
 DEEPSEEK_MODELS = ["deepseek-chat"]
+
 
 class DeepSeekModel(LCModelComponent):
     display_name = "DeepSeek"
@@ -41,27 +43,22 @@ class DeepSeekModel(LCModelComponent):
             info="DeepSeek model to use",
             options=DEEPSEEK_MODELS,
             value="deepseek-chat",
-            refresh_button=True
+            refresh_button=True,
         ),
         StrInput(
             name="api_base",
             display_name="DeepSeek API Base",
             advanced=True,
             info="Base URL for API requests. Defaults to https://api.deepseek.com",
-            value="https://api.deepseek.com"
+            value="https://api.deepseek.com",
         ),
-        SecretStrInput(
-            name="api_key",
-            display_name="DeepSeek API Key",
-            info="The DeepSeek API Key",
-            advanced=False
-        ),
+        SecretStrInput(name="api_key", display_name="DeepSeek API Key", info="The DeepSeek API Key", advanced=False),
         SliderInput(
             name="temperature",
             display_name="Temperature",
             info="Controls randomness in responses",
             value=1.0,
-            range_spec=RangeSpec(min=0, max=2, step=0.01)
+            range_spec=RangeSpec(min=0, max=2, step=0.01),
         ),
         IntInput(
             name="seed",
@@ -77,11 +74,8 @@ class DeepSeekModel(LCModelComponent):
             return DEEPSEEK_MODELS
 
         url = f"{self.api_base}/models"
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Accept": "application/json"
-        }
-        
+        headers = {"Authorization": f"Bearer {self.api_key}", "Accept": "application/json"}
+
         try:
             response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
@@ -126,6 +120,7 @@ class DeepSeekModel(LCModelComponent):
         """Get message from DeepSeek API exception."""
         try:
             from openai import BadRequestError
+
             if isinstance(e, BadRequestError):
                 message = e.body.get("message")
                 if message:
