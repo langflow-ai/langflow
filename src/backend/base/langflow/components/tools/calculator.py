@@ -9,6 +9,7 @@ from langflow.io import Output
 from langflow.schema import Data
 from langflow.schema.message import Message
 
+
 class CalculatorToolComponent(Component):
     display_name = "Calculator"
     description = "Perform basic arithmetic operations on a given expression."
@@ -37,7 +38,7 @@ class CalculatorToolComponent(Component):
             ast.Div: operator.truediv,
             ast.Pow: operator.pow,
         }
-        if isinstance(node, (ast.Constant, ast.Num)):  # Support both for backwards compatibility
+        if isinstance(node, ast.Constant | ast.Num):  # Support both for backwards compatibility
             return node.value if isinstance(node, ast.Constant) else node.n
         if isinstance(node, ast.BinOp):
             return operators[type(node.op)](self._eval_expr(node.left), self._eval_expr(node.right))
@@ -82,8 +83,7 @@ class CalculatorToolComponent(Component):
         data = self.evaluate_expression()
         if "result" in data.data:
             return Message(text=str(data.data["result"]))
-        else:
-            return Message(text=str(data.data["error"]))
+        return Message(text=str(data.data["error"]))
 
     def build(self):
         return self.evaluate_expression
