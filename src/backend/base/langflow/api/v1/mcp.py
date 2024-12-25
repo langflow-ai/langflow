@@ -286,17 +286,11 @@ sse = SseServerTransport("/api/v1/mcp/")
 
 
 def find_validation_error(exc):
-    """Recursively searches for a pydantic.ValidationError in nested exceptions."""
-    if isinstance(exc, pydantic.ValidationError):
-        return exc
-
-    # Check for nested exceptions in __cause__ or __context__
-    if hasattr(exc, "__cause__") and exc.__cause__:
-        return find_validation_error(exc.__cause__)
-    if hasattr(exc, "__context__") and exc.__context__:
-        return find_validation_error(exc.__context__)
-
-    # No validation error found
+    """Searches for a pydantic.ValidationError in the exception chain."""
+    while exc:
+        if isinstance(exc, pydantic.ValidationError):
+            return exc
+        exc = getattr(exc, "__cause__", None) or getattr(exc, "__context__", None)
     return None
 
 
