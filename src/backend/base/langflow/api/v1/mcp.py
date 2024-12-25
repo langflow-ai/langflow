@@ -3,6 +3,7 @@ import base64
 import json
 import logging
 import traceback
+from contextlib import suppress
 from contextvars import ContextVar
 from typing import Annotated
 from urllib.parse import quote, unquote, urlparse
@@ -260,10 +261,8 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                     return collected_results
                 finally:
                     progress_task.cancel()
-                    try:
+                    with suppress(asyncio.CancelledError):
                         await progress_task
-                    except asyncio.CancelledError:
-                        pass
             except Exception as e:
                 msg = f"Error in async session: {e}"
                 logger.exception(msg)
