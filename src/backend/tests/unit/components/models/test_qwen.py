@@ -1,10 +1,10 @@
 import os
+
 import pytest
 from langchain_community.llms.tongyi import Tongyi
-
-from langflow.components.models.qwen import QwenModelComponent
 from langflow.base.models.qwen_constants import QWEN_MODEL_NAMES
-from openai import OpenAI
+from langflow.components.models.qwen import QwenModelComponent
+
 
 @pytest.fixture
 def qwen_credentials():
@@ -16,10 +16,7 @@ def qwen_credentials():
 
 
 @pytest.mark.api_key_required
-@pytest.mark.parametrize(
-    "model_name",
-    [QWEN_MODEL_NAMES[3]]
-)
+@pytest.mark.parametrize("model_name", QWEN_MODEL_NAMES)
 def test_qwen_different_models(qwen_credentials, model_name):
     """Test different Qwen models with a simple prompt."""
     component = QwenModelComponent()
@@ -31,13 +28,9 @@ def test_qwen_different_models(qwen_credentials, model_name):
     assert isinstance(model, Tongyi)
 
     try:
-        response = model.invoke(input =[
-            {'role': 'system', 'content': 'You are a helpful assistant.'},
-            {'role': 'user', 'content': 'Who are you?'}])
-        print(response)
-        # assert response is not None
-        # if model_name != "qwen-long":
-        #     assert len(str(response)) > 0
+        response = model.invoke("Who are you?")
+        assert isinstance(response, str)
+        assert len(response) > 0
     except ValueError as e:
         pytest.fail(f"Model {model_name} failed with error: {e!s}")
 
@@ -51,6 +44,6 @@ def test_qwen_nonexistent_model(qwen_credentials):
     model = component.build_model()
     assert isinstance(model, Tongyi)
 
-    # invoke should raise an error
-    with pytest.raises(ValueError):
+    # invoke should raise an error with a specific message
+    with pytest.raises(ValueError, match="status_code: 400 \n code: InvalidParameter \n message: Model not exist."):
         model.invoke("Say 'Hello' in Chinese")

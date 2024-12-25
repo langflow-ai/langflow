@@ -15,9 +15,9 @@ from .ollama import ChatOllamaComponent
 from .openai import OpenAIModelComponent
 from .openrouter import OpenRouterComponent
 from .perplexity import PerplexityComponent
+from .qwen import QwenModelComponent
 from .sambanova import SambaNovaComponent
 from .vertexai import ChatVertexAIComponent
-from .qwen import QwenModelComponent
 
 __all__ = [
     "AIMLModelComponent",
@@ -38,6 +38,6 @@ __all__ = [
     "OpenRouterComponent",
     "PerplexityComponent",
     "QianfanChatEndpointComponent",
-    "SambaNovaComponent",
     "QwenModelComponent",
+    "SambaNovaComponent",
 ]
