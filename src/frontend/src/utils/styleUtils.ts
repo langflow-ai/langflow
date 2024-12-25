@@ -284,6 +284,7 @@ import { OllamaIcon } from "../icons/Ollama";
 import { OpenAiIcon } from "../icons/OpenAi";
 import { OpenRouterIcon } from "../icons/OpenRouter";
 import { OpenSearch } from "../icons/OpenSearch";
+import { DeepSeekIcon } from "../icons/DeepSeek";
 import { PineconeIcon } from "../icons/Pinecone";
 import { PostgresIcon } from "../icons/Postgres";
 import { PythonIcon } from "../icons/Python";
@@ -668,6 +669,7 @@ export const nodeIconsLucide: iconsType = {
   AzureChatOpenAI: OpenAiIcon,
   OpenAI: OpenAiIcon,
   OpenRouter: OpenRouterIcon,
+  DeepSeek: DeepSeekIcon,
   OpenAIEmbeddings: OpenAiIcon,
   Pinecone: PineconeIcon,
   Qdrant: QDrantIcon,
