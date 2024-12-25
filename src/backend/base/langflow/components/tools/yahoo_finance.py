@@ -3,16 +3,14 @@ import pprint
 from enum import Enum
 
 import yfinance as yf
-from langchain.tools import StructuredTool
 from langchain_core.tools import ToolException
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from langflow.custom import Component
-from langflow.field_typing import Tool
 from langflow.inputs import DropdownInput, IntInput, MessageTextInput
-from langflow.schema import Data
 from langflow.io import Output
+from langflow.schema import Data
 from langflow.schema.message import Message
 
 
@@ -70,7 +68,6 @@ to access financial data and market information from Yahoo Finance."""
             info="The type of data to retrieve.",
             options=list(YahooFinanceMethod),
             value="get_news",
-            tool_mode=True,
         ),
         IntInput(
             name="num_news",
@@ -91,7 +88,7 @@ to access financial data and market information from Yahoo Finance."""
     def fetch_content(self) -> list[Data]:
         return self._yahoo_finance_tool(
             self.symbol,
-            self.method,
+            YahooFinanceMethod(self.method),
             self.num_news,
         )
 
@@ -122,7 +119,10 @@ to access financial data and market information from Yahoo Finance."""
             result = pprint.pformat(result)
 
             if method == YahooFinanceMethod.GET_NEWS:
-                data_list = [Data(text=f"{article['title']}: {article['link']}", data=article) for article in ast.literal_eval(result)]
+                data_list = [
+                    Data(text=f"{article['title']}: {article['link']}", data=article)
+                    for article in ast.literal_eval(result)
+                ]
             else:
                 data_list = [Data(text=result, data={"result": result})]
 
