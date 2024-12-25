@@ -282,6 +282,7 @@ import { NotionIcon } from "../icons/Notion";
 import { NvidiaIcon } from "../icons/Nvidia";
 import { OllamaIcon } from "../icons/Ollama";
 import { OpenAiIcon } from "../icons/OpenAi";
+import { GigaChatIcon } from "../icons/GigaChat";
 import { OpenRouterIcon } from "../icons/OpenRouter";
 import { OpenSearch } from "../icons/OpenSearch";
 import { PineconeIcon } from "../icons/Pinecone";
@@ -665,6 +666,7 @@ export const nodeIconsLucide: iconsType = {
   Needle: NeedleIcon,
   NVIDIA: NvidiaIcon,
   ChatOpenAI: OpenAiIcon,
+  GigaChat: GigaChatIcon,
   AzureChatOpenAI: OpenAiIcon,
   OpenAI: OpenAiIcon,
   OpenRouter: OpenRouterIcon,

@@ -13,6 +13,7 @@ from .mistral import MistralAIModelComponent
 from .nvidia import NVIDIAModelComponent
 from .ollama import ChatOllamaComponent
 from .openai import OpenAIModelComponent
+from .gigachat import GigaChatComponent
 from .openrouter import OpenRouterComponent
 from .perplexity import PerplexityComponent
 from .sambanova import SambaNovaComponent
@@ -34,6 +35,7 @@ __all__ = [
     "MistralAIModelComponent",
     "NVIDIAModelComponent",
     "OpenAIModelComponent",
+    "GigaChatComponent",
     "OpenRouterComponent",
     "PerplexityComponent",
     "QianfanChatEndpointComponent",

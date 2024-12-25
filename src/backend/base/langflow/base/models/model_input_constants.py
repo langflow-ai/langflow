@@ -7,6 +7,7 @@ from langflow.components.models.azure_openai import AzureChatOpenAIComponent
 from langflow.components.models.groq import GroqModel
 from langflow.components.models.nvidia import NVIDIAModelComponent
 from langflow.components.models.openai import OpenAIModelComponent
+from langflow.components.models.gigachat import GigaChatComponent
 from langflow.inputs.inputs import InputTypes, SecretStrInput
 
 
@@ -51,6 +52,17 @@ def _get_openai_inputs_and_fields():
         msg = "OpenAI is not installed. Please install it with `pip install langchain-openai`."
         raise ImportError(msg) from e
     return openai_inputs, {input_.name: input_ for input_ in openai_inputs}
+
+
+def _get_gigachat_inputs_and_fields():
+    try:
+        from langflow.components.models.gigachat import GigaChatComponent
+
+        gigachat_inputs = get_filtered_inputs(GigaChatComponent)
+    except ImportError as e:
+        msg = "GigaChat is not installed. Please install it with `pip install langchain-gigachat`."
+        raise ImportError(msg) from e
+    return gigachat_inputs, {input_.name: input_ for input_ in gigachat_inputs}
 
 
 def _get_azure_inputs_and_fields():
@@ -118,6 +130,17 @@ try:
         "inputs": openai_inputs,
         "prefix": "",
         "component_class": OpenAIModelComponent(),
+    }
+except ImportError:
+    pass
+
+try:
+    gigachain_inputs, gigachat_fields = _get_gigachat_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["OpenAI"] = {
+        "fields": gigachat_fields,
+        "inputs": gigachain_inputs,
+        "prefix": "",
+        "component_class": GigaChatComponent(),
     }
 except ImportError:
     pass
