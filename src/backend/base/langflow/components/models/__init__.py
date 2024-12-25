@@ -17,6 +17,7 @@ from .openrouter import OpenRouterComponent
 from .perplexity import PerplexityComponent
 from .sambanova import SambaNovaComponent
 from .vertexai import ChatVertexAIComponent
+from .deepseek import DeepseekModelComponent
 
 __all__ = [
     "AIMLModelComponent",
@@ -26,6 +27,7 @@ __all__ = [
     "ChatOllamaComponent",
     "ChatVertexAIComponent",
     "CohereComponent",
+    "DeepseekModelComponent",
     "GoogleGenerativeAIComponent",
     "GroqModel",
     "HuggingFaceEndpointsComponent",
