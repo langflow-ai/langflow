@@ -15,4 +15,6 @@ export type UtilityStoreType = {
   setTags: (tags: Tag[]) => void;
   featureFlags: Record<string, any>;
   setFeatureFlags: (featureFlags: Record<string, any>) => void;
+  chatValueStore: string;
+  setChatValueStore: (value: string) => void;
 };
