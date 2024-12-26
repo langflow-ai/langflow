@@ -64,8 +64,8 @@ test(
     await page
       .getByTestId("modelsOpenAI")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
     await page.mouse.down();
+    await page.mouse.up();
 
     await initialGPTsetup(page);
 
