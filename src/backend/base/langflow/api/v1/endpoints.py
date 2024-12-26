@@ -258,7 +258,6 @@ async def simplified_run_flow(
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
-    request: Request,
 ):
     """Executes a specified flow by ID with support for streaming and telemetry.
 
@@ -296,7 +295,6 @@ async def simplified_run_flow(
     if flow is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
     start_time = time.perf_counter()
-    logger.info(f"Request: {request}")
 
     if stream:
         asyncio_queue: asyncio.Queue = asyncio.Queue()
