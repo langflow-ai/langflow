@@ -19,11 +19,11 @@ class SequentialCrewComponent(BaseCrewComponent):
 
     @property
     def agents(self: 'SequentialCrewComponent') -> list[Agent]:
-        # Deriva os agentes diretamente das tarefas vinculadas
+        # Derive agents directly from linked tasks
         return [task.agent for task in self.tasks if hasattr(task, 'agent')]
 
     def get_tasks_and_agents(self, agents_list=None) -> tuple[list[Task], list[Agent]]:
-        # Usa a propriedade agents para derivar agentes
+        # Use the agents property to derive agents
         if not agents_list:
             existing_agents = self.agents
             agents_list = existing_agents + (agents_list or [])
