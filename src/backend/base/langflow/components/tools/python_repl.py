@@ -1,96 +1,119 @@
+import ast
 import importlib
 
-from langchain.tools import StructuredTool
-from langchain_core.tools import ToolException
 from langchain_experimental.utilities import PythonREPL
-from loguru import logger
-from pydantic import BaseModel, Field
 
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.field_typing import Tool
-from langflow.inputs import StrInput
+from langflow.custom import Component
+from langflow.io import CodeInput, Output
 from langflow.schema import Data
 
 
-class PythonREPLToolComponent(LCToolComponent):
+class PythonREPLToolComponent(Component):
     display_name = "Python REPL"
-    description = "A tool for running Python code in a REPL environment."
-    name = "PythonREPLTool"
+    description = "A tool for running Python code in a REPL environment with dynamic imports."
     icon = "Python"
+    name = "PythonREPL"
 
     inputs = [
-        StrInput(
-            name="name",
-            display_name="Tool Name",
-            info="The name of the tool.",
-            value="python_repl",
-        ),
-        StrInput(
-            name="description",
-            display_name="Tool Description",
-            info="A description of the tool.",
-            value="A Python shell. Use this to execute python commands. "
-            "Input should be a valid python command. "
-            "If you want to see the output of a value, you should print it out with `print(...)`.",
-        ),
-        StrInput(
-            name="global_imports",
-            display_name="Global Imports",
-            info="A comma-separated list of modules to import globally, e.g. 'math,numpy'.",
-            value="math",
-        ),
-        StrInput(
-            name="code",
+        CodeInput(
+            name="python_code",
             display_name="Python Code",
-            info="The Python code to execute.",
+            info="The Python code to execute. Supports both 'import' and 'from import' statements.",
             value="print('Hello, World!')",
+            tool_mode=True,
         ),
     ]
 
-    class PythonREPLSchema(BaseModel):
-        code: str = Field(..., description="The Python code to execute.")
+    outputs = [
+        Output(
+            display_name="Results",
+            name="results",
+            type_=Data,
+            method="run_python_repl",
+        ),
+    ]
 
-    def get_globals(self, global_imports: str | list[str]) -> dict:
-        global_dict = {}
-        if isinstance(global_imports, str):
-            modules = [module.strip() for module in global_imports.split(",")]
-        elif isinstance(global_imports, list):
-            modules = global_imports
+    def extract_imports_and_names(self, code: str) -> tuple[set[str], dict[str, set[str]]]:
+        """Extract both regular imports and from-imports from the code.
+
+        Returns a tuple of (regular_imports, from_imports) where from_imports is a dict
+        mapping module names to sets of imported names.
+        """
+        try:
+            tree = ast.parse(code)
+            regular_imports: set[str] = set()
+            from_imports: dict[str, set[str]] = {}
+
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        regular_imports.add(alias.name.split(".")[0])
+                elif isinstance(node, ast.ImportFrom):
+                    if node.module:
+                        module_name = node.module.split(".")[0]
+                        if module_name not in from_imports:
+                            from_imports[module_name] = set()
+                        for alias in node.names:
+                            from_imports[module_name].add(alias.name)
+                elif isinstance(node, ast.Name):
+                    regular_imports.add(node.id)
+        except SyntaxError:
+            self.log("Syntax error in code, could not extract imports and names")
+            return set(), {}
         else:
-            msg = "global_imports must be either a string or a list"
-            raise TypeError(msg)
+            return regular_imports, from_imports
 
-        for module in modules:
+    def get_globals(self, regular_imports: set[str], from_imports: dict[str, set[str]]) -> dict:
+        """Create a globals dictionary containing both regular imports and specific imports from modules."""
+        global_dict = {}
+
+        # Handle regular imports
+        for name in regular_imports:
             try:
-                imported_module = importlib.import_module(module)
-                global_dict[imported_module.__name__] = imported_module
-            except ImportError as e:
-                msg = f"Could not import module {module}"
-                raise ImportError(msg) from e
+                module = importlib.import_module(name)
+                global_dict[name] = module
+            except ImportError:
+                # If it's not a module, it might be a built-in or a name defined in the code
+                pass
+
+        # Handle from-imports
+        for module_name, names in from_imports.items():
+            try:
+                module = importlib.import_module(module_name)
+                for name in names:
+                    try:
+                        # Get the specific attribute from the module
+                        attr = getattr(module, name)
+                        global_dict[name] = attr
+                    except AttributeError:
+                        self.log(f"Could not import {name} from module {module_name}")
+            except ImportError:
+                self.log(f"Could not import module {module_name}")
+
         return global_dict
 
-    def build_tool(self) -> Tool:
-        globals_ = self.get_globals(self.global_imports)
-        python_repl = PythonREPL(_globals=globals_)
+    def run_python_repl(self) -> Data:
+        try:
+            # Extract both types of imports
+            regular_imports, from_imports = self.extract_imports_and_names(self.python_code)
 
-        def run_python_code(code: str) -> str:
-            try:
-                return python_repl.run(code)
-            except Exception as e:
-                logger.opt(exception=True).debug("Error running Python code")
-                raise ToolException(str(e)) from e
+            # Get global dictionary with all imported items
+            globals_ = self.get_globals(regular_imports, from_imports)
 
-        tool = StructuredTool.from_function(
-            name=self.name,
-            description=self.description,
-            func=run_python_code,
-            args_schema=self.PythonREPLSchema,
-        )
+            # Create PythonREPL with the global dictionary
+            python_repl = PythonREPL(_globals=globals_)
 
-        self.status = f"Python REPL Tool created with global imports: {self.global_imports}"
-        return tool
+            # Run the code
+            result = python_repl.run(self.python_code)
 
-    def run_model(self) -> list[Data]:
-        tool = self.build_tool()
-        result = tool.run(self.code)
-        return [Data(data={"result": result})]
+            # Remove any trailing newlines and whitespace
+            result = result.strip() if result else ""
+
+            return Data(data={"result": result})
+        except (ImportError, SyntaxError, NameError, TypeError, ValueError) as e:
+            self.log(f"Error running Python code: {e!s}")
+            error_message = str(e)
+            return Data(data={"error": error_message})
+
+    def build(self):
+        return self.run_python_repl
