@@ -22,6 +22,8 @@ test(
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-chat-input").click();
+        await page.getByTestId(/rf__node-ChatInput-/).click();
+        await page.keyboard.press('Control+.');
         await page.getByTestId("button_run_chat input").click();
       });
 
