@@ -3,6 +3,7 @@ from crewai import Agent, Crew, Process, Task
 from langflow.base.agents.crewai.crew import BaseCrewComponent
 from langflow.io import HandleInput
 from langflow.schema.message import Message
+from langflow.base.agents.crewai.crew import Agent
 
 
 class SequentialCrewComponent(BaseCrewComponent):
@@ -16,11 +17,17 @@ class SequentialCrewComponent(BaseCrewComponent):
         HandleInput(name="tasks", display_name="Tasks", input_types=["SequentialTask"], is_list=True),
     ]
 
-    def get_tasks_and_agents(self, agents_list=None) -> tuple[list[Task], list[Agent]]:
-        if not agents_list:
-            agents_list = [task.agent for task in self.tasks] or []
+    @property
+    def agents(self: 'SequentialCrewComponent') -> list[Agent]:
+        # Deriva os agentes diretamente das tarefas vinculadas
+        return [task.agent for task in self.tasks if hasattr(task, 'agent')]
 
-        # Use the superclass implementation, passing the customized agents_list
+    def get_tasks_and_agents(self, agents_list=None) -> tuple[list[Task], list[Agent]]:
+        # Usa a propriedade agents para derivar agentes
+        if not agents_list:
+            existing_agents = self.agents
+            agents_list = existing_agents + (agents_list or [])
+            
         return super().get_tasks_and_agents(agents_list=agents_list)
 
     def build_crew(self) -> Message:
