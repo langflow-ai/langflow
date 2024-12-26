@@ -3,7 +3,7 @@ from langflow.io import DataInput, Output
 from langflow.schema import Data
 
 
-class IteratorComponent(Component):
+class LoopComponent(Component):
     display_name = "Loop"
     description = (
         "Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs."
