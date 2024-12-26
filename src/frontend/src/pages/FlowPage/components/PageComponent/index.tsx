@@ -493,7 +493,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
 
   const handleEdgeClick = (event, edge) => {
     const color =
-      nodeColorsName[edge?.data?.targetHandle?.inputTypes[0]] || "cyan";
+      nodeColorsName[edge?.data?.sourceHandle?.output_types[0]] || "cyan";
 
     const accentColor = `hsl(var(--datatype-${color}))`;
     reactFlowWrapper.current?.style.setProperty("--selected", accentColor);

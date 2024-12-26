@@ -77,7 +77,7 @@ test(
     await page.getByTestId("fit_view").click();
 
     const elementsChatInput = await page
-      .locator('[data-testid="handle-chatinput-shownode-message-right"]')
+      .locator('[data-testid="handle-chatinput-noshownode-message-source"]')
       .all();
 
     let visibleElementHandle;
@@ -125,7 +125,7 @@ test(
 
     // Move to the second element
     const elementsChatOutput = await page
-      .getByTestId("handle-chatoutput-shownode-text-left")
+      .getByTestId("handle-chatoutput-noshownode-text-target")
       .all();
 
     for (const element of elementsChatOutput) {

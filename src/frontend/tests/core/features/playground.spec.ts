@@ -75,7 +75,7 @@ test(
     await page.getByTestId("zoom_out").click();
 
     const elementsChatInput = await page
-      .locator('[data-testid="handle-chatinput-shownode-message-right"]')
+      .locator('[data-testid="handle-chatinput-noshownode-message-source"]')
       .all();
 
     let visibleElementHandle;
@@ -133,7 +133,7 @@ test(
 
     //
     const elementsChatOutput = await page
-      .getByTestId("handle-chatoutput-shownode-text-left")
+      .getByTestId("handle-chatoutput-noshownode-text-target")
       .all();
 
     for (const element of elementsChatOutput) {
