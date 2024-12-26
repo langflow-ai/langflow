@@ -4143,7 +4143,7 @@ requires-dist = [
     { name = "langchain-cohere", specifier = "==0.3.3" },
     { name = "langchain-community", specifier = "~=0.3.10" },
     { name = "langchain-elasticsearch", specifier = "==0.3.0" },
-    { name = "langchain-gigachat", specifier = "==0.3.1" },
+    { name = "langchain-gigachat", specifier = "==0.3.2" },
     { name = "langchain-google-calendar-tools", specifier = "==0.0.1" },
     { name = "langchain-google-community", specifier = "==2.0.3" },
     { name = "langchain-google-genai", specifier = "==2.0.6" },
