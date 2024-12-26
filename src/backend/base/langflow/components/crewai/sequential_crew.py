@@ -1,9 +1,8 @@
 from crewai import Agent, Crew, Process, Task
 
-from langflow.base.agents.crewai.crew import BaseCrewComponent
+from langflow.base.agents.crewai.crew import Agent, BaseCrewComponent
 from langflow.io import HandleInput
 from langflow.schema.message import Message
-from langflow.base.agents.crewai.crew import Agent
 
 
 class SequentialCrewComponent(BaseCrewComponent):
@@ -18,16 +17,16 @@ class SequentialCrewComponent(BaseCrewComponent):
     ]
 
     @property
-    def agents(self: 'SequentialCrewComponent') -> list[Agent]:
+    def agents(self: "SequentialCrewComponent") -> list[Agent]:
         # Derive agents directly from linked tasks
-        return [task.agent for task in self.tasks if hasattr(task, 'agent')]
+        return [task.agent for task in self.tasks if hasattr(task, "agent")]
 
     def get_tasks_and_agents(self, agents_list=None) -> tuple[list[Task], list[Agent]]:
         # Use the agents property to derive agents
         if not agents_list:
             existing_agents = self.agents
             agents_list = existing_agents + (agents_list or [])
-            
+
         return super().get_tasks_and_agents(agents_list=agents_list)
 
     def build_crew(self) -> Message:
