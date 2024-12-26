@@ -73,8 +73,8 @@ test(
       timeout: 5000,
       state: "visible",
     });
-
-    await page.getByTestId("fit_view").click();
+    // This causes the Chat Input to be hidden
+    // await page.getByTestId("fit_view").click();
 
     const elementsChatInput = await page
       .locator('[data-testid="handle-chatinput-noshownode-message-source"]')
