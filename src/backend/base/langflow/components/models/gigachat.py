@@ -1,19 +1,16 @@
 from langchain_gigachat import GigaChat
 from pydantic.v1 import SecretStr
 
-from langflow.base.models.model import LCModelComponent
 from langflow.base.models.gigachat_constants import GIGACHAT_MODEL_NAMES
+from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs import (
-    BoolInput,
-    DictInput,
     DropdownInput,
     IntInput,
     SecretStrInput,
     SliderInput,
     StrInput,
-    BoolInput,
 )
 
 
@@ -80,16 +77,10 @@ class GigaChatComponent(LCModelComponent):
         max_tokens = self.max_tokens
         gigachat_user = self.gigachat_user
         password = self.password
-        gigachat_api_base = (
-            self.gigachat_api_base or None
-        )
+        gigachat_api_base = self.gigachat_api_base or None
 
-        gigachat_credentials = (
-            SecretStr(gigachat_credentials).get_secret_value()
-            if gigachat_credentials
-            else None
-        )
-        output = GigaChat(
+        gigachat_credentials = SecretStr(gigachat_credentials).get_secret_value() if gigachat_credentials else None
+        return GigaChat(
             credentials=gigachat_credentials,
             user=gigachat_user or None,
             password=password or None,
@@ -99,8 +90,6 @@ class GigaChatComponent(LCModelComponent):
             temperature=temperature if temperature is not None else 1.0,
             verify_ssl_certs=False,
         )
-
-        return output
 
     def _get_exception_message(self, e: Exception):
         """Get a message from an GigaChat exception.
