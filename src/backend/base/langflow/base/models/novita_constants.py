@@ -1,20 +1,35 @@
 NOVITA_MODELS = [
-    "distil-whisper-large-v3-en",  # HuggingFace
-    "gemma2-9b-it",  # Google
-    "gemma-7b-it",  # Google
-    "llama3-groq-70b-8192-tool-use-preview",  # Groq
-    "llama3-groq-8b-8192-tool-use-preview",  # Groq
-    "llama-3.1-70b-versatile",  # Meta
-    "llama-3.1-8b-instant",  # Meta
-    "llama-3.2-1b-preview",  # Meta
-    "llama-3.2-3b-preview",  # Meta
-    "llama-3.2-11b-vision-preview",  # Meta
-    "llama-3.2-90b-vision-preview",  # Meta
-    "llama-guard-3-8b",  # Meta
-    "llama3-70b-8192",  # Meta
-    "llama3-8b-8192",  # Meta
-    "mixtral-8x7b-32768",  # Mistral
-    "whisper-large-v3",  # OpenAI
-    "whisper-large-v3-turbo",  # OpenAI
+  "meta-llama/llama-3.3-70b-instruct",
+  "meta-llama/llama-3.1-8b-instruct",
+  "meta-llama/llama-3.1-8b-instruct-max",
+  "meta-llama/llama-3.1-70b-instruct",
+  "meta-llama/llama-3.1-405b-instruct",
+  "meta-llama/llama-3-8b-instruct",
+  "meta-llama/llama-3-70b-instruct",
+  "gryphe/mythomax-l2-13b",
+  "google/gemma-2-9b-it",
+  "mistralai/mistral-nemo",
+  "microsoft/wizardlm-2-8x22b",
+  "mistralai/mistral-7b-instruct",
+  "openchat/openchat-7b",
+  "nousresearch/hermes-2-pro-llama-3-8b",
+  "sao10k/l3-70b-euryale-v2.1",
+  "cognitivecomputations/dolphin-mixtral-8x22b",
+  "jondurbin/airoboros-l2-70b",
+  "lzlv_70b",
+  "nousresearch/nous-hermes-llama2-13b",
+  "teknium/openhermes-2.5-mistral-7b",
+  "sophosympatheia/midnight-rose-70b",
+  "Sao10K/L3-8B-Stheno-v3.2",
+  "sao10k/l3-8b-lunaris",
+  "qwen/qwen-2-vl-72b-instruct",
+  "meta-llama/llama-3.2-1b-instruct",
+  "meta-llama/llama-3.2-11b-vision-instruct",
+  "meta-llama/llama-3.2-3b-instruct",
+  "meta-llama/llama-3.1-8b-instruct-bf16",
+  "qwen/qwen-2.5-72b-instruct",
+  "sao10k/l31-70b-euryale-v2.2",
+  "qwen/qwen-2-7b-instruct",
+  "qwen/qwen-2-72b-instruct"
 ]
 MODEL_NAMES = NOVITA_MODELS  # reverse compatibility
