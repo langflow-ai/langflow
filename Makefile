@@ -73,7 +73,7 @@ install_frontend: ## install the frontend dependencies
 
 build_frontend: ## build the frontend static files
 	@echo 'Building frontend static files'
-	@cd src/frontend && CI='' npm run build > /dev/null 2>&1
+	@cd src/frontend && CI='' npm run build
 	$(call CLEAR_DIRS,src/backend/base/langflow/frontend)
 	@cp -r src/frontend/build/. src/backend/base/langflow/frontend
 
