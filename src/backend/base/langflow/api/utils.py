@@ -12,7 +12,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_current_active_user
-from langflow.services.database.models import User
+from langflow.services.database.models import User, MessageTable
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
@@ -283,6 +283,7 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None
     try:
         await session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id))
         await session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id))
+        await session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))
         await session.exec(delete(Flow).where(Flow.id == flow_id))
     except Exception as e:
         msg = f"Unable to cascade delete flow: ${flow_id}"
