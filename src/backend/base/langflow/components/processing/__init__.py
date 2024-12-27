@@ -4,7 +4,7 @@ from .create_data import CreateDataComponent
 from .extract_key import ExtractDataKeyComponent
 from .filter_data_values import DataFilterComponent
 from .json_cleaner import JSONCleaner
-from .merge_data import MergeDataComponent
+from .merge_data import DataCombinerComponent
 from .message_to_data import MessageToDataComponent
 from .parse_data import ParseDataComponent
 from .parse_json_data import ParseJSONDataComponent
@@ -19,7 +19,7 @@ __all__ = [
     "DataFilterComponent",
     "ExtractDataKeyComponent",
     "JSONCleaner",
-    "MergeDataComponent",
+    "DataCombinerComponent",
     "MessageToDataComponent",
     "ParseDataComponent",
     "ParseJSONDataComponent",
