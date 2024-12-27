@@ -1,4 +1,4 @@
-from langchain_community.llms.tongyi import Tongyi
+from langchain_community.chat_models.tongyi import ChatTongyi
 
 from langflow.base.models.model import LCModelComponent
 from langflow.base.models.qwen_constants import QWEN_MODEL_NAMES
@@ -49,5 +49,5 @@ class QwenModelComponent(LCModelComponent):
         model_name = self.model_name
         top_p = self.top_p
 
-        self.model = Tongyi(base_url=qwen_url, api_key=qwen_api_key, model=model_name, top_p=top_p)
+        self.model = ChatTongyi(base_url=qwen_url, api_key=qwen_api_key, model=model_name, top_p=top_p)
         return self.model

@@ -1,7 +1,7 @@
 import os
 
 import pytest
-from langchain_community.llms.tongyi import Tongyi
+from langchain_community.chat_models.tongyi import ChatTongyi
 from langflow.base.models.qwen_constants import QWEN_MODEL_NAMES
 from langflow.components.models.qwen import QwenModelComponent
 
@@ -25,12 +25,12 @@ def test_qwen_different_models(qwen_credentials, model_name):
 
     # Build the model
     model = component.build_model()
-    assert isinstance(model, Tongyi)
+    assert isinstance(model, ChatTongyi)
 
     try:
         response = model.invoke("Who are you?")
-        assert isinstance(response, str)
-        assert len(response) > 0
+        assert isinstance(response.content, str)
+        assert len(response.content) > 0
     except ValueError as e:
         pytest.fail(f"Model {model_name} failed with error: {e!s}")
 
@@ -42,7 +42,7 @@ def test_qwen_nonexistent_model(qwen_credentials):
     component.model_name = "nonexistent-model"
     component.qwen_api_key = qwen_credentials["api_key"]
     model = component.build_model()
-    assert isinstance(model, Tongyi)
+    assert isinstance(model, ChatTongyi)
 
     # invoke should raise an error with a specific message
     with pytest.raises(ValueError, match="status_code: 400 \n code: InvalidParameter \n message: Model not exist."):
