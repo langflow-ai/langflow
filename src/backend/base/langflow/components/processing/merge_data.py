@@ -1,15 +1,19 @@
 from enum import Enum
 from typing import cast
+
 from loguru import logger
+
 from langflow.custom import Component
 from langflow.io import DataInput, DropdownInput, Output
 from langflow.schema import DataFrame
+
 
 class DataOperation(str, Enum):
     CONCATENATE = "CONCATENATE"
     APPEND = "APPEND"
     MERGE = "MERGE"
     JOIN = "JOIN"
+
 
 class DataCombinerComponent(Component):
     display_name = "Data Combiner"
