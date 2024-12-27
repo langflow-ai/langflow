@@ -12,7 +12,6 @@ class PythonREPLToolComponent(Component):
     display_name = "Python REPL"
     description = "A tool for running Python code in a REPL environment with dynamic imports."
     icon = "Python"
-    name = "PythonREPL"
 
     inputs = [
         CodeInput(
