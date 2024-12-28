@@ -92,7 +92,7 @@ class StructuredOutputComponent(Component):
         Output(name="structured_output", display_name="Structured Output", method="build_structured_output"),
     ]
 
-    def build_structured_output(self) -> Data:
+    def build_structured_output(self) -> list[Data]:
         if not hasattr(self.llm, "with_structured_output"):
             msg = "Language model does not support structured output."
             raise TypeError(msg)
@@ -125,4 +125,8 @@ class StructuredOutputComponent(Component):
         else:
             msg = f"Output should be a Pydantic BaseModel, got {type(output)} ({output})"
             raise TypeError(msg)
-        return Data(data=output_dict)
+
+        if self.multiple:
+            return [Data(data=item) for item in output_dict["objects"]]
+        else:  # noqa: RET505
+            return [Data(data=output_dict)]
