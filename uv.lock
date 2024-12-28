@@ -543,14 +543,14 @@ wheels = [
 
 [[package]]
 name = "blockbuster"
-version = "1.5.7"
+version = "1.5.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "forbiddenfruit" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d4/19/33ac1f5586f828d84d55ad5186a509d2d5efdec9a051f2de7fbdc73100ef/blockbuster-1.5.7.tar.gz", hash = "sha256:192aa4db4ce443ccfd0d9cdb6212521024d155ff1e9797bab47695bb3d346a3e", size = 33986 }
+sdist = { url = "https://files.pythonhosted.org/packages/ef/d9/c117da06f9dee8ca4179e6a2fd3d413f6e4f7fcffd09652d2f2cda9d22da/blockbuster-1.5.8.tar.gz", hash = "sha256:0018080fd735e84f0b138f15ff0a339f99444ecdc0045f16056c7b23db92706b", size = 33990 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2e/ea/d3527833dc9692d8d555f131c5b54a676775cb3872cf611c5c3c4c9763ec/blockbuster-1.5.7-py3-none-any.whl", hash = "sha256:7dc2effc55fa16b11c7c623549c2b37667ba6273deaa6d8e6800daf54f40c22f", size = 11696 },
+    { url = "https://files.pythonhosted.org/packages/1a/61/1c154c6f4e2994d7b1a9fa9cc40d7614c9fc0fe07cc55c1e1ac956404033/blockbuster-1.5.8-py3-none-any.whl", hash = "sha256:ea0352823acbd837872785a96ec87701f1c7938410d66c6a8857ae11646d9744", size = 11700 },
 ]
 
 [[package]]
@@ -1157,7 +1157,7 @@ wheels = [
 
 [[package]]
 name = "composio-core"
-version = "0.6.3"
+version = "0.6.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -1177,14 +1177,14 @@ dependencies = [
     { name = "sentry-sdk" },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5f/21/730e8e305489d88f49d44d25630779fa79601d4add08ec00cb3c576f30fb/composio_core-0.6.3.tar.gz", hash = "sha256:13098b20d8832e74453ca194889305c935432156fc07be91dfddf76561ad591b", size = 305588 }
+sdist = { url = "https://files.pythonhosted.org/packages/07/d0/e5a43b4c2ebdd994262c682ecaa9641dc2dbc0c57cbe63fa735bec17b626/composio_core-0.6.7.tar.gz", hash = "sha256:b87f0b804d87945b4eae556468b9efc75f751d256bbf2c20fb8ae5b6a31a2818", size = 306803 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3f/33/e696eccb062d24182740b3203b53114aa633c9d8ded5a5799f5ff6ef5808/composio_core-0.6.3-py3-none-any.whl", hash = "sha256:981a9856781b791242f947a9685a18974d8a012ac7fab2c09438e1b19610d6a2", size = 468385 },
+    { url = "https://files.pythonhosted.org/packages/e4/73/c7cec57beaa7846d22eb87b3d15048fd014032a7be06ad4d297b99feeabc/composio_core-0.6.7-py3-none-any.whl", hash = "sha256:03cedeffe417b919d1021c1bc4751f54bd05829b52ff3285f7984e14bdf91efe", size = 469603 },
 ]
 
 [[package]]
 name = "composio-langchain"
-version = "0.6.3"
+version = "0.6.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "composio-core" },
@@ -1193,9 +1193,9 @@ dependencies = [
     { name = "langchainhub" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e7/cc/c6b48d16081c8a90f6e73e339b2cac26d8bae875622b853442bbd3cab525/composio_langchain-0.6.3.tar.gz", hash = "sha256:2036f94bfe60974b31f2be0bfdb33dd75a1d43435f275141219b3376587bf49d", size = 4252 }
+sdist = { url = "https://files.pythonhosted.org/packages/fe/ba/b88fe93c9475670ca1fb529f638f5dfa64378a95373b5a5fa386a3808794/composio_langchain-0.6.7.tar.gz", hash = "sha256:adeab3a87b0e6eb7e96048cef6b988dbe699b6a493a82fac2d371ab940e7e54e", size = 4266 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ad/01/cad5fd344f79b3c86e0baa7092d16dff8b38ea83640bcfc8350139d4b6aa/composio_langchain-0.6.3-py3-none-any.whl", hash = "sha256:0e749a1603dc0562293412d0a6429f88b75152b01a313cca859732070d762a6b", size = 4676 },
+    { url = "https://files.pythonhosted.org/packages/41/7c/bbbe361fe16ac629d8f5b3874a9b444958033cdc81f2474f808c9ed82209/composio_langchain-0.6.7-py3-none-any.whl", hash = "sha256:f8653b6a7e6b03a61b679a096e278744d3009ebaf3741d7e24e5120a364f212e", size = 4683 },
 ]
 
 [[package]]
@@ -4116,8 +4116,8 @@ requires-dist = [
     { name = "certifi", specifier = ">=2023.11.17,<2025.0.0" },
     { name = "chromadb", specifier = "==0.5.23" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse-connect'", specifier = "==0.7.19" },
-    { name = "composio-core", specifier = "==0.6.3" },
-    { name = "composio-langchain", specifier = "==0.6.3" },
+    { name = "composio-core", specifier = "==0.6.7" },
+    { name = "composio-langchain", specifier = "==0.6.7" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "crewai", specifier = "~=0.86.0" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
@@ -4204,7 +4204,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
-    { name = "blockbuster", specifier = ">=1.5.7,<1.6" },
+    { name = "blockbuster", specifier = ">=1.5.8,<1.6" },
     { name = "codeflash", specifier = ">=0.8.4" },
     { name = "dictdiffer", specifier = ">=0.9.0" },
     { name = "httpx", specifier = ">=0.27.0" },
