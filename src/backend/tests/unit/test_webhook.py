@@ -1,3 +1,5 @@
+import asyncio
+
 import aiofiles
 import anyio
 import pytest
@@ -8,7 +10,16 @@ def _check_openai_api_key_in_environment_variables():
     pass
 
 
-async def test_webhook_endpoint(client, added_webhook_test):
+async def poll_until_job_is_completed(client, job_id, headers, times=10):
+    job_endpoint = f"api/v1/jobs/{job_id}"
+    for _ in range(times):
+        response = await client.get(job_endpoint, headers=headers)
+        assert response.status_code == 200
+        assert response.json()["pending"] is False
+        await asyncio.sleep(1)
+
+
+async def test_webhook_endpoint(client, added_webhook_test, logged_in_headers):
     # The test is as follows:
     # 1. The flow when run will get a "path" from the payload and save a file with the path as the name.
     # We will create a temporary file path and send it to the webhook endpoint, then check if the file exists.
@@ -23,9 +34,12 @@ async def test_webhook_endpoint(client, added_webhook_test):
 
         response = await client.post(endpoint, json=payload)
         assert response.status_code == 202
+        job_id = response.json()["job_id"]
+        await poll_until_job_is_completed(client, job_id, logged_in_headers)
+
         assert await file_path.exists()
 
-    assert not await file_path.exists()
+    assert not await file_path.exists
 
     # Send an invalid payload
     payload = {"invalid_key": "invalid_value"}
