@@ -5,7 +5,7 @@ import pytest
 from apscheduler.events import JobExecutionEvent
 from langflow.services.database.models.job.model import Job, JobStatus
 from langflow.services.deps import get_settings_service, session_scope
-from langflow.services.task.service import TaskService, TaskStatus
+from langflow.services.task.service import TaskService
 from sqlmodel import select
 
 
@@ -156,7 +156,7 @@ async def test_concurrent_job_updates(task_service: TaskService, sample_job: Job
         stmt = select(Job).where(Job.id == sample_job.id)
         final_job = (await session.exec(stmt)).first()
         assert final_job is not None, "Job not found"
-        assert final_job.status in [TaskStatus.COMPLETED, TaskStatus.FAILED], "Job should be either completed or failed"
+        assert final_job.status in [JobStatus.COMPLETED, JobStatus.FAILED], "Job should be either completed or failed"
 
 
 @pytest.mark.usefixtures("client")
