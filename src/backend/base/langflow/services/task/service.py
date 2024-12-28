@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
@@ -19,6 +18,7 @@ from langflow.services.task.scheduler import AsyncScheduler
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from datetime import datetime
 
     from apscheduler.job import Job as APSJob
 
@@ -98,12 +98,11 @@ class TaskService(Service):
             raise ValueError(msg)
         task_id = str(uuid4())
         try:
-            if run_at is None:
-                run_at = datetime.now(timezone.utc) + timedelta(seconds=1)
+            trigger = DateTrigger(run_date=run_at) if run_at is not None else None
 
             await self.scheduler.add_job(
                 task_func,
-                trigger=DateTrigger(run_date=run_at),
+                trigger=trigger,
                 args=args or [],
                 kwargs=kwargs or {},
                 id=task_id,
