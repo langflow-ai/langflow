@@ -9,10 +9,10 @@ from langflow.schema import DataFrame
 
 
 class DataOperation(str, Enum):
-    CONCATENATE = "CONCATENATE"
-    APPEND = "APPEND"
-    MERGE = "MERGE"
-    JOIN = "JOIN"
+    CONCATENATE = "Concatenate"
+    APPEND = "Append"
+    MERGE = "Merge"
+    JOIN = "Join"
 
 
 class DataCombinerComponent(Component):
