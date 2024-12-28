@@ -44,7 +44,7 @@ from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_session_service, get_settings_service, get_telemetry_service
+from langflow.services.deps import get_session_service, get_settings_service, get_task_service, get_telemetry_service
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.version import get_version_info
@@ -393,6 +393,7 @@ async def webhook_run_flow(
         HTTPException: If the flow is not found or if there is an error processing the request.
     """
     telemetry_service = get_telemetry_service()
+    task_service = get_task_service()
     start_time = time.perf_counter()
     logger.debug("Received webhook request")
     error_msg = ""
@@ -422,12 +423,17 @@ async def webhook_run_flow(
                 session_id=None,
             )
 
-            logger.debug("Starting background task")
-            background_tasks.add_task(
-                simple_run_flow_task,
-                flow=flow,
-                input_request=input_request,
-                api_key_user=user,
+            logger.debug("Creating job")
+            job_id = await task_service.create_job(
+                task_func=simple_run_flow_task,
+                run_at=None,
+                name=f"webhook_{flow.name}_{time.time()}",
+                kwargs={
+                    "flow": flow,
+                    "input_request": input_request,
+                    "stream": False,
+                    "api_key_user": user,
+                },
             )
         except Exception as exc:
             error_msg = str(exc)
@@ -443,7 +449,7 @@ async def webhook_run_flow(
             ),
         )
 
-    return {"message": "Task started in the background", "status": "in progress"}
+    return {"message": "Job created successfully", "status": "pending", "job_id": job_id}
 
 
 @router.post(
