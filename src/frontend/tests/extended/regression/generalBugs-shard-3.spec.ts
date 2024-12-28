@@ -64,8 +64,8 @@ test(
     await page
       .getByTestId("modelsOpenAI")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
     await page.mouse.down();
+    await page.mouse.up();
 
     await initialGPTsetup(page);
 
@@ -73,8 +73,8 @@ test(
       timeout: 5000,
       state: "visible",
     });
-
-    await page.getByTestId("fit_view").click();
+    // This causes the Chat Input to be hidden
+    // await page.getByTestId("fit_view").click();
 
     const elementsChatInput = await page
       .locator('[data-testid="handle-chatinput-noshownode-message-source"]')
