@@ -132,7 +132,8 @@ class TelemetryService(Service):
         except Exception:  # noqa: BLE001
             logger.exception("Error flushing logs")
 
-    async def _cancel_task(self, task: asyncio.Task, cancel_msg: str) -> None:
+    @staticmethod
+    async def _cancel_task(task: asyncio.Task, cancel_msg: str) -> None:
         task.cancel(cancel_msg)
         await asyncio.wait([task])
         if not task.cancelled():

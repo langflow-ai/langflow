@@ -1,3 +1,5 @@
+import base64
+
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 from langflow.schema.data import Data
@@ -9,8 +11,6 @@ def sample_image(tmp_path):
     """Create a sample image file for testing."""
     image_path = tmp_path / "test_image.png"
     # Create a small black 1x1 pixel PNG file
-    import base64
-
     image_content = base64.b64decode(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="
     )

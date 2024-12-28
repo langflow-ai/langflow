@@ -177,9 +177,6 @@ async def clean_transactions(settings_service: SettingsService, session: AsyncSe
     Args:
         settings_service: The settings service containing configuration like max_transactions_to_keep
         session: The database session to use for the deletion
-
-    Returns:
-        None
     """
     try:
         # Delete transactions using bulk delete
@@ -209,9 +206,6 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
     Args:
         settings_service: The settings service containing configuration like max_vertex_builds_to_keep
         session: The database session to use for the deletion
-
-    Returns:
-        None
     """
     try:
         # Delete vertex builds using bulk delete

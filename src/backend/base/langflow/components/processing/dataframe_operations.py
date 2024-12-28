@@ -144,7 +144,7 @@ class DataFrameOperationsComponent(Component):
                 build_config["new_column_value"]["show"] = True
             elif field_value == "Select Columns":
                 build_config["columns_to_select"]["show"] = True
-            elif field_value in ["Head", "Tail"]:
+            elif field_value in {"Head", "Tail"}:
                 build_config["num_rows"]["show"] = True
             elif field_value == "Replace Value":
                 build_config["column_name"]["show"] = True

@@ -319,7 +319,8 @@ class ArizePhoenixTracer(BaseTracer):
 
         return value
 
-    def _error_to_string(self, error: Exception | None):
+    @staticmethod
+    def _error_to_string(error: Exception | None):
         """Converts an error to a string with traceback details."""
         error_message = None
         if error:
@@ -327,11 +328,13 @@ class ArizePhoenixTracer(BaseTracer):
             error_message = f"{error.__class__.__name__}: {error}\n\n{string_stacktrace}"
         return error_message
 
-    def _get_current_timestamp(self) -> int:
+    @staticmethod
+    def _get_current_timestamp() -> int:
         """Gets the current UTC timestamp in nanoseconds."""
         return int(datetime.now(timezone.utc).timestamp() * 1_000_000_000)
 
-    def _safe_json_dumps(self, obj: Any, **kwargs: Any) -> str:
+    @staticmethod
+    def _safe_json_dumps(obj: Any, **kwargs: Any) -> str:
         """A convenience wrapper around `json.dumps` that ensures that any object can be safely encoded."""
         return json.dumps(obj, default=str, ensure_ascii=False, **kwargs)
 
@@ -359,6 +362,7 @@ class ArizePhoenixTracer(BaseTracer):
         else:
             current_span.set_status(Status(StatusCode.OK))
 
+    @override
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
         """Returns the LangChain callback handler if applicable."""
         return None

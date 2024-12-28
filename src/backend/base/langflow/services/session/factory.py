@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING
 
+from typing_extensions import override
+
 from langflow.services.factory import ServiceFactory
 from langflow.services.session.service import SessionService
 
@@ -11,5 +13,6 @@ class SessionServiceFactory(ServiceFactory):
     def __init__(self) -> None:
         super().__init__(SessionService)
 
+    @override
     def create(self, cache_service: "CacheService"):
         return SessionService(cache_service)

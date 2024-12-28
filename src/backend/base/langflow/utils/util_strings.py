@@ -4,7 +4,11 @@ from langflow.utils import constants
 
 
 def truncate_long_strings(data, max_length=None):
-    """Recursively traverse the dictionary or list and truncate strings longer than max_length."""
+    """Recursively traverse the dictionary or list and truncate strings longer than max_length.
+
+    Returns:
+        The data with strings truncated if they exceed the max length.
+    """
     if max_length is None:
         max_length = constants.MAX_TEXT_LENGTH
 

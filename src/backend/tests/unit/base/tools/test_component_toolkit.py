@@ -11,7 +11,7 @@ from langflow.schema.data import Data
 from pydantic import BaseModel
 
 
-async def test_component_tool():
+def test_component_tool():
     calculator_component = CalculatorToolComponent()
     component_toolkit = ComponentToolkit(component=calculator_component)
     component_tool = component_toolkit.get_tools()[0]

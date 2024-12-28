@@ -1,8 +1,11 @@
+import re
 from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_core.language_models import BaseLanguageModel
 from langflow.components.helpers.structured_output import StructuredOutputComponent
+from langflow.helpers.base_model import build_model_from_schema
+from langflow.inputs.inputs import TableInput
 from langflow.schema.data import Data
 from pydantic import BaseModel
 from typing_extensions import override
@@ -12,8 +15,6 @@ class TestStructuredOutputComponent:
     # Ensure that the structured output is successfully generated with the correct BaseModel instance returned by
     # the mock function
     def test_successful_structured_output_generation_with_patch_with_config(self):
-        from unittest.mock import patch
-
         class MockLanguageModel(BaseLanguageModel):
             @override
             def with_structured_output(self, *args, **kwargs):
@@ -87,15 +88,11 @@ class TestStructuredOutputComponent:
             multiple=False,
         )
 
-        with pytest.raises(TypeError, match="Language model does not support structured output."):
+        with pytest.raises(TypeError, match=re.escape("Language model does not support structured output.")):
             component.build_structured_output()
 
     # Correctly builds the output model from the provided schema
     def test_correctly_builds_output_model(self):
-        # Import internal organization modules, packages, and libraries
-        from langflow.helpers.base_model import build_model_from_schema
-        from langflow.inputs.inputs import TableInput
-
         # Setup
         component = StructuredOutputComponent()
         schema = [
@@ -134,10 +131,6 @@ class TestStructuredOutputComponent:
 
     # Properly handles multiple outputs when 'multiple' is set to True
     def test_handles_multiple_outputs(self):
-        # Import internal organization modules, packages, and libraries
-        from langflow.helpers.base_model import build_model_from_schema
-        from langflow.inputs.inputs import TableInput
-
         # Setup
         component = StructuredOutputComponent()
         schema = [
@@ -261,5 +254,5 @@ class TestStructuredOutputComponent:
             multiple=False,
         )
 
-        with pytest.raises(TypeError, match="Language model does not support structured output."):
+        with pytest.raises(TypeError, match=re.escape("Language model does not support structured output.")):
             component.build_structured_output()

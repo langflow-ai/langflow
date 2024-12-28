@@ -36,7 +36,8 @@ class KeyedWorkerLockManager:
     def __init__(self) -> None:
         self.locks_dir = Path(user_cache_dir("langflow"), ensure_exists=True) / "worker_locks"
 
-    def _validate_key(self, key: str) -> bool:
+    @staticmethod
+    def _validate_key(key: str) -> bool:
         """Validate that the string only contains alphanumeric characters and underscores.
 
         Parameters:

@@ -1,3 +1,4 @@
+import re
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -48,7 +49,7 @@ def test_increment_counter_empty_label(opentelemetry_instance):
 
 
 def test_increment_counter_missing_mandatory_label(opentelemetry_instance):
-    with pytest.raises(ValueError, match="Missing required labels: {'flow_id'}"):
+    with pytest.raises(ValueError, match=re.escape("Missing required labels: {'flow_id'}")):
         opentelemetry_instance.increment_counter(metric_name="num_files_uploaded", value=5, labels={"service": "one"})
 
 

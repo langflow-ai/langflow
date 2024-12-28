@@ -22,7 +22,7 @@ class OpenRouterComponent(LCModelComponent):
 
     display_name = "OpenRouter"
     description = (
-        "OpenRouter provides unified access to multiple AI models " "from different providers through a single API."
+        "OpenRouter provides unified access to multiple AI models from different providers through a single API."
     )
     icon = "OpenRouter"
 
@@ -180,9 +180,7 @@ class OpenRouterComponent(LCModelComponent):
                     build_config["model_name"]["value"] = models[0]["id"]
 
                 tooltips = {
-                    model["id"]: (
-                        f"{model['name']}\n" f"Context Length: {model['context_length']}\n" f"{model['description']}"
-                    )
+                    model["id"]: (f"{model['name']}\nContext Length: {model['context_length']}\n{model['description']}")
                     for model in models
                 }
                 build_config["model_name"]["tooltips"] = tooltips

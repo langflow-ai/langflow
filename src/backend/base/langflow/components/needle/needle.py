@@ -10,7 +10,7 @@ from langflow.utils.constants import MESSAGE_SENDER_AI
 
 class NeedleComponent(Component):
     display_name = "Needle Retriever"
-    description = "A retriever that uses the Needle API to search collections " "and generates responses using OpenAI."
+    description = "A retriever that uses the Needle API to search collections and generates responses using OpenAI."
     documentation = "https://docs.needle-ai.com"
     icon = "search"
     name = "needle"
@@ -105,8 +105,8 @@ class NeedleComponent(Component):
             if str(output_type).lower().strip() == "chunks":
                 # If chunks selected, include full context and answer
                 docs = result["source_documents"]
-                context = "\n\n".join([f"Document {i+1}:\n{doc.page_content}" for i, doc in enumerate(docs)])
-                text_content = f"Question: {query}\n\n" f"Context:\n{context}\n\n" f"Answer: {result['answer']}"
+                context = "\n\n".join([f"Document {i + 1}:\n{doc.page_content}" for i, doc in enumerate(docs)])
+                text_content = f"Question: {query}\n\nContext:\n{context}\n\nAnswer: {result['answer']}"
             else:
                 # If answer selected, only include the answer
                 text_content = result["answer"]

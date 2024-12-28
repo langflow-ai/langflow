@@ -135,7 +135,8 @@ class LangFuseTracer(BaseTracer):
             return None
         return None  # self._callback
 
-    def _get_config(self) -> dict:
+    @staticmethod
+    def _get_config() -> dict:
         secret_key = os.getenv("LANGFUSE_SECRET_KEY", None)
         public_key = os.getenv("LANGFUSE_PUBLIC_KEY", None)
         host = os.getenv("LANGFUSE_HOST", None)

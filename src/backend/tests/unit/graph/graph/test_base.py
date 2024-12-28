@@ -20,7 +20,7 @@ async def test_graph_not_prepared():
         await graph.astep()
 
 
-async def test_graph(caplog: pytest.LogCaptureFixture):
+def test_graph(caplog: pytest.LogCaptureFixture):
     chat_input = ChatInput()
     chat_output = ChatOutput()
     graph = Graph()
