@@ -131,12 +131,12 @@ class LangWatchComponent(Component):
 
                     # Clear component's dynamic attributes
                     for attr in list(self.__dict__.keys()):
-                        if attr not in default_keys and attr not in [
+                        if attr not in default_keys and attr not in {
                             "evaluators",
                             "dynamic_inputs",
                             "_code",
                             "current_evaluator",
-                        ]:
+                        }:
                             delattr(self, attr)
 
                     # Add new dynamic inputs
@@ -177,7 +177,7 @@ class LangWatchComponent(Component):
             input_fields = [
                 field
                 for field in evaluator.get("requiredFields", []) + evaluator.get("optionalFields", [])
-                if field not in ["input", "output"]
+                if field not in {"input", "output"}
             ]
 
             for field in input_fields:
