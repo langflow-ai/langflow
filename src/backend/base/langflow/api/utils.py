@@ -12,7 +12,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_current_active_user
-from langflow.services.database.models import MessageTable, User
+from langflow.services.database.models import User
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
