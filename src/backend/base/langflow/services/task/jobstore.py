@@ -13,17 +13,58 @@ from langflow.services.deps import session_scope
 
 
 class AsyncSQLModelJobStore(BaseJobStore):
-    """A job store that uses SQLModel to store jobs in the Langflow database.
+    """An asynchronous job store that uses SQLModel to store jobs in the Langflow database.
 
-    Currently only supports one-off tasks.
+    This jobstore is designed to work with async/await operations and uses SQLModel for database operations.
+    All database operations are performed asynchronously using session_scope context manager.
+
+    Currently only supports one-off tasks with DateTrigger.
+
+    Attributes:
+        _jobs (dict): A dictionary that caches job instances for quick lookup
     """
 
     def __init__(self):
+        """Initialize the async job store."""
         super().__init__()
         self._jobs = {}
 
+    async def start(self, scheduler, alias):
+        """Start the job store asynchronously.
+
+        This method is called when the scheduler starts up. It loads all existing jobs
+        from the database into memory.
+
+        Args:
+            scheduler: The scheduler instance that this job store is associated with
+            alias: The alias of this job store as known to the scheduler
+        """
+        super().start(scheduler, alias)
+        # Load all jobs from the database
+        await self.get_all_jobs()
+
+    async def shutdown(self):
+        """Shut down the job store asynchronously.
+
+        This method is called when the scheduler is shut down. It clears the job cache
+        and performs any necessary cleanup.
+        """
+        await super().shutdown()
+        self._jobs.clear()
+
     async def get_all_jobs(self) -> list[Job]:
-        """Get all jobs in the store."""
+        """Get all jobs from the database asynchronously.
+
+        Retrieves all jobs from the database and reconstitutes them into Job objects.
+        Failed jobs are removed from the database.
+
+        Returns:
+            list[Job]: A list of all active jobs in the store
+
+        Note:
+            This method will remove any jobs that cannot be properly reconstituted
+            from their serialized state.
+        """
         async with session_scope() as session:
             stmt = select(Job)
             tasks = (await session.exec(stmt)).all()
@@ -43,7 +84,18 @@ class AsyncSQLModelJobStore(BaseJobStore):
             return jobs
 
     async def lookup_job(self, job_id: str, user_id: UUID | None = None) -> APSJob | None:
-        """Get job by ID."""
+        """Look up a job by its ID asynchronously.
+
+        Args:
+            job_id (str): The identifier of the job to look up
+            user_id (UUID | None): Optional user ID to filter jobs by owner
+
+        Returns:
+            APSJob | None: The job if found and successfully reconstituted, None otherwise
+
+        Note:
+            If the job exists but cannot be reconstituted, it will be removed from the database.
+        """
         async with session_scope() as session:
             stmt = select(Job).where(Job.id == job_id)
             if user_id:
@@ -65,7 +117,19 @@ class AsyncSQLModelJobStore(BaseJobStore):
             return job
 
     async def get_due_jobs(self, now: datetime) -> list[Job]:
-        """Get all jobs that should be run at the given time."""
+        """Get all jobs that are due to run asynchronously.
+
+        Retrieves all active jobs that should be run at or before the given time.
+
+        Args:
+            now (datetime): The current time to check against
+
+        Returns:
+            list[Job]: A list of jobs that are due to run
+
+        Note:
+            Jobs that cannot be reconstituted will be removed from the database.
+        """
         async with session_scope() as session:
             stmt = select(Job).where(
                 Job.next_run_time <= now,
@@ -88,7 +152,12 @@ class AsyncSQLModelJobStore(BaseJobStore):
             return jobs
 
     async def get_next_run_time(self) -> datetime | None:
-        """Get the earliest timestamp of all scheduled jobs."""
+        """Get the earliest timestamp of all scheduled jobs asynchronously.
+
+        Returns:
+            datetime | None: The earliest run time of all active jobs,
+                           or None if there are no active jobs.
+        """
         async with session_scope() as session:
             stmt = (
                 select(Job)
@@ -99,7 +168,19 @@ class AsyncSQLModelJobStore(BaseJobStore):
             return task.next_run_time if task else None
 
     async def add_job(self, job: APSJob) -> None:
-        """Add a one-off job."""
+        """Add a new job to the store asynchronously.
+
+        Args:
+            job (APSJob): The job to add
+
+        Raises:
+            TypeError: If the job's trigger is not a DateTrigger
+            ValueError: If the job is missing required fields or is invalid
+
+        Note:
+            Currently only supports one-off tasks using DateTrigger.
+            The job must include 'flow' and 'api_key_user' in its kwargs.
+        """
         if not isinstance(job.trigger, DateTrigger):
             msg = "Only one-off tasks are supported"
             raise TypeError(msg)
@@ -149,7 +230,14 @@ class AsyncSQLModelJobStore(BaseJobStore):
                 raise ValueError(msg) from exc
 
     async def update_job(self, job: APSJob) -> None:
-        """Update a job in the store."""
+        """Update an existing job in the store asynchronously.
+
+        Args:
+            job (APSJob): The job to update
+
+        Raises:
+            JobLookupError: If the job does not exist in the store
+        """
         async with session_scope() as session:
             stmt = select(Job).where(Job.id == job.id)
             task = (await session.exec(stmt)).first()
@@ -168,7 +256,14 @@ class AsyncSQLModelJobStore(BaseJobStore):
             self._jobs[job.id] = job
 
     async def remove_job(self, job_id: str) -> None:
-        """Remove a job."""
+        """Remove a job from the store asynchronously.
+
+        Args:
+            job_id (str): The identifier of the job to remove
+
+        Raises:
+            JobLookupError: If the job does not exist in the store
+        """
         async with session_scope() as session:
             stmt = select(Job).where(Job.id == job_id)
             task = (await session.exec(stmt)).first()
@@ -180,7 +275,10 @@ class AsyncSQLModelJobStore(BaseJobStore):
             self._jobs.pop(job_id, None)
 
     async def remove_all_jobs(self) -> None:
-        """Remove all jobs."""
+        """Remove all jobs from the store asynchronously.
+
+        This method removes all jobs from both the database and the in-memory cache.
+        """
         async with session_scope() as session:
             stmt = select(Job)
             tasks = (await session.exec(stmt)).all()
@@ -190,7 +288,18 @@ class AsyncSQLModelJobStore(BaseJobStore):
             self._jobs.clear()
 
     async def get_user_jobs(self, user_id: UUID, pending: bool | None = None) -> list[Job]:
-        """Get all jobs for a specific user."""
+        """Get all jobs for a specific user asynchronously.
+
+        Args:
+            user_id (UUID): The ID of the user whose jobs to retrieve
+            pending (bool | None): If set, only return jobs with matching pending status
+
+        Returns:
+            list[Job]: A list of jobs belonging to the specified user
+
+        Note:
+            Jobs that cannot be reconstituted will be removed from the database.
+        """
         async with session_scope() as session:
             stmt = select(Job).where(Job.user_id == user_id)
             tasks = (await session.exec(stmt)).all()
@@ -212,7 +321,20 @@ class AsyncSQLModelJobStore(BaseJobStore):
             return jobs
 
     def _reconstitute_job(self, job_state):
-        """Reconstitute a job from its serialized state."""
+        """Reconstitute a job from its serialized state.
+
+        This method creates a new Job instance from a serialized job state.
+
+        Args:
+            job_state: The serialized job state (either a dict or pickled data)
+
+        Returns:
+            APSJob: The reconstituted job instance
+
+        Note:
+            This is an internal method used by other methods to restore jobs from their
+            serialized state in the database.
+        """
         job_state_dict = job_state if isinstance(job_state, dict) else pickle.loads(job_state)  # noqa: S301
         job_state_dict["jobstore"] = self
         job = APSJob.__new__(APSJob)
