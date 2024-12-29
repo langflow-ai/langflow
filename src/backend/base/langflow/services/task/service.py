@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
@@ -22,6 +21,7 @@ if TYPE_CHECKING:
 
     from apscheduler.job import Job as APSJob
 
+    from langflow.services.database.service import DatabaseService
     from langflow.services.settings.service import SettingsService
 
 
@@ -30,22 +30,23 @@ class TaskService(Service):
 
     name = "task_service"
 
-    def __init__(self, settings_service: SettingsService):
+    def __init__(self, settings_service: SettingsService, database_service: DatabaseService):
         self.settings_service = settings_service
         self._started = False
         self.scheduler: AsyncScheduler | None = None
         self.job_store: AsyncSQLModelJobStore | None = None
+        self.database_service = database_service
 
     async def setup(self):
         """Initialize the scheduler."""
-        self.scheduler = await asyncio.to_thread(AsyncScheduler)
+        self.scheduler = AsyncScheduler()
+        await self.scheduler.configure()
         self.job_store = AsyncSQLModelJobStore()
-        self.scheduler.add_jobstore(self.job_store, "default")
+        await self.scheduler.add_jobstore(self.job_store, "default")
 
         # Add event listeners
-        self.scheduler.add_listener(self._handle_job_executed, EVENT_JOB_EXECUTED)
-        self.scheduler.add_listener(self._handle_job_error, EVENT_JOB_ERROR)
-        self._started = False
+        await self.scheduler.add_listener(self._handle_job_executed, EVENT_JOB_EXECUTED)
+        await self.scheduler.add_listener(self._handle_job_error, EVENT_JOB_ERROR)
 
     async def _ensure_scheduler_running(self):
         """Ensure the scheduler is running."""
