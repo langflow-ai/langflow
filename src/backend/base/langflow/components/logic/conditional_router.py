@@ -126,8 +126,7 @@ class ConditionalRouterComponent(Component):
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         if field_name == "operator":
             if field_value == "matches regex":
-                if "case_sensitive" in build_config:
-                    del build_config["case_sensitive"]
+                build_config.pop("case_sensitive", None)
             # Ensure case_sensitive is present for all other operators
             elif "case_sensitive" not in build_config:
                 case_sensitive_input = next(
