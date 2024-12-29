@@ -1,11 +1,12 @@
 import asyncio
+import inspect
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
 from apscheduler.events import EVENT_ALL_JOBS_REMOVED, EVENT_JOB_ADDED, EVENT_JOB_REMOVED, JobEvent, SchedulerEvent
 from apscheduler.job import Job as APSJob
 from apscheduler.jobstores.base import ConflictingIdError
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.schedulers.asyncio import maybe_ref
 from apscheduler.schedulers.base import (
     EVENT_JOB_MAX_INSTANCES,
     EVENT_JOB_SUBMITTED,
@@ -22,16 +23,49 @@ from apscheduler.schedulers.base import (
 from apscheduler.util import undefined
 from loguru import logger
 
+from langflow.services.task.base_scheduler import AsyncBaseScheduler
+
 if TYPE_CHECKING:
     from langflow.services.task.jobstore import AsyncSQLModelJobStore
 
 
-class AsyncScheduler(AsyncIOScheduler):
+class AsyncScheduler(AsyncBaseScheduler):
     """An improved version of AsyncIOScheduler that supports async jobstores."""
+
+    _eventloop: asyncio.AbstractEventLoop | None = None
+    _timeout = None
 
     def __init__(self, *args, **kwargs):
         self.timezone = timezone.utc
         super().__init__(*args, **kwargs)
+
+    async def shutdown(self, *, wait: bool = True):
+        """Shut down the scheduler.
+
+        :param wait: ``True`` to wait until all currently executing jobs have finished
+        :type wait: bool
+        """
+        await super().shutdown(wait=wait)
+        self._stop_timer()
+
+    async def _configure(self, config):
+        self._eventloop = maybe_ref(config.pop("event_loop", None))
+        await super()._configure(config)
+
+    def _start_timer(self, wait_seconds):
+        self._stop_timer()
+        if wait_seconds is not None:
+            self._timeout = self._eventloop.call_later(wait_seconds, self.wakeup)
+
+    def _stop_timer(self):
+        if self._timeout:
+            self._timeout.cancel()
+            del self._timeout
+
+    def _create_default_executor(self):
+        from apscheduler.executors.asyncio import AsyncIOExecutor
+
+        return AsyncIOExecutor()
 
     async def wakeup(self):
         self._stop_timer()
@@ -44,7 +78,7 @@ class AsyncScheduler(AsyncIOScheduler):
         Args:
             paused (bool, optional): If True, start in paused state. Defaults to False.
         """
-        self._eventloop: asyncio.AbstractEventLoop | None = self._eventloop or asyncio.get_running_loop()
+        self._eventloop = self._eventloop or asyncio.get_running_loop()
         await self._start(paused=paused)
 
     async def _start(self, *, paused: bool = False):
@@ -60,37 +94,39 @@ class AsyncScheduler(AsyncIOScheduler):
 
         self._check_uwsgi()
 
-        with self._executors_lock:
+        async with self._executors_lock:
             # Create a default executor if nothing else is configured
             if "default" not in self._executors:
-                self.add_executor(self._create_default_executor(), "default")
+                await self.add_executor(self._create_default_executor(), "default")
 
             # Start all the executors
             for alias, executor in self._executors.items():
-                executor.start(self, alias)
+                result = await executor.start(self, alias)
+                if inspect.iscoroutine(result):
+                    await result
 
-        with self._jobstores_lock:
+        async with self._jobstores_lock:
             # Create a default job store if nothing else is configured
             if "default" not in self._jobstores:
-                self.add_jobstore(self._create_default_jobstore(), "default")
+                await self.add_jobstore(self._create_default_jobstore(), "default")
 
             # Start all the job stores
             for alias, store in self._jobstores.items():
-                store.start(self, alias)
+                result = await store.start(self, alias)
+                if asyncio.iscoroutine(result):
+                    await result
 
             # Schedule all pending jobs
             for job, jobstore_alias, replace_existing in self._pending_jobs:
-                self._real_add_job(job, jobstore_alias, replace_existing)
+                await self._real_add_job(job, jobstore_alias, replace_existing)
             del self._pending_jobs[:]
 
         self.state = STATE_PAUSED if paused else STATE_RUNNING
         self._logger.info("Scheduler started")
-        self._dispatch_event(SchedulerEvent(EVENT_SCHEDULER_STARTED))
+        await self._dispatch_event(SchedulerEvent(EVENT_SCHEDULER_STARTED))
 
         if not paused:
-            result = self.wakeup()
-            if asyncio.iscoroutine(result):
-                await result
+            await self.wakeup()
 
     async def _process_jobs(self):
         """Iterates through jobs in every jobstore.
@@ -109,7 +145,7 @@ class AsyncScheduler(AsyncIOScheduler):
         next_wakeup_time = None
         events = []
 
-        with self._jobstores_lock:
+        async with self._jobstores_lock:
             for jobstore_alias, jobstore in self._jobstores.items():
                 try:
                     due_jobs = jobstore.get_due_jobs(now)
@@ -138,9 +174,7 @@ class AsyncScheduler(AsyncIOScheduler):
                             job.executor,
                             job,
                         )
-                        result = self.remove_job(job.id, jobstore_alias)
-                        if asyncio.iscoroutine(result):
-                            await result
+                        await self.remove_job(job.id, jobstore_alias)
                         continue
 
                     run_times = job._get_run_times(now)
@@ -182,9 +216,7 @@ class AsyncScheduler(AsyncIOScheduler):
                             if asyncio.iscoroutine(result):
                                 await result
                         else:
-                            result = self.remove_job(job.id, jobstore_alias)
-                            if asyncio.iscoroutine(result):
-                                await result
+                            await self.remove_job(job.id, jobstore_alias)
 
                 # Set a new next wakeup time if there isn't one yet or
                 # the jobstore has an even earlier one
@@ -196,9 +228,7 @@ class AsyncScheduler(AsyncIOScheduler):
 
         # Dispatch collected events
         for event in events:
-            result = self._dispatch_event(event)
-            if asyncio.iscoroutine(result):
-                await result
+            await self._dispatch_event(event)
 
         # Determine the delay until this method should be called again
         if self.state == STATE_PAUSED:
@@ -227,7 +257,7 @@ class AsyncScheduler(AsyncIOScheduler):
 
         """
         jobstore_alias = None
-        with self._jobstores_lock:
+        async with self._jobstores_lock:
             # Check if the job is among the pending jobs
             if self.state == STATE_STOPPED:
                 for i, (job, alias, _replace_existing) in enumerate(self._pending_jobs):
@@ -254,7 +284,7 @@ class AsyncScheduler(AsyncIOScheduler):
 
         # Notify listeners that a job has been removed
         event = JobEvent(EVENT_JOB_REMOVED, job_id, jobstore_alias)
-        self._dispatch_event(event)
+        await self._dispatch_event(event)
 
         self._logger.info("Removed job %s", job_id)
 
@@ -264,7 +294,7 @@ class AsyncScheduler(AsyncIOScheduler):
         :param str|unicode jobstore: alias of the job store
 
         """
-        with self._jobstores_lock:
+        async with self._jobstores_lock:
             if self.state == STATE_STOPPED:
                 if jobstore:
                     self._pending_jobs = [pending for pending in self._pending_jobs if pending[1] != jobstore]
@@ -273,9 +303,11 @@ class AsyncScheduler(AsyncIOScheduler):
             else:
                 for alias, store in self._jobstores.items():
                     if jobstore in (None, alias):
-                        store.remove_all_jobs()
+                        result = store.remove_all_jobs()
+                        if asyncio.iscoroutine(result):
+                            await result
 
-        self._dispatch_event(SchedulerEvent(EVENT_ALL_JOBS_REMOVED, jobstore))
+        await self._dispatch_event(SchedulerEvent(EVENT_ALL_JOBS_REMOVED, jobstore))
 
     async def _real_add_job(self, job, jobstore_alias, replace_existing):
         """Override to make async-compatible."""
@@ -305,7 +337,7 @@ class AsyncScheduler(AsyncIOScheduler):
 
         # Notify listeners that a new job has been added
         event = JobEvent(EVENT_JOB_ADDED, job.id, jobstore_alias)
-        self._dispatch_event(event)
+        await self._dispatch_event(event)
 
         logger.info(f"Added job {job.name} to job store {jobstore_alias}")
 
@@ -353,7 +385,7 @@ class AsyncScheduler(AsyncIOScheduler):
         job = APSJob(self, **job_kwargs)
 
         # Don't really add jobs to job stores before the scheduler is up and running
-        with self._jobstores_lock:
+        async with self._jobstores_lock:
             if self.state == STATE_STOPPED:
                 self._pending_jobs.append((job, jobstore, replace_existing))
                 logger.info("Adding job tentatively -- it will be properly scheduled when the scheduler starts")
