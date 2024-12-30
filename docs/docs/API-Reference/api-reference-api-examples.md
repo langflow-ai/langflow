@@ -121,7 +121,7 @@ A JSON object containing a list of flows.
    </TabItem>
 </Tabs>
 
-Retrieve only the flows from a specific folder, pass `folder_id_` in the query string.
+To retrieve only the flows from a specific folder, pass `folder_id_` in the query string.
 
 
 <Tabs>
@@ -152,8 +152,9 @@ Read a specific flow by its ID.
 <TabItem value="curl" label="curl" default>
 
 ```bash
- curl-X GET "$ LANGFLOW_URL /api /v1 /flows /{flow_id}"
--H “ Authorization : Bearer YOUR_ACCESS_TOKEN”
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/flows/$FLOW_ID' \
+  -H 'accept: application/json'
  ```
 
 </TabItem>
@@ -161,7 +162,15 @@ Read a specific flow by its ID.
 <TabItem value="result" label="Result">
 
 ```plain
-result
+{
+  "name": "Basic Prompting",
+  "description": "Perform basic prompting with an OpenAI model.",
+  "icon": "Braces",
+  "icon_bg_color": null,
+  "gradient": "2",
+  "data": {
+    "nodes": [
+     ...
 ```
 
    </TabItem>
@@ -171,22 +180,47 @@ result
 
 Update an existing flow by its ID.
 
+This example changes the value for `endpoint_name` from a random UUID to `my_new_endpoint_name`.
+
 <Tabs>
 <TabItem value="curl" label="curl" default>
 
  ```bash
- curl-X PATCH "$ LANGFLOW_URL/api/v1 flows/{flow_id}"
--H “ Authorization : Bearer YOUR_ACCESS_TOKEN”
--d '{
-      // Updated flow details
+curl -X 'PATCH' \
+  'http://127.0.0.1:7860/api/v1/flows/01ce083d-748b-4b8d-97b6-33adbb6a528a' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "name": "string",
+  "description": "string",
+  "data": {},
+  "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "endpoint_name": "my_new_endpoint_name",
+  "locked": true
 }'
  ```
 
 </TabItem>
 <TabItem value="result" label="Result">
 
-```plain
-result
+```json
+{
+  "name": "string",
+  "description": "string",
+  "icon": "Braces",
+  "icon_bg_color": null,
+  "gradient": "2",
+  "data": {},
+  "is_component": false,
+  "updated_at": "2024-12-30T18:30:22+00:00",
+  "webhook": false,
+  "endpoint_name": "my_new_endpoint_name",
+  "tags": null,
+  "locked": true,
+  "id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
+  "user_id": "f58396d4-a387-4bb8-b749-f40825c3d9f3",
+  "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+}
 ```
 
    </TabItem>
@@ -200,16 +234,19 @@ Delete a specific flow by its ID.
     <TabItem value="curl" label="curl" default>
 
  ```bash
- curl-X DELETE "$ LANGFLOW_URL /api /v1 /flows /{flow_id}"
--H “ Authorization : Bearer YOUR_ACCESS_TOKEN”
+curl -X 'DELETE' \
+  '$LANGFLOW_URL/api/v1/flows/$FLOW_ID' \
+  -H 'accept: application/json'
  ```
 
 </TabItem>
 
 <TabItem value="result" label="Result">
 
-```plain
-result
+```json
+{
+  "message": "Flow deleted successfully"
+}
 ```
 
    </TabItem>
@@ -224,19 +261,37 @@ Create multiple new flows.
 
 ```curl
 curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/flows/batch/' \
+  'http://127.0.0.1:7860/api/v1/flows/batch/' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
   -d '{
-    // FlowListCreate object
-  }'
+  "flows": [
+    {
+      "name": "string",
+      "description": "string",
+      "icon": "string",
+      "icon_bg_color": "string",
+      "gradient": "string",
+      "data": {},
+      "is_component": false,
+      "updated_at": "2024-12-30T18:36:02.737Z",
+      "webhook": false,
+      "endpoint_name": "string",
+      "tags": [
+        "string"
+      ],
+      "locked": false,
+      "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+    }
+  ]
+}'
 ```
 
   </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```json
 [
   {
     // FlowRead objects
@@ -251,55 +306,75 @@ curl -X 'POST' \
 
 Upload flows from a file.
 
+This example uploads a local file named `agent-with-astra-db-tool.json`.
+
+
+
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
 ```curl
 curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/flows/upload/?folder_id=OPTIONAL_FOLDER_ID' \
+  'http://127.0.0.1:7860/api/v1/flows/upload/' \
   -H 'accept: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
   -H 'Content-Type: multipart/form-data' \
-  -F 'file=@/path/to/your/file'
+  -F 'file=@agent-with-astra-db-tool.json;type=application/json'
 ```
 
   </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```json
 [
   {
-    // FlowRead objects
+    "name": "agent-with-astra-db-tool",
+    "description": "",
+    "icon": null,
+    "icon_bg_color": null,
+    "gradient": null,
+    "data": {}
+  ...
   }
 ]
 ```
-
   </TabItem>
 </Tabs>
 
+To specify a target folder for the flow, include the query parameter `folder_id`.
+
+```curl
+curl -X 'POST' \
+  '$LANGFLOW_URL/api/v1/flows/upload/?folder_id=$FOLDER_ID' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: multipart/form-data' \
+  -F 'file=@agent-with-astra-db-tool.json;type=application/json'
+```
 ### Download Multiple Files
 
-Download multiple flows as a zip file.
+Download all flows as a ZIP file.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
 ```curl
 curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/flows/download/' \
+  'http://127.0.0.1:7860/api/v1/flows/download/' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
-  -d '["FLOW_ID_1", "FLOW_ID_2"]'
+  -d '[
+  "e1e40c77-0541-41a9-88ab-ddb3419398b5", "92f9a4c5-cfc8-4656-ae63-1f0881163c28"
+]' \
+  --output langflow-flows.zip
 ```
 
   </TabItem>
   <TabItem value="result" label="Result">
 
 ```plain
-// Binary file content (ZIP)
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100 76437    0 76353  100    84  4516k   5088 --:--:-- --:--:-- --:--:-- 4665k
 ```
-
   </TabItem>
 </Tabs>
 
