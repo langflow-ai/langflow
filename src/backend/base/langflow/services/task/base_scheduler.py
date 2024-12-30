@@ -174,7 +174,9 @@ class AsyncBaseScheduler(metaclass=ABCMeta):
 
             # Start all the executors
             for alias, executor in self._executors.items():
-                executor.start(self, alias)
+                result = executor.start(self, alias)
+                if inspect.iscoroutine(result):
+                    await result
 
         async with self._jobstores_lock:
             # Create a default job store if nothing else is configured
@@ -183,7 +185,9 @@ class AsyncBaseScheduler(metaclass=ABCMeta):
 
             # Start all the job stores
             for alias, store in self._jobstores.items():
-                store.start(self, alias)
+                result = store.start(self, alias)
+                if inspect.iscoroutine(result):
+                    await result
 
             # Schedule all pending jobs
             for job, jobstore_alias, replace_existing in self._pending_jobs:
@@ -192,7 +196,7 @@ class AsyncBaseScheduler(metaclass=ABCMeta):
 
         self.state = STATE_PAUSED if paused else STATE_RUNNING
         self._logger.info("Scheduler started")
-        self._dispatch_event(SchedulerEvent(EVENT_SCHEDULER_STARTED))
+        await self._dispatch_event(SchedulerEvent(EVENT_SCHEDULER_STARTED))
 
         if not paused:
             self.wakeup()
@@ -302,7 +306,7 @@ class AsyncBaseScheduler(metaclass=ABCMeta):
 
         """
         async with self._executors_lock:
-            executor = self._lookup_executor(alias)
+            executor = await self._lookup_executor(alias)
             del self._executors[alias]
 
         if shutdown:
@@ -364,7 +368,7 @@ class AsyncBaseScheduler(metaclass=ABCMeta):
             if inspect.iscoroutine(result):
                 await result
 
-        self._dispatch_event(SchedulerEvent(EVENT_JOBSTORE_REMOVED, alias))
+        await self._dispatch_event(SchedulerEvent(EVENT_JOBSTORE_REMOVED, alias))
 
     async def add_listener(self, callback, mask=EVENT_ALL):
         """Add a listener for scheduler events.
@@ -530,7 +534,11 @@ class AsyncBaseScheduler(metaclass=ABCMeta):
 
         """
         async with self._jobstores_lock:
-            job, jobstore = self._lookup_job(job_id, jobstore)
+            result = self._lookup_job(job_id, jobstore)
+            if inspect.iscoroutine(result):
+                job, jobstore = await result
+            else:
+                job, jobstore = result
             job._modify(**changes)
             if jobstore:
                 result = self._lookup_jobstore(jobstore).update_job(job)
@@ -638,9 +646,14 @@ class AsyncBaseScheduler(metaclass=ABCMeta):
         """
         async with self._jobstores_lock:
             try:
-                return self._lookup_job(job_id, jobstore)[0]
+                result = self._lookup_job(job_id, jobstore)
+                if inspect.iscoroutine(result):
+                    job, _ = await result
+                else:
+                    job, _ = result
             except JobLookupError:
                 return None
+            return job
 
     async def remove_job(self, job_id, jobstore=None):
         """Removes a job, preventing it from being run any more.
@@ -732,6 +745,8 @@ class AsyncBaseScheduler(metaclass=ABCMeta):
                     if jobstore in (None, alias):
                         print(f"Jobstore {alias}:", file=out)
                         jobs = store.get_all_jobs()
+                        if inspect.iscoroutine(jobs):
+                            jobs = await jobs
                         if jobs:
                             for job in jobs:
                                 print(f"    {job}", file=out)
@@ -961,7 +976,7 @@ class AsyncBaseScheduler(metaclass=ABCMeta):
             msg = f"No such job store: {alias}"
             raise KeyError(msg) from err
 
-    def _lookup_job(self, job_id, jobstore_alias):
+    async def _lookup_job(self, job_id, jobstore_alias):
         """Find a job by its ID.
 
         :type job_id: str
@@ -979,7 +994,11 @@ class AsyncBaseScheduler(metaclass=ABCMeta):
             # Look in all job stores
             for alias, store in self._jobstores.items():
                 if jobstore_alias in (None, alias):
-                    job = store.lookup_job(job_id)
+                    result = store.lookup_job(job_id)
+                    if inspect.iscoroutine(result):
+                        job = await result
+                    else:
+                        job = result
                     if job is not None:
                         return job, alias
 
