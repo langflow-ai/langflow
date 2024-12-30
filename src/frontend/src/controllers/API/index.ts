@@ -23,7 +23,6 @@ export async function getRepoStars(owner: string, repo: string) {
   }
 }
 
-
 export async function createApiKey(name: string) {
   try {
     const res = await api.post(`${BASE_URL_API}api_key/`, { name });
@@ -159,7 +158,6 @@ export async function getStoreComponents({
   }
 }
 
-
 export async function getComponent(component_id: string) {
   try {
     const res = await api.get(
@@ -194,7 +192,6 @@ export async function checkHasStore() {
     throw error;
   }
 }
-
 
 /**
  * Updates an existing flow in the Store.
@@ -238,7 +235,6 @@ export async function updateFlowStore(
     throw error;
   }
 }
-
 
 export async function getVerticesOrder(
   flowId: string,
