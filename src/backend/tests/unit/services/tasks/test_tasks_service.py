@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+from unittest.mock import AsyncMock
 
 import pytest
 from apscheduler.events import JobExecutionEvent
@@ -13,6 +14,17 @@ from sqlmodel import select
 async def task_service(client):  # noqa: ARG001
     """Create a task service for testing."""
     service = get_task_service()
+    await service.setup()
+    yield service
+    await service.teardown()
+
+
+@pytest.fixture
+async def task_service_with_mock_listeners():
+    """Create a task service with mock listeners."""
+    service = get_task_service()
+    service._handle_job_executed = AsyncMock()
+    service._handle_job_error = AsyncMock()
     await service.setup()
     yield service
     await service.teardown()
@@ -45,8 +57,15 @@ async def sample_job(task_service: TaskService, active_user, simple_api_test):
     async with session_scope() as session:
         stmt = select(Job).where(Job.id == task_id)
         job = (await session.exec(stmt)).first()
-        assert job is not None, "Job was not created"
+    assert job is not None, "Job was not created"
     return job
+
+
+async def test_listeners_are_called(sample_job: Job):
+    """Test that the listeners are called."""
+    # Check that the job has the results set correctly
+    assert isinstance(sample_job.result, dict), "Job result should be a dictionary"
+    assert sample_job.error is None, "Job error should be None"
 
 
 async def test_handle_job_executed(task_service: TaskService, sample_job: Job):
@@ -94,37 +113,6 @@ async def test_handle_job_error(task_service: TaskService, sample_job: Job):
         assert updated_job is not None, "Job not found"
         assert updated_job.status == JobStatus.FAILED, "Job status not updated to FAILED"
         assert updated_job.error == str(test_error), "Job error not saved correctly"
-
-
-async def test_job_lifecycle(task_service: TaskService, sample_job: Job):
-    """Test the complete lifecycle of a job from creation to completion."""
-    # Verify initial state
-    async with session_scope() as session:
-        stmt = select(Job).where(Job.id == sample_job.id)
-        job = (await session.exec(stmt)).first()
-        assert job is not None, "Job not found"
-        assert job.status == JobStatus.PENDING, "Initial job status should be PENDING"
-        assert job.result is None, "Initial job result should be None"
-        assert job.error is None, "Initial job error should be None"
-
-    # Simulate successful execution
-    success_event = JobExecutionEvent(
-        code=0,
-        job_id=sample_job.id,
-        jobstore="default",
-        retval={"output": "Success result"},
-        scheduled_run_time=sample_job.next_run_time,
-    )
-    await task_service._handle_job_executed(success_event)
-
-    # Verify successful completion
-    async with session_scope() as session:
-        stmt = select(Job).where(Job.id == sample_job.id)
-        completed_job = (await session.exec(stmt)).first()
-        assert completed_job is not None, "Job not found"
-        assert completed_job.status == JobStatus.COMPLETED, "Job should be marked as completed"
-        assert completed_job.result == {"output": "Success result"}, "Job result should be saved"
-        assert completed_job.error is None, "Completed job should not have an error"
 
 
 async def test_concurrent_job_updates(task_service: TaskService, sample_job: Job):

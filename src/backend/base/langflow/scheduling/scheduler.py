@@ -23,10 +23,10 @@ from apscheduler.schedulers.base import (
 from apscheduler.util import undefined
 from loguru import logger
 
-from langflow.services.task.base_scheduler import AsyncBaseScheduler
+from .base_scheduler import AsyncBaseScheduler
 
 if TYPE_CHECKING:
-    from langflow.services.task.jobstore import AsyncSQLModelJobStore
+    from .jobstore import AsyncSQLModelJobStore
 
 
 class AsyncScheduler(AsyncBaseScheduler):

@@ -1,7 +1,7 @@
 import asyncio
 
 import pytest
-from langflow.services.task.async_rlock import AsyncRLock
+from langflow.scheduling.async_rlock import AsyncRLock
 
 
 @pytest.mark.asyncio
