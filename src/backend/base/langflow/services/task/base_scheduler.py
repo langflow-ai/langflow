@@ -3,7 +3,6 @@ import inspect
 import sys
 import warnings
 from abc import ABCMeta, abstractmethod
-from asyncio import Lock
 from collections.abc import Mapping, MutableMapping
 from datetime import datetime, timedelta
 from importlib.metadata import entry_points
@@ -42,6 +41,8 @@ from apscheduler.schedulers import SchedulerAlreadyRunningError, SchedulerNotRun
 from apscheduler.triggers.base import BaseTrigger
 from apscheduler.util import asbool, asint, astimezone, maybe_ref, obj_to_ref, ref_to_obj, undefined
 from tzlocal import get_localzone
+
+from .async_rlock import AsyncRLock
 
 if TYPE_CHECKING:
     from traitlets import Callable
@@ -1121,7 +1122,7 @@ class AsyncBaseScheduler(metaclass=ABCMeta):
 
     def _create_lock(self):
         """Creates a reentrant lock object."""
-        return Lock()
+        return AsyncRLock()
 
     async def _process_jobs(self):
         """Process due jobs and determine next wakeup time.
@@ -1162,7 +1163,7 @@ class AsyncBaseScheduler(metaclass=ABCMeta):
                 for job in due_jobs:
                     # Look up the job's executor
                     try:
-                        executor = self._lookup_executor(job.executor)
+                        executor = await self._lookup_executor(job.executor)
                     except BaseException:
                         self._logger.exception(
                             'Executor lookup ("%s") failed for job "%s" -- removing it from the ' "job store",
