@@ -53,9 +53,8 @@ def data_to_text_list(template: str, data: Data | list[Data]) -> tuple[list[str]
     for value in data_:
         # Prevent conflict with 'data' keyword in template formatting
         kwargs = value.data.copy()
-        if "data" not in kwargs:
-            kwargs["data"] = value.data
-        formatted_text.append(template.format(**kwargs))
+        data = kwargs.pop("data", value.data)
+        formatted_text.append(template.format(data=data, **kwargs))
 
     return formatted_text, data_
 
