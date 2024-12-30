@@ -63,7 +63,7 @@ class AsyncScheduler(AsyncBaseScheduler):
             del self._timeout
 
     def _create_default_executor(self):
-        from apscheduler.executors.asyncio import AsyncIOExecutor
+        from langflow.scheduling.executor import AsyncIOExecutor
 
         return AsyncIOExecutor()
 
@@ -101,7 +101,7 @@ class AsyncScheduler(AsyncBaseScheduler):
 
             # Start all the executors
             for alias, executor in self._executors.items():
-                result = await executor.start(self, alias)
+                result = executor.start(self, alias)
                 if inspect.iscoroutine(result):
                     await result
 
@@ -167,7 +167,7 @@ class AsyncScheduler(AsyncBaseScheduler):
                 for job in due_jobs:
                     # Look up the job's executor
                     try:
-                        executor = self._lookup_executor(job.executor)
+                        executor = await self._lookup_executor(job.executor)
                     except BaseException:
                         self._logger.exception(
                             'Executor lookup ("%s") failed for job "%s" -- removing it from the ' "job store",

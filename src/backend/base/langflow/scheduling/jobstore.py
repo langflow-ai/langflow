@@ -8,7 +8,7 @@ from apscheduler.triggers.date import DateTrigger
 from loguru import logger
 from sqlmodel import select
 
-from langflow.services.database.models.job import Job
+from langflow.services.database.models.job.model import Job, JobStatus
 from langflow.services.deps import session_scope
 
 
@@ -256,10 +256,10 @@ class AsyncSQLModelJobStore(BaseJobStore):
             self._jobs[job.id] = job
 
     async def remove_job(self, job_id: str) -> None:
-        """Remove a job from the store asynchronously.
+        """Mark a job as completed in the store asynchronously.
 
         Args:
-            job_id (str): The identifier of the job to remove
+            job_id (str): The identifier of the job to mark as completed
 
         Raises:
             JobLookupError: If the job does not exist in the store
@@ -270,7 +270,11 @@ class AsyncSQLModelJobStore(BaseJobStore):
             if not task:
                 raise JobLookupError(job_id)
 
-            await session.delete(task)
+            task.status = JobStatus.COMPLETED
+            task.is_active = False
+            task.updated_at = datetime.now(timezone.utc)
+
+            session.add(task)
             await session.commit()
             self._jobs.pop(job_id, None)
 

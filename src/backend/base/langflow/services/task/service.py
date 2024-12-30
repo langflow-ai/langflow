@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED, JobEvent, JobExecutionEvent
 from apscheduler.schedulers.base import SchedulerAlreadyRunningError
 from apscheduler.triggers.date import DateTrigger
+from fastapi.encoders import jsonable_encoder
 from loguru import logger
 from sqlmodel import select
 
@@ -17,7 +19,6 @@ from langflow.services.task.scheduler import AsyncScheduler
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from datetime import datetime
 
     from apscheduler.job import Job as APSJob
 
@@ -67,7 +68,14 @@ class TaskService(Service):
             job = (await session.exec(stmt)).first()
             if job:
                 job.status = JobStatus.COMPLETED
-                job.result = event.retval if isinstance(event.retval, dict) else {"output": str(event.retval)}
+                try:
+                    serialized_result = jsonable_encoder(
+                        event.retval, custom_encoder={datetime: lambda v: v.isoformat(), UUID: lambda v: str(v)}
+                    )
+                except (TypeError, ValueError) as e:
+                    logger.error("Error serializing result: %s", str(e))
+                    serialized_result = {"output": str(event.retval)}
+                job.result = serialized_result if isinstance(serialized_result, dict) else {"output": str(event.retval)}
                 session.add(job)
                 await session.commit()
 
