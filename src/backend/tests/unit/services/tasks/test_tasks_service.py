@@ -4,15 +4,15 @@ import datetime
 import pytest
 from apscheduler.events import JobExecutionEvent
 from langflow.services.database.models.job.model import Job, JobStatus
-from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.deps import get_task_service, session_scope
 from langflow.services.task.service import TaskService
 from sqlmodel import select
 
 
 @pytest.fixture
-async def task_service():
+async def task_service(client):  # noqa: ARG001
     """Create a task service for testing."""
-    service = TaskService(get_settings_service())
+    service = get_task_service()
     await service.setup()
     yield service
     await service.teardown()
