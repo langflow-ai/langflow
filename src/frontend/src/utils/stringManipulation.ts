@@ -106,7 +106,7 @@ export function parseString(
           break;
       }
     } catch (error) {
-      throw new Error(`Error in parser ${parser})}`);
+      throw new Error(`Error in parser ${parser}`);
     }
   }
 
