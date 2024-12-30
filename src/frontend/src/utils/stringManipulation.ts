@@ -49,15 +49,16 @@ function validCommands(str: string): string {
   return str
     .trim()
     .split(/[\s,]+/)
-    .flatMap(cmd => {
+    .flatMap((cmd) => {
       cmd = cmd.trim();
-      cmd = cmd.replace(/\\/g, '/');
-      return cmd.split('/')
-        .filter(part => part.length > 0)
-        .map(part => `/${part}`);
+      cmd = cmd.replace(/\\/g, "/");
+      return cmd
+        .split("/")
+        .filter((part) => part.length > 0)
+        .map((part) => `/${part}`);
     })
-    .filter(cmd => cmd.length > 1)
-    .join(', ');
+    .filter((cmd) => cmd.length > 1)
+    .join(", ");
 }
 
 export function parseString(
