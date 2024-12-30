@@ -41,20 +41,58 @@ Create a new flow.
 
 ```curl
 curl -X 'POST' \
-   '$LANGFLOW_URL/api/v1/flows/' \
-   -H 'accept: application/json' \
-   -H 'Content-Type: application/json' \
-   -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
-   -d '{
-       // Flow creation details
-     }'
+  '$LANGFLOW_URL/api/v1/flows/' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "name": "string2",
+  "description": "string",
+  "icon": "string",
+  "icon_bg_color": "#FF0000",
+  "gradient": "string",
+  "data": {},
+  "is_component": false,
+  "updated_at": "2024-12-30T15:48:01.519Z",
+  "webhook": false,
+  "endpoint_name": "string",
+  "tags": [
+    "string"
+  ],
+  "locked": false,
+  "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+}'
 ```
 
    </TabItem>
    <TabItem value="result" label="Result">
 
 ```plain
-result
+{
+    "name": "Untitled document (2)",
+    "description": "Conversational Cartography Unlocked.",
+    "icon": null,
+    "icon_bg_color": null,
+    "gradient": null,
+    "data": {
+        "nodes": [],
+        "edges": [],
+        "viewport": {
+            "zoom": 1,
+            "x": 0,
+            "y": 0
+        }
+    },
+    "is_component": false,
+    "updated_at": "2024-12-30T15:48:53+00:00",
+    "webhook": false,
+    "endpoint_name": null,
+    "tags": null,
+    "locked": false,
+    "id": "91be355a-3cd1-46b2-89c0-6b416391ad95",
+    "user_id": "f58396d4-a387-4bb8-b749-f40825c3d9f3",
+    "folder_id": "1415de42-8f01-4f36-bf34-539f23e47466"
+}
 ```
 
    </TabItem>
@@ -68,8 +106,9 @@ Retrieve a list of flows with pagination support.
    <TabItem value="curl" label="curl" default>
 
 ```bash
-curl -X GET "$LANGFLOW_URL/api/v1/flows/"
--H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/flows/?remove_example_flows=false&components_only=false&get_all=true&header_flows=false&page=1&size=50' \
+  -H 'accept: application/json'
 ```
 
    </TabItem>
@@ -77,7 +116,29 @@ curl -X GET "$LANGFLOW_URL/api/v1/flows/"
 <TabItem value="result" label="Result">
 
 ```plain
-result
+A JSON object containing a list of flows.
+```
+   </TabItem>
+</Tabs>
+
+Retrieve only the flows from a specific folder, pass `folder_id_` in the query string.
+
+
+<Tabs>
+   <TabItem value="curl" label="curl" default>
+
+```bash
+curl -X 'GET' \
+  'http://127.0.0.1:7863/api/v1/flows/?remove_example_flows=true&components_only=false&get_all=false&folder_id=1415de42-8f01-4f36-bf34-539f23e47466&header_flows=false&page=1&size=1' \
+  -H 'accept: application/json'
+```
+
+   </TabItem>
+
+<TabItem value="result" label="Result">
+
+```plain
+A JSON object containing a list of flows.
 ```
 
    </TabItem>
