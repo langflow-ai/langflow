@@ -898,6 +898,199 @@ curl -X 'GET' \
   </TabItem>
 </Tabs>
 
+
+## Files
+
+### Upload File
+
+Upload a file to a specific flow.
+
+This example uploads `the_oscar_award.csv`.
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'POST' \
+  'http://127.0.0.1:7860/api/v1/files/upload/92f9a4c5-cfc8-4656-ae63-1f0881163c28' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: multipart/form-data' \
+  -F 'file=@the_oscar_award.csv'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```json
+{
+  "flowId": "92f9a4c5-cfc8-4656-ae63-1f0881163c28",
+  "file_path": "92f9a4c5-cfc8-4656-ae63-1f0881163c28/2024-12-30_15-19-43_the_oscar_award.csv"
+}
+```
+
+  </TabItem>
+</Tabs>
+
+#### Upload image files
+
+Send image files to the Langflow API for AI analysis.
+
+The default file limit is 100 MB. To configure this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` environment variable.
+For more information, see [Supported environment variables](/environment-variables#supported-variables).
+
+1. To send an image to your flow with the API, POST the image file to the `v1/files/upload/<YOUR-FLOW-ID>` endpoint of your flow.
+
+```curl
+curl -X POST "http://127.0.0.1:7860/api/v1/files/upload/a430cc57-06bb-4c11-be39-d3d4de68d2c4" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@image-file.png"
+```
+
+The API returns the image file path in the format `"file_path":"<YOUR-FLOW-ID>/<TIMESTAMP>_<FILE-NAME>"}`.
+
+```json
+{"flowId":"a430cc57-06bb-4c11-be39-d3d4de68d2c4","file_path":"a430cc57-06bb-4c11-be39-d3d4de68d2c4/2024-11-27_14-47-50_image-file.png"}
+```
+
+2. Post the image file to the **Chat Input** component of a **Basic prompting** flow.
+Pass the file path value as an input in the **Tweaks** section of the curl call to Langflow.
+
+```curl
+curl -X POST \
+    "http://127.0.0.1:7860/api/v1/run/a430cc57-06bb-4c11-be39-d3d4de68d2c4?stream=false" \
+    -H 'Content-Type: application/json'\
+    -d '{
+    "output_type": "chat",
+    "input_type": "chat",
+    "tweaks": {
+  "ChatInput-b67sL": {
+    "files": "a430cc57-06bb-4c11-be39-d3d4de68d2c4/2024-11-27_14-47-50_image-file.png",
+    "input_value": "what do you see?"
+  }
+}}'
+```
+
+Your chatbot describes the image file you sent.
+
+```plain
+"text": "This flowchart appears to represent a complex system for processing financial inquiries using various AI agents and tools. Here’s a breakdown of its components and how they might work together..."
+```
+
+
+### List Files
+
+List all files associated with a specific flow.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/files/list/$FLOW_ID' \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```json
+{
+  "files": [
+    "2024-12-30_15-19-43_the_oscar_award.csv"
+  ]
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Download File
+
+Download a specific file for a given flow.
+
+To look up the file name in Langflow, use the `/list` endpoint.
+
+This example downloads the `2024-12-30_15-19-43_the_oscar_award.csv` file from Langflow to a file named `output-file.csv`.
+
+The `--output` flag is optional.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/files/download/$FLOW_ID/2024-12-30_15-19-43_the_oscar_award.csv' \
+  -H 'accept: application/json' \
+  --output output-file.csv
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+The file contents.
+```
+
+  </TabItem>
+</Tabs>
+
+### Download Image
+
+Download an image file for a given flow.
+
+To look up the file name in Langflow, use the `/list` endpoint.
+
+This example downloads the `2024-12-30_15-42-44_image-file.png` file from Langflow to a file named `output-image.png`.
+
+The `--output` flag is optional.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/files/images/$FLOW_ID/2024-12-30_15-42-44_image-file.png' \
+  -H 'accept: application/json'
+  --output output-image.png
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+Image file content.
+```
+
+  </TabItem>
+</Tabs>
+
+
+### Delete File
+
+Delete a specific file from a flow.
+
+This example deletes the `2024-12-30_15-42-44_image-file.png` file from Langflow.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'DELETE' \
+  '$LANGFLOW_URL/api/v1/files/delete/$FLOW_ID/2024-12-30_15-42-44_image-file.png' \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+  "message": "File 2024-12-30_15-42-44_image-file.png deleted successfully"
+}
+```
+
+  </TabItem>
+</Tabs>
+
 ## Log
 
 ### Stream Logs
@@ -973,108 +1166,6 @@ A list of starter projects.
   </TabItem>
 </Tabs>
 
-
-
-
-## Chat
-
-### Retrieve vertices order
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X POST "$LANGFLOW_URL/api/v1/build/$FLOW_ID/vertices" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "data": {
-      "input_keys": ["key1", "key2"],
-      "input_values": ["value1", "value2"]
-    },
-    "stop_component_id": "component123",
-    "start_component_id": "component456"
-  }'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```result
-text
-```
-
-  </TabItem>
-</Tabs>
-
-
-### Build flow
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X POST "$LANGFLOW_URL/api/v1/build/$FLOW_ID/vertices" \
-  -H "Content-Type: application/json" \
-  -d '{}'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```result
-text
-```
-
-  </TabItem>
-</Tabs>
-
-### Build vertex
-
-Build a vertex instead of the entire graph.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X POST "$LANGFLOW_URL/api/v1/build/$FLOW_ID/vertices/{vertex_id}" \
-  -H "Content-Type: application/json" \
-  -d '{}'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```result
-text
-```
-
-  </TabItem>
-</Tabs>
-
-### Build vertex stream
-
-Build a vertex instead of the entire graph.
-
-Returns: A StreamingResponse object with the streamed vertex data in text/event-stream format.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X POST "$LANGFLOW_URL/api/v1/build/$FLOW_ID/vertices/{vertex_id}" \
-  -H "Content-Type: application/json" \
-  -d '{}'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```result
-text
-```
-
-  </TabItem>
-</Tabs>
 
 ## Base
 
@@ -1429,1027 +1520,6 @@ curl -X 'GET' \
   </TabItem>
 </Tabs>
 
-## Validate
-
-### Post Validate Code
-
-Validate the provided code.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/validate/code' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "code": "Your code to validate"
-}'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-  "valid": true,
-  "message": "Validation message"
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Post Validate Prompt
-
-Validate the provided prompt.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/validate/prompt' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "template": "Your prompt template to validate"
-}'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-  "valid": true,
-  "message": "Validation message"
-}
-```
-
-  </TabItem>
-</Tabs>
-
-## Components store
-
-### Check If Store Is Enabled
-
-Check if the component store is enabled.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/store/check/' \
-  -H 'accept: application/json'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-    "enabled": true
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Check If Store Has API Key
-
-Check if the component store has an API key.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/store/check/api_key' \
-  -H 'accept: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-    "has_api_key": false,
-    "is_valid": false
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Share Component
-
-Share a component to the store.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/store/components/' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
-  -d '{
-  "name": "Component name",
-  "description": "Component description",
-  "component_code": "Your component code"
-}'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-  "id": "Component ID",
-  "name": "Component name",
-  "description": "Component description"
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Get Components
-
-Retrieve components from the store.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/store/components/' \
-  -H 'accept: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-  "components": [
-    {
-      "id": "Component ID",
-      "name": "Component name",
-      "description": "Component description"
-    }
-  ],
-  "total": 1,
-  "page": 1,
-  "page_size": 10
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Update Shared Component
-
-Update a shared component by its ID.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'PATCH' \
-   '$LANGFLOW_URL/api/v1/store/components/{component_id}' \
-   -H 'accept: application/json' \
-   -H 'Content-Type: application/json' \
-   -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
-   -d '{
-     "name": "Updated Component Name",
-     "description": "Updated description",
-     ...
-}'
-```
-
-   </TabItem>
-   <TabItem value="result" label="Result">
-
-```plain
-{
-    "id": "Updated Component ID",
-    ...
-}
-```
-
-   </TabItem>
-</Tabs>
-
-### Download Component
-
-Download a specific component by its ID.
-
-<Tabs>
-   <TabItem value="curl" label="curl">
-
-```curl
-curl -X 'GET' \
-   '$LANGFLOW_URL/api/v1/store/components/{component_id}' \
-   -H 'accept: application/json' \
-   -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
-```
-
-   </TabItem>
-   <TabItem value="result" label="Result">
-
-```plain
-{
-    ...
-}
-```
-
-   </TabItem>
-</Tabs>
-
-### Get Tags
-
-Retrieve available tags in the component store.
-
-<Tabs>
-   <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-   '$LANGFLOW_URL/api/v1/store/tags' \
-   -H 'accept: application/json'
-```
-
-   </TabItem>
-   <TabItem value="result" label="Result">
-
-```json
-[
-    {
-        "id": "ccabb590-c9e8-4e56-9d6c-309955936c6c",
-        "name": "Agent"
-    },
-    {
-        "id": "e660a9ea-35fb-4587-bfbd-13dba4c556d1",
-        "name": "Memory"
-    },
-    {
-        "id": "d442c88b-f8d0-4010-8752-16a644c7ac8e",
-        "name": "Chain"
-    },
-    {
-        "id": "cd614b49-dd57-4c8b-a5eb-f8bb5f957b9a",
-        "name": "Vector Store"
-    },
-    {
-        "id": "57f5c681-a1f5-4053-be33-e9525e7eb00a",
-        "name": "Prompt"
-    }
-]
-```
-
-   </TabItem>
-</Tabs>
-
-### Get List Of Components Liked By User
-
-Retrieve a list of components that a user has liked.
-
-<Tabs>
-   <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-   '$LANGFLOW_URL/api/v1/store/users/likes' \
-   -H 'accept: application/json' \
-   -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
-```
-
-   </TabItem>
-   <TabItem value="result" label="Result">
-
-```plain
-{
-    "detail": "You must have a store API key set."
-}
-```
-
-   </TabItem>
-</Tabs>
-
-### Like Component
-
-Like a specific component by its ID.
-
-<Tabs>
-   <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-   '$LANGFLOW_URL/api/v1/store/users/likes/{component_id}' \
-   -H 'accept: application/json' \
-   -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
-```
-
-   </TabItem>
-   <TabItem value="result" label="Result">
-
-```plain
-reuslt
-```
-
-   </TabItem>
-</Tabs>
-
-
-## Users
-
-### Add User
-
-Add a new user to the database.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/users/' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
-  -d '{
-    // UserCreate object
-  }'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-  // UserRead object
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Read All Users
-
-Retrieve a list of users from the database with pagination.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/users/?skip=0&limit=10' \
-  -H 'accept: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-    "total_count": 2,
-    "users": [
-        {
-            "id": "aa8ac16d-8400-459d-b683-f6ae72b22469",
-            "username": "langflow",
-            "profile_image": null,
-            "store_api_key": null,
-            "is_active": true,
-            "is_superuser": true,
-            "create_at": "2024-12-02T20:03:38.395299",
-            "updated_at": "2024-12-04T21:43:59.385038",
-            "last_login_at": "2024-12-04T21:43:59.384330"
-        },
-        {
-            "id": "941f6379-5689-42c9-8ced-7c1e8366ff12",
-            "username": "<string>",
-            "profile_image": null,
-            "store_api_key": null,
-            "is_active": false,
-            "is_superuser": false,
-            "create_at": "2024-12-04T21:42:29.102577",
-            "updated_at": "2024-12-04T21:42:29.102585",
-            "last_login_at": null
-        }
-    ]
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Read Current User
-
-Retrieve the current user's data.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/users/whoami' \
-  -H 'accept: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-    "id": "aa8ac16d-8400-459d-b683-f6ae72b22469",
-    "username": "langflow",
-    "profile_image": null,
-    "store_api_key": null,
-    "is_active": true,
-    "is_superuser": true,
-    "create_at": "2024-12-02T20:03:38.395299",
-    "updated_at": "2024-12-04T21:43:59.385038",
-    "last_login_at": "2024-12-04T21:43:59.384330"
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Patch User
-
-Update an existing user's data.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'PATCH' \
-  '$LANGFLOW_URL/api/v1/users/{user_id}' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
-  -d '{
-    // UserUpdate object
-  }'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-  // UserRead object
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Delete User
-
-Delete a user from the database.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'DELETE' \
-  '$LANGFLOW_URL/api/v1/users/{user_id}' \
-  -H 'accept: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
-```
-
-  </TabItem>
-<TabItem value="result" label="Result">
-
-```plain
-{
-  // UserRead object
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Reset Password
-
-Reset a user's password.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'PATCH' \
-  '$LANGFLOW_URL/api/v1/users/{user_id}/reset-password' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
-  -d '{
-    // UserUpdate object for password reset
-  }'
-```
-
-  </TabItem>
-<TabItem value="result" label="Result">
-
-```plain
-{
-  // UserRead object
-}
-```
-
-  </TabItem>
-</Tabs>
-
-## APIKey
-
-### Get API Keys
-
-Retrieve a list of API keys.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/api_key/' \
-  -H 'accept: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-    "total_count": 2,
-    "user_id": "aa8ac16d-8400-459d-b683-f6ae72b22469",
-    "api_keys": [
-        {
-            "name": "test",
-            "last_used_at": null,
-            "total_uses": 0,
-            "is_active": true,
-            "id": "6a554940-bbb2-4108-81eb-995712d6d6de",
-            "api_key": "sk-bfAnq**************************************",
-            "user_id": "aa8ac16d-8400-459d-b683-f6ae72b22469",
-            "created_at": "2024-12-04T21:15:28.096576"
-        },
-        {
-            "name": "another-key",
-            "last_used_at": null,
-            "total_uses": 0,
-            "is_active": true,
-            "id": "f322a178-b808-42cf-b9fa-7564afc177cd",
-            "api_key": "sk-VVH6_**************************************",
-            "user_id": "aa8ac16d-8400-459d-b683-f6ae72b22469",
-            "created_at": "2024-12-04T22:13:09.128912"
-        }
-    ]
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Create API Key
-
-Create a new API key.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/api_key/' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
-  -d '{
-    // ApiKeyCreate object
-  }'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-  // UnmaskedApiKeyRead object
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Delete API Key
-
-Delete a specific API key.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'DELETE' \
-  '$LANGFLOW_URL/api/v1/api_key/{api_key_id}' \
-  -H 'accept: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-  // UnmaskedApiKeyRead object
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Save Store API Key
-
-Save an API key to the store.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/api_key/store' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
-  -d '{
-    // ApiKeyCreateRequest object
-  }'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-  // UnmaskedApiKeyRead object
-}
-```
-
-  </TabItem>
-</Tabs>
-
-## Login
-
-### Login To Get Access Token
-
-Obtain an access token by logging in.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/login' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/x-www-form-urlencoded' \
-  -d 'username=YOUR_USERNAME&password=YOUR_PASSWORD'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-  // Token object
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Auto Login
-
-Perform an automatic login.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/auto_login' \
-  -H 'accept: application/json'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-    "access_token": "ey...",
-    "refresh_token": null,
-    "token_type": "bearer"
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Refresh Token
-
-Refresh the current access token.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/refresh' \
-  -H 'accept: application/json'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-// Response content
-```
-
-  </TabItem>
-</Tabs>
-
-### Logout
-
-Perform a logout operation.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/logout' \
-  -H 'accept: application/json'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-    "message": "Logout successful"
-}
-```
-
-  </TabItem>
-</Tabs>
-
-## Variables
-
-### Update Variable
-
-Update a variable.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'PATCH' \
-  '$LANGFLOW_URL/api/v1/variables/{variable_id}' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
-  -d '{
-  "name": "updated_variable_name",
-  "value": "updated_value"
-}'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-  "id": "variable_id",
-  "name": "updated_variable_name",
-  "value": "updated_value"
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Delete Variable
-
-Delete a variable.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'DELETE' \
-  '$LANGFLOW_URL/api/v1/variables/{variable_id}' \
-  -H 'accept: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-  "message": "Variable deleted successfully"
-}
-```
-
-  </TabItem>
-</Tabs>
-
-## Files
-
-### Upload File
-
-Upload a file to a specific flow.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/files/upload/{flow_id}' \
-  -H 'accept: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
-  -H 'Content-Type: multipart/form-data' \
-  -F 'file=@/path/to/your/file'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-  // UploadFileResponse object
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Download File
-
-Download a specific file for a given flow.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/files/download/{flow_id}/{file_name}' \
-  -H 'accept: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-// File content
-```
-
-  </TabItem>
-</Tabs>
-
-### Download Image
-
-Download an image file for a given flow.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/files/images/{flow_id}/{file_name}' \
-  -H 'accept: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-// Image file content
-```
-
-  </TabItem>
-</Tabs>
-
-### Download Profile Picture
-
-Download a profile picture from a specific folder.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/files/profile_pictures/{folder_name}/{file_name}' \
-  -H 'accept: application/json'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-// Profile picture file content
-```
-
-  </TabItem>
-</Tabs>
-
-### List Profile Pictures
-
-Retrieve a list of available profile pictures.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/files/profile_pictures/list' \
-  -H 'accept: application/json'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-    "files": [
-        "People/People Avatar-01-20.svg",
-        "People/People Avatar-01-08.svg",
-        "People/People Avatar-01-09.svg",
-    ...
-    ]
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### List Files
-
-List all files associated with a specific flow.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/files/list/{flow_id}' \
-  -H 'accept: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-// List of files
-```
-
-  </TabItem>
-</Tabs>
-
-### Delete File
-
-Delete a specific file from a flow.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'DELETE' \
-  '$LANGFLOW_URL/api/v1/files/delete/{flow_id}/{file_name}' \
-  -H 'accept: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-// Deletion confirmation
-```
-
-  </TabItem>
-</Tabs>
 
 
 
