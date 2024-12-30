@@ -1,6 +1,6 @@
 ---
 title: API examples
-slug: /API-Reference/api-examples
+slug: /api-reference-api-examples
 ---
 
 import Tabs from '@theme/Tabs';
