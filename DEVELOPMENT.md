@@ -13,7 +13,7 @@ You will push changes to a fork of the Langflow repository, and from there creat
 
 Fork the [Langflow GitHub repository](https://github.com/langflow-ai/langflow/fork), and follow the instructions to create a new fork.
 
-On your new fork, click the "<> Code" button to get a URL to clone using your preferred method, and clone the repostory; for example using `https`:
+On your new fork, click the "<> Code" button to get a URL to [clone](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) using your preferred method, and clone the repostory; for example using `https`:
 
 ```bash
 git clone https://github.com/<your username>/langflow.git
@@ -27,6 +27,7 @@ git remote add upstream https://github.com/langflow-ai/langflow.git
 git remote set-url --push upstream no_push
 ```
 
+> [!TIP]
 > **Windows/WSL Users**: You may find that files "change", specifically the file mode e.g. "changed file mode 100755 → 100644". You can workaround this problem with `git config core.filemode false`.
 
 ## Set up Environment
@@ -94,7 +95,8 @@ There are some other steps to consider before you are ready to begin development
 
 Pre-commit hooks will help keep your changes clean and well-formatted.
 
-> **Note:** With these installed, the `git commit` command needs to run within the Python environment; your syntax needs to change to `uv run git commit`.
+> [!NOTE]
+> With these installed, the `git commit` command needs to run within the Python environment; your syntax needs to change to `uv run git commit`.
 
  Install pre-commit hooks by running the following commands:
 
@@ -107,7 +109,8 @@ uv run pre-commit install
 
 With the above validation, you can now run the backend (FastAPI) and frontend (Node) services in a way that will "hot-reload" your changes. In this mode, the FastAPI server requires a Node.js server to serve the frontend pages rather than serving them directly.
 
-> ***Note***: You will likely have multiple terminal sessions active in the normal development workflow. These will be annotated as *Backend Terminal*, *Frontend Terminal*, *Documentation Terminal*, and *Build Terminal*.
+> [!NOTE]
+> You will likely have multiple terminal sessions active in the normal development workflow. These will be annotated as *Backend Terminal*, *Frontend Terminal*, *Documentation Terminal*, and *Build Terminal*.
 
 ### Debug Mode
 
@@ -185,7 +188,8 @@ Components reside in folders under `src/backend/base/langflow`, and their unit t
 
 Add the component to the appropriate subdirectory, and add the component to the `__init__.py` file (alphabetical ordering on the `import` and the `__all__` list). Assuming the backend and frontend services are running, the backend service will restart as these files are changed. The new component will be visible after the backend is restarted, _*and*_ after you hit "refresh" in the browser. 
 
-> Tip: It is faster to copy-paste the component code from your editor into the UI *without* saving in the source code in the editor, and once you are satisfied it is working you can save (restarting the backend) and refresh the browser to confirm it is present.
+> [!TIP]
+> It is faster to copy-paste the component code from your editor into the UI *without* saving in the source code in the editor, and once you are satisfied it is working you can save (restarting the backend) and refresh the browser to confirm it is present.
 
 You should try to add a unit test for your component, though templates and best practices for this is a work in progress. At the very least, please create a Markdown file in the unit test subdirectory associated with your component (create the directory if not present), with the same filename as the component but with a `.md` extension. Within this should be the steps you have taken to manually test the component.
 
@@ -193,7 +197,8 @@ You should try to add a unit test for your component, though templates and best 
 
 Modifying a component is much the same as adding a component: it is generally easier to make changes in the UI and then save the file in the repository. Please be sure to review and modify unit tests; if there is not a unit test for the component, the addition of one that at least covers your changes would be much appreciated!
 
-> Note: if you have an old version of the component on the canvas when changes are saved and the backend service restarts, that component should show "Updates Available" when the canvas is reloaded (i.e. a browser refresh). [Issue 5179](https://github.com/langflow-ai/langflow/issues/5179) indicates this behavior is not consistent, at least in a development setting.
+> [!NOTE]
+> If you have an old version of the component on the canvas when changes are saved and the backend service restarts, that component should show "Updates Available" when the canvas is reloaded (i.e. a browser refresh). [Issue 5179](https://github.com/langflow-ai/langflow/issues/5179) indicates this behavior is not consistent, at least in a development setting.
 
 ## Building and Testing Changes
 
@@ -211,7 +216,8 @@ As a final validation, stop the backend and frontend services and run `make init
 
 Once you are happy your changes are complete, commit them and push the changes to your own fork (this will be `origin` if you followed the above instructions). You can then raise a Pull Request into the Project repository on the GitHub interface or within your IDE.
 
-> Tip: Remember that if you have pre-commit hooks enabled, you need to run the `git` command as `uv run git` to activate the necessary Python environment!
+> [!TIP]
+> Remember that if you have pre-commit hooks enabled, you need to run the `git` command as `uv run git` to activate the necessary Python environment!
 
 ## Some Quirks!
 
