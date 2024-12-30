@@ -1,5 +1,4 @@
 import json
-import re
 import unicodedata
 
 from langflow.custom import Component
@@ -83,7 +82,7 @@ class JSONCleaner(Component):
 
     def _remove_control_characters(self, s: str) -> str:
         """Remove control characters from the string."""
-        return re.sub(r"[\x00-\x1F\x7F]", "", s)
+        return s.translate(self.translation_table)
 
     def _normalize_unicode(self, s: str) -> str:
         """Normalize Unicode characters in the string."""
@@ -97,3 +96,8 @@ class JSONCleaner(Component):
             msg = f"Invalid JSON string: {e}"
             raise ValueError(msg) from e
         return s
+
+    def __init__(self, *args, **kwargs):
+        # Create a translation table that maps control characters to None
+        super().__init__(*args, **kwargs)
+        self.translation_table = str.maketrans("", "", "".join(chr(i) for i in range(32)) + chr(127))

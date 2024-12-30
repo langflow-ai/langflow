@@ -24,7 +24,7 @@ ignore_missing_imports = true
 
 [tool.ruff]
 target-version = "py310"
-exclude = ["langflow/alembic"]
+exclude = ["langflow/alembic/versions"]
 line-length = 120
 
 [tool.ruff.lint]
@@ -80,6 +80,15 @@ dev-dependencies = [
     "pytest-github-actions-annotate-failures>=0.2.0",
     "types-aiofiles>=24.1.0.20240626",
 ]
+[tool.codeflash]
+# All paths are relative to this pyproject.toml's directory.
+module-root = "langflow"
+tests-root = "../tests/unit"
+test-framework = "pytest"
+ignore-paths = []
+formatter-cmds = ["ruff check --exit-zero --fix $file", "ruff format $file"]
+#disable plugins that might interfere with runtime measurement
+pytest-cmd = "pytest -p no:profiling -p no:sugar -p no:xdist -p no:cov -p no:split"
 
 [build-system]
 requires = ["hatchling"]
@@ -119,7 +128,7 @@ dependencies = [
     "rich>=13.7.0,<14.0.0",
     "langchain-experimental>=0.0.61,<1.0.0",
     "sqlmodel==0.0.22",
-    "pydantic~=2.7.0",
+    "pydantic~=2.10.1",
     "pydantic-settings>=2.2.0,<3.0.0",
     "typer>=0.13.0,<1.0.0",
     "cachetools>=5.5.0,<6.0.0",
@@ -222,7 +231,8 @@ dev = [
     "pytest-split>=0.9.0",
     "devtools>=0.12.2",
     "pytest-flakefinder>=1.1.0",
-    "types-markdown>=3.7.0.20240822"
+    "types-markdown>=3.7.0.20240822",
+    "codeflash>=0.8.4"
 ]
 
 [project.scripts]

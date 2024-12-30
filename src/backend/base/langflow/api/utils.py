@@ -16,7 +16,7 @@ from langflow.services.database.models import User
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
-from langflow.services.deps import async_session_scope, get_session
+from langflow.services.deps import get_session, session_scope
 from langflow.services.store.utils import get_lf_version_from_pypi
 
 if TYPE_CHECKING:
@@ -141,7 +141,7 @@ def format_elapsed_time(elapsed_time: float) -> str:
 
 
 async def _get_flow_name(flow_id: uuid.UUID) -> str:
-    async with async_session_scope() as session:
+    async with session_scope() as session:
         flow = await session.get(Flow, flow_id)
         if flow is None:
             msg = f"Flow {flow_id} not found"
@@ -283,6 +283,11 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None
     try:
         await session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id))
         await session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id))
+        # TODO: Verify if deleting messages is safe in terms of session id relevance
+        # If we delete messages directly, rather than setting flow_id to null,
+        # it might cause unexpected behaviors because the session id could still be
+        # used elsewhere to search for these messages.
+        # await session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))
         await session.exec(delete(Flow).where(Flow.id == flow_id))
     except Exception as e:
         msg = f"Unable to cascade delete flow: ${flow_id}"

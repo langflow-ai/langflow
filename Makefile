@@ -28,7 +28,7 @@ all: help
 ######################
 
 # Some directories may be mount points as in devcontainer, so we need to clear their
-# contents rather than remove the entire directory. But we must also be mindful that 
+# contents rather than remove the entire directory. But we must also be mindful that
 # we are not running in a devcontainer, so need to ensure the directories exist.
 # See https://code.visualstudio.com/remote/advancedcontainers/improve-performance
 CLEAR_DIRS = $(foreach dir,$1,$(shell mkdir -p $(dir) && find $(dir) -mindepth 1 -delete))
@@ -72,10 +72,17 @@ install_frontend: ## install the frontend dependencies
 	@cd src/frontend && npm install > /dev/null 2>&1
 
 build_frontend: ## build the frontend static files
-	@echo 'Building frontend static files'
-	@cd src/frontend && CI='' npm run build > /dev/null 2>&1
+	@echo '==== Starting frontend build ===='
+	@echo 'Current directory: $$(pwd)'
+	@echo 'Checking if src/frontend exists...'
+	@ls -la src/frontend || true
+	@echo 'Building frontend static files...'
+	@cd src/frontend && CI='' npm run build 2>&1 || { echo "\nBuild failed! Error output above ☝️"; exit 1; }
+	@echo 'Clearing destination directory...'
 	$(call CLEAR_DIRS,src/backend/base/langflow/frontend)
+	@echo 'Copying build files...'
 	@cp -r src/frontend/build/. src/backend/base/langflow/frontend
+	@echo '==== Frontend build complete ===='
 
 init: check_tools clean_python_cache clean_npm_cache ## initialize the project
 	@make install_backend
@@ -309,7 +316,6 @@ endif
 
 build_langflow_base:
 	cd src/backend/base && uv build $(args)
-	$(call CLEAR_DIRS,src/backend/base/langflow/frontend)
 
 build_langflow_backup:
 	uv lock && uv build

@@ -28,7 +28,7 @@ async def test_initialize_services():
 
 
 @pytest.mark.benchmark
-async def test_setup_llm_caching():
+def test_setup_llm_caching():
     """Benchmark LLM caching setup."""
     from langflow.interface.utils import setup_llm_caching
 
