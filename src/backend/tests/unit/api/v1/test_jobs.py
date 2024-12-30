@@ -4,13 +4,43 @@ from uuid import uuid4
 import pytest
 from fastapi import status
 from httpx import AsyncClient
+from langflow.components.inputs import ChatInput
+from langflow.custom import Component
+from langflow.graph import Graph
+from langflow.io import MessageTextInput, Output
 from langflow.services.auth.utils import get_password_hash
+from langflow.services.database.models.flow.model import FlowCreate
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_db_service
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
 from tests.conftest import _delete_transactions_and_vertex_builds
+
+
+class LongRunningComponent(Component):
+    display_name = "Long Running Component"
+
+    inputs = [MessageTextInput(name="input_value", display_name="Input")]
+
+    outputs = [Output(name="output_value", display_name="Output", method="run_long_task")]
+
+    async def run_long_task(self) -> str:
+        await asyncio.sleep(100)
+        return self.input_value
+
+
+@pytest.fixture
+async def long_running_flow(client: AsyncClient, logged_in_headers):
+    chat_input = ChatInput()
+    long_running_component = LongRunningComponent().set(input_value=chat_input.message_response)
+    graph = Graph(start=chat_input, end=long_running_component)
+    graph_dict = graph.dump(name="Long Running Component")
+    flow = FlowCreate(**graph_dict)
+    response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+    assert response.status_code == 201
+    yield response.json()
+    await client.delete(f"api/v1/flows/{response.json()['id']}", headers=logged_in_headers)
 
 
 @pytest.fixture
@@ -69,7 +99,7 @@ async def another_user_headers(client, anoter_active_user):
 async def test_create_task(client: AsyncClient, logged_in_headers, simple_api_test, create_task_request):
     """Test creating a task."""
     response = await client.post(
-        f"/api/v1/tasks/{simple_api_test['id']}", headers=logged_in_headers, json=create_task_request
+        f"/api/v1/jobs/{simple_api_test['id']}", headers=logged_in_headers, json=create_task_request
     )
     assert (
         response.status_code == status.HTTP_200_OK
@@ -78,7 +108,7 @@ async def test_create_task(client: AsyncClient, logged_in_headers, simple_api_te
     assert isinstance(task_id, str), f"Expected task_id to be a string, got {type(task_id)}"
 
     # Verify task was created by getting it
-    response = await client.get(f"/api/v1/tasks/{task_id}", headers=logged_in_headers)
+    response = await client.get(f"/api/v1/jobs/{task_id}", headers=logged_in_headers)
     assert (
         response.status_code == status.HTTP_200_OK
     ), f"Failed to get created task. Status: {response.status_code}. Response: {response.text}"
@@ -93,7 +123,7 @@ async def test_create_task(client: AsyncClient, logged_in_headers, simple_api_te
 async def test_create_task_invalid_flow(client: AsyncClient, logged_in_headers, create_task_request):
     """Test creating a task with an invalid flow ID."""
     some_flow_id = uuid4()
-    response = await client.post(f"/api/v1/tasks/{some_flow_id}", headers=logged_in_headers, json=create_task_request)
+    response = await client.post(f"/api/v1/jobs/{some_flow_id}", headers=logged_in_headers, json=create_task_request)
     assert (
         response.status_code == status.HTTP_404_NOT_FOUND
     ), f"Expected 404 error for invalid flow ID. Got: {response.status_code}. Response: {response.text}"
@@ -101,7 +131,7 @@ async def test_create_task_invalid_flow(client: AsyncClient, logged_in_headers, 
 
 async def test_get_task_not_found(client: AsyncClient, logged_in_headers):
     """Test getting a non-existent task."""
-    response = await client.get("/api/v1/tasks/nonexistent", headers=logged_in_headers)
+    response = await client.get("/api/v1/jobs/nonexistent", headers=logged_in_headers)
     assert (
         response.status_code == status.HTTP_404_NOT_FOUND
     ), f"Expected 404 for non-existent task. Got: {response.status_code}. Response: {response.text}"
@@ -111,7 +141,7 @@ async def test_get_tasks(client: AsyncClient, logged_in_headers, simple_api_test
     """Test getting all tasks."""
     # Create a task first
     response = await client.post(
-        f"/api/v1/tasks/{simple_api_test['id']}", headers=logged_in_headers, json=create_task_request
+        f"/api/v1/jobs/{simple_api_test['id']}", headers=logged_in_headers, json=create_task_request
     )
     response.json()
 
@@ -119,7 +149,7 @@ async def test_get_tasks(client: AsyncClient, logged_in_headers, simple_api_test
         response.status_code == status.HTTP_200_OK
     ), f"Failed to create task. Status: {response.status_code}. Response: {response.text}"
     # Get all tasks
-    response = await client.get("/api/v1/tasks/", headers=logged_in_headers)
+    response = await client.get("/api/v1/jobs/", headers=logged_in_headers)
     assert (
         response.status_code == status.HTTP_200_OK
     ), f"Failed to get tasks. Status: {response.status_code}. Response: {response.text}"
@@ -132,10 +162,10 @@ async def test_get_tasks(client: AsyncClient, logged_in_headers, simple_api_test
 async def test_get_tasks_with_status(client: AsyncClient, logged_in_headers, simple_api_test, create_task_request):
     """Test getting tasks filtered by status."""
     # Create a task first
-    await client.post(f"/api/v1/tasks/{simple_api_test['id']}", headers=logged_in_headers, json=create_task_request)
+    await client.post(f"/api/v1/jobs/{simple_api_test['id']}", headers=logged_in_headers, json=create_task_request)
 
     # Get all tasks
-    response = await client.get("/api/v1/tasks/", headers=logged_in_headers)
+    response = await client.get("/api/v1/jobs/", headers=logged_in_headers)
     assert (
         response.status_code == status.HTTP_200_OK
     ), f"Failed to get tasks. Status: {response.status_code}. Response: {response.text}"
@@ -144,23 +174,23 @@ async def test_get_tasks_with_status(client: AsyncClient, logged_in_headers, sim
     assert len(tasks) > 0, "Expected at least one task"
 
 
-async def test_cancel_task(client: AsyncClient, logged_in_headers, simple_api_test, create_task_request):
+async def test_cancel_task(client: AsyncClient, logged_in_headers, long_running_flow, create_task_request):
     """Test canceling a task."""
     # Create a task first
     response = await client.post(
-        f"/api/v1/tasks/{simple_api_test['id']}", headers=logged_in_headers, json=create_task_request
+        f"/api/v1/jobs/{long_running_flow['id']}", headers=logged_in_headers, json=create_task_request
     )
     task_id = response.json()
 
     # Cancel the task
-    response = await client.delete(f"/api/v1/tasks/{task_id}", headers=logged_in_headers)
+    response = await client.delete(f"/api/v1/jobs/{task_id}", headers=logged_in_headers)
     assert (
         response.status_code == status.HTTP_200_OK
     ), f"Failed to cancel task. Status: {response.status_code}. Response: {response.text}"
     assert response.json() is True, f"Expected True response for task cancellation, got: {response.json()}"
 
     # Verify task was canceled by trying to get it
-    response = await client.get(f"/api/v1/tasks/{task_id}", headers=logged_in_headers)
+    response = await client.get(f"/api/v1/jobs/{task_id}", headers=logged_in_headers)
     assert (
         response.status_code == status.HTTP_404_NOT_FOUND
     ), f"Expected task to be not found after cancellation. Status: {response.status_code}. Response: {response.text}"
@@ -168,7 +198,7 @@ async def test_cancel_task(client: AsyncClient, logged_in_headers, simple_api_te
 
 async def test_cancel_nonexistent_task(client: AsyncClient, logged_in_headers):
     """Test canceling a non-existent task."""
-    response = await client.delete("/api/v1/tasks/nonexistent", headers=logged_in_headers)
+    response = await client.delete("/api/v1/jobs/nonexistent", headers=logged_in_headers)
     assert (
         response.status_code == status.HTTP_404_NOT_FOUND
     ), f"Expected 404 for non-existent task cancellation. Got: {response.status_code}. Response: {response.text}"
@@ -181,7 +211,7 @@ async def test_create_task_invalid_request(client: AsyncClient, logged_in_header
         # Missing required input_request field
     }
     response = await client.post(
-        f"/api/v1/tasks/{simple_api_test['id']}", headers=logged_in_headers, json=invalid_request
+        f"/api/v1/jobs/{simple_api_test['id']}", headers=logged_in_headers, json=invalid_request
     )
     assert (
         response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -196,20 +226,20 @@ async def test_task_access_control(
     assert logged_in_headers["Authorization"] != another_user_headers["Authorization"], "Headers are the same"
     # User A creates a task
     response = await client.post(
-        f"/api/v1/tasks/{simple_api_test['id']}", headers=logged_in_headers, json=create_task_request
+        f"/api/v1/jobs/{simple_api_test['id']}", headers=logged_in_headers, json=create_task_request
     )
     assert response.status_code == status.HTTP_200_OK, f"Failed to create task. Response: {response.text}"
     task_id = response.json()
 
     # User B tries to access User A's task
-    response = await client.get(f"/api/v1/tasks/{task_id}", headers=another_user_headers)
+    response = await client.get(f"/api/v1/jobs/{task_id}", headers=another_user_headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND, (
         f"Expected 404 when accessing another user's task. "
         f"Got status {response.status_code}. Response: {response.text}"
     )
 
     # User B tries to cancel User A's task
-    response = await client.delete(f"/api/v1/tasks/{task_id}", headers=another_user_headers)
+    response = await client.delete(f"/api/v1/jobs/{task_id}", headers=another_user_headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND, (
         f"Expected 404 when canceling another user's task. "
         f"Got status {response.status_code}. Response: {response.text}"
@@ -220,7 +250,7 @@ async def test_create_multiple_tasks(client: AsyncClient, logged_in_headers, sim
     """Test creating multiple tasks concurrently."""
     num_tasks = 5
     tasks = [
-        client.post(f"/api/v1/tasks/{simple_api_test['id']}", headers=logged_in_headers, json=create_task_request)
+        client.post(f"/api/v1/jobs/{simple_api_test['id']}", headers=logged_in_headers, json=create_task_request)
         for _ in range(num_tasks)
     ]
     responses = await asyncio.gather(*tasks)
@@ -233,7 +263,7 @@ async def test_create_multiple_tasks(client: AsyncClient, logged_in_headers, sim
         assert isinstance(task_id, str), f"Task {i + 1}/{num_tasks}: Expected string ID, got {type(task_id)}"
 
     # Verify all tasks were created
-    response = await client.get("/api/v1/tasks/", headers=logged_in_headers)
+    response = await client.get("/api/v1/jobs/", headers=logged_in_headers)
     assert (
         response.status_code == status.HTTP_200_OK
     ), f"Failed to get tasks list. Status: {response.status_code}. Response: {response.text}"
@@ -247,7 +277,7 @@ async def test_task_status_transitions(client: AsyncClient, logged_in_headers, s
     """Test task status transitions."""
     # Create a task
     response = await client.post(
-        f"/api/v1/tasks/{simple_api_test['id']}", headers=logged_in_headers, json=create_task_request
+        f"/api/v1/jobs/{simple_api_test['id']}", headers=logged_in_headers, json=create_task_request
     )
     assert response.status_code == status.HTTP_200_OK, (
         f"Failed to create task for status test. " f"Status: {response.status_code}. Response: {response.text}"
@@ -255,7 +285,7 @@ async def test_task_status_transitions(client: AsyncClient, logged_in_headers, s
     task_id = response.json()
 
     # Get task status
-    response = await client.get(f"/api/v1/tasks/{task_id}", headers=logged_in_headers)
+    response = await client.get(f"/api/v1/jobs/{task_id}", headers=logged_in_headers)
     assert (
         response.status_code == status.HTTP_200_OK
     ), f"Failed to get task status. Status: {response.status_code}. Response: {response.text}"
@@ -281,7 +311,7 @@ async def test_create_task_malicious_input(client: AsyncClient, logged_in_header
     }
 
     response = await client.post(
-        f"/api/v1/tasks/{simple_api_test['id']}", headers=logged_in_headers, json=malicious_request
+        f"/api/v1/jobs/{simple_api_test['id']}", headers=logged_in_headers, json=malicious_request
     )
 
     # Should either sanitize and accept (200) or reject invalid input (422)
@@ -292,7 +322,7 @@ async def test_create_task_malicious_input(client: AsyncClient, logged_in_header
     if response.status_code == status.HTTP_200_OK:
         task_id = response.json()
         # Verify the task was created and can be retrieved
-        response = await client.get(f"/api/v1/tasks/{task_id}", headers=logged_in_headers)
+        response = await client.get(f"/api/v1/jobs/{task_id}", headers=logged_in_headers)
         assert response.status_code == status.HTTP_200_OK, (
             f"Failed to retrieve task created with sanitized malicious input. "
             f"Status: {response.status_code}. Response: {response.text}"
