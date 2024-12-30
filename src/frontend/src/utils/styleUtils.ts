@@ -297,6 +297,7 @@ import { Share2Icon } from "../icons/Share2";
 import SvgSlackIcon from "../icons/Slack/SlackIcon";
 import { SpiderIcon } from "../icons/Spider";
 import { Streamlit } from "../icons/Streamlit";
+import { TongyiIcon } from "../icons/Tongyi";
 import { UpstashSvgIcon } from "../icons/Upstash";
 import { VectaraIcon } from "../icons/VectaraIcon";
 import { VertexAIIcon } from "../icons/VertexAI";
@@ -712,6 +713,7 @@ export const nodeIconsLucide: iconsType = {
   ZepMemory: ZepMemoryIcon,
   Langwatch: LangwatchIcon,
   Mem0,
+  Tongyi: TongyiIcon,
   Glean: GleanIcon,
   GleanAPI: GleanIcon,
   SerpSearch: SerpSearchIcon,
