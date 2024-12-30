@@ -1,3 +1,4 @@
+import asyncio
 import inspect
 import sys
 import warnings
@@ -883,7 +884,7 @@ class AsyncBaseScheduler(metaclass=ABCMeta):
     async def _configure(self, config):
         # Set general options
         self._logger = maybe_ref(config.pop("logger", None)) or getLogger("apscheduler.scheduler")
-        self.timezone = astimezone(config.pop("timezone", None)) or get_localzone()
+        self.timezone = astimezone(config.pop("timezone", None)) or await asyncio.to_thread(get_localzone)
         self.jobstore_retry_interval = float(config.pop("jobstore_retry_interval", 10))
 
         # Set the job defaults
