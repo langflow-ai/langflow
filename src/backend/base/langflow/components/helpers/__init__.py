@@ -14,4 +14,5 @@ __all__ = [
     "MessageStoreComponent",
     "OutputParserComponent",
     "StructuredOutputComponent",
+    "BatchRunComponent"
 ]
