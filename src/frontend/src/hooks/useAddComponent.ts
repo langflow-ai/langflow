@@ -56,6 +56,7 @@ export function useAddComponent() {
         position: { x: 0, y: 0 },
         data: {
           node: component,
+          showNode: !component.minimized,
           type: type,
           id: newId,
         },

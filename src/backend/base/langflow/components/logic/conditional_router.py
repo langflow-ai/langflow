@@ -29,7 +29,7 @@ class ConditionalRouterComponent(Component):
         DropdownInput(
             name="operator",
             display_name="Operator",
-            options=["equals", "not equals", "contains", "starts with", "ends with", "matches regex"],
+            options=["equals", "not equals", "contains", "starts with", "ends with", "regex"],
             info="The operator to apply for comparing the texts.",
             value="equals",
             real_time_refresh=True,
@@ -72,7 +72,7 @@ class ConditionalRouterComponent(Component):
         self.__iteration_updated = False
 
     def evaluate_condition(self, input_text: str, match_text: str, operator: str, *, case_sensitive: bool) -> bool:
-        if not case_sensitive and operator != "matches regex":
+        if not case_sensitive and operator != "regex":
             input_text = input_text.lower()
             match_text = match_text.lower()
 
@@ -86,7 +86,7 @@ class ConditionalRouterComponent(Component):
             return input_text.startswith(match_text)
         if operator == "ends with":
             return input_text.endswith(match_text)
-        if operator == "matches regex":
+        if operator == "regex":
             try:
                 return bool(re.match(match_text, input_text))
             except re.error:
@@ -125,9 +125,9 @@ class ConditionalRouterComponent(Component):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         if field_name == "operator":
-            if field_value == "matches regex":
-                if "case_sensitive" in build_config:
-                    del build_config["case_sensitive"]
+            if field_value == "regex":
+                build_config.pop("case_sensitive", None)
+
             # Ensure case_sensitive is present for all other operators
             elif "case_sensitive" not in build_config:
                 case_sensitive_input = next(

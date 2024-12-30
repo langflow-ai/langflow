@@ -4,9 +4,21 @@ sidebar_position: 5
 slug: /components-models
 ---
 
-# Models
+# Model components in Langflow
 
-Model components are used to generate text using language models. These components can be used to generate text for various tasks such as chatbots, content generation, and more.
+Model components generate text using large language models.
+
+Refer to your specific component's documentation for more information on parameters.
+
+## Use a model component in a flow
+
+Model components receive inputs and prompts for generating text, and the generated text is sent to an output component.
+
+The model output can also be sent to the **Language Model** port and on to a **Parse Data** component, where the output can be parsed into structured [Data](/guides-data-message) objects.
+
+This example has the OpenAI model in a chatbot flow. For more information, see the [Basic prompting flow](/starter-projects-basic-prompting).
+
+![](/img/starter-flow-basic-prompting.png)
 
 ## AI/ML API
 
@@ -14,9 +26,7 @@ This component creates a ChatOpenAI model instance using the AIML API.
 
 For more information, see [AIML documentation](https://docs.aimlapi.com/).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name         | Type        | Description                                                                                 |
 |--------------|-------------|---------------------------------------------------------------------------------------------|
@@ -28,7 +38,7 @@ For more information, see [AIML documentation](https://docs.aimlapi.com/).
 | temperature  | Float       | Controls randomness in the output. Default: 0.1.                                            |
 | seed         | Integer     | Controls reproducibility of the job.                                                         |
 
-#### Outputs
+### Outputs
 
 | Name  | Type          | Description                                                      |
 |-------|---------------|------------------------------------------------------------------|
@@ -40,9 +50,7 @@ This component generates text using Amazon Bedrock LLMs.
 
 For more information, see [Amazon Bedrock documentation](https://docs.aws.amazon.com/bedrock).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name                   | Type         | Description                                                                         |
 |------------------------|--------------|-------------------------------------------------------------------------------------|
@@ -54,7 +62,7 @@ For more information, see [Amazon Bedrock documentation](https://docs.aws.amazon
 | model_kwargs           | Dictionary   | Additional keyword arguments for the model (advanced).                               |
 | endpoint_url           | String       | Custom endpoint URL for the Bedrock service (advanced).                              |
 
-#### Outputs
+### Outputs
 
 | Name  | Type          | Description                                                       |
 |-------|---------------|-------------------------------------------------------------------|
@@ -66,9 +74,7 @@ This component allows the generation of text using Anthropic Chat and Language m
 
 For more information, see the [Anthropic documentation](https://docs.anthropic.com/en/docs/welcome).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name                | Type        | Description                                                                            |
 |---------------------|-------------|----------------------------------------------------------------------------------------|

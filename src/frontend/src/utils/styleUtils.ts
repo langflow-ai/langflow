@@ -282,6 +282,7 @@ import { NotionIcon } from "../icons/Notion";
 import { NvidiaIcon } from "../icons/Nvidia";
 import { OllamaIcon } from "../icons/Ollama";
 import { OpenAiIcon } from "../icons/OpenAi";
+import { OpenRouterIcon } from "../icons/OpenRouter";
 import { OpenSearch } from "../icons/OpenSearch";
 import { PineconeIcon } from "../icons/Pinecone";
 import { PostgresIcon } from "../icons/Postgres";
@@ -513,6 +514,7 @@ export const SIDEBAR_BUNDLES = [
     name: "astra_assistants",
     icon: "AstraDB",
   },
+  { display_name: "LangWatch", name: "langwatch", icon: "Langwatch" },
   { display_name: "Notion", name: "Notion", icon: "Notion" },
   { display_name: "Needle", name: "needle", icon: "Needle" },
   { display_name: "NVIDIA", name: "nvidia", icon: "NVIDIA" },
@@ -665,6 +667,7 @@ export const nodeIconsLucide: iconsType = {
   ChatOpenAI: OpenAiIcon,
   AzureChatOpenAI: OpenAiIcon,
   OpenAI: OpenAiIcon,
+  OpenRouter: OpenRouterIcon,
   OpenAIEmbeddings: OpenAiIcon,
   Pinecone: PineconeIcon,
   Qdrant: QDrantIcon,

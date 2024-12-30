@@ -39,7 +39,7 @@ const config = {
         docs: {
           routeBasePath: "/", // Serve the docs at the site's root
           sidebarPath: require.resolve("./sidebars.js"), // Use sidebars.js file
-          sidebarCollapsed: false,
+          sidebarCollapsed: true,
           beforeDefaultRemarkPlugins: [
             [
               remarkCodeHike,
@@ -107,8 +107,11 @@ const config = {
             from: "/getting-started-quickstart",
           },
           {
-            to: "/starter-projects-travel-planning-agent",
-            from: "/starter-projects-dynamic-agent/",
+            to: "/tutorials-travel-planning-agent",
+            from: [
+              "/starter-projects-dynamic-agent/",
+              "/starter-projects-travel-planning-agent",
+            ],
           },
           {
             to: "/workspace-overview",
@@ -126,6 +129,26 @@ const config = {
           {
             to: "/configuration-global-variables",
             from: "/settings-global-variables",
+          },
+          {
+            to: "/tutorials-sequential-agent",
+            from: "/starter-projects-sequential-agent",
+          },
+          {
+            to: "/tutorials-blog-writer",
+            from: "/starter-projects-blog-writer",
+          },
+          {
+            to: "/tutorials-memory-chatbot",
+            from: "/starter-projects-memory-chatbot",
+          },
+          {
+            to: "/tutorials-document-qa",
+            from: "/starter-projects-document-qa",
+          },
+          {
+            to: "/components-vector-stores",
+            from: "/components-rag",
           },
           // add more redirects like this
           // {

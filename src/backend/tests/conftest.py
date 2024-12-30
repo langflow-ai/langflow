@@ -17,8 +17,10 @@ from blockbuster import blockbuster_ctx
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
+from langflow.components.inputs import ChatInput
 from langflow.graph import Graph
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+from langflow.main import create_app
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow, FlowCreate
@@ -63,14 +65,15 @@ def blockbuster(request):
             ]:
                 bb.functions[func].can_block_in("importlib_metadata/__init__.py", "metadata")
 
-            # TODO: make set_class_code async
-            bb.functions["os.stat"].can_block_in("langflow/custom/custom_component/component.py", "set_class_code")
-
-            # TODO: follow discussion in https://github.com/encode/httpx/discussions/3456
-            bb.functions["os.stat"].can_block_in("httpx/_client.py", "_init_transport")
-
-            bb.functions["os.stat"].can_block_in("rich/traceback.py", "_render_stack")
-            bb.functions["os.stat"].can_block_in("langchain_core/_api/internal.py", "is_caller_internal")
+            (
+                bb.functions["os.stat"]
+                # TODO: make set_class_code async
+                .can_block_in("langflow/custom/custom_component/component.py", "set_class_code")
+                # TODO: follow discussion in https://github.com/encode/httpx/discussions/3456
+                .can_block_in("httpx/_client.py", "_init_transport")
+                .can_block_in("rich/traceback.py", "_render_stack")
+                .can_block_in("langchain_core/_api/internal.py", "is_caller_internal")
+            )
 
             (
                 bb.functions["os.path.abspath"]
@@ -154,8 +157,6 @@ def caplog(caplog: pytest.LogCaptureFixture):
 
 @pytest.fixture
 async def async_client() -> AsyncGenerator:
-    from langflow.main import create_app
-
     app = create_app()
     async with AsyncClient(app=app, base_url="http://testserver", http2=True) as client:
         yield client
@@ -226,8 +227,6 @@ def distributed_client_fixture(
 
         # def get_session_override():
         #     return session
-
-        from langflow.main import create_app
 
         app = create_app()
 
@@ -356,8 +355,6 @@ async def client_fixture(
                 monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
                 monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
 
-            from langflow.main import create_app
-
             app = create_app()
             db_service = get_db_service()
             db_service.database_url = f"sqlite:///{db_path}"
@@ -481,8 +478,6 @@ async def flow(
     json_flow: str,
     active_user,
 ):
-    from langflow.services.database.models.flow.model import FlowCreate
-
     loaded_json = json.loads(json_flow)
     flow_data = FlowCreate(name="test_flow", data=loaded_json.get("data"), user_id=active_user.id)
 
@@ -576,8 +571,6 @@ async def added_webhook_test(client, json_webhook_test, logged_in_headers):
 
 @pytest.fixture
 async def flow_component(client: AsyncClient, logged_in_headers):
-    from langflow.components.inputs import ChatInput
-
     chat_input = ChatInput()
     graph = Graph(start=chat_input, end=chat_input)
     graph_dict = graph.dump(name="Chat Input Component")
