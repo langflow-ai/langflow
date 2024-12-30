@@ -1,4 +1,3 @@
-import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
 import { usePostAddFlow } from "@/controllers/API/queries/flows/use-post-add-flow";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -19,12 +18,6 @@ import { useParams } from "react-router-dom";
 import useDeleteFlow from "./use-delete-flow";
 
 const useAddFlow = () => {
-  const unavaliableFields = useGlobalVariablesStore(
-    (state) => state.unavailableFields,
-  );
-  const globalVariablesEntries = useGlobalVariablesStore(
-    (state) => state.globalVariablesEntries,
-  );
   const flows = useFlowsManagerStore((state) => state.flows);
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const { deleteFlow } = useDeleteFlow();
@@ -34,6 +27,13 @@ const useAddFlow = () => {
   const { folderId } = useParams();
 
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
+
+  const unavailableFields = useGlobalVariablesStore(
+    (state) => state.unavailableFields,
+  );
+  const globalVariablesEntries = useGlobalVariablesStore(
+    (state) => state.globalVariablesEntries,
+  );
 
   const { mutate: postAddFlow } = usePostAddFlow();
 
@@ -51,7 +51,7 @@ const useAddFlow = () => {
         updateGroupRecursion(
           node,
           flowData?.edges,
-          unavaliableFields,
+          unavailableFields,
           globalVariablesEntries,
         );
       });

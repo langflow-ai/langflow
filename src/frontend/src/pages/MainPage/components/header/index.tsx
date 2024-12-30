@@ -141,6 +141,7 @@ const HeaderComponent = ({
                 className="!px-3 md:!px-4 md:!pl-3.5"
                 onClick={() => setNewProjectModal(true)}
                 id="new-project-btn"
+                data-testid="new-project-btn"
               >
                 <ForwardedIconComponent
                   name="Plus"

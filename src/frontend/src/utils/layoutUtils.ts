@@ -1,8 +1,7 @@
 import { NODE_HEIGHT, NODE_WIDTH } from "@/constants/constants";
-import { NodeType } from "@/types/flow";
+import { AllNodeType, EdgeType } from "@/types/flow";
 import ELK, { ElkNode } from "elkjs/lib/elk.bundled.js";
 import { cloneDeep } from "lodash";
-import { Edge } from "reactflow";
 
 const layoutOptions = {
   "elk.algorithm": "layered",
@@ -11,7 +10,7 @@ const layoutOptions = {
   "elk.layered.spacing.edgeNodeBetweenLayers": "40",
   "elk.spacing.nodeNode": "40",
   "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
-  "elk.separateConnectedComponents": true,
+  "elk.separateConnectedComponents": "true",
   "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
   "elk.spacing.componentComponent": `${NODE_WIDTH}`,
   "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
@@ -19,7 +18,10 @@ const layoutOptions = {
 const elk = new ELK();
 
 // uses elkjs to give each node a layouted position
-export const getLayoutedNodes = async (nodes: NodeType[], edges: Edge[]) => {
+export const getLayoutedNodes = async (
+  nodes: AllNodeType[],
+  edges: EdgeType[],
+): Promise<AllNodeType[]> => {
   const graph = {
     id: "root",
     layoutOptions,
@@ -72,7 +74,6 @@ export const getLayoutedNodes = async (nodes: NodeType[], edges: Edge[]) => {
         x: layoutedNode?.x ?? 0,
         y: layoutedNode?.y ?? 0,
       },
-      type: "genericNode",
     };
   });
   return layoutedNodes;

@@ -5,7 +5,7 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { FlowType } from "@/types/flow";
 import { customStringify } from "@/utils/reactflowUtils";
-import { ReactFlowJsonObject } from "reactflow";
+import { ReactFlowJsonObject } from "@xyflow/react";
 
 const useSaveFlow = () => {
   const flows = useFlowsManagerStore((state) => state.flows);
@@ -58,11 +58,26 @@ const useSaveFlow = () => {
             );
           }
 
-          const { id, name, data, description, folder_id, endpoint_name } =
-            flow;
+          const {
+            id,
+            name,
+            data,
+            description,
+            folder_id,
+            endpoint_name,
+            locked,
+          } = flow;
           if (!currentSavedFlow?.data?.nodes.length || data!.nodes.length > 0) {
             mutate(
-              { id, name, data: data!, description, folder_id, endpoint_name },
+              {
+                id,
+                name,
+                data: data!,
+                description,
+                folder_id,
+                endpoint_name,
+                locked,
+              },
               {
                 onSuccess: (updatedFlow) => {
                   setSaveLoading(false);

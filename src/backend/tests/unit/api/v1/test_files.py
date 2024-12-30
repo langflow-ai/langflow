@@ -7,9 +7,11 @@ from io import BytesIO
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import anyio
 import pytest
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
+from langflow.main import create_app
 from langflow.services.deps import get_storage_service
 from langflow.services.storage.service import StorageService
 from sqlmodel import Session
@@ -59,8 +61,6 @@ async def files_client_fixture(
                 monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
                 monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
 
-            from langflow.main import create_app
-
             app = create_app()
             return app, db_path
 
@@ -76,18 +76,18 @@ async def files_client_fixture(
         monkeypatch.undo()
         # clear the temp db
         with suppress(FileNotFoundError):
-            db_path.unlink()
+            await anyio.Path(db_path).unlink()
 
 
 @pytest.fixture
-async def max_file_size_upload_fixture(monkeypatch):
+def max_file_size_upload_fixture(monkeypatch):
     monkeypatch.setenv("LANGFLOW_MAX_FILE_SIZE_UPLOAD", "1")
     yield
     monkeypatch.undo()
 
 
 @pytest.fixture
-async def max_file_size_upload_10mb_fixture(monkeypatch):
+def max_file_size_upload_10mb_fixture(monkeypatch):
     monkeypatch.setenv("LANGFLOW_MAX_FILE_SIZE_UPLOAD", "10")
     yield
     monkeypatch.undo()
