@@ -5,55 +5,67 @@ from langflow.schema import Data
 from langflow.schema.message import Message
 
 
-class ParseDataComponent(Component):
-    display_name = "Parse Data"
-    description = "Convert Data into plain text following a specified template."
-    icon = "braces"
-    name = "ParseData"
+class DataToMessage(Component):
+    display_name = "Data to Message"
+    description = "Convert Data objects into Message format using customizable templates."
+    icon = "message-square"
+    name = "DataToMessage"
 
     inputs = [
-        DataInput(name="data", display_name="Data", info="The data to convert to text.", is_list=True),
+        DataInput(
+            name="data",
+            display_name="Data",
+            info="One or more Data objects to convert into message format.",
+            is_list=True,
+        ),
         MultilineInput(
             name="template",
             display_name="Template",
-            info="The template to use for formatting the data. "
-            "It can contain the keys {text}, {data} or any other key in the Data.",
+            info="Template for formatting the message. Use placeholders like {text}, {data}, or any key.",
             value="{text}",
         ),
-        StrInput(name="sep", display_name="Separator", advanced=True, value="\n"),
+        StrInput(
+            name="separator",
+            display_name="Separator",
+            info="Character(s) to use when combining multiple messages.",
+            value="\n",
+            advanced=True,
+        ),
     ]
 
     outputs = [
         Output(
             display_name="Text",
             name="text",
-            info="Data as a single Message, with each input Data separated by Separator",
-            method="parse_data",
+            info="Single Message containing all input Data formatted and combined using the separator",
+            method="create_combined_text",
         ),
         Output(
             display_name="Data List",
             name="data_list",
-            info="Data as a list of new Data, each having `text` formatted by Template",
-            method="parse_data_as_list",
+            info="List of individual Messages, each formatted using the template",
+            method="create_data_list",
         ),
     ]
 
-    def _clean_args(self) -> tuple[list[Data], str, str]:
+    def _prepare_inputs(self) -> tuple[list[Data], str, str]:
         data = self.data if isinstance(self.data, list) else [self.data]
-        template = self.template
-        sep = self.sep
-        return data, template, sep
+        return data, self.template, self.separator
 
-    def parse_data(self) -> Message:
-        data, template, sep = self._clean_args()
-        result_string = data_to_text(template, data, sep)
-        self.status = result_string
-        return Message(text=result_string)
+    def create_combined_text(self) -> Message:
+        """Combine all input Data into a single formatted Message."""
+        data, template, separator = self._prepare_inputs()
+        formatted_text = data_to_text(template, data, separator)
+        self.status = formatted_text
+        return Message(text=formatted_text)
 
-    def parse_data_as_list(self) -> list[Data]:
-        data, template, _ = self._clean_args()
+    def create_data_list(self) -> list[Data]:
+        """Create individual formatted Messages for each input Data."""
+        data, template, _ = self._prepare_inputs()
         text_list, data_list = data_to_text_list(template, data)
+
         for item, text in zip(data_list, text_list, strict=True):
             item.set_text(text)
+
         self.status = data_list
         return data_list
