@@ -7,6 +7,7 @@ from .store_message import MessageStoreComponent
 from .structured_output import StructuredOutputComponent
 
 __all__ = [
+    "BatchRunComponent",
     "CreateListComponent",
     "CurrentDateComponent",
     "IDGeneratorComponent",
@@ -14,5 +15,4 @@ __all__ = [
     "MessageStoreComponent",
     "OutputParserComponent",
     "StructuredOutputComponent",
-    "BatchRunComponent"
 ]

@@ -1,23 +1,19 @@
-from pathlib import Path
 from langflow.custom import Component
-from langflow.io import (
-    HandleInput,
-    MessageTextInput,
-    DataFrameInput,
-    MultilineInput,
-    StrInput,
-    Output,
-)
-from langflow.schema.message import Message
-from langflow.schema import DataFrame
 from langflow.field_typing import LanguageModel
+from langflow.io import (
+    DataFrameInput,
+    HandleInput,
+    MultilineInput,
+    Output,
+    StrInput,
+)
+from langflow.schema import DataFrame
+from langflow.schema.message import Message
 
 
 class BatchRunComponent(Component):
     display_name = "Batch Run"
-    description = (
-        "Runs a language model over each row of a DataFrame’s text column and returns a DataFrame containing one model response per row."
-    )
+    description = "Runs a language model over each row of a DataFrame’s text column and returns a DataFrame containing one model response per row."
     icon = "List"
     beta = True
 
@@ -57,8 +53,7 @@ class BatchRunComponent(Component):
     ]
 
     def run_batch(self) -> DataFrame:
-        """
-        For each row in df[column_name], combine that text with system_message
+        """For each row in df[column_name], combine that text with system_message
         and invoke the model, returning a list of responses as Langflow Messages.
         """
         # Retrieve inputs
@@ -66,7 +61,6 @@ class BatchRunComponent(Component):
         system_msg: str = self.system_message or ""
         df: DataFrame = self.df
         col_name: str = self.column_name or "text"
-
 
         if col_name not in df.columns:
             raise ValueError(f"Column '{col_name}' not found in the DataFrame.")
@@ -95,6 +89,5 @@ class BatchRunComponent(Component):
                 new_message = Message(text=str(response))
 
             results.append(new_message)
-
 
         return DataFrame(results)
