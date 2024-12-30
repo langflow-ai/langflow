@@ -11,11 +11,11 @@ from fastapi.encoders import jsonable_encoder
 from loguru import logger
 from sqlmodel import select
 
+from langflow.scheduling.jobstore import AsyncSQLModelJobStore
+from langflow.scheduling.scheduler import AsyncScheduler
 from langflow.services.base import Service
 from langflow.services.database.models.job.model import Job, JobStatus
 from langflow.services.deps import session_scope
-from langflow.services.task.jobstore import AsyncSQLModelJobStore
-from langflow.services.task.scheduler import AsyncScheduler
 
 if TYPE_CHECKING:
     from collections.abc import Callable
