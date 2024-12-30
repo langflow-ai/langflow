@@ -7,13 +7,14 @@ from loguru import logger
 
 from langflow.base.flow_processing.utils import build_data_from_result_data
 from langflow.base.tools.constants import TOOLS_METADATA_INPUT_NAME
+from langflow.base.tools.flow_tool import FlowTool
 from langflow.custom import Component
 from langflow.custom.custom_component.component import _get_component_toolkit
 from langflow.field_typing import Tool
 from langflow.graph.graph.base import Graph
 from langflow.graph.vertex.base import Vertex
 from langflow.helpers.flow import get_flow_inputs, run_flow
-from langflow.io import DropdownInput, FileInput, MessageInput, Output
+from langflow.io import BoolInput, DropdownInput, FileInput, MessageInput, Output
 from langflow.schema import Data, dotdict
 
 default_keys = [
@@ -22,14 +23,15 @@ default_keys = [
     "flow_name_selected",
     "session_id",
     "flow_json",
+    "return_direct",
 ]
 FLOW_INPUTS: list[dotdict] = []
 
 
-class FlowOrchestrator(Component):
-    display_name = "Flow Orchestrator"
+class RunFlowComponent(Component):
+    display_name = "Run Flow"
     description = "Generates a Component from a Flow, with all of its inputs, and "
-    name = "FlowOrchestrator"
+    name = "RunFlow"
     beta: bool = True
     icon = "Workflow"
     # async def __init__(self, *args: Any, **kwargs: Any):
@@ -62,9 +64,15 @@ class FlowOrchestrator(Component):
             advanced=True,
             refresh_button=True,
         ),
+        BoolInput(
+            name="return_direct",
+            display_name="Return Direct",
+            info="Return the result directly from the Tool.",
+            advanced=True,
+        ),
     ]
 
-    outputs = [Output(name="flow_outputs", display_name="Flow Outputs", method="generate_results")]
+    outputs = [Output(name="flow_outputs", display_name="Flow Outputs", method="run_flow_with_tweaks")]
 
     async def get_flow_names(self) -> list[str]:
         # TODO: get flfow ID with flow name
@@ -184,7 +192,7 @@ class FlowOrchestrator(Component):
             if field not in [new_field["name"] for new_field in new_fields] + default_keys
         ]
 
-    async def generate_results(self) -> list[Data]:
+    async def run_flow_with_tweaks(self) -> list[Data]:
         tweaks: dict = {}
 
         flow_name_selected = self._attributes.get("flow_name_selected")
@@ -196,7 +204,7 @@ class FlowOrchestrator(Component):
                     tweaks[node] = {}
                 tweaks[node][name] = self._attributes[field]
         print("IN GENERATE RESULTS")
-        tweaks= {"ChatInput-xNZ0a": {"input_value": "add 1+1"}}
+        # tweaks= {"ChatInput-xNZ0a": {"input_value": "add 1+1"}}
         print(f"tweaks______________: {tweaks}")
         run_outputs = await run_flow(
             inputs=None,
@@ -205,10 +213,11 @@ class FlowOrchestrator(Component):
             flow_name=flow_name_selected,
             tweaks=tweaks,
             user_id=str(self.user_id),
-            run_id=self.graph.run_id,
+            # run_id=self.graph.run_id,
             session_id=self.graph.session_id or self.session_id,
         )
         print(f"run_outputs______________: {run_outputs}")
+        # import pdb; pdb.set_trace()
         data: list[Data] = []
         if not run_outputs:
             return data
@@ -218,7 +227,7 @@ class FlowOrchestrator(Component):
             for output in run_output.outputs:
                 if output:
                     data.extend(build_data_from_result_data(output))
-        return data
+        return Data(data={"value":"All good"})
 
     async def get_required_data(self, flow_name_selected):
         self.flow_data = await self.alist_flows()
@@ -251,3 +260,50 @@ class FlowOrchestrator(Component):
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
         return tools
+
+    # async def to_toolkit(self) -> list[Tool]:
+    #     FlowTool.model_rebuild()
+    #     component_toolkit = _get_component_toolkit()
+    #     if "flow_name_selected" not in self._attributes or not self._attributes["flow_name_selected"]:
+    #         msg = "Flow name is required"
+    #         raise ValueError(msg)
+    #     flow_name = self._attributes["flow_name_selected"]
+    #     flow_data = await self.get_flow(flow_name)
+    #     if not flow_data:
+    #         msg = "Flow not found."
+    #         raise ValueError(msg)
+    #     graph = Graph.from_payload(
+    #         flow_data.data["data"],
+    #         user_id=str(self.user_id),
+    #     )
+    #     # import pdb; pdb.set_trace()
+    #     #TODO: Sert run id, inverstigate why self.graph has no run id
+    #     #  if self.graph has an attribute run_id, set it
+    #     if hasattr(self.graph, "run_id"):
+    #         graph.set_run_id(self.graph.run_id)
+    #     else:
+    #         graph.set_run_id(None)
+    #     # try:
+    #     #     graph.set_run_id(self.graph.run_id)
+    #     # except Exception:  # noqa: BLE001   
+    #     #     logger.opt(exception=True).warning("Failed to set run_id")
+    #     inputs = get_flow_inputs(graph)
+
+    #     tool_name = f"{flow_name}_tool"
+    #     tool_description = flow_data.description if flow_data.description else f"Tool for {flow_name}"
+    #     tool = FlowTool(
+    #         name=tool_name,
+    #         description=tool_description,
+    #         graph=graph,
+    #         return_direct=self.return_direct,
+    #         inputs=inputs,
+    #         flow_id=str(flow_data.id),
+    #         user_id=str(self.user_id),
+    #         session_id=self.graph.session_id if hasattr(self, "graph") else None,
+    #     )
+    #     description_repr = repr(tool.description).strip("'")
+    #     args_str = "\n".join([f"- {arg_name}: {arg_data['description']}" for arg_name, arg_data in tool.args.items()])
+    #     self.status = f"{description_repr}\nArguments:\n{args_str}"
+    #     if hasattr(self, TOOLS_METADATA_INPUT_NAME):
+    #         return component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=[tool])
+    #     return [tool]
