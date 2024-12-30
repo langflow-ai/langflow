@@ -1199,15 +1199,24 @@ Execute a specified flow by ID or name with simplified input.
 
 ```curl
 curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/run/$FLOW_ID' \
+  '$LANGFLOW_URL/api/v1/run/92f9a4c5-cfc8-4656-ae63-1f0881163c28?stream=false' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
-  -H 'x-api-key: YOUR_API_KEY' \
   -d '{
-  "input_value": "Sample input",
+  "input_value": "string",
   "input_type": "chat",
   "output_type": "chat",
-  "tweaks": {}
+  "output_component": "",
+  "tweaks": {
+    "Component Name": {
+      "parameter_name": "value"
+    },
+    "component_id": {
+      "parameter_name": "value"
+    },
+    "parameter_name": "value"
+  },
+  "session_id": "string"
 }'
 ```
 
