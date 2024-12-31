@@ -692,6 +692,34 @@ curl -X 'GET' \
 
 ## Folders
 
+### Read folders
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/folders/' \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+[
+  {
+    "name": "My Projects",
+    "description": "Manage your own projects. Download and upload folders.",
+    "id": "1415de42-8f01-4f36-bf34-539f23e47466",
+    "parent_id": null
+  }
+]
+```
+
+  </TabItem>
+</Tabs>
+
 ### Create Folder
 
 Create a new folder.
@@ -704,10 +732,16 @@ curl -X 'POST' \
   '$LANGFLOW_URL/api/v1/folders/' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
   -d '{
-    "name": "New Folder Name"
-  }'
+  "name": "new_folder_name",
+  "description": "string",
+  "components_list": [
+    "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+  ],
+  "flows_list": [
+    "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+  ]
+}'
 ```
 
   </TabItem>
@@ -715,8 +749,10 @@ curl -X 'POST' \
 
 ```plain
 {
-  "id": "new_folder_id",
-  "name": "New Folder Name"
+  "name": "new_folder_name",
+  "description": "string",
+  "id": "b408ddb9-6266-4431-9be8-e04a62758331",
+  "parent_id": null
 }
 ```
 
@@ -727,14 +763,15 @@ curl -X 'POST' \
 
 Retrieve details of a specific folder.
 
+To find the UUID of your folder, call the [read folders](#read-folders) endpoint.
+
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
 ```curl
 curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/folders/{folder_id}' \
-  -H 'accept: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+  '$LANGFLOW_URL/api/v1/folders/$FOLDER_ID' \
+  -H 'accept: application/json'
 ```
 
   </TabItem>
@@ -745,7 +782,7 @@ curl -X 'GET' \
     {
         "name": "My Projects",
         "description": "Manage your own projects. Download and upload folders.",
-        "id": "f1838e2e-f6a9-4f1f-be3f-3affc5ef1b4c",
+        "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
         "parent_id": null
     }
 ]
@@ -763,13 +800,20 @@ Update the information of a specific folder.
 
 ```curl
 curl -X 'PATCH' \
-  '$LANGFLOW_URL/api/v1/folders/{folder_id}' \
+  'http://127.0.0.1:7860/api/v1/folders/b408ddb9-6266-4431-9be8-e04a62758331' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
   -d '{
-    "name": "Updated Folder Name"
-  }'
+  "name": "string",
+  "description": "string",
+  "parent_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "components": [
+    "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+  ],
+  "flows": [
+    "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+  ]
+}'
 ```
 
   </TabItem>
@@ -777,8 +821,10 @@ curl -X 'PATCH' \
 
 ```plain
 {
-  "id": "folder_id",
-  "name": "Updated Folder Name"
+  "name": "string",
+  "description": "string",
+  "id": "b408ddb9-6266-4431-9be8-e04a62758331",
+  "parent_id": null
 }
 ```
 
@@ -794,9 +840,8 @@ Delete a specific folder.
 
 ```curl
 curl -X 'DELETE' \
-  '$LANGFLOW_URL/api/v1/folders/{folder_id}' \
-  -H 'accept: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+  '$LANGFLOW_URL/api/v1/folders/$FOLDER_ID' \
+  -H 'accept: */*'
 ```
 
   </TabItem>
@@ -809,95 +854,57 @@ curl -X 'DELETE' \
   </TabItem>
 </Tabs>
 
-### Download File
+### Download Folder
 
 Download all flows from a folder as a zip file.
+
+The `--output` flag is optional.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
 ```curl
 curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/folders/download/{folder_id}' \
+  'http://127.0.0.1:7860/api/v1/folders/download/b408ddb9-6266-4431-9be8-e04a62758331' \
   -H 'accept: application/json' \
-  -H 'Authorization: Bearer $YOUR_ACCESS_TOKEN'
+  --output langflow-folder.zip
+```
+
+  </TabItem>
+    <TabItem value="result" label="Result">
+
+```plain
+The folder contents.
 ```
 
   </TabItem>
 </Tabs>
 
-### Upload File
+### Upload Folder
 
-Upload flows from a file to a folder.
+Upload a folder to Langflow.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
 ```curl
 curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/folders/upload/' \
+  'http://127.0.0.1:7860/api/v1/folders/upload/' \
   -H 'accept: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
-  -F 'file=@/path/to/your/file.zip'
+  -H 'Content-Type: multipart/form-data' \
+  -F 'file=@20241230_135006_langflow_flows.zip;type=application/zip'
 ```
 
   </TabItem>
-</Tabs>
 
-## Health Check
-
-### Health
-
-Check the health status of the service.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/health' \
-  -H 'accept: application/json'
-```
-
-  </TabItem>
   <TabItem value="result" label="Result">
 
 ```plain
-{
-  "status": "ok"
-}
+The folder contents are uploaded to Langflow.
 ```
 
   </TabItem>
 </Tabs>
-
-### Health Check
-
-Perform a detailed health check of the service.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/health_check' \
-  -H 'accept: application/json'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-  "status": "ok",
-  "chat": "ok",
-  "db": "ok"
-}
-```
-
-  </TabItem>
-</Tabs>
-
 
 ## Files
 
@@ -1274,15 +1281,31 @@ curl -X 'POST' \
   '$LANGFLOW_URL/api/v1/run/advanced/$FLOW_ID' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
-  -H 'x-api-key: YOUR_API_KEY' \
   -d '{
   "inputs": [
-    {"components": ["component1"], "input_value": "value1"},
-    {"components": ["component2"], "input_value": "value2"}
+    {
+      "components": [
+        "components_id",
+        "Component Name"
+      ],
+      "input_value": "input_value",
+      "session": "session_id"
+    }
   ],
-  "outputs": ["Component Name", "component_id"],
-  "tweaks": {"parameter_name": "value"},
-  "stream": false
+  "outputs": [
+    "string"
+  ],
+  "tweaks": {
+    "Component Name": {
+      "parameter_name": "value"
+    },
+    "component_id": {
+      "parameter_name": "value"
+    },
+    "parameter_name": "value"
+  },
+  "stream": false,
+  "session_id": "string"
 }'
 ```
 
@@ -1301,61 +1324,15 @@ curl -X 'POST' \
 
 ### Process
 
-Process an input with a given flow ID.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/process/$FLOW_ID' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -H 'x-api-key: YOUR_API_KEY' \
-  -d '{
-  "input": "Your input data here"
-}'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```result
-{
-  "result": "Processed output"
-}
-```
-
-  </TabItem>
-</Tabs>
+:::info
+This endpoint is deprecated. Use the `/run` endpoint instead.
+:::
 
 ### Predict
 
-Process an input with a given flow (alternative endpoint).
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/predict/{flow_id}' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -H 'x-api-key: YOUR_API_KEY' \
-  -d '{
-  "predict_input": "Your predict input here"
-}'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-null
-```
-
-  </TabItem>
-</Tabs>
+:::info
+This endpoint is deprecated. Use the `/run` endpoint instead.
+:::
 
 ### Get Task Status
 
@@ -1385,30 +1362,9 @@ curl -X 'GET' \
 
 ### Create Upload File (Deprecated)
 
-Upload a file for a specific flow (Deprecated).
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/upload/$FLOW_ID' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: multipart/form-data' \
-  -F 'file=@path/to/your/file'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```result
-{
-  "file_path": "Uploaded file path"
-}
-```
-
-  </TabItem>
-</Tabs>
+:::info
+This endpoint is deprecated. Use the `/file` endpoint instead.
+:::
 
 ### Get Version
 
@@ -1431,66 +1387,6 @@ curl -X 'GET' \
     "version": "1.1.1",
     "main_version": "1.1.1",
     "package": "Langflow"
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Custom Component
-
-Create a custom component.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/custom_component' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
-  -d '{
-  "code": "Your custom component code here"
-}'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```result
-{
-  "custom_component": "Custom component details"
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Custom Component Update
-
-Update a custom component.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/custom_component/update' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN' \
-  -d '{
-  "code": "Your updated custom component code here"
-}'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```result
-{
-  "updated_component": "Updated custom component details"
 }
 ```
 
