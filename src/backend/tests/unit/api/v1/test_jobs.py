@@ -44,10 +44,10 @@ async def long_running_flow(client: AsyncClient, logged_in_headers):
 
 
 @pytest.fixture
-def create_task_request():
-    """Fixture for creating a task request."""
+def create_job_request():
+    """Fixture for creating a job request."""
     return {
-        "name": "Test Task",
+        "name": "Test Job",
         "input_request": {
             "input_value": "test input",
             "input_type": "text",
@@ -96,118 +96,118 @@ async def another_user_headers(client, anoter_active_user):
     return {"Authorization": f"Bearer {a_token}"}
 
 
-async def test_create_task(client: AsyncClient, logged_in_headers, simple_api_test, create_task_request):
-    """Test creating a task."""
+async def test_create_job(client: AsyncClient, logged_in_headers, simple_api_test, create_job_request):
+    """Test creating a job."""
     response = await client.post(
-        f"/api/v1/jobs/{simple_api_test['id']}", headers=logged_in_headers, json=create_task_request
+        f"/api/v1/jobs/{simple_api_test['id']}", headers=logged_in_headers, json=create_job_request
     )
     assert (
         response.status_code == status.HTTP_200_OK
-    ), f"Failed to create task. Status: {response.status_code}. Response: {response.text}"
-    task_id = response.json()
-    assert isinstance(task_id, str), f"Expected task_id to be a string, got {type(task_id)}"
+    ), f"Failed to create job. Status: {response.status_code}. Response: {response.text}"
+    job_id = response.json()
+    assert isinstance(job_id, str), f"Expected job_id to be a string, got {type(job_id)}"
 
-    # Verify task was created by getting it
-    response = await client.get(f"/api/v1/jobs/{task_id}", headers=logged_in_headers)
+    # Verify job was created by getting it
+    response = await client.get(f"/api/v1/jobs/{job_id}", headers=logged_in_headers)
     assert (
         response.status_code == status.HTTP_200_OK
-    ), f"Failed to get created task. Status: {response.status_code}. Response: {response.text}"
-    task = response.json()
-    assert task["id"] == task_id, f"Task ID mismatch. Expected: {task_id}, got: {task['id']}"
+    ), f"Failed to get created job. Status: {response.status_code}. Response: {response.text}"
+    job = response.json()
+    assert job["id"] == job_id, f"Job ID mismatch. Expected: {job_id}, got: {job['id']}"
     assert (
-        task["name"] == create_task_request["name"]
-    ), f"Task name mismatch. Expected: {create_task_request['name']}, got: {task['name']}"
-    assert task["pending"] is False, f"Expected task to not be pending, got: {task['pending']}"
+        job["name"] == create_job_request["name"]
+    ), f"Job name mismatch. Expected: {create_job_request['name']}, got: {job['name']}"
+    assert job["pending"] is False, f"Expected job to not be pending, got: {job['pending']}"
 
 
-async def test_create_task_invalid_flow(client: AsyncClient, logged_in_headers, create_task_request):
-    """Test creating a task with an invalid flow ID."""
+async def test_create_job_invalid_flow(client: AsyncClient, logged_in_headers, create_job_request):
+    """Test creating a job with an invalid flow ID."""
     some_flow_id = uuid4()
-    response = await client.post(f"/api/v1/jobs/{some_flow_id}", headers=logged_in_headers, json=create_task_request)
+    response = await client.post(f"/api/v1/jobs/{some_flow_id}", headers=logged_in_headers, json=create_job_request)
     assert (
         response.status_code == status.HTTP_404_NOT_FOUND
     ), f"Expected 404 error for invalid flow ID. Got: {response.status_code}. Response: {response.text}"
 
 
-async def test_get_task_not_found(client: AsyncClient, logged_in_headers):
-    """Test getting a non-existent task."""
+async def test_get_job_not_found(client: AsyncClient, logged_in_headers):
+    """Test getting a non-existent job."""
     response = await client.get("/api/v1/jobs/nonexistent", headers=logged_in_headers)
     assert (
         response.status_code == status.HTTP_404_NOT_FOUND
-    ), f"Expected 404 for non-existent task. Got: {response.status_code}. Response: {response.text}"
+    ), f"Expected 404 for non-existent job. Got: {response.status_code}. Response: {response.text}"
 
 
-async def test_get_tasks(client: AsyncClient, logged_in_headers, simple_api_test, create_task_request):
-    """Test getting all tasks."""
-    # Create a task first
+async def test_get_jobs(client: AsyncClient, logged_in_headers, simple_api_test, create_job_request):
+    """Test getting all jobs."""
+    # Create a job first
     response = await client.post(
-        f"/api/v1/jobs/{simple_api_test['id']}", headers=logged_in_headers, json=create_task_request
+        f"/api/v1/jobs/{simple_api_test['id']}", headers=logged_in_headers, json=create_job_request
     )
     response.json()
 
     assert (
         response.status_code == status.HTTP_200_OK
-    ), f"Failed to create task. Status: {response.status_code}. Response: {response.text}"
-    # Get all tasks
+    ), f"Failed to create job. Status: {response.status_code}. Response: {response.text}"
+    # Get all jobs
     response = await client.get("/api/v1/jobs/", headers=logged_in_headers)
     assert (
         response.status_code == status.HTTP_200_OK
-    ), f"Failed to get tasks. Status: {response.status_code}. Response: {response.text}"
-    tasks = response.json()
-    assert isinstance(tasks, list), f"Expected tasks to be a list, got {type(tasks)}"
-    assert len(tasks) >= 1, f"Expected at least 1 task, got {len(tasks)}"
-    assert all(isinstance(task["id"], str) for task in tasks), "Some task IDs are not strings"
+    ), f"Failed to get jobs. Status: {response.status_code}. Response: {response.text}"
+    jobs = response.json()
+    assert isinstance(jobs, list), f"Expected jobs to be a list, got {type(jobs)}"
+    assert len(jobs) >= 1, f"Expected at least 1 job, got {len(jobs)}"
+    assert all(isinstance(job["id"], str) for job in jobs), "Some job IDs are not strings"
 
 
-async def test_get_tasks_with_status(client: AsyncClient, logged_in_headers, simple_api_test, create_task_request):
-    """Test getting tasks filtered by status."""
-    # Create a task first
-    await client.post(f"/api/v1/jobs/{simple_api_test['id']}", headers=logged_in_headers, json=create_task_request)
+async def test_get_jobs_with_status(client: AsyncClient, logged_in_headers, simple_api_test, create_job_request):
+    """Test getting jobs filtered by status."""
+    # Create a job first
+    await client.post(f"/api/v1/jobs/{simple_api_test['id']}", headers=logged_in_headers, json=create_job_request)
 
-    # Get all tasks
+    # Get all jobs
     response = await client.get("/api/v1/jobs/", headers=logged_in_headers)
     assert (
         response.status_code == status.HTTP_200_OK
-    ), f"Failed to get tasks. Status: {response.status_code}. Response: {response.text}"
-    tasks = response.json()
-    assert isinstance(tasks, list), f"Expected tasks to be a list, got {type(tasks)}"
-    assert len(tasks) > 0, "Expected at least one task"
+    ), f"Failed to get jobs. Status: {response.status_code}. Response: {response.text}"
+    jobs = response.json()
+    assert isinstance(jobs, list), f"Expected jobs to be a list, got {type(jobs)}"
+    assert len(jobs) > 0, "Expected at least one job"
 
 
-async def test_cancel_task(client: AsyncClient, logged_in_headers, long_running_flow, create_task_request):
-    """Test canceling a task."""
-    # Create a task first
+async def test_cancel_job(client: AsyncClient, logged_in_headers, long_running_flow, create_job_request):
+    """Test canceling a job."""
+    # Create a job first
     response = await client.post(
-        f"/api/v1/jobs/{long_running_flow['id']}", headers=logged_in_headers, json=create_task_request
+        f"/api/v1/jobs/{long_running_flow['id']}", headers=logged_in_headers, json=create_job_request
     )
-    task_id = response.json()
+    job_id = response.json()
 
-    # Cancel the task
-    response = await client.delete(f"/api/v1/jobs/{task_id}", headers=logged_in_headers)
+    # Cancel the job
+    response = await client.delete(f"/api/v1/jobs/{job_id}", headers=logged_in_headers)
     assert (
         response.status_code == status.HTTP_200_OK
-    ), f"Failed to cancel task. Status: {response.status_code}. Response: {response.text}"
-    assert response.json() is True, f"Expected True response for task cancellation, got: {response.json()}"
+    ), f"Failed to cancel job. Status: {response.status_code}. Response: {response.text}"
+    assert response.json() is True, f"Expected True response for job cancellation, got: {response.json()}"
 
-    # Verify task was canceled by trying to get it
-    response = await client.get(f"/api/v1/jobs/{task_id}", headers=logged_in_headers)
+    # Verify job was canceled by trying to get it
+    response = await client.get(f"/api/v1/jobs/{job_id}", headers=logged_in_headers)
     assert (
         response.status_code == status.HTTP_404_NOT_FOUND
-    ), f"Expected task to be not found after cancellation. Status: {response.status_code}. Response: {response.text}"
+    ), f"Expected job to be not found after cancellation. Status: {response.status_code}. Response: {response.text}"
 
 
-async def test_cancel_nonexistent_task(client: AsyncClient, logged_in_headers):
-    """Test canceling a non-existent task."""
+async def test_cancel_nonexistent_job(client: AsyncClient, logged_in_headers):
+    """Test canceling a non-existent job."""
     response = await client.delete("/api/v1/jobs/nonexistent", headers=logged_in_headers)
     assert (
         response.status_code == status.HTTP_404_NOT_FOUND
-    ), f"Expected 404 for non-existent task cancellation. Got: {response.status_code}. Response: {response.text}"
+    ), f"Expected 404 for non-existent job cancellation. Got: {response.status_code}. Response: {response.text}"
 
 
-async def test_create_task_invalid_request(client: AsyncClient, logged_in_headers, simple_api_test):
-    """Test creating a task with invalid request data."""
+async def test_create_job_invalid_request(client: AsyncClient, logged_in_headers, simple_api_test):
+    """Test creating a job with invalid request data."""
     invalid_request = {
-        "name": "Test Task",
+        "name": "Test Job",
         # Missing required input_request field
     }
     response = await client.post(
@@ -218,90 +218,90 @@ async def test_create_task_invalid_request(client: AsyncClient, logged_in_header
     ), f"Expected 422 for invalid request. Got: {response.status_code}. Response: {response.text}"
 
 
-async def test_task_access_control(
-    client: AsyncClient, logged_in_headers, another_user_headers, simple_api_test, create_task_request
+async def test_job_access_control(
+    client: AsyncClient, logged_in_headers, another_user_headers, simple_api_test, create_job_request
 ):
-    """Test that a user cannot access another user's tasks."""
+    """Test that a user cannot access another user's jobs."""
     # assert headers are different
     assert logged_in_headers["Authorization"] != another_user_headers["Authorization"], "Headers are the same"
-    # User A creates a task
+    # User A creates a job
     response = await client.post(
-        f"/api/v1/jobs/{simple_api_test['id']}", headers=logged_in_headers, json=create_task_request
+        f"/api/v1/jobs/{simple_api_test['id']}", headers=logged_in_headers, json=create_job_request
     )
-    assert response.status_code == status.HTTP_200_OK, f"Failed to create task. Response: {response.text}"
-    task_id = response.json()
+    assert response.status_code == status.HTTP_200_OK, f"Failed to create job. Response: {response.text}"
+    job_id = response.json()
 
-    # User B tries to access User A's task
-    response = await client.get(f"/api/v1/jobs/{task_id}", headers=another_user_headers)
+    # User B tries to access User A's job
+    response = await client.get(f"/api/v1/jobs/{job_id}", headers=another_user_headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND, (
-        f"Expected 404 when accessing another user's task. "
+        f"Expected 404 when accessing another user's job. "
         f"Got status {response.status_code}. Response: {response.text}"
     )
 
-    # User B tries to cancel User A's task
-    response = await client.delete(f"/api/v1/jobs/{task_id}", headers=another_user_headers)
+    # User B tries to cancel User A's job
+    response = await client.delete(f"/api/v1/jobs/{job_id}", headers=another_user_headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND, (
-        f"Expected 404 when canceling another user's task. "
+        f"Expected 404 when canceling another user's job. "
         f"Got status {response.status_code}. Response: {response.text}"
     )
 
 
-async def test_create_multiple_tasks(client: AsyncClient, logged_in_headers, simple_api_test, create_task_request):
-    """Test creating multiple tasks concurrently."""
-    num_tasks = 5
-    tasks = [
-        client.post(f"/api/v1/jobs/{simple_api_test['id']}", headers=logged_in_headers, json=create_task_request)
-        for _ in range(num_tasks)
+async def test_create_multiple_jobs(client: AsyncClient, logged_in_headers, simple_api_test, create_job_request):
+    """Test creating multiple jobs concurrently."""
+    num_jobs = 5
+    jobs = [
+        client.post(f"/api/v1/jobs/{simple_api_test['id']}", headers=logged_in_headers, json=create_job_request)
+        for _ in range(num_jobs)
     ]
-    responses = await asyncio.gather(*tasks)
+    responses = await asyncio.gather(*jobs)
 
     for i, response in enumerate(responses):
         assert response.status_code == status.HTTP_200_OK, (
-            f"Failed to create task {i + 1}/{num_tasks}. " f"Status: {response.status_code}. Response: {response.text}"
+            f"Failed to create job {i + 1}/{num_jobs}. " f"Status: {response.status_code}. Response: {response.text}"
         )
-        task_id = response.json()
-        assert isinstance(task_id, str), f"Task {i + 1}/{num_tasks}: Expected string ID, got {type(task_id)}"
+        job_id = response.json()
+        assert isinstance(job_id, str), f"Job {i + 1}/{num_jobs}: Expected string ID, got {type(job_id)}"
 
-    # Verify all tasks were created
+    # Verify all jobs were created
     response = await client.get("/api/v1/jobs/", headers=logged_in_headers)
     assert (
         response.status_code == status.HTTP_200_OK
-    ), f"Failed to get tasks list. Status: {response.status_code}. Response: {response.text}"
-    tasks = response.json()
-    assert len(tasks) >= num_tasks, (
-        f"Expected at least {num_tasks} tasks, but found {len(tasks)}. " f"Some tasks may have failed to create."
+    ), f"Failed to get jobs list. Status: {response.status_code}. Response: {response.text}"
+    jobs = response.json()
+    assert len(jobs) >= num_jobs, (
+        f"Expected at least {num_jobs} jobs, but found {len(jobs)}. " f"Some jobs may have failed to create."
     )
 
 
-async def test_task_status_transitions(client: AsyncClient, logged_in_headers, simple_api_test, create_task_request):
-    """Test task status transitions."""
-    # Create a task
+async def test_job_status_transitions(client: AsyncClient, logged_in_headers, simple_api_test, create_job_request):
+    """Test job status transitions."""
+    # Create a job
     response = await client.post(
-        f"/api/v1/jobs/{simple_api_test['id']}", headers=logged_in_headers, json=create_task_request
+        f"/api/v1/jobs/{simple_api_test['id']}", headers=logged_in_headers, json=create_job_request
     )
     assert response.status_code == status.HTTP_200_OK, (
-        f"Failed to create task for status test. " f"Status: {response.status_code}. Response: {response.text}"
+        f"Failed to create job for status test. " f"Status: {response.status_code}. Response: {response.text}"
     )
-    task_id = response.json()
+    job_id = response.json()
 
-    # Get task status
-    response = await client.get(f"/api/v1/jobs/{task_id}", headers=logged_in_headers)
+    # Get job status
+    response = await client.get(f"/api/v1/jobs/{job_id}", headers=logged_in_headers)
     assert (
         response.status_code == status.HTTP_200_OK
-    ), f"Failed to get task status. Status: {response.status_code}. Response: {response.text}"
-    task = response.json()
+    ), f"Failed to get job status. Status: {response.status_code}. Response: {response.text}"
+    job = response.json()
 
-    # Verify task has a valid pending status
-    assert "pending" in task, f"Task response missing 'pending' field. Response: {task}"
-    assert isinstance(task["pending"], bool), (
-        f"Expected boolean for task.pending, got {type(task['pending'])}. " f"Value: {task['pending']}"
+    # Verify job has a valid pending status
+    assert "pending" in job, f"Job response missing 'pending' field. Response: {job}"
+    assert isinstance(job["pending"], bool), (
+        f"Expected boolean for job.pending, got {type(job['pending'])}. " f"Value: {job['pending']}"
     )
 
 
-async def test_create_task_malicious_input(client: AsyncClient, logged_in_headers, simple_api_test):
-    """Test task creation with potentially malicious input."""
+async def test_create_job_malicious_input(client: AsyncClient, logged_in_headers, simple_api_test):
+    """Test job creation with potentially malicious input."""
     malicious_request = {
-        "name": "'; DROP TABLE tasks; --",
+        "name": "'; DROP TABLE jobs; --",
         "input_request": {
             "input_value": "<script>alert('xss')</script>",
             "input_type": "text",
@@ -320,10 +320,10 @@ async def test_create_task_malicious_input(client: AsyncClient, logged_in_header
     )
 
     if response.status_code == status.HTTP_200_OK:
-        task_id = response.json()
-        # Verify the task was created and can be retrieved
-        response = await client.get(f"/api/v1/jobs/{task_id}", headers=logged_in_headers)
+        job_id = response.json()
+        # Verify the job was created and can be retrieved
+        response = await client.get(f"/api/v1/jobs/{job_id}", headers=logged_in_headers)
         assert response.status_code == status.HTTP_200_OK, (
-            f"Failed to retrieve task created with sanitized malicious input. "
+            f"Failed to retrieve job created with sanitized malicious input. "
             f"Status: {response.status_code}. Response: {response.text}"
         )
