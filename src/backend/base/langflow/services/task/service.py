@@ -169,7 +169,25 @@ class TaskService(Service):
         user_id: UUID | None = None,
         pending: bool | None = None,
     ) -> list[dict]:
-        """Get tasks with optional filters."""
+        """Get all jobs from the job store.
+
+        This method retrieves jobs from the job store, with optional filtering by user ID and pending status.
+
+        Args:
+            user_id (UUID | None): If provided, only return jobs belonging to this user
+            pending (bool | None): If provided, only return jobs with matching pending status
+
+        Returns:
+            list[dict]: A list of jobs as dictionaries, each containing the job's attributes
+
+        Raises:
+            ValueError: If the job store is not initialized
+            Exception: If there is an error retrieving the jobs
+
+        Note:
+            If no user_id is provided, all jobs in the store will be returned.
+            The pending filter is only applied when a user_id is provided.
+        """
         await self._ensure_scheduler_running()
         if self.job_store is None:
             msg = "Job store not initialized"
@@ -177,10 +195,12 @@ class TaskService(Service):
             raise ValueError(msg)
         try:
             if user_id:
-                return await self.job_store.get_user_jobs(user_id, pending)
+                jobs = await self.job_store.get_user_jobs(user_id, pending)
+                return [job.model_dump() for job in jobs]
             # For other filters, we'll need to implement corresponding methods in the jobstore
             # For now, we'll just get all jobs if no user_id is provided
-            return await self.job_store.get_all_jobs()
+            jobs = await self.job_store.get_all_jobs()
+            return [job.model_dump() for job in jobs]
         except Exception as exc:
             logger.error(f"Error getting tasks: {exc}")
             raise
@@ -193,7 +213,8 @@ class TaskService(Service):
             logger.error(msg)
             raise ValueError(msg)
         try:
-            return await self.job_store.get_user_jobs(user_id)
+            jobs = await self.job_store.get_user_jobs(user_id)
+            return [job.model_dump() for job in jobs]
         except Exception as exc:
             logger.error(f"Error getting jobs for user {user_id}: {exc}")
             raise
