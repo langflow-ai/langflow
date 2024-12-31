@@ -44,7 +44,7 @@ from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_session_service, get_settings_service, get_task_service, get_telemetry_service
+from langflow.services.deps import get_jobs_service, get_session_service, get_settings_service, get_telemetry_service
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.version import get_version_info
@@ -393,7 +393,7 @@ async def webhook_run_flow(
         HTTPException: If the flow is not found or if there is an error processing the request.
     """
     telemetry_service = get_telemetry_service()
-    task_service = get_task_service()
+    jobs_service = get_jobs_service()
     start_time = time.perf_counter()
     logger.debug("Received webhook request")
     error_msg = ""
@@ -424,7 +424,7 @@ async def webhook_run_flow(
             )
 
             logger.debug("Creating job")
-            job_id = await task_service.create_job(
+            job_id = await jobs_service.create_job(
                 task_func=simple_run_flow_task,
                 run_at=None,
                 name=f"webhook_{flow.name}_{time.time()}",
