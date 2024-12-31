@@ -29,8 +29,9 @@ export FLOW_ID="359cd752-07ea-46f2-9d3b-a4407ef618da"
 
 The examples in this guide use environment variables for these values.
 
-
 ## Flows
+
+Use the `/flows` endpoint to create, read, update, and delete flows.
 
 ### Create Flow
 
@@ -403,6 +404,8 @@ A list of example flows.
 
 ## Monitor
 
+Use the `/monitor` endpoint to monitor and modify messages passed between Langflow components.
+
 ### Get Vertex Builds
 
 Retrieve Vertex Builds for a specific flow.
@@ -692,6 +695,47 @@ curl -X 'GET' \
 
 ## Folders
 
+Use the `/folders` endpoint to create, read, update, and delete folders.
+
+Folders store your flows and components.
+
+You might find it helpful to set the `folder-id` environment variable in your terminal.
+
+The examples in this guide use environment variables for these values.
+
+1. To find your folder ID, use the Langflow API endpoint [Read folders](#read-folders).
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/folders/' \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+[
+  {
+    "name": "My Projects",
+    "description": "Manage your own projects. Download and upload folders.",
+    "id": "1415de42-8f01-4f36-bf34-539f23e47466",
+    "parent_id": null
+  }
+]
+```
+  </TabItem>
+</Tabs>
+
+2. Export the `folder-id` you want to as an environment variable.
+
+```plain
+export FOLDER_ID="1415de42-8f01-4f36-bf34-539f23e47466"
+```
+
 ### Read folders
 
 <Tabs>
@@ -908,6 +952,8 @@ The folder contents are uploaded to Langflow.
 
 ## Files
 
+Use the `/files` endpoint to add or delete files between your local machine and Langflow.
+
 ### Upload File
 
 Upload a file to a specific flow.
@@ -1098,7 +1144,9 @@ curl -X 'DELETE' \
   </TabItem>
 </Tabs>
 
-## Log
+## Logs
+
+Retrieve logs for your Langflow flow.
 
 ### Stream Logs
 
@@ -1150,31 +1198,9 @@ curl -X 'GET' \
   </TabItem>
 </Tabs>
 
-## Get starter projects
-
-Retrieve starter projects.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL//api/v1/starter-projects/' \
-  -H 'accept: application/json'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-A list of starter projects.
-```
-
-  </TabItem>
-</Tabs>
-
-
 ## Base
+
+Use the base Langflow API for running your flow and retrieving configuration information.
 
 ### Get all
 
@@ -1425,6 +1451,27 @@ curl -X 'GET' \
   </TabItem>
 </Tabs>
 
+## Get starter projects
 
+Retrieve starter projects.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/starter-projects/' \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+A list of starter projects.
+```
+
+  </TabItem>
+</Tabs>
 
 
