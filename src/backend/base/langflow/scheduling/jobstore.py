@@ -6,7 +6,7 @@ from apscheduler.job import Job as APSJob
 from apscheduler.jobstores.base import BaseJobStore, JobLookupError
 from apscheduler.triggers.date import DateTrigger
 from loguru import logger
-from sqlmodel import select
+from sqlmodel import col, select
 
 from langflow.services.database.models.job.model import Job, JobStatus
 from langflow.services.deps import session_scope
@@ -132,8 +132,9 @@ class AsyncSQLModelJobStore(BaseJobStore):
         """
         async with session_scope() as session:
             stmt = select(Job).where(
-                Job.next_run_time <= now,
-                Job.is_active == True,  # noqa: E712
+                col(Job.next_run_time).isnot(None),
+                col(Job.next_run_time) <= now,
+                col(Job.is_active) == True,  # noqa: E712
             )
             tasks = (await session.exec(stmt)).all()
 
