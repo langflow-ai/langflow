@@ -1,6 +1,29 @@
-# Tools
+---
+title: Tools
+slug: /components-tools
+---
 
-Tool components are used to interact with external services, APIs, and tools. They can be used to search the web, query databases, and perform other tasks.
+# Tool components in Langflow
+
+Tools are typically connected to agent components at the **Tools** port. Agents use LLMs as a reasoning engine to decide which of the connected tool components to use to solve a problem.
+
+Tools in agentic functions are, essentially, functions that the agent can call to perform tasks or access external resources.
+A function is wrapped as a `Tool` object, with a common interface the agent understands.
+Agents become aware of tools through tool registration, where the agent is provided a list of available tools, typically at agent initialization. The `Tool` object's description tells the agent what the tool can do.
+
+The agent then uses a connected LLM to reason through the problem to decide which tool is best for the job.
+
+## Use a tool in a flow
+
+Tools are typically connected to agent components at the **Tools** port.
+
+The [simple agent starter project](/starter-projects-simple-agent) uses URL and Calculator tools connected to an [agent component](#agent-component-agent-component) to answer a user's questions. The OpenAI LLM acts as a brain for the agent to decide which tool to use.
+
+![Simple agent starter flow](/img/starter-flow-simple-agent.png)
+
+To make a component into a tool that an agent can use, enable **Tool mode** in the component. Enabling **Tool mode** modifies a component input to accept calls from an agent.
+If the component you want to connect to an agent doesn't have a **Tool mode** option, you can modify the component's inputs to become a tool.
+For an example, see [Make any component a tool](/agents-tool-calling-agent-component#make-any-component-a-tool).
 
 ## Bing Search API
 
@@ -43,6 +66,28 @@ This component creates a tool for performing basic arithmetic operations on a gi
 | result | Tool | Calculator tool for use in LangChain            |
 
 This component allows you to evaluate basic arithmetic expressions. It supports addition, subtraction, multiplication, division, and exponentiation. The tool uses a secure evaluation method that prevents the execution of arbitrary Python code.
+
+## Combinatorial Reasoner
+
+This component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to create an optimized prompt with embedded reasons. Sign up for access here: https://forms.gle/oWNv2NKjBNaqqvCx6 
+
+### Parameters
+
+#### Inputs
+| Name                   | Display Name | Description                           |
+|------------------------|--------------|---------------------------------------|
+| prompt                 | Prompt      | Input to run CR on                    |
+| openai_api_key         | OpenAI API Key | OpenAI API key for authentication     |
+| username               | Username       | Username for Icosa API authentication |
+| password               | Password | Password for Icosa API authentication |
+| model_name             | Model Name      | OpenAI LLM to use for reason generation|
+
+#### Outputs
+
+| Name    | Display Name | Description                          |
+|---------|-----------|--------------------------------------|
+| optimized_prompt | Optimized Prompt| A message object containing the optimized prompt |
+| reasons | Selected Reasons| A list of the selected reasons that are embedded in the optimized prompt|
 
 ## Glean Search API
 

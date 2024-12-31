@@ -1,19 +1,26 @@
+import io
+import json
+import zipfile
+from datetime import datetime, timezone
 from typing import Annotated
+from uuid import UUID
 
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import StreamingResponse
 from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import paginate
 from sqlalchemy import or_, update
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
-from langflow.api.utils import AsyncDbSession, CurrentActiveUser, cascade_delete_flow, custom_params
+from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, custom_params, remove_api_keys
 from langflow.api.v1.flows import create_flows
-from langflow.api.v1.schemas import FlowListCreate, FlowListReadWithFolderName
+from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
-from langflow.initial_setup.setup import STARTER_FOLDER_NAME
+from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
@@ -31,7 +38,7 @@ router = APIRouter(prefix="/folders", tags=["Folders"])
 @router.post("/", response_model=FolderRead, status_code=201)
 async def create_folder(
     *,
-    session: AsyncDbSession,
+    session: DbSession,
     folder: FolderCreate,
     current_user: CurrentActiveUser,
 ):
@@ -87,7 +94,7 @@ async def create_folder(
 @router.get("/", response_model=list[FolderRead], status_code=200)
 async def read_folders(
     *,
-    session: AsyncDbSession,
+    session: DbSession,
     current_user: CurrentActiveUser,
 ):
     try:
@@ -107,8 +114,8 @@ async def read_folders(
 @router.get("/{folder_id}", response_model=FolderWithPaginatedFlows | FolderReadWithFlows, status_code=200)
 async def read_folder(
     *,
-    session: AsyncDbSession,
-    folder_id: str,
+    session: DbSession,
+    folder_id: UUID,
     current_user: CurrentActiveUser,
     params: Annotated[Params | None, Depends(custom_params)],
     is_component: bool = False,
@@ -158,8 +165,8 @@ async def read_folder(
 @router.patch("/{folder_id}", response_model=FolderRead, status_code=200)
 async def update_folder(
     *,
-    session: AsyncDbSession,
-    folder_id: str,
+    session: DbSession,
+    folder_id: UUID,
     folder: FolderUpdate,  # Assuming FolderUpdate is a Pydantic model defining updatable fields
     current_user: CurrentActiveUser,
 ):
@@ -219,8 +226,8 @@ async def update_folder(
 @router.delete("/{folder_id}", status_code=204)
 async def delete_folder(
     *,
-    session: AsyncDbSession,
-    folder_id: str,
+    session: DbSession,
+    folder_id: UUID,
     current_user: CurrentActiveUser,
 ):
     try:
@@ -248,33 +255,58 @@ async def delete_folder(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/download/{folder_id}", response_model=FlowListReadWithFolderName, status_code=200)
+@router.get("/download/{folder_id}", status_code=200)
 async def download_file(
     *,
-    session: AsyncDbSession,
-    folder_id: str,
+    session: DbSession,
+    folder_id: UUID,
     current_user: CurrentActiveUser,
 ):
-    """Download all flows from folder."""
+    """Download all flows from folder as a zip file."""
     try:
-        folder = (
-            await session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id))
-        ).first()
+        query = select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id)
+        result = await session.exec(query)
+        folder = result.first()
+
+        if not folder:
+            raise HTTPException(status_code=404, detail="Folder not found")
+
+        flows_query = select(Flow).where(Flow.folder_id == folder_id)
+        flows_result = await session.exec(flows_query)
+        flows = [FlowRead.model_validate(flow, from_attributes=True) for flow in flows_result.all()]
+
+        if not flows:
+            raise HTTPException(status_code=404, detail="No flows found in folder")
+
+        flows_without_api_keys = [remove_api_keys(flow.model_dump()) for flow in flows]
+        zip_stream = io.BytesIO()
+
+        with zipfile.ZipFile(zip_stream, "w") as zip_file:
+            for flow in flows_without_api_keys:
+                flow_json = json.dumps(jsonable_encoder(flow))
+                zip_file.writestr(f"{flow['name']}.json", flow_json)
+
+        zip_stream.seek(0)
+
+        current_time = datetime.now(tz=timezone.utc).astimezone().strftime("%Y%m%d_%H%M%S")
+        filename = f"{current_time}_{folder.name}_flows.zip"
+
+        return StreamingResponse(
+            zip_stream,
+            media_type="application/x-zip-compressed",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+
     except Exception as e:
         if "No result found" in str(e):
             raise HTTPException(status_code=404, detail="Folder not found") from e
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-    if not folder:
-        raise HTTPException(status_code=404, detail="Folder not found")
-
-    return folder
-
 
 @router.post("/upload/", response_model=list[FlowRead], status_code=201)
 async def upload_file(
     *,
-    session: AsyncDbSession,
+    session: DbSession,
     file: Annotated[UploadFile, File(...)],
     current_user: CurrentActiveUser,
 ):

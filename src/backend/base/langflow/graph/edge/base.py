@@ -22,7 +22,7 @@ class Edge:
         self.is_cycle = False
         if data := edge.get("data", {}):
             self._source_handle = data.get("sourceHandle", {})
-            self._target_handle = cast(TargetHandleDict, data.get("targetHandle", {}))
+            self._target_handle = cast("TargetHandleDict", data.get("targetHandle", {}))
             self.source_handle: SourceHandle = SourceHandle(**self._source_handle)
             if isinstance(self._target_handle, dict):
                 try:
@@ -195,13 +195,13 @@ class Edge:
     def __hash__(self) -> int:
         return hash(self.__repr__())
 
-    def __eq__(self, __o: object) -> bool:
-        if not isinstance(__o, Edge):
+    def __eq__(self, /, other: object) -> bool:
+        if not isinstance(other, Edge):
             return False
         return (
-            self._source_handle == __o._source_handle
-            and self._target_handle == __o._target_handle
-            and self.target_param == __o.target_param
+            self._source_handle == other._source_handle
+            and self._target_handle == other._target_handle
+            and self.target_param == other.target_param
         )
 
     def __str__(self) -> str:

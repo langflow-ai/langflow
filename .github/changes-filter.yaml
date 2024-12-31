@@ -3,7 +3,9 @@ python:
   - "src/backend/**"
   - "src/backend/**.py"
   - "pyproject.toml"
-  - "poetry.lock"
+  - "uv.lock"
+  - "src/backend/base/pyproject.toml"
+  - "src/backend/base/uv.lock"
   - "**/python_test.yml"
 components-changes:
   - "src/backend/base/langflow/components/**"
@@ -16,3 +18,58 @@ frontend:
   - "**/typescript_test.yml"
 docs:
   - "docs/**"
+
+# Test categories and their associated paths
+starter-projects:
+  - "src/backend/base/langflow/initial_setup/**"
+  - "src/backend/base/langflow/components/**"
+  - "src/backend/base/langflow/services/**"
+  - "src/backend/base/langflow/custom/**"
+  - "src/frontend/src/pages/MainPage/**"
+  - "src/frontend/src/utils/reactflowUtils.ts"
+  - "src/frontend/tests/extended/features/**"
+
+components:
+  - "src/frontend/src/components/**"
+  - "src/frontend/src/modals/**"
+  - "src/frontend/src/pages/FlowPage/**"
+  - "src/frontend/src/shared/**"
+  - "src/frontend/src/hooks/**"
+  - "src/frontend/src/CustomNodes/**"
+  - "src/frontend/src/style/**"
+  - "src/frontend/src/utils/styleUtils.ts"
+  - "src/backend/base/langflow/components/**"
+  - "src/frontend/tests/core/features/**"
+  - "src/frontend/tests/core/integrations/**"
+  - "src/frontend/tests/core/regression/**"
+  - "src/frontend/tests/extended/integrations/**"
+  - "src/frontend/tests/extended/features/**"
+  - "src/frontend/tests/extended/regression/**"
+
+workspace:
+  - "src/backend/base/langflow/inputs/**"
+  - "src/frontend/src/components/core/parameterRenderComponent/**"
+  - "src/frontend/src/CustomNodes/**"
+  - "src/frontend/src/modals/**"
+  - "src/frontend/src/style/**"
+  - "src/frontend/src/CustomEdges/**"
+  - "src/frontend/src/utils/reactflowUtils.ts"
+  - "src/frontend/src/utils/buildUtils.ts"
+  - "src/frontend/tests/core/features/**"
+  - "src/frontend/tests/core/unit/**"
+  - "src/frontend/tests/extended/features/**"
+  - "src/frontend/tests/core/regression/**"
+
+api:
+  - "src/backend/base/langflow/api/**"
+  - "src/frontend/src/controllers/**"
+  - "src/frontend/tests/core/features/**"
+  - "src/frontend/tests/extended/features/**"
+  - "src/frontend/tests/extended/regression/**"
+
+database:
+  - "src/backend/base/langflow/services/database/**"
+  - "src/backend/base/langflow/alembic/**"
+  - "src/frontend/src/controllers/**"
+  - "src/frontend/tests/core/features/**"
+  - "src/frontend/tests/extended/features/**"

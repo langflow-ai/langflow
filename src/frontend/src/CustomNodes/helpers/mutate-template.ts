@@ -19,6 +19,7 @@ export const mutateTemplate = debounce(
     >,
     setErrorData,
     parameterName?: string,
+    callback?: () => void,
   ) => {
     try {
       const newNode = cloneDeep(node);
@@ -31,6 +32,7 @@ export const mutateTemplate = debounce(
         newNode.outputs = newTemplate.outputs;
       }
       setNodeClass(newNode);
+      callback?.();
     } catch (e) {
       const error = e as ResponseErrorDetailAPI;
       setErrorData({

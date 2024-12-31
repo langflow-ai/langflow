@@ -93,7 +93,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--ring)) !important;
+  background-color: hsl(var(--placeholder-foreground)) !important;
 }
 
 .jv-indent::-webkit-scrollbar-track {
@@ -107,7 +107,7 @@ body {
 }
 
 .jv-indent::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--ring)) !important;
+  background-color: hsl(var(--placeholder-foreground)) !important;
 }
 
 .custom-hover {
@@ -137,8 +137,17 @@ body {
   stroke: var(--selected) !important;
   stroke-width: 2px !important;
 }
+.react-flow__controls-button svg {
+  fill: none !important;
+}
 
 .react-flow__edge .react-flow__edge-path {
+  transition: color;
+  stroke: var(--connection) !important;
+  transition-duration: 150ms;
+  stroke-width: 2px !important;
+}
+.react-flow__connection path {
   transition: color;
   stroke: var(--connection) !important;
   transition-duration: 150ms;
@@ -170,10 +179,33 @@ body {
   height: 0.75rem !important;
   background-color: white !important;
   border-color: var(--border) !important;
-  z-index: 1000 !important;
+  z-index: 50 !important;
   border-radius: 20% !important;
 }
 
 code {
   font-family: var(--font-mono) s !important;
+}
+
+.ag-cell {
+  --ag-internal-calculated-line-height: none !important;
+}
+
+.ag-cell-wrapper > *:not(.ag-cell-value):not(.ag-group-value) {
+  --ag-internal-calculated-line-height: none !important;
+}
+
+.arrow-hide::-webkit-inner-spin-button,
+.arrow-hide::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.ag-large-text-input.ag-text-area.ag-input-field {
+  background-color: hsl(var(--background)) !important;
+}
+
+.ag-large-text-input.ag-text-area.ag-input-field textarea {
+  resize: none !important;
+  height: 100% !important;
 }

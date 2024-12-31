@@ -1,9 +1,9 @@
 import { BASE_URL_API } from "@/constants/constants";
 import { performStreamingRequest } from "@/controllers/API/api";
 import { useMessagesStore } from "@/stores/messagesStore";
+import { Edge, Node } from "@xyflow/react";
 import { AxiosError } from "axios";
 import { flushSync } from "react-dom";
-import { Edge, Node } from "reactflow";
 import { BuildStatus } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
 import useAlertStore from "../stores/alertStore";
@@ -199,9 +199,6 @@ export async function buildFlowVertices({
         onBuildStart(ids.map((id) => ({ id: id, reference: id })));
       ids.forEach((id) => verticesStartTimeMs.set(id, Date.now()));
     };
-
-    console.log("type", type);
-    console.log("data", data);
 
     switch (type) {
       case "vertices_sorted": {

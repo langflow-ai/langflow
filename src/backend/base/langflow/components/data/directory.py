@@ -1,6 +1,6 @@
 from langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data, retrieve_file_paths
 from langflow.custom import Component
-from langflow.io import BoolInput, IntInput, MessageTextInput
+from langflow.io import BoolInput, IntInput, MessageTextInput, MultiselectInput
 from langflow.schema import Data
 from langflow.template import Output
 
@@ -15,13 +15,16 @@ class DirectoryComponent(Component):
         MessageTextInput(
             name="path",
             display_name="Path",
-            info="Path to the directory to load files from.",
+            info="Path to the directory to load files from. Defaults to current directory ('.')",
+            value=".",
+            tool_mode=True,
         ),
-        MessageTextInput(
+        MultiselectInput(
             name="types",
-            display_name="Types",
-            info="File types to load. Leave empty to load all default supported types.",
-            is_list=True,
+            display_name="File Types",
+            info="File types to load. Select one or more types or leave empty to load all supported types.",
+            options=TEXT_FILE_TYPES,
+            value=[],
         ),
         IntInput(
             name="depth",
@@ -68,9 +71,7 @@ class DirectoryComponent(Component):
 
     def load_directory(self) -> list[Data]:
         path = self.path
-        types = (
-            self.types if self.types and self.types != [""] else TEXT_FILE_TYPES
-        )  # self.types is already a list due to is_list=True
+        types = self.types or TEXT_FILE_TYPES
         depth = self.depth
         max_concurrency = self.max_concurrency
         load_hidden = self.load_hidden
@@ -79,6 +80,7 @@ class DirectoryComponent(Component):
         use_multithreading = self.use_multithreading
 
         resolved_path = self.resolve_path(path)
+
         file_paths = retrieve_file_paths(
             resolved_path, load_hidden=load_hidden, recursive=recursive, depth=depth, types=types
         )
@@ -87,11 +89,11 @@ class DirectoryComponent(Component):
             file_paths = [fp for fp in file_paths if any(fp.endswith(ext) for ext in types)]
 
         loaded_data = []
-
         if use_multithreading:
             loaded_data = parallel_load_data(file_paths, silent_errors=silent_errors, max_concurrency=max_concurrency)
         else:
             loaded_data = [parse_text_file_to_data(file_path, silent_errors=silent_errors) for file_path in file_paths]
-        loaded_data = list(filter(None, loaded_data))
-        self.status = loaded_data
-        return loaded_data  # type: ignore[return-value]
+
+        valid_data = [x for x in loaded_data if x is not None and isinstance(x, Data)]
+        self.status = valid_data
+        return valid_data

@@ -1,5 +1,6 @@
-import { convertTestName } from "@/components/storeCardComponent/utils/convert-test-name";
+import { convertTestName } from "@/components/common/storeCardComponent/utils/convert-test-name";
 import { Badge } from "@/components/ui/badge";
+import { nodeColorsName } from "@/utils/styleUtils";
 
 export default function HandleTooltipComponent({
   isInput,
@@ -7,8 +8,6 @@ export default function HandleTooltipComponent({
   isConnecting,
   isCompatible,
   isSameNode,
-  accentColorName,
-  accentForegroundColorName,
   left,
 }: {
   isInput: boolean;
@@ -16,8 +15,6 @@ export default function HandleTooltipComponent({
   isConnecting: boolean;
   isCompatible: boolean;
   isSameNode: boolean;
-  accentColorName: string;
-  accentForegroundColorName: string;
   left: boolean;
 }) {
   const tooltips = tooltipTitle.split("\n");
@@ -48,13 +45,14 @@ export default function HandleTooltipComponent({
           {tooltips.map((word, index) => (
             <Badge
               className="h-6 rounded-md p-1"
+              key={`${index}-${word.toLowerCase()}`}
               style={{
                 backgroundColor: left
-                  ? `hsl(var(--${accentColorName}))`
-                  : `hsl(var(--${accentColorName}-foreground))`,
+                  ? `hsl(var(--datatype-${nodeColorsName[word]}))`
+                  : `hsl(var(--datatype-${nodeColorsName[word]}-foreground))`,
                 color: left
-                  ? `hsl(var(--${accentForegroundColorName}))`
-                  : `hsl(var(--${accentColorName}))`,
+                  ? `hsl(var(--datatype-${nodeColorsName[word]}-foreground))`
+                  : `hsl(var(--datatype-${nodeColorsName[word]}))`,
               }}
               data-testid={`${isInput ? "input" : "output"}-tooltip-${convertTestName(word)}`}
             >
@@ -70,7 +68,7 @@ export default function HandleTooltipComponent({
             <b>Drag</b> to connect compatible {!isInput ? "inputs" : "outputs"}
           </div>
           <div>
-            <b>Select</b> to filter compatible {!isInput ? "inputs" : "outputs"}{" "}
+            <b>Click</b> to filter compatible {!isInput ? "inputs" : "outputs"}{" "}
             and components
           </div>
         </div>

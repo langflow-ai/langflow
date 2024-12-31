@@ -3,7 +3,7 @@ from langchain_experimental.agents.agent_toolkits.csv.base import create_csv_age
 from langflow.base.agents.agent import LCAgentComponent
 from langflow.field_typing import AgentExecutor
 from langflow.inputs import DropdownInput, FileInput, HandleInput
-from langflow.inputs.inputs import MessageTextInput
+from langflow.inputs.inputs import DictInput, MessageTextInput
 from langflow.schema.message import Message
 from langflow.template.field.base import Output
 
@@ -44,12 +44,24 @@ class CSVAgentComponent(LCAgentComponent):
             display_name="Text",
             info="Text to be passed as input and extract info from the CSV File.",
         ),
+        DictInput(
+            name="pandas_kwargs",
+            display_name="Pandas Kwargs",
+            info="Pandas Kwargs to be passed to the agent.",
+            advanced=True,
+            is_list=True,
+        ),
     ]
 
     outputs = [
         Output(display_name="Response", name="response", method="build_agent_response"),
         Output(display_name="Agent", name="agent", method="build_agent"),
     ]
+
+    def _path(self) -> str:
+        if isinstance(self.path, Message) and isinstance(self.path.text, str):
+            return self.path.text
+        return self.path
 
     def build_agent_response(self) -> Message:
         agent_kwargs = {
@@ -59,9 +71,10 @@ class CSVAgentComponent(LCAgentComponent):
 
         agent_csv = create_csv_agent(
             llm=self.llm,
-            path=self.path,
+            path=self._path(),
             agent_type=self.agent_type,
             handle_parsing_errors=self.handle_parsing_errors,
+            pandas_kwargs=self.pandas_kwargs,
             **agent_kwargs,
         )
 
@@ -76,9 +89,10 @@ class CSVAgentComponent(LCAgentComponent):
 
         agent_csv = create_csv_agent(
             llm=self.llm,
-            path=self.path,
+            path=self._path(),
             agent_type=self.agent_type,
             handle_parsing_errors=self.handle_parsing_errors,
+            pandas_kwargs=self.pandas_kwargs,
             **agent_kwargs,
         )
 

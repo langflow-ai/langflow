@@ -8,7 +8,6 @@ import queue
 import threading
 import uuid
 from collections import defaultdict, deque
-from collections.abc import Generator, Iterable
 from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
@@ -40,8 +39,11 @@ from langflow.schema.dotdict import dotdict
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.deps import get_chat_service, get_tracing_service
+from langflow.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
+    from collections.abc import Generator, Iterable
+
     from langflow.api.v1.schemas import InputValueRequest
     from langflow.custom.custom_component.component import Component
     from langflow.events.event_manager import EventManager
@@ -1072,7 +1074,7 @@ class Graph:
         else:
             return graph
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, /, other: object) -> bool:
         if not isinstance(other, Graph):
             return False
         return self.__repr__() == other.__repr__()
@@ -1099,7 +1101,8 @@ class Graph:
             return False
         return self.vertex_edges_are_identical(vertex, other_vertex)
 
-    def vertex_edges_are_identical(self, vertex: Vertex, other_vertex: Vertex) -> bool:
+    @staticmethod
+    def vertex_edges_are_identical(vertex: Vertex, other_vertex: Vertex) -> bool:
         same_length = len(vertex.edges) == len(other_vertex.edges)
         if not same_length:
             return False
@@ -1181,9 +1184,9 @@ class Graph:
         for edge in vertex.edges:
             for vid in [edge.source_id, edge.target_id]:
                 if vid in self.vertex_map:
-                    _vertex = self.vertex_map[vid]
-                    if not _vertex.frozen:
-                        _vertex.build_params()
+                    vertex_ = self.vertex_map[vid]
+                    if not vertex_.frozen:
+                        vertex_.build_params()
 
     def _add_vertex(self, vertex: Vertex) -> None:
         """Adds a vertex to the graph."""
@@ -1216,6 +1219,8 @@ class Graph:
         for vertex in self.vertices:
             if vertex.id in self.cycle_vertices:
                 self.run_manager.add_to_cycle_vertices(vertex.id)
+
+        self.assert_streaming_sequence()
 
     def _get_edges_as_list_of_tuples(self) -> list[tuple[str, str]]:
         """Returns the edges of the graph as a list of tuples."""
@@ -1345,9 +1350,18 @@ class Graph:
         files: list[str] | None = None,
         user_id: str | None = None,
     ):
-        # Call astep but synchronously
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self.astep(inputs, files, user_id))
+        """Runs the next vertex in the graph.
+
+        Note:
+            This function is a synchronous wrapper around `astep`.
+            It creates an event loop if one does not exist.
+
+        Args:
+            inputs: The inputs for the vertex. Defaults to None.
+            files: The files for the vertex. Defaults to None.
+            user_id: The user ID. Defaults to None.
+        """
+        return run_until_complete(self.astep(inputs, files, user_id))
 
     async def build_vertex(
         self,
@@ -1716,7 +1730,7 @@ class Graph:
             edges.add(new_edge)
         if self.vertices and not edges:
             logger.warning("Graph has vertices but no edges")
-        return list(cast(Iterable[CycleEdge], edges))
+        return list(cast("Iterable[CycleEdge]", edges))
 
     def build_edge(self, edge: EdgeData) -> CycleEdge | Edge:
         source = self.get_vertex(edge["source"])
@@ -1734,7 +1748,8 @@ class Graph:
             new_edge = Edge(source, target, edge)
         return new_edge
 
-    def _get_vertex_class(self, node_type: str, node_base_type: str, node_id: str) -> type[Vertex]:
+    @staticmethod
+    def _get_vertex_class(node_type: str, node_base_type: str, node_id: str) -> type[Vertex]:
         """Returns the node class based on the node type."""
         # First we check for the node_base_type
         node_name = node_id.split("-")[0]
@@ -1779,6 +1794,18 @@ class Graph:
         vertex_instance.set_top_level(self.top_level_vertices)
         return vertex_instance
 
+    def assert_streaming_sequence(self) -> None:
+        for i in self.edges:
+            source = self.get_vertex(i.source_id)
+            if "stream" in source.params and source.params["stream"] is True:
+                target = self.get_vertex(i.target_id)
+                if target.vertex_type != "ChatOutput":
+                    msg = (
+                        "Error: A 'streaming' vertex cannot be followed by a non-'chat output' vertex."
+                        "Disable streaming to run the flow."
+                    )
+                    raise Exception(msg)  # noqa: TRY002
+
     def prepare(self, stop_component_id: str | None = None, start_component_id: str | None = None):
         self.initialize()
         if stop_component_id and start_component_id:
@@ -1805,7 +1832,8 @@ class Graph:
         self._record_snapshot()
         return self
 
-    def get_children_by_vertex_type(self, vertex: Vertex, vertex_type: str) -> list[Vertex]:
+    @staticmethod
+    def get_children_by_vertex_type(vertex: Vertex, vertex_type: str) -> list[Vertex]:
         """Returns the children of a vertex based on the vertex type."""
         children = []
         vertex_types = [vertex.data["type"]]
@@ -1928,15 +1956,22 @@ class Graph:
         return [layer for layer in refined_layers if layer]
 
     def sort_chat_inputs_first(self, vertices_layers: list[list[str]]) -> list[list[str]]:
+        chat_inputs = []
+        for layer in vertices_layers:
+            for vertex_id in layer:
+                if "ChatInput" in vertex_id and self.get_predecessors(self.get_vertex(vertex_id)):
+                    return vertices_layers
+                if "ChatInput" in vertex_id:
+                    chat_inputs.append(vertex_id)
+
+        if not chat_inputs:
+            return vertices_layers
+
         chat_inputs_first = []
         for layer in vertices_layers:
             layer_chat_inputs_first = [vertex_id for vertex_id in layer if "ChatInput" in vertex_id]
             chat_inputs_first.extend(layer_chat_inputs_first)
-            for vertex_id in layer_chat_inputs_first:
-                # Remove the ChatInput from the layer
-                layer.remove(vertex_id)
-        if not chat_inputs_first:
-            return vertices_layers
+            layer[:] = [v for v in layer if v not in layer_chat_inputs_first]
 
         return [chat_inputs_first, *vertices_layers]
 
@@ -1991,6 +2026,11 @@ class Graph:
     ) -> list[str]:
         """Sorts the vertices in the graph."""
         self.mark_all_vertices("ACTIVE")
+        if stop_component_id in self.cycle_vertices:
+            # Make the stop into a start because we are in a cycle and
+            # we cannot know where is the input or output
+            start_component_id = stop_component_id
+            stop_component_id = None
         if stop_component_id is not None:
             self.stop_vertex = stop_component_id
             vertices = self.__filter_vertices(stop_component_id)
@@ -2022,7 +2062,8 @@ class Graph:
         self._first_layer = first_layer
         return first_layer
 
-    def sort_interface_components_first(self, vertices_layers: list[list[str]]) -> list[list[str]]:
+    @staticmethod
+    def sort_interface_components_first(vertices_layers: list[list[str]]) -> list[list[str]]:
         """Sorts the vertices in the graph so that vertices containing ChatInput or ChatOutput come first."""
 
         def contains_interface_component(vertex):
@@ -2060,9 +2101,6 @@ class Graph:
 
         This method is responsible for building the run map for the graph,
         which maps each node in the graph to its corresponding run function.
-
-        Returns:
-            None
         """
         self.run_manager.build_run_map(predecessor_map=self.predecessor_map, vertices_to_run=self.vertices_to_run)
 
@@ -2132,7 +2170,8 @@ class Graph:
                 in_degree[vertex.id] = 0
         return in_degree
 
-    def build_adjacency_maps(self, edges: list[CycleEdge]) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
+    @staticmethod
+    def build_adjacency_maps(edges: list[CycleEdge]) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
         """Returns the adjacency maps for the graph."""
         predecessor_map: dict[str, list[str]] = defaultdict(list)
         successor_map: dict[str, list[str]] = defaultdict(list)

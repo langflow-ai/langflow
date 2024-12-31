@@ -2,17 +2,10 @@ import { getSpecificClassFromBuildStatus } from "@/CustomNodes/helpers/get-class
 import useIconStatus from "@/CustomNodes/hooks/use-icons-status";
 import useUpdateValidationStatus from "@/CustomNodes/hooks/use-update-validation-status";
 import useValidationStatusString from "@/CustomNodes/hooks/use-validation-status-string";
-import ShadTooltip from "@/components/shadTooltipComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  ICON_STROKE_WIDTH,
-  RUN_TIMESTAMP_PREFIX,
-  STATUS_BUILD,
-  STATUS_BUILDING,
-  STATUS_INACTIVE,
-  TOOLTIP_OUTDATED_NODE,
-} from "@/constants/constants";
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { BuildStatus } from "@/constants/enums";
 import { track } from "@/customization/utils/analytics";
 import { useDarkStore } from "@/stores/darkStore";
@@ -25,7 +18,8 @@ import { classNames, cn } from "@/utils/utils";
 import { Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import IconComponent from "../../../../components/genericIconComponent";
+import IconComponent from "../../../../components/common/genericIconComponent";
+import BuildStatusDisplay from "./components/build-status-display";
 import { normalizeTimeString } from "./utils/format-run-time";
 
 export default function NodeStatus({
@@ -39,13 +33,11 @@ export default function NodeStatus({
   buildStatus,
   isOutdated,
   isUserEdited,
-  handleUpdateCode,
-  loadingUpdate,
   getValidationStatus,
 }: {
   nodeId: string;
   display_name: string;
-  selected: boolean;
+  selected?: boolean;
   setBorderColor: (color: string) => void;
   frozen?: boolean;
   showNode: boolean;
@@ -53,8 +45,6 @@ export default function NodeStatus({
   buildStatus: BuildStatus;
   isOutdated: boolean;
   isUserEdited: boolean;
-  handleUpdateCode: () => void;
-  loadingUpdate: boolean;
   getValidationStatus: (data) => VertexBuildTypeAPI | null;
 }) {
   const nodeId_ = data.node?.flow?.data
@@ -66,9 +56,7 @@ export default function NodeStatus({
 
   const conditionSuccess =
     buildStatus === BuildStatus.BUILT ||
-    (!(!buildStatus || buildStatus === BuildStatus.TO_BUILD) &&
-      validationStatus &&
-      validationStatus.valid);
+    (buildStatus !== BuildStatus.TO_BUILD && validationStatus?.valid);
 
   const lastRunTime = useFlowStore(
     (state) => state.flowBuildStatus[nodeId_]?.timestamp,
@@ -102,11 +90,12 @@ export default function NodeStatus({
         ? " border ring-[0.75px] ring-muted-foreground border-muted-foreground hover:shadow-node"
         : "border ring-[0.5px] hover:shadow-node ring-border";
     let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
-    return frozen ? frozenClass : className;
+    let updateClass =
+      isOutdated && !isUserEdited ? "border-warning ring-2 ring-warning" : "";
+    return cn(frozen ? frozenClass : className, updateClass);
   };
   const getNodeBorderClassName = (
-    selected: boolean,
-    showNode: boolean,
+    selected: boolean | undefined,
     buildStatus: BuildStatus | undefined,
     validationStatus: VertexBuildTypeAPI | null,
   ) => {
@@ -123,9 +112,17 @@ export default function NodeStatus({
 
   useEffect(() => {
     setBorderColor(
-      getNodeBorderClassName(selected, showNode, buildStatus, validationStatus),
+      getNodeBorderClassName(selected, buildStatus, validationStatus),
     );
-  }, [selected, showNode, buildStatus, validationStatus, frozen]);
+  }, [
+    selected,
+    showNode,
+    buildStatus,
+    validationStatus,
+    isOutdated,
+    isUserEdited,
+    frozen,
+  ]);
 
   useEffect(() => {
     if (buildStatus === BuildStatus.BUILT && !isBuilding) {
@@ -151,7 +148,6 @@ export default function NodeStatus({
   const divRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
 
-  const runClass = "justify-left flex font-normal text-muted-foreground";
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
 
   const handleClickRun = () => {
@@ -160,7 +156,6 @@ export default function NodeStatus({
       return;
     }
     if (buildStatus === BuildStatus.BUILDING || isBuilding) return;
-    setValidationStatus(null);
     buildFlow({ stopNodeId: nodeId });
     track("Flow Build - Clicked", { stopNodeId: nodeId });
   };
@@ -186,59 +181,24 @@ export default function NodeStatus({
     return "Run component";
   };
 
-  return (
+  return showNode ? (
     <>
       <div className="flex flex-shrink-0 items-center">
-        {isOutdated && !isUserEdited && (
-          <ShadTooltip content={TOOLTIP_OUTDATED_NODE}>
-            <Button
-              onClick={handleUpdateCode}
-              unstyled
-              className={"hit-area-icon button-run-bg group p-1"}
-              loading={loadingUpdate}
-            >
-              <IconComponent
-                name="AlertTriangle"
-                className="icon-size text-placeholder-foreground group-hover:text-foreground"
-              />
-            </Button>
-          </ShadTooltip>
-        )}
-
         <div className="flex items-center gap-2 self-center">
           <ShadTooltip
+            styleClasses={cn(
+              "border rounded-xl",
+              conditionSuccess
+                ? "border-accent-emerald-foreground bg-success-background"
+                : "border-destructive bg-error-background",
+            )}
             content={
-              buildStatus === BuildStatus.BUILDING ? (
-                <span> {STATUS_BUILDING} </span>
-              ) : buildStatus === BuildStatus.INACTIVE ? (
-                <span> {STATUS_INACTIVE} </span>
-              ) : !validationStatus ? (
-                <span className="flex">{STATUS_BUILD}</span>
-              ) : (
-                <div className="max-h-100 p-2">
-                  <div className="max-h-80 overflow-auto">
-                    {validationString && (
-                      <div className="text-accent-red-foreground ml-1 pb-2">
-                        {validationString}
-                      </div>
-                    )}
-                    {lastRunTime && (
-                      <div className={runClass}>
-                        <div>{RUN_TIMESTAMP_PREFIX}</div>
-                        <div className="ml-1 text-status-blue">
-                          {lastRunTime}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div className={runClass}>
-                    <div>Duration:</div>
-                    <div className="ml-1 text-status-blue">
-                      {validationStatus?.data.duration}
-                    </div>
-                  </div>
-                </div>
-              )
+              <BuildStatusDisplay
+                buildStatus={buildStatus}
+                validationStatus={validationStatus}
+                validationString={validationString}
+                lastRunTime={lastRunTime}
+              />
             }
             side="bottom"
           >
@@ -267,7 +227,6 @@ export default function NodeStatus({
             </Badge>
           )}
         </div>
-
         <ShadTooltip content={getTooltipContent()}>
           <div
             ref={divRef}
@@ -291,5 +250,7 @@ export default function NodeStatus({
         </ShadTooltip>
       </div>
     </>
+  ) : (
+    <></>
   );
 }

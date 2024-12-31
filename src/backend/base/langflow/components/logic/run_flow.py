@@ -18,14 +18,14 @@ class RunFlowComponent(Component):
     legacy: bool = True
     icon = "workflow"
 
-    def get_flow_names(self) -> list[str]:
-        flow_data = self.list_flows()
+    async def get_flow_names(self) -> list[str]:
+        flow_data = await self.alist_flows()
         return [flow_data.data["name"] for flow_data in flow_data]
 
     @override
-    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
+    async def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "flow_name":
-            build_config["flow_name"]["options"] = self.get_flow_names()
+            build_config["flow_name"]["options"] = await self.get_flow_names()
 
         return build_config
 

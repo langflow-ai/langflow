@@ -1,7 +1,7 @@
 import { useFolderStore } from "@/stores/foldersStore";
 import { useMutationFunctionType } from "@/types/api";
 import { UseMutationResult } from "@tanstack/react-query";
-import { ReactFlowJsonObject } from "reactflow";
+import { ReactFlowJsonObject } from "@xyflow/react";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -35,7 +35,6 @@ export const usePostAddFlow: useMutationFunctionType<
       gradient: payload.gradient || null,
       endpoint_name: payload.endpoint_name || null,
     });
-
     return response.data;
   };
 
@@ -45,9 +44,18 @@ export const usePostAddFlow: useMutationFunctionType<
     {
       ...options,
       onSettled: (response) => {
-        queryClient.refetchQueries({
-          queryKey: ["useGetFolder", response.folder_id ?? myCollectionId],
-        });
+        if (response) {
+          queryClient.refetchQueries({
+            queryKey: [
+              "useGetRefreshFlowsQuery",
+              { get_all: true, header_flows: true },
+            ],
+          });
+
+          queryClient.refetchQueries({
+            queryKey: ["useGetFolder", response.folder_id ?? myCollectionId],
+          });
+        }
       },
     },
   );

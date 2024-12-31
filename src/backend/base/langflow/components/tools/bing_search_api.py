@@ -13,6 +13,7 @@ class BingSearchAPIComponent(LCToolComponent):
     display_name = "Bing Search API"
     description = "Call the Bing Search API."
     name = "BingSearchAPI"
+    icon = "Bing"
 
     inputs = [
         SecretStrInput(name="bing_subscription_key", display_name="Bing Subscription Key"),
@@ -43,4 +44,4 @@ class BingSearchAPIComponent(LCToolComponent):
             )
         else:
             wrapper = BingSearchAPIWrapper(bing_subscription_key=self.bing_subscription_key)
-        return cast(Tool, BingSearchResults(api_wrapper=wrapper, num_results=self.k))
+        return cast("Tool", BingSearchResults(api_wrapper=wrapper, num_results=self.k))

@@ -1,12 +1,13 @@
 import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
+
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import LoadingComponent from "@/components/common/loadingComponent";
 import CanvasControls, {
   CustomControlButton,
-} from "@/components/canvasControlsComponent";
-import FlowToolbar from "@/components/flowToolbarComponent";
-import ForwardedIconComponent from "@/components/genericIconComponent";
-import LoadingComponent from "@/components/loadingComponent";
-import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+} from "@/components/core/canvasControlsComponent";
+import FlowToolbar from "@/components/core/flowToolbarComponent";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   COLOR_OPTIONS,
   NOTE_NODE_MIN_HEIGHT,
@@ -19,6 +20,17 @@ import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useAddComponent } from "@/hooks/useAddComponent";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { cn, isSupportedNodeTypes } from "@/utils/utils";
+import {
+  Background,
+  Connection,
+  Edge,
+  OnNodeDrag,
+  OnSelectionChangeParams,
+  Panel,
+  ReactFlow,
+  reconnectEdge,
+  SelectionDragHandler,
+} from "@xyflow/react";
 import _, { cloneDeep } from "lodash";
 import {
   KeyboardEvent,
@@ -29,16 +41,6 @@ import {
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import ReactFlow, {
-  Background,
-  Connection,
-  Edge,
-  NodeDragHandler,
-  OnSelectionChangeParams,
-  Panel,
-  SelectionDragHandler,
-  updateEdge,
-} from "reactflow";
 import GenericNode from "../../../../CustomNodes/GenericNode";
 import {
   INVALID_SELECTION_ERROR_ALERT,
@@ -52,9 +54,8 @@ import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useTypesStore } from "../../../../stores/typesStore";
 import { APIClassType } from "../../../../types/api";
-import { NodeType } from "../../../../types/flow";
+import { AllNodeType, EdgeType, NoteNodeType } from "../../../../types/flow";
 import {
-  checkOldComponents,
   generateFlow,
   generateNodeFromFlow,
   getNodeId,
@@ -65,6 +66,7 @@ import {
 } from "../../../../utils/reactflowUtils";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import SelectionMenu from "../SelectionMenuComponent";
+import UpdateAllComponents from "../UpdateAllComponents";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
 
@@ -91,6 +93,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   );
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
+  const isEmptyFlow = useRef(nodes.length === 0);
   const onNodesChange = useFlowStore((state) => state.onNodesChange);
   const onEdgesChange = useFlowStore((state) => state.onEdgesChange);
   const setNodes = useFlowStore((state) => state.setNodes);
@@ -179,15 +182,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     Object.keys(templates).length > 0 &&
     Object.keys(types).length > 0 &&
     !isFetching;
-
-  useEffect(() => {
-    if (checkOldComponents({ nodes })) {
-      setNoticeData({
-        title:
-          "Components created before Langflow 1.0 may be unstable. Ensure components are up to date.",
-      });
-    }
-  }, [currentFlowId]);
 
   useEffect(() => {
     useFlowStore.setState({ autoSaveFlow });
@@ -330,14 +324,14 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     [takeSnapshot, onConnect],
   );
 
-  const onNodeDragStart: NodeDragHandler = useCallback(() => {
+  const onNodeDragStart: OnNodeDrag = useCallback(() => {
     // 👇 make dragging a node undoable
 
     takeSnapshot();
     // 👉 you can place your event handlers here
   }, [takeSnapshot]);
 
-  const onNodeDragStop: NodeDragHandler = useCallback(() => {
+  const onNodeDragStop: OnNodeDrag = useCallback(() => {
     // 👇 make moving the canvas undoable
     autoSaveFlow();
     updateCurrentFlow({ nodes });
@@ -412,12 +406,14 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   }, []);
 
   const onEdgeUpdate = useCallback(
-    (oldEdge: Edge, newConnection: Connection) => {
+    (oldEdge: EdgeType, newConnection: Connection) => {
       if (isValidConnection(newConnection, nodes, edges)) {
         edgeUpdateSuccessful.current = true;
-        oldEdge.data.targetHandle = scapeJSONParse(newConnection.targetHandle!);
-        oldEdge.data.sourceHandle = scapeJSONParse(newConnection.sourceHandle!);
-        setEdges((els) => updateEdge(oldEdge, newConnection, els));
+        oldEdge.data = {
+          targetHandle: scapeJSONParse(newConnection.targetHandle!),
+          sourceHandle: scapeJSONParse(newConnection.sourceHandle!),
+        };
+        setEdges((els) => reconnectEdge(oldEdge, newConnection, els));
       }
     },
     [setEdges],
@@ -479,7 +475,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
         };
         const newId = getNodeId(data.type);
 
-        const newNode: NodeType = {
+        const newNode: NoteNodeType = {
           id: newId,
           type: "noteNode",
           position: position || { x: 0, y: 0 },
@@ -497,13 +493,11 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
 
   const handleEdgeClick = (event, edge) => {
     const color =
-      nodeColorsName[edge?.data?.targetHandle?.inputTypes[0]] || "cyan";
+      nodeColorsName[edge?.data?.sourceHandle?.output_types[0]] || "cyan";
 
     const accentColor = `hsl(var(--datatype-${color}))`;
     reactFlowWrapper.current?.style.setProperty("--selected", accentColor);
   };
-
-  const { open } = useSidebar();
 
   useEffect(() => {
     const handleGlobalMouseMove = (event) => {
@@ -524,11 +518,13 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     };
   }, [isAddingNote, shadowBoxWidth, shadowBoxHeight]);
 
+  const componentsToUpdate = useFlowStore((state) => state.componentsToUpdate);
+
   return (
     <div className="h-full w-full bg-canvas" ref={reactFlowWrapper}>
       {showCanvas ? (
         <div id="react-flow-id" className="h-full w-full bg-canvas">
-          <ReactFlow
+          <ReactFlow<AllNodeType, EdgeType>
             nodes={nodes}
             edges={edges}
             onNodesChange={onNodesChange}
@@ -537,9 +533,9 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             disableKeyboardA11y={true}
             onInit={setReactFlowInstance}
             nodeTypes={nodeTypes}
-            onEdgeUpdate={onEdgeUpdate}
-            onEdgeUpdateStart={onEdgeUpdateStart}
-            onEdgeUpdateEnd={onEdgeUpdateEnd}
+            onReconnect={onEdgeUpdate}
+            onReconnectStart={onEdgeUpdateStart}
+            onReconnectEnd={onEdgeUpdateEnd}
             onNodeDragStart={onNodeDragStart}
             onSelectionDragStart={onSelectionDragStart}
             onSelectionEnd={onSelectionEnd}
@@ -552,6 +548,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             onDrop={onDrop}
             onSelectionChange={onSelectionChange}
             deleteKeyCode={[]}
+            fitView={isEmptyFlow.current ? false : true}
             className="theme-attribution"
             minZoom={0.01}
             maxZoom={8}
@@ -589,9 +586,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             <Panel
               className={cn(
                 "react-flow__controls !m-2 flex gap-1.5 rounded-md border border-secondary-hover bg-background fill-foreground stroke-foreground p-1.5 text-primary shadow transition-all duration-300 [&>button]:border-0 [&>button]:bg-background hover:[&>button]:bg-accent",
-                open
-                  ? "pointer-events-none -translate-x-full opacity-0"
-                  : "pointer-events-auto opacity-100",
+                "pointer-events-auto opacity-100 group-data-[open=true]/sidebar-wrapper:pointer-events-none group-data-[open=true]/sidebar-wrapper:-translate-x-full group-data-[open=true]/sidebar-wrapper:opacity-0",
               )}
               position="top-left"
             >
@@ -600,9 +595,10 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
                   name="PanelRightClose"
                   className="h-4 w-4"
                 />
-                Components
+                <span className="text-foreground">Components</span>
               </SidebarTrigger>
             </Panel>
+            {componentsToUpdate.length > 0 && <UpdateAllComponents />}
             <SelectionMenu
               lastSelection={lastSelection}
               isVisible={selectionMenuVisible}

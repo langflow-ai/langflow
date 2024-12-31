@@ -1,9 +1,9 @@
 from pydantic.v1 import SecretStr
 
+from langflow.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs import DropdownInput, FloatInput, IntInput, SecretStrInput
-from langflow.inputs.inputs import HandleInput
 
 
 class GoogleGenerativeAIComponent(LCModelComponent):
@@ -21,7 +21,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             name="model",
             display_name="Model",
             info="The name of the model to use.",
-            options=["gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.0-pro", "gemini-1.0-pro-vision"],
+            options=GOOGLE_GENERATIVE_AI_MODELS,
             value="gemini-1.5-pro",
         ),
         SecretStrInput(
@@ -48,13 +48,6 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             display_name="Top K",
             info="Decode using top-k sampling: consider the set of top_k most probable tokens. Must be positive.",
             advanced=True,
-        ),
-        HandleInput(
-            name="output_parser",
-            display_name="Output Parser",
-            info="The parser to use to parse the output of the model",
-            advanced=True,
-            input_types=["OutputParser"],
         ),
     ]
 

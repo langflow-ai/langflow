@@ -108,6 +108,11 @@ const config = {
         "status-red": "var(--status-red)",
         "status-yellow": "var(--status-yellow)",
         "status-gray": "var(--status-gray)",
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+          text: "hsl(var(--warning-text))",
+        },
         "success-background": "var(--success-background)",
         "success-foreground": "var(--success-foreground)",
         "accent-pink": "hsl(var(--accent-pink))",
@@ -251,6 +256,7 @@ const config = {
         "holo-frost": "hsl(var(--holo-frost))",
         "terminal-green": "hsl(var(--terminal-green))",
         "cosmic-void": "hsl(var(--cosmic-void))",
+        "slider-input-border": "var(--slider-input-border)",
       },
       borderRadius: {
         lg: `var(--radius)`,
@@ -353,7 +359,7 @@ const config = {
             borderRadius: "999px",
           },
           "&::-webkit-scrollbar-thumb:hover": {
-            backgroundColor: "hsl(var(--ring))",
+            backgroundColor: "hsl(var(--placeholder-foreground))",
           },
           cursor: "auto",
         },

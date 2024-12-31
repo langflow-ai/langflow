@@ -58,8 +58,8 @@ class LangFuseTracer(BaseTracer):
             logger.exception("Could not import langfuse. Please install it with `pip install langfuse`.")
             return False
 
-        except Exception:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error setting up LangSmith tracer")
+        except Exception as e:  # noqa: BLE001
+            logger.debug(f"Error setting up LangSmith tracer: {e}")
             return False
 
         return True
@@ -78,15 +78,15 @@ class LangFuseTracer(BaseTracer):
         if not self._ready:
             return
 
-        _metadata: dict = {}
-        _metadata |= {"trace_type": trace_type} if trace_type else {}
-        _metadata |= metadata or {}
+        metadata_: dict = {}
+        metadata_ |= {"trace_type": trace_type} if trace_type else {}
+        metadata_ |= metadata or {}
 
-        _name = trace_name.removesuffix(f" ({trace_id})")
+        name = trace_name.removesuffix(f" ({trace_id})")
         content_span = {
-            "name": _name,
+            "name": name,
             "input": inputs,
-            "metadata": _metadata,
+            "metadata": metadata_,
             "start_time": start_time,
         }
 
@@ -110,11 +110,11 @@ class LangFuseTracer(BaseTracer):
 
         span = self.spans.get(trace_id, None)
         if span:
-            _output: dict = {}
-            _output |= outputs or {}
-            _output |= {"error": str(error)} if error else {}
-            _output |= {"logs": list(logs)} if logs else {}
-            content = {"output": _output, "end_time": end_time}
+            output: dict = {}
+            output |= outputs or {}
+            output |= {"error": str(error)} if error else {}
+            output |= {"logs": list(logs)} if logs else {}
+            content = {"output": output, "end_time": end_time}
             span.update(**content)
 
     @override
@@ -135,7 +135,8 @@ class LangFuseTracer(BaseTracer):
             return None
         return None  # self._callback
 
-    def _get_config(self) -> dict:
+    @staticmethod
+    def _get_config() -> dict:
         secret_key = os.getenv("LANGFUSE_SECRET_KEY", None)
         public_key = os.getenv("LANGFUSE_PUBLIC_KEY", None)
         host = os.getenv("LANGFUSE_HOST", None)

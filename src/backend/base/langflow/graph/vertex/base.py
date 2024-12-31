@@ -423,7 +423,7 @@ class Vertex:
                     else:
                         msg = f"Invalid value type {type(val)} for field {field_name}"
                         raise ValueError(msg)
-                elif val is not None and val != "":
+                elif val:
                     params[field_name] = val
 
                 if field.get("load_from_db"):
@@ -522,7 +522,7 @@ class Vertex:
             stream_url = artifacts.get("stream_url")
             files = [{"path": file} if isinstance(file, str) else file for file in artifacts.get("files", [])]
             component_id = self.id
-            _type = self.artifacts_type
+            type_ = self.artifacts_type
 
             if isinstance(sender_name, Data | Message):
                 sender_name = sender_name.get_text()
@@ -536,7 +536,7 @@ class Vertex:
                     stream_url=stream_url,
                     files=files,
                     component_id=component_id,
-                    type=_type,
+                    type=type_,
                 ).model_dump(exclude_none=True)
             ]
         except KeyError:
@@ -596,7 +596,8 @@ class Vertex:
                 result = await value.get_result(self, target_handle_name=key)
                 self.params[key][sub_key] = result
 
-    def _is_vertex(self, value):
+    @staticmethod
+    def _is_vertex(value):
         """Checks if the provided value is an instance of Vertex."""
         return isinstance(value, Vertex)
 
@@ -845,16 +846,16 @@ class Vertex:
     def __repr__(self) -> str:
         return f"Vertex(display_name={self.display_name}, id={self.id}, data={self.data})"
 
-    def __eq__(self, __o: object) -> bool:
+    def __eq__(self, /, other: object) -> bool:
         try:
-            if not isinstance(__o, Vertex):
+            if not isinstance(other, Vertex):
                 return False
             # We should create a more robust comparison
             # for the Vertex class
-            ids_are_equal = self.id == __o.id
+            ids_are_equal = self.id == other.id
             # self.data is a dict and we need to compare them
             # to check if they are equal
-            data_are_equal = self.data == __o.data
+            data_are_equal = self.data == other.data
         except AttributeError:
             return False
         else:
