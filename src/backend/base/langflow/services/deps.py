@@ -15,13 +15,13 @@ if TYPE_CHECKING:
     from langflow.services.cache.service import AsyncBaseCacheService, CacheService
     from langflow.services.chat.service import ChatService
     from langflow.services.database.service import DatabaseService
+    from langflow.services.jobs.service import JobsService
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
     from langflow.services.socket.service import SocketIOService
     from langflow.services.state.service import StateService
     from langflow.services.storage.service import StorageService
     from langflow.services.store.service import StoreService
-    from langflow.services.task.service import TaskService
     from langflow.services.telemetry.service import TelemetryService
     from langflow.services.tracing.service import TracingService
     from langflow.services.variable.service import VariableService
@@ -211,16 +211,16 @@ def get_session_service() -> SessionService:
     return get_service(ServiceType.SESSION_SERVICE, SessionServiceFactory())
 
 
-def get_task_service() -> TaskService:
+def get_jobs_service() -> JobsService:
     """Retrieves the TaskService instance from the service manager.
 
     Returns:
         The TaskService instance.
 
     """
-    from langflow.services.task.factory import TaskServiceFactory
+    from langflow.services.jobs.factory import JobsServiceFactory
 
-    return get_service(ServiceType.TASK_SERVICE, TaskServiceFactory())
+    return get_service(ServiceType.JOBS_SERVICE, JobsServiceFactory())
 
 
 def get_chat_service() -> ChatService:
