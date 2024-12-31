@@ -62,11 +62,10 @@ async def get_job(
         raise HTTPException(status_code=404, detail="Job not found")
     logger.info(f"Job: {task}")
     async with session_scope() as session:
-        stmt = select(Job).where(Job.id == job_id)
         if not user.id:
             msg = "User not found"
             raise HTTPException(status_code=404, detail=msg)
-        stmt = stmt.where(Job.user_id == user.id)
+        stmt = select(Job).where(Job.id == job_id, Job.user_id == user.id)
         return (await session.exec(stmt)).first()
 
 
