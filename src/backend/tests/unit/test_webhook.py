@@ -14,9 +14,11 @@ async def poll_until_job_is_completed(client, job_id, headers, times=10):
     job_endpoint = f"api/v1/jobs/{job_id}"
     for _ in range(times):
         response = await client.get(job_endpoint, headers=headers)
-        assert response.status_code == 200
-        assert response.json()["pending"] is False
+        if response.json()["status"] == "COMPLETED":
+            return
         await asyncio.sleep(1)
+    msg = f"Job {job_id} did not complete in the expected time."
+    raise TimeoutError(msg)
 
 
 async def test_webhook_endpoint(client, added_webhook_test, logged_in_headers):
