@@ -49,8 +49,13 @@ def data_to_text_list(template: str, data: Data | list[Data]) -> tuple[list[str]
         Data(text=value) if not isinstance(value, Data) else value
         for value in data
     ]
+    formatted_text = []
+    for value in data_:
+        # Prevent conflict with 'data' keyword in template formatting
+        kwargs = value.data.copy()
+        data = kwargs.pop("data", value.data)
+        formatted_text.append(template.format(data=data, **kwargs))
 
-    formatted_text = [template.format(data=value.data, **value.data) for value in data_]
     return formatted_text, data_
 
 
