@@ -27,11 +27,29 @@ if TYPE_CHECKING:
 
 
 class TaskService(Service):
-    """Service for managing tasks and scheduled flows."""
+    """Service for managing asynchronous tasks and scheduled flows.
+
+    This service provides functionality to schedule, execute, monitor and manage background tasks
+    using APScheduler. It supports one-time tasks scheduled for future execution.
+
+    Attributes:
+        name (str): The name identifier for this service
+        settings_service (SettingsService): Service for accessing application settings
+        database_service (DatabaseService): Service for database operations
+        scheduler (AsyncScheduler | None): The async task scheduler instance
+        job_store (AsyncSQLModelJobStore | None): Store for persisting job information
+        _started (bool): Flag indicating if scheduler is running
+    """
 
     name = "task_service"
 
     def __init__(self, settings_service: SettingsService, database_service: DatabaseService):
+        """Initialize the task service.
+
+        Args:
+            settings_service: Service for accessing application settings
+            database_service: Service for database operations
+        """
         self.settings_service = settings_service
         self._started = False
         self.scheduler: AsyncScheduler | None = None
@@ -39,7 +57,11 @@ class TaskService(Service):
         self.database_service = database_service
 
     async def setup(self):
-        """Initialize the scheduler."""
+        """Initialize and configure the task scheduler and job store.
+
+        Sets up the AsyncScheduler with a SQLModel-based job store and configures
+        event listeners for job execution and error handling.
+        """
         self.scheduler = AsyncScheduler()
         await self.scheduler.configure()
         self.job_store = AsyncSQLModelJobStore()
@@ -50,7 +72,11 @@ class TaskService(Service):
         await self.scheduler.add_listener(self._handle_job_error, EVENT_JOB_ERROR)
 
     async def _ensure_scheduler_running(self):
-        """Ensure the scheduler is running."""
+        """Ensure the scheduler is initialized and running.
+
+        Initializes the scheduler if needed and starts it if not already running.
+        Handles the case where scheduler is already running gracefully.
+        """
         if not self._started:
             if self.scheduler is None:
                 await self.setup()
@@ -61,7 +87,13 @@ class TaskService(Service):
                 pass
 
     async def _handle_job_executed(self, event: JobExecutionEvent) -> None:
-        """Handle job executed event."""
+        """Handle successful job execution events.
+
+        Updates the job status to COMPLETED and stores the execution result.
+
+        Args:
+            event: The job execution event containing job ID and result
+        """
         await self._ensure_scheduler_running()
         async with session_scope() as session:
             stmt = select(Job).where(Job.id == event.job_id)
@@ -80,7 +112,13 @@ class TaskService(Service):
                 await session.commit()
 
     async def _handle_job_error(self, event: JobEvent) -> None:
-        """Handle job error event."""
+        """Handle job execution error events.
+
+        Updates the job status to FAILED and stores the error information.
+
+        Args:
+            event: The job event containing job ID and exception details
+        """
         await self._ensure_scheduler_running()
         async with session_scope() as session:
             stmt = select(Job).where(Job.id == event.job_id)
@@ -99,7 +137,22 @@ class TaskService(Service):
         args: list | None = None,
         kwargs: dict | None = None,
     ) -> str:
-        """Create a new job."""
+        """Create and schedule a new job.
+
+        Args:
+            task_func: The function to execute or its string reference
+            run_at: Optional datetime when the task should run
+            name: Optional name for the task
+            args: Optional positional arguments for the task
+            kwargs: Optional keyword arguments for the task
+
+        Returns:
+            str: The unique identifier for the created job
+
+        Raises:
+            ValueError: If scheduler or job store is not initialized
+            Exception: If job creation fails
+        """
         await self._ensure_scheduler_running()
         if self.scheduler is None or self.job_store is None:
             msg = "Scheduler or job store not initialized"
@@ -128,7 +181,19 @@ class TaskService(Service):
         return task_id
 
     async def get_job(self, job_id: str, user_id: UUID | None = None) -> APSJob | None:
-        """Get job information."""
+        """Retrieve information about a specific job.
+
+        Args:
+            job_id: The unique identifier of the job
+            user_id: Optional user ID to verify job ownership
+
+        Returns:
+            APSJob | None: The job if found, None otherwise
+
+        Raises:
+            ValueError: If job store is not initialized
+            Exception: If job lookup fails
+        """
         await self._ensure_scheduler_running()
         if self.job_store is None:
             msg = "Job store not initialized"
@@ -142,7 +207,19 @@ class TaskService(Service):
         return job
 
     async def cancel_job(self, job_id: str, user_id: UUID | None = None) -> bool:
-        """Cancel a job."""
+        """Cancel a scheduled job.
+
+        Args:
+            job_id: The unique identifier of the job to cancel
+            user_id: Optional user ID to verify job ownership
+
+        Returns:
+            bool: True if job was cancelled, False if job not found
+
+        Raises:
+            ValueError: If scheduler or job store is not initialized
+            Exception: If job cancellation fails
+        """
         await self._ensure_scheduler_running()
         if self.scheduler is None or self.job_store is None:
             msg = "Scheduler or job store not initialized"
@@ -169,20 +246,18 @@ class TaskService(Service):
         user_id: UUID | None = None,
         pending: bool | None = None,
     ) -> list[dict]:
-        """Get all jobs from the job store.
-
-        This method retrieves jobs from the job store, with optional filtering by user ID and pending status.
+        """Get all jobs from the job store with optional filtering.
 
         Args:
-            user_id (UUID | None): If provided, only return jobs belonging to this user
-            pending (bool | None): If provided, only return jobs with matching pending status
+            user_id: Optional user ID to filter jobs by owner
+            pending: Optional boolean to filter by pending status
 
         Returns:
-            list[dict]: A list of jobs as dictionaries, each containing the job's attributes
+            list[dict]: List of jobs as dictionaries containing job attributes
 
         Raises:
-            ValueError: If the job store is not initialized
-            Exception: If there is an error retrieving the jobs
+            ValueError: If job store is not initialized
+            Exception: If retrieving jobs fails
 
         Note:
             If no user_id is provided, all jobs in the store will be returned.
@@ -206,7 +281,18 @@ class TaskService(Service):
             raise
 
     async def get_user_jobs(self, user_id: UUID) -> list[dict]:
-        """Get all jobs for a specific user."""
+        """Get all jobs for a specific user.
+
+        Args:
+            user_id: The ID of the user whose jobs to retrieve
+
+        Returns:
+            list[dict]: List of jobs belonging to the user
+
+        Raises:
+            ValueError: If job store is not initialized
+            Exception: If retrieving jobs fails
+        """
         await self._ensure_scheduler_running()
         if self.job_store is None:
             msg = "Job store not initialized"
@@ -220,7 +306,10 @@ class TaskService(Service):
             raise
 
     async def stop(self):
-        """Stop the scheduler."""
+        """Stop the task scheduler.
+
+        Shuts down the scheduler if it is currently running.
+        """
         if self.scheduler.running:
             self.scheduler.shutdown()
             logger.info("Task scheduler stopped")
