@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
 
 
-class TaskService(Service):
+class JobsService(Service):
     """Service for managing asynchronous tasks and scheduled flows.
 
     This service provides functionality to schedule, execute, monitor and manage background tasks
@@ -41,7 +41,7 @@ class TaskService(Service):
         _started (bool): Flag indicating if scheduler is running
     """
 
-    name = "task_service"
+    name = "jobs_service"
 
     def __init__(self, settings_service: SettingsService, database_service: DatabaseService):
         """Initialize the task service.
