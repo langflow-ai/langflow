@@ -5,15 +5,15 @@ from unittest.mock import AsyncMock
 import pytest
 from apscheduler.events import JobExecutionEvent
 from langflow.services.database.models.job.model import Job, JobStatus
-from langflow.services.deps import get_task_service, session_scope
-from langflow.services.task.service import TaskService
+from langflow.services.deps import get_jobs_service, session_scope
+from langflow.services.jobs.service import JobsService
 from sqlmodel import select
 
 
 @pytest.fixture
 async def task_service(client):  # noqa: ARG001
     """Create a task service for testing."""
-    service = get_task_service()
+    service = get_jobs_service()
     await service.setup()
     yield service
     await service.teardown()
@@ -22,7 +22,7 @@ async def task_service(client):  # noqa: ARG001
 @pytest.fixture
 async def task_service_with_mock_listeners():
     """Create a task service with mock listeners."""
-    service = get_task_service()
+    service = get_jobs_service()
     service._handle_job_executed = AsyncMock()
     service._handle_job_error = AsyncMock()
     await service.setup()
@@ -36,7 +36,7 @@ def mock_task_func(**kwargs):
 
 
 @pytest.fixture
-async def sample_job(task_service: TaskService, active_user, simple_api_test):
+async def sample_job(task_service: JobsService, active_user, simple_api_test):
     """Create a sample job for testing."""
     task_id = await task_service.create_job(
         task_func=mock_task_func,
@@ -68,7 +68,7 @@ async def test_listeners_are_called(sample_job: Job):
     assert sample_job.error is None, "Job error should be None"
 
 
-async def test_handle_job_executed(task_service: TaskService, sample_job: Job):
+async def test_handle_job_executed(task_service: JobsService, sample_job: Job):
     """Test handling of successful job execution."""
     # Create a JobExecutionEvent
     event = JobExecutionEvent(
@@ -91,7 +91,7 @@ async def test_handle_job_executed(task_service: TaskService, sample_job: Job):
         assert updated_job.result == {"output": "Test result"}, "Job result not saved correctly"
 
 
-async def test_handle_job_error(task_service: TaskService, sample_job: Job):
+async def test_handle_job_error(task_service: JobsService, sample_job: Job):
     """Test handling of job execution error."""
     # Create a JobEvent with an error
     test_error = ValueError("Test error message")
@@ -115,7 +115,7 @@ async def test_handle_job_error(task_service: TaskService, sample_job: Job):
         assert updated_job.error == str(test_error), "Job error not saved correctly"
 
 
-async def test_concurrent_job_updates(task_service: TaskService, sample_job: Job):
+async def test_concurrent_job_updates(task_service: JobsService, sample_job: Job):
     """Test handling concurrent updates to the same job."""
     # Create multiple events for the same job
     success_event = JobExecutionEvent(
@@ -148,7 +148,7 @@ async def test_concurrent_job_updates(task_service: TaskService, sample_job: Job
 
 
 @pytest.mark.usefixtures("client")
-async def test_invalid_job_id(task_service: TaskService):
+async def test_invalid_job_id(task_service: JobsService):
     """Test handling events for non-existent jobs."""
     # Create events with invalid job ID
     invalid_success_event = JobExecutionEvent(
