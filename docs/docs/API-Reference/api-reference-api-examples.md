@@ -22,7 +22,7 @@ export LANGFLOW_URL="http://127.0.0.1:7860"
 ```
 
 2. Export the `flow-id` in your terminal.
-The `flow-id` can be found in the [API pane](/workspace-api) or in the flow's URL.
+The `flow-id` is found in the [API pane](/workspace-api) or in the flow's URL.
 ```plain
 export FLOW_ID="359cd752-07ea-46f2-9d3b-a4407ef618da"
 ```
@@ -122,7 +122,7 @@ A JSON object containing a list of flows.
    </TabItem>
 </Tabs>
 
-To retrieve only the flows from a specific folder, pass `folder_id_` in the query string.
+To retrieve only the flows from a specific folder, pass `folder_id` in the query string.
 
 
 <Tabs>
@@ -130,7 +130,7 @@ To retrieve only the flows from a specific folder, pass `folder_id_` in the quer
 
 ```bash
 curl -X 'GET' \
-  'http://127.0.0.1:7863/api/v1/flows/?remove_example_flows=true&components_only=false&get_all=false&folder_id=1415de42-8f01-4f36-bf34-539f23e47466&header_flows=false&page=1&size=1' \
+  '$LANGFLOW_URL/api/v1/flows/?remove_example_flows=true&components_only=false&get_all=false&folder_id=1415de42-8f01-4f36-bf34-539f23e47466&header_flows=false&page=1&size=1' \
   -H 'accept: application/json'
 ```
 
@@ -188,7 +188,7 @@ This example changes the value for `endpoint_name` from a random UUID to `my_new
 
  ```bash
 curl -X 'PATCH' \
-  'http://127.0.0.1:7860/api/v1/flows/01ce083d-748b-4b8d-97b6-33adbb6a528a' \
+  '$LANGFLOW_URL/api/v1/flows/01ce083d-748b-4b8d-97b6-33adbb6a528a' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -262,7 +262,7 @@ Create multiple new flows.
 
 ```curl
 curl -X 'POST' \
-  'http://127.0.0.1:7860/api/v1/flows/batch/' \
+  '$LANGFLOW_URL/api/v1/flows/batch/' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -314,7 +314,7 @@ This example uploads a local file named `agent-with-astra-db-tool.json`.
 
 ```curl
 curl -X 'POST' \
-  'http://127.0.0.1:7860/api/v1/flows/upload/' \
+  '$LANGFLOW_URL/api/v1/flows/upload/' \
   -H 'accept: application/json' \
   -H 'Content-Type: multipart/form-data' \
   -F 'file=@agent-with-astra-db-tool.json;type=application/json'
@@ -358,7 +358,7 @@ Download all flows as a ZIP file.
 
 ```curl
 curl -X 'POST' \
-  'http://127.0.0.1:7860/api/v1/flows/download/' \
+  '$LANGFLOW_URL/api/v1/flows/download/' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '[
@@ -585,7 +585,7 @@ This example updates `01ce083d-748b-4b8d-97b6-33adbb6a528a` to `different_sessio
 
 ```curl
 curl -X 'PATCH' \
-  'http://127.0.0.1:7863/api/v1/monitor/messages/session/01ce083d-748b-4b8d-97b6-33adbb6a528a?new_session_id=different_session_id' \
+  '$LANGFLOW_URL/api/v1/monitor/messages/session/01ce083d-748b-4b8d-97b6-33adbb6a528a?new_session_id=different_session_id' \
   -H 'accept: application/json'
 ```
 
@@ -844,7 +844,7 @@ Update the information of a specific folder.
 
 ```curl
 curl -X 'PATCH' \
-  'http://127.0.0.1:7860/api/v1/folders/b408ddb9-6266-4431-9be8-e04a62758331' \
+  '$LANGFLOW_URL/api/v1/folders/b408ddb9-6266-4431-9be8-e04a62758331' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -909,7 +909,7 @@ The `--output` flag is optional.
 
 ```curl
 curl -X 'GET' \
-  'http://127.0.0.1:7860/api/v1/folders/download/b408ddb9-6266-4431-9be8-e04a62758331' \
+  '$LANGFLOW_URL/api/v1/folders/download/b408ddb9-6266-4431-9be8-e04a62758331' \
   -H 'accept: application/json' \
   --output langflow-folder.zip
 ```
@@ -933,7 +933,7 @@ Upload a folder to Langflow.
 
 ```curl
 curl -X 'POST' \
-  'http://127.0.0.1:7860/api/v1/folders/upload/' \
+  '$LANGFLOW_URL/api/v1/folders/upload/' \
   -H 'accept: application/json' \
   -H 'Content-Type: multipart/form-data' \
   -F 'file=@20241230_135006_langflow_flows.zip;type=application/zip'
@@ -964,7 +964,7 @@ This example uploads `the_oscar_award.csv`.
 
 ```curl
 curl -X 'POST' \
-  'http://127.0.0.1:7860/api/v1/files/upload/92f9a4c5-cfc8-4656-ae63-1f0881163c28' \
+  '$LANGFLOW_URL/api/v1/files/upload/92f9a4c5-cfc8-4656-ae63-1f0881163c28' \
   -H 'accept: application/json' \
   -H 'Content-Type: multipart/form-data' \
   -F 'file=@the_oscar_award.csv'
@@ -993,7 +993,7 @@ For more information, see [Supported environment variables](/environment-variabl
 1. To send an image to your flow with the API, POST the image file to the `v1/files/upload/<YOUR-FLOW-ID>` endpoint of your flow.
 
 ```curl
-curl -X POST "http://127.0.0.1:7860/api/v1/files/upload/a430cc57-06bb-4c11-be39-d3d4de68d2c4" \
+curl -X POST "$LANGFLOW_URL/api/v1/files/upload/a430cc57-06bb-4c11-be39-d3d4de68d2c4" \
   -H "Content-Type: multipart/form-data" \
   -F "file=@image-file.png"
 ```
@@ -1009,7 +1009,7 @@ Pass the file path value as an input in the **Tweaks** section of the curl call 
 
 ```curl
 curl -X POST \
-    "http://127.0.0.1:7860/api/v1/run/a430cc57-06bb-4c11-be39-d3d4de68d2c4?stream=false" \
+    "$LANGFLOW_URL/api/v1/run/a430cc57-06bb-4c11-be39-d3d4de68d2c4?stream=false" \
     -H 'Content-Type: application/json'\
     -d '{
     "output_type": "chat",
