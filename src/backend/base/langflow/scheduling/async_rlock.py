@@ -20,7 +20,7 @@ class AsyncRLock:
 
     def __init__(self, *, debug: bool = False):
         self._lock = asyncio.Lock()
-        self._owner = contextvars.ContextVar("lock_owner", default=None)
+        self._owner = contextvars.ContextVar[asyncio.Task | None]("lock_owner", default=None)
         self._count = 0
         self._debug = debug
         self._pending_tasks: WeakKeyDictionary = WeakKeyDictionary()
