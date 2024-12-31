@@ -14,7 +14,7 @@ from sqlmodel import select
 from langflow.scheduling.jobstore import AsyncSQLModelJobStore
 from langflow.scheduling.scheduler import AsyncScheduler
 from langflow.services.base import Service
-from langflow.services.database.models.job.model import Job, JobStatus
+from langflow.services.database.models.job.model import Job, JobRead, JobStatus
 from langflow.services.deps import session_scope
 
 if TYPE_CHECKING:
@@ -245,12 +245,14 @@ class TaskService(Service):
         self,
         user_id: UUID | None = None,
         pending: bool | None = None,
-    ) -> list[dict]:
+        status: JobStatus | None = None,
+    ) -> list[JobRead]:
         """Get all jobs from the job store with optional filtering.
 
         Args:
             user_id: Optional user ID to filter jobs by owner
             pending: Optional boolean to filter by pending status
+            status: Optional job status to filter by
 
         Returns:
             list[dict]: List of jobs as dictionaries containing job attributes
@@ -270,17 +272,17 @@ class TaskService(Service):
             raise ValueError(msg)
         try:
             if user_id:
-                jobs = await self.job_store.get_user_jobs(user_id, pending)
-                return [job.model_dump() for job in jobs]
+                jobs = await self.job_store.get_user_jobs(user_id, pending, status)
+                return [JobRead.model_validate(job, from_attributes=True) for job in jobs]
             # For other filters, we'll need to implement corresponding methods in the jobstore
             # For now, we'll just get all jobs if no user_id is provided
             jobs = await self.job_store.get_all_jobs()
-            return [job.model_dump() for job in jobs]
+            return [JobRead.model_validate(job, from_attributes=True) for job in jobs]
         except Exception as exc:
             logger.error(f"Error getting tasks: {exc}")
             raise
 
-    async def get_user_jobs(self, user_id: UUID) -> list[dict]:
+    async def get_user_jobs(self, user_id: UUID) -> list[JobRead]:
         """Get all jobs for a specific user.
 
         Args:
@@ -300,7 +302,7 @@ class TaskService(Service):
             raise ValueError(msg)
         try:
             jobs = await self.job_store.get_user_jobs(user_id)
-            return [job.model_dump() for job in jobs]
+            return [JobRead.model_validate(job, from_attributes=True) for job in jobs]
         except Exception as exc:
             logger.error(f"Error getting jobs for user {user_id}: {exc}")
             raise

@@ -292,13 +292,15 @@ class AsyncSQLModelJobStore(BaseJobStore):
             await session.commit()
             self._jobs.clear()
 
-    async def get_user_jobs(self, user_id: UUID, pending: bool | None = None) -> list[Job]:
+    async def get_user_jobs(
+        self, user_id: UUID, pending: bool | None = None, status: JobStatus | None = None
+    ) -> list[Job]:
         """Get all jobs for a specific user asynchronously.
 
         Args:
             user_id (UUID): The ID of the user whose jobs to retrieve
             pending (bool | None): If set, only return jobs with matching pending status
-
+            status (JobStatus | None): If set, only return jobs with matching status
         Returns:
             list[Job]: A list of jobs belonging to the specified user
 
@@ -307,13 +309,15 @@ class AsyncSQLModelJobStore(BaseJobStore):
         """
         async with session_scope() as session:
             stmt = select(Job).where(Job.user_id == user_id)
+            if status:
+                stmt = stmt.where(Job.status == status)
             tasks = (await session.exec(stmt)).all()
 
             jobs = []
             for task in tasks:
                 try:
                     job_state = pickle.loads(task.job_state)  # noqa: S301
-                    job = self._reconstitute_job(job_state)
+                    job: APSJob = self._reconstitute_job(job_state)
                     if pending is not None and job.pending != pending:
                         continue
                     self._jobs[job.id] = job
@@ -325,7 +329,7 @@ class AsyncSQLModelJobStore(BaseJobStore):
             await session.commit()
             return jobs
 
-    def _reconstitute_job(self, job_state):
+    def _reconstitute_job(self, job_state) -> APSJob:
         """Reconstitute a job from its serialized state.
 
         This method creates a new Job instance from a serialized job state.
