@@ -39,7 +39,7 @@ async def test_webhook_endpoint(client, added_webhook_test, logged_in_headers):
 
         assert await file_path.exists()
 
-    assert not await file_path.exists
+    assert not await file_path.exists()
 
     # Send an invalid payload
     payload = {"invalid_key": "invalid_value"}
