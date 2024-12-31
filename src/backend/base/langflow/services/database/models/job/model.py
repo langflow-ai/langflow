@@ -47,7 +47,6 @@ class JobRead(SQLModel):
     """Model for reading scheduled jobs."""
 
     id: str
-    job_state: bytes | None
     next_run_time: datetime | None
     status: str
 
