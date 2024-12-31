@@ -34,8 +34,8 @@ async def create_job(
 ) -> str:
     """Create a new job."""
     try:
-        task_service = get_jobs_service()
-        return await task_service.create_job(
+        jobs_service = get_jobs_service()
+        return await jobs_service.create_job(
             task_func=simple_run_flow_task,
             run_at=None,
             name=request.name,
