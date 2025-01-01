@@ -1,5 +1,4 @@
 # from langflow.field_typing import Data
-import numpy as np
 
 # TODO: remove ignore once the google package is published with types
 from google.ai.generativelanguage_v1beta.types import BatchEmbedContentsRequest
