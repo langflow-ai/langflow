@@ -89,7 +89,7 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                     except Exception as e:
                         msg = f"Error embedding content: {e}"
                         raise GoogleGenerativeAIError(msg) from e
-                    embeddings.extend([list(np.pad(e.values, (0, 768), "constant")) for e in result.embeddings])
+                    embeddings.extend([list(e.values) for e in result.embeddings])
                 return embeddings
 
             def embed_query(
