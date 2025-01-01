@@ -46,7 +46,7 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                 batch_size: int = 100,
                 task_type: str | None = None,
                 titles: list[str] | None = None,
-                output_dimensionality: int | None = 1536,
+                output_dimensionality: int | None = 768,
             ) -> list[list[float]]:
                 """Embed a list of strings.
 
@@ -97,7 +97,7 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                 text: str,
                 task_type: str | None = None,
                 title: str | None = None,
-                output_dimensionality: int | None = 1536,
+                output_dimensionality: int | None = 768,
             ) -> list[float]:
                 """Embed a text.
 
