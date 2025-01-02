@@ -254,13 +254,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return []
         return [*collections, "+ Create new collection"]
 
-
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):  # noqa: ARG002
         # Refresh the collection name options
         build_config["database_name"]["options"] = self._initialize_database_options()
         build_config["collection_name"]["options"] = self._initialize_collection_options()
         return build_config
-
 
     def get_collection_choice(self):
         collection_name = self.collection_name
@@ -463,7 +461,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     "z_04_authentication": new_parameter_4,
                 },
             )
-
 
     @check_cached_vector_store
     def build_vector_store(self):
