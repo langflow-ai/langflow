@@ -167,7 +167,8 @@ class RunFlowBaseComponent(Component):
                 graph = Graph.from_payload(flow_data.data["data"])
                 new_fields = self.get_new_fields_from_graph(graph)
                 new_fields = self.update_input_types(new_fields)
-                return [field for field in new_fields if field.get("tool_mode") is True]
+
+                return flow_data.data["description"], [field for field in new_fields if field.get("tool_mode") is True]
         return None
 
     def update_input_types(self, fields: list[dotdict]) -> list[dotdict]:
@@ -181,11 +182,16 @@ class RunFlowBaseComponent(Component):
 
     async def to_toolkit(self) -> list[Tool]:
         component_toolkit = _get_component_toolkit()
-        tool_mode_inputs = await self.get_required_data(self.flow_name_selected)
+        flow_description, tool_mode_inputs = await self.get_required_data(self.flow_name_selected)
         # # convert list of dicts to list of dotdicts
         tool_mode_inputs = [dotdict(field) for field in tool_mode_inputs]
         tools = component_toolkit(component=self).get_tools(
-            callbacks=self.get_langchain_callbacks(), flow_mode_inputs=tool_mode_inputs
+            tool_name=f"{self.flow_name_selected}_tool",
+            tool_description=(
+                f"Tool designed to execute the flow '{self.flow_name_selected}'. " f"Flow details: {flow_description}."
+            ),
+            callbacks=self.get_langchain_callbacks(),
+            flow_mode_inputs=tool_mode_inputs,
         )
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
