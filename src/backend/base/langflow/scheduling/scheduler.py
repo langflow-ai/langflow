@@ -112,7 +112,7 @@ class AsyncScheduler(AsyncBaseScheduler):
 
             # Start all the job stores
             for alias, store in self._jobstores.items():
-                result = await store.start(self, alias)
+                result = store.start(self, alias)
                 if asyncio.iscoroutine(result):
                     await result
 
