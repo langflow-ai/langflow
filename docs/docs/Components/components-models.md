@@ -1,6 +1,5 @@
 ---
 title: Models
-sidebar_position: 5
 slug: /components-models
 ---
 

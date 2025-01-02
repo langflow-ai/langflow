@@ -1,6 +1,5 @@
 ---
 title: Quickstart
-sidebar_position: 2
 slug: /get-started-quickstart
 ---
 

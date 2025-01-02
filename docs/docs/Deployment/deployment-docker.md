@@ -1,7 +1,6 @@
 ---
-title: Docker
-sidebar_position: 2
-slug: /deployment-docker
+title: Dockers
+lug: /deployment-docker
 ---
 
 

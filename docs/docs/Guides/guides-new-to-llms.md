@@ -1,6 +1,5 @@
 ---
 title: 📚 New to LLMs?
-sidebar_position: 0
 slug: /guides-new-to-llms
 ---
 

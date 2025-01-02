@@ -1,6 +1,5 @@
 ---
 title: Playground
-sidebar_position: 2
 slug: /workspace-playground
 ---
 

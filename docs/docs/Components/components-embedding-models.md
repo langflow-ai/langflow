@@ -1,6 +1,5 @@
 ---
 title: Embeddings
-sidebar_position: 6
 slug: /components-embedding-models
 ---
 

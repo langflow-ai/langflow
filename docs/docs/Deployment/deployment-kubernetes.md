@@ -1,6 +1,5 @@
 ---
 title: Kubernetes
-sidebar_position: 1
 slug: /deployment-kubernetes
 ---
 

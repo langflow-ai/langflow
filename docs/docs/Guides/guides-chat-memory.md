@@ -1,6 +1,5 @@
 ---
 title: Chat Memory
-sidebar_position: 1
 slug: /guides-chat-memory
 ---
 

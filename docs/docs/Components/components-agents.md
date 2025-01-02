@@ -1,6 +1,5 @@
 ---
 title: Agents
-sidebar_position: 12
 slug: /components-agents
 ---
 

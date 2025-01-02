@@ -1,6 +1,5 @@
 ---
 title: Loaders
-sidebar_position: 10
 slug: /components-loaders
 ---
 
