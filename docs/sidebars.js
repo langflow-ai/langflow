@@ -53,6 +53,7 @@ module.exports = {
         "Components/components-logic",
         "Components/components-memories",
         "Components/components-models",
+        "Components/components-processing",
         "Components/components-prompts",
         "Components/components-tools",
         "Components/components-vector-stores",
