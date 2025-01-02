@@ -4,7 +4,7 @@ from .flow_tool import FlowToolComponent
 from .listen import ListenComponent
 from .notify import NotifyComponent
 from .pass_message import PassMessageComponent
-from .runflow import RunFlowComponent
+from .run_flow import RunFlowComponent
 from .sub_flow import SubFlowComponent
 
 __all__ = [

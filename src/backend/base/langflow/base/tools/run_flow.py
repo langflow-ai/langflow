@@ -17,7 +17,7 @@ from langflow.schema import Data, dotdict
 from langflow.template import Output
 
 
-class RunFlowBase(Component):
+class RunFlowBaseComponent(Component):
     _base_inputs: list[InputTypes] = [
         DropdownInput(
             name="flow_name_selected",
@@ -189,4 +189,5 @@ class RunFlowBase(Component):
         )
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
+        self.status = tools
         return tools

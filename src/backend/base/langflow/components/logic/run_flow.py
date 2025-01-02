@@ -3,19 +3,19 @@ from typing import Any
 from loguru import logger
 
 from langflow.base.flow_processing.utils import build_data_from_result_data
-from langflow.base.tools.run_flow_tool import RunFlowBase
+from langflow.base.tools.run_flow import RunFlowBaseComponent
 from langflow.helpers.flow import run_flow
 from langflow.schema import Data, dotdict
 
 
-class RunFlowComponent(RunFlowBase):
+class RunFlowComponent(RunFlowBaseComponent):
     display_name = "Run Flow"
     description = "Generates a Component from a Flow, with all of its inputs, and "
     name = "RunFlow"
     beta: bool = True
     icon = "Workflow"
 
-    inputs = RunFlowBase._base_inputs
+    inputs = RunFlowBaseComponent._base_inputs
 
     async def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "flow_name_selected":
@@ -75,4 +75,4 @@ class RunFlowComponent(RunFlowBase):
             for output in run_output.outputs:
                 if output:
                     data.extend(build_data_from_result_data(output))
-        return Data(data=data)
+        return Data(data=data[-1].data)
