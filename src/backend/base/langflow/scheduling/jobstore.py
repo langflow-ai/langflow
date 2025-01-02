@@ -257,10 +257,10 @@ class AsyncSQLModelJobStore(BaseJobStore):
             self._jobs[job.id] = job
 
     async def remove_job(self, job_id: str) -> None:
-        """Mark a job as completed in the store asynchronously.
+        """Mark a job as cancelled in the store asynchronously.
 
         Args:
-            job_id (str): The identifier of the job to mark as completed
+            job_id (str): The identifier of the job to mark as cancelled
 
         Raises:
             JobLookupError: If the job does not exist in the store
@@ -271,7 +271,9 @@ class AsyncSQLModelJobStore(BaseJobStore):
             if not task:
                 raise JobLookupError(job_id)
 
-            task.status = JobStatus.COMPLETED
+            # Only mark as CANCELLED if the job is not already COMPLETED
+            if task.status != JobStatus.COMPLETED:
+                task.status = JobStatus.CANCELLED
             task.is_active = False
             task.updated_at = datetime.now(timezone.utc)
 
