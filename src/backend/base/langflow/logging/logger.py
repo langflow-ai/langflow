@@ -15,7 +15,7 @@ from loguru._file_sink import FileSink
 from loguru._simple_sinks import AsyncSink
 from platformdirs import user_cache_dir
 from rich.logging import RichHandler
-from typing_extensions import NotRequired
+from typing_extensions import NotRequired, override
 
 from langflow.settings import DEV
 
@@ -285,6 +285,7 @@ class InterceptHandler(logging.Handler):
     See https://loguru.readthedocs.io/en/stable/overview.html#entirely-compatible-with-standard-logging.
     """
 
+    @override
     def emit(self, record) -> None:
         # Get corresponding Loguru level if it exists
         try:

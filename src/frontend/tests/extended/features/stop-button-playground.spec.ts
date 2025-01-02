@@ -17,6 +17,10 @@ test(
       },
     );
 
+    await page.waitForSelector('[data-testid="zoom_out"]', {
+      timeout: 3000,
+    });
+
     await page.getByTestId("sidebar-custom-component-button").click();
     await page.getByTitle("fit view").click();
     await page.getByTitle("zoom out").click();
@@ -35,6 +39,12 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
     await adjustScreenView(page);
+
+    await page.getByTestId("div-generic-node").nth(1).click();
+
+    await page.getByTestId("more-options-modal").click();
+
+    await page.getByTestId("expand-button-modal").click();
 
     await page.getByTestId("div-generic-node").nth(0).click();
 

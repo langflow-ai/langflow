@@ -114,7 +114,7 @@ test(
 
     // Move to the second element
     const chatOutputElement = await page
-      .getByTestId("handle-chatoutput-shownode-text-left")
+      .getByTestId("handle-chatoutput-noshownode-text-target")
       .all();
 
     for (const element of chatOutputElement) {
