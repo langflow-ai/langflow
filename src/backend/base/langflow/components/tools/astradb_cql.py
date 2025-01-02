@@ -91,33 +91,69 @@ class AstraDBCQLToolComponent(LCToolComponent):
     ]
 
     def astra_rest(self, args):
-        headers = {"Accept": "application/json", "X-Cassandra-Token": f"{self.token}"}
-        astra_url = f"{self.api_endpoint}/api/rest/v2/keyspaces/{self.keyspace}/{self.table_name}/"
-        key = []
+        headers = {"Accept": "application/json", "X-Cassandra-Token": f"{self.token}", "Content-Type": "application/json"}
 
-        # Partition keys are mandatory
-        key = [self.partition_keys[k] for k in self.partition_keys]
+        astra_url = f"{self.api_endpoint}/api/rest/v2/keyspaces/{self.keyspace}/{self.table_name}/rows"
 
-        # Clustering keys are optional
-        for k in self.clustering_keys:
-            if k in args:
-                key.append(args[k])
-            elif self.static_filters[k] is not None:
-                key.append(self.static_filters[k])
+        where_clauses = []
 
-        url = f"{astra_url}{'/'.join(key)}?page-size={self.number_of_results}"
+        for key in self.partition_keys:
+            if key in args:
+                where_clauses.append(
+                    {"column": key, "operator": "EQ", "value": args[key]}
+                )
+            elif key in self.static_filters:
+                where_clauses.append(
+                    {"column": key, "operator": "EQ", "value": self.static_filters[key]}
+                )
+
+        for key in self.clustering_keys:
+            clean_key = key[1:] if key.startswith("!") else key
+            if clean_key in args and args[clean_key] is not None:
+                where_clauses.append(
+                    {"column": clean_key, "operator": "EQ", "value": args[clean_key]}
+                )
+            elif clean_key in self.static_filters:
+                where_clauses.append(
+                    {
+                        "column": clean_key,
+                        "operator": "EQ",
+                        "value": self.static_filters[clean_key],
+                    }
+                )
+
+        params = {
+            "page-size": self.number_of_results,
+            "where": {"filters": where_clauses},
+        }
 
         if self.projection_fields != "*":
-            url += f"&fields={urllib.parse.quote(self.projection_fields.replace(' ', ''))}"
+            params["fields"] = [
+                field.strip() for field in self.projection_fields.split(",")
+            ]
 
-        res = requests.request("GET", url=url, headers=headers, timeout=10)
+        res = requests.request(
+            "GET",
+            url=astra_url,
+            headers=headers,
+            params={"raw": "true"},
+            json=params,
+            timeout=10,
+        )
 
         if int(res.status_code) >= HTTPStatus.BAD_REQUEST:
             return res.text
 
         try:
             res_data = res.json()
-            return res_data["data"]
+            if isinstance(res_data, dict) and "data" in res_data:
+                return res_data["data"]
+            elif isinstance(res_data, list):
+                return res_data
+            elif isinstance(res_data, dict):
+                return [res_data]
+            else:
+                return []
         except ValueError:
             return res.status_code
 
@@ -125,17 +161,18 @@ class AstraDBCQLToolComponent(LCToolComponent):
         args: dict[str, tuple[Any, Field]] = {}
 
         for key in self.partition_keys:
-            # Partition keys are mandatory is it doesn't have a static filter
             if key not in self.static_filters:
                 args[key] = (str, Field(description=self.partition_keys[key]))
 
         for key in self.clustering_keys:
-            # Partition keys are mandatory if has the exclamation mark and doesn't have a static filter
             if key not in self.static_filters:
                 if key.startswith("!"):  # Mandatory
                     args[key[1:]] = (str, Field(description=self.clustering_keys[key]))
                 else:  # Optional
-                    args[key] = (str | None, Field(description=self.clustering_keys[key], default=None))
+                    args[key] = (
+                        str | None,
+                        Field(description=self.clustering_keys[key], default=None),
+                    )
 
         model = create_model("ToolInput", **args, __base__=BaseModel)
         return {"ToolInput": model}
@@ -172,6 +209,10 @@ class AstraDBCQLToolComponent(LCToolComponent):
 
     def run_model(self, **args) -> Data | list[Data]:
         results = self.astra_rest(args)
+
+        if isinstance(results, str):
+            raise ValueError(f"Error from Astra DB: {results}")
+
         data: list[Data] = [Data(data=doc) for doc in results]
         self.status = data
         return results
