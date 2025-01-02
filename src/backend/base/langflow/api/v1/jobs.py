@@ -47,7 +47,7 @@ async def create_job(
             },
         )
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/{job_id}", response_model=JobRead)
