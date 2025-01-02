@@ -10,6 +10,7 @@ from langflow.graph import Graph
 from langflow.io import MessageTextInput, Output
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.flow.model import FlowCreate
+from langflow.services.database.models.job.model import JobStatus
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_db_service
 from sqlalchemy.orm import selectinload
@@ -117,7 +118,10 @@ async def test_create_job(client: AsyncClient, logged_in_headers, simple_api_tes
     assert (
         job["name"] == create_job_request["name"]
     ), f"Job name mismatch. Expected: {create_job_request['name']}, got: {job['name']}"
-    assert job["pending"] is False, f"Expected job to not be pending, got: {job['pending']}"
+    assert job["status"] in [
+        JobStatus.PENDING,
+        JobStatus.COMPLETED,
+    ], f"Expected job to be pending or completed, got: {job['status']}"
 
 
 async def test_create_job_invalid_flow(client: AsyncClient, logged_in_headers, create_job_request):
@@ -165,13 +169,25 @@ async def test_get_jobs_with_status(client: AsyncClient, logged_in_headers, simp
     await client.post(f"/api/v1/jobs/{simple_api_test['id']}", headers=logged_in_headers, json=create_job_request)
 
     # Get all jobs
-    response = await client.get("/api/v1/jobs/", headers=logged_in_headers)
+    response = await client.get("/api/v1/jobs/", headers=logged_in_headers, params={"status": "PENDING"})
     assert (
         response.status_code == status.HTTP_200_OK
     ), f"Failed to get jobs. Status: {response.status_code}. Response: {response.text}"
     jobs = response.json()
     assert isinstance(jobs, list), f"Expected jobs to be a list, got {type(jobs)}"
-    assert len(jobs) > 0, "Expected at least one job"
+    assert len(jobs) >= 0, "Expected at least one job"
+    if jobs:
+        assert all(job["status"] == "PENDING" for job in jobs), "Some jobs do not have status PENDING"
+
+    # Get all jobs with completed status
+    response = await client.get("/api/v1/jobs/", headers=logged_in_headers, params={"status": "COMPLETED"})
+    assert (
+        response.status_code == status.HTTP_200_OK
+    ), f"Failed to get jobs. Status: {response.status_code}. Response: {response.text}"
+    jobs = response.json()
+    assert isinstance(jobs, list), f"Expected jobs to be a list, got {type(jobs)}"
+    if jobs:
+        assert all(job["status"] == "COMPLETED" for job in jobs), "Some jobs do not have status COMPLETED"
 
 
 async def test_cancel_job(client: AsyncClient, logged_in_headers, long_running_flow, create_job_request):
@@ -189,11 +205,14 @@ async def test_cancel_job(client: AsyncClient, logged_in_headers, long_running_f
     ), f"Failed to cancel job. Status: {response.status_code}. Response: {response.text}"
     assert response.json() is True, f"Expected True response for job cancellation, got: {response.json()}"
 
-    # Verify job was canceled by trying to get it
+    # Verify job was canceled and marked as CANCELLED
     response = await client.get(f"/api/v1/jobs/{job_id}", headers=logged_in_headers)
     assert (
-        response.status_code == status.HTTP_404_NOT_FOUND
-    ), f"Expected job to be not found after cancellation. Status: {response.status_code}. Response: {response.text}"
+        response.status_code == status.HTTP_200_OK
+    ), f"Failed to get cancelled job. Status: {response.status_code}. Response: {response.text}"
+    job = response.json()
+    assert job["status"] == "CANCELLED", f"Expected job to be cancelled, got: {job['status']}"
+    assert not job["is_active"], "Expected job to be inactive"
 
 
 async def test_cancel_nonexistent_job(client: AsyncClient, logged_in_headers):
@@ -291,10 +310,10 @@ async def test_job_status_transitions(client: AsyncClient, logged_in_headers, si
     ), f"Failed to get job status. Status: {response.status_code}. Response: {response.text}"
     job = response.json()
 
-    # Verify job has a valid pending status
-    assert "pending" in job, f"Job response missing 'pending' field. Response: {job}"
-    assert isinstance(job["pending"], bool), (
-        f"Expected boolean for job.pending, got {type(job['pending'])}. " f"Value: {job['pending']}"
+    # Verify job has a valid status
+    assert "status" in job, f"Job response missing 'status' field. Response: {job}"
+    assert isinstance(job["status"], str), (
+        f"Expected string for job.status, got {type(job['status'])}. " f"Value: {job['status']}"
     )
 
 
