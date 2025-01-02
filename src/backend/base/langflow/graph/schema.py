@@ -60,13 +60,15 @@ CHAT_COMPONENTS = [InterfaceComponentTypes.ChatInput, InterfaceComponentTypes.Ch
 RECORDS_COMPONENTS = [InterfaceComponentTypes.DataOutput]
 INPUT_COMPONENTS = [
     InterfaceComponentTypes.ChatInput,
-    InterfaceComponentTypes.TextInput,
     InterfaceComponentTypes.WebhookInput,
+    # TODO: Add TextInput back in after add support for it in playground
+    # InterfaceComponentTypes.TextInput,
 ]
 OUTPUT_COMPONENTS = [
     InterfaceComponentTypes.ChatOutput,
-    InterfaceComponentTypes.TextOutput,
     InterfaceComponentTypes.DataOutput,
+    # TODO: Add TextOutput back in after add support for it in playground
+    # InterfaceComponentTypes.TextOutput,
 ]
 
 
