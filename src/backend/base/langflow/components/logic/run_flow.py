@@ -62,7 +62,7 @@ class RunFlowComponent(RunFlowBaseComponent):
             flow_name=flow_name_selected,
             tweaks=tweaks,
             user_id=str(self.user_id),
-            # run_id=self.graph.run_id,
+            run_id=self.graph.run_id,
             session_id=self.graph.session_id or self.session_id,
         )
         # import pdb; pdb.set_trace()

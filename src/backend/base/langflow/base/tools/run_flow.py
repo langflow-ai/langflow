@@ -18,6 +18,9 @@ from langflow.template import Output
 
 
 class RunFlowBaseComponent(Component):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.add_tool_output = True
     _base_inputs: list[InputTypes] = [
         DropdownInput(
             name="flow_name_selected",
@@ -52,7 +55,6 @@ class RunFlowBaseComponent(Component):
         ),
     ]
     outputs = [Output(name="flow_outputs", display_name="Flow Outputs", method="run_flow_with_tweaks")]
-
     default_keys = [
         "code",
         "_type",
@@ -195,5 +197,5 @@ class RunFlowBaseComponent(Component):
         )
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
-        self.status = tools
+        # self.status = tools
         return tools

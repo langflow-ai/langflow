@@ -411,6 +411,7 @@ class Component(CustomComponent):
             is_tool_mode = field_value or frontend_node.get("tool_mode")
             frontend_node["outputs"] = [self._build_tool_output()] if is_tool_mode else frontend_node["outputs"]
             if is_tool_mode:
+                self.add_tool_mode = True
                 frontend_node.setdefault("template", {})
                 _build_tools_metadata_input_result = await self._build_tools_metadata_input()
                 frontend_node["template"][TOOLS_METADATA_INPUT_NAME] = _build_tools_metadata_input_result.to_dict()
@@ -873,8 +874,8 @@ class Component(CustomComponent):
         if hasattr(self, "_pre_run_setup"):
             self._pre_run_setup()
         if hasattr(self, "outputs"):
-            if any(getattr(_input, "tool_mode", False) for _input in self.inputs):
-                await self._append_tool_to_outputs_map()
+            if any(getattr(_input, "tool_mode", False) for _input in self.inputs) | self.add_tool_output:
+                self._append_tool_to_outputs_map()
             for output in self._outputs_map.values():
                 # Build the output if it's connected to some other vertex
                 # or if it's not connected to any vertex
@@ -1175,7 +1176,7 @@ class Component(CustomComponent):
         await self.send_message(error_message)
         return error_message
 
-    async def _append_tool_to_outputs_map(self):
+    def _append_tool_to_outputs_map(self):
         self._outputs_map[TOOL_OUTPUT_NAME] = self._build_tool_output()
         # add a new input for the tool schema
         # self.inputs.append(self._build_tool_schema())

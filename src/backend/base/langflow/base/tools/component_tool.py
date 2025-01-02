@@ -242,8 +242,9 @@ class ComponentToolkit:
                 )
         if len(tools) == 1 and (tool_name or tool_description):
             tool = tools[0]
-            tool.name = tool_name or tool.name
+            tool.name = _format_tool_name(tool_name) or tool.name
             tool.description = tool_description or tool.description
+            tool.tags = [tool.name]
         elif tool_name or tool_description:
             msg = (
                 "When passing a tool name or description, there must be only one tool, "
