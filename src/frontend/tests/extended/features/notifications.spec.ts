@@ -21,10 +21,8 @@ test(
       .getByTestId("inputsText Input")
       .hover()
       .then(async () => {
-        await page.getByTestId("add-component-button-chat-input").click();
-        await page.getByTestId(/rf__node-ChatInput-/).click();
-        await page.keyboard.press('Control+.');
-        await page.getByTestId("button_run_chat input").click();
+        await page.getByTestId("add-component-button-text-input").click();
+        await page.getByTestId("button_run_text input").click();
       });
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
