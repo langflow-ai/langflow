@@ -1,10 +1,9 @@
-import asyncio
 import inspect
 import sys
 import warnings
 from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping, MutableMapping
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from importlib.metadata import entry_points
 from logging import getLogger
 from pathlib import Path
@@ -39,8 +38,7 @@ from apscheduler.jobstores.base import BaseJobStore, ConflictingIdError, JobLook
 from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.schedulers import SchedulerAlreadyRunningError, SchedulerNotRunningError
 from apscheduler.triggers.base import BaseTrigger
-from apscheduler.util import asbool, asint, astimezone, maybe_ref, obj_to_ref, ref_to_obj, undefined
-from tzlocal import get_localzone
+from apscheduler.util import asbool, asint, maybe_ref, obj_to_ref, ref_to_obj, undefined
 
 from .async_rlock import AsyncRLock
 
@@ -885,7 +883,7 @@ class AsyncBaseScheduler(metaclass=ABCMeta):
     async def _configure(self, config):
         # Set general options
         self._logger = maybe_ref(config.pop("logger", None)) or getLogger("apscheduler.scheduler")
-        self.timezone = astimezone(config.pop("timezone", None)) or await asyncio.to_thread(get_localzone)
+        self.timezone = timezone.utc  # This is the default timezone for the scheduler
         self.jobstore_retry_interval = float(config.pop("jobstore_retry_interval", 10))
 
         # Set the job defaults
