@@ -933,16 +933,14 @@ class Component(CustomComponent):
 
     def _process_raw_result(self, result):
         if self.status:
-            raw = self.status
-        elif hasattr(result, "data"):
-            raw = result.data
-        elif hasattr(result, "model_dump"):
-            raw = result.model_dump()
-        elif isinstance(result, dict | Data | str):
-            raw = result.data if isinstance(result, Data) else result
-        else:
-            raw = result
-        return raw
+            return self.status
+        if hasattr(result, "data"):
+            return result.data
+        if hasattr(result, "model_dump"):
+            return result.model_dump()
+        if isinstance(result, (dict, Data, str)):
+            return result.data if isinstance(result, Data) else result
+        return result
 
     def _log_output(self, output):
         self._output_logs[output.name] = self._logs
@@ -1231,3 +1229,41 @@ class Component(CustomComponent):
                 field_parsers={"name": FieldParserType.SNAKE_CASE},
             ),
         )
+
+    def _initialize_instance_specific_attributes(self) -> None:
+        self._output_logs = {}
+        self._current_output = ""
+        self._metadata = {}
+        self._ctx = {}
+        self._code = None
+        self._logs = []
+        self._inputs = {}
+        self._outputs_map = {}
+        self._results = {}
+        self._attributes = {}
+        self._edges = []
+        self._components = []
+        self._event_manager = None
+        self._state_model = None
+
+    def _process_kwargs(self, kwargs) -> tuple[dict, dict]:
+        inputs = {}
+        config = {}
+        for key, value in kwargs.items():
+            (config if key.startswith("_") else inputs)[key if not key.startswith("_") else key[1:]] = value
+        return config, inputs
+
+    def _add_unique_id_if_not_provided(self, config) -> None:
+        if "_id" not in config:
+            config["_id"] = f"{self.__class__.__name__}-{nanoid.generate(size=5)}"
+
+    def _post_initialization_setup(self) -> None:
+        self.trace_type = getattr(self, "_trace_type", "chain")
+        self._reset_all_output_values()
+        if self.inputs:
+            self.map_inputs(self.inputs)
+        if self.outputs:
+            self.map_outputs(self.outputs)
+        self._set_output_types(list(self._outputs_map.values()))
+        self.set_class_code()
+        self._set_output_required_inputs()
