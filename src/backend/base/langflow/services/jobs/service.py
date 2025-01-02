@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
+import httpx
 from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED, JobEvent, JobExecutionEvent
 from apscheduler.schedulers.base import SchedulerAlreadyRunningError
 from apscheduler.triggers.date import DateTrigger
@@ -16,6 +18,7 @@ from langflow.scheduling.scheduler import AsyncScheduler
 from langflow.services.base import Service
 from langflow.services.database.models.job.model import Job, JobRead, JobStatus
 from langflow.services.deps import session_scope
+from langflow.services.jobs.schema import WebhookJobData
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -90,26 +93,56 @@ class JobsService(Service):
         """Handle successful job execution events.
 
         Updates the job status to COMPLETED and stores the execution result.
+        Sends webhook notification if enabled.
 
         Args:
             event: The job execution event containing job ID and result
         """
         await self._ensure_scheduler_running()
         async with session_scope() as session:
-            stmt = select(Job).where(Job.id == event.job_id)
-            job = (await session.exec(stmt)).first()
+            job = await self._get_job_by_id(event.job_id, session)
             if job:
-                job.status = JobStatus.COMPLETED
-                try:
-                    serialized_result = jsonable_encoder(
-                        event.retval, custom_encoder={datetime: lambda v: v.isoformat(), UUID: lambda v: str(v)}
-                    )
-                except (TypeError, ValueError) as e:
-                    logger.error("Error serializing result: %s", str(e))
-                    serialized_result = {"output": str(event.retval)}
-                job.result = serialized_result if isinstance(serialized_result, dict) else {"output": str(event.retval)}
-                session.add(job)
+                await self._update_completed_job(job, event, session)
                 await session.commit()
+                await session.refresh(job)
+                if self.settings_service.settings.job_webhook_enabled:
+                    await self._send_job_webhook(job)
+
+    async def _get_job_by_id(self, job_id: str, session) -> Job | None:
+        """Get a job by its ID."""
+        stmt = select(Job).where(Job.id == job_id)
+        return (await session.exec(stmt)).first()
+
+    async def _update_completed_job(self, job: Job, event: JobExecutionEvent, session) -> None:
+        """Update job with completion details and result."""
+        job.status = JobStatus.COMPLETED
+        job.result = await self._serialize_job_result(event.retval)
+        session.add(job)
+
+    async def _serialize_job_result(self, result: Any) -> dict:
+        """Serialize job result to JSON-compatible format."""
+        try:
+            serialized_result = jsonable_encoder(
+                result, custom_encoder={datetime: lambda v: v.isoformat(), UUID: lambda v: str(v)}
+            )
+            if isinstance(serialized_result, dict):
+                return serialized_result
+            return {"output": str(result)}
+        except (TypeError, ValueError) as e:
+            logger.error("Error serializing result: %s", str(e))
+            return {"output": str(result)}
+
+    async def _send_job_webhook(self, job: Job) -> None:
+        """Prepare and send webhook notification for completed job."""
+        job_data = WebhookJobData(
+            id=str(job.id),
+            status=job.status.value if isinstance(job.status, Enum) else job.status,
+            result=job.result,
+            name=job.name,
+            flow_id=str(job.flow_id) if job.flow_id else None,
+            user_id=str(job.user_id) if job.user_id else None,
+        )
+        await self.send_webhook_notification(job_data)
 
     async def _handle_job_error(self, event: JobEvent) -> None:
         """Handle job execution error events.
@@ -121,8 +154,7 @@ class JobsService(Service):
         """
         await self._ensure_scheduler_running()
         async with session_scope() as session:
-            stmt = select(Job).where(Job.id == event.job_id)
-            job = (await session.exec(stmt)).first()
+            job = await self._get_job_by_id(event.job_id, session)
             if job:
                 job.status = JobStatus.FAILED
                 job.error = str(event.exception)
@@ -326,3 +358,36 @@ class JobsService(Service):
         if self.scheduler.running:
             self.scheduler.shutdown()
             logger.info("Task scheduler stopped")
+
+    async def send_webhook_notification(self, job_data: WebhookJobData) -> bool:
+        """Send webhook notification for job completion."""
+        if not self.settings_service.settings.job_webhook_enabled or not self.settings_service.settings.job_webhook_url:
+            return False
+
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": self.settings_service.settings.user_agent,
+        }
+
+        # Add secret key to headers if configured
+        if self.settings_service.settings.job_webhook_secret:
+            headers["X-Webhook-Secret"] = self.settings_service.settings.job_webhook_secret
+
+        for attempt in range(self.settings_service.settings.job_webhook_retries):
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        self.settings_service.settings.job_webhook_url,
+                        json=job_data.model_dump(),
+                        headers=headers,
+                        timeout=self.settings_service.settings.job_webhook_timeout,
+                    )
+                    response.raise_for_status()
+                    logger.debug(f"Webhook notification sent successfully for job {job_data.id}")
+                    return True
+            except (httpx.RequestError, httpx.HTTPStatusError) as exc:
+                logger.warning(f"Webhook delivery attempt {attempt + 1} failed: {exc!s}")
+                if attempt == self.settings_service.settings.job_webhook_retries - 1:
+                    logger.error(f"Failed to send webhook notification for job {job_data.id}")
+                    return False
+        return False
