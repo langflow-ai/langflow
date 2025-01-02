@@ -15,7 +15,129 @@ import {
 import { cn } from "@/utils/utils";
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import { X } from "lucide-react";
-import { useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
+
+const OptionBadge = ({
+  option,
+  onRemove,
+  variant = "emerald",
+  className = "",
+}: {
+  option: string;
+  variant?:
+    | "default"
+    | "emerald"
+    | "gray"
+    | "secondary"
+    | "destructive"
+    | "outline"
+    | "secondaryStatic"
+    | "pinkStatic"
+    | "successStatic"
+    | "errorStatic";
+  className?: string;
+  onRemove: (e: React.MouseEvent<HTMLButtonElement>) => void;
+}) => (
+  <Badge
+    variant={
+      variant as
+        | "default"
+        | "emerald"
+        | "gray"
+        | "secondary"
+        | "destructive"
+        | "outline"
+        | "secondaryStatic"
+        | "pinkStatic"
+        | "successStatic"
+        | "errorStatic"
+    }
+    className={cn("flex items-center gap-1 truncate", className)}
+  >
+    <div className="truncate">{option}</div>
+    <X
+      className="h-3 w-3 cursor-pointer bg-transparent hover:text-destructive"
+      onClick={(e) =>
+        onRemove(e as unknown as React.MouseEvent<HTMLButtonElement>)
+      }
+      data-testid="remove-icon-badge"
+    />
+  </Badge>
+);
+
+const CommandItemContent = ({
+  option,
+  isSelected,
+  optionButton,
+}: {
+  option: string;
+  isSelected: boolean;
+  optionButton: (option: string) => ReactNode;
+}) => (
+  <div className="group flex w-full items-center justify-between">
+    <div className="flex items-center justify-between">
+      <SelectionIndicator isSelected={isSelected} />
+      <span className="max-w-52 truncate pr-2">{option}</span>
+    </div>
+    {optionButton && optionButton(option)}
+  </div>
+);
+
+const SelectionIndicator = ({ isSelected }: { isSelected: boolean }) => (
+  <div
+    className={cn(
+      "relative mr-2 h-4 w-4",
+      isSelected ? "opacity-100" : "opacity-0",
+    )}
+  >
+    <div className="absolute opacity-100 transition-all group-hover:opacity-0">
+      <ForwardedIconComponent
+        name="Check"
+        className="mr-2 h-4 w-4 text-primary"
+        aria-hidden="true"
+      />
+    </div>
+    <div className="absolute opacity-0 transition-all group-hover:opacity-100">
+      <ForwardedIconComponent
+        name="X"
+        className="mr-2 h-4 w-4 text-status-red"
+        aria-hidden="true"
+      />
+    </div>
+  </div>
+);
+
+const getInputClassName = (
+  editNode: boolean,
+  disabled: boolean,
+  password: boolean,
+  selectedOptions: string[],
+) => {
+  return cn(
+    "popover-input nodrag w-full truncate px-1 pr-4",
+    editNode && "px-2",
+    editNode && disabled && "h-fit w-fit",
+    disabled &&
+      "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
+    password && "text-clip pr-14",
+    selectedOptions?.length >= 0 && "cursor-default",
+  );
+};
+
+const getAnchorClassName = (
+  editNode: boolean,
+  disabled: boolean,
+  isFocused: boolean,
+) => {
+  return cn(
+    "primary-input noflow nopan nodelete nodrag border-1 flex h-full min-h-[2.375rem] cursor-default flex-wrap items-center px-2",
+    editNode && "min-h-7 p-0 px-1",
+    editNode && disabled && "min-h-5 border-muted",
+    disabled && "bg-muted text-muted",
+    isFocused &&
+      "border-foreground ring-1 ring-foreground hover:border-foreground",
+  );
+};
 
 const CustomInputPopover = ({
   id,
@@ -46,13 +168,17 @@ const CustomInputPopover = ({
   popoverWidth,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
+  const memoizedOptions = useMemo(() => options, [options]);
 
   const PopoverContentInput = editNode
     ? PopoverContent
     : PopoverContentWithoutPortal;
 
-  const handleRemoveOption = (optionToRemove, e) => {
-    e.stopPropagation(); // Prevent the popover from opening when removing badges
+  const handleRemoveOption = (
+    optionToRemove: string,
+    e: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    e.stopPropagation();
     if (setSelectedOptions) {
       setSelectedOptions(
         selectedOptions.filter((option) => option !== optionToRemove),
@@ -62,57 +188,49 @@ const CustomInputPopover = ({
     }
   };
 
+  const handleOptionSelect = (currentValue: string) => {
+    if (setSelectedOption) {
+      setSelectedOption(currentValue === selectedOption ? "" : currentValue);
+    }
+    if (setSelectedOptions) {
+      setSelectedOptions(
+        selectedOptions?.includes(currentValue)
+          ? selectedOptions.filter((item) => item !== currentValue)
+          : [...(selectedOptions || []), currentValue],
+      );
+    }
+    !setSelectedOptions && setShowOptions(false);
+  };
+
   return (
     <Popover modal open={showOptions} onOpenChange={setShowOptions}>
       <PopoverAnchor>
         <div
           data-testid={`anchor-${id}`}
-          className={cn(
-            "primary-input noflow nopan nodelete nodrag border-1 flex h-full min-h-[2.375rem] cursor-default flex-wrap items-center px-2",
-            editNode && "min-h-7 p-0 px-1",
-            editNode && disabled && "min-h-5 border-muted",
-            disabled && "bg-muted text-muted",
-            isFocused &&
-              "border-foreground ring-1 ring-foreground hover:border-foreground",
-          )}
-          onClick={() => {
-            if (!nodeStyle && !disabled) {
-              setShowOptions(true);
-            }
-          }}
+          className={getAnchorClassName(editNode, disabled, isFocused)}
+          onClick={() => !nodeStyle && !disabled && setShowOptions(true)}
         >
           {selectedOptions?.length > 0 ? (
-            <div className="mr-1 flex flex-wrap gap-2">
+            <div className="mr-5 flex flex-wrap gap-2">
               {selectedOptions.map((option) => (
-                <Badge
+                <OptionBadge
                   key={option}
-                  variant="emerald"
-                  className="flex items-center gap-1 truncate rounded-[3px] p-1 font-mono"
-                >
-                  <div className="truncate">{option}</div>
-                  <X
-                    className="h-3 w-3 cursor-pointer bg-transparent hover:text-destructive"
-                    onClick={(e) => handleRemoveOption(option, e)}
-                  />
-                </Badge>
+                  option={option}
+                  onRemove={(e) => handleRemoveOption(option, e)}
+                  className="rounded-[3px] p-1 font-mono"
+                />
               ))}
             </div>
           ) : selectedOption?.length > 0 ? (
-            <Badge
+            <OptionBadge
+              option={selectedOption}
+              onRemove={(e) => handleRemoveOption(selectedOption, e)}
               variant={nodeStyle ? "emerald" : "secondary"}
               className={cn(
-                "flex items-center gap-1 truncate",
                 editNode && "text-xs",
                 nodeStyle ? "rounded-[3px] px-1 font-mono" : "bg-muted",
               )}
-            >
-              <div className="max-w-36 truncate">{selectedOption}</div>
-              <X
-                className="h-3 w-3 cursor-pointer bg-transparent hover:text-destructive"
-                onClick={(e) => handleRemoveOption(selectedOption, e)}
-                data-testid={"remove-icon-badge"}
-              />
-            </Badge>
+            />
           ) : null}
 
           {!selectedOption?.length && !selectedOptions?.length && (
@@ -130,14 +248,11 @@ const CustomInputPopover = ({
               value={value || ""}
               disabled={disabled}
               required={required}
-              className={cn(
-                "popover-input nodrag w-full truncate px-1 pr-4",
-                editNode && "px-2",
-                editNode && disabled && "h-fit w-fit",
-                disabled &&
-                  "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
-                password && "text-clip pr-14",
-                selectedOptions?.length >= 0 && "cursor-default",
+              className={getInputClassName(
+                editNode,
+                disabled,
+                password,
+                selectedOptions,
               )}
               placeholder={
                 selectedOptions?.length > 0 || selectedOption ? "" : placeholder
@@ -152,6 +267,7 @@ const CustomInputPopover = ({
           )}
         </div>
       </PopoverAnchor>
+
       <PopoverContentInput
         className="noflow nowheel nopan nodelete nodrag p-0"
         style={{
@@ -174,59 +290,21 @@ const CustomInputPopover = ({
           <CommandInput placeholder={optionsPlaceholder} />
           <CommandList>
             <CommandGroup>
-              {options.map((option, id) => (
+              {memoizedOptions.map((option, id) => (
                 <CommandItem
                   key={option + id}
                   value={option}
-                  onSelect={(currentValue) => {
-                    if (setSelectedOption) {
-                      setSelectedOption(
-                        currentValue === selectedOption ? "" : currentValue,
-                      );
-                    }
-                    if (setSelectedOptions) {
-                      setSelectedOptions(
-                        selectedOptions?.includes(currentValue)
-                          ? selectedOptions.filter(
-                              (item) => item !== currentValue,
-                            )
-                          : [...(selectedOptions || []), currentValue],
-                      );
-                    }
-                    !setSelectedOptions && setShowOptions(false);
-                  }}
+                  onSelect={handleOptionSelect}
                   className="group"
                 >
-                  <div className="group flex w-full items-center justify-between">
-                    <div className="flex items-center justify-between">
-                      <div
-                        className={cn(
-                          "relative mr-2 h-4 w-4",
-                          selectedOption === option ||
-                            selectedOptions?.includes(option)
-                            ? "opacity-100"
-                            : "opacity-0",
-                        )}
-                      >
-                        <div className="absolute opacity-100 transition-all group-hover:opacity-0">
-                          <ForwardedIconComponent
-                            name="Check"
-                            className="mr-2 h-4 w-4 text-primary"
-                            aria-hidden="true"
-                          />
-                        </div>
-                        <div className="absolute opacity-0 transition-all group-hover:opacity-100">
-                          <ForwardedIconComponent
-                            name="X"
-                            className="mr-2 h-4 w-4 text-status-red"
-                            aria-hidden="true"
-                          />
-                        </div>
-                      </div>
-                      <span className="max-w-52 truncate pr-2">{option}</span>
-                    </div>
-                    {optionButton && optionButton(option)}
-                  </div>
+                  <CommandItemContent
+                    option={option}
+                    isSelected={
+                      selectedOption === option ||
+                      selectedOptions?.includes(option)
+                    }
+                    optionButton={optionButton}
+                  />
                 </CommandItem>
               ))}
               {optionsButton}

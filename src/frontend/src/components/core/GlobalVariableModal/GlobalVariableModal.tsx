@@ -7,6 +7,7 @@ import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavai
 import { GlobalVariable } from "@/types/global_variables";
 import { useEffect, useState } from "react";
 
+import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
@@ -127,7 +128,12 @@ export default function GlobalVariableModal({
       disable={disabled}
     >
       <BaseModal.Header description="This variable will be available for use across your flows.">
-        Create Variable
+        <ForwardedIconComponent
+          name="Globe"
+          className="h-6 w-6 pr-1 text-primary"
+          aria-hidden="true"
+        />
+        {initialData ? "Update Variable" : "Create Variable"}
       </BaseModal.Header>
       <BaseModal.Trigger disable={disabled} asChild={asChild}>
         {children}
@@ -142,8 +148,12 @@ export default function GlobalVariableModal({
               className="w-full"
             >
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="Credential">Credential</TabsTrigger>
-                <TabsTrigger value="Generic">Generic</TabsTrigger>
+                <TabsTrigger data-testid="credential-tab" value="Credential">
+                  Credential
+                </TabsTrigger>
+                <TabsTrigger data-testid="generic-tab" value="Generic">
+                  Generic
+                </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
