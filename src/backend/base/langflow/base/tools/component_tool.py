@@ -11,7 +11,7 @@ from loguru import logger
 from pydantic import BaseModel
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
-from langflow.io.schema import create_input_schema,create_input_schema_from_dict
+from langflow.io.schema import create_input_schema, create_input_schema_from_dict
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 
@@ -210,9 +210,7 @@ class ComponentToolkit:
                     raise ValueError(msg)
                 args_schema = create_input_schema(inputs)
             elif tool_mode_inputs:
-                print(f"TOOL_MODE_INPUTS {tool_mode_inputs}")
                 args_schema = create_input_schema(tool_mode_inputs)
-                print(f"ARGS_SCHEMA {args_schema}")
             else:
                 args_schema = create_input_schema(self.component.inputs)
             name = f"{self.component.name}.{output.method}"

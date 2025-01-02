@@ -874,7 +874,7 @@ class Component(CustomComponent):
             self._pre_run_setup()
         if hasattr(self, "outputs"):
             if any(getattr(_input, "tool_mode", False) for _input in self.inputs):
-                self._append_tool_to_outputs_map()
+                await self._append_tool_to_outputs_map()
             for output in self._outputs_map.values():
                 # Build the output if it's connected to some other vertex
                 # or if it's not connected to any vertex
@@ -1175,7 +1175,7 @@ class Component(CustomComponent):
         await self.send_message(error_message)
         return error_message
 
-    def _append_tool_to_outputs_map(self):
+    async def _append_tool_to_outputs_map(self):
         self._outputs_map[TOOL_OUTPUT_NAME] = self._build_tool_output()
         # add a new input for the tool schema
         # self.inputs.append(self._build_tool_schema())

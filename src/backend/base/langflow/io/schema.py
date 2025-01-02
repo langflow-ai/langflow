@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Literal
 from pydantic import BaseModel, Field, create_model
 
 from langflow.inputs.inputs import FieldTypes
+from langflow.schema.dotdict import dotdict
 
 _convert_field_type_to_type: dict[FieldTypes, type] = {
     FieldTypes.TEXT: str,
@@ -63,7 +64,8 @@ def create_input_schema(inputs: list["InputTypes"]) -> type[BaseModel]:
     model.model_rebuild()
     return model
 
-def create_input_schema_from_dict(inputs: list[dict]) -> type[BaseModel]:
+
+def create_input_schema_from_dict(inputs: list[dotdict]) -> type[BaseModel]:
     if not isinstance(inputs, list):
         msg = "inputs must be a list of Inputs"
         raise TypeError(msg)

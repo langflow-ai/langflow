@@ -1,5 +1,3 @@
-
-
 from langflow.io.schema import create_input_schema_from_dict
 from langflow.schema.dotdict import dotdict
 
@@ -33,7 +31,3 @@ def test_create_schema():
     sample_input = [dotdict(field) for field in sample_input]
     schema = create_input_schema_from_dict(sample_input)
     assert schema is not None
-
-
-
-# sample_input = [MessageTextInput(tool_mode=True, trace_as_input=True, trace_as_metadata=True, load_from_db=False, is_list=True, field_type=<FieldTypes.TEXT: 'str'>, required=False, placeholder='', show=True, name='urls', value='', display_name='URLs', advanced=False, input_types=['Message'], dynamic=False, info="Enter one or more URLs, by clicking the '+' button.", real_time_refresh=None, refresh_button=None, refresh_button_text=None, title_case=False)]
