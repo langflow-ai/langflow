@@ -21,6 +21,7 @@ ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
 
 RUN apt-get update \
+    && apt-get upgrade -y \
     && apt-get install --no-install-recommends -y \
     # deps for building python deps
     build-essential \
@@ -29,6 +30,7 @@ RUN apt-get update \
     npm \
     # gcc
     gcc \
+
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -41,7 +43,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
     uv sync --frozen --no-install-project --no-editable
 
-ADD ./src /app/src
+COPY ./src /app/src
 
 COPY src/frontend /tmp/src/frontend
 WORKDIR /tmp/src/frontend
@@ -52,9 +54,9 @@ RUN --mount=type=cache,target=/root/.npm \
     && rm -rf /tmp/src/frontend
 
 WORKDIR /app
-ADD ./pyproject.toml /app/pyproject.toml
-ADD ./uv.lock /app/uv.lock
-ADD ./README.md /app/README.md
+COPY ./pyproject.toml /app/pyproject.toml
+COPY ./uv.lock /app/uv.lock
+COPY ./README.md /app/README.md
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-editable
@@ -65,7 +67,12 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 ################################
 FROM python:3.12.3-slim AS runtime
 
-RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
+
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
 
 # Place executables in the environment at the front of the path

@@ -22,6 +22,7 @@ ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
 
 RUN apt-get update \
+    && apt-get upgrade -y \
     && apt-get install --no-install-recommends -y \
     # deps for building python deps
     build-essential \
@@ -44,7 +45,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     cd src/backend/base && uv sync --frozen --no-install-project --no-dev --no-editable
 
-ADD ./src /app/src
+COPY ./src /app/src
 
 COPY src/frontend /tmp/src/frontend
 WORKDIR /tmp/src/frontend
@@ -53,14 +54,14 @@ RUN npm install \
     && cp -r build /app/src/backend/base/langflow/frontend \
     && rm -rf /tmp/src/frontend
 
-ADD ./src/backend/base /app/src/backend/base
+COPY ./src/backend/base /app/src/backend/base
 WORKDIR /app/src/backend/base
 # again we need these because of workspaces
-ADD ./pyproject.toml /app/pyproject.toml
-ADD ./uv.lock /app/uv.lock
-ADD ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
-ADD ./src/backend/base/uv.lock /app/src/backend/base/uv.lock
-ADD ./src/backend/base/README.md /app/src/backend/base/README.md
+COPY ./pyproject.toml /app/pyproject.toml
+COPY ./uv.lock /app/uv.lock
+COPY ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
+COPY ./src/backend/base/uv.lock /app/src/backend/base/uv.lock
+COPY ./src/backend/base/README.md /app/src/backend/base/README.md
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable
 
@@ -70,7 +71,11 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 ################################
 FROM python:3.12.3-slim AS runtime
 
-RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 # and we use the venv at the root because workspaces
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
 
