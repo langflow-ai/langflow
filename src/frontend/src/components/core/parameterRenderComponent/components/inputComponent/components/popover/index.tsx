@@ -43,7 +43,7 @@ const CustomInputPopover = ({
   nodeStyle,
   optionButton,
   autoFocus,
-  className,
+  popoverWidth,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
 
@@ -82,26 +82,28 @@ const CustomInputPopover = ({
           }}
         >
           {selectedOptions?.length > 0 ? (
-            selectedOptions.map((option) => (
-              <Badge
-                key={option}
-                variant="secondary"
-                className="m-[1px] flex items-center gap-1 truncate px-1"
-              >
-                <div className="truncate">{option}</div>
-                <X
-                  className="h-3 w-3 cursor-pointer bg-transparent hover:text-destructive"
-                  onClick={(e) => handleRemoveOption(option, e)}
-                />
-              </Badge>
-            ))
+            <div className="mr-1 flex flex-wrap gap-2">
+              {selectedOptions.map((option) => (
+                <Badge
+                  key={option}
+                  variant="emerald"
+                  className="flex items-center gap-1 truncate rounded-[3px] p-1 font-mono"
+                >
+                  <div className="truncate">{option}</div>
+                  <X
+                    className="h-3 w-3 cursor-pointer bg-transparent hover:text-destructive"
+                    onClick={(e) => handleRemoveOption(option, e)}
+                  />
+                </Badge>
+              ))}
+            </div>
           ) : selectedOption?.length > 0 ? (
             <Badge
               variant={nodeStyle ? "emerald" : "secondary"}
               className={cn(
                 "flex items-center gap-1 truncate",
                 editNode && "text-xs",
-                nodeStyle ? "font-jetbrains rounded-[3px] px-1" : "bg-muted",
+                nodeStyle ? "rounded-[3px] px-1 font-mono" : "bg-muted",
               )}
             >
               <div className="max-w-36 truncate">{selectedOption}</div>
@@ -113,7 +115,7 @@ const CustomInputPopover = ({
             </Badge>
           ) : null}
 
-          {!selectedOption && (
+          {!selectedOption?.length && !selectedOptions?.length && (
             <input
               autoComplete="off"
               onFocus={() => setIsFocused(true)}
@@ -135,6 +137,7 @@ const CustomInputPopover = ({
                 disabled &&
                   "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
                 password && "text-clip pr-14",
+                selectedOptions?.length >= 0 && "cursor-default",
               )}
               placeholder={
                 selectedOptions?.length > 0 || selectedOption ? "" : placeholder
@@ -151,7 +154,10 @@ const CustomInputPopover = ({
       </PopoverAnchor>
       <PopoverContentInput
         className="noflow nowheel nopan nodelete nodrag p-0"
-        style={{ minWidth: refInput?.current?.clientWidth ?? "200px" }}
+        style={{
+          minWidth: refInput?.current?.clientWidth ?? "200px",
+          width: popoverWidth ?? null,
+        }}
         side="bottom"
         align="start"
       >
