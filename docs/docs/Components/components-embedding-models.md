@@ -60,7 +60,7 @@ This component is used to load embedding models from [Amazon Bedrock](https://aw
 
 ## Astra DB vectorize
 
-Connect this component to the **Embeddings** port of the [Astra DB vector store component](components-vector-stores#astra-db-serverless) to generate embeddings.
+Connect this component to the **Embeddings** port of the [Astra DB vector store component](/components-vector-stores#astra-db-vector-store) to generate embeddings.
 
 This component requires that your Astra DB database has a collection that uses a vectorize embedding provider integration.
 For more information and instructions, see [Embedding Generation](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
