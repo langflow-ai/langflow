@@ -1,6 +1,5 @@
 ---
 title: Environment variables
-sidebar_position: 7
 slug: /environment-variables
 ---
 
@@ -108,7 +107,7 @@ The following table lists the environment variables supported by Langflow.
 | Variable | Format / Values | Default | Description |
 |----------|---------------|---------|-------------|
 | <a id="DO_NOT_TRACK"></a>`DO_NOT_TRACK` | Boolean | `false` | If enabled, Langflow will not track telemetry. |
-| <a id="LANGFLOW_AUTO_LOGIN"></a>`LANGFLOW_AUTO_LOGIN` | Boolean | `true` | Enable automatic login for Langflow. Set to `false` to disable automatic login and require the login form to log into the Langflow UI. Setting to `false` requires [`LANGFLOW_SUPERUSER`](#LANGFLOW_SUPERUSER) and [`LANGFLOW_SUPERUSER_PASSWORD`](#LANGFLOW_SUPERUSER_PASSWORD) to be set. |
+| <a id="LANGFLOW_AUTO_LOGIN"></a>`LANGFLOW_AUTO_LOGIN` | Boolean | `true` | Enable automatic login for Langflow. Set to `false` to disable automatic login and require the login form to log into the Langflow UI. Setting to `false` requires [`LANGFLOW_SUPERUSER`](#LANGFLOW_SUPERUSER) and [`LANGFLOW_SUPERUSER_PASSWORD`](environment-variables.md#LANGFLOW_SUPERUSER_PASSWORD) to be set. |
 | <a id="LANGFLOW_AUTO_SAVING"></a>`LANGFLOW_AUTO_SAVING` | Boolean | `true` | Enable flow auto-saving.<br/>See [`--auto-saving` option](./configuration-cli.md#run-auto-saving). |
 | <a id="LANGFLOW_AUTO_SAVING_INTERVAL"></a>`LANGFLOW_AUTO_SAVING_INTERVAL` | Integer | `1000` | Set the interval for flow auto-saving in milliseconds.<br/>See [`--auto-saving-interval` option](./configuration-cli.md#run-auto-saving-interval). |
 | <a id="LANGFLOW_BACKEND_ONLY"></a>`LANGFLOW_BACKEND_ONLY` | Boolean | `false` | Only run Langflow's backend server (no frontend).<br/>See [`--backend-only` option](./configuration-cli.md#run-backend-only). |

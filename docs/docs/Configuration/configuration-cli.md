@@ -1,6 +1,5 @@
 ---
 title: Langflow CLI
-sidebar_position: 2
 slug: /configuration-cli
 ---
 
