@@ -3,7 +3,9 @@ ENV TZ=UTC
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y \
     build-essential \
     curl \
     npm \

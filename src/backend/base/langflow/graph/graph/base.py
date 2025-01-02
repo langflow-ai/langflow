@@ -1101,7 +1101,8 @@ class Graph:
             return False
         return self.vertex_edges_are_identical(vertex, other_vertex)
 
-    def vertex_edges_are_identical(self, vertex: Vertex, other_vertex: Vertex) -> bool:
+    @staticmethod
+    def vertex_edges_are_identical(vertex: Vertex, other_vertex: Vertex) -> bool:
         same_length = len(vertex.edges) == len(other_vertex.edges)
         if not same_length:
             return False
@@ -1747,7 +1748,8 @@ class Graph:
             new_edge = Edge(source, target, edge)
         return new_edge
 
-    def _get_vertex_class(self, node_type: str, node_base_type: str, node_id: str) -> type[Vertex]:
+    @staticmethod
+    def _get_vertex_class(node_type: str, node_base_type: str, node_id: str) -> type[Vertex]:
         """Returns the node class based on the node type."""
         # First we check for the node_base_type
         node_name = node_id.split("-")[0]
@@ -1830,7 +1832,8 @@ class Graph:
         self._record_snapshot()
         return self
 
-    def get_children_by_vertex_type(self, vertex: Vertex, vertex_type: str) -> list[Vertex]:
+    @staticmethod
+    def get_children_by_vertex_type(vertex: Vertex, vertex_type: str) -> list[Vertex]:
         """Returns the children of a vertex based on the vertex type."""
         children = []
         vertex_types = [vertex.data["type"]]
@@ -2059,7 +2062,8 @@ class Graph:
         self._first_layer = first_layer
         return first_layer
 
-    def sort_interface_components_first(self, vertices_layers: list[list[str]]) -> list[list[str]]:
+    @staticmethod
+    def sort_interface_components_first(vertices_layers: list[list[str]]) -> list[list[str]]:
         """Sorts the vertices in the graph so that vertices containing ChatInput or ChatOutput come first."""
 
         def contains_interface_component(vertex):
@@ -2097,9 +2101,6 @@ class Graph:
 
         This method is responsible for building the run map for the graph,
         which maps each node in the graph to its corresponding run function.
-
-        Returns:
-            None
         """
         self.run_manager.build_run_map(predecessor_map=self.predecessor_map, vertices_to_run=self.vertices_to_run)
 
@@ -2169,7 +2170,8 @@ class Graph:
                 in_degree[vertex.id] = 0
         return in_degree
 
-    def build_adjacency_maps(self, edges: list[CycleEdge]) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
+    @staticmethod
+    def build_adjacency_maps(edges: list[CycleEdge]) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
         """Returns the adjacency maps for the graph."""
         predecessor_map: dict[str, list[str]] = defaultdict(list)
         successor_map: dict[str, list[str]] = defaultdict(list)
