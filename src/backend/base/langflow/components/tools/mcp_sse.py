@@ -3,7 +3,7 @@ import asyncio
 from contextlib import AsyncExitStack
 
 import httpx
-from mcp import ClientSession
+from mcp import ClientSession, types
 from mcp.client.sse import sse_client
 
 from langflow.base.mcp.util import create_tool_coroutine, create_tool_func
@@ -55,8 +55,8 @@ class MCPSseClient:
 
 class MCPSse(Component):
     client = MCPSseClient()
-    tools = None
-    tool_names = []
+    tools = types.ListToolsResult
+    tool_names = [str]
     display_name = "MCP Tools (SSE)"
     description = "Connects to an MCP server over SSE and exposes it's tools as langflow tools to be used by an Agent."
     documentation: str = "http://docs.langflow.org/components/custom"

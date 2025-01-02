@@ -15,7 +15,7 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], session) 
     return tool_coroutine
 
 
-def create_tool_func(tool_name: str, session) -> [Callable[..., str]]:
+def create_tool_func(tool_name: str, session) -> Callable[..., str]:
     def tool_func(**kwargs):
         if len(kwargs) == 0:
             msg = f"at least one named argument is required {kwargs}"

@@ -3,7 +3,7 @@ import os
 from contextlib import AsyncExitStack
 from typing import Any
 
-from mcp import ClientSession, StdioServerParameters
+from mcp import ClientSession, StdioServerParameters, types
 from mcp.client.stdio import stdio_client
 from pydantic import BaseModel, Field, create_model
 
@@ -78,8 +78,8 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
 
 class MCPStdio(Component):
     client = MCPStdioClient()
-    tools = None
-    tool_names = []
+    tools = types.ListToolsResult
+    tool_names = [str]
     display_name = "MCP Tools (stdio)"
     description = (
         "Connects to an MCP server over stdio and exposes it's tools as langflow tools to be used by an Agent."
