@@ -163,8 +163,9 @@ async def simple_run_flow_task(
             event_manager=event_manager,
         )
 
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.exception(f"Error running flow {flow.id} task")
+        raise
 
 
 async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio.Queue) -> AsyncGenerator:
