@@ -671,6 +671,7 @@ export type buttonBoxPropsType = {
 export type FlowSettingsPropsType = {
   open: boolean;
   setOpen: (open: boolean) => void;
+  flowData?: FlowType;
 };
 
 export type groupDataType = {
