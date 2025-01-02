@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
@@ -235,6 +235,17 @@ class JobsService(Service):
             scheduler_job = await self.scheduler.get_job(job_id)
             if scheduler_job is not None:
                 await self.scheduler.remove_job(job_id)
+
+            # Explicitly mark the job as cancelled in the job store
+            async with session_scope() as session:
+                stmt = select(Job).where(Job.id == job_id)
+                task = (await session.exec(stmt)).first()
+                if task:
+                    task.status = JobStatus.CANCELLED
+                    task.is_active = False
+                    task.updated_at = datetime.now(timezone.utc)
+                    session.add(task)
+                    await session.commit()
 
         except Exception as exc:
             logger.error(f"Error cancelling job {job_id}: {exc}")
