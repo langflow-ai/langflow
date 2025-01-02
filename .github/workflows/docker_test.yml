@@ -17,6 +17,7 @@ on:
       - "pyproject.toml"
       - "src/**"
       - ".github/workflows/docker_test.yml"
+  workflow_dispatch:
 
 env:
   POETRY_VERSION: "1.8.2"
