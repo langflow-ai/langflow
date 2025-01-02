@@ -3,7 +3,6 @@ import os
 from contextlib import AsyncExitStack
 from typing import Any
 
-from dotenv import load_dotenv
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from pydantic import BaseModel, Field, create_model
@@ -12,8 +11,6 @@ from langflow.base.mcp.util import create_tool_coroutine, create_tool_func
 from langflow.custom import Component
 from langflow.field_typing import Tool
 from langflow.io import MessageTextInput, Output
-
-load_dotenv()  # load environment variables from .env
 
 
 class MCPStdioClient:
@@ -84,7 +81,9 @@ class MCPStdio(Component):
     tools = None
     tool_names = []
     display_name = "MCP Tools (stdio)"
-    description = "Use as a template to create your own component."
+    description = (
+        "Connects to an MCP server over stdio and exposes it's tools as langflow tools to be used by an Agent."
+    )
     documentation: str = "http://docs.langflow.org/components/custom"
     icon = "code"
     name = "MCPStdio"

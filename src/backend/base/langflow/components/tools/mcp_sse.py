@@ -3,7 +3,6 @@ import asyncio
 from contextlib import AsyncExitStack
 
 import httpx
-from dotenv import load_dotenv
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 
@@ -12,8 +11,6 @@ from langflow.components.tools.mcp_stdio import create_input_schema_from_json_sc
 from langflow.custom import Component
 from langflow.field_typing import Tool
 from langflow.io import MessageTextInput, Output
-
-load_dotenv()  # load environment variables from .env
 
 # Define constant for status code
 HTTP_TEMPORARY_REDIRECT = 307
@@ -61,7 +58,7 @@ class MCPSse(Component):
     tools = None
     tool_names = []
     display_name = "MCP Tools (SSE)"
-    description = "Use as a template to create your own component."
+    description = "Connects to an MCP server over SSE and exposes it's tools as langflow tools to be used by an Agent."
     documentation: str = "http://docs.langflow.org/components/custom"
     icon = "code"
     name = "MCPSse"
