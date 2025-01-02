@@ -208,3 +208,7 @@ def rewrite_file_path(file_path: str):
         consistent_file_path = "/".join(file_path_split)
 
     return [consistent_file_path]
+
+
+def has_output_vertex(vertices: dict[Vertex, int]):
+    return any(vertex.is_output for vertex in vertices)
