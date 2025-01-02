@@ -257,6 +257,6 @@ class GitLoaderComponent(Component):
 
     async def load_documents(self) -> list[Data]:
         gitloader = await self.build_gitloader()
-        data = [Data.from_document(doc) for doc in await gitloader.alazy_load()]
+        data = [Data.from_document(doc) async for doc in gitloader.alazy_load()]
         self.status = data
         return data
