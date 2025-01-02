@@ -1,4 +1,3 @@
-import urllib
 from http import HTTPStatus
 from typing import Any
 
@@ -91,7 +90,11 @@ class AstraDBCQLToolComponent(LCToolComponent):
     ]
 
     def astra_rest(self, args):
-        headers = {"Accept": "application/json", "X-Cassandra-Token": f"{self.token}", "Content-Type": "application/json"}
+        headers = {
+            "Accept": "application/json",
+            "X-Cassandra-Token": f"{self.token}",
+            "Content-Type": "application/json",
+        }
 
         astra_url = f"{self.api_endpoint}/api/rest/v2/keyspaces/{self.keyspace}/{self.table_name}/rows"
 
@@ -99,20 +102,14 @@ class AstraDBCQLToolComponent(LCToolComponent):
 
         for key in self.partition_keys:
             if key in args:
-                where_clauses.append(
-                    {"column": key, "operator": "EQ", "value": args[key]}
-                )
+                where_clauses.append({"column": key, "operator": "EQ", "value": args[key]})
             elif key in self.static_filters:
-                where_clauses.append(
-                    {"column": key, "operator": "EQ", "value": self.static_filters[key]}
-                )
+                where_clauses.append({"column": key, "operator": "EQ", "value": self.static_filters[key]})
 
         for key in self.clustering_keys:
             clean_key = key[1:] if key.startswith("!") else key
             if clean_key in args and args[clean_key] is not None:
-                where_clauses.append(
-                    {"column": clean_key, "operator": "EQ", "value": args[clean_key]}
-                )
+                where_clauses.append({"column": clean_key, "operator": "EQ", "value": args[clean_key]})
             elif clean_key in self.static_filters:
                 where_clauses.append(
                     {
@@ -128,9 +125,7 @@ class AstraDBCQLToolComponent(LCToolComponent):
         }
 
         if self.projection_fields != "*":
-            params["fields"] = [
-                field.strip() for field in self.projection_fields.split(",")
-            ]
+            params["fields"] = [field.strip() for field in self.projection_fields.split(",")]
 
         res = requests.request(
             "GET",
@@ -148,12 +143,11 @@ class AstraDBCQLToolComponent(LCToolComponent):
             res_data = res.json()
             if isinstance(res_data, dict) and "data" in res_data:
                 return res_data["data"]
-            elif isinstance(res_data, list):
+            if isinstance(res_data, list):
                 return res_data
-            elif isinstance(res_data, dict):
+            if isinstance(res_data, dict):
                 return [res_data]
-            else:
-                return []
+            return []
         except ValueError:
             return res.status_code
 
