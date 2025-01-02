@@ -33,7 +33,7 @@ class AsyncScheduler(AsyncBaseScheduler):
     """An improved version of AsyncIOScheduler that supports async jobstores."""
 
     _eventloop: asyncio.AbstractEventLoop | None = None
-    _timeout = None
+    _timeout: asyncio.TimerHandle | None = None
 
     def __init__(self, *args, **kwargs):
         self.timezone = timezone.utc
@@ -128,7 +128,7 @@ class AsyncScheduler(AsyncBaseScheduler):
         if not paused:
             await self.wakeup()
 
-    async def _process_jobs(self):
+    async def _process_jobs(self) -> None | float:
         """Iterates through jobs in every jobstore.
 
         Starts jobs that are due and figures out how long to wait for the next round.
@@ -148,7 +148,7 @@ class AsyncScheduler(AsyncBaseScheduler):
         async with self._jobstores_lock:
             for jobstore_alias, jobstore in self._jobstores.items():
                 try:
-                    due_jobs = jobstore.get_due_jobs(now)
+                    due_jobs: list[APSJob] = jobstore.get_due_jobs(now)
                     if asyncio.iscoroutine(due_jobs):
                         due_jobs = await due_jobs
                 except Exception as e:  # noqa: BLE001
@@ -177,7 +177,7 @@ class AsyncScheduler(AsyncBaseScheduler):
                         await self.remove_job(job.id, jobstore_alias)
                         continue
 
-                    run_times = job._get_run_times(now)
+                    run_times: list[datetime] = job._get_run_times(now)
                     run_times = run_times[-1:] if run_times and job.coalesce else run_times
                     if run_times:
                         try:
@@ -309,7 +309,7 @@ class AsyncScheduler(AsyncBaseScheduler):
 
         await self._dispatch_event(SchedulerEvent(EVENT_ALL_JOBS_REMOVED, jobstore))
 
-    async def _real_add_job(self, job, jobstore_alias, replace_existing):
+    async def _real_add_job(self, job: APSJob, jobstore_alias: str, replace_existing: bool):  # noqa: FBT001
         """Override to make async-compatible."""
         # Fill in undefined values with defaults
         replacements = {key: value for key, value in self._job_defaults.items() if not hasattr(job, key)}
