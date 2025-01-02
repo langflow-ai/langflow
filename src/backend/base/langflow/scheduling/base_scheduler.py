@@ -33,7 +33,7 @@ from apscheduler.events import (
 )
 from apscheduler.executors.base import BaseExecutor, MaxInstancesReachedError
 from apscheduler.executors.pool import ThreadPoolExecutor
-from apscheduler.job import Job
+from apscheduler.job import Job as APSJob
 from apscheduler.jobstores.base import BaseJobStore, ConflictingIdError, JobLookupError
 from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.schedulers import SchedulerAlreadyRunningError, SchedulerNotRunningError
@@ -104,7 +104,7 @@ class AsyncBaseScheduler(metaclass=ABCMeta):
         self._jobstores_lock = self._create_lock()
         self._listeners: list[tuple[Callable[[JobEvent], None], int]] = []
         self._listeners_lock = self._create_lock()
-        self._pending_jobs: list[tuple[Job, str, bool]] = []
+        self._pending_jobs: list[tuple[APSJob, str, bool]] = []
         self.state = STATE_STOPPED
 
     def __getstate__(self):
@@ -463,7 +463,7 @@ class AsyncBaseScheduler(metaclass=ABCMeta):
             "next_run_time": next_run_time,
         }
         job_kwargs = {key: value for key, value in job_kwargs.items() if value is not undefined}
-        job = Job(self, **job_kwargs)
+        job = APSJob(self, **job_kwargs)
 
         # Don't really add jobs to job stores before the scheduler is up and running
         async with self._jobstores_lock:
@@ -523,7 +523,7 @@ class AsyncBaseScheduler(metaclass=ABCMeta):
 
         return inner
 
-    async def modify_job(self, job_id, jobstore=None, **changes):
+    async def modify_job(self, job_id: str, jobstore: str | None = None, **changes):
         """Modifies the properties of a single job.
 
         Modifications are passed to this method as extra keyword arguments.
@@ -536,7 +536,9 @@ class AsyncBaseScheduler(metaclass=ABCMeta):
         async with self._jobstores_lock:
             result = self._lookup_job(job_id, jobstore)
             if inspect.iscoroutine(result):
-                job, jobstore = await result
+                job_result: tuple[APSJob, str] = await result
+                job: APSJob = job_result[0]
+                jobstore = job_result[1]
             else:
                 job, jobstore = result
             job._modify(**changes)
@@ -864,7 +866,7 @@ class AsyncBaseScheduler(metaclass=ABCMeta):
             raise ValueError(msg)
 
         for job_state in data["jobs"]:
-            job = object.__new__(Job)
+            job = object.__new__(APSJob)
             job.__setstate__(job_state)
             jobstore.add_job(job)
 
