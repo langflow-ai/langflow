@@ -1,4 +1,5 @@
 import os
+from functools import lru_cache
 
 from astrapy import DataAPIClient
 from astrapy.admin import parse_api_endpoint
@@ -208,16 +209,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return None
 
     def collection_exists(self):
+        database = self.get_database()
+        if database is None:
+            return False
+
         try:
-            client = DataAPIClient(token=self.token)
-            database = client.get_database(
-                self.get_api_endpoint(),
-                token=self.token,
-            )
-            return self.collection_name in list(database.list_collections())
+            return self.collection_name in database.list_collections()
         except Exception as e:  # noqa: BLE001
             self.log(f"Error getting collection status: {e}")
-
             return False
 
     def _initialize_database_options(self):
@@ -608,3 +607,22 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
         }
+
+    def __init__(self, api_endpoint=None, database_name=None, token=None, collection_name=None, log=None):
+        self.api_endpoint = api_endpoint
+        self.database_name = database_name
+        self.token = token
+        self.collection_name = collection_name
+        self.log = log
+        self.client = DataAPIClient(token=self.token)
+
+    @lru_cache(maxsize=128)
+    def get_database(self):
+        try:
+            return self.client.get_database(
+                self.get_api_endpoint(),
+                token=self.token,
+            )
+        except Exception as e:
+            self.log(f"Error getting database: {e}")
+            return None
