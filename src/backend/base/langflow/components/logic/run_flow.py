@@ -47,7 +47,9 @@ class RunFlowComponent(RunFlowBaseComponent):
         tweaks: dict = {}
 
         flow_name_selected = self._attributes.get("flow_name_selected")
-        import pdb; pdb.set_trace()
+        import pdb
+
+        pdb.set_trace()
 
         if self.flow_tweak_data:
             for field, value in self.flow_tweak_data.items():
@@ -63,7 +65,7 @@ class RunFlowComponent(RunFlowBaseComponent):
                     tweaks[node] = {}
                 tweaks[node][name] = self._attributes[field]
         # tweaks= {"ChatInput-xNZ0a": {"input_value": "add 1+1"}}
-        
+
         run_outputs = await run_flow(
             inputs=None,
             output_type="all",
