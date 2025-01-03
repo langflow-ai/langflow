@@ -142,7 +142,6 @@ class RunFlowBaseComponent(Component):
                     for input_name in field_order
                 ]
                 new_fields += new_vertex_inputs
-        
 
         # for vertex in inputs_vertex:
         #     new_vertex_inputs = []
@@ -156,9 +155,6 @@ class RunFlowBaseComponent(Component):
         #             new_vertex_inputs.append(field_template[inp])
         #     new_fields += new_vertex_inputs
         return new_fields
-    
-
-
 
     def add_new_fields(self, build_config: dotdict, new_fields: list[dotdict]) -> dotdict:
         """Add new fields to the build_config."""
