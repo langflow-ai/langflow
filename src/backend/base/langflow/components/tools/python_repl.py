@@ -67,6 +67,13 @@ class PythonREPLToolComponent(Component):
             self.log(f"Successfully imported modules: {list(global_dict.keys())}")
             return global_dict
 
+<<<<<<< HEAD
+=======
+        except Exception as e:
+            self.log(f"Error in global imports: {e!s}")
+            raise
+
+>>>>>>> c247df11a29aa02335d96d14d767ba00e459a9bc
     def run_python_repl(self) -> Data:
         try:
             globals_ = self.get_globals(self.global_imports)
@@ -89,6 +96,14 @@ class PythonREPLToolComponent(Component):
 
         except (NameError, TypeError, ValueError) as e:
             error_message = f"Error during execution: {e!s}"
+<<<<<<< HEAD
+=======
+            self.log(error_message)
+            return Data(data={"error": error_message})
+
+        except Exception as e:
+            error_message = f"Unexpected error: {e!s}"
+>>>>>>> c247df11a29aa02335d96d14d767ba00e459a9bc
             self.log(error_message)
             return Data(data={"error": error_message})
 
