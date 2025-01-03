@@ -1,6 +1,5 @@
 ---
 title: AssemblyAI
-sidebar_position: 1
 slug: /integrations-assemblyai
 ---
 

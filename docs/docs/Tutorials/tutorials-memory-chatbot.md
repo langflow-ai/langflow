@@ -1,6 +1,5 @@
 ---
 title: Memory Chatbot
-sidebar_position: 3
 slug: /tutorials-memory-chatbot
 ---
 

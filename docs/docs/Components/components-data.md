@@ -1,6 +1,5 @@
 ---
 title: Data
-sidebar_position: 3
 slug: /components-data
 ---
 

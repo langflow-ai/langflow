@@ -1,6 +1,5 @@
 ---
 title: Basic Prompting
-sidebar_position: 0
 slug: /starter-projects-basic-prompting
 ---
 

@@ -1,6 +1,5 @@
 ---
 title: LangSmith
-sidebar_position: 3
 slug: /integrations-langsmith
 ---
 

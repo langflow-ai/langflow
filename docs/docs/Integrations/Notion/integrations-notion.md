@@ -1,6 +1,5 @@
 ---
 title: Setup
-sidebar_position: 0
 slug: /integrations/notion/setup
 ---
 

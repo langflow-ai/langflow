@@ -1,6 +1,5 @@
 ---
 title: Create a problem-solving agent
-sidebar_position: 2
 slug: /agents-tool-calling-agent-component
 ---
 

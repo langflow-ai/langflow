@@ -1,6 +1,5 @@
 ---
 title: Embeddings
-sidebar_position: 6
 slug: /components-embedding-models
 ---
 
@@ -60,7 +59,7 @@ This component is used to load embedding models from [Amazon Bedrock](https://aw
 
 ## Astra DB vectorize
 
-Connect this component to the **Embeddings** port of the [Astra DB vector store component](components-vector-stores#astra-db-serverless) to generate embeddings.
+Connect this component to the **Embeddings** port of the [Astra DB vector store component](/components-vector-stores#astra-db-vector-store) to generate embeddings.
 
 This component requires that your Astra DB database has a collection that uses a vectorize embedding provider integration.
 For more information and instructions, see [Embedding Generation](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
@@ -221,7 +220,7 @@ This component generates embeddings using MistralAI models.
 | max_concurrent_requests | Integer | Maximum number of concurrent API requests (default: 64) |
 | max_retries | Integer | Maximum number of retry attempts for failed requests (default: 5) |
 | timeout | Integer | Request timeout in seconds (default: 120) |
-| endpoint | String | Custom API endpoint URL (default: "https://api.mistral.ai/v1/") |
+| endpoint | String | Custom API endpoint URL (default: `https://api.mistral.ai/v1/`) |
 
 #### Outputs
 
@@ -239,10 +238,10 @@ This component generates embeddings using NVIDIA models.
 
 | Name | Type | Description |
 |------|------|-------------|
-| model | String | The NVIDIA model to use for embeddings (e.g., nvidia/nv-embed-v1) |
-| base_url | String | Base URL for the NVIDIA API (default: https://integrate.api.nvidia.com/v1) |
+| model | String | The NVIDIA model to use for embeddings (e.g., `nvidia/nv-embed-v1`) |
+| base_url | String | Base URL for the NVIDIA API (default: `https://integrate.api.nvidia.com/v1`) |
 | nvidia_api_key | SecretString | API key for authenticating with NVIDIA's service |
-| temperature | Float | Model temperature for embedding generation (default: 0.1) |
+| temperature | Float | Model temperature for embedding generation (default: `0.1`) |
 
 #### Outputs
 

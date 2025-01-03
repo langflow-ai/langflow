@@ -1,6 +1,5 @@
 ---
 title: Railway
-sidebar_position: 5
 slug: /deployment-railway
 ---
 

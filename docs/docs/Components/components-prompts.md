@@ -1,6 +1,5 @@
 ---
 title: Prompts
-sidebar_position: 2
 slug: /components-prompts
 ---
 

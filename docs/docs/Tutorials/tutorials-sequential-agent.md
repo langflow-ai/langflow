@@ -1,6 +1,5 @@
 ---
 title: Sequential tasks agent
-sidebar_position: 4
 slug: /tutorials-sequential-agent
 ---
 

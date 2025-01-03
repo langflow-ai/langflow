@@ -1,6 +1,5 @@
 ---
 title: Simple agent
-sidebar_position: 6
 slug: /starter-projects-simple-agent
 ---
 

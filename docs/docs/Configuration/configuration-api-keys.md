@@ -1,6 +1,5 @@
 ---
 title: API keys
-sidebar_position: 1
 slug: /configuration-api-keys
 ---
 

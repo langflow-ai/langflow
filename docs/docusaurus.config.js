@@ -15,6 +15,7 @@ const config = {
   baseUrl: "/",
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
+  onBrokenAnchors: "warn",
   organizationName: "langflow-ai",
   projectName: "langflow",
   trailingSlash: false,
