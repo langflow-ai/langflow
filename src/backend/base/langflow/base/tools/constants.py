@@ -20,7 +20,7 @@ TOOL_TABLE_SCHEMA = [
         "description": "Describe the purpose of the tool.",
         "sortable": False,
         "filterable": False,
-        "edit_mode": EditMode.INLINE,
+        "edit_mode": EditMode.POPOVER,
     },
     {
         "name": "tags",
@@ -35,6 +35,19 @@ TOOL_TABLE_SCHEMA = [
         "filterable": False,
         "edit_mode": EditMode.INLINE,
     },
+    {
+        "name": "commands",
+        "display_name": "Commands",
+        "type": "str",
+        "description": (
+            "Add commands to the tool. These commands will be used to run the tool. Start all commands with a `/`. "
+            "You can add multiple commands separated by a comma. "
+            "Example: `/command1`, `/command2`, `/command3`"
+        ),
+        "sortable": False,
+        "filterable": False,
+        "edit_mode": EditMode.INLINE,
+    },
 ]
 
-TOOLS_METADATA_INFO = "Use the table to configure the tools."
+TOOLS_METADATA_INFO = "Modify tool names and descriptions to help agents understand when to use each tool."
