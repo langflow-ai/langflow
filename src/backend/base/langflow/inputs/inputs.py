@@ -86,7 +86,7 @@ class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeM
     field_type: SerializableFieldTypes = FieldTypes.PROMPT
 
 
-class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
+class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.CODE
 
 
