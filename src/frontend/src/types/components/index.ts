@@ -46,6 +46,7 @@ export type InputComponentType = {
   onChangeFolderName?: (e: any) => void;
   nodeStyle?: boolean;
   isToolMode?: boolean;
+  popoverWidth?: string;
 };
 export type DropDownComponent = {
   disabled?: boolean;

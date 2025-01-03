@@ -90,6 +90,7 @@ export default function InputGlobalComponent({
   return (
     <InputComponent
       nodeStyle
+      popoverWidth="315px"
       placeholder={getPlaceholder(disabled, placeholder)}
       id={id}
       editNode={editNode}
