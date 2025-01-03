@@ -1,25 +1,31 @@
-import ast
 import importlib
-
 from langchain_experimental.utilities import PythonREPL
 
 from langflow.custom import Component
-from langflow.io import CodeInput, Output
+from langflow.io import CodeInput, StrInput, Output
 from langflow.schema import Data
 
 
 class PythonREPLToolComponent(Component):
     display_name = "Python REPL"
-    description = "A tool for running Python code in a REPL environment with dynamic imports."
+    description = "A tool for running Python code in a REPL environment with restricted imports."
     icon = "Python"
 
     inputs = [
+        StrInput(
+            name="global_imports",
+            display_name="Global Imports",
+            info="A comma-separated list of modules to import globally, e.g. 'math,numpy'.",
+            value="math",
+            required=True,
+        ),
         CodeInput(
             name="python_code",
             display_name="Python Code",
-            info="The Python code to execute. Supports both 'import' and 'from import' statements.",
+            info="The Python code to execute. Only modules specified in Global Imports can be used.",
             value="print('Hello, World!')",
             tool_mode=True,
+            required=True,
         ),
     ]
 
@@ -32,86 +38,62 @@ class PythonREPLToolComponent(Component):
         ),
     ]
 
-    def extract_imports_and_names(self, code: str) -> tuple[set[str], dict[str, set[str]]]:
-        """Extract both regular imports and from-imports from the code.
-
-        Returns a tuple of (regular_imports, from_imports) where from_imports is a dict
-        mapping module names to sets of imported names.
-        """
-        try:
-            tree = ast.parse(code)
-            regular_imports: set[str] = set()
-            from_imports: dict[str, set[str]] = {}
-
-            for node in ast.walk(tree):
-                if isinstance(node, ast.Import):
-                    for alias in node.names:
-                        regular_imports.add(alias.name.split(".")[0])
-                elif isinstance(node, ast.ImportFrom):
-                    if node.module:
-                        module_name = node.module.split(".")[0]
-                        if module_name not in from_imports:
-                            from_imports[module_name] = set()
-                        for alias in node.names:
-                            from_imports[module_name].add(alias.name)
-                elif isinstance(node, ast.Name):
-                    regular_imports.add(node.id)
-        except SyntaxError:
-            self.log("Syntax error in code, could not extract imports and names")
-            return set(), {}
-        else:
-            return regular_imports, from_imports
-
-    def get_globals(self, regular_imports: set[str], from_imports: dict[str, set[str]]) -> dict:
-        """Create a globals dictionary containing both regular imports and specific imports from modules."""
+    def get_globals(self, global_imports: str | list[str]) -> dict:
+        """Create a globals dictionary with only the specified allowed imports."""
         global_dict = {}
+        
+        try:
+            if isinstance(global_imports, str):
+                modules = [module.strip() for module in global_imports.split(",")]
+            elif isinstance(global_imports, list):
+                modules = global_imports
+            else:
+                msg = "global_imports must be either a string or a list"
+                raise TypeError(msg)
 
-        # Handle regular imports
-        for name in regular_imports:
-            try:
-                module = importlib.import_module(name)
-                global_dict[name] = module
-            except ImportError:
-                # If it's not a module, it might be a built-in or a name defined in the code
-                pass
+            for module in modules:
+                try:
+                    imported_module = importlib.import_module(module)
+                    global_dict[imported_module.__name__] = imported_module
+                except ImportError as e:
+                    msg = f"Could not import module {module}: {str(e)}"
+                    raise ImportError(msg) from e
 
-        # Handle from-imports
-        for module_name, names in from_imports.items():
-            try:
-                module = importlib.import_module(module_name)
-                for name in names:
-                    try:
-                        # Get the specific attribute from the module
-                        attr = getattr(module, name)
-                        global_dict[name] = attr
-                    except AttributeError:
-                        self.log(f"Could not import {name} from module {module_name}")
-            except ImportError:
-                self.log(f"Could not import module {module_name}")
+            self.log(f"Successfully imported modules: {list(global_dict.keys())}")
+            return global_dict
 
-        return global_dict
+        except Exception as e:
+            self.log(f"Error in global imports: {str(e)}")
+            raise
 
     def run_python_repl(self) -> Data:
         try:
-            # Extract both types of imports
-            regular_imports, from_imports = self.extract_imports_and_names(self.python_code)
-
-            # Get global dictionary with all imported items
-            globals_ = self.get_globals(regular_imports, from_imports)
-
-            # Create PythonREPL with the global dictionary
+            globals_ = self.get_globals(self.global_imports)
             python_repl = PythonREPL(_globals=globals_)
-
-            # Run the code
             result = python_repl.run(self.python_code)
-
-            # Remove any trailing newlines and whitespace
             result = result.strip() if result else ""
-
+            
+            self.log(f"Code execution completed successfully")
             return Data(data={"result": result})
-        except (ImportError, SyntaxError, NameError, TypeError, ValueError) as e:
-            self.log(f"Error running Python code: {e!s}")
-            error_message = str(e)
+
+        except ImportError as e:
+            error_message = f"Import Error: {str(e)}"
+            self.log(error_message)
+            return Data(data={"error": error_message})
+            
+        except SyntaxError as e:
+            error_message = f"Syntax Error: {str(e)}"
+            self.log(error_message)
+            return Data(data={"error": error_message})
+            
+        except (NameError, TypeError, ValueError) as e:
+            error_message = f"Error during execution: {str(e)}"
+            self.log(error_message)
+            return Data(data={"error": error_message})
+            
+        except Exception as e:
+            error_message = f"Unexpected error: {str(e)}"
+            self.log(error_message)
             return Data(data={"error": error_message})
 
     def build(self):
