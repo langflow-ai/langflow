@@ -248,7 +248,7 @@ For more information, see [Mistral AI documentation](https://docs.mistral.ai/).
 
 This component generates text using NVIDIA LLMs.
 
-For more information, see [NVIDIA AI Foundation Models documentation](https://developer.nvidia.com/ai-foundation-models).
+For more information, see [NVIDIA AI Foundation Models documentation](https://developer.nvidia.com/generative-ai).
 
 ### Parameters
 
