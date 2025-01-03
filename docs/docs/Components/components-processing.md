@@ -9,7 +9,7 @@ Processing components process and transform data within a flow.
 
 ## Use a processing component in a flow
 
-The **Split Text** processing component in this flow splits the incoming [data](/guides-data-message) into chunks to be embedded into the vector store component.
+The **Split Text** processing component in this flow splits the incoming [data](/configuration-objects) into chunks to be embedded into the vector store component.
 
 The component offers control over chunk size, overlap, and separator, which affect context and granularity in vector store retrieval results.
 
