@@ -90,7 +90,7 @@ test(
     }
 
     await page.locator(".react-flow__pane").click();
-
+    await adjustScreenView(page, { numberOfZoomOut: 1 });
     await visibleElementHandle.hover();
     await page.mouse.down();
 
