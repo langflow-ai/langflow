@@ -12,7 +12,13 @@ from langflow.field_typing import Tool
 from langflow.graph.graph.base import Graph
 from langflow.graph.vertex.base import Vertex
 from langflow.helpers.flow import get_flow_inputs
-from langflow.inputs.inputs import BoolInput, DropdownInput, FileInput, InputTypes, MessageInput
+from langflow.inputs.inputs import (
+    BoolInput,
+    DropdownInput,
+    FileInput,
+    InputTypes,
+    MessageInput,
+)
 from langflow.schema import Data, dotdict
 from langflow.template import Output
 
@@ -21,7 +27,6 @@ class RunFlowBaseComponent(Component):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.add_tool_output = True
-        self.flow_tweak_data = None
 
     _base_inputs: list[InputTypes] = [
         DropdownInput(
@@ -57,15 +62,9 @@ class RunFlowBaseComponent(Component):
         ),
     ]
     outputs = [Output(name="flow_outputs", display_name="Flow Outputs", method="run_flow_with_tweaks")]
-    default_keys = [
-        "code",
-        "_type",
-        "flow_name_selected",
-        "session_id",
-        "flow_json",
-        "return_direct",
-    ]
+    default_keys = ["code", "_type", "flow_name_selected", "session_id", "flow_json", "return_direct"]
     FLOW_INPUTS: list[dotdict] = []
+    flow_tweak_data: dict = {}
 
     @abstractmethod
     async def run_flow_with_tweaks(self) -> list[Data]:
@@ -132,16 +131,34 @@ class RunFlowBaseComponent(Component):
             field_order = vertex.data.get("node", {}).get("field_order", [])
             if field_order and field_template:
                 new_vertex_inputs = [
-                    {
-                        **field_template[input_name],
-                        "display_name": vertex.display_name + " - " + field_template[input_name]["display_name"],
-                        "name": vertex.id + "|" + input_name,
-                        "tool_mode": not (field_template[input_name].get("advanced", False)),
-                    }
+                    dotdict(
+                        {
+                            **field_template[input_name],
+                            "display_name": vertex.display_name + " - " + field_template[input_name]["display_name"],
+                            "name": f"{vertex.id}~{input_name}",
+                            "tool_mode": not (field_template[input_name].get("advanced", False)),
+                        }
+                    )
                     for input_name in field_order
                 ]
                 new_fields += new_vertex_inputs
+        
+
+        # for vertex in inputs_vertex:
+        #     new_vertex_inputs = []
+        #     field_template = vertex.data["node"]["template"]
+        #     for inp in field_template:
+        #         if inp not in {"code", "_type"}:
+        #             field_template[inp]["display_name"] = (
+        #                 vertex.display_name + " - " + field_template[inp]["display_name"]
+        #             )
+        #             field_template[inp]["name"] = vertex.id + "|" + inp
+        #             new_vertex_inputs.append(field_template[inp])
+        #     new_fields += new_vertex_inputs
         return new_fields
+    
+
+
 
     def add_new_fields(self, build_config: dotdict, new_fields: list[dotdict]) -> dotdict:
         """Add new fields to the build_config."""

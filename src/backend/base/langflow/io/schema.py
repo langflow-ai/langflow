@@ -65,9 +65,7 @@ def create_input_schema(inputs: list["InputTypes"]) -> type[BaseModel]:
     return model
 
 
-def create_input_schema_from_dict(
-    inputs: list[dotdict], param_key: str | None = None, description: str | None = None
-) -> type[BaseModel]:
+def create_input_schema_from_dict(inputs: list[dotdict], param_key: str | None = None) -> type[BaseModel]:
     if not isinstance(inputs, list):
         msg = "inputs must be a list of Inputs"
         raise TypeError(msg)
@@ -101,11 +99,12 @@ def create_input_schema_from_dict(
 
     # Wrap fields in a dictionary with the key as param_key
     if param_key is not None:
-        # fields = {param_key: (dict(fields), Field(title=param_key,description="Values for the flow"))}
+        # Create an inner model with the fields
         inner_model = create_model("InnerModel", **fields)
-        model = create_model("InputSchema", **{param_key: (inner_model, Field(default=..., description=description))})
 
-        # fields = {param_key: (inner_model, Field(title=param_key,description="Values for the flow"))}
+        # Ensure the model is wrapped correctly in a dictionary
+        # model = create_model("InputSchema", **{param_key: (inner_model, Field(default=..., description=description))})
+        model = create_model("InputSchema", **{param_key: (inner_model, ...)})
     else:
         # Create and return the InputSchema model
         model = create_model("InputSchema", **fields)

@@ -188,7 +188,6 @@ class ComponentToolkit:
                 args_schema = create_input_schema_from_dict(
                     inputs=flow_mode_inputs,
                     param_key="flow_tweak_data",
-                    description="Values for the flow",
                 )
             elif output.required_inputs:
                 inputs = [
@@ -246,7 +245,7 @@ class ComponentToolkit:
                 )
         if len(tools) == 1 and (tool_name or tool_description):
             tool = tools[0]
-            tool.name = _format_tool_name(tool_name) or tool.name
+            tool.name = _format_tool_name(str(tool_name)) or tool.name
             tool.description = tool_description or tool.description
             tool.tags = [tool.name]
         elif tool_name or tool_description:

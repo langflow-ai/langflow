@@ -47,23 +47,25 @@ class RunFlowComponent(RunFlowBaseComponent):
         tweaks: dict = {}
 
         flow_name_selected = self._attributes.get("flow_name_selected")
-        import pdb; pdb.set_trace()
+        parsed_flow_tweak_data = self._attributes.get("flow_tweak_data", {})
+        if not isinstance(parsed_flow_tweak_data, dict):
+            parsed_flow_tweak_data = parsed_flow_tweak_data.dict()
 
-        if self.flow_tweak_data:
-            for field, value in self.flow_tweak_data.items():
-                [node, name] = field.split("|")
-                if field not in tweaks:
-                    tweaks[field] = {}
-                tweaks[field][name] = value
+        if parsed_flow_tweak_data != {}:
+            for field in parsed_flow_tweak_data:
+                if "~" in field:
+                    [node, name] = field.split("~")
+                    if node not in tweaks:
+                        tweaks[node] = {}
+                    tweaks[node][name] = parsed_flow_tweak_data[field]
         else:
             for field in self._attributes:
-                if field not in self.default_keys and "|" in field:
-                    [node, name] = field.split("|")
-                if node not in tweaks:
-                    tweaks[node] = {}
-                tweaks[node][name] = self._attributes[field]
-        # tweaks= {"ChatInput-xNZ0a": {"input_value": "add 1+1"}}
-        
+                if field not in self.default_keys and "~" in field:
+                    [node, name] = field.split("~")
+                    if node not in tweaks:
+                        tweaks[node] = {}
+                    tweaks[node][name] = self._attributes[field]
+        # import pdb; pdb.set_trace()
         run_outputs = await run_flow(
             inputs=None,
             output_type="all",
@@ -71,7 +73,7 @@ class RunFlowComponent(RunFlowBaseComponent):
             flow_name=flow_name_selected,
             tweaks=tweaks,
             user_id=str(self.user_id),
-            run_id=self.graph.run_id,
+            # run_id=self.graph.run_id,
             session_id=self.graph.session_id or self.session_id,
         )
         # import pdb; pdb.set_trace()
