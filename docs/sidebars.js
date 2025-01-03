@@ -53,6 +53,7 @@ module.exports = {
         "Components/components-logic",
         "Components/components-memories",
         "Components/components-models",
+        "Components/components-processing",
         "Components/components-prompts",
         "Components/components-tools",
         "Components/components-vector-stores",
@@ -78,16 +79,8 @@ module.exports = {
         "Configuration/configuration-cli",
         "Configuration/configuration-global-variables",
         "Configuration/environment-variables",
+        "Configuration/configuration-objects",
         "Configuration/configuration-security-best-practices"
-      ],
-    },
-    {
-      type: "category",
-      label: "Guides",
-      items: [
-        "Guides/guides-chat-memory",
-        "Guides/guides-data-message",
-        "Guides/guides-new-to-llms",
       ],
     },
     {

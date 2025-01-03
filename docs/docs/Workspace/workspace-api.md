@@ -1,6 +1,5 @@
 ---
 title: API
-sidebar_position: 2
 slug: /workspace-api
 ---
 
