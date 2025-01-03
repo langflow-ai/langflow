@@ -1,8 +1,9 @@
 import importlib
+
 from langchain_experimental.utilities import PythonREPL
 
 from langflow.custom import Component
-from langflow.io import CodeInput, StrInput, Output
+from langflow.io import CodeInput, Output, StrInput
 from langflow.schema import Data
 
 
@@ -41,7 +42,7 @@ class PythonREPLToolComponent(Component):
     def get_globals(self, global_imports: str | list[str]) -> dict:
         """Create a globals dictionary with only the specified allowed imports."""
         global_dict = {}
-        
+
         try:
             if isinstance(global_imports, str):
                 modules = [module.strip() for module in global_imports.split(",")]
@@ -56,14 +57,14 @@ class PythonREPLToolComponent(Component):
                     imported_module = importlib.import_module(module)
                     global_dict[imported_module.__name__] = imported_module
                 except ImportError as e:
-                    msg = f"Could not import module {module}: {str(e)}"
+                    msg = f"Could not import module {module}: {e!s}"
                     raise ImportError(msg) from e
 
             self.log(f"Successfully imported modules: {list(global_dict.keys())}")
             return global_dict
 
         except Exception as e:
-            self.log(f"Error in global imports: {str(e)}")
+            self.log(f"Error in global imports: {e!s}")
             raise
 
     def run_python_repl(self) -> Data:
@@ -72,27 +73,27 @@ class PythonREPLToolComponent(Component):
             python_repl = PythonREPL(_globals=globals_)
             result = python_repl.run(self.python_code)
             result = result.strip() if result else ""
-            
-            self.log(f"Code execution completed successfully")
+
+            self.log("Code execution completed successfully")
             return Data(data={"result": result})
 
         except ImportError as e:
-            error_message = f"Import Error: {str(e)}"
+            error_message = f"Import Error: {e!s}"
             self.log(error_message)
             return Data(data={"error": error_message})
-            
+
         except SyntaxError as e:
-            error_message = f"Syntax Error: {str(e)}"
+            error_message = f"Syntax Error: {e!s}"
             self.log(error_message)
             return Data(data={"error": error_message})
-            
+
         except (NameError, TypeError, ValueError) as e:
-            error_message = f"Error during execution: {str(e)}"
+            error_message = f"Error during execution: {e!s}"
             self.log(error_message)
             return Data(data={"error": error_message})
-            
+
         except Exception as e:
-            error_message = f"Unexpected error: {str(e)}"
+            error_message = f"Unexpected error: {e!s}"
             self.log(error_message)
             return Data(data={"error": error_message})
 
