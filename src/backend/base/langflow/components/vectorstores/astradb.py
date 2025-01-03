@@ -612,7 +612,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             else:
                 msg = "Vector Store Inputs must be Data objects."
                 raise TypeError(msg)
-            
+
         if documents and self.deletion_field:
             self.log(f"Deleting documents where {self.deletion_field}")
             try:
@@ -624,7 +624,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             except Exception as e:
                 msg = f"Error deleting documents from AstraDBVectorStore: {e}"
                 raise ValueError(msg) from e
-            
+
         if documents:
             self.log(f"Adding {len(documents)} documents to the Vector Store.")
             try:
