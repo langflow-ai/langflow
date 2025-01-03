@@ -81,7 +81,7 @@ For more information, see the [Anthropic documentation](https://docs.anthropic.c
 | model               | String      | The name of the Anthropic model to use. Options include various Claude 3 models.      |
 | anthropic_api_key   | SecretString| Your Anthropic API key for authentication.                                              |
 | temperature         | Float       | Controls randomness in the output. Default: `0.1`.                                       |
-| anthropic_api_url   | String      | Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified (advanced). |
+| anthropic_api_url   | String      | Endpoint of the Anthropic API. Defaults to `https://api.anthropic.com` if not specified (advanced). |
 | prefill             | String      | Prefill text to guide the model's response (advanced).                                 |
 
 ### Outputs
