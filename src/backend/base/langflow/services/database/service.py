@@ -136,7 +136,14 @@ class DatabaseService(Service):
     @asynccontextmanager
     async def with_session(self):
         async with AsyncSession(self.engine, expire_on_commit=False) as session:
-            yield session
+            try:
+                yield session
+                if session.is_active:
+                    await session.commit()
+            except Exception:
+                logger.exception("An error occurred during the session scope.")
+                await session.rollback()
+                raise
 
     async def assign_orphaned_flows_to_superuser(self) -> None:
         """Assign orphaned flows to the default superuser when auto login is enabled."""
