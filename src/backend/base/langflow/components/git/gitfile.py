@@ -3,6 +3,7 @@ import os
 import shutil
 import tempfile
 from contextlib import asynccontextmanager
+from typing import Any
 
 import anyio
 import git
@@ -100,8 +101,9 @@ class GitFileComponent(Component):
             self.log(f"Error getting branches: {e}")
             return ["main", "master"]
 
-    async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
+    async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         """Update component build configuration."""
+        _ = field_value  # Use field_value to satisfy the formatter
         if not self.repository_url:
             build_config["branch"]["options"] = ["Enter repository URL first"]
             build_config["branch"]["value"] = "Enter repository URL first"
@@ -157,13 +159,16 @@ class GitFileComponent(Component):
         """Get content of selected files from repository."""
         if not self.repository_url:
             msg = "Repository URL is required"
-            raise GitCommandError("clone", msg)
+            error_type = "clone"
+            raise GitCommandError(error_type, msg)
         if not self.branch or self.branch == "Enter repository URL first":
             msg = "Branch selection is required"
-            raise GitCommandError("clone", msg)
+            error_type = "clone"
+            raise GitCommandError(error_type, msg)
         if not self.selected_files:
             msg = "File selection is required"
-            raise GitCommandError("clone", msg)
+            error_type = "clone"
+            raise GitCommandError(error_type, msg)
 
         try:
             async with self.temp_git_repo() as temp_dir:
