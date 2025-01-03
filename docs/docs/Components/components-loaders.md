@@ -26,9 +26,9 @@ The Confluence component integrates with the Confluence wiki collaboration platf
 
 | Name | Display Name | Info |
 | --- | --- | --- |
-| url | Site URL | The base URL of the Confluence Space (e.g., https://company.atlassian.net/wiki) |
-| username | Username | Atlassian User E-mail (e.g., email@example.com) |
-| api_key | API Key | Atlassian API Key (Create at: https://id.atlassian.com/manage-profile/security/api-tokens) |
+| url | Site URL | The base URL of the Confluence Space (e.g., `https://company.atlassian.net/wiki`) |
+| username | Username | Atlassian User E-mail (e.g., `email@example.com`) |
+| api_key | API Key | Atlassian API Key (Create an API key at: [Atlassian](https://id.atlassian.com/manage-profile/security/api-tokens)) |
 | space_key | Space Key | The key of the Confluence space to access |
 | cloud | Use Cloud? | Whether to use Confluence Cloud (default: true) |
 | content_format | Content Format | Specify content format (default: STORAGE) |
