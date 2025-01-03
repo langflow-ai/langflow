@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Generator
 from enum import Enum
 
@@ -26,29 +28,21 @@ def get_artifact_type(value, build_result=None) -> str:
     result = ArtifactType.UNKNOWN
     match value:
         case Message():
-            if not isinstance(value.text, str):
-                enum_value = get_artifact_type(value.text)
-                result = ArtifactType(enum_value)
-            else:
-                result = ArtifactType.MESSAGE
+            result = (
+                ArtifactType.MESSAGE if isinstance(value.text, str) else ArtifactType(get_artifact_type(value.text))
+            )
         case Data():
-            enum_value = get_artifact_type(value.data)
-            result = ArtifactType(enum_value)
-
+            result = ArtifactType(get_artifact_type(value.data))
         case str():
             result = ArtifactType.TEXT
-
         case dict():
             result = ArtifactType.OBJECT
-
         case list() | DataFrame():
             result = ArtifactType.ARRAY
-    if result == ArtifactType.UNKNOWN and (
-        (build_result and isinstance(build_result, Generator))
-        or (isinstance(value, Message) and isinstance(value.text, Generator))
+    if (result == ArtifactType.UNKNOWN and (build_result and isinstance(build_result, Generator))) or (
+        isinstance(value, Message) and isinstance(value.text, Generator)
     ):
         result = ArtifactType.STREAM
-
     return result.value
 
 
@@ -63,18 +57,19 @@ def _to_list_of_dicts(raw):
 
 
 def post_process_raw(raw, artifact_type: str):
-    if artifact_type == ArtifactType.STREAM.value:
-        raw = ""
-    elif artifact_type == ArtifactType.ARRAY.value:
-        raw = raw.to_dict(orient="records") if isinstance(raw, DataFrame) else _to_list_of_dicts(raw)
-    elif artifact_type == ArtifactType.UNKNOWN.value and raw is not None:
-        if isinstance(raw, BaseModel | dict):
-            try:
-                raw = jsonable_encoder(raw, custom_encoder=CUSTOM_ENCODERS)
+    match artifact_type:
+        case ArtifactType.STREAM.value:
+            raw = ""
+        case ArtifactType.ARRAY.value:
+            raw = raw.to_dict(orient="records") if isinstance(raw, DataFrame) else _to_list_of_dicts(raw)
+        case ArtifactType.UNKNOWN.value if raw is not None:
+            if isinstance(raw, (BaseModel, dict)):
+                try:
+                    raw = jsonable_encoder(raw, custom_encoder=CUSTOM_ENCODERS)
+                except Exception:  # noqa: BLE001
+                    logger.opt(exception=True).debug(f"Error converting to json: {raw} ({type(raw)})")
+                    raw = "Built Successfully ✨"
                 artifact_type = ArtifactType.OBJECT.value
-            except Exception:  # noqa: BLE001
-                logger.opt(exception=True).debug(f"Error converting to json: {raw} ({type(raw)})")
+            else:
                 raw = "Built Successfully ✨"
-        else:
-            raw = "Built Successfully ✨"
     return raw, artifact_type

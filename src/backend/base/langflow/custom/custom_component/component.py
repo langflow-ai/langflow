@@ -12,7 +12,7 @@ from uuid import UUID
 import nanoid
 import yaml
 from langchain_core.tools import StructuredTool
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 
 from langflow.base.tools.constants import (
     TOOL_OUTPUT_DISPLAY_NAME,
@@ -924,24 +924,19 @@ class Component(CustomComponent):
         return result
 
     def _build_artifact(self, result):
-        custom_repr = self.custom_repr() or (result if isinstance(result, dict | Data | str) else str(result))
-
+        custom_repr = self.custom_repr() or (result if isinstance(result, (dict, Data, str)) else str(result))
         raw = self._process_raw_result(result)
         artifact_type = get_artifact_type(self.status or raw, result)
         raw, artifact_type = post_process_raw(raw, artifact_type)
         return {"repr": custom_repr, "raw": raw, "type": artifact_type}
 
     def _process_raw_result(self, result):
-        if self.status:
-            raw = self.status
-        elif hasattr(result, "data"):
-            raw = result.data
-        elif hasattr(result, "model_dump"):
-            raw = result.model_dump()
-        elif isinstance(result, dict | Data | str):
-            raw = result.data if isinstance(result, Data) else result
-        else:
-            raw = result
+        raw = (
+            self.status
+            or getattr(result, "data", None)
+            or getattr(result, "model_dump", lambda: None)()
+            or (result.data if isinstance(result, Data) else result if isinstance(result, (dict, str)) else result)
+        )
         return raw
 
     def _log_output(self, output):
@@ -956,15 +951,13 @@ class Component(CustomComponent):
             self._tracing_service.set_outputs(self.trace_name, results)
 
     def custom_repr(self):
-        if self.repr_value == "":
-            self.repr_value = self.status
-        if isinstance(self.repr_value, dict):
-            return yaml.dump(self.repr_value)
-        if isinstance(self.repr_value, str):
-            return self.repr_value
-        if isinstance(self.repr_value, BaseModel) and not isinstance(self.repr_value, Data):
-            return str(self.repr_value)
-        return self.repr_value
+        return (
+            yaml.dump(self.repr_value)
+            if isinstance(self.repr_value, dict)
+            else self.repr_value
+            if isinstance(self.repr_value, str)
+            else str(self.repr_value)
+        )
 
     def build_inputs(self):
         """Builds the inputs for the custom component.
