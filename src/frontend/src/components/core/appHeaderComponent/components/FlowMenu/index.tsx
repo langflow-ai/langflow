@@ -125,9 +125,12 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const changes = useShortcutsStore((state) => state.changesSave);
   useHotkeys(changes, handleSave, { preventDefault: true });
 
-  const handleEditName = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFlowName(e.target.value);
-  };
+  const handleEditName = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setFlowName(e.target.value);
+    },
+    [],
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
