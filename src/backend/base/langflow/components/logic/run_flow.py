@@ -10,7 +10,7 @@ from langflow.schema import Data, dotdict
 
 class RunFlowComponent(RunFlowBaseComponent):
     display_name = "Run Flow"
-    description = "Generates a Component from a Flow, with all of its inputs, and "
+    description = "Creates a tool component from a Flow that takes all its inputs and runs it."
     name = "RunFlow"
     beta: bool = True
     icon = "Workflow"
