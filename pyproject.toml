@@ -117,8 +117,9 @@ dependencies = [
     "crewai~=0.86.0",
     "mcp>=0.9.1",
     "uv>=0.5.7",
-    "ag2",
+    "ag2>=0.1.0",
     "pydantic-ai>=0.0.12",
+    "crosshair-tool==0.0.81",
 ]
 
 [project.urls]
