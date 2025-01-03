@@ -119,6 +119,8 @@ dependencies = [
     "uv>=0.5.7",
     "ag2",
     "pydantic-ai>=0.0.12",
+    "keybert>=0.8.5",
+    "gliner==0.2.13",
 ]
 
 [project.urls]
