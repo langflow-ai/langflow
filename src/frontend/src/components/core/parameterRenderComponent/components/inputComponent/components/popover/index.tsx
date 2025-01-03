@@ -168,7 +168,7 @@ const CustomInputPopover = ({
   popoverWidth,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
-  const memoizedOptions = useMemo(() => options, [options]);
+  const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
 
   const PopoverContentInput = editNode
     ? PopoverContent
@@ -290,7 +290,7 @@ const CustomInputPopover = ({
           <CommandInput placeholder={optionsPlaceholder} />
           <CommandList>
             <CommandGroup>
-              {memoizedOptions.map((option, id) => (
+              {Array.from(memoizedOptions).map((option, id) => (
                 <CommandItem
                   key={option + id}
                   value={option}
