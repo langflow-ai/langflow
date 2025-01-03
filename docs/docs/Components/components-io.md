@@ -1,6 +1,5 @@
 ---
 title: Inputs and outputs
-sidebar_position: 1
 slug: /components-io
 ---
 
