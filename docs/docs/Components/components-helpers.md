@@ -1,6 +1,5 @@
 ---
 title: Helpers
-sidebar_position: 4
 slug: /components-helpers
 ---
 
