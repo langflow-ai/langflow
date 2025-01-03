@@ -30,10 +30,11 @@ ALL_COLLECTIONS = [
 
 @pytest.fixture
 def astradb_client():
-    client = AstraDB(api_endpoint=get_astradb_api_endpoint(), token=get_astradb_application_token())
+    api_client = DataAPIClient(token=get_astradb_application_token())
+    client = api_client.get_database(get_astradb_api_endpoint())
     yield client
     for collection in ALL_COLLECTIONS:
-        client.delete_collection(collection)
+        client.drop_collection(collection)
 
 
 @pytest.mark.api_key_required
@@ -56,7 +57,7 @@ async def test_base(astradb_client: AstraDB):
     )
 
     assert results["search_results"] == []
-    assert astradb_client.collection(BASIC_COLLECTION)
+    assert astradb_client.get_collection(BASIC_COLLECTION)
 
 
 @pytest.mark.api_key_required
@@ -92,8 +93,8 @@ def test_astra_vectorize():
 
     store = None
     try:
+        # Get the vectorize options
         options = {"provider": "nvidia", "modelName": "NV-Embed-QA"}
-        options_comp = {"embedding_provider": "nvidia", "model": "NV-Embed-QA"}
 
         store = AstraDBVectorStore(
             collection_name=VECTORIZE_COLLECTION,
@@ -106,7 +107,6 @@ def test_astra_vectorize():
         records = [Data.from_document(d) for d in documents]
 
         component = AstraDBVectorStoreComponent()
-        vectorize_options = component.build_vectorize_options(**options_comp)
 
         component.build(
             token=application_token,
@@ -115,9 +115,9 @@ def test_astra_vectorize():
             ingest_data=records,
             search_query="test",
             number_of_results=2,
-            pre_delete_collection=True,
+            astradb_vectorstore_kwargs={"collection_vector_service_options": options},
         )
-        vector_store = component.build_vector_store(vectorize_options)
+        vector_store = component.build_vector_store()
         records = component.search_documents(vector_store=vector_store)
 
         assert len(records) == 2
@@ -141,14 +141,6 @@ def test_astra_vectorize_with_provider_api_key():
             "authentication": {"providerKey": "openai"},
         }
 
-        options_comp = {
-            "embedding_provider": "openai",
-            "model": "text-embedding-3-small",
-            "z_01_model_parameters": {},
-            "z_03_provider_api_key": "openai",
-            "z_04_authentication": {},
-        }
-
         store = AstraDBVectorStore(
             collection_name=VECTORIZE_COLLECTION_OPENAI,
             api_endpoint=api_endpoint,
@@ -160,7 +152,6 @@ def test_astra_vectorize_with_provider_api_key():
         records = [Data.from_document(d) for d in documents]
 
         component = AstraDBVectorStoreComponent()
-        vectorize_options = component.build_vectorize_options(**options_comp)
 
         component.build(
             token=application_token,
@@ -169,10 +160,10 @@ def test_astra_vectorize_with_provider_api_key():
             ingest_data=records,
             search_query="test",
             number_of_results=2,
-            pre_delete_collection=True,
+            astradb_vectorstore_kwargs={"collection_vector_service_options": options},
         )
 
-        vector_store = component.build_vector_store(vectorize_options)
+        vector_store = component.build_vector_store()
         records = component.search_documents(vector_store=vector_store)
 
         assert len(records) == 2
@@ -195,12 +186,6 @@ def test_astra_vectorize_passes_authentication():
             "parameters": {},
             "authentication": {"providerKey": "openai"},
         }
-        options_comp = {
-            "embedding_provider": "openai",
-            "model": "text-embedding-3-small",
-            "z_01_model_parameters": {},
-            "z_04_authentication": {"providerKey": "openai"},
-        }
 
         store = AstraDBVectorStore(
             collection_name=VECTORIZE_COLLECTION_OPENAI_WITH_AUTH,
@@ -213,7 +198,6 @@ def test_astra_vectorize_passes_authentication():
         records = [Data.from_document(d) for d in documents]
 
         component = AstraDBVectorStoreComponent()
-        vectorize_options = component.build_vectorize_options(**options_comp)
 
         component.build(
             token=application_token,
@@ -222,10 +206,10 @@ def test_astra_vectorize_passes_authentication():
             ingest_data=records,
             search_query="test",
             number_of_results=2,
-            pre_delete_collection=True,
+            astradb_vectorstore_kwargs={"collection_vector_service_options": options},
         )
 
-        vector_store = component.build_vector_store(vectorize_options)
+        vector_store = component.build_vector_store()
         records = component.search_documents(vector_store=vector_store)
 
         assert len(records) == 2
