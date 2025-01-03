@@ -58,7 +58,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ positionDictionary });
   },
   isPositionAvailable: (position: { x: number; y: number }) => {
-    if(get().positionDictionary[position.x] && get().positionDictionary[position.x] === position.y) {
+    if (
+      get().positionDictionary[position.x] &&
+      get().positionDictionary[position.x] === position.y
+    ) {
       return false;
     }
     return true;
@@ -403,8 +406,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       internalPostionDictionary = buildPositionDictionary(get().nodes);
     }
     while (!get().isPositionAvailable(insidePosition)) {
-      insidePosition.x += (1 + Math.random() * 100);
-      insidePosition.y += (1 + Math.random() * 100);
+      insidePosition.x += 1 + Math.random() * 100;
+      insidePosition.y += 1 + Math.random() * 100;
     }
     internalPostionDictionary[insidePosition.x] = insidePosition.y;
     get().setPositionDictionary(internalPostionDictionary);
