@@ -148,10 +148,18 @@ export default function GlobalVariableModal({
               className="w-full"
             >
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger data-testid="credential-tab" value="Credential">
+                <TabsTrigger
+                  disabled={!!initialData?.type}
+                  data-testid="credential-tab"
+                  value="Credential"
+                >
                   Credential
                 </TabsTrigger>
-                <TabsTrigger data-testid="generic-tab" value="Generic">
+                <TabsTrigger
+                  disabled={!!initialData?.type}
+                  data-testid="generic-tab"
+                  value="Generic"
+                >
                   Generic
                 </TabsTrigger>
               </TabsList>
@@ -206,7 +214,7 @@ export default function GlobalVariableModal({
       </BaseModal.Content>
       <BaseModal.Footer
         submit={{
-          label: "Save Variable",
+          label: `${initialData ? "Update" : "Save"} Variable`,
           dataTestId: "save-variable-btn",
         }}
       />
