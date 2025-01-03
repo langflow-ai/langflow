@@ -87,6 +87,13 @@ class ServiceManager:
             self.services.pop(service_name, None)
             self.get(service_name)
 
+    async def setup(self) -> None:
+        """Initialize all the services."""
+        for service in self.services.values():
+            result = service.setup()
+            if inspect.iscoroutine(result):
+                await result
+
     async def teardown(self) -> None:
         """Teardown all the services."""
         for service in self.services.values():
