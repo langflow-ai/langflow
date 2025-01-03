@@ -3,25 +3,33 @@ import os
 import shutil
 import tempfile
 from contextlib import asynccontextmanager
+from typing import Optional
 
 import anyio
 import git
+from git.exc import GitCommandError
 
 from langflow.custom import Component
 from langflow.io import DropdownInput, MessageTextInput, MultiselectInput, Output
 from langflow.schema import Data
 
 
+class GitFileError(Exception):
+    """Base exception for GitFile component errors."""
+    pass
+
+
 class GitFileComponent(Component):
     display_name = "GitFile"
     description = "Analyzes a Git repository and returns the content of selected files from specified branch"
     icon = "GitLoader"
+    
     inputs = [
         MessageTextInput(
             name="repository_url",
             display_name="Repository URL",
             info="URL of the Git repository (e.g., https://github.com/username/repo)",
-            value="",
+            required=True,
         ),
         DropdownInput(
             name="branch",
@@ -30,6 +38,7 @@ class GitFileComponent(Component):
             options=["Enter repository URL first"],
             value="Enter repository URL first",
             refresh_button=True,
+            required=True,
         ),
         MultiselectInput(
             name="selected_files",
@@ -38,32 +47,42 @@ class GitFileComponent(Component):
             options=["Select branch first"],
             value=[],
             refresh_button=True,
+            required=True,
         ),
     ]
+    
     outputs = [
         Output(display_name="Files Content", name="files_content", method="get_files_content"),
     ]
 
     @asynccontextmanager
     async def temp_git_repo(self):
-        """Async context manager for temporary git repository cloning."""
-        temp_dir = tempfile.mkdtemp()
+        """Context manager for handling temporary clone directory."""
+        temp_dir = None
         try:
+            temp_dir = tempfile.mkdtemp(prefix="langflow_clone_")
             yield temp_dir
         finally:
-            await asyncio.get_event_loop().run_in_executor(None, lambda: shutil.rmtree(temp_dir, ignore_errors=True))
+            if temp_dir:
+                try:
+                    await anyio.Path(temp_dir).rmdir()
+                except Exception:
+                    # Fallback to shutil if directory not empty
+                    await asyncio.to_thread(shutil.rmtree, temp_dir, ignore_errors=True)
 
     async def is_binary(self, file_path: anyio.Path) -> bool:
+        """Check if a file is binary."""
         try:
-            async with await file_path.open() as check_file:
+            async with await file_path.open("r") as check_file:
                 await check_file.read()
                 return False
         except UnicodeDecodeError:
             return True
 
     async def get_repository_files(self, repo_path: str) -> list[str]:
+        """Get list of files in repository."""
         file_list = []
-        path = anyio.Path(repo_path)  # Convert str to anyio.Path explicitly
+        path = anyio.Path(repo_path)
         async for entry in path.rglob("*"):
             if await entry.is_file():
                 relative_path = os.path.relpath(str(entry), str(path))
@@ -72,12 +91,16 @@ class GitFileComponent(Component):
         return sorted(file_list)
 
     async def get_branches(self, repo_url: str) -> list[str]:
+        """Get list of branches in repository."""
         try:
             async with self.temp_git_repo() as temp_dir:
-                repo = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: git.Repo.clone_from(repo_url, temp_dir, no_checkout=True)
+                repo = await asyncio.to_thread(
+                    git.Repo.clone_from,
+                    repo_url,
+                    temp_dir,
+                    no_checkout=True
                 )
-                await asyncio.get_event_loop().run_in_executor(None, lambda: repo.remote().fetch())
+                await asyncio.to_thread(repo.remote().fetch)
                 branches = []
 
                 for ref in repo.remote().refs:
@@ -88,11 +111,12 @@ class GitFileComponent(Component):
                         branches.append(branch_name)
 
                 return sorted(branches) if branches else ["main", "master"]
-        except git.GitCommandError as e:
-            self.log(f"Error getting branches: {e!s}")
+        except GitCommandError as e:
+            self.log(f"Error getting branches: {e}")
             return ["main", "master"]
 
-    async def update_build_config(self, build_config: dict, _field_value: str, field_name: str | None = None) -> dict:
+    async def update_build_config(self, build_config: dict, field_value: str, field_name: Optional[str] = None) -> dict:
+        """Update component build configuration."""
         if not self.repository_url:
             build_config["branch"]["options"] = ["Enter repository URL first"]
             build_config["branch"]["value"] = "Enter repository URL first"
@@ -113,11 +137,13 @@ class GitFileComponent(Component):
         ):
             try:
                 async with self.temp_git_repo() as temp_dir:
-                    await asyncio.get_event_loop().run_in_executor(
-                        None,
-                        lambda: git.Repo.clone_from(
-                            self.repository_url, temp_dir, branch=self.branch, depth=1, single_branch=True
-                        ),
+                    await asyncio.to_thread(
+                        git.Repo.clone_from,
+                        self.repository_url,
+                        temp_dir,
+                        branch=self.branch,
+                        depth=1,
+                        single_branch=True
                     )
 
                     file_list = await self.get_repository_files(temp_dir)
@@ -129,13 +155,13 @@ class GitFileComponent(Component):
                         self.log(f"Found {len(file_list)} files")
                         build_config["selected_files"]["options"] = file_list
 
-            except git.exc.GitCommandError as e:
-                error_msg = f"Git error: {e!s}"
+            except GitCommandError as e:
+                error_msg = f"Git error: {e}"
                 self.log(error_msg)
                 build_config["selected_files"]["options"] = ["Error accessing branch"]
                 build_config["selected_files"]["value"] = []
             except OSError as e:
-                error_msg = f"Error listing files: {e!s}"
+                error_msg = f"Error listing files: {e}"
                 self.log(error_msg)
                 build_config["selected_files"]["options"] = ["Error listing files"]
                 build_config["selected_files"]["value"] = []
@@ -143,20 +169,23 @@ class GitFileComponent(Component):
         return build_config
 
     async def get_files_content(self) -> list[Data]:
+        """Get content of selected files from repository."""
         if not self.repository_url:
-            return [Data(data={"error": "Please enter a repository URL"})]
+            raise GitFileError("Please enter a repository URL")
         if not self.branch or self.branch == "Enter repository URL first":
-            return [Data(data={"error": "Please select a branch"})]
+            raise GitFileError("Please select a branch")
         if not self.selected_files:
-            return [Data(data={"error": "Please select at least one file"})]
+            raise GitFileError("Please select at least one file")
 
         try:
             async with self.temp_git_repo() as temp_dir:
-                await asyncio.get_event_loop().run_in_executor(
-                    None,
-                    lambda: git.Repo.clone_from(
-                        self.repository_url, temp_dir, branch=self.branch, depth=1, single_branch=True
-                    ),
+                await asyncio.to_thread(
+                    git.Repo.clone_from,
+                    self.repository_url,
+                    temp_dir,
+                    branch=self.branch,
+                    depth=1,
+                    single_branch=True
                 )
 
                 content_list = []
@@ -180,7 +209,7 @@ class GitFileComponent(Component):
                 self.status = content_list
                 return content_list
 
-        except (git.exc.GitCommandError, OSError) as e:
-            error_msg = f"Error getting files content: {e!s}"
+        except (GitCommandError, OSError) as e:
+            error_msg = f"Error getting files content: {e}"
             self.status = error_msg
-            return [Data(data={"error": error_msg})]
+            raise GitFileError(error_msg) from e
