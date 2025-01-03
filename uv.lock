@@ -3935,7 +3935,6 @@ dependencies = [
     { name = "composio-core" },
     { name = "composio-langchain" },
     { name = "crewai" },
-    { name = "crosshair-tool" },
     { name = "dspy-ai" },
     { name = "duckduckgo-search" },
     { name = "elasticsearch" },
@@ -4076,7 +4075,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "ag2", specifier = ">=0.1.0" },
+    { name = "ag2" },
     { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
     { name = "arize-phoenix-otel", specifier = ">=0.6.1" },
     { name = "assemblyai", specifier = "==0.35.1" },
@@ -4094,7 +4093,6 @@ requires-dist = [
     { name = "composio-langchain", specifier = "==0.6.7" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "crewai", specifier = "~=0.86.0" },
-    { name = "crosshair-tool", specifier = "==0.0.81" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
     { name = "dspy-ai", specifier = "==2.5.41" },
     { name = "duckduckgo-search", specifier = "==6.3.7" },
