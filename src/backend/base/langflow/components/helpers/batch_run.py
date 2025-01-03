@@ -1,5 +1,5 @@
-import asyncio
 from langchain_core.runnables import RunnableLambda
+
 from langflow.custom import Component
 from langflow.field_typing import LanguageModel
 from langflow.io import (
@@ -10,7 +10,6 @@ from langflow.io import (
     StrInput,
 )
 from langflow.schema import DataFrame
-from langflow.schema.message import Message
 
 
 class BatchRunComponent(Component):
@@ -59,8 +58,7 @@ class BatchRunComponent(Component):
     ]
 
     async def run_batch(self) -> DataFrame:
-        """
-        For each row in df[column_name], combine that text with system_message, then
+        """For each row in df[column_name], combine that text with system_message, then
         invoke the model asynchronously. Returns a new DataFrame of the same length,
         with columns 'text_input' and 'model_response'.
         """
@@ -102,16 +100,13 @@ class BatchRunComponent(Component):
 
         # Build the final data, each row has 'text_input' + 'model_response'
         rows = []
-        for original_text, response in zip(user_texts, responses):
+        for original_text, response in zip(user_texts, responses, strict=False):
             if hasattr(response, "content"):
                 resp_text = response.content
             else:
                 resp_text = str(response)
 
-            row = {
-                "text_input": original_text,
-                "model_response": resp_text
-            }
+            row = {"text_input": original_text, "model_response": resp_text}
             rows.append(row)
 
         # Convert to a new DataFrame
