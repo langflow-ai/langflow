@@ -301,7 +301,6 @@ async def update_flow(
         return db_flow
 
     except Exception as e:
-        await session.rollback()
         if hasattr(e, "errors"):
             raise HTTPException(status_code=400, detail=str(e)) from e
 
