@@ -145,7 +145,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
     [currentFlow?.name],
   );
 
-  const handleNameSubmit = () => {
+  const handleNameSubmit = useCallback(() => {
     if (flowName.trim() !== "" && flowName !== currentFlow?.name) {
       const newFlow = {
         ...currentFlow!,
@@ -160,7 +160,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
       setFlowName(currentFlow?.name ?? "");
     }
     setEditingName(false);
-  };
+  }, [flowName, currentFlow, setCurrentFlow, saveFlow, setSuccessData]);
 
   return currentFlow && onFlowPage ? (
     <div className="flex items-center justify-center gap-2 truncate">
