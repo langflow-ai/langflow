@@ -10,6 +10,7 @@ from .huggingface import HuggingFaceEndpointsComponent
 from .lmstudiomodel import LMStudioModelComponent
 from .maritalk import MaritalkModelComponent
 from .mistral import MistralAIModelComponent
+from .novita import NovitaModelComponent
 from .nvidia import NVIDIAModelComponent
 from .ollama import ChatOllamaComponent
 from .openai import OpenAIModelComponent
@@ -33,6 +34,7 @@ __all__ = [
     "MaritalkModelComponent",
     "MistralAIModelComponent",
     "NVIDIAModelComponent",
+    "NovitaModelComponent",
     "OpenAIModelComponent",
     "OpenRouterComponent",
     "PerplexityComponent",
