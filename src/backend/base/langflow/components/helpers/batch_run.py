@@ -1,3 +1,5 @@
+import asyncio
+from langchain_core.runnables import RunnableLambda
 from langflow.custom import Component
 from langflow.field_typing import LanguageModel
 from langflow.io import (
@@ -13,7 +15,11 @@ from langflow.schema.message import Message
 
 class BatchRunComponent(Component):
     display_name = "Batch Run"
-    description = "Runs a language model over each row of a DataFrame’s text column and returns a DataFrame containing one model response per row."
+    description = (
+        "Runs a language model over each row of a DataFrame’s text column and returns a new "
+        "DataFrame with two columns: 'text_input' (the original text) and 'model_response' "
+        "containing the model’s response."
+    )
     icon = "List"
     beta = True
 
@@ -27,7 +33,7 @@ class BatchRunComponent(Component):
         MultilineInput(
             name="system_message",
             display_name="System Message",
-            info="Multi-line system instruction for all items in the DataFrame.",
+            info="Multi-line system instruction for all rows in the DataFrame.",
             required=False,
         ),
         DataFrameInput(
@@ -48,46 +54,66 @@ class BatchRunComponent(Component):
             display_name="Batch Results",
             name="batch_results",
             method="run_batch",
-            info="A list of processed messages returned by the model, one per row in the chosen DataFrame column.",
+            info="A DataFrame with two columns: 'text_input' and 'model_response'.",
         ),
     ]
 
-    def run_batch(self) -> DataFrame:
-        """For each row in df[column_name], combine that text with system_message
-        and invoke the model, returning a list of responses as Langflow Messages.
+    async def run_batch(self) -> DataFrame:
         """
-        # Retrieve inputs
+        For each row in df[column_name], combine that text with system_message, then
+        invoke the model asynchronously. Returns a new DataFrame of the same length,
+        with columns 'text_input' and 'model_response'.
+        """
         model: LanguageModel = self.model
-        system_msg: str = self.system_message or ""
+        system_msg = self.system_message or ""
         df: DataFrame = self.df
-        col_name: str = self.column_name or "text"
+        col_name = self.column_name or "text"
 
         if col_name not in df.columns:
             raise ValueError(f"Column '{col_name}' not found in the DataFrame.")
 
-        # We'll treat each row's text as a user message
+        # Convert the specified column to a list of strings
         user_texts = df[col_name].astype(str).tolist()
 
-        results: list[Message] = []
+        # 1) Synchronous fallback
+        def invoke_model_sync(conversation):
+            return model.invoke(conversation)
 
-        for text in user_texts:
-            # Build conversation array: system + user
-            conversation = []
-            if system_msg:
-                conversation.append({"role": "system", "content": system_msg})
-            conversation.append({"role": "user", "content": text})
+        # 2) Asynchronous usage
+        async def invoke_model_async(conversation):
+            return await model.ainvoke(conversation)
 
-            # Invoke the model
-            response = model.invoke(conversation)
+        # Build a RunnableLambda with both sync and async
+        runnable = RunnableLambda(func=invoke_model_sync, afunc=invoke_model_async)
 
-            # Convert response to a Langflow Message
+        # Prepare the batch of conversations
+        conversations = [
+            [{"role": "system", "content": system_msg}, {"role": "user", "content": text}]
+            if system_msg
+            else [{"role": "user", "content": text}]
+            for text in user_texts
+        ]
+
+        # Process the batch asynchronously
+        async def process_batch():
+            return await runnable.abatch(conversations)
+
+        responses = await process_batch()
+
+        # Build the final data, each row has 'text_input' + 'model_response'
+        rows = []
+        for original_text, response in zip(user_texts, responses):
             if hasattr(response, "content"):
-                # If the model returns an object with .content (e.g. AIMessage)
-                new_message = Message(text=response.content)
+                resp_text = response.content
             else:
-                # Otherwise assume it's raw text or a dict
-                new_message = Message(text=str(response))
+                resp_text = str(response)
 
-            results.append(new_message)
+            row = {
+                "text_input": original_text,
+                "model_response": resp_text
+            }
+            rows.append(row)
 
-        return DataFrame(results)
+        # Convert to a new DataFrame
+        results_df = DataFrame(rows)  # Langflow DataFrame from a list of dicts
+        return results_df
