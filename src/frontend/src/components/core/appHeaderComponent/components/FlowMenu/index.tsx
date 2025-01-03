@@ -132,15 +132,18 @@ export const MenuBar = ({}: {}): JSX.Element => {
     [],
   );
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Escape") {
-      setEditingName(false);
-      setFlowName(currentFlow?.name ?? "");
-    }
-    if (e.key === "Enter") {
-      nameInputRef.current?.blur();
-    }
-  };
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Escape") {
+        setEditingName(false);
+        setFlowName(currentFlow?.name ?? "");
+      }
+      if (e.key === "Enter") {
+        nameInputRef.current?.blur();
+      }
+    },
+    [currentFlow?.name],
+  );
 
   const handleNameSubmit = () => {
     if (flowName.trim() !== "" && flowName !== currentFlow?.name) {
