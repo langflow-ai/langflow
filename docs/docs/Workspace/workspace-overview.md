@@ -1,6 +1,5 @@
 ---
 title: Workspace concepts
-sidebar_position: 1
 slug: /workspace-overview
 ---
 
