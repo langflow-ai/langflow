@@ -3,15 +3,15 @@ import pprint
 from enum import Enum
 
 import yfinance as yf
-from langchain.tools import StructuredTool
 from langchain_core.tools import ToolException
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.field_typing import Tool
+from langflow.custom import Component
 from langflow.inputs import DropdownInput, IntInput, MessageTextInput
+from langflow.io import Output
 from langflow.schema import Data
+from langflow.schema.message import Message
 
 
 class YahooFinanceMethod(Enum):
@@ -48,7 +48,7 @@ class YahooFinanceSchema(BaseModel):
     num_news: int | None = Field(5, description="The number of news articles to retrieve.")
 
 
-class YfinanceToolComponent(LCToolComponent):
+class YfinanceToolComponent(Component):
     display_name = "Yahoo Finance"
     description = """Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) \
 to access financial data and market information from Yahoo Finance."""
@@ -60,6 +60,7 @@ to access financial data and market information from Yahoo Finance."""
             name="symbol",
             display_name="Stock Symbol",
             info="The stock symbol to retrieve data for (e.g., AAPL, GOOG).",
+            tool_mode=True,
         ),
         DropdownInput(
             name="method",
@@ -76,20 +77,28 @@ to access financial data and market information from Yahoo Finance."""
         ),
     ]
 
+    outputs = [
+        Output(display_name="Data", name="data", method="fetch_content"),
+        Output(display_name="Text", name="text", method="fetch_content_text"),
+    ]
+
     def run_model(self) -> list[Data]:
+        return self.fetch_content()
+
+    def fetch_content(self) -> list[Data]:
         return self._yahoo_finance_tool(
             self.symbol,
-            self.method,
+            YahooFinanceMethod(self.method),
             self.num_news,
         )
 
-    def build_tool(self) -> Tool:
-        return StructuredTool.from_function(
-            name="yahoo_finance",
-            description="Access financial data and market information from Yahoo Finance.",
-            func=self._yahoo_finance_tool,
-            args_schema=YahooFinanceSchema,
-        )
+    def fetch_content_text(self) -> Message:
+        data = self.fetch_content()
+        result_string = ""
+        for item in data:
+            result_string += item.text + "\n"
+        self.status = result_string
+        return Message(text=result_string)
 
     def _yahoo_finance_tool(
         self,
@@ -110,9 +119,12 @@ to access financial data and market information from Yahoo Finance."""
             result = pprint.pformat(result)
 
             if method == YahooFinanceMethod.GET_NEWS:
-                data_list = [Data(data=article) for article in ast.literal_eval(result)]
+                data_list = [
+                    Data(text=f"{article['title']}: {article['link']}", data=article)
+                    for article in ast.literal_eval(result)
+                ]
             else:
-                data_list = [Data(data={"result": result})]
+                data_list = [Data(text=result, data={"result": result})]
 
         except Exception as e:
             error_message = f"Error retrieving data: {e}"
