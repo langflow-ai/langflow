@@ -93,3 +93,11 @@ def create_default_event_manager(queue):
     manager.register_event("on_build_start", "build_start")
     manager.register_event("on_build_end", "build_end")
     return manager
+
+
+def create_stream_tokens_event_manager(queue):
+    manager = EventManager(queue)
+    manager.register_event("on_message", "add_message")
+    manager.register_event("on_token", "token")
+    manager.register_event("on_end", "end")
+    return manager

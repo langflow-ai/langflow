@@ -726,6 +726,7 @@ class Graph:
         stream: bool,
         session_id: str,
         fallback_to_env_vars: bool,
+        event_manager: EventManager | None = None,
     ) -> list[ResultData | None]:
         """Runs the graph with the given inputs.
 
@@ -737,6 +738,7 @@ class Graph:
             stream (bool): Whether to stream the results or not.
             session_id (str): The session ID for the graph.
             fallback_to_env_vars (bool): Whether to fallback to environment variables.
+            event_manager (EventManager | None): The event manager for the graph.
 
         Returns:
             List[Optional["ResultData"]]: The outputs of the graph.
@@ -770,7 +772,11 @@ class Graph:
         try:
             # Prioritize the webhook component if it exists
             start_component_id = find_start_component_id(self._is_input_vertices)
-            await self.process(start_component_id=start_component_id, fallback_to_env_vars=fallback_to_env_vars)
+            await self.process(
+                start_component_id=start_component_id,
+                fallback_to_env_vars=fallback_to_env_vars,
+                event_manager=event_manager,
+            )
             self.increment_run_count()
         except Exception as exc:
             self._end_all_traces_async(error=exc)
@@ -804,6 +810,7 @@ class Graph:
         session_id: str | None = None,
         stream: bool = False,
         fallback_to_env_vars: bool = False,
+        event_manager: EventManager | None = None,
     ) -> list[RunOutputs]:
         """Runs the graph with the given inputs.
 
@@ -815,6 +822,7 @@ class Graph:
             session_id (Optional[str], optional): The session ID for the graph. Defaults to None.
             stream (bool, optional): Whether to stream the results or not. Defaults to False.
             fallback_to_env_vars (bool, optional): Whether to fallback to environment variables. Defaults to False.
+            event_manager (EventManager | None): The event manager for the graph.
 
         Returns:
             List[RunOutputs]: The outputs of the graph.
@@ -847,6 +855,7 @@ class Graph:
                 stream=stream,
                 session_id=session_id or "",
                 fallback_to_env_vars=fallback_to_env_vars,
+                event_manager=event_manager,
             )
             run_output_object = RunOutputs(inputs=run_inputs, outputs=run_outputs)
             logger.debug(f"Run outputs: {run_output_object}")
@@ -1495,7 +1504,13 @@ class Graph:
                 vertices.append(vertex)
         return vertices
 
-    async def process(self, *, fallback_to_env_vars: bool, start_component_id: str | None = None) -> Graph:
+    async def process(
+        self,
+        *,
+        fallback_to_env_vars: bool,
+        start_component_id: str | None = None,
+        event_manager: EventManager | None = None,
+    ) -> Graph:
         """Processes the graph with vertices in each layer run in parallel."""
         first_layer = self.sort_vertices(start_component_id=start_component_id)
         vertex_task_run_count: dict[str, int] = {}
@@ -1521,6 +1536,7 @@ class Graph:
                         fallback_to_env_vars=fallback_to_env_vars,
                         get_cache=chat_service.get_cache,
                         set_cache=chat_service.set_cache,
+                        event_manager=event_manager,
                     ),
                     name=f"{vertex.display_name} Run {vertex_task_run_count.get(vertex_id, 0)}",
                 )
