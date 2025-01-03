@@ -143,7 +143,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         StrInput(
             name="deletion_field",
             display_name="Deletion Based On Field",
-            info="When this parameter is provided, documents in the target collection with metadata field values matching the input metadata field value will be deleted before new data is loaded.",
+            info="When this parameter is provided, documents in the target collection with "
+            "metadata field values matching the input metadata field value will be deleted "
+            "before new data is loaded.",
             advanced=True,
         ),
         BoolInput(
@@ -575,7 +577,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Bundle up the auto-detect parameters
         autodetect_params = {
-            "autodetect_collection": not is_new_collection,  # TODO: May want to expose this option
+            # TODO: May want to expose this option
+            "autodetect_collection": not is_new_collection,
             "content_field": self.content_field or None,
             "ignore_invalid_documents": self.ignore_invalid_documents,
         }
@@ -618,7 +621,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             try:
                 database = self.get_database()
                 collection = database.get_collection(self.get_collection_choice(), keyspace=self.keyspace or None)
-                delete_values = list(set(doc.metadata[self.deletion_field] for doc in documents))
+                delete_values = list({doc.metadata[self.deletion_field] for doc in documents})
                 self.log(f"Deleting documents where {self.deletion_field} matches {delete_values}.")
                 collection.delete_many({f"metadata.{self.deletion_field}": {"$in": delete_values}})
             except Exception as e:
