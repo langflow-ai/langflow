@@ -3,7 +3,6 @@ import os
 import shutil
 import tempfile
 from contextlib import asynccontextmanager
-from typing import Optional
 
 import anyio
 import git
@@ -16,14 +15,13 @@ from langflow.schema import Data
 
 class GitFileError(Exception):
     """Base exception for GitFile component errors."""
-    pass
 
 
 class GitFileComponent(Component):
     display_name = "GitFile"
     description = "Analyzes a Git repository and returns the content of selected files from specified branch"
     icon = "GitLoader"
-    
+
     inputs = [
         MessageTextInput(
             name="repository_url",
@@ -50,7 +48,7 @@ class GitFileComponent(Component):
             required=True,
         ),
     ]
-    
+
     outputs = [
         Output(display_name="Files Content", name="files_content", method="get_files_content"),
     ]
@@ -94,12 +92,7 @@ class GitFileComponent(Component):
         """Get list of branches in repository."""
         try:
             async with self.temp_git_repo() as temp_dir:
-                repo = await asyncio.to_thread(
-                    git.Repo.clone_from,
-                    repo_url,
-                    temp_dir,
-                    no_checkout=True
-                )
+                repo = await asyncio.to_thread(git.Repo.clone_from, repo_url, temp_dir, no_checkout=True)
                 await asyncio.to_thread(repo.remote().fetch)
                 branches = []
 
@@ -115,7 +108,7 @@ class GitFileComponent(Component):
             self.log(f"Error getting branches: {e}")
             return ["main", "master"]
 
-    async def update_build_config(self, build_config: dict, field_value: str, field_name: Optional[str] = None) -> dict:
+    async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Update component build configuration."""
         if not self.repository_url:
             build_config["branch"]["options"] = ["Enter repository URL first"]
@@ -143,7 +136,7 @@ class GitFileComponent(Component):
                         temp_dir,
                         branch=self.branch,
                         depth=1,
-                        single_branch=True
+                        single_branch=True,
                     )
 
                     file_list = await self.get_repository_files(temp_dir)
@@ -180,12 +173,7 @@ class GitFileComponent(Component):
         try:
             async with self.temp_git_repo() as temp_dir:
                 await asyncio.to_thread(
-                    git.Repo.clone_from,
-                    self.repository_url,
-                    temp_dir,
-                    branch=self.branch,
-                    depth=1,
-                    single_branch=True
+                    git.Repo.clone_from, self.repository_url, temp_dir, branch=self.branch, depth=1, single_branch=True
                 )
 
                 content_list = []
