@@ -1,6 +1,5 @@
 ---
 title: Data & Message
-sidebar_position: 2
 slug: /guides-data-message
 ---
 
