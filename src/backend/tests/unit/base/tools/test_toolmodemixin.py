@@ -118,7 +118,7 @@ class AllInputsComponent(Component):
         return data
 
 
-async def test_component_inputs_toolkit():
+def test_component_inputs_toolkit():
     component = AllInputsComponent()
     component_toolkit = ComponentToolkit(component=component)
     component_tool = component_toolkit.get_tools()[0]
