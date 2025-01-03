@@ -10,11 +10,13 @@ type DropdownComponentProps = {
   flowData: FlowType;
   setOpenDelete: (open: boolean) => void;
   handlePlaygroundClick?: () => void;
+  handleEdit: () => void;
 };
 
 const DropdownComponent = ({
   flowData,
   setOpenDelete,
+  handleEdit,
 }: DropdownComponentProps) => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -29,17 +31,32 @@ const DropdownComponent = ({
     downloadFlow(flowData, flowData.name, flowData.description);
     setSuccessData({ title: `${flowData.name} exported successfully` });
   };
-
   const { handleSelectOptionsChange } = useSelectOptionsChange(
     [flowData.id],
     setErrorData,
     setOpenDelete,
     handleDuplicate,
     handleExport,
+    handleEdit,
   );
 
   return (
     <>
+      <DropdownMenuItem
+        onClick={(e) => {
+          e.stopPropagation();
+          handleSelectOptionsChange("edit");
+        }}
+        className="cursor-pointer"
+        data-testid="btn-edit-flow"
+      >
+        <ForwardedIconComponent
+          name="SquarePen"
+          aria-hidden="true"
+          className="mr-2 h-4 w-4"
+        />
+        Edit details
+      </DropdownMenuItem>
       <DropdownMenuItem
         onClick={(e) => {
           e.stopPropagation();
