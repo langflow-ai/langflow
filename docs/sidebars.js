@@ -85,26 +85,6 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Components",
-      items: [
-        "Components/components-overview",
-        "Components/components-agents",
-        "Components/components-custom-components",
-        "Components/components-data",
-        "Components/components-embedding-models",
-        "Components/components-helpers",
-        "Components/components-io",
-        "Components/components-loaders",
-        "Components/components-logic",
-        "Components/components-memories",
-        "Components/components-models",
-        "Components/components-prompts",
-        "Components/components-tools",
-        "Components/components-vector-stores",
-      ],
-    },
-    {
-      type: "category",
       label: "Deployment",
       items: [
         "Deployment/deployment-docker",

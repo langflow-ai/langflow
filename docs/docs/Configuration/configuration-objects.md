@@ -155,9 +155,9 @@ message = Message(
 
 ## DataFrame object
 
-The `DataFrame` class is a custom extension of the pandas' [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) class, specifically designed to work seamlessly with Langflow's `Data` objects. The class includes methods for converting between `DataFrame` and lists of `Data` objects.
+The `DataFrame` class is a custom extension of the Pandas [DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) class, specifically designed to work seamlessly with Langflow's `Data` objects. The class includes methods for converting between `DataFrame` and lists of `Data` objects.
 
-A `DataFrame` object accepts various input formats, including lists of `Data` objects, dictionaries, and existing pandas DataFrames.
+A `DataFrame` object accepts various input formats, including lists of `Data` objects, dictionaries, and existing `DataFrames`.
 
 ### Create a DataFrame object
 
