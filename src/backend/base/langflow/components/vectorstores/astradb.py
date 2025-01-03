@@ -140,6 +140,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             info="Field to use as the text content field for the vector store.",
             advanced=True,
         ),
+        StrInput(
+            name="deletion_field",
+            display_name="Deletion Based On Field",
+            info="When this parameter is provided, documents in the target collection with metadata field values matching the input metadata field value will be deleted before new data is loaded.",
+            advanced=True,
+        ),
         BoolInput(
             name="ignore_invalid_documents",
             display_name="Ignore Invalid Documents",
@@ -598,7 +604,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         return vector_store
 
-    def _add_documents_to_vector_store(self, vector_store) -> None:
+    def _add_documents_to_vector_store(self, vector_store : AstraDBVectorStore) -> None:
         documents = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):
@@ -606,6 +612,18 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             else:
                 msg = "Vector Store Inputs must be Data objects."
                 raise TypeError(msg)
+
+        if self.deletion_field:
+            self.log(f"Deleting documents where {self.deletion_field}")
+            try:
+                database = self.get_database()
+                collection = database.get_collection(self.get_collection_choice(), keyspace=self.keyspace or None)
+                delete_values = list(set(doc.metadata[self.deletion_field] for doc in documents))
+                self.log(f"Deleting documents where {self.deletion_field} matches {delete_values}.")
+                collection.delete_many({f"metadata.{self.deletion_field}": {"$in": delete_values}})
+            except Exception as e:
+                msg = f"Error deleting documents from AstraDBVectorStore: {e}"
+                raise ValueError(msg) from e
 
         if documents:
             self.log(f"Adding {len(documents)} documents to the Vector Store.")
