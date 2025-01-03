@@ -13,6 +13,7 @@ from langflow.api.v1 import (
     monitor_router,
     starter_projects_router,
     store_router,
+    tasks_router,
     users_router,
     validate_router,
     variables_router,
@@ -35,6 +36,8 @@ router.include_router(files_router)
 router.include_router(monitor_router)
 router.include_router(folders_router)
 router.include_router(starter_projects_router)
+router.include_router(tasks_router)
+
 
 if get_settings_service().settings.mcp_server_enabled:
     router.include_router(mcp_router)

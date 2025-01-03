@@ -9,6 +9,7 @@ from langflow.api.v1.mcp import router as mcp_router
 from langflow.api.v1.monitor import router as monitor_router
 from langflow.api.v1.starter_projects import router as starter_projects_router
 from langflow.api.v1.store import router as store_router
+from langflow.api.v1.tasks import router as tasks_router
 from langflow.api.v1.users import router as users_router
 from langflow.api.v1.validate import router as validate_router
 from langflow.api.v1.variable import router as variables_router
@@ -25,6 +26,7 @@ __all__ = [
     "monitor_router",
     "starter_projects_router",
     "store_router",
+    "tasks_router",
     "users_router",
     "validate_router",
     "variables_router",
