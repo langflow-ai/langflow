@@ -185,7 +185,11 @@ class ComponentToolkit:
             args_schema = None
             tool_mode_inputs = [_input for _input in self.component.inputs if getattr(_input, "tool_mode", False)]
             if flow_mode_inputs:
-                args_schema = create_input_schema_from_dict(flow_mode_inputs)
+                args_schema = create_input_schema_from_dict(
+                    inputs=flow_mode_inputs,
+                    param_key="flow_tweak_data",
+                    description="Values for the flow",
+                )
             elif output.required_inputs:
                 inputs = [
                     self.component._inputs[input_name]

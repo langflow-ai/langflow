@@ -47,14 +47,23 @@ class RunFlowComponent(RunFlowBaseComponent):
         tweaks: dict = {}
 
         flow_name_selected = self._attributes.get("flow_name_selected")
+        import pdb; pdb.set_trace()
 
-        for field in self._attributes:
-            if field not in self.default_keys and "|" in field:
+        if self.flow_tweak_data:
+            for field, value in self.flow_tweak_data.items():
                 [node, name] = field.split("|")
+                if field not in tweaks:
+                    tweaks[field] = {}
+                tweaks[field][name] = value
+        else:
+            for field in self._attributes:
+                if field not in self.default_keys and "|" in field:
+                    [node, name] = field.split("|")
                 if node not in tweaks:
                     tweaks[node] = {}
                 tweaks[node][name] = self._attributes[field]
         # tweaks= {"ChatInput-xNZ0a": {"input_value": "add 1+1"}}
+        
         run_outputs = await run_flow(
             inputs=None,
             output_type="all",
