@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import inspect
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
 from copy import deepcopy
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, get_type_hints
@@ -22,10 +22,13 @@ from langflow.base.tools.constants import (
     TOOLS_METADATA_INPUT_NAME,
 )
 from langflow.custom.tree_visitor import RequiredInputsVisitor
+from langflow.events.event_manager import EventManager
 from langflow.exceptions.component import StreamingError
 from langflow.field_typing import Tool  # noqa: TC001 Needed by _add_toolkit_output
+from langflow.graph.edge.schema import EdgeData
 from langflow.graph.state.model import create_state_model
 from langflow.helpers.custom import format_type
+from langflow.inputs.inputs import InputTypes
 from langflow.memory import astore_message, aupdate_messages, delete_message
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
@@ -891,10 +894,11 @@ class Component(CustomComponent):
             self._append_tool_to_outputs_map()
 
     def _get_outputs_to_process(self):
+        vertex = self._vertex
         return [
             output
             for output in self._outputs_map.values()
-            if not self._vertex or not self._vertex.outgoing_edges or output.name in self._vertex.edges_source_names
+            if not vertex or not vertex.outgoing_edges or output.name in vertex.edges_source_names
         ]
 
     async def _get_output_result(self, output):
