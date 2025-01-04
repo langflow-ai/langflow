@@ -152,24 +152,24 @@ jobs:
 
           if [[ "${{ inputs.release_type }}" == "base" || "${{ inputs.release_type }}" == "nightly-base" ]]; then
             # LANGFLOW-BASE RELEASE
-            echo "docker_tags=langflowai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
-            echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:base-latest" >> $GITHUB_OUTPUT
+            echo "docker_tags=langflowai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:base-latest,langflowai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }}-amd64,langflowai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }}-arm64,langflowai/langflow${nightly_suffix}:base-latest-amd64,langflowai/langflow${nightly_suffix}:base-latest-arm64" >> $GITHUB_OUTPUT
+            echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:base-latest,ghcr.io/langflow-ai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }}-amd64,ghcr.io/langflow-ai/langflow${nightly_suffix}:base-${{ needs.get-version.outputs.version }}-arm64,ghcr.io/langflow-ai/langflow${nightly_suffix}:base-latest-amd64,ghcr.io/langflow-ai/langflow${nightly_suffix}:base-latest-arm64" >> $GITHUB_OUTPUT
             echo "file=./docker/build_and_push_base.Dockerfile" >> $GITHUB_OUTPUT
           else
             if [[ "${{ inputs.pre_release }}" == "true" ]]; then
               # LANGFLOW-MAIN PRE-RELEASE
-              echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}" >> $GITHUB_OUTPUT
-              echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}" >> $GITHUB_OUTPUT
+              echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}-amd64,langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}-arm64" >> $GITHUB_OUTPUT
+              echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}-amd64,ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}-arm64" >> $GITHUB_OUTPUT
               echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
             elif [[ "${{ inputs.release_type }}" == "main-ep" ]]; then
               # LANGFLOW-MAIN (ENTRYPOINT) RELEASE
-              echo "docker_tags=langflowai/langflow-ep${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow-ep${nightly_suffix}:latest" >> $GITHUB_OUTPUT
-              echo "ghcr_tags=ghcr.io/langflow-ai/langflow-ep${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow-ep${nightly_suffix}:latest" >> $GITHUB_OUTPUT
+              echo "docker_tags=langflowai/langflow-ep${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow-ep${nightly_suffix}:latest,langflowai/langflow-ep${nightly_suffix}:${{ needs.get-version.outputs.version }}-amd64,langflowai/langflow-ep${nightly_suffix}:${{ needs.get-version.outputs.version }}-arm64,langflowai/langflow-ep${nightly_suffix}:latest-amd64,langflowai/langflow-ep${nightly_suffix}:latest-arm64" >> $GITHUB_OUTPUT
+              echo "ghcr_tags=ghcr.io/langflow-ai/langflow-ep${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow-ep${nightly_suffix}:latest,ghcr.io/langflow-ai/langflow-ep${nightly_suffix}:${{ needs.get-version.outputs.version }}-amd64,ghcr.io/langflow-ai/langflow-ep${nightly_suffix}:${{ needs.get-version.outputs.version }}-arm64,ghcr.io/langflow-ai/langflow-ep${nightly_suffix}:latest-amd64,ghcr.io/langflow-ai/langflow-ep${nightly_suffix}:latest-arm64" >> $GITHUB_OUTPUT
               echo "file=./docker/build_and_push_ep.Dockerfile" >> $GITHUB_OUTPUT
             elif [[ "${{ inputs.release_type }}" == "main" || "${{ inputs.release_type }}" == "nightly-main" ]]; then
               # LANGFLOW-MAIN RELEASE
-              echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
-              echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:latest" >> $GITHUB_OUTPUT
+              echo "docker_tags=langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},langflowai/langflow${nightly_suffix}:latest,langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}-amd64,langflowai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}-arm64,langflowai/langflow${nightly_suffix}:latest-amd64,langflowai/langflow${nightly_suffix}:latest-arm64" >> $GITHUB_OUTPUT
+              echo "ghcr_tags=ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }},ghcr.io/langflow-ai/langflow${nightly_suffix}:latest,ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}-amd64,ghcr.io/langflow-ai/langflow${nightly_suffix}:${{ needs.get-version.outputs.version }}-arm64,ghcr.io/langflow-ai/langflow${nightly_suffix}:latest-amd64,ghcr.io/langflow-ai/langflow${nightly_suffix}:latest-arm64" >> $GITHUB_OUTPUT
               echo "file=./docker/build_and_push.Dockerfile" >> $GITHUB_OUTPUT
             else
               echo "Invalid release type. Exiting the workflow."
@@ -179,6 +179,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     needs: [get-version, setup]
+    strategy:
+      matrix:
+        platform: [linux/amd64, linux/arm64]
     steps:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
@@ -211,7 +214,7 @@ jobs:
           push: true
           file: ${{ needs.setup.outputs.file }}
           tags: ${{ needs.setup.outputs.docker_tags }}
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -229,7 +232,7 @@ jobs:
           push: true
           file: ${{ needs.setup.outputs.file }}
           tags: ${{ needs.setup.outputs.ghcr_tags }}
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
