@@ -1,3 +1,4 @@
+import { FlowType } from "@/types/flow";
 import { FolderType } from "../../../pages/MainPage/entities";
 
 export type FoldersStoreType = {
@@ -11,4 +12,6 @@ export type FoldersStoreType = {
   setFolderIdDragging: (id: string) => void;
   starterProjectId: string;
   setStarterProjectId: (id: string) => void;
+  folders: FolderType[];
+  setFolders: (folders: FolderType[]) => void;
 };

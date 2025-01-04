@@ -1,16 +1,15 @@
-import time
+import asyncio
 from uuid import UUID, uuid4
 
 import pytest
 from fastapi import status
-from fastapi.testclient import TestClient
-
+from httpx import AsyncClient
 from langflow.custom.directory_reader.directory_reader import DirectoryReader
 from langflow.services.deps import get_settings_service
 
 
-def run_post(client, flow_id, headers, post_data):
-    response = client.post(
+async def run_post(client, flow_id, headers, post_data):
+    response = await client.post(
         f"api/v1/process/{flow_id}",
         headers=headers,
         json=post_data,
@@ -20,15 +19,15 @@ def run_post(client, flow_id, headers, post_data):
 
 
 # Helper function to poll task status
-def poll_task_status(client, headers, href, max_attempts=20, sleep_time=1):
+async def poll_task_status(client, headers, href, max_attempts=20, sleep_time=1):
     for _ in range(max_attempts):
-        task_status_response = client.get(
+        task_status_response = await client.get(
             href,
             headers=headers,
         )
         if task_status_response.status_code == 200 and task_status_response.json()["status"] == "SUCCESS":
             return task_status_response.json()
-        time.sleep(sleep_time)
+        await asyncio.sleep(sleep_time)
     return None  # Return None if task did not complete in time
 
 
@@ -109,159 +108,9 @@ PROMPT_REQUEST = {
 }
 
 
-# def test_process_flow_invalid_api_key(client, flow, monkeypatch):
-#     # Mock de process_graph_cached
-#     from langflow.api.v1 import endpoints
-#     from langflow.services.database.models.api_key import crud
-
-#     settings_service = get_settings_service()
-#     settings_service.auth_settings.AUTO_LOGIN = False
-
-#     async def mock_process_graph_cached(*args, **kwargs):
-#         return Result(result={}, session_id="session_id_mock")
-
-#     def mock_update_total_uses(*args, **kwargs):
-#         return created_api_key
-
-#     monkeypatch.setattr(endpoints, "process_graph_cached", mock_process_graph_cached)
-#     monkeypatch.setattr(crud, "update_total_uses", mock_update_total_uses)
-
-#     headers = {"x-api-key": "invalid_api_key"}
-
-#     post_data = {
-#         "inputs": {"key": "value"},
-#         "tweaks": None,
-#         "clear_cache": False,
-#         "session_id": None,
-#     }
-
-#     response = client.post(f"api/v1/process/{flow.id}", headers=headers, json=post_data)
-
-#     assert response.status_code == 403
-#     assert response.json() == {"detail": "Invalid or missing API key"}
-
-
-# def test_process_flow_invalid_id(client, monkeypatch, created_api_key):
-#     async def mock_process_graph_cached(*args, **kwargs):
-#         return Result(result={}, session_id="session_id_mock")
-
-#     from langflow.api.v1 import endpoints
-
-#     monkeypatch.setattr(endpoints, "process_graph_cached", mock_process_graph_cached)
-
-#     api_key = created_api_key.api_key
-#     headers = {"x-api-key": api_key}
-
-#     post_data = {
-#         "inputs": {"key": "value"},
-#         "tweaks": None,
-#         "clear_cache": False,
-#         "session_id": None,
-#     }
-
-#     invalid_id = uuid.uuid4()
-#     response = client.post(f"api/v1/process/{invalid_id}", headers=headers, json=post_data)
-
-#     assert response.status_code == 404
-#     assert f"Flow {invalid_id} not found" in response.json()["detail"]
-
-
-# def test_process_flow_without_autologin(client, flow, monkeypatch, created_api_key):
-#     # Mock de process_graph_cached
-#     from langflow.api.v1 import endpoints
-#     from langflow.services.database.models.api_key import crud
-
-#     settings_service = get_settings_service()
-#     settings_service.auth_settings.AUTO_LOGIN = False
-
-#     async def mock_process_graph_cached(*args, **kwargs):
-#         return Result(result={}, session_id="session_id_mock")
-
-#     def mock_process_graph_cached_task(*args, **kwargs):
-#         return Result(result={}, session_id="session_id_mock")
-
-#     # The task function is ran like this:
-#     # if not self.use_celery:
-#     #     return None, await task_func(*args, **kwargs)
-#     # if not hasattr(task_func, "apply"):
-#     #     raise ValueError(f"Task function {task_func} does not have an apply method")
-#     # task = task_func.apply(args=args, kwargs=kwargs)
-#     # result = task.get()
-#     # return task.id, result
-#     # So we need to mock the task function to return a task object
-#     # and then mock the task object to return a result
-#     # maybe a named tuple would be better here
-#     task = namedtuple("task", ["id", "get"])
-#     mock_process_graph_cached_task.apply = lambda *args, **kwargs: task(
-#         id="task_id_mock", get=lambda: Result(result={}, session_id="session_id_mock")
-#     )
-
-#     def mock_update_total_uses(*args, **kwargs):
-#         return created_api_key
-
-#     monkeypatch.setattr(endpoints, "process_graph_cached", mock_process_graph_cached)
-#     monkeypatch.setattr(crud, "update_total_uses", mock_update_total_uses)
-#     monkeypatch.setattr(endpoints, "process_graph_cached_task", mock_process_graph_cached_task)
-
-#     api_key = created_api_key.api_key
-#     headers = {"x-api-key": api_key}
-
-#     # Dummy POST data
-#     post_data = {
-#         "inputs": {"input": "value"},
-#         "tweaks": None,
-#         "clear_cache": False,
-#         "session_id": None,
-#     }
-
-#     # Make the request to the FastAPI TestClient
-
-#     response = client.post(f"api/v1/process/{flow.id}", headers=headers, json=post_data)
-
-#     # Check the response
-#     assert response.status_code == 200, response.json()
-#     assert response.json()["result"] == {}, response.json()
-#     assert response.json()["session_id"] == "session_id_mock", response.json()
-
-
-# def test_process_flow_fails_autologin_off(client, flow, monkeypatch):
-#     # Mock de process_graph_cached
-#     from langflow.api.v1 import endpoints
-#     from langflow.services.database.models.api_key import crud
-
-#     settings_service = get_settings_service()
-#     settings_service.auth_settings.AUTO_LOGIN = False
-
-#     async def mock_process_graph_cached(*args, **kwargs):
-#         return Result(result={}, session_id="session_id_mock")
-
-#     async def mock_update_total_uses(*args, **kwargs):
-#         return created_api_key
-
-#     monkeypatch.setattr(endpoints, "process_graph_cached", mock_process_graph_cached)
-#     monkeypatch.setattr(crud, "update_total_uses", mock_update_total_uses)
-
-#     headers = {"x-api-key": "api_key"}
-
-#     # Dummy POST data
-#     post_data = {
-#         "inputs": {"key": "value"},
-#         "tweaks": None,
-#         "clear_cache": False,
-#         "session_id": None,
-#     }
-
-#     # Make the request to the FastAPI TestClient
-
-#     response = client.post(f"api/v1/process/{flow.id}", headers=headers, json=post_data)
-
-#     # Check the response
-#     assert response.status_code == 403, response.json()
-#     assert response.json() == {"detail": "Invalid or missing API key"}
-
-
-def test_get_all(client: TestClient, logged_in_headers):
-    response = client.get("api/v1/all", headers=logged_in_headers)
+@pytest.mark.benchmark
+async def test_get_all(client: AsyncClient, logged_in_headers):
+    response = await client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
     settings = get_settings_service().settings
     dir_reader = DirectoryReader(settings.components_path[0])
@@ -278,7 +127,7 @@ def test_get_all(client: TestClient, logged_in_headers):
     assert "ChatOutput" in json_response["outputs"]
 
 
-def test_post_validate_code(client: TestClient):
+async def test_post_validate_code(client: AsyncClient):
     # Test case with a valid import and function
     code1 = """
 import math
@@ -286,7 +135,7 @@ import math
 def square(x):
     return x ** 2
 """
-    response1 = client.post("api/v1/validate/code", json={"code": code1})
+    response1 = await client.post("api/v1/validate/code", json={"code": code1})
     assert response1.status_code == 200
     assert response1.json() == {"imports": {"errors": []}, "function": {"errors": []}}
 
@@ -297,7 +146,7 @@ import non_existent_module
 def square(x):
     return x ** 2
 """
-    response2 = client.post("api/v1/validate/code", json={"code": code2})
+    response2 = await client.post("api/v1/validate/code", json={"code": code2})
     assert response2.status_code == 200
     assert response2.json() == {
         "imports": {"errors": ["No module named 'non_existent_module'"]},
@@ -311,7 +160,7 @@ import math
 def square(x)
     return x ** 2
 """
-    response3 = client.post("api/v1/validate/code", json={"code": code3})
+    response3 = await client.post("api/v1/validate/code", json={"code": code3})
     assert response3.status_code == 200
     assert response3.json() == {
         "imports": {"errors": []},
@@ -319,11 +168,11 @@ def square(x)
     }
 
     # Test case with invalid JSON payload
-    response4 = client.post("api/v1/validate/code", json={"invalid_key": code1})
+    response4 = await client.post("api/v1/validate/code", json={"invalid_key": code1})
     assert response4.status_code == 422
 
     # Test case with an empty code string
-    response5 = client.post("api/v1/validate/code", json={"code": ""})
+    response5 = await client.post("api/v1/validate/code", json={"code": ""})
     assert response5.status_code == 200
     assert response5.json() == {"imports": {"errors": []}, "function": {"errors": []}}
 
@@ -334,7 +183,7 @@ import math
 def square(x)
     return x ** 2
 """
-    response6 = client.post("api/v1/validate/code", json={"code": code6})
+    response6 = await client.post("api/v1/validate/code", json={"code": code6})
     assert response6.status_code == 200
     assert response6.json() == {
         "imports": {"errors": []},
@@ -359,16 +208,16 @@ What is a good name for a company that makes {product}?
 INVALID_PROMPT = "This is an invalid prompt without any input variable."
 
 
-def test_valid_prompt(client: TestClient):
+async def test_valid_prompt(client: AsyncClient):
     PROMPT_REQUEST["template"] = VALID_PROMPT
-    response = client.post("api/v1/validate/prompt", json=PROMPT_REQUEST)
+    response = await client.post("api/v1/validate/prompt", json=PROMPT_REQUEST)
     assert response.status_code == 200
     assert response.json()["input_variables"] == ["product"]
 
 
-def test_invalid_prompt(client: TestClient):
+async def test_invalid_prompt(client: AsyncClient):
     PROMPT_REQUEST["template"] = INVALID_PROMPT
-    response = client.post(
+    response = await client.post(
         "api/v1/validate/prompt",
         json=PROMPT_REQUEST,
     )
@@ -377,7 +226,7 @@ def test_invalid_prompt(client: TestClient):
 
 
 @pytest.mark.parametrize(
-    "prompt,expected_input_variables",
+    ("prompt", "expected_input_variables"),
     [
         ("{color} is my favorite color.", ["color"]),
         ("The weather is {weather} today.", ["weather"]),
@@ -385,22 +234,22 @@ def test_invalid_prompt(client: TestClient):
         ("{a}, {b}, and {c} are variables.", ["a", "b", "c"]),
     ],
 )
-def test_various_prompts(client, prompt, expected_input_variables):
+async def test_various_prompts(client, prompt, expected_input_variables):
     PROMPT_REQUEST["template"] = prompt
-    response = client.post("api/v1/validate/prompt", json=PROMPT_REQUEST)
+    response = await client.post("api/v1/validate/prompt", json=PROMPT_REQUEST)
     assert response.status_code == 200
     assert response.json()["input_variables"] == expected_input_variables
 
 
-def test_get_vertices_flow_not_found(client, logged_in_headers):
+async def test_get_vertices_flow_not_found(client, logged_in_headers):
     uuid = uuid4()
-    response = client.post(f"/api/v1/build/{uuid}/vertices", headers=logged_in_headers)
+    response = await client.post(f"/api/v1/build/{uuid}/vertices", headers=logged_in_headers)
     assert response.status_code == 500
 
 
-def test_get_vertices(client, added_flow_with_prompt_and_history, logged_in_headers):
-    flow_id = added_flow_with_prompt_and_history["id"]
-    response = client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+async def test_get_vertices(client, added_flow_webhook_test, logged_in_headers):
+    flow_id = added_flow_webhook_test["id"]
+    response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
     assert response.status_code == 200
     assert "ids" in response.json()
     # The response should contain the list in this order
@@ -408,29 +257,25 @@ def test_get_vertices(client, added_flow_with_prompt_and_history, logged_in_head
     # The important part is before the - (ConversationBufferMemory, PromptTemplate, ChatOpenAI, LLMChain)
     ids = [_id.split("-")[0] for _id in response.json()["ids"]]
 
-    assert set(ids) == {
-        "ChatOpenAI",
-        "PromptTemplate",
-        "ConversationBufferMemory",
-    }
+    assert set(ids) == {"ChatInput"}
 
 
-def test_build_vertex_invalid_flow_id(client, logged_in_headers):
+async def test_build_vertex_invalid_flow_id(client, logged_in_headers):
     uuid = uuid4()
-    response = client.post(f"/api/v1/build/{uuid}/vertices/vertex_id", headers=logged_in_headers)
+    response = await client.post(f"/api/v1/build/{uuid}/vertices/vertex_id", headers=logged_in_headers)
     assert response.status_code == 500
 
 
-def test_build_vertex_invalid_vertex_id(client, added_flow_with_prompt_and_history, logged_in_headers):
-    flow_id = added_flow_with_prompt_and_history["id"]
-    response = client.post(f"/api/v1/build/{flow_id}/vertices/invalid_vertex_id", headers=logged_in_headers)
+async def test_build_vertex_invalid_vertex_id(client, added_flow_webhook_test, logged_in_headers):
+    flow_id = added_flow_webhook_test["id"]
+    response = await client.post(f"/api/v1/build/{flow_id}/vertices/invalid_vertex_id", headers=logged_in_headers)
     assert response.status_code == 500
 
 
-def test_successful_run_no_payload(client, simple_api_test, created_api_key):
+async def test_successful_run_no_payload(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
-    response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers)
     assert response.status_code == status.HTTP_200_OK, response.text
     # Add more assertions here to validate the response content
     json_response = response.json()
@@ -446,22 +291,22 @@ def test_successful_run_no_payload(client, simple_api_test, created_api_key):
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 1
     ids = [output.get("component_id") for output in outputs_dict.get("outputs")]
-    assert all(["ChatOutput" in _id for _id in ids])
+    assert all("ChatOutput" in _id for _id in ids)
     display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
-    assert all([name in display_names for name in ["Chat Output"]])
+    assert all(name in display_names for name in ["Chat Output"])
     output_results_has_results = all("results" in output.get("results") for output in outputs_dict.get("outputs"))
     inner_results = [output.get("results") for output in outputs_dict.get("outputs")]
 
-    assert all([result is not None for result in inner_results]), (outputs_dict, output_results_has_results)
+    assert all(result is not None for result in inner_results), (outputs_dict, output_results_has_results)
 
 
-def test_successful_run_with_output_type_text(client, simple_api_test, created_api_key):
+async def test_successful_run_with_output_type_text(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
     payload = {
         "output_type": "text",
     }
-    response = client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
     assert response.status_code == status.HTTP_200_OK, response.text
     # Add more assertions here to validate the response content
     json_response = response.json()
@@ -477,22 +322,23 @@ def test_successful_run_with_output_type_text(client, simple_api_test, created_a
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 1
     ids = [output.get("component_id") for output in outputs_dict.get("outputs")]
-    assert all(["ChatOutput" in _id for _id in ids]), ids
+    assert all("ChatOutput" in _id for _id in ids), ids
     display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
-    assert all([name in display_names for name in ["Chat Output"]]), display_names
+    assert all(name in display_names for name in ["Chat Output"]), display_names
     inner_results = [output.get("results") for output in outputs_dict.get("outputs")]
     expected_keys = ["message"]
-    assert all([key in result for result in inner_results for key in expected_keys]), outputs_dict
+    assert all(key in result for result in inner_results for key in expected_keys), outputs_dict
 
 
-def test_successful_run_with_output_type_any(client, simple_api_test, created_api_key):
+@pytest.mark.benchmark
+async def test_successful_run_with_output_type_any(client, simple_api_test, created_api_key):
     # This one should have both the ChatOutput and TextOutput components
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
     payload = {
         "output_type": "any",
     }
-    response = client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
     assert response.status_code == status.HTTP_200_OK, response.text
     # Add more assertions here to validate the response content
     json_response = response.json()
@@ -508,15 +354,16 @@ def test_successful_run_with_output_type_any(client, simple_api_test, created_ap
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 1
     ids = [output.get("component_id") for output in outputs_dict.get("outputs")]
-    assert all(["ChatOutput" in _id or "TextOutput" in _id for _id in ids]), ids
+    assert all("ChatOutput" in _id or "TextOutput" in _id for _id in ids), ids
     display_names = [output.get("component_display_name") for output in outputs_dict.get("outputs")]
-    assert all([name in display_names for name in ["Chat Output"]]), display_names
+    assert all(name in display_names for name in ["Chat Output"]), display_names
     inner_results = [output.get("results") for output in outputs_dict.get("outputs")]
     expected_keys = ["message"]
-    assert all([key in result for result in inner_results for key in expected_keys]), outputs_dict
+    assert all(key in result for result in inner_results for key in expected_keys), outputs_dict
 
 
-def test_successful_run_with_output_type_debug(client, simple_api_test, created_api_key):
+@pytest.mark.benchmark
+async def test_successful_run_with_output_type_debug(client, simple_api_test, created_api_key):
     # This one should return outputs for all components
     # Let's just check the amount of outputs(there should be 7)
     headers = {"x-api-key": created_api_key.api_key}
@@ -524,7 +371,7 @@ def test_successful_run_with_output_type_debug(client, simple_api_test, created_
     payload = {
         "output_type": "debug",
     }
-    response = client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
     assert response.status_code == status.HTTP_200_OK, response.text
     # Add more assertions here to validate the response content
     json_response = response.json()
@@ -541,7 +388,8 @@ def test_successful_run_with_output_type_debug(client, simple_api_test, created_
     assert len(outputs_dict.get("outputs")) == 3
 
 
-def test_successful_run_with_input_type_text(client, simple_api_test, created_api_key):
+@pytest.mark.benchmark
+async def test_successful_run_with_input_type_text(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
     payload = {
@@ -549,7 +397,7 @@ def test_successful_run_with_input_type_text(client, simple_api_test, created_ap
         "output_type": "debug",
         "input_value": "value1",
     }
-    response = client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
     assert response.status_code == status.HTTP_200_OK, response.text
     # Add more assertions here to validate the response content
     json_response = response.json()
@@ -570,11 +418,13 @@ def test_successful_run_with_input_type_text(client, simple_api_test, created_ap
     # Now we check if the input_value is correct
     # We get text key twice because the output is now a Message
     assert all(
-        [output.get("results").get("text").get("text") == "value1" for output in text_input_outputs]
+        output.get("results").get("text").get("text") == "value1" for output in text_input_outputs
     ), text_input_outputs
 
 
-def test_successful_run_with_input_type_chat(client, simple_api_test, created_api_key):
+@pytest.mark.api_key_required
+@pytest.mark.benchmark
+async def test_successful_run_with_input_type_chat(client: AsyncClient, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
     payload = {
@@ -582,7 +432,7 @@ def test_successful_run_with_input_type_chat(client, simple_api_test, created_ap
         "output_type": "debug",
         "input_value": "value1",
     }
-    response = client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
     assert response.status_code == status.HTTP_200_OK, response.text
     # Add more assertions here to validate the response content
     json_response = response.json()
@@ -602,11 +452,12 @@ def test_successful_run_with_input_type_chat(client, simple_api_test, created_ap
     assert len(chat_input_outputs) == 1
     # Now we check if the input_value is correct
     assert all(
-        [output.get("results").get("message").get("text") == "value1" for output in chat_input_outputs]
+        output.get("results").get("message").get("text") == "value1" for output in chat_input_outputs
     ), chat_input_outputs
 
 
-def test_invalid_run_with_input_type_chat(client, simple_api_test, created_api_key):
+@pytest.mark.benchmark
+async def test_invalid_run_with_input_type_chat(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
     payload = {
@@ -615,12 +466,13 @@ def test_invalid_run_with_input_type_chat(client, simple_api_test, created_api_k
         "input_value": "value1",
         "tweaks": {"Chat Input": {"input_value": "value2"}},
     }
-    response = client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
     assert response.status_code == status.HTTP_400_BAD_REQUEST, response.text
     assert "If you pass an input_value to the chat input, you cannot pass a tweak with the same name." in response.text
 
 
-def test_successful_run_with_input_type_any(client, simple_api_test, created_api_key):
+@pytest.mark.benchmark
+async def test_successful_run_with_input_type_any(client, simple_api_test, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
     payload = {
@@ -628,7 +480,7 @@ def test_successful_run_with_input_type_any(client, simple_api_test, created_api
         "output_type": "debug",
         "input_value": "value1",
     }
-    response = client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
     assert response.status_code == status.HTTP_200_OK, response.text
     # Add more assertions here to validate the response content
     json_response = response.json()
@@ -656,23 +508,24 @@ def test_successful_run_with_input_type_any(client, simple_api_test, created_api
         result_dict.get("message", result_dict.get("text")) for result_dict in all_result_dicts
     ]
     assert all(
-        [message_or_text_dict.get("text") == "value1" for message_or_text_dict in all_message_or_text_dicts]
+        message_or_text_dict.get("text") == "value1" for message_or_text_dict in all_message_or_text_dicts
     ), any_input_outputs
 
 
-def test_invalid_flow_id(client, created_api_key):
+async def test_invalid_flow_id(client, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = "invalid-flow-id"
-    response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = UUID(int=0)
-    response = client.post(f"/api/v1/run/{flow_id}", headers=headers)
+    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
     # Check if the error detail is as expected
 
 
-def test_starter_projects(client, created_api_key):
+@pytest.mark.benchmark
+async def test_starter_projects(client, created_api_key):
     headers = {"x-api-key": created_api_key.api_key}
-    response = client.get("/api/v1/starter-projects/", headers=headers)
+    response = await client.get("api/v1/starter-projects/", headers=headers)
     assert response.status_code == status.HTTP_200_OK, response.text

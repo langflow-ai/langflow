@@ -7,9 +7,7 @@ def convert_to_langchain_type(value):
     from langflow.schema.message import Message
 
     if isinstance(value, dict):
-        for key, _value in value.copy().items():
-            _value = convert_to_langchain_type(_value)
-            value[key] = _value
+        value = {key: convert_to_langchain_type(val) for key, val in value.items()}
     elif isinstance(value, list):
         value = [convert_to_langchain_type(v) for v in value]
     elif isinstance(value, Message):
@@ -20,10 +18,7 @@ def convert_to_langchain_type(value):
         else:
             value = value.to_lc_document()
     elif isinstance(value, Data):
-        if "text" in value.data:
-            value = value.to_lc_document()
-        else:
-            value = value.data
+        value = value.to_lc_document() if "text" in value.data else value.data
     return value
 
 

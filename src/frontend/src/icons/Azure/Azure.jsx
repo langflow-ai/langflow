@@ -6,6 +6,7 @@ export const SvgAzure = (props) => (
     height="35"
     version="1"
     viewBox="0 0 750 750"
+    {...props}
   >
     <defs>
       <filter id="ac4759936b" width="100%" height="100%" x="0%" y="0%">

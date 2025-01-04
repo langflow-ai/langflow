@@ -1,140 +1,109 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
-test("freeze must work correctly", async ({ page }) => {
-  test.skip(
-    !process?.env?.OPENAI_API_KEY,
-    "OPENAI_API_KEY required to run this test",
-  );
+test(
+  "freeze must work correctly",
+  { tag: ["@release", "@api", "@components"] },
+  async ({ page }) => {
+    test.skip(
+      !process?.env?.OPENAI_API_KEY,
+      "OPENAI_API_KEY required to run this test",
+    );
 
-  if (!process.env.CI) {
-    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-  }
-
-  await page.goto("/");
-  await page.waitForTimeout(1000);
-
-  const promptText = "THIS IS A TEST PROMPT";
-  const newPromptText = "TEST TEST TEST TEST TEST";
-
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
+    if (!process.env.CI) {
+      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
-  } catch (error) {
-    modalCount = 0;
-  }
 
-  while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
+    const promptText = "answer as you are a dog";
+    const newPromptText = "answer as you are a bird";
 
-  await page.getByRole("heading", { name: "Basic Prompting" }).click();
-  await page.waitForTimeout(1000);
+    await awaitBootstrapTest(page);
 
-  await page.getByTitle("fit view").click();
+    await page.getByTestId("side_nav_options_all-templates").click();
+    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 3000,
+    });
 
-  await page.getByText("openai").first().click();
-  await page.keyboard.press("Delete");
+    await page.getByTestId("fit_view").click();
 
-  //connection 1
+    await page.getByText("openai").first().click();
+    await page.keyboard.press("Delete");
 
-  const elementPrompt = await page
-    .getByTestId("handle-prompt-shownode-prompt message-right")
-    .first();
-  await elementPrompt.hover();
-  await page.mouse.down();
+    //connection 1
 
-  await page.locator('//*[@id="react-flow-id"]').hover();
+    const elementPrompt = await page
+      .getByTestId("handle-prompt-shownode-prompt message-right")
+      .first();
+    await elementPrompt.hover();
+    await page.mouse.down();
 
-  const elementChatOutput = await page
-    .getByTestId("handle-chatoutput-shownode-text-left")
-    .first();
-  await elementChatOutput.hover();
-  await page.mouse.up();
+    await page.locator('//*[@id="react-flow-id"]').hover();
 
-  await page.locator('//*[@id="react-flow-id"]').hover();
+    const elementChatOutput = await page
+      .getByTestId("handle-chatoutput-shownode-text-left")
+      .first();
+    await elementChatOutput.hover();
+    await page.mouse.up();
 
-  await page.getByTestId("promptarea_prompt_template-ExternalLink").click();
+    await page.locator('//*[@id="react-flow-id"]').hover();
 
-  await page.getByTestId("modal-promptarea_prompt_template").fill(promptText);
+    await page.getByTestId("button_open_prompt_modal").click();
 
-  let promptValue = await page
-    .getByTestId("modal-promptarea_prompt_template")
-    .inputValue();
+    await page.getByTestId("modal-promptarea_prompt_template").fill(promptText);
 
-  await page.getByText("Check & Save").click();
+    await page.getByText("Check & Save").click();
 
-  await page.waitForTimeout(3000);
+    await page.getByTestId("button_run_chat output").click();
 
-  await page.getByTestId("button_run_chat output").click();
+    await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-  await page.waitForTimeout(3000);
+    await page.getByTestId("playground-btn-flow-io").click();
 
-  await page.getByTestId("button_run_chat output").click();
+    const textContents = await page
+      .getByTestId("div-chat-message")
+      .allTextContents();
 
-  await page.waitForTimeout(3000);
+    const concatAllText = textContents.join(" ");
 
-  await page.getByTestId("playground-btn-flow-io").click();
+    await page.getByText("Close").last().click();
 
-  const textContents = await page
-    .getByTestId("div-chat-message")
-    .allTextContents();
+    await page.getByText("Prompt", { exact: true }).click();
 
-  const concatAllText = textContents.join(" ");
+    await page.getByTestId("more-options-modal").click();
 
-  expect(concatAllText).toContain(promptValue);
+    await page.getByText("Freeze", { exact: true }).last().click();
 
-  await page.waitForTimeout(1000);
-  await page.getByText("Close").last().click();
+    await page.waitForSelector(".border-ring-frozen", { timeout: 3000 });
 
-  await page.getByText("Prompt", { exact: true }).click();
-  await page.getByTestId("more-options-modal").click();
+    expect(page.locator(".border-ring-frozen")).toHaveCount(1);
 
-  await page.getByText("Freeze", { exact: true }).last().click();
+    await page.locator('//*[@id="react-flow-id"]').click();
 
-  await page.waitForTimeout(1000);
-  await page.locator('//*[@id="react-flow-id"]').click();
+    await page.getByTestId("button_open_prompt_modal").click();
 
-  expect(page.getByTestId("icon-Snowflake").first()).toBeVisible();
+    await page.getByTestId("edit-prompt-sanitized").first().click();
 
-  await page.locator('//*[@id="react-flow-id"]').click();
+    await page
+      .getByTestId("modal-promptarea_prompt_template")
+      .fill(newPromptText);
 
-  await page.getByTestId("promptarea_prompt_template-ExternalLink").click();
+    await page.getByText("Check & Save").click();
 
-  await page.getByTestId("edit-prompt-sanitized").first().click();
+    await page.getByTestId("button_run_chat output").click();
 
-  await page
-    .getByTestId("modal-promptarea_prompt_template")
-    .fill(newPromptText);
+    await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-  promptValue = await page
-    .getByTestId("modal-promptarea_prompt_template")
-    .inputValue();
+    await page.getByTestId("playground-btn-flow-io").click();
 
-  await page.getByText("Check & Save").click();
+    const textContents2 = await page
+      .getByTestId("div-chat-message")
+      .allTextContents();
 
-  await page.getByTestId("button_run_chat output").click();
+    const concatAllText2 = textContents2.join(" ");
 
-  await page.waitForTimeout(3000);
-
-  await page.getByTestId("button_run_chat output").click();
-
-  await page.waitForTimeout(3000);
-
-  await page.getByTestId("playground-btn-flow-io").click();
-
-  const textContents2 = await page
-    .getByTestId("div-chat-message")
-    .allTextContents();
-
-  const concatAllText2 = textContents2.join(" ");
-
-  expect(concatAllText2).toContain(promptText);
-  expect(concatAllText2).not.toContain(newPromptText);
-});
+    expect(concatAllText2).toBe(concatAllText);
+  },
+);

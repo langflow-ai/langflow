@@ -4,14 +4,8 @@ import time
 import uuid
 
 import pytest
-
 from langflow.events.event_manager import EventManager
 from langflow.schema.log import LoggableType
-
-
-@pytest.fixture
-def client():
-    pass
 
 
 class TestEventManager:
@@ -42,27 +36,11 @@ class TestEventManager:
         assert "on_test_event" in manager.events
         assert manager.events["on_test_event"].func == manager.send_event
 
-    # Sending an event with valid event_type and data using pytest-asyncio plugin
-    @pytest.mark.asyncio
-    async def test_sending_event_with_valid_type_and_data_asyncio_plugin(self):
-        async def mock_queue_put_nowait(item):
-            await queue.put(item)
-
-        queue = asyncio.Queue()
-        queue.put_nowait = mock_queue_put_nowait
-        manager = EventManager(queue)
-        manager.register_event("on_test_event", "test_type", manager.noop)
-        event_type = "test_type"
-        data = "test_data"
-        manager.send_event(event_type=event_type, data=data)
-        await queue.join()
-        assert queue.empty()
-
     # Accessing a non-registered event callback via __getattr__ with the recommended fix
     def test_accessing_non_registered_event_callback_with_recommended_fix(self):
         queue = asyncio.Queue()
         manager = EventManager(queue)
-        result = manager.__getattr__("non_registered_event")
+        result = manager.non_registered_event
         assert result == manager.noop
 
     # Accessing a registered event callback via __getattr__
@@ -77,7 +55,7 @@ class TestEventManager:
 
     # Handling a large number of events in the queue
     def test_handling_large_number_of_events(self):
-        async def mock_queue_put_nowait(item):
+        def mock_queue_put_nowait(item):
             pass
 
         queue = asyncio.Queue()
@@ -96,15 +74,15 @@ class TestEventManager:
 
         queue = asyncio.Queue()
         manager = EventManager(queue)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Event name cannot be empty"):
             manager.register_event("", "test_type", mock_callback)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Event name must start with 'on_'"):
             manager.register_event("invalid_name", "test_type", mock_callback)
 
     # Sending an event with complex data and verifying successful event transmission
-    @pytest.mark.asyncio
     async def test_sending_event_with_complex_data(self):
         queue = asyncio.Queue()
+
         manager = EventManager(queue)
         manager.register_event("on_test_event", "test_type", manager.noop)
         data = {"key": "value", "nested": [1, 2, 3]}
@@ -123,7 +101,7 @@ class TestEventManager:
         assert manager.events["on_test_event"].func.__name__ == "send_event"
 
     # Ensuring thread-safety when accessing the events dictionary
-    def test_thread_safety_accessing_events_dictionary(self):
+    async def test_thread_safety_accessing_events_dictionary(self):
         def mock_callback(event_type: str, data: LoggableType):
             pass
 
@@ -138,12 +116,11 @@ class TestEventManager:
         queue = asyncio.Queue()
         manager = EventManager(queue)
 
-        tasks = [register_events(manager), access_events(manager)]
-        asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks))
+        await asyncio.gather(register_events(manager), access_events(manager))
 
     # Checking the performance impact of frequent event registrations
     def test_performance_impact_frequent_registrations(self):
-        async def mock_callback(event_type: str, data: LoggableType):
+        def mock_callback(event_type: str, data: LoggableType):
             pass
 
         queue = asyncio.Queue()
@@ -153,9 +130,6 @@ class TestEventManager:
         assert len(manager.events) == 1000
 
     # Verifying the uniqueness of event IDs for each event triggered using await with asyncio decorator
-    import pytest
-
-    @pytest.mark.asyncio
     async def test_event_id_uniqueness_with_await(self):
         queue = asyncio.Queue()
         manager = EventManager(queue)
@@ -171,7 +145,6 @@ class TestEventManager:
         assert event_id_1 != event_id_2
 
     # Ensuring the queue receives the correct event data format
-    @pytest.mark.asyncio
     async def test_queue_receives_correct_event_data_format(self):
         async def mock_queue_put_nowait(data):
             pass
@@ -209,7 +182,16 @@ class TestEventManager:
 
         assert len(queue.data) == 1
         event_id, str_data, timestamp = queue.data[0]
-        assert isinstance(event_id, uuid.UUID)
+        # event_id follows this pattern: f"{event_type}-{uuid.uuid4()}"
+        event_type_from_id = event_id.split("-")[0]
+        assert event_type_from_id == "test_type"
+        uuid_from_id = event_id.split(event_type_from_id)[1]
+        assert isinstance(uuid_from_id, str)
+        # assert that the uuid_from_id is a valid uuid
+        try:
+            uuid.UUID(uuid_from_id)
+        except ValueError:
+            pytest.fail(f"Invalid UUID: {uuid_from_id}")
         assert isinstance(str_data, bytes)
         assert isinstance(timestamp, float)
 

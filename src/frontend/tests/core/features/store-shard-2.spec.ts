@@ -1,56 +1,73 @@
 import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
-test("should filter by tag", async ({ page }) => {
-  test.skip(
-    !process?.env?.STORE_API_KEY,
-    "STORE_API_KEY required to run this test",
-  );
+test(
+  "should filter by tag",
+  { tag: ["@release", "@api"] },
+  async ({ page }) => {
+    test.skip(
+      !process?.env?.STORE_API_KEY,
+      "STORE_API_KEY required to run this test",
+    );
 
-  if (!process.env.CI) {
-    dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-  }
+    if (!process.env.CI) {
+      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+    }
 
-  await page.goto("/");
-  await page.waitForTimeout(1000);
+    await page.goto("/");
+    await page.waitForTimeout(1000);
 
-  await page.getByTestId("button-store").click();
-  await page.waitForTimeout(1000);
+    await page.getByTestId("button-store").click();
+    await page.waitForTimeout(1000);
 
-  await page.getByTestId("api-key-button-store").click();
+    await page.getByTestId("api-key-button-store").click({
+      timeout: 200000,
+    });
 
-  await page
-    .getByPlaceholder("Insert your API Key")
-    .fill(process.env.STORE_API_KEY ?? "");
+    await page
+      .getByPlaceholder("Insert your API Key")
+      .fill(process.env.STORE_API_KEY ?? "");
 
-  await page.getByTestId("api-key-save-button-store").click();
+    await page.getByTestId("api-key-save-button-store").click();
 
-  await page.waitForTimeout(1000);
-  await page.getByText("Success! Your API Key has been saved.").isVisible();
+    await page.waitForTimeout(1000);
+    await page.getByText("Success! Your API Key has been saved.").isVisible();
 
-  await page.getByTestId("button-store").click();
-  await page.waitForTimeout(1000);
+    await page.getByTestId("button-store").click();
+    await page.waitForTimeout(1000);
 
-  await page.getByTestId("tag-selector-Agent").click();
-  await page.getByText("File Loader").isVisible();
-  await page.getByTestId("tag-selector-Agent").click();
-  await page.getByText("Album Cover Builder").isVisible();
+    async function safeClick(selector: string) {
+      await page.getByTestId(selector).waitFor({ state: "visible" });
+      await page.getByTestId(selector).click();
+      await page.waitForTimeout(500); // Wait for UI updates
+    }
 
-  await page.getByTestId("tag-selector-Memory").click();
-  await page.getByText("MP3 QA12").isVisible();
+    // Agent section
+    await safeClick("tag-selector-Agent");
+    await page.getByText("File Loader").waitFor({ state: "visible" });
+    await safeClick("tag-selector-Agent");
+    await page.getByText("Website Content").waitFor({ state: "visible" });
 
-  await page.getByTestId("tag-selector-Chain").click();
-  await page.getByText("There are no").isVisible();
-  await page.getByTestId("tag-selector-Chain").click();
+    // Memory section
+    await safeClick("tag-selector-Memory");
+    await page.getByText("MP3 QA12").waitFor({ state: "visible" });
 
-  await page.getByTestId("tag-selector-Vector Store").click();
-  await page.getByText("MP3 QA12").isVisible();
-  await page.getByTestId("tag-selector-Vector Store").click();
-  await page.getByTestId("tag-selector-Memory").click();
+    // Chain section
+    await safeClick("tag-selector-Chain");
+    await page.getByText("ChatOllama").waitFor({ state: "visible" });
+    await safeClick("tag-selector-Chain");
 
-  await page.getByText("Basic RAG").isVisible();
-});
+    // Vector Store section
+    await safeClick("tag-selector-Vector Store");
+    await page.getByText("MP3 QA12").waitFor({ state: "visible" });
+    await safeClick("tag-selector-Vector Store");
+    await safeClick("tag-selector-Memory");
+
+    await page.getByText("Basic RAG").isVisible();
+  },
+);
 
 test("should share component with share button", async ({ page }) => {
   test.skip(
@@ -68,7 +85,9 @@ test("should share component with share button", async ({ page }) => {
   await page.getByTestId("button-store").click();
   await page.waitForTimeout(1000);
 
-  await page.getByTestId("api-key-button-store").click();
+  await page.getByTestId("api-key-button-store").click({
+    timeout: 200000,
+  });
 
   await page
     .getByPlaceholder("Insert your API Key")
@@ -79,33 +98,26 @@ test("should share component with share button", async ({ page }) => {
   await page.waitForTimeout(1000);
   await page.getByText("Success! Your API Key has been saved.").isVisible();
 
-  await page.getByText("My Collection").click();
-  await page.waitForTimeout(1000);
+  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    timeout: 100000,
+  });
 
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
-    }
-  } catch (error) {
-    modalCount = 0;
-  }
+  await page.getByTestId("icon-ChevronLeft").first().click();
 
-  while (modalCount === 0) {
-    await page.getByText("New Project", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
+  await awaitBootstrapTest(page, {
+    skipGoto: true,
+  });
+
   await page.waitForTimeout(1000);
 
   const randomName = Math.random().toString(36).substring(2);
 
+  await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.waitForTimeout(1000);
   const flowName = await page.getByTestId("flow_name").innerText();
   await page.getByTestId("flow_name").click();
-  await page.getByText("Settings").click();
+  await page.getByText("Flow Settings").click();
   const flowDescription = await page
     .getByPlaceholder("Flow description")
     .inputValue();

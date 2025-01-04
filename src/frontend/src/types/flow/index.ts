@@ -1,11 +1,19 @@
-import { ReactFlowJsonObject, XYPosition } from "reactflow";
+import { Edge, Node, ReactFlowJsonObject } from "@xyflow/react";
 import { BuildStatus } from "../../constants/enums";
 import { APIClassType } from "../api/index";
+
+export type PaginatedFlowsType = {
+  items: FlowType[];
+  total: number;
+  size: number;
+  page: number;
+  pages: number;
+};
 
 export type FlowType = {
   name: string;
   id: string;
-  data: ReactFlowJsonObject | null;
+  data: ReactFlowJsonObject<AllNodeType, EdgeType> | null;
   description: string;
   endpoint_name?: string | null;
   style?: FlowStyleType;
@@ -17,43 +25,54 @@ export type FlowType = {
   folder?: string;
   user_id?: string;
   icon?: string;
+  gradient?: string;
+  tags?: string[];
   icon_bg_color?: string;
   folder_id?: string;
   webhook?: boolean;
+  locked?: boolean | null;
 };
 
-export type NodeType = {
-  id: string;
-  type?: string;
-  position: XYPosition;
-  data: NodeDataType;
-  selected?: boolean;
-};
+export type GenericNodeType = Node<NodeDataType, "genericNode">;
+export type NoteNodeType = Node<NoteDataType, "noteNode">;
 
-export interface noteClassType
-  extends Pick<APIClassType, "description" | "display_name" | "documentation"> {
+export type AllNodeType = GenericNodeType | NoteNodeType;
+export type SetNodeType<T = "genericNode" | "noteNode"> =
+  T extends "genericNode" ? GenericNodeType : NoteNodeType;
+
+export type noteClassType = Pick<
+  APIClassType,
+  "description" | "display_name" | "documentation" | "tool_mode" | "frozen"
+> & {
   template: {
-    backgroundColor: string;
+    backgroundColor?: string;
     [key: string]: any;
   };
-}
+};
 
-export interface noteDataType
-  extends Pick<NodeDataType, "showNode" | "type" | "id"> {
+export type NoteDataType = {
   showNode?: boolean;
   type: string;
-  node?: noteClassType;
+  node: noteClassType;
   id: string;
-}
+};
 export type NodeDataType = {
   showNode?: boolean;
   type: string;
-  node?: APIClassType;
+  node: APIClassType;
   id: string;
   output_types?: string[];
   selected_output_type?: string;
   buildStatus?: BuildStatus;
 };
+
+export type EdgeType = Edge<EdgeDataType, "default">;
+
+export type EdgeDataType = {
+  sourceHandle: sourceHandleType;
+  targetHandle: targetHandleType;
+};
+
 // FlowStyleType is the type of the style object that is used to style the
 // Flow card with an emoji and a color.
 export type FlowStyleType = {
@@ -72,6 +91,7 @@ export type TweaksType = Array<
 
 // right side
 export type sourceHandleType = {
+  baseClasses?: string[];
   dataType: string;
   id: string;
   output_types: string[];

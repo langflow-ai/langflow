@@ -1,3 +1,4 @@
+from .astra_assistant_manager import AstraAssistantManager
 from .create_assistant import AssistantsCreateAssistant
 from .create_thread import AssistantsCreateThread
 from .dotenv import Dotenv
@@ -8,10 +9,11 @@ from .run import AssistantsRun
 
 __all__ = [
     "AssistantsCreateAssistant",
+    "AssistantsCreateThread",
     "AssistantsGetAssistantName",
     "AssistantsListAssistants",
-    "AssistantsCreateThread",
     "AssistantsRun",
-    "GetEnvVar",
+    "AstraAssistantManager",
     "Dotenv",
+    "GetEnvVar",
 ]

@@ -1,4 +1,4 @@
-.PHONY: all init format lint build build_frontend install_frontend run_frontend run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_all
+.PHONY: all init format_backend format_frontend format lint build build_frontend install_frontend run_frontend run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_all
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
@@ -6,7 +6,7 @@ DOCKERFILE=docker/build_and_push.Dockerfile
 DOCKERFILE_BACKEND=docker/build_and_push_backend.Dockerfile
 DOCKERFILE_FRONTEND=docker/frontend/build_and_push_frontend.Dockerfile
 DOCKER_COMPOSE=docker_example/docker-compose.yml
-PYTHON_REQUIRED=$(shell grep '^python[[:space:]]*=' pyproject.toml | sed -n 's/.*"\([^"]*\)".*/\1/p')
+PYTHON_REQUIRED=$(shell grep '^requires-python[[:space:]]*=' pyproject.toml | sed -n 's/.*"\([^"]*\)".*/\1/p')
 RED=\033[0;31m
 NC=\033[0m # No Color
 GREEN=\033[0;32m
@@ -19,11 +19,19 @@ open_browser ?= true
 path = src/backend/base/langflow/frontend
 workers ?= 1
 async ?= true
+lf ?= false
+ff ?= true
 all: help
 
 ######################
 # UTILITIES
 ######################
+
+# Some directories may be mount points as in devcontainer, so we need to clear their
+# contents rather than remove the entire directory. But we must also be mindful that
+# we are not running in a devcontainer, so need to ensure the directories exist.
+# See https://code.visualstudio.com/remote/advancedcontainers/improve-performance
+CLEAR_DIRS = $(foreach dir,$1,$(shell mkdir -p $(dir) && find $(dir) -mindepth 1 -delete))
 
 # increment the patch version of the current package
 patch: ## bump the version in langflow and langflow-base
@@ -37,17 +45,8 @@ patch: ## bump the version in langflow and langflow-base
 check_tools:
 	@command -v uv >/dev/null 2>&1 || { echo >&2 "$(RED)uv is not installed. Aborting.$(NC)"; exit 1; }
 	@command -v npm >/dev/null 2>&1 || { echo >&2 "$(RED)NPM is not installed. Aborting.$(NC)"; exit 1; }
-	@command -v pipx >/dev/null 2>&1 || { echo >&2 "$(RED)pipx is not installed. Aborting.$(NC)"; exit 1; }
-	@$(MAKE) check_env
 	@echo "$(GREEN)All required tools are installed.$(NC)"
 
-# check if Python version is compatible
-check_env: ## check if Python version is compatible
-	@chmod +x scripts/setup/check_env.sh
-	@PYTHON_INSTALLED=$$(scripts/setup/check_env.sh python --version 2>&1 | awk '{print $$2}'); \
-	if ! scripts/setup/check_env.sh python -c "import sys; from packaging.specifiers import SpecifierSet; from packaging.version import Version; sys.exit(not SpecifierSet('$(PYTHON_REQUIRED)').contains(Version('$$PYTHON_INSTALLED')))" 2>/dev/null; then \
-		echo "$(RED)Error: Python version $$PYTHON_INSTALLED is not compatible with the required version $(PYTHON_REQUIRED). Aborting.$(NC)"; exit 1; \
-	fi
 
 help: ## show this help message
 	@echo '----'
@@ -73,10 +72,17 @@ install_frontend: ## install the frontend dependencies
 	@cd src/frontend && npm install > /dev/null 2>&1
 
 build_frontend: ## build the frontend static files
-	@echo 'Building frontend static files'
-	@cd src/frontend && CI='' npm run build > /dev/null 2>&1
-	@rm -rf src/backend/base/langflow/frontend
-	@cp -r src/frontend/build src/backend/base/langflow/frontend
+	@echo '==== Starting frontend build ===='
+	@echo 'Current directory: $$(pwd)'
+	@echo 'Checking if src/frontend exists...'
+	@ls -la src/frontend || true
+	@echo 'Building frontend static files...'
+	@cd src/frontend && CI='' npm run build 2>&1 || { echo "\nBuild failed! Error output above ☝️"; exit 1; }
+	@echo 'Clearing destination directory...'
+	$(call CLEAR_DIRS,src/backend/base/langflow/frontend)
+	@echo 'Copying build files...'
+	@cp -r src/frontend/build/. src/backend/base/langflow/frontend
+	@echo '==== Frontend build complete ===='
 
 init: check_tools clean_python_cache clean_npm_cache ## initialize the project
 	@make install_backend
@@ -95,13 +101,14 @@ clean_python_cache:
 	find . -type f -name '*.py[cod]' -exec rm -f {} +
 	find . -type f -name '*~' -exec rm -f {} +
 	find . -type f -name '.*~' -exec rm -f {} +
-	find . -type d -empty -delete
+	$(call CLEAR_DIRS,.mypy_cache )
 	@echo "$(GREEN)Python cache cleaned.$(NC)"
 
 clean_npm_cache:
 	@echo "Cleaning npm cache..."
 	cd src/frontend && npm cache clean --force
-	rm -rf src/frontend/node_modules src/frontend/build src/backend/base/langflow/frontend src/frontend/package-lock.json
+	$(call CLEAR_DIRS,src/frontend/node_modules src/frontend/build src/backend/base/langflow/frontend)
+	rm -f src/frontend/package-lock.json
 	@echo "$(GREEN)NPM cache and frontend directories cleaned.$(NC)"
 
 clean_all: clean_python_cache clean_npm_cache # clean all caches and temporary directories
@@ -133,26 +140,20 @@ endif
 coverage: ## run the tests and generate a coverage report
 	@uv run coverage run
 	@uv run coverage erase
-	#@poetry run coverage run
-	#@poetry run coverage erase
 
 unit_tests: ## run unit tests
 	@uv sync --extra dev --frozen
-ifeq ($(async), true)
-	uv run pytest src/backend/tests \
-		--ignore=src/backend/tests/integration \
-		--instafail -n auto -ra -m "not api_key_required" \
-		--durations-path src/backend/tests/.test_durations \
-		--splitting-algorithm least_duration \
-		$(args)
-else
-	uv run pytest src/backend/tests \
-		--ignore=src/backend/tests/integration \
-		--instafail -ra -m "not api_key_required" \
-		--durations-path src/backend/tests/.test_durations \
-		--splitting-algorithm least_duration \
-		$(args)
-endif
+	@EXTRA_ARGS=""
+	@if [ "$(async)" = "true" ]; then \
+		EXTRA_ARGS="$$EXTRA_ARGS --instafail -n auto"; \
+	fi; \
+	if [ "$(lf)" = "true" ]; then \
+		EXTRA_ARGS="$$EXTRA_ARGS --lf"; \
+	fi; \
+	if [ "$(ff)" = "true" ]; then \
+		EXTRA_ARGS="$$EXTRA_ARGS --ff"; \
+	fi; \
+	uv run pytest src/backend/tests --ignore=src/backend/tests/integration $$EXTRA_ARGS --instafail -ra -m 'not api_key_required' --durations-path src/backend/tests/.test_durations --splitting-algorithm least_duration $(args)
 
 unit_tests_looponfail:
 	@make unit_tests args="-f"
@@ -192,10 +193,17 @@ fix_codespell: ## run codespell to fix spelling errors
 	@poetry install --with spelling
 	poetry run codespell --toml pyproject.toml --write
 
-format: ## run code formatters
-	@uv run ruff check . --fix
-	@uv run ruff format .
+format_backend: ## backend code formatters
+	@uv run ruff check . --fix --ignore EXE002
+	@uv run ruff format . --config pyproject.toml
+
+format_frontend: ## frontend code formatters
 	@cd src/frontend && npm run format
+
+format: format_backend format_frontend ## run code formatters
+
+unsafe_fix:
+	@uv run ruff check . --fix --unsafe-fixes
 
 lint: install_backend ## run linters
 	@uv run mypy --namespace-packages -p "langflow"
@@ -204,11 +212,11 @@ install_frontendci:
 	@cd src/frontend && npm ci > /dev/null 2>&1
 
 install_frontendc:
-	@cd src/frontend && rm -rf node_modules package-lock.json && npm install > /dev/null 2>&1
+	@cd src/frontend && $(call CLEAR_DIRS,node_modules) && rm -f package-lock.json && npm install > /dev/null 2>&1
 
 run_frontend: ## run the frontend
 	@-kill -9 `lsof -t -i:3000`
-	@cd src/frontend && npm start
+	@cd src/frontend && npm start $(if $(FRONTEND_START_FLAGS),-- $(FRONTEND_START_FLAGS))
 
 tests_frontend: ## run frontend tests
 ifeq ($(UI), true)
@@ -219,11 +227,13 @@ endif
 
 run_cli: install_frontend install_backend build_frontend ## run the CLI
 	@echo 'Running the CLI'
-ifdef env
-	@make start env=$(env) host=$(host) port=$(port) log_level=$(log_level)
-else
-	@make start host=$(host) port=$(port) log_level=$(log_level)
-endif
+	@uv run langflow run \
+		--frontend-path $(path) \
+		--log-level $(log_level) \
+		--host $(host) \
+		--port $(port) \
+		$(if $(env),--env-file $(env),) \
+		$(if $(filter false,$(open_browser)),--no-open-browser)
 
 run_cli_debug:
 	@echo 'Running the CLI in debug mode'
@@ -238,31 +248,12 @@ else
 	@make start host=$(host) port=$(port) log_level=debug
 endif
 
-start:
-	@echo 'Running the CLI'
-
-ifeq ($(open_browser),false)
-	@make install_backend && uv run langflow run \
-		--path $(path) \
-		--log-level $(log_level) \
-		--host $(host) \
-		--port $(port) \
-		--env-file $(env) \
-		--no-open-browser
-else
-	@make install_backend && uv run langflow run \
-		--path $(path) \
-		--log-level $(log_level) \
-		--host $(host) \
-		--port $(port) \
-		--env-file $(env)
-endif
 
 setup_devcontainer: ## set up the development container
 	make install_backend
 	make install_frontend
 	make build_frontend
-	uv run langflow --path src/frontend/build
+	uv run langflow --frontend-path src/frontend/build
 
 setup_env: ## set up the environment
 	@sh ./scripts/setup/setup_env.sh
@@ -299,35 +290,32 @@ else
 endif
 
 build_and_run: setup_env ## build the project and run it
-	rm -rf dist
-	rm -rf src/backend/base/dist
+	$(call CLEAR_DIRS,dist src/backend/base/dist)
 	make build
 	uv run pip install dist/*.tar.gz
 	uv run langflow run
 
 build_and_install: ## build the project and install it
 	@echo 'Removing dist folder'
-	rm -rf dist
-	rm -rf src/backend/base/dist
+	$(call CLEAR_DIRS,dist src/backend/base/dist)
 	make build && uv run pip install dist/*.whl && pip install src/backend/base/dist/*.whl --force-reinstall
 
 build: setup_env ## build the frontend static files and package the project
 ifdef base
 	make install_frontendci
 	make build_frontend
-	make build_langflow_base
+	make build_langflow_base args="$(args)"
 endif
 
 ifdef main
 	make install_frontendci
 	make build_frontend
-	make build_langflow_base
+	make build_langflow_base args="$(args)"
 	make build_langflow args="$(args)"
 endif
 
 build_langflow_base:
-	cd src/backend/base && uv build
-	rm -rf src/backend/base/langflow/frontend
+	cd src/backend/base && uv build $(args)
 
 build_langflow_backup:
 	uv lock && uv build
@@ -394,8 +382,8 @@ lock_langflow:
 
 lock: ## lock dependencies
 	@echo 'Locking dependencies'
-	cd src/backend/base && uv lock --no-update
-	uv lock --no-update
+	cd src/backend/base && uv lock
+	uv lock
 
 update: ## update dependencies
 	@echo 'Updating dependencies'
@@ -440,3 +428,34 @@ ifdef main
 	poetry config repositories.test-pypi https://test.pypi.org/legacy/
 	make publish_langflow_testpypi
 endif
+
+
+# example make alembic-revision message="Add user table"
+alembic-revision: ## generate a new migration
+	@echo 'Generating a new Alembic revision'
+	cd src/backend/base/langflow/ && uv run alembic revision --autogenerate -m "$(message)"
+
+
+alembic-upgrade: ## upgrade database to the latest version
+	@echo 'Upgrading database to the latest version'
+	cd src/backend/base/langflow/ && uv run alembic upgrade head
+
+alembic-downgrade: ## downgrade database by one version
+	@echo 'Downgrading database by one version'
+	cd src/backend/base/langflow/ && uv run alembic downgrade -1
+
+alembic-current: ## show current revision
+	@echo 'Showing current Alembic revision'
+	cd src/backend/base/langflow/ && uv run alembic current
+
+alembic-history: ## show migration history
+	@echo 'Showing Alembic migration history'
+	cd src/backend/base/langflow/ && uv run alembic history --verbose
+
+alembic-check: ## check migration status
+	@echo 'Running alembic check'
+	cd src/backend/base/langflow/ && uv run alembic check
+
+alembic-stamp: ## stamp the database with a specific revision
+	@echo 'Stamping the database with revision $(revision)'
+	cd src/backend/base/langflow/ && uv run alembic stamp $(revision)

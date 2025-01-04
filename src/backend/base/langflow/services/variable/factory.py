@@ -1,4 +1,8 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
+
+from typing_extensions import override
 
 from langflow.services.factory import ServiceFactory
 from langflow.services.variable.service import DatabaseVariableService, VariableService
@@ -8,10 +12,11 @@ if TYPE_CHECKING:
 
 
 class VariableServiceFactory(ServiceFactory):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(VariableService)
 
-    def create(self, settings_service: "SettingsService"):
+    @override
+    def create(self, settings_service: SettingsService):
         # here you would have logic to create and configure a VariableService
         # based on the settings_service
 

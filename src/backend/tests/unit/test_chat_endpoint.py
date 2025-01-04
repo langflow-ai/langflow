@@ -1,52 +1,57 @@
 import json
 from uuid import UUID
+
+import pytest
+from langflow.memory import aget_messages
+from langflow.services.database.models.flow import FlowCreate, FlowUpdate
 from orjson import orjson
 
-from langflow.memory import get_messages
-from langflow.services.database.models.flow import FlowCreate, FlowUpdate
+
+@pytest.mark.benchmark
+async def test_build_flow(client, json_memory_chatbot_no_llm, logged_in_headers):
+    flow_id = await _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    async with client.stream("POST", f"api/v1/build/{flow_id}/flow", json={}, headers=logged_in_headers) as r:
+        await consume_and_assert_stream(r)
+
+    await check_messages(flow_id)
 
 
-def test_build_flow(client, json_memory_chatbot_no_llm, logged_in_headers):
-    flow_id = _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+@pytest.mark.benchmark
+async def test_build_flow_from_request_data(client, json_memory_chatbot_no_llm, logged_in_headers):
+    flow_id = await _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    response = await client.get("api/v1/flows/" + str(flow_id), headers=logged_in_headers)
+    flow_data = response.json()
 
-    with client.stream("POST", f"api/v1/build/{flow_id}/flow", json={}, headers=logged_in_headers) as r:
-        consume_and_assert_stream(r)
-
-    check_messages(flow_id)
-
-
-def test_build_flow_from_request_data(client, json_memory_chatbot_no_llm, logged_in_headers):
-    flow_id = _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
-    flow_data = client.get("api/v1/flows/" + str(flow_id), headers=logged_in_headers).json()
-
-    with client.stream(
+    async with client.stream(
         "POST", f"api/v1/build/{flow_id}/flow", json={"data": flow_data["data"]}, headers=logged_in_headers
     ) as r:
-        consume_and_assert_stream(r)
+        await consume_and_assert_stream(r)
 
-    check_messages(flow_id)
+    await check_messages(flow_id)
 
 
-def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, logged_in_headers):
-    flow_id = _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, logged_in_headers):
+    flow_id = await _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
 
-    flow_data = client.get("api/v1/flows/" + str(flow_id), headers=logged_in_headers).json()
+    response = await client.get("api/v1/flows/" + str(flow_id), headers=logged_in_headers)
+    flow_data = response.json()
     flow_data["data"]["nodes"][0]["data"]["node"]["frozen"] = True
-    response = client.patch(
-        "api/v1/flows/" + str(flow_id),
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
         json=FlowUpdate(name="Flow", description="description", data=flow_data["data"]).model_dump(),
         headers=logged_in_headers,
     )
     response.raise_for_status()
 
-    with client.stream("POST", f"api/v1/build/{flow_id}/flow", json={}, headers=logged_in_headers) as r:
-        consume_and_assert_stream(r)
+    async with client.stream("POST", f"api/v1/build/{flow_id}/flow", json={}, headers=logged_in_headers) as r:
+        await consume_and_assert_stream(r)
 
-    check_messages(flow_id)
+    await check_messages(flow_id)
 
 
-def check_messages(flow_id):
-    messages = get_messages(flow_id=UUID(flow_id), order="ASC")
+async def check_messages(flow_id):
+    messages = await aget_messages(flow_id=UUID(flow_id), order="ASC")
     assert len(messages) == 2
     assert messages[0].session_id == flow_id
     assert messages[0].sender == "User"
@@ -57,9 +62,9 @@ def check_messages(flow_id):
     assert messages[1].sender_name == "AI"
 
 
-def consume_and_assert_stream(r):
+async def consume_and_assert_stream(r):
     count = 0
-    for line in r.iter_lines():
+    async for line in r.aiter_lines():
         # httpx split by \n, but ndjson sends two \n for each line
         if not line:
             continue
@@ -68,7 +73,7 @@ def consume_and_assert_stream(r):
             assert parsed["event"] == "vertices_sorted"
             ids = parsed["data"]["ids"]
             ids.sort()
-            assert ids == ["ChatInput-CIGht", "Memory-amN4Z"]
+            assert ids == ["ChatInput-CIGht"]
 
             to_run = parsed["data"]["to_run"]
             to_run.sort()
@@ -79,15 +84,15 @@ def consume_and_assert_stream(r):
         elif count == 5:
             assert parsed["event"] == "end"
         else:
-            raise ValueError(f"Unexpected line: {line}")
+            msg = f"Unexpected line: {line}"
+            raise ValueError(msg)
         count += 1
 
 
-def _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers):
+async def _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers):
     vector_store = orjson.loads(json_memory_chatbot_no_llm)
     data = vector_store["data"]
     vector_store = FlowCreate(name="Flow", description="description", data=data, endpoint_name="f")
-    response = client.post("api/v1/flows/", json=vector_store.model_dump(), headers=logged_in_headers)
+    response = await client.post("api/v1/flows/", json=vector_store.model_dump(), headers=logged_in_headers)
     response.raise_for_status()
-    flow_id = response.json()["id"]
-    return flow_id
+    return response.json()["id"]

@@ -1,12 +1,12 @@
-from langflow.components.agents.CrewAIAgent import CrewAIAgentComponent
-from langflow.components.agents.HierarchicalCrew import HierarchicalCrewComponent
-from langflow.components.helpers.HierarchicalTask import HierarchicalTaskComponent
-from langflow.components.inputs.ChatInput import ChatInput
-from langflow.components.models.OpenAIModel import OpenAIModelComponent
-from langflow.components.outputs.ChatOutput import ChatOutput
-from langflow.components.prompts.Prompt import PromptComponent
-from langflow.components.tools.SearchAPI import SearchAPIComponent
-from langflow.graph.graph.base import Graph
+from langflow.components.crewai.crewai import CrewAIAgentComponent
+from langflow.components.crewai.hierarchical_crew import HierarchicalCrewComponent
+from langflow.components.crewai.hierarchical_task import HierarchicalTaskComponent
+from langflow.components.inputs import ChatInput
+from langflow.components.models import OpenAIModelComponent
+from langflow.components.outputs import ChatOutput
+from langflow.components.prompts import PromptComponent
+from langflow.components.tools import SearchAPIComponent
+from langflow.graph import Graph
 
 
 def hierarchical_tasks_agent_graph():

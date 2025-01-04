@@ -30,6 +30,7 @@
   <a href="./README.zh_CN.md"><img alt="README en Chino Simplificado" src="https://img.shields.io/badge/简体中文-d9d9d9"></a>
   <a href="./README.ja.md"><img alt="README en Japonés" src="https://img.shields.io/badge/日本語-d9d9d9"></a>
   <a href="./README.KR.md"><img alt="README en Coreano" src="https://img.shields.io/badge/한국어-d9d9d9"></a>
+  <a href="./README.FR.md"><img alt="README en Francès" src="https://img.shields.io/badge/Français-d9d9d9"></a>
 </div>
 
 <p align="center">
@@ -132,7 +133,7 @@ Cada opción se detalla a continuación:
 - `--help`: Muestra todas las opciones disponibles.
 - `--host`: Establece el host al que vincular el servidor. Se puede configurar usando la variable de entorno `LANGFLOW_HOST`. El valor predeterminado es `127.0.0.1`.
 - `--workers`: Establece el número de procesos. Se puede configurar usando la variable de entorno `LANGFLOW_WORKERS`. El valor predeterminado es `1`.
-- `--timeout`: Establece el tiempo de espera del worker en segundos. El valor predeterminado es `60`.
+- `--worker-timeout`: Establece el tiempo de espera del worker en segundos. El valor predeterminado es `60`.
 - `--port`: Establece el puerto en el que escuchar. Se puede configurar usando la variable de entorno `LANGFLOW_PORT`. El valor predeterminado es `7860`.
 - `--env-file`: Especifica la ruta al archivo .env que contiene variables de entorno. El valor predeterminado es `.env`.
 - `--log-level`: Establece el nivel de registro. Se puede configurar usando la variable de entorno `LANGFLOW_LOG_LEVEL`. El valor predeterminado es `critical`.

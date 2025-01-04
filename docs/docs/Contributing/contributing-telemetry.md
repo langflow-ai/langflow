@@ -1,36 +1,17 @@
 ---
 title: Telemetry
-sidebar_position: 0
 slug: /contributing-telemetry
 ---
 
-
-
-:::info
-
-This page may contain outdated information. It will be updated as soon as possible.
-
-:::
-
-
-
-
-Our system uses anonymous telemetry to collect essential usage statistics to enhance functionality and user experience. This data helps us identify commonly used features and areas needing improvement, ensuring our development efforts align with what you need.
-
-
-:::note
+Langflow uses anonymous telemetry to collect essential usage statistics to enhance functionality and the user experience. This data helps us identify popular features and areas that need improvement, and ensures development efforts align with what you need.
 
 We respect your privacy and are committed to protecting your data. We do not collect any personal information or sensitive data. All telemetry data is anonymized and used solely for improving Langflow.
 
-You can opt-out of telemetry by setting the `LANGFLOW_DO_NOT_TRACK` or `DO_NOT_TRACK` environment variable to `true` before running Langflow. This will disable telemetry data collection.
+## Opt out of telemetry
 
-:::
+To opt out of telemetry, set the `LANGFLOW_DO_NOT_TRACK` or `DO_NOT_TRACK` environment variable to `true` before running Langflow. This disables telemetry data collection.
 
-
-
-
-## Data Collected Includes {#1734ed50fb4a4a45aaa84185b44527ca}
-
+## Data that Langflow collects
 
 ### Run {#2d427dca4f0148ae867997f6789e8bfb}
 
@@ -65,6 +46,4 @@ You can opt-out of telemetry by setting the `LANGFLOW_DO_NOT_TRACK` or `DO_NO
 - **Seconds**: Time taken by the component to execute, offering performance metrics.
 - **Success**: Whether the component operated successfully, which helps in quality control.
 - **ErrorMessage**: Details of any errors encountered, crucial for debugging and improvement.
-
-This telemetry data is crucial for enhancing Langflow and ensuring that our development efforts align with your needs. Your feedback and suggestions are invaluable in shaping the future of Langflow, and we appreciate your support in making Langflow better for everyone.
 

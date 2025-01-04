@@ -1,7 +1,17 @@
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "Roboto",
+    "Oxygen",
+    "Ubuntu",
+    "Cantarell",
+    "Fira Sans",
+    "Droid Sans",
+    "Helvetica Neue",
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -16,6 +26,7 @@ pre {
 }
 
 .react-flow__pane {
+  pointer-events: all;
   cursor: default;
 }
 
@@ -88,6 +99,16 @@ input .ag-cell-edit-input {
   outline-color: transparent !important;
 }
 
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23666666'%3E%3Cpath d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'/%3E%3C/svg%3E");
+  height: 16px;
+  width: 16px;
+  cursor: pointer;
+  display: block;
+}
+
 input[class^="ag-"]:not([type]),
 input[class^="ag-"][type="text"],
 input[class^="ag-"][type="number"],
@@ -127,7 +148,7 @@ textarea[class^="ag-"]:focus {
 }
 
 .ace_scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--ring));
+  background-color: hsl(var(--placeholder-foreground));
   border-radius: 999px;
 }
 
@@ -179,16 +200,84 @@ textarea[class^="ag-"]:focus {
   transform: translate(-50%, -50%) !important;
 }
 
-.react-flow__handle-right {
-  right: 0 !important;
-  transform: translate(50%, -50%) !important;
-}
-
-.react-flow__handle-left {
-  left: 0 !important;
-  transform: translate(-50%, -50%) !important;
-}
-
 .react-flow__node-noteNode:not(.selected) {
   z-index: -1 !important;
+}
+
+.card-shine-effect {
+  --shine-deg: 135deg;
+  position: relative;
+  overflow: hidden;
+  padding: 4rem 2rem;
+  max-width: 28rem;
+
+  background-repeat: no-repeat;
+  background-position:
+    100% 100%,
+    0 0;
+
+  background-image: linear-gradient(
+    var(--shine-deg),
+    transparent 20%,
+    transparent 40%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.2) 55%,
+    transparent 60%,
+    transparent 100%
+  );
+
+  background-size:
+    250% 250%,
+    100% 100%;
+  transition: background-position 0s ease;
+}
+
+.card-shine-effect:hover {
+  background-position:
+    -100% -100%,
+    0 0;
+  transition-duration: 1.5s;
+}
+
+span.token {
+  display: inline-block;
+  max-width: 100%;
+}
+
+pre code {
+  max-width: 100%;
+  display: inline-block;
+  width: 100%;
+  /* Background color */
+  background-color: hsl(var(--code-background)) !important;
+  color: hsl(var(--code-foreground)) !important;
+}
+
+pre {
+  /* Background color */
+  background-color: hsl(var(--code-background)) !important;
+}
+
+.prose li::marker {
+  color: inherit !important;
+}
+
+[type="search"]:not(:placeholder-shown)::-webkit-search-cancel-button {
+  opacity: 1 !important;
+}
+
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  height: 16px;
+  width: 16px;
+  margin-left: 0.4em;
+  position: relative;
+  right: -4px;
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'><path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'/></svg>");
+  background-color: hsl(var(--foreground)) !important;
+  background-image: none;
+  cursor: pointer;
+}
+.react-flow__background pattern circle {
+  fill: hsl(var(--canvas-dot)) !important;
 }

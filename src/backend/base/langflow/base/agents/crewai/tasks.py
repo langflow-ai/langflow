@@ -1,4 +1,4 @@
-from crewai import Task  # type: ignore
+from crewai import Task
 
 
 class SequentialTask(Task):

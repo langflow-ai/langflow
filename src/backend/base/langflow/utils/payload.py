@@ -3,10 +3,7 @@ import re
 
 
 def extract_input_variables(nodes):
-    """
-    Extracts input variables from the template
-    and adds them to the input_variables field.
-    """
+    """Extracts input variables from the template and adds them to the input_variables field."""
     for node in nodes:
         with contextlib.suppress(Exception):
             if "input_variables" in node["data"]["node"]["template"]:
@@ -28,9 +25,7 @@ def extract_input_variables(nodes):
 
 
 def get_root_vertex(graph):
-    """
-    Returns the root node of the template.
-    """
+    """Returns the root node of the template."""
     incoming_edges = {edge.source_id for edge in graph.edges}
 
     if not incoming_edges and len(graph.vertices) == 1:
@@ -57,10 +52,11 @@ def build_json(root, graph) -> dict:
     template = root.data["node"]["template"]
     final_dict = template.copy()
 
-    for key, value in final_dict.items():
+    for key in final_dict:
         if key == "_type":
             continue
 
+        value = final_dict[key]
         node_type = value["type"]
 
         if "value" in value and value["value"] is not None:
@@ -81,7 +77,7 @@ def build_json(root, graph) -> dict:
                 raise ValueError(msg)
             values = [build_json(child, graph) for child in children]
             value = (
-                list(values) if value["list"] else next(iter(values), None)  # type: ignore
+                list(values) if value["list"] else next(iter(values), None)  # type: ignore[arg-type]
             )
         final_dict[key] = value
 

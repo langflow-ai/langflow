@@ -5,7 +5,7 @@ from typing import Any
 
 
 def import_module(module_path: str) -> Any:
-    """Import module from module path"""
+    """Import module from module path."""
     if "from" not in module_path:
         # Import the module using the module path
         return importlib.import_module(module_path)
@@ -19,7 +19,7 @@ def import_module(module_path: str) -> Any:
 
 
 def import_class(class_path: str) -> Any:
-    """Import class from class path"""
+    """Import class from class path."""
     module_path, class_name = class_path.rsplit(".", 1)
     module = import_module(module_path)
     return getattr(module, class_name)

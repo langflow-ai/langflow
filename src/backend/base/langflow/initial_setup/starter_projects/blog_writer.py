@@ -1,12 +1,12 @@
 from textwrap import dedent
 
-from langflow.components.data.URL import URLComponent
-from langflow.components.helpers.ParseData import ParseDataComponent
-from langflow.components.inputs.TextInput import TextInputComponent
-from langflow.components.models.OpenAIModel import OpenAIModelComponent
-from langflow.components.outputs.ChatOutput import ChatOutput
-from langflow.components.prompts.Prompt import PromptComponent
-from langflow.graph.graph.base import Graph
+from langflow.components.data import URLComponent
+from langflow.components.inputs import TextInputComponent
+from langflow.components.models import OpenAIModelComponent
+from langflow.components.outputs import ChatOutput
+from langflow.components.processing import ParseDataComponent
+from langflow.components.prompts import PromptComponent
+from langflow.graph import Graph
 
 
 def blog_writer_graph(template: str | None = None):

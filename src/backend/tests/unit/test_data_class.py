@@ -1,12 +1,8 @@
+import copy
+
 import pytest
 from langchain_core.documents import Document
-
 from langflow.schema import Data
-
-
-@pytest.fixture
-def client():
-    pass
 
 
 def test_data_initialization():
@@ -68,8 +64,6 @@ def test_custom_attribute_get_set_del():
 
 
 def test_deep_copy():
-    import copy
-
     record1 = Data(data={"text": "Hello", "number": 10})
     record2 = copy.deepcopy(record1)
     assert record2.text == "Hello"

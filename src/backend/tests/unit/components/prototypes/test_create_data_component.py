@@ -1,5 +1,7 @@
+import re
+
 import pytest
-from langflow.components.prototypes.CreateData import CreateDataComponent
+from langflow.components.processing import CreateDataComponent
 from langflow.schema import Data
 
 
@@ -48,13 +50,10 @@ def test_update_build_config_exceed_limit(create_data_component):
             "value": False,
         },
     }
-    with pytest.raises(
-        ValueError, match="Number of fields cannot exceed 15. Try using a Component to combine two Data."
-    ):
+    with pytest.raises(ValueError, match=re.escape("Number of fields cannot exceed 15.")):
         create_data_component.update_build_config(build_config, 16, "number_of_fields")
 
 
-@pytest.mark.asyncio
 async def test_build_data(create_data_component):
     create_data_component._attributes = {
         "field_1_key": {"key1": "value1"},
@@ -109,9 +108,5 @@ def test_validate_text_key_invalid(create_data_component):
     create_data_component.text_key = "invalid_key"
 
     # Act & Assert
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(ValueError, match="Text Key: 'invalid_key' not found in the Data keys: 'key1, key2'"):
         create_data_component.validate_text_key()
-
-    # Check for the exact error message
-    expected_error_message = f"Text Key: '{create_data_component.text_key}' not found in the Data keys: '{', '.join(create_data_component.get_data().keys())}'"
-    assert str(exc_info.value) == expected_error_message

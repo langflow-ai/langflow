@@ -9,7 +9,7 @@ from langflow.template import Output
 class GetEnvVar(Component):
     display_name = "Get env var"
     description = "Get env var"
-    icon = "custom_components"
+    icon = "AstraDB"
 
     inputs = [
         StrInput(
@@ -26,5 +26,5 @@ class GetEnvVar(Component):
     def process_inputs(self) -> Message:
         if self.env_var_name not in os.environ:
             msg = f"Environment variable {self.env_var_name} not set"
-            raise Exception(msg)
+            raise ValueError(msg)
         return Message(text=os.environ[self.env_var_name])

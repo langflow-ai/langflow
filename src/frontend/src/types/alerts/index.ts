@@ -6,7 +6,7 @@ export type ErrorAlertType = {
 };
 export type NoticeAlertType = {
   title: string;
-  link: string | undefined;
+  link?: string;
   id: string;
   removeAlert: (id: string) => void;
 };
@@ -21,6 +21,8 @@ export type SingleAlertComponentType = {
 };
 export type AlertDropdownType = {
   children: JSX.Element;
+  notificationRef?: React.RefObject<HTMLDivElement>;
+  onClose?: () => void;
 };
 export type AlertItemType = {
   type: "notice" | "error" | "success";

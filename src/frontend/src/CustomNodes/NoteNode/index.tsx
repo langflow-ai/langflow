@@ -5,45 +5,48 @@ import {
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
-import { noteDataType } from "@/types/flow";
+import { NoteDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
+import { NodeResizer } from "@xyflow/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { NodeResizer, NodeToolbar } from "reactflow";
-import IconComponent from "../../components/genericIconComponent";
 import NodeDescription from "../GenericNode/components/NodeDescription";
-import NodeName from "../GenericNode/components/NodeName";
 import NoteToolbarComponent from "./NoteToolbarComponent";
 function NoteNode({
   data,
   selected,
 }: {
-  data: noteDataType;
-  selected: boolean;
+  data: NoteDataType;
+  selected?: boolean;
 }) {
   const bgColor =
-    data.node?.template.backgroundColor ?? Object.keys(COLOR_OPTIONS)[0];
+    Object.keys(COLOR_OPTIONS).find(
+      (key) => key === data.node?.template.backgroundColor,
+    ) ?? Object.keys(COLOR_OPTIONS)[0];
   const nodeDiv = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   //tricky to start the description with the right size
   useEffect(() => {
     if (nodeDiv.current) {
       setSize({
-        width: nodeDiv.current.offsetWidth - 43,
-        height: nodeDiv.current.offsetHeight - 80,
+        width: nodeDiv.current.offsetWidth - 25,
+        height: nodeDiv.current.offsetHeight - 25,
       });
     }
   }, []);
+
   const MemoNoteToolbarComponent = useMemo(
-    () => (
-      <NodeToolbar>
-        <NoteToolbarComponent data={data} bgColor={bgColor} />
-      </NodeToolbar>
-    ),
-    [data, bgColor],
+    () =>
+      selected ? (
+        <div className={cn("absolute -top-12 left-1/2 z-50 -translate-x-1/2")}>
+          <NoteToolbarComponent data={data} bgColor={bgColor} />
+        </div>
+      ) : (
+        <></>
+      ),
+    [data, bgColor, selected],
   );
   return (
     <>
-      {MemoNoteToolbarComponent}
       <NodeResizer
         minWidth={NOTE_NODE_MIN_WIDTH}
         minHeight={NOTE_NODE_MIN_HEIGHT}
@@ -51,10 +54,10 @@ function NoteNode({
         maxWidth={NOTE_NODE_MAX_WIDTH}
         onResize={(_, params) => {
           const { width, height } = params;
-          setSize({ width: width - 43, height: height - 80 });
+          setSize({ width: width - 25, height: height - 25 });
         }}
         isVisible={selected}
-        lineClassName="border-[3px] border-border"
+        lineClassName="!border !border-muted-foreground"
       />
       <div
         data-testid="note_node"
@@ -63,43 +66,44 @@ function NoteNode({
           maxWidth: NOTE_NODE_MAX_WIDTH,
           minWidth: NOTE_NODE_MIN_WIDTH,
           minHeight: NOTE_NODE_MIN_HEIGHT,
-          backgroundColor: COLOR_OPTIONS[bgColor],
+          backgroundColor: COLOR_OPTIONS[bgColor] ?? "#00000000",
         }}
         ref={nodeDiv}
         className={cn(
-          "flex h-full w-full flex-col gap-3 rounded-md border border-b p-5 transition-all",
-          selected ? "" : "-z-50 shadow-sm",
+          "relative flex h-full w-full flex-col gap-3 rounded-xl p-3 transition-all",
+          COLOR_OPTIONS[bgColor] !== null &&
+            `border ${!selected && "-z-50 shadow-sm"}`,
         )}
       >
-        <div className="flex h-fit w-full items-center align-middle">
-          <div className="flex w-full gap-2">
-            <div data-testid="note_icon">
-              <IconComponent name="SquarePen" className="min-w-fit" />
-            </div>
-
-            <div className="w-11/12">
-              <NodeName
-                nodeId={data.id}
-                selected={selected}
-                display_name={data.node?.display_name || "Note"}
-              />
-            </div>
-          </div>
-        </div>
+        {MemoNoteToolbarComponent}
         <div
           style={{
             width: size.width,
             height: size.height,
+            display: "flex",
           }}
         >
           <NodeDescription
-            inputClassName="border-0 ring-transparent resize-none rounded-none shadow-none h-full w-full"
-            style={{ backgroundColor: COLOR_OPTIONS[bgColor] }}
+            inputClassName={cn(
+              "border-0 ring-0 focus:ring-0 resize-none shadow-none rounded-sm h-full w-full",
+              COLOR_OPTIONS[bgColor] === null
+                ? ""
+                : "dark:!ring-background dark:text-background",
+            )}
+            mdClassName={cn(
+              COLOR_OPTIONS[bgColor] === null
+                ? "dark:prose-invert"
+                : "dark:!text-background",
+            )}
+            style={{ backgroundColor: COLOR_OPTIONS[bgColor] ?? "#00000000" }}
             charLimit={2500}
             nodeId={data.id}
             selected={selected}
             description={data.node?.description}
             emptyPlaceholder="Double-click to start typing or enter Markdown..."
+            placeholderClassName={
+              COLOR_OPTIONS[bgColor] === null ? "" : "dark:!text-background"
+            }
           />
         </div>
       </div>

@@ -1,19 +1,17 @@
-import { useGetRefreshFlows } from "@/controllers/API/queries/flows/use-get-refresh-flows";
-import { ENABLE_BRANDING } from "@/customization/feature-flags";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
 import useAlertStore from "@/stores/alertStore";
-import { useTypesStore } from "@/stores/typesStore";
 import { customStringify } from "@/utils/reactflowUtils";
 import { useEffect } from "react";
 import { useBlocker, useParams } from "react-router-dom";
-import FlowToolbar from "../../components/chatComponent";
-import { useDarkStore } from "../../stores/darkStore";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import Page from "./components/PageComponent";
-import ExtraSidebar from "./components/extraSidebarComponent";
+import { FlowSidebarComponent } from "./components/flowSidebarComponent";
 
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
@@ -28,7 +26,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const blocker = useBlocker(changesNotSaved || isBuilding);
 
-  const version = useDarkStore((state) => state.version);
   const setOnFlowPage = useFlowStore((state) => state.setOnFlowPage);
   const { id } = useParams();
   const navigate = useCustomNavigate();
@@ -36,16 +33,14 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   const flows = useFlowsManagerStore((state) => state.flows);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const { mutateAsync: refreshFlows } = useGetRefreshFlows();
-  const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
-  const getTypes = useTypesStore((state) => state.getTypes);
-  const types = useTypesStore((state) => state.types);
+
+  const flowToCanvas = useFlowsManagerStore((state) => state.flowToCanvas);
 
   const updatedAt = currentSavedFlow?.updated_at;
-
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
-
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
+
+  const { mutateAsync: getFlow } = useGetFlow();
 
   const handleSave = () => {
     let saving = true;
@@ -106,16 +101,15 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
           return;
         }
 
-        setCurrentFlow(isAnExistingFlow);
-      } else if (!flows) {
-        setIsLoading(true);
-        await refreshFlows(undefined);
-        if (!types || Object.keys(types).length === 0) await getTypes();
-        setIsLoading(false);
+        const isAnExistingFlowId = isAnExistingFlow.id;
+
+        flowToCanvas
+          ? setCurrentFlow(flowToCanvas)
+          : getFlowToAddToCanvas(isAnExistingFlowId);
       }
     };
     awaitgetTypes();
-  }, [id, flows, currentFlowId]);
+  }, [id, flows, currentFlowId, flowToCanvas]);
 
   useEffect(() => {
     setOnFlowPage(true);
@@ -147,22 +141,29 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
     }
   }, [blocker.state, isBuilding]);
 
+  const getFlowToAddToCanvas = async (id: string) => {
+    const flow = await getFlow({ id: id });
+    setCurrentFlow(flow);
+  };
+
+  const isMobile = useIsMobile();
+
   return (
     <>
       <div className="flow-page-positioning">
         {currentFlow && (
           <div className="flex h-full overflow-hidden">
-            {!view && <ExtraSidebar />}
-            <main className="flex flex-1">
-              {/* Primary column */}
-              <div className="h-full w-full">
-                <Page />
-              </div>
-              {!view && <FlowToolbar />}
-            </main>
+            <SidebarProvider width="17.5rem" defaultOpen={!isMobile}>
+              {!view && <FlowSidebarComponent />}
+              <main className="flex w-full overflow-hidden">
+                <div className="h-full w-full">
+                  <Page />
+                </div>
+              </main>
+            </SidebarProvider>
           </div>
         )}
-        {ENABLE_BRANDING && version && (
+        {/* {ENABLE_BRANDING && version && (
           <a
             target={"_blank"}
             href="https://medium.com/logspace/langflow-datastax-better-together-1b7462cebc4d"
@@ -172,7 +173,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
             <div className={version ? "mt-2" : "mt-1"}>⛓️ v{version}</div>
           </a>
-        )}
+        )} */}
       </div>
       {blocker.state === "blocked" && (
         <>

@@ -1,13 +1,12 @@
-import { FlowType } from "@/types/flow";
+import { AllNodeType, EdgeType, FlowType } from "@/types/flow";
 import {
   Connection,
-  Edge,
   Node,
   OnEdgesChange,
   OnNodesChange,
   ReactFlowInstance,
   Viewport,
-} from "reactflow";
+} from "@xyflow/react";
 import { BuildStatus } from "../../../constants/enums";
 import { VertexBuildTypeAPI } from "../../api";
 import { ChatInputType, ChatOutputType } from "../../chat";
@@ -54,9 +53,13 @@ export type FlowPoolType = {
 };
 
 export type FlowStoreType = {
+  fitViewNode: (nodeId: string) => void;
   autoSaveFlow: (() => void) | undefined;
-  componentsToUpdate: boolean;
-  updateComponentsToUpdate: (nodes: Node[]) => void;
+  componentsToUpdate: string[];
+  setComponentsToUpdate: (
+    update: string[] | ((oldState: string[]) => string[]),
+  ) => void;
+  updateComponentsToUpdate: (nodes: AllNodeType[]) => void;
   onFlowPage: boolean;
   setOnFlowPage: (onFlowPage: boolean) => void;
   flowPool: FlowPoolType;
@@ -86,8 +89,10 @@ export type FlowStoreType = {
   setIsBuilding: (isBuilding: boolean) => void;
   setPending: (isPending: boolean) => void;
   resetFlow: (flow: FlowType | undefined) => void;
-  reactFlowInstance: ReactFlowInstance | null;
-  setReactFlowInstance: (newState: ReactFlowInstance) => void;
+  reactFlowInstance: ReactFlowInstance<AllNodeType, EdgeType> | null;
+  setReactFlowInstance: (
+    newState: ReactFlowInstance<AllNodeType, EdgeType>,
+  ) => void;
   flowState: FlowState | undefined;
   setFlowState: (
     state:
@@ -95,18 +100,23 @@ export type FlowStoreType = {
       | undefined
       | ((oldState: FlowState | undefined) => FlowState),
   ) => void;
-  nodes: Node[];
-  edges: Edge[];
-  onNodesChange: OnNodesChange;
-  onEdgesChange: OnEdgesChange;
-  setNodes: (update: Node[] | ((oldState: Node[]) => Node[])) => void;
-  setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void;
+  nodes: AllNodeType[];
+  edges: EdgeType[];
+  onNodesChange: OnNodesChange<AllNodeType>;
+  onEdgesChange: OnEdgesChange<EdgeType>;
+  setNodes: (
+    update: AllNodeType[] | ((oldState: AllNodeType[]) => AllNodeType[]),
+  ) => void;
+  setEdges: (
+    update: EdgeType[] | ((oldState: EdgeType[]) => EdgeType[]),
+  ) => void;
   setNode: (
     id: string,
-    update: Node | ((oldState: Node) => Node),
+    update: AllNodeType | ((oldState: AllNodeType) => AllNodeType),
     isUserChange?: boolean,
+    callback?: () => void,
   ) => void;
-  getNode: (id: string) => Node | undefined;
+  getNode: (id: string) => AllNodeType | undefined;
   deleteNode: (nodeId: string | Array<string>) => void;
   deleteEdge: (edgeId: string | Array<string>) => void;
   paste: (
@@ -130,6 +140,7 @@ export type FlowStoreType = {
     files,
     silent,
     setLockChat,
+    session,
   }: {
     setLockChat?: (lock: boolean) => void;
     startNodeId?: string;
@@ -137,8 +148,9 @@ export type FlowStoreType = {
     input_value?: string;
     files?: string[];
     silent?: boolean;
+    session?: string;
   }) => Promise<void>;
-  getFlow: () => { nodes: Node[]; edges: Edge[]; viewport: Viewport };
+  getFlow: () => { nodes: Node[]; edges: EdgeType[]; viewport: Viewport };
   updateVerticesBuild: (
     vertices: {
       verticesIds: string[];
@@ -176,8 +188,8 @@ export type FlowStoreType = {
     edges,
     viewport,
   }: {
-    nodes?: Node[];
-    edges?: Edge[];
+    nodes?: AllNodeType[];
+    edges?: EdgeType[];
     viewport?: Viewport;
   }) => void;
   handleDragging:
@@ -229,4 +241,8 @@ export type FlowStoreType = {
   stopBuilding: () => void;
   buildController: AbortController;
   setBuildController: (controller: AbortController) => void;
+  currentBuildingNodeId: string[] | undefined;
+  setCurrentBuildingNodeId: (nodeIds: string[] | undefined) => void;
+  clearEdgesRunningByNodes: () => Promise<void>;
+  updateToolMode: (nodeId: string, toolMode: boolean) => void;
 };

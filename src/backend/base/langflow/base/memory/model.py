@@ -3,7 +3,8 @@ from abc import abstractmethod
 from langchain.memory import ConversationBufferMemory
 
 from langflow.custom import Component
-from langflow.field_typing import BaseChatMemory, BaseChatMessageHistory
+from langflow.field_typing import BaseChatMemory
+from langflow.field_typing.constants import Memory
 from langflow.template import Output
 
 
@@ -17,7 +18,7 @@ class LCChatMemoryComponent(Component):
         )
     ]
 
-    def _validate_outputs(self):
+    def _validate_outputs(self) -> None:
         required_output_methods = ["build_message_history"]
         output_names = [output.name for output in self.outputs]
         for method_name in required_output_methods:
@@ -32,7 +33,5 @@ class LCChatMemoryComponent(Component):
         return ConversationBufferMemory(chat_memory=self.build_message_history())
 
     @abstractmethod
-    def build_message_history(self) -> BaseChatMessageHistory:
-        """
-        Builds the chat message history memory.
-        """
+    def build_message_history(self) -> Memory:
+        """Builds the chat message history memory."""

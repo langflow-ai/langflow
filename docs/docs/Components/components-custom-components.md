@@ -1,18 +1,15 @@
 ---
-title: Custom Components
-sidebar_position: 8
+title: Create custom components
 slug: /components-custom-components
 ---
 
-# Custom Components
-
-Custom components are created within Langflow and extend the platform's functionality with custom, resusable Python code.
+Custom components are created within Langflow and extend the platform's functionality with custom, reusable Python code.
 
 Since Langflow operates with Python behind the scenes, you can implement any Python function within a Custom Component. This means you can leverage the power of libraries such as Pandas, Scikit-learn, Numpy, and thousands of other packages to create components that handle data processing in unlimited ways. You can use any type as long as the type is properly annotated in the output methods (e.g., `> list[int]`).
 
 Custom Components create reusable and configurable components to enhance the capabilities of Langflow, making it a powerful tool for developing complex processing between user and AI messages.
 
-## How to Create Custom Components
+## Create a custom component in Langflow
 
 Creating custom components in Langflow involves creating a Python class that defines the component's functionality, inputs, and outputs.
 The default code provides a working structure for your custom component.
@@ -90,8 +87,6 @@ class CustomComponent(Component):
 8. Click **Check & Save** to confirm your component works.
 You now have an operational custom component.
 
-![](./238089171.png)
-
 
 ## Add inputs and modify output methods
 
@@ -160,8 +155,6 @@ class MyCustomComponent(Component):
 Since the component outputs a `Message`, you can wire it into a chat and pass messages to yourself.
 
 Your Custom Component accepts the Chat Input message through `MessageTextInput`, fills in the variables with the `process_inputs` method, and finally passes the message `User Username (Age: 49, Gender: Male) sent the following special message: Hello!` to Chat Output.
-
-![](./custom-component-chat.png)
 
 By defining inputs this way, Langflow can automatically handle the validation and display of these fields in the user interface, making it easier to create robust and user-friendly custom components.
 
@@ -427,8 +420,6 @@ The component performs basic text analysis, including character count and senten
 
 Since the component inputs and outputs a `Message`, you can wire the component into a chat and see how the basic custom component logic interacts with your input.
 
-![](./custom-component-inputs-chat.png)
-
 ## Create a Custom Component with Multiple Outputs {#6f225be8a142450aa19ee8e46a3b3c8c}
 
 ---
@@ -497,4 +488,4 @@ Advanced methods and attributes offer additional control and functionality. Unde
 
 ## Contribute Custom Components to Langflow
 
-See [How to Contribute](/contributing-how-to-contribute#submitting-components) to contribute your custom component to Langflow.
+See [How to Contribute](/contributing-components) to contribute your custom component to Langflow.

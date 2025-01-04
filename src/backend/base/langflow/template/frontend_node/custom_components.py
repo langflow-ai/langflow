@@ -47,6 +47,8 @@ class CustomComponentFrontendNode(FrontendNode):
     name: str = "CustomComponent"
     display_name: str | None = "CustomComponent"
     beta: bool = False
+    legacy: bool = False
+    minimized: bool = False
     template: Template = Template(
         type_name="CustomComponent",
         fields=[
@@ -72,6 +74,8 @@ class ComponentFrontendNode(FrontendNode):
     name: str = "Component"
     display_name: str | None = "Component"
     beta: bool = False
+    minimized: bool = False
+    legacy: bool = False
     template: Template = Template(
         type_name="Component",
         fields=[

@@ -1,4 +1,8 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
+
+from typing_extensions import override
 
 from langflow.services.factory import ServiceFactory
 from langflow.services.tracing.service import TracingService
@@ -8,8 +12,9 @@ if TYPE_CHECKING:
 
 
 class TracingServiceFactory(ServiceFactory):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(TracingService)
 
-    def create(self, settings_service: "SettingsService"):
+    @override
+    def create(self, settings_service: SettingsService):
         return TracingService(settings_service)
