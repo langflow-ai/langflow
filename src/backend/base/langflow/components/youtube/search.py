@@ -1,9 +1,10 @@
+import pandas as pd
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from langflow.custom import Component
 from langflow.inputs import IntInput, MessageTextInput, SecretStrInput
-from langflow.schema import Data, Message
+from langflow.schema import DataFrame
 from langflow.template import Output
 
 
@@ -39,57 +40,79 @@ class YouTubeSearchComponent(Component):
         Output(name="video_data", display_name="Video Data", method="search_youtube"),
     ]
 
-    def search_youtube(self) -> list[Message]:
-        """Searches YouTube and returns a list of video data based on the query.
-
-        Returns:
-            List[Data]: A list of Data objects, each containing information about a video.
-        """
+    def search_youtube(self) -> DataFrame:
+        """Searches YouTube and returns video data as a DataFrame."""
         try:
+            # Initialize YouTube API client
             youtube = build("youtube", "v3", developerKey=self.api_key)
 
+            # Perform initial search
             search_response = (
                 youtube.search()
                 .list(q=self.query, type="video", part="id,snippet", maxResults=self.max_results)
                 .execute()
             )
 
+            # Prepare data for DataFrame
             video_data_list = []
             for search_result in search_response.get("items", []):
                 video_id = search_result["id"]["videoId"]
-                title = search_result["snippet"]["title"]
-                description = search_result["snippet"]["description"]
-                thumbnail_url = search_result["snippet"]["thumbnails"]["default"]["url"]
-                channel_title = search_result["snippet"]["channelTitle"]
-                published_at = search_result["snippet"]["publishedAt"]
+                snippet = search_result["snippet"]
 
-                video_data = Data(
-                    data={
-                        "title": title,
-                        "video_id": video_id,
-                        "url": f"https://www.youtube.com/watch?v={video_id}",
-                        "description": description,
-                        "thumbnail_url": thumbnail_url,
-                        "channel_title": channel_title,
-                        "published_at": published_at,
-                    }
-                )
+                video_data = {
+                    "video_id": video_id,
+                    "url": f"https://www.youtube.com/watch?v={video_id}",
+                    "title": snippet["title"],
+                    "description": snippet["description"],
+                    "channel_id": snippet["channelId"],
+                    "channel_title": snippet["channelTitle"],
+                    "published_at": snippet["publishedAt"],
+                    "search_query": self.query,
+                }
+
+                # Add thumbnails
+                thumbnails = snippet["thumbnails"]
+                for size, thumb in thumbnails.items():
+                    video_data[f"thumbnail_{size}_url"] = thumb["url"]
+                    video_data[f"thumbnail_{size}_width"] = thumb.get("width", 0)
+                    video_data[f"thumbnail_{size}_height"] = thumb.get("height", 0)
+
                 video_data_list.append(video_data)
 
-            if video_data_list:
-                self.status = video_data_list
-                return video_data_list
-            self.status = []
-            return []
+            if not video_data_list:
+                return DataFrame(pd.DataFrame({"error": ["No results found"]}))
+
+            # Create DataFrame
+            video_df = pd.DataFrame(video_data_list)
+
+            # Organize columns in logical groups
+            base_cols = [
+                "video_id",
+                "title",
+                "url",
+                "channel_id",
+                "channel_title",
+                "published_at",
+                "search_query",
+                "description",
+            ]
+
+            thumb_cols = sorted([col for col in video_df.columns if col.startswith("thumbnail_")])
+
+            # Get remaining columns that don't fit in any category
+            all_defined_cols = base_cols + thumb_cols
+            other_cols = [col for col in video_df.columns if col not in all_defined_cols]
+
+            # Combine all columns in desired order
+            ordered_cols = base_cols + thumb_cols + other_cols
+
+            # Reorder DataFrame columns
+            video_df = video_df[ordered_cols]
+
+            return DataFrame(video_df)
 
         except HttpError as e:
-            error_data = [Data(data={"error": f"An HTTP error occurred: {e}"})]
-            self.status = error_data
-            return error_data
-        except ValueError as e:
-            error_data = [Data(data={"error": f"A value error occurred: {e}"})]
-            self.status = error_data
-            return error_data
-        else:
-            self.status = []
-            return []
+            return DataFrame(pd.DataFrame({"error": [f"An HTTP error occurred: {e!s}"]}))
+
+        except (KeyError, pd.errors.EmptyDataError) as e:
+            return DataFrame(pd.DataFrame({"error": [f"An unexpected error occurred: {e!s}"]}))
