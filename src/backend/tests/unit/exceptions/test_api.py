@@ -1,11 +1,10 @@
 from unittest.mock import Mock, patch
 
+from langflow.exceptions.api import APIException, ExceptionBody
 from langflow.services.database.models.flow.model import Flow
 
 
 def test_api_exception():
-    from langflow.exceptions.api import APIException, ExceptionBody
-
     mock_exception = Exception("Test exception")
     mock_flow = Mock(spec=Flow)
     mock_outdated_components = ["component1", "component2"]
@@ -45,8 +44,6 @@ def test_api_exception():
 
 
 def test_api_exception_no_flow():
-    from langflow.exceptions.api import APIException, ExceptionBody
-
     # Mock data
     mock_exception = Exception("Test exception")
 

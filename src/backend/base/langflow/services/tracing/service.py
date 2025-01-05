@@ -264,7 +264,8 @@ class TracingService(Service):
         self.outputs[trace_name] |= outputs or {}
         self.outputs_metadata[trace_name] |= output_metadata or {}
 
-    def _cleanup_inputs(self, inputs: dict[str, Any]):
+    @staticmethod
+    def _cleanup_inputs(inputs: dict[str, Any]):
         inputs = inputs.copy()
         for key in inputs:
             if "api_key" in key:

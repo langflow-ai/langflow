@@ -1,6 +1,5 @@
 ---
 title: Document QA
-sidebar_position: 2
 slug: /tutorials-document-qa
 ---
 

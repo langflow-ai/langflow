@@ -93,6 +93,8 @@ class StructuredOutputComponent(Component):
     ]
 
     def build_structured_output(self) -> Data:
+        schema_name = self.schema_name or "OutputModel"
+
         if not hasattr(self.llm, "with_structured_output"):
             msg = "Language model does not support structured output."
             raise TypeError(msg)
@@ -103,8 +105,8 @@ class StructuredOutputComponent(Component):
         output_model_ = build_model_from_schema(self.output_schema)
         if self.multiple:
             output_model = create_model(
-                self.schema_name,
-                objects=(list[output_model_], Field(description=f"A list of {self.schema_name}.")),  # type: ignore[valid-type]
+                schema_name,
+                objects=(list[output_model_], Field(description=f"A list of {schema_name}.")),  # type: ignore[valid-type]
             )
         else:
             output_model = output_model_

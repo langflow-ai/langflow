@@ -131,31 +131,29 @@ export default function Dropdown({
       <CommandEmpty>No values found.</CommandEmpty>
       <CommandGroup defaultChecked={false}>
         {filteredOptions?.map((option, index) => (
-          <ShadTooltip key={index} delayDuration={700} content={option}>
-            <div>
-              <CommandItem
-                value={option}
-                onSelect={(currentValue) => {
-                  onSelect(currentValue);
-                  setOpen(false);
-                }}
-                className="items-center overflow-hidden truncate"
-                data-testid={`${option}-${index}-option`}
-              >
-                {customValue === option && (
-                  <span className="text-muted-foreground">Text:&nbsp;</span>
+          <div>
+            <CommandItem
+              value={option}
+              onSelect={(currentValue) => {
+                onSelect(currentValue);
+                setOpen(false);
+              }}
+              className="items-center overflow-hidden truncate hover:cursor-pointer"
+              data-testid={`${option}-${index}-option`}
+            >
+              {customValue === option && (
+                <span className="text-muted-foreground">Text:&nbsp;</span>
+              )}
+              <span className="truncate">{option}</span>
+              <ForwardedIconComponent
+                name="Check"
+                className={cn(
+                  "ml-auto h-4 w-4 shrink-0 text-primary",
+                  value === option ? "opacity-100" : "opacity-0",
                 )}
-                <span className="truncate">{option}</span>
-                <ForwardedIconComponent
-                  name="Check"
-                  className={cn(
-                    "ml-auto h-4 w-4 shrink-0 text-primary",
-                    value === option ? "opacity-100" : "opacity-0",
-                  )}
-                />
-              </CommandItem>
-            </div>
-          </ShadTooltip>
+              />
+            </CommandItem>
+          </div>
         ))}
       </CommandGroup>
     </CommandList>

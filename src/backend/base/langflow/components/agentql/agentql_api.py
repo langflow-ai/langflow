@@ -90,7 +90,7 @@ class AgentQL(Component):
 
         except httpx.HTTPStatusError as e:
             response = e.response
-            if response.status_code in [401, 403]:
+            if response.status_code in {401, 403}:
                 self.status = "Please, provide a valid API Key. You can create one at https://dev.agentql.com."
             else:
                 try:

@@ -1,6 +1,5 @@
 ---
 title: Langfuse
-sidebar_position: 2
 slug: /integrations-langfuse
 ---
 

@@ -44,7 +44,7 @@ def test_operations(sample_dataframe, operation, expected_columns, expected_valu
         component.new_column_name = "Z"
     elif operation == "Select Columns":
         component.columns_to_select = ["A", "C"]
-    elif operation in ("Head", "Tail"):
+    elif operation in {"Head", "Tail"}:
         component.num_rows = 1
     elif operation == "Replace Value":
         component.column_name = "C"

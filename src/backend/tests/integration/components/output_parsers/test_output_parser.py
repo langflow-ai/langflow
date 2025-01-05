@@ -10,7 +10,7 @@ from tests.integration.utils import ComponentInputHandle, run_single_component
 
 @pytest.mark.api_key_required
 async def test_csv_output_parser_openai():
-    format_instructions = ComponentInputHandle(
+    format_instructions_ = ComponentInputHandle(
         clazz=OutputParserComponent,
         inputs={},
         output_name="format_instructions",
@@ -24,7 +24,7 @@ async def test_csv_output_parser_openai():
         clazz=PromptComponent,
         inputs={
             "template": "List the first five positive integers.\n\n{format_instructions}",
-            "format_instructions": format_instructions,
+            "format_instructions": format_instructions_,
         },
         output_name="prompt",
     )

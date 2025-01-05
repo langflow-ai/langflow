@@ -12,6 +12,7 @@ from docstring_parser import parse
 from langflow.logging.logger import logger
 from langflow.schema import Data
 from langflow.services.deps import get_settings_service
+from langflow.services.utils import initialize_settings_service
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
 
@@ -416,8 +417,6 @@ async def update_settings(
     max_file_size_upload: int = 100,
 ) -> None:
     """Update the settings from a config file."""
-    from langflow.services.utils import initialize_settings_service
-
     # Check for database_url in the environment variables
 
     initialize_settings_service()

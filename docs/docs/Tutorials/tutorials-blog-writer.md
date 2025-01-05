@@ -1,6 +1,5 @@
 ---
 title: Blog Writer
-sidebar_position: 1
 slug: /tutorials-blog-writer
 ---
 

@@ -18,7 +18,11 @@ def test_celery(word: str) -> str:
 
 @celery_app.task(bind=True, soft_time_limit=30, max_retries=3)
 def build_vertex(self, vertex: Vertex) -> Vertex:
-    """Build a vertex."""
+    """Build a vertex.
+
+    Returns:
+        The built vertex.
+    """
     try:
         vertex.task_id = self.request.id
         async_to_sync(vertex.build)()

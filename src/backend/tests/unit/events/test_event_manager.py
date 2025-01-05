@@ -40,7 +40,7 @@ class TestEventManager:
     def test_accessing_non_registered_event_callback_with_recommended_fix(self):
         queue = asyncio.Queue()
         manager = EventManager(queue)
-        result = manager.__getattr__("non_registered_event")
+        result = manager.non_registered_event
         assert result == manager.noop
 
     # Accessing a registered event callback via __getattr__
@@ -130,8 +130,6 @@ class TestEventManager:
         assert len(manager.events) == 1000
 
     # Verifying the uniqueness of event IDs for each event triggered using await with asyncio decorator
-    import pytest
-
     async def test_event_id_uniqueness_with_await(self):
         queue = asyncio.Queue()
         manager = EventManager(queue)

@@ -14,11 +14,6 @@ from langflow.schema.properties import Properties, Source
 from langflow.template.field.base import Output
 
 
-async def create_event_queue():
-    """Create a queue for testing events."""
-    return asyncio.Queue()
-
-
 def blocking_cb(manager, event_type, data):
     time.sleep(0.01)
     manager.send_event(event_type=event_type, data=data)
@@ -43,7 +38,7 @@ class ComponentForTesting(Component):
 async def test_component_message_sending():
     """Test component's message sending functionality."""
     # Create event queue and manager
-    queue = await create_event_queue()
+    queue = asyncio.Queue()
     event_manager = EventManager(queue)
 
     event_manager.register_event("on_message", "message", callback=blocking_cb)
@@ -75,7 +70,7 @@ async def test_component_message_sending():
 async def test_component_tool_output():
     """Test component's tool output functionality."""
     # Create event queue and manager
-    queue = await create_event_queue()
+    queue = asyncio.Queue()
     event_manager = EventManager(queue)
 
     # Create component
@@ -110,7 +105,7 @@ async def test_component_tool_output():
 async def test_component_error_handling():
     """Test component's error handling."""
     # Create event queue and manager
-    queue = await create_event_queue()
+    queue = asyncio.Queue()
     event_manager = EventManager(queue)
 
     # Create component
@@ -141,7 +136,7 @@ async def test_component_error_handling():
 async def test_component_build_results():
     """Test component's build_results functionality."""
     # Create event queue and manager
-    queue = await create_event_queue()
+    queue = asyncio.Queue()
     event_manager = EventManager(queue)
 
     # Create component
@@ -173,7 +168,7 @@ async def test_component_build_results():
 async def test_component_logging():
     """Test component's logging functionality."""
     # Create event queue and manager
-    queue = await create_event_queue()
+    queue = asyncio.Queue()
     event_manager = EventManager(queue)
 
     # Create component
@@ -207,7 +202,7 @@ async def test_component_logging():
 @pytest.mark.usefixtures("client")
 async def test_component_streaming_message():
     """Test component's streaming message functionality."""
-    queue = await create_event_queue()
+    queue = asyncio.Queue()
     event_manager = EventManager(queue)
 
     event_manager.register_event("on_token", "token", blocking_cb)

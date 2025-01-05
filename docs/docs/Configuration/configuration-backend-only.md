@@ -1,6 +1,5 @@
 ---
 title: Run Langflow in backend-only mode
-sidebar_position: 4
 slug: /configuration-backend-only
 ---
 

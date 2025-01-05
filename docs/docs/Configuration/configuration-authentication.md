@@ -1,6 +1,5 @@
 ---
 title: Authentication
-sidebar_position: 0
 slug: /configuration-authentication
 ---
 

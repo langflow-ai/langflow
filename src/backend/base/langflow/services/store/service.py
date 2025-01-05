@@ -164,7 +164,8 @@ class StoreService(Service):
         except Exception:  # noqa: BLE001
             logger.opt(exception=True).debug("Webhook failed")
 
-    def build_tags_filter(self, tags: list[str]):
+    @staticmethod
+    def build_tags_filter(tags: list[str]):
         tags_filter: dict[str, Any] = {"tags": {"_and": []}}
         for tag in tags:
             tags_filter["tags"]["_and"].append({"_some": {"tags_id": {"name": {"_eq": tag}}}})
@@ -249,7 +250,8 @@ class StoreService(Service):
 
         return filter_conditions
 
-    def build_liked_filter(self):
+    @staticmethod
+    def build_liked_filter():
         user_data = user_data_var.get()
         # params["filter"] = json.dumps({"user_created": {"_eq": user_data["id"]}})
         if not user_data:

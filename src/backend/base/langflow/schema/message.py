@@ -381,7 +381,7 @@ class ErrorMessage(Message):
             exception = exception.__cause__
         # Get the error reason
         reason = f"**{exception.__class__.__name__}**\n"
-        if hasattr(exception, "body") and "message" in exception.body:
+        if hasattr(exception, "body") and isinstance(exception.body, dict) and "message" in exception.body:
             reason += f" - **{exception.body.get('message')}**\n"
         elif hasattr(exception, "code"):
             reason += f" - **Code: {exception.code}**\n"

@@ -1,6 +1,5 @@
 ---
 title: GCP
-sidebar_position: 3
 slug: /deployment-gcp
 ---
 

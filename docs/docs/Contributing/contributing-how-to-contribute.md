@@ -1,6 +1,5 @@
 ---
 title: Contribute to Langflow
-sidebar_position: 1
 slug: /contributing-how-to-contribute
 ---
 

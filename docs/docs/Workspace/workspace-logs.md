@@ -1,6 +1,5 @@
 ---
 title: Logs
-sidebar_position: 4
 slug: /workspace-logs
 ---
 

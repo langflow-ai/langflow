@@ -1,22 +1,16 @@
 ---
 title: Memory Chatbot
-sidebar_position: 3
 slug: /tutorials-memory-chatbot
 ---
 
-
-
 This flow extends the [basic prompting](/starter-projects-basic-prompting) flow to include a chat memory. This makes the AI remember previous user inputs.
 
-
 ## Prerequisites {#a71d73e99b1543bbba827207503cf31f}
-
 
 ---
 
 - [Langflow installed and running](/get-started-installation)
 - [OpenAI API key created](https://platform.openai.com/)
-
 
 ## Create the memory chatbot flow
 
@@ -26,15 +20,11 @@ This flow extends the [basic prompting](/starter-projects-basic-prompting) flo
 
 ![](/img/starter-flow-memory-chatbot.png)
 
-
 This flow uses the same components as the Basic Prompting one, but extends it with a **Chat Memory** component. This component retrieves previous messages and sends them to the **Prompt** component to fill a part of the **Template** with context.
-
 
 By clicking the template, you'll see the prompt editor like below:
 
-
 This gives the **OpenAI** component a memory of previous chat messages.
-
 
 ## Run the memory chatbot flow
 
@@ -49,14 +39,12 @@ Check and adjust advanced parameters by opening the Advanced Settings of the **
 
 
 
-## Use Session ID with the memory chatbot flow {#4e68c3c0750942f98c45c1c45d7ffbbe}
 
+## Use Session ID with the memory chatbot flow
 
 ---
 
-
 `SessionID` is a unique identifier in Langflow that stores conversation sessions between the AI and a user. A `SessionID` is created when a conversation is initiated, and then associated with all subsequent messages during that session.
-
 
 In the **Memory Chatbot** flow you created, the **Chat Memory** component references past interactions by **Session ID**. You can demonstrate this by modifying the **Session ID** value to switch between conversation histories.
 
@@ -70,8 +58,4 @@ Every chat component in Langflow comes with a `SessionID`. It defaults to the
 
 :::
 
-
-
-
-Learn more about memories in the [Chat Memory](/guides-chat-memory) section.
-
+Learn more about memories in the [Memory](/components-memories) section.

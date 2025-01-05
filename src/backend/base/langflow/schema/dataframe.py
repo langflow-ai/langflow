@@ -32,7 +32,7 @@ class DataFrame(pandas_DataFrame):
         >>> dataset = DataFrame({"name": ["John", "Jane"], "age": [30, 25]})
     """
 
-    def __init__(self, data: None | list[dict | Data] | dict | pd.DataFrame = None, **kwargs):
+    def __init__(self, data: list[dict | Data] | dict | pd.DataFrame | None = None, **kwargs):
         if data is None:
             super().__init__(**kwargs)
             return

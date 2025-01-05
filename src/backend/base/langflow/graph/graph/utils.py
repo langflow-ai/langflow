@@ -110,9 +110,6 @@ def update_template(template, g_nodes) -> None:
     Args:
         template (dict): The new template to update the node with.
         g_nodes (list): The list of nodes in the graph.
-
-    Returns:
-        None
     """
     for value in template.values():
         if not value.get("proxy"):
@@ -161,9 +158,6 @@ def set_new_target_handle(proxy_id, new_edge, target_handle, node) -> None:
         new_edge (dict): The new edge to be created.
         target_handle (dict): The target handle of the edge.
         node (dict): The node containing the edge.
-
-    Returns:
-        None
     """
     new_edge["target"] = proxy_id
     type_ = target_handle.get("type")

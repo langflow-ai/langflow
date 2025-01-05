@@ -1,6 +1,5 @@
 ---
 title: Components overview
-sidebar_position: 0
 slug: /components-overview
 ---
 

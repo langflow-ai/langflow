@@ -423,7 +423,7 @@ class Vertex:
                     else:
                         msg = f"Invalid value type {type(val)} for field {field_name}"
                         raise ValueError(msg)
-                elif val is not None and val != "":
+                elif val:
                     params[field_name] = val
 
                 if field.get("load_from_db"):
@@ -596,7 +596,8 @@ class Vertex:
                 result = await value.get_result(self, target_handle_name=key)
                 self.params[key][sub_key] = result
 
-    def _is_vertex(self, value):
+    @staticmethod
+    def _is_vertex(value):
         """Checks if the provided value is an instance of Vertex."""
         return isinstance(value, Vertex)
 

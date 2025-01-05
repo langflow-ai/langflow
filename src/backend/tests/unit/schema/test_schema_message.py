@@ -1,3 +1,4 @@
+import base64
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
@@ -29,8 +30,6 @@ def sample_image(langflow_cache_dir):
     # Create the image in the flow directory
     image_path = flow_dir / "test_image.png"
     # Create a small black 1x1 pixel PNG file
-    import base64
-
     image_content = base64.b64decode(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="
     )

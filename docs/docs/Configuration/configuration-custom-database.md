@@ -1,6 +1,6 @@
 ---
 title: Configure an external PostgreSQL database
-sidebar_position: 8
+slug: /configuration-custom-database
 ---
 Langflow's default database is [SQLite](https://www.sqlite.org/docs.html), but you can configure Langflow to use PostgreSQL instead.
 

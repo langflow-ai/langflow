@@ -1,6 +1,5 @@
 ---
 title: Logic
-sidebar_position: 13
 slug: /components-logic
 ---
 

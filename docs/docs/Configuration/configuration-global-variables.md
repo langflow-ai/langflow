@@ -1,6 +1,5 @@
 ---
 title: Global variables
-sidebar_position: 5
 slug: /configuration-global-variables
 ---
 

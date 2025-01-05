@@ -13,6 +13,7 @@ from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
 from langflow.services.database.models.folder.model import FolderCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
+from sqlalchemy import text
 
 
 @pytest.fixture(scope="module")
@@ -619,8 +620,6 @@ async def test_sqlite_pragmas():
     db_service = get_db_service()
 
     async with db_service.with_session() as session:
-        from sqlalchemy import text
-
         assert (await session.exec(text("PRAGMA journal_mode;"))).scalar() == "wal"
         assert (await session.exec(text("PRAGMA synchronous;"))).scalar() == 1
 

@@ -72,10 +72,17 @@ install_frontend: ## install the frontend dependencies
 	@cd src/frontend && npm install > /dev/null 2>&1
 
 build_frontend: ## build the frontend static files
-	@echo 'Building frontend static files'
-	@cd src/frontend && CI='' npm run build > /dev/null 2>&1
+	@echo '==== Starting frontend build ===='
+	@echo 'Current directory: $$(pwd)'
+	@echo 'Checking if src/frontend exists...'
+	@ls -la src/frontend || true
+	@echo 'Building frontend static files...'
+	@cd src/frontend && CI='' npm run build 2>&1 || { echo "\nBuild failed! Error output above ☝️"; exit 1; }
+	@echo 'Clearing destination directory...'
 	$(call CLEAR_DIRS,src/backend/base/langflow/frontend)
+	@echo 'Copying build files...'
 	@cp -r src/frontend/build/. src/backend/base/langflow/frontend
+	@echo '==== Frontend build complete ===='
 
 init: check_tools clean_python_cache clean_npm_cache ## initialize the project
 	@make install_backend

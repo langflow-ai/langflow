@@ -1,6 +1,7 @@
 """Module for package versioning."""
 
 import contextlib
+from importlib import metadata
 
 
 def get_version() -> str:
@@ -14,8 +15,6 @@ def get_version() -> str:
     Raises:
         ValueError: If the package is not found from the list of package names.
     """
-    from importlib import metadata
-
     pkg_names = [
         "langflow",
         "langflow-base",
