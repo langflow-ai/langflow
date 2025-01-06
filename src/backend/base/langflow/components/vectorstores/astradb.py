@@ -241,9 +241,26 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 token=self.token,
                 keyspace=self.get_keyspace(),
             )
+
             return self.collection_name in list(database.list_collection_names(keyspace=self.get_keyspace()))
         except Exception as e:  # noqa: BLE001
             self.log(f"Error getting collection status: {e}")
+
+            return False
+
+    def collection_hasdata(self):
+        try:
+            client = DataAPIClient(token=self.token)
+            database = client.get_database(
+                api_endpoint=self.get_api_endpoint(),
+                token=self.token,
+                keyspace=self.get_keyspace(),
+            )
+            collection = database.get_collection(self.collection_name, keyspace=self.get_keyspace())
+
+            return collection.estimated_document_count() > 0
+        except Exception as e:  # noqa: BLE001
+            self.log(f"Error checking collection data: {e}")
 
             return False
 
@@ -333,7 +350,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Bundle up the auto-detect parameters
         autodetect_params = {
             "autodetect_collection": self.collection_exists(),  # TODO: May want to expose this option
-            "content_field": self.content_field or None,
+            "content_field": (
+                self.content_field
+                if self.content_field and embedding_params
+                else ("page_content" if not self.collection_hasdata() else None)
+            ),
             "ignore_invalid_documents": self.ignore_invalid_documents,
         }
 
