@@ -216,6 +216,7 @@ export default function SliderComponent({
                 onKeyDown={handleKeyDown}
                 className="relative bottom-[1px] w-full cursor-text rounded-sm bg-transparent text-center font-mono text-[0.88rem] arrow-hide"
                 autoFocus
+                data-testid="slider_input"
               />
             ) : (
               <span
