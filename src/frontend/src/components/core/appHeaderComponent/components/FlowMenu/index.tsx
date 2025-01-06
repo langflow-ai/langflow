@@ -57,11 +57,24 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
   const [editingName, setEditingName] = useState(false);
   const [flowName, setFlowName] = useState(currentFlow?.name ?? "");
+  const [isInvalidName, setIsInvalidName] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const [inputWidth, setInputWidth] = useState<number>(0);
   const measureRef = useRef<HTMLSpanElement>(null);
 
   const { data: folders, isFetched: isFoldersFetched } = useGetFoldersQuery();
+  const flows = useFlowsManagerStore((state) => state.flows);
+  const [nameLists, setNameList] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (flows) {
+      const tempNameList: string[] = [];
+      flows.forEach((flow) => {
+        tempNameList.push(flow.name);
+      });
+      setNameList(tempNameList.filter((name) => name !== currentFlow?.name));
+    }
+  }, [flows, currentFlow?.name]);
 
   useGetRefreshFlowsQuery(
     {
@@ -127,9 +140,18 @@ export const MenuBar = ({}: {}): JSX.Element => {
 
   const handleEditName = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      setFlowName(e.target.value);
+      const { value } = e.target;
+      let invalid = false;
+      for (let i = 0; i < nameLists.length; i++) {
+        if (value === nameLists[i]) {
+          invalid = true;
+          break;
+        }
+      }
+      setIsInvalidName(invalid);
+      setFlowName(value);
     },
-    [],
+    [nameLists],
   );
 
   const handleKeyDown = useCallback(
@@ -137,6 +159,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
       if (e.key === "Escape") {
         setEditingName(false);
         setFlowName(currentFlow?.name ?? "");
+        setIsInvalidName(false);
       }
       if (e.key === "Enter") {
         nameInputRef.current?.blur();
@@ -146,21 +169,48 @@ export const MenuBar = ({}: {}): JSX.Element => {
   );
 
   const handleNameSubmit = useCallback(() => {
-    if (flowName.trim() !== "" && flowName !== currentFlow?.name) {
+    if (
+      flowName.trim() !== "" &&
+      flowName !== currentFlow?.name &&
+      !isInvalidName
+    ) {
       const newFlow = {
         ...currentFlow!,
         name: flowName,
         id: currentFlow!.id,
       };
       setCurrentFlow(newFlow);
-      saveFlow(newFlow).then(() => {
-        setSuccessData({ title: "Flow name updated successfully" });
+      saveFlow(newFlow)
+        .then(() => {
+          setSuccessData({ title: "Flow name updated successfully" });
+        })
+        .catch((error) => {
+          setErrorData({
+            title: "Error updating flow name",
+            list: [(error as Error).message],
+          });
+          setFlowName(currentFlow?.name ?? "");
+        });
+    } else if (isInvalidName) {
+      setErrorData({
+        title: "Invalid flow name",
+        list: ["Name already exists"],
       });
+      setFlowName(currentFlow?.name ?? "");
     } else {
       setFlowName(currentFlow?.name ?? "");
     }
     setEditingName(false);
-  }, [flowName, currentFlow, setCurrentFlow, saveFlow, setSuccessData]);
+    setIsInvalidName(false);
+  }, [
+    flowName,
+    currentFlow,
+    setCurrentFlow,
+    saveFlow,
+    setSuccessData,
+    setErrorData,
+    isInvalidName,
+  ]);
 
   return currentFlow && onFlowPage ? (
     <div className="flex items-center justify-center gap-2 truncate">
@@ -192,18 +242,22 @@ export const MenuBar = ({}: {}): JSX.Element => {
             className="header-menu-flow-name-2 truncate"
             data-testid="flow-configuration-button"
           >
+            <span
+              ref={measureRef}
+              className="invisible absolute font-semibold"
+              style={{ whiteSpace: "pre" }}
+            >
+              {flowName}
+            </span>
             {editingName ? (
               <>
-                <span
-                  ref={measureRef}
-                  className="invisible absolute font-semibold"
-                  style={{ whiteSpace: "pre" }}
-                >
-                  {flowName}
-                </span>
                 <Input
-                  className="h-6 px-0 font-semibold focus:border-0"
-                  style={{ width: `${inputWidth}px` }}
+                  className={cn(
+                    "h-6 px-0 font-semibold focus:border-0",
+                    isInvalidName &&
+                      "border-status-red focus-visible:ring-status-red",
+                  )}
+                  style={{ width: `${inputWidth + 1}px` }}
                   onChange={handleEditName}
                   maxLength={38}
                   ref={nameInputRef}
