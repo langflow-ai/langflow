@@ -295,7 +295,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         # Always attempt to update the database list
-        if field_name in ["token", "api_endpoint", "collection_name"]:
+        if field_name in {"token", "api_endpoint", "collection_name"}:
             # Update the database selector
             build_config["api_endpoint"]["options"] = self._initialize_database_options()
 
