@@ -266,18 +266,23 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return []
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):  # noqa: ARG002
-        # Refresh the collection name options
-        database_options = self._initialize_database_options()
-        build_config["database_name"]["options"] = [db["name"] for db in database_options]
-        build_config["database_name"]["options_metadata"] = [
-            {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
-        ]
+        # Refresh the database name options
+        if field_name == "token":
+            database_options = self._initialize_database_options()
+            build_config["database_name"]["options"] = [db["name"] for db in database_options]
+            build_config["database_name"]["options_metadata"] = [
+                {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
+            ]
 
-        collection_options = self._initialize_collection_options()
-        build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
-        build_config["collection_name"]["options_metadata"] = [
-            {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
-        ]
+        if field_name == "database_name":
+            # Refresh the collection name options
+            collection_options = self._initialize_collection_options()
+
+            raise ValueError(collection_options)
+            build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
+            build_config["collection_name"]["options_metadata"] = [
+                {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
+            ]
 
         return build_config
 
