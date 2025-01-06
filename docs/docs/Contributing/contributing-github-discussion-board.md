@@ -1,6 +1,5 @@
 ---
 title: Ask for help on the Discussions board
-sidebar_position: 3
 slug: /contributing-github-discussions
 ---
 
