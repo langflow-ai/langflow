@@ -20,7 +20,7 @@ class LoopComponent(Component):
         Output(display_name="Done", name="done", method="done_output"),
     ]
 
-    def initialize_data(self):
+    def initialize_data(self) -> None:
         """Initialize the data list, context index, and aggregated list."""
         if self.ctx.get(f"{self._id}_initialized", False):
             return
