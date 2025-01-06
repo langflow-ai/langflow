@@ -254,10 +254,10 @@ export const MenuBar = ({}: {}): JSX.Element => {
                 className="cursor-pointer"
               >
                 <IconComponent
-                  name="Settings2"
+                  name="SquarePen"
                   className="header-menu-options"
                 />
-                Flow Settings
+                Edit Details
               </DropdownMenuItem>
               {!autoSaving && (
                 <DropdownMenuItem
