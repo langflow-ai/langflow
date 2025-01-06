@@ -42,8 +42,6 @@ Langflow has four distinct regions: the [workspace](#workspace) is the main area
 
 The **workspace** is where you create AI applications by connecting and running components in flows.
 
-![](/img/workspace-basic-prompting.png)
-
 The workspace controls allow you to adjust your view and lock your flows in place.
 
 * Add **Notes** to flows with the **Add Note** button, similar to commenting in code.
@@ -59,7 +57,7 @@ To add a component to your flow, drag it from the sidebar onto the workspace.
 
 To connect components, drag a line from the output handle (⚪) of one component to the input handle of another.
 
-For more information, see [How to build flows with components](/concepts-components).
+For more information, see [Components overview](/concepts-components).
 
 <img src="/img/prompt-component.png" alt="Prompt component" style={{display: 'block', margin: 'auto', width: 300}} />
 
