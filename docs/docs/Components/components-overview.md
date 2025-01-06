@@ -1,59 +1,92 @@
 ---
-title: How to build flows with components
-sidebar_position: 0
+title: Components overview
 slug: /components-overview
 ---
 
-A component is a single building block within a flow. It consists of inputs, outputs, and parameters that define their functionality. These elements provide a convenient and  straightforward way to compose LLM-based applications. Learn more about components and how they work below.
+import Icon from "@site/src/components/icon";
 
+A component is a single building block within a flow with inputs, outputs, functions, and parameters that define its functionality. A single component is like a class within a larger application.
 
-During the flow creation process, you will notice handles (colored circles) attached to one or both sides of a component. These handles use distinct colors to indicate the types of inputs and outputs that can be interconnected. Hover over a handle to see connection details.
+To add a component to a flow, drag it from the **Component** menu to the **Workspace**.
 
+Learn more about components and how they work on this page.
+
+## Component menu
+
+Each component is unique, but all have a menu bar at the top that looks something like this.
+
+<img src="/img/openai-model-component.png" alt="Open AI component" style={{display: 'block', margin: 'auto', width: 300}} />
+
+Use these controls to do the following:
+
+- **Code** — Modify the component's Python code and save your changes.
+- **Controls** — Adjust all component parameters.
+- **Freeze Path** — After a component runs, lock its previous output state to prevent it from re-running.
+
+Click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> **All** to see additional options for a component.
+
+To view a component’s output and logs, click the <Icon name="View" aria-label="View icon" />**Visibility** icon.
+
+To run a single component, click ▶️ **Play**. A ✅**Check** indicates that the component ran successfully.
+
+## Component ports
+
+Handles (<Icon name="Circle" size="16" aria-label="A circle on the side of a component" />) on the side of a component indicate the types of inputs and outputs that can be connected at that port. Hover over a handle to see connection details.
 
 <img src="/img/prompt-component.png" alt="Prompt component" style={{display: 'block', margin: 'auto', width: 300}} />
 
+### Component port data type colors
 
-On the top right corner of the component, you'll find the a play button to run a component. Once it runs, a status icon appears and you can hover over that to visualize success or error messages. Start interacting with your AI by clicking the **Playground** at the bottom right of the workspace.
+The following table lists the handle colors and their corresponding data types:
 
-
-## Component menu {#7e3f2f8ff5074b2fb3eee97c9cfaabe7}
-
-
-Each component is unique, but they all have a menu bar at the top that looks something like this.
-
-
-<img src="/img/openai-model-component.png" alt="Prompt component" style={{display: 'block', margin: 'auto', width: 300}} />
-
-
-It consists of options such as:
-
-- **Code** — Modify the component's Python code and save it.
-- **Controls** — Adjust all parameters of a component.
-- **Freeze Path** — After a component runs, lock its previous output state to prevent it from re-running.
-
-Click **All** (the "..." button) to see all options.
+| Data Type | Handle Color | Hex Code |
+|-----------|--------------|----------|
+| BaseLanguageModel | Fuchsia | #c026d3 |
+| Data | Red | #dc2626 |
+| Document | Lime | #65a30d |
+| Embeddings | Emerald | #10b981 |
+| LanguageModel | Fuchsia | #c026d3 |
+| Message | Indigo | #4f46e5 |
+| Prompt | Violet | #7c3aed |
+| str | Indigo | #4F46E5 |
+| Text | Indigo | #4F46E5 |
+| unknown | Gray | #9CA3AF |
 
 
-## Output preview {#ed7b3c34e0774b8a916b0e68821c9a7a}
+## Freeze Path
+
+After a component runs, **Freeze Path** locks the component's previous output state to prevent it from re-running.
+
+If you’re expecting consistent output from a component and don’t need to re-run it, click **Freeze Path**.
+
+Enabling **Freeze Path** freezes all components downstream of the selected component.
 
 
-Langflow includes an output visualizer for components that opens a pop-up screen. This allows you to easily inspect and monitor transmissions between components, providing instant feedback on your workflows.
+## Additional component options
 
+Click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> **All** to see additional options for a component.
 
-## Advanced settings {#b6430d4903df44f0ba4618a558c83d7b}
+To modify a component's name or description, double-click in the **Name** or **Description** fields. Component descriptions accept markdown syntax.
 
+### Component shortcuts
 
-Langflow components can be edited by clicking the **Advanced Settings** button.
+The following keyboard shortcuts are available when a component is selected.
 
+| Menu Item | Mac Shortcut | Description |
+|-----------|----------|-------------|
+| Code | ⌘ + C | Opens the code editor for the component. |
+| Advanced | ⌘ + A | Opens advanced settings for the component. |
+| Save | ⌘ + S | Saves the current state of the component to Saved components in the sidebar. |
+| Duplicate | ⌘ + D | Creates a duplicate of the component. |
+| Copy | ⌘ + C | Copies the selected component. Paste it in the workspace with ⌘ + V. |
+| Docs | ⌘ + D | Opens related documentation. |
+| Minimize | ⌘ + Q | Minimizes the current component. |
+| Freeze | ⌘ + F | Freezes the current component state. |
+| Freeze Path | ⌘ + F | Freezes the current component state and all upstream components. |
+| Download | ⌘ + D | Downloads the current component as a JSON file. |
+| Delete | ⌘ + ⌫ | Deletes the component. |
 
-Hide parameters with the **Show** button to reduce complexity and keep the workspace clean and intuitive for experimentation.
-
-
-You can also double-click a component's name and description to modify those. Component descriptions accept markdown syntax.
-
-
-## Group components {#c3f5ed818e3b40ceb6534dc358e1a5f2}
-
+## Group components in the workspace
 
 Multiple components can be grouped into a single component for reuse. This is useful when combining large flows into single components (like RAG with a vector database, for example) and saving space.
 
@@ -61,11 +94,12 @@ Multiple components can be grouped into a single component for reuse. This is us
 2. Select **Group**.
 3. The components merge into a single component.
 4. Double-click the name and description to change them.
-5. Save your grouped component to in the sidebar for later use!
+5. Save your grouped component to in the sidebar for later use.
 
-## Component version {#887fd587589448dc8c27336d1c235b9b}
+## Component version
 
 A component's state is stored in a database, while sidebar components are like starter templates. As soon as you drag a component from the sidebar to the workspace, the two components are no longer in parity.
 
-
 The component will keep the version number it was initialized to the workspace with. Click the **Update Component** icon (exclamation mark) to bring the component up to the `latest` version. This will change the code of the component in place so you can validate that the component was updated by checking its Python code before and after updating it.
+
+

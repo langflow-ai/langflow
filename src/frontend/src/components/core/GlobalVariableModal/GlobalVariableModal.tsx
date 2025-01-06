@@ -44,7 +44,7 @@ export default function GlobalVariableModal({
 }): JSX.Element {
   const [key, setKey] = useState(initialData?.name ?? "");
   const [value, setValue] = useState(initialData?.value ?? "");
-  const [type, setType] = useState(initialData?.type ?? "Generic");
+  const [type, setType] = useState(initialData?.type ?? "Credential");
   const [fields, setFields] = useState<string[]>(
     initialData?.default_fields ?? [],
   );
@@ -136,7 +136,7 @@ export default function GlobalVariableModal({
     >
       <BaseModal.Header
         description={
-          "This variable will be encrypted and will be available for you to use in any of your projects."
+          "This variable will be available for you to use in any of your projects."
         }
       >
         <span className="pr-2">

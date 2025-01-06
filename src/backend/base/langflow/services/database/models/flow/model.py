@@ -9,7 +9,12 @@ import emoji
 from emoji import purely_emoji
 from fastapi import HTTPException, status
 from loguru import logger
-from pydantic import BaseModel, field_serializer, field_validator
+from pydantic import (
+    BaseModel,
+    ValidationInfo,
+    field_serializer,
+    field_validator,
+)
 from sqlalchemy import Text, UniqueConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
@@ -37,6 +42,7 @@ class FlowBase(SQLModel):
     webhook: bool | None = Field(default=False, nullable=True, description="Can be used on the webhook endpoint")
     endpoint_name: str | None = Field(default=None, nullable=True, index=True)
     tags: list[str] | None = None
+    locked: bool | None = Field(default=False, nullable=True)
 
     @field_validator("endpoint_name")
     @classmethod
@@ -161,6 +167,7 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     user: "User" = Relationship(back_populates="flows")
     icon: str | None = Field(default=None, nullable=True)
     tags: list[str] | None = Field(sa_column=Column(JSON), default=[])
+    locked: bool | None = Field(default=False, nullable=True)
     folder_id: UUID | None = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
     folder: Optional["Folder"] = Relationship(back_populates="flows")
     messages: list["MessageTable"] = Relationship(back_populates="flow")
@@ -196,30 +203,25 @@ class FlowRead(FlowBase):
 
 
 class FlowHeader(BaseModel):
-    """Model representing a header for a flow - Without the data.
+    """Model representing a header for a flow - Without the data."""
 
-    Attributes:
-    -----------
-    id : UUID
-        Unique identifier for the flow.
-    name : str
-        The name of the flow.
-    folder_id : UUID | None, optional
-        The ID of the folder containing the flow. None if not associated with a folder.
-    is_component : bool | None, optional
-        Flag indicating whether the flow is a component.
-    endpoint_name : str | None, optional
-        The name of the endpoint associated with this flow.
-    description : str | None, optional
-        A description of the flow.
-    """
+    id: UUID = Field(description="Unique identifier for the flow")
+    name: str = Field(description="The name of the flow")
+    folder_id: UUID | None = Field(
+        None,
+        description="The ID of the folder containing the flow. None if not associated with a folder",
+    )
+    is_component: bool | None = Field(None, description="Flag indicating whether the flow is a component")
+    endpoint_name: str | None = Field(None, description="The name of the endpoint associated with this flow")
+    description: str | None = Field(None, description="A description of the flow")
+    data: dict | None = Field(None, description="The data of the component, if is_component is True")
 
-    id: UUID
-    name: str
-    folder_id: UUID | None = None
-    is_component: bool | None = None
-    endpoint_name: str | None = None
-    description: str | None = None
+    @field_validator("data", mode="before")
+    @classmethod
+    def validate_flow_header(cls, value: dict, info: ValidationInfo):
+        if not info.data["is_component"]:
+            return None
+        return value
 
 
 class FlowUpdate(SQLModel):
@@ -228,6 +230,7 @@ class FlowUpdate(SQLModel):
     data: dict | None = None
     folder_id: UUID | None = None
     endpoint_name: str | None = None
+    locked: bool | None = None
 
     @field_validator("endpoint_name")
     @classmethod

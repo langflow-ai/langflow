@@ -7,7 +7,7 @@ on:
         description: "(Optional) Python versions to test"
         required: true
         type: string
-        default: "['3.10', '3.11', '3.12']"
+        default: "['3.10', '3.11', '3.12', '3.13']"
       ref:
         description: "(Optional) ref to checkout"
         required: false
@@ -23,7 +23,7 @@ on:
         description: "(Optional) Python versions to test"
         required: true
         type: string
-        default: "['3.10', '3.11', '3.12']"
+        default: "['3.10', '3.11', '3.12', '3.13']"
 env:
   POETRY_VERSION: "1.8.2"
   NODE_VERSION: "21"
@@ -57,7 +57,7 @@ jobs:
       - name: "Set up Python"
         uses: actions/setup-python@v5
         with:
-          python-version-file: "pyproject.toml"
+          python-version: ${{ matrix.python-version }}
       - name: Restore uv cache
         uses: actions/cache@v4
         with:
@@ -94,7 +94,7 @@ jobs:
       - name: "Set up Python"
         uses: actions/setup-python@v5
         with:
-          python-version-file: "pyproject.toml"
+          python-version: ${{ matrix.python-version }}
       - name: Restore uv cache
         uses: actions/cache@v4
         with:

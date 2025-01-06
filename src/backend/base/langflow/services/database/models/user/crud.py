@@ -17,6 +17,8 @@ async def get_user_by_username(db: AsyncSession, username: str) -> User | None:
 
 
 async def get_user_by_id(db: AsyncSession, user_id: UUID) -> User | None:
+    if isinstance(user_id, str):
+        user_id = UUID(user_id)
     stmt = select(User).where(User.id == user_id)
     return (await db.exec(stmt)).first()
 

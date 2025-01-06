@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from typing_extensions import override
+
 from langflow.logging.logger import logger
 from langflow.services.cache.disk import AsyncDiskCache
 from langflow.services.cache.service import AsyncInMemoryCache, CacheService, RedisCache, ThreadingInMemoryCache
@@ -15,6 +17,7 @@ class CacheServiceFactory(ServiceFactory):
     def __init__(self) -> None:
         super().__init__(CacheService)
 
+    @override
     def create(self, settings_service: SettingsService):
         # Here you would have logic to create and configure a CacheService
         # based on the settings_service

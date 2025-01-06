@@ -1,6 +1,7 @@
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
+import { TableOptionsTypeAPI } from "@/types/api";
 import { cn } from "@/utils/utils";
 
 export default function TableOptions({
@@ -10,6 +11,7 @@ export default function TableOptions({
   hasSelection,
   stateChange,
   addRow,
+  tableOptions,
 }: {
   resetGrid: () => void;
   duplicateRow?: () => void;
@@ -17,11 +19,12 @@ export default function TableOptions({
   addRow?: () => void;
   hasSelection: boolean;
   stateChange: boolean;
+  tableOptions?: TableOptionsTypeAPI;
 }): JSX.Element {
   return (
     <div className={cn("absolute bottom-3 left-6")}>
       <div className="flex items-center gap-3">
-        {addRow && (
+        {addRow && !tableOptions?.block_add && (
           <div>
             <ShadTooltip content={"Add a new row"}>
               <Button data-testid="add-row-button" unstyled onClick={addRow}>
@@ -105,7 +108,8 @@ export default function TableOptions({
                 name="RotateCcw"
                 strokeWidth={2}
                 className={cn(
-                  "h-5 w-5 text-primary transition-all hover:text-accent-foreground",
+                  "h-5 w-5 transition-all",
+                  !stateChange ? "text-muted-foreground" : "text-primary",
                 )}
               />
             </Button>

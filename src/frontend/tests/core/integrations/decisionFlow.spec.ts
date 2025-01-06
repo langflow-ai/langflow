@@ -1,16 +1,12 @@
-import { Page, test } from "@playwright/test";
+import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
-
-async function zoomOut(page: Page, times: number = 4) {
-  for (let i = 0; i < times; i++) {
-    await page.getByTestId("zoom_out").click();
-  }
-}
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "should create a flow with decision",
-  { tag: ["@release", "@components"] },
+  { tag: ["@release", "@components", "@workflow"] },
 
   async ({ page }) => {
     test.skip(
@@ -20,29 +16,8 @@ test(
     if (!process.env.CI) {
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
-    await page.goto("/");
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
-    await page.waitForSelector('[id="new-project-btn"]', {
-      timeout: 30000,
-    });
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForSelector('[data-testid="modal-title"]', {
-        timeout: 3000,
-      });
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
+    await awaitBootstrapTest(page);
+
     await page.waitForSelector('[data-testid="blank-flow"]', {
       timeout: 30000,
     });
@@ -76,6 +51,11 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 100 },
       });
+
+    await page.waitForSelector('[data-testid="input-list-plus-btn_texts-0"]', {
+      timeout: 3000,
+      state: "attached",
+    });
 
     await page.getByTestId("input-list-plus-btn_texts-0").first().click();
     await page.getByTestId("input-list-plus-btn_texts-0").first().click();
@@ -267,7 +247,7 @@ test(
       .nth(1)
       .click();
     await page
-      .getByTestId("handle-chatinput-shownode-message-right")
+      .getByTestId("handle-chatinput-noshownode-message-source")
       .nth(0)
       .click();
     await page
@@ -353,7 +333,7 @@ test(
       .nth(2)
       .click();
     await page
-      .getByTestId("handle-chatoutput-shownode-text-left")
+      .getByTestId("handle-chatoutput-noshownode-text-target")
       .nth(0)
       .click();
     await page
@@ -361,7 +341,7 @@ test(
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-chatoutput-shownode-text-left")
+      .getByTestId("handle-chatoutput-noshownode-text-target")
       .nth(1)
       .click();
     const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
