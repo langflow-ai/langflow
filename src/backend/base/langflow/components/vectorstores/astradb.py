@@ -209,15 +209,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def collection_exists(self):
         try:
-            client = DataAPIClient(token=self.token)
-            database = client.get_database(
-                self.get_api_endpoint(),
-                token=self.token,
-            )
-            return self.collection_name in list(database.list_collections())
-        except Exception as e:  # noqa: BLE001
+            database = self.get_database()
+            return self.collection_name in database.list_collections()
+        except Exception as e:
             self.log(f"Error getting collection status: {e}")
-
             return False
 
     def _initialize_database_options(self):
@@ -608,3 +603,19 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
         }
+
+    def __init__(self, api_endpoint=None, database_name=None, token=None, collection_name=None):
+        self.api_endpoint = api_endpoint
+        self.database_name = database_name
+        self.token = token
+        self.collection_name = collection_name
+        self.client = DataAPIClient(token=self.token)
+        self.database = None
+
+    def get_database(self):
+        if self.database is None:
+            self.database = self.client.get_database(
+                self.get_api_endpoint(),
+                token=self.token,
+            )
+        return self.database
