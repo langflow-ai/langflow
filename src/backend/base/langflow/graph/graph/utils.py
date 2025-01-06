@@ -651,8 +651,8 @@ def _max_dependency_index(
     """
     max_index = -1
     for successor_id in get_vertex_successors(vertex_id):
-        if successor_id in index_map:
-            max_index = max(max_index, index_map[successor_id])
+        successor_index = index_map.get(successor_id, -1)
+        max_index = max(successor_index, max_index)
     return max_index
 
 
@@ -671,12 +671,20 @@ def _sort_single_layer_by_dependency(
     """
     # Build a map of each vertex to its index in the layer for quick lookup.
     index_map = {vertex: index for index, vertex in enumerate(layer)}
-    # Create a sorted copy of the layer based on dependency order.
-    return sorted(
-        layer,
-        key=lambda vertex: _max_dependency_index(vertex, index_map, get_vertex_successors),
-        reverse=True,
-    )
+    dependency_cache: dict[str, int] = {}
+
+    def max_dependency_index(vertex: str) -> int:
+        if vertex in dependency_cache:
+            return dependency_cache[vertex]
+        max_index = index_map[vertex]
+        for successor in get_vertex_successors(vertex):
+            if successor in index_map:
+                max_index = max(max_index, max_dependency_index(successor))
+
+        dependency_cache[vertex] = max_index
+        return max_index
+
+    return sorted(layer, key=max_dependency_index, reverse=True)
 
 
 def sort_layer_by_dependency(
@@ -873,7 +881,8 @@ def filter_vertices_up_to_vertex(
     Returns:
         Set of vertex IDs that are predecessors of the given vertex
     """
-    if vertex_id not in vertices_ids:
+    vertices_set = set(vertices_ids)
+    if vertex_id not in vertices_set:
         return set()
 
     # Build predecessor map if not provided
@@ -899,9 +908,8 @@ def filter_vertices_up_to_vertex(
     # Process vertices in breadth-first order
     while queue:
         current_vertex = queue.popleft()
-        predecessors = get_vertex_predecessors(current_vertex)
-        for predecessor in predecessors:
-            if predecessor in vertices_ids and predecessor not in filtered_vertices:
+        for predecessor in get_vertex_predecessors(current_vertex):
+            if predecessor in vertices_set and predecessor not in filtered_vertices:
                 filtered_vertices.add(predecessor)
                 queue.append(predecessor)
 
