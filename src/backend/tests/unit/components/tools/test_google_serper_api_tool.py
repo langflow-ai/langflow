@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 from langflow.components.tools import GoogleSerperAPIComponent
 from langflow.schema import DataFrame
 
@@ -30,7 +31,7 @@ def mock_search_results():
 def test_component_initialization(google_serper_component):
     assert google_serper_component.display_name == "Google Serper API"
     assert google_serper_component.icon == "Google"
-    
+
     input_names = [input_.name for input_ in google_serper_component.inputs]
     assert "serper_api_key" in input_names
     assert "input_value" in input_names
@@ -88,11 +89,9 @@ def test_search_serper_error_handling(mock_post, mock_get, google_serper_compone
 
 
 def test_text_search_serper(google_serper_component, mock_search_results):
-    with patch.object(google_serper_component, 'search_serper') as mock_search:
+    with patch.object(google_serper_component, "search_serper") as mock_search:
         mock_search.return_value = DataFrame(
-            [
-                {"title": "Test Title", "link": "https://test.com", "snippet": "Test snippet"}
-            ]
+            [{"title": "Test Title", "link": "https://test.com", "snippet": "Test snippet"}]
         )
 
         result = google_serper_component.text_search_serper()
@@ -112,4 +111,4 @@ def test_build_wrapper(google_serper_component):
 
 def test_build_method(google_serper_component):
     build_result = google_serper_component.build()
-    assert build_result == google_serper_component.search_serper 
+    assert build_result == google_serper_component.search_serper
