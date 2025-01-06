@@ -53,6 +53,7 @@ export type DropDownComponent = {
   value: string;
   combobox?: boolean;
   options: string[];
+  optionsMetaData?: any[];
   onSelect: (value: string, dbValue?: boolean, snapshot?: boolean) => void;
   editNode?: boolean;
   id?: string;

@@ -28,6 +28,7 @@ export default function Dropdown({
   isLoading,
   value,
   options,
+  optionsMetaData,
   combobox,
   onSelect,
   editNode = false,
@@ -212,29 +213,40 @@ export default function Dropdown({
                   onSelect(currentValue);
                   setOpen(false);
                 }}
-                className="items-center overflow-hidden truncate"
+                className="items-center"
                 data-testid={`${option}-${index}-option`}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex w-full items-center gap-2">
                   <ForwardedIconComponent
                     name=""
-                    className={cn("h-4 w-4 shrink-0 text-primary")}
+                    className="h-4 w-4 shrink-0 text-primary"
                   />
-                  <div className="flex flex-col">
-                    <span className="truncate">{option}</span>
-                    <span className="flex items-center gap-1 truncate pt-1 text-muted-foreground">
-                      {["GPT-4o", "510 records"].map((value, i) => (
-                        <>
-                          {i > 0 && (
-                            <ForwardedIconComponent
-                              name="Circle"
-                              className="h-1 w-1 fill-muted-foreground"
-                            />
-                          )}
-                          <span className="truncate text-xs">{value}</span>
-                        </>
-                      ))}
-                    </span>
+                  <div className="flex flex-col truncate">
+                    <div className="truncate">{option}</div>
+                    <div className="flex w-full items-center text-muted-foreground">
+                      {Object.entries(optionsMetaData?.[index] || {}).map(
+                        ([key, value], i, arr) => (
+                          <div
+                            key={key}
+                            className={cn("flex items-center", {
+                              truncate: i === arr.length - 1,
+                            })}
+                          >
+                            {i > 0 && (
+                              <ForwardedIconComponent
+                                name="Circle"
+                                className="mx-1 h-1 w-1 overflow-visible fill-muted-foreground"
+                              />
+                            )}
+                            <div
+                              className={cn("text-xs", {
+                                truncate: i === arr.length - 1,
+                              })}
+                            >{`${String(value)} ${key}`}</div>
+                          </div>
+                        ),
+                      )}
+                    </div>
                   </div>
                 </div>
               </CommandItem>

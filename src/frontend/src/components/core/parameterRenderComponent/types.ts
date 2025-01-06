@@ -79,6 +79,7 @@ export type DropDownComponentType = {
   options: string[];
   name: string;
   dialogInputs?: any[];
+  optionsMetaData?: any[];
 };
 
 export type TextAreaComponentType = {

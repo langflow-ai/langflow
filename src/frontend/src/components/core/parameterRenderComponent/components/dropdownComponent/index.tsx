@@ -11,6 +11,7 @@ export default function DropdownComponent({
   options,
   name,
   dialogInputs,
+  optionsMetaData,
 }: InputProps<string, DropDownComponentType>) {
   const onChange = (value: any, dbValue?: boolean, skipSnapshot?: boolean) => {
     handleOnNewValue({ value, load_from_db: dbValue }, { skipSnapshot });
@@ -21,6 +22,7 @@ export default function DropdownComponent({
       disabled={disabled}
       editNode={editNode}
       options={options}
+      optionsMetaData={optionsMetaData}
       onSelect={onChange}
       combobox={combobox}
       value={value || ""}
