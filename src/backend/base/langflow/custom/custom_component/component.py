@@ -25,7 +25,7 @@ from langflow.custom.tree_visitor import RequiredInputsVisitor
 from langflow.exceptions.component import StreamingError
 from langflow.field_typing import Tool  # noqa: TC001 Needed by _add_toolkit_output
 from langflow.graph.state.model import create_state_model
-from langflow.graph.utils import has_output_vertex
+from langflow.graph.utils import has_chat_output
 from langflow.helpers.custom import format_type
 from langflow.memory import astore_message, aupdate_messages, delete_message
 from langflow.schema.artifact import get_artifact_type, post_process_raw
@@ -1024,7 +1024,7 @@ class Component(CustomComponent):
         """Check if the message should be skipped based on vertex configuration and message type."""
         return (
             not (self._vertex.is_output or self._vertex.is_input)
-            and not has_output_vertex(self.graph.get_vertex_neighbors(self._vertex))
+            and not has_chat_output(self.graph.get_vertex_neighbors(self._vertex))
             and not isinstance(message, ErrorMessage)
         )
 
