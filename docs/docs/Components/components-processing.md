@@ -9,7 +9,7 @@ Processing components process and transform data within a flow.
 
 ## Use a processing component in a flow
 
-The **Split Text** processing component in this flow splits the incoming [data](/guides-data-message) into chunks to be embedded into the vector store component.
+The **Split Text** processing component in this flow splits the incoming [data](/configuration-objects) into chunks to be embedded into the vector store component.
 
 The component offers control over chunk size, overlap, and separator, which affect context and granularity in vector store retrieval results.
 
@@ -82,7 +82,7 @@ The component iterates through the input list of data objects, merging them into
 | merged_data | Merged Data | A single data object containing the combined information from all input data objects |
 
 
-## Parse Data component
+## Parse Data
 
 The ParseData component converts data objects into plain text using a specified template.
 This component transforms structured data into human-readable text formats, allowing for customizable output through the use of templates.
@@ -102,7 +102,7 @@ This component transforms structured data into human-readable text formats, allo
 | text | Text | The resulting formatted text string as a message object. |
 
 
-## Split Text component
+## Split Text
 
 This component splits text into chunks of a specified length.
 
