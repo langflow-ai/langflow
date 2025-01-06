@@ -1,4 +1,5 @@
 import os
+from functools import cache
 
 from astrapy import DataAPIClient
 from astrapy.admin import parse_api_endpoint
@@ -194,6 +195,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             for db in db_list
         }
 
+    @cache
     def get_api_endpoint(self):
         # If the API endpoint is set, return it
         if self.api_endpoint:
@@ -221,15 +223,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def collection_exists(self):
         try:
-            client = DataAPIClient(token=self.token)
-            database = client.get_database(
-                self.get_api_endpoint(),
-                token=self.token,
-            )
-            return self.collection_name in list(database.list_collections())
+            database = self.get_database()
+            return self.collection_name in database.list_collections()
         except Exception as e:  # noqa: BLE001
             self.log(f"Error getting collection status: {e}")
-
             return False
 
     def _initialize_database_options(self):
@@ -430,3 +427,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
         }
+
+    @cache
+    def get_database(self):
+        client = DataAPIClient(token=self.token)
+        return client.get_database(
+            self.get_api_endpoint(),
+            token=self.token,
+        )
