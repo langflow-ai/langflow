@@ -1,7 +1,8 @@
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
+import { nodeColorsName } from "@/utils/styleUtils";
 import { Connection, Handle, Position } from "@xyflow/react";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import {
   isValidConnection,
@@ -31,7 +32,6 @@ const HandleContent = memo(function HandleContent({
   showNode,
   left,
   nodeId,
-  colorName,
 }: {
   isNullHandle: boolean;
   handleColor: string;
@@ -43,7 +43,6 @@ const HandleContent = memo(function HandleContent({
   showNode: boolean;
   left: boolean;
   nodeId: string;
-  colorName?: string[];
 }) {
   // Restore animation effect
   useEffect(() => {
@@ -51,36 +50,36 @@ const HandleContent = memo(function HandleContent({
       const styleSheet = document.createElement("style");
       styleSheet.id = `pulse-${nodeId}`;
       styleSheet.textContent = `
-        @keyframes pulseNeon {
+        @keyframes pulseNeon-${nodeId} {
           0% {
             box-shadow: 0 0 0 2px hsl(var(--node-ring)),
-                        0 0 2px hsl(var(--datatype-${colorName?.[0]})),
-                        0 0 4px hsl(var(--datatype-${colorName?.[0]})),
-                        0 0 6px hsl(var(--datatype-${colorName?.[0]})),
-                        0 0 8px hsl(var(--datatype-${colorName?.[0]})),
-                        0 0 10px hsl(var(--datatype-${colorName?.[0]})),
-                        0 0 15px hsl(var(--datatype-${colorName?.[0]})),
-                        0 0 20px hsl(var(--datatype-${colorName?.[0]}));
+                        0 0 2px ${handleColor},
+                        0 0 4px ${handleColor},
+                        0 0 6px ${handleColor},
+                        0 0 8px ${handleColor},
+                        0 0 10px ${handleColor},
+                        0 0 15px ${handleColor},
+                        0 0 20px ${handleColor};
           }
           50% {
             box-shadow: 0 0 0 2px hsl(var(--node-ring)),
-                        0 0 4px hsl(var(--datatype-${colorName?.[0]})),
-                        0 0 8px hsl(var(--datatype-${colorName?.[0]})),
-                        0 0 12px hsl(var(--datatype-${colorName?.[0]})),
-                        0 0 16px hsl(var(--datatype-${colorName?.[0]})),
-                        0 0 20px hsl(var(--datatype-${colorName?.[0]})),
-                        0 0 25px hsl(var(--datatype-${colorName?.[0]})),
-                        0 0 30px hsl(var(--datatype-${colorName?.[0]}));
+                        0 0 4px ${handleColor},
+                        0 0 8px ${handleColor},
+                        0 0 12px ${handleColor},
+                        0 0 16px ${handleColor},
+                        0 0 20px ${handleColor},
+                        0 0 25px ${handleColor},
+                        0 0 30px ${handleColor};
           }
           100% {
             box-shadow: 0 0 0 2px hsl(var(--node-ring)),
-                        0 0 2px hsl(var(--datatype-${colorName?.[0]})),
-                        0 0 4px hsl(var(--datatype-${colorName?.[0]})),
-                        0 0 6px hsl(var(--datatype-${colorName?.[0]})),
-                        0 0 8px hsl(var(--datatype-${colorName?.[0]})),
-                        0 0 10px hsl(var(--datatype-${colorName?.[0]})),
-                        0 0 15px hsl(var(--datatype-${colorName?.[0]})),
-                        0 0 20px hsl(var(--datatype-${colorName?.[0]}));
+                        0 0 2px ${handleColor},
+                        0 0 4px ${handleColor},
+                        0 0 6px ${handleColor},
+                        0 0 8px ${handleColor},
+                        0 0 10px ${handleColor},
+                        0 0 15px ${handleColor},
+                        0 0 20px ${handleColor};
           }
         }
       `;
@@ -93,12 +92,12 @@ const HandleContent = memo(function HandleContent({
         }
       };
     }
-  }, [isHovered, openHandle, isNullHandle, nodeId, colorName]);
+  }, [isHovered, openHandle, isNullHandle, nodeId, handleColor]);
 
   const getNeonShadow = useCallback(
     (color: string, isActive: boolean) => {
       if (isNullHandle) return "none";
-      if (!isActive) return `0 0 0 3px hsl(var(--${color}))`;
+      if (!isActive) return `0 0 0 3px ${color}`;
       return [
         "0 0 0 1px hsl(var(--border))",
         `0 0 2px ${color}`,
@@ -125,7 +124,7 @@ const HandleContent = memo(function HandleContent({
       ),
       animation:
         (isHovered || openHandle) && !isNullHandle
-          ? "pulseNeon 1.1s ease-in-out infinite"
+          ? `pulseNeon-${nodeId} 1.1s ease-in-out infinite`
           : "none",
       border: isNullHandle ? "2px solid hsl(var(--muted))" : "none",
     }),
@@ -181,10 +180,6 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
   nodeId: string;
   colorName?: string[];
 }) {
-  const handleColorName = colorName?.[0] ?? "";
-  const accentColorName = `datatype-${handleColorName}`;
-  const accentForegroundColorName = `${accentColorName}-foreground`;
-
   const [isHovered, setIsHovered] = useState(false);
   const [openTooltip, setOpenTooltip] = useState(false);
 
@@ -238,6 +233,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     currentFilter,
     isNullHandle,
     handleColor,
+    accentForegroundColorName,
   } = useMemo(() => {
     const sameDraggingNode =
       (!left ? handleDragging?.target : handleDragging?.source) === nodeId;
@@ -272,6 +268,38 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     const openHandle = filterOpenHandle || draggingOpenHandle;
     const filterPresent = handleDragging || filterType;
 
+    const connectedEdge = edges.find(
+      (edge) => edge.target === nodeId && edge.targetHandle === myId,
+    );
+    const connectedColor =
+      nodeColorsName[connectedEdge?.data?.sourceHandle?.output_types[0]] ||
+      "gray";
+
+    const isNullHandle =
+      filterPresent && !(openHandle || ownDraggingHandle || ownFilterHandle);
+
+    const handleColorName = connectedEdge
+      ? connectedColor
+      : colorName!.length > 1
+        ? "secondary-foreground"
+        : "datatype-" + colorName![0];
+
+    const handleColor = isNullHandle
+      ? dark
+        ? "hsl(var(--accent-gray))"
+        : "hsl(var(--accent-gray-foreground)"
+      : connectedEdge
+        ? "hsl(var(--datatype-" + connectedColor + "))"
+        : colorName!.length > 1
+          ? "hsl(var(--secondary-foreground))"
+          : "hsl(var(--datatype-" + colorName![0] + "))";
+
+    const accentForegroundColorName = connectedEdge
+      ? "hsl(var(--datatype-" + connectedColor + "-foreground))"
+      : colorName!.length > 1
+        ? "hsl(var(--input))"
+        : "hsl(var(--datatype-" + colorName![0] + "-foreground))";
+
     const currentFilter = left
       ? {
           targetHandle: myId,
@@ -290,31 +318,10 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
           color: handleColorName,
         };
 
-    const isNullHandle =
-      filterPresent && !(openHandle || ownDraggingHandle || ownFilterHandle);
-
-    const handleColor = isNullHandle
-      ? dark
-        ? "conic-gradient(hsl(var(--accent-gray)) 0deg 360deg)"
-        : "conic-gradient(hsl(var(--accent-gray-foreground)) 0deg 360deg)"
-      : "conic-gradient(" +
-        colorName!
-          .concat(colorName![0])
-          .map(
-            (color, index) =>
-              `hsl(var(--datatype-${color}))` +
-              " " +
-              ((360 / colors.length) * index - 360 / (colors.length * 4)) +
-              "deg " +
-              ((360 / colors.length) * index + 360 / (colors.length * 4)) +
-              "deg",
-          )
-          .join(" ,") +
-        ")";
-
     return {
       sameNode: sameDraggingNode || sameFilterNode,
       ownHandle: ownDraggingHandle || ownFilterHandle,
+      accentForegroundColorName,
       openHandle,
       filterOpenHandle,
       filterPresent,
@@ -335,7 +342,6 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     colors,
     colorName,
     tooltipTitle,
-    handleColorName,
   ]);
 
   const handleMouseDown = useCallback(
@@ -402,8 +408,6 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
             isConnecting={!!filterPresent && !ownHandle}
             isCompatible={openHandle}
             isSameNode={sameNode && !ownHandle}
-            accentColorName={accentColorName}
-            accentForegroundColorName={accentForegroundColorName}
             left={left}
           />
         }
@@ -442,7 +446,6 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
             showNode={showNode}
             left={left}
             nodeId={nodeId}
-            colorName={colorName}
           />
         </Handle>
       </ShadTooltip>
