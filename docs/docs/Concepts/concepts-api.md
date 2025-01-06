@@ -1,39 +1,35 @@
 ---
-title: API
-slug: /workspace-api
+title: API pane
+slug: /concepts-api
 ---
 
 import ReactPlayer from "react-player";
 
-The **API** section presents code templates for integrating your flow into external applications.
-
+The **API** pane presents code templates for integrating your flow into external applications.
 
 ![](/img/api-pane.png)
 
 
-### cURL {#4eb287a8424349c4b0b436a6703de5f3}
-
+### cURL
 
 The **cURL** tab displays sample code for posting a query to your flow. Modify the `input_value` to change your input message. Copy the code and run it to post a query to your flow and get the result.
 
 
-### Python API {#fb7db14e6330418389562ef647aa2354}
+### Python API
 
 
 The **Python API** tab displays code to interact with your flow using the Python HTTP requests library.
 
 
-### Python Code {#7af87438549b4972907ac310a4193067}
+### Python Code
 
 
 The **Python Code** tab displays code to interact with your flow's `.json` file using the Langflow runtime.
 
 
-### Tweaks {#5680600063724590ac2302b4ddeea867}
-
+### Tweaks
 
 The **Tweaks** tab displays the available parameters for your flow. Modifying the parameters changes the code parameters across all windows. For example, changing the **Chat Input** component's `input_value` will change that value across all API calls.
-
 
 ## Send image files to your flow with the API
 
@@ -80,14 +76,9 @@ Your chatbot describes the image file you sent.
 "text": "This flowchart appears to represent a complex system for processing financial inquiries using various AI agents and tools. Here’s a breakdown of its components and how they might work together..."
 ```
 
-## Chat Widget {#48f121a6cb3243979a341753da0c2700}
-
-
----
-
+## Chat Widget
 
 The **Chat Widget HTML** tab displays code that can be inserted in the `<body>` of your HTML to interact with your flow.
-
 
 The **Langflow Chat Widget** is a powerful web component that enables communication with a Langflow project. This widget allows for a chat interface embedding, allowing the integration of Langflow into web applications effortlessly.
 
@@ -98,13 +89,13 @@ You can get the HTML code embedded with the chat by clicking the Code button at 
 Clicking the Chat Widget HTML tab, you'll get the code to be inserted. Read below to learn how to use it with HTML, React and Angular.
 
 
-### Embed your flow into HTML {#6e84db2f2a0d451db6fa03c57e9bf9a4}
+### Embed your flow into HTML
 
 
 The Chat Widget can be embedded into any HTML page, inside a `<body>` tag, as demonstrated in the video below.
 
 
-### Embed your flow with React {#fe5d3b1c42e74e4c84ebc9d1799b7665}
+### Embed your flow with React
 
 
 To embed the Chat Widget using React, insert this `<script>` tag into the React _index.html_ file, inside the `<body>`tag:
@@ -127,7 +118,7 @@ declare global {  namespace JSX {    interface IntrinsicElements {      "langflo
 Finally, you can place the component anywhere in your code to display the Chat Widget.
 
 
-### Embed your flow with Angular {#4fd87355b9aa409894acfbb9e1497980}
+### Embed your flow with Angular
 
 
 To use the chat widget in Angular, first add this `<script>` tag into the Angular _index.html_ file, inside the `<body>` tag.
@@ -171,7 +162,7 @@ In your Angular project, find the component belonging to the module where `CUST
 
 
 
-## Chat Widget Configuration {#5ede4bbbd2ac43e29c90f3edb43cba58}
+## Chat Widget Configuration
 
 
 ---

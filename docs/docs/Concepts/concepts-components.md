@@ -1,7 +1,9 @@
 ---
-title: Components overview
-slug: /components-overview
+title: Components
+slug: /concepts-components
 ---
+
+# Langflow components overview
 
 import Icon from "@site/src/components/icon";
 
@@ -27,7 +29,13 @@ Click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> **All** to see
 
 To view a component’s output and logs, click the <Icon name="View" aria-label="View icon" />**Visibility** icon.
 
-To run a single component, click ▶️ **Play**. A ✅**Check** indicates that the component ran successfully.
+To run a single component, click ▶️ **Play**.
+
+A ✅**Check** indicates that the component ran successfully.
+
+When a single component is downstream from other components, the upstream components are also run.
+
+Running a single component with the **Play** button is different from running the flow. 
 
 ## Component ports
 
@@ -101,5 +109,9 @@ Multiple components can be grouped into a single component for reuse. This is us
 A component's state is stored in a database, while sidebar components are like starter templates. As soon as you drag a component from the sidebar to the workspace, the two components are no longer in parity.
 
 The component will keep the version number it was initialized to the workspace with. Click the **Update Component** icon (exclamation mark) to bring the component up to the `latest` version. This will change the code of the component in place so you can validate that the component was updated by checking its Python code before and after updating it.
+
+## Components sidebar
+
+
 
 

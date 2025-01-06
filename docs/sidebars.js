@@ -31,19 +31,19 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Workspace",
+      label: "Concepts",
       items: [
-        "Workspace/workspace-overview",
-        "Workspace/workspace-api",
-        "Workspace/workspace-logs",
-        "Workspace/workspace-playground",
+        "Concepts/concepts-overview",
+        "Concepts/concepts-components",
+        "Concepts/concepts-playground",
+        "Concepts/concepts-api",
+        "Concepts/concepts-logs",
       ],
     },
     {
       type: "category",
       label: "Components",
       items: [
-        "Components/components-overview",
         "Components/components-agents",
         "Components/components-data",
         "Components/components-embedding-models",

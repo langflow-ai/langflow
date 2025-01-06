@@ -1,6 +1,6 @@
 ---
 title: Playground
-slug: /workspace-playground
+slug: /concepts-playground
 ---
 
 import ReactPlayer from "react-player";
@@ -18,8 +18,6 @@ Notice how the **Playground's** window arrangement changes depending on what com
 :::
 
 ## Memory Management
-
----
 
 When you send a message from the **Playground** interface, the interactions for that session are stored in the **Message Logs**.
 

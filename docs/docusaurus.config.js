@@ -116,8 +116,9 @@ const config = {
             ],
           },
           {
-            to: "/workspace-overview",
+            to: "concepts-overview",
             from: [
+              "/workspace-overview",
               "/365085a8-a90a-43f9-a779-f8769ec7eca1",
               "/My-Collection",
               "/workspace",
@@ -125,15 +126,18 @@ const config = {
             ],
           },
           {
-            to: "/components-overview",
-            from: "/components",
-          },
+            to: "/concepts-components",
+            from: [
+              "/components",
+              "/components-overview"
+            ],
+            },
           {
             to: "/configuration-global-variables",
             from: "/settings-global-variables",
           },
           {
-            to: "/workspace-playground",
+            to: "/concepts-playground",
             from: "/guides-chat-memory",
           },
           {

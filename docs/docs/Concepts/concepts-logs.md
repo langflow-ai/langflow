@@ -1,8 +1,7 @@
 ---
-title: Logs
-slug: /workspace-logs
+title: Logs pane
+slug: /concepts-logs
 ---
-
 
 The **Logs** pane provides a detailed record of all component executions within a workspace. It is designed to help you track actions, debug issues, and understand the flow of data through various components.
 
