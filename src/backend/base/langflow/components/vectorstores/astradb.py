@@ -625,7 +625,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 self.log(f"Deleting documents where {self.deletion_field} matches {delete_values}.")
                 collection.delete_many({f"metadata.{self.deletion_field}": {"$in": delete_values}})
             except Exception as e:
-                msg = f"Error deleting documents from AstraDBVectorStore: {e}"
+                msg = f"Error deleting documents from AstraDBVectorStore based on '{self.deletion_field}': {e}"
                 raise ValueError(msg) from e
 
         if documents:
