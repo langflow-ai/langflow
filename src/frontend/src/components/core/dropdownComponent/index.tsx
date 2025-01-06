@@ -14,6 +14,7 @@ import {
   CommandGroup,
   CommandItem,
   CommandList,
+  CommandSeparator,
 } from "../../ui/command";
 import {
   Popover,
@@ -33,7 +34,7 @@ export default function Dropdown({
   id = "",
   children,
   name,
-  hasDialog,
+  dialogInputs,
 }: DropDownComponent): JSX.Element {
   const placeholderName = name
     ? formatPlaceholderName(name)
@@ -170,17 +171,26 @@ export default function Dropdown({
   );
 
   const renderCreateOptionDialog = () => (
-    <div className="flex items-center justify-between gap-2 truncate pb-1 pl-2 text-xs font-semibold text-muted-foreground">
-      {`${firstWord}${filteredOptions.length > 1 ? "s" : ""} (${filteredOptions.length})`}
-      <ShadTooltip delayDuration={700} content={`New ${firstWord}`} side="left">
-        <Button
-          variant="ghost"
-          size="iconMd"
-          onClick={() => setOpenDialog(true)}
-        >
-          <ForwardedIconComponent name="Plus" className="text-primary" />
-        </Button>
-      </ShadTooltip>
+    <div className="flex flex-col">
+      <CommandItem
+        className="flex items-center justify-start gap-2 truncate py-2 text-xs font-semibold text-muted-foreground"
+        onClick={() => setOpenDialog(true)}
+      >
+        <ForwardedIconComponent name="Plus" className="h-3 w-3 text-primary" />
+        {`New ${firstWord}`}
+      </CommandItem>
+      <CommandItem
+        className="flex items-center justify-start gap-2 truncate py-2 text-xs font-semibold text-muted-foreground"
+        onClick={() => {
+          setOpenDialog(true); // TODO: Implement refresh list
+        }}
+      >
+        <ForwardedIconComponent
+          name="RefreshCcw"
+          className="h-3 w-3 text-primary"
+        />
+        Refresh list
+      </CommandItem>
       <NodeDialog
         open={openDialog}
         onClose={() => setOpenDialog(false)}
@@ -193,7 +203,6 @@ export default function Dropdown({
     <CommandList>
       <CommandEmpty>No values found.</CommandEmpty>
       <CommandGroup defaultChecked={false}>
-        {renderCreateOptionDialog()}
         {filteredOptions?.map((option, index) => (
           <ShadTooltip key={index} delayDuration={700} content={option}>
             <div>
@@ -208,7 +217,7 @@ export default function Dropdown({
               >
                 <div className="flex items-center gap-2">
                   <ForwardedIconComponent
-                    name={option?.icon}
+                    name=""
                     className={cn("h-4 w-4 shrink-0 text-primary")}
                   />
                   <div className="flex flex-col">
@@ -233,6 +242,8 @@ export default function Dropdown({
           </ShadTooltip>
         ))}
       </CommandGroup>
+      <CommandSeparator />
+      {renderCreateOptionDialog()}
     </CommandList>
   );
 
@@ -247,7 +258,7 @@ export default function Dropdown({
     >
       <Command>
         {renderSearchInput()}
-        {hasDialog ? renderIconOptionsList() : renderOptionsList()}
+        {renderIconOptionsList()}
       </Command>
     </PopoverContentDropdown>
   );

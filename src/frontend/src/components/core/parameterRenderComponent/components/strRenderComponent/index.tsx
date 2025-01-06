@@ -45,7 +45,7 @@ export function StrRenderComponent({
     return (
       <DropdownComponent
         {...baseInputProps}
-        hasDialog={templateData.has_dialog}
+        dialogInputs={templateData.dialog_inputs}
         options={templateData.options}
         combobox={templateData.combobox}
         name={templateData?.name!}
