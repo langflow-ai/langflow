@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 
 from astrapy import DataAPIClient
@@ -183,28 +185,16 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         }
 
     def get_api_endpoint(self):
-        # If the API endpoint is set, return it
-        if self.api_endpoint:
-            return self.api_endpoint
-
-        # If the database is not set, nothing we can do.
-        if not self.database_name:
-            return None
-
-        # Otherwise, get the URL from the database list
-        return self.get_database_list().get(self.database_name)
+        return self.api_endpoint or self.get_database_list().get(self.database_name)
 
     def get_database(self):
+        if self.api_endpoint is None:
+            self.log("Error: API endpoint not set")
+            return None
         try:
-            client = DataAPIClient(token=self.token)
-
-            return client.get_database(
-                self.get_api_endpoint(),
-                token=self.token,
-            )
-        except Exception as e:  # noqa: BLE001
+            return DataAPIClient(token=self.token).get_database(self.get_api_endpoint(), token=self.token)
+        except Exception as e:
             self.log(f"Error getting database: {e}")
-
             return None
 
     def collection_exists(self):
