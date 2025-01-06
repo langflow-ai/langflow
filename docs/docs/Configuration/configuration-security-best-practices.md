@@ -1,6 +1,5 @@
 ---
 title: Security best practices
-sidebar_position: 1
 slug: /configuration-security-best-practices
 ---
 

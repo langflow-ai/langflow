@@ -1,6 +1,7 @@
 import math
 
 import pytest
+from langflow.utils.constants import MAX_TEXT_LENGTH
 from langflow.utils.util_strings import truncate_long_strings
 
 
@@ -48,8 +49,6 @@ def test_truncate_long_strings_negative_max_length():
 
 # Test for None max_length (should use default MAX_TEXT_LENGTH)
 def test_truncate_long_strings_none_max_length():
-    from langflow.utils.constants import MAX_TEXT_LENGTH
-
     long_string = "a" * (MAX_TEXT_LENGTH + 10)
     result = truncate_long_strings(long_string, None)
     assert len(result) == MAX_TEXT_LENGTH + 3  # +3 for "..."
