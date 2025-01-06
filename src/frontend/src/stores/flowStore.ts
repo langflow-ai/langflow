@@ -406,8 +406,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       internalPostionDictionary = buildPositionDictionary(get().nodes);
     }
     while (!get().isPositionAvailable(insidePosition)) {
-      insidePosition.x += 10
-      insidePosition.y += 10
+      insidePosition.x += 10;
+      insidePosition.y += 10;
     }
     internalPostionDictionary[insidePosition.x] = insidePosition.y;
     get().setPositionDictionary(internalPostionDictionary);
