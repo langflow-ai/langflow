@@ -1,4 +1,5 @@
 from copy import deepcopy
+from typing_extensions import override
 
 from chromadb.config import Settings
 from langchain_chroma import Chroma
@@ -82,6 +83,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
+    @override
     @check_cached_vector_store
     def build_vector_store(self) -> Chroma:
         """Builds the Chroma object."""

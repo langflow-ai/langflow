@@ -122,16 +122,16 @@ class LCVectorStoreComponent(Component):
 
     def search_documents(self) -> list[Data]:
         """Search for documents in the vector store."""
-        search_query: str = self.search_query
-        if not search_query:
-            self.status = ""
-            return []
-
         if self._cached_vector_store is not None:
             vector_store = self._cached_vector_store
         else:
             vector_store = self.build_vector_store()
-            self._cached_vector_store = vector_store
+            self._cached_vector_store = vector_store    
+
+        search_query: str = self.search_query
+        if not search_query:
+            self.status = ""
+            return []
 
         self.log(f"Search input: {search_query}")
         self.log(f"Search type: {self.search_type}")
