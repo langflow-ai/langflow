@@ -1906,7 +1906,6 @@ class Graph:
             stop_component_id=stop_component_id,
             start_component_id=start_component_id,
             graph_dict=self.__to_dict(),
-            parent_node_map=self.get_parent_map(),
             in_degree_map=self.in_degree_map,
             successor_map=self.successor_map,
             predecessor_map=self.predecessor_map,
