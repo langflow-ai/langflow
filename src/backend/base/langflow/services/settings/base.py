@@ -70,6 +70,8 @@ class Settings(BaseSettings):
     dev: bool = False
     """If True, Langflow will run in development mode."""
     database_url: str | None = None
+    """Database driver async."""
+    database_driver_async: str | None = None
     """Database URL for Langflow. If not provided, Langflow will use a SQLite database."""
     pool_size: int = 10
     """The number of connections to keep open in the connection pool. If not provided, the default is 10."""
@@ -316,6 +318,20 @@ class Settings(BaseSettings):
 
             value = f"sqlite:///{final_path}"
 
+        return value
+
+    @field_validator("database_driver_async", mode="before")
+    @classmethod
+    def set_database_driver_async(cls, value):
+        if os.getenv("LANGFLOW_DATABASE_DRIVER_ASYNC"):
+            logger.debug("Adding LANGFLOW_DATABASE_DRIVER_ASYNC to database_driver_async")
+            value = os.getenv("LANGFLOW_DATABASE_DRIVER_ASYNC")
+        else:
+            value = None
+            logger.debug("There's no information about database_driver_async."
+                         "It might be a problem whether using a database different from Postgres and SQLite.")
+
+        logger.debug(f"Database driver async: {value}")
         return value
 
     @field_validator("components_path", mode="before")

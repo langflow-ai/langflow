@@ -44,6 +44,7 @@ class DatabaseService(Service):
             raise ValueError(msg)
         self.database_url: str = settings_service.settings.database_url
         self._sanitize_database_url()
+        self.database_driver_async: str = settings_service.settings.database_driver_async
 
         # This file is in langflow.services.database.manager.py
         # the ini is in langflow
@@ -93,7 +94,7 @@ class DatabaseService(Service):
                 "pool_size": self.settings_service.settings.pool_size,
                 "max_overflow": self.settings_service.settings.max_overflow,
             }
-            database_url = "postgresql+psycopg://" if url_components[0].startswith("postgresql") else url_components[0]
+            database_url = "postgresql+psycopg://" if url_components[0].startswith("postgresql") else f'{self.database_driver_async}://' if self.database_driver_async else f'{url_components[0]}://'
         database_url += url_components[1]
         return create_async_engine(
             database_url,
