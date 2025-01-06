@@ -77,7 +77,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             name="api_endpoint",
             display_name="API Endpoint",
             info="The Astra DB API Endpoint to use. Overrides selection of database.",
-            required=True,
             refresh_button=True,
             real_time_refresh=True,
             advanced=True,
@@ -187,8 +186,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Generate the api endpoint for each database
         return {
             db.info.name: {
-                "api_endpoint": f"https://{db.info.id}-{db.info.region}.apps.astra.datastax.com",
-                "collections": len(list(client.get_database(db.info.id, token=self.token).list_collection_names())),
+                "api_endpoint": (api_endpoint := f"https://{db.info.id}-{db.info.region}.apps.astra.datastax.com"),
+                "collections": len(
+                    list(client.get_database(api_endpoint=api_endpoint, token=self.token).list_collection_names())
+                ),
                 "records": 0,
             }
             for db in db_list
@@ -204,14 +205,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return None
 
         # Otherwise, get the URL from the database list
-        return self.get_database_list().get(self.database_name)
+        return self.get_database_list().get(self.database_name).get("api_endpoint")
 
     def get_database(self):
         try:
             client = DataAPIClient(token=self.token)
 
             return client.get_database(
-                self.get_api_endpoint(),
+                api_endpoint=self.get_api_endpoint(),
                 token=self.token,
             )
         except Exception as e:  # noqa: BLE001
@@ -255,8 +256,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 {
                     "name": col.name,
                     "records": 0,
-                    "provider": col.options.vector.service.provider if col.options.vector else "",
-                    "model": col.options.vector.service.model_name if col.options.vector else "",
+                    "provider": (
+                        col.options.vector.service.provider if col.options.vector and col.options.vector.service else ""
+                    ),
+                    "model": (
+                        col.options.vector.service.model_name
+                        if col.options.vector and col.options.vector.service
+                        else ""
+                    ),
                 }
                 for col in collection_list
             ]
@@ -266,17 +273,16 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return []
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):  # noqa: ARG002
-        # Refresh the collection name options
-        build_config["database_name"]["options"] = self._initialize_database_options()
-        build_config["collection_name"]["options"] = self._initialize_collection_options()
-
+        # Refresh the database name options
         database_options = self._initialize_database_options()
         build_config["database_name"]["options"] = [db["name"] for db in database_options]
         build_config["database_name"]["options_metadata"] = [
             {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
         ]
 
+        # Refresh the collection name options
         collection_options = self._initialize_collection_options()
+
         build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
         build_config["collection_name"]["options_metadata"] = [
             {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
