@@ -12,7 +12,7 @@ class LoopComponent(Component):
 
     inputs = [
         DataInput(name="data", display_name="Data", info="The initial list of Data objects to iterate over."),
-        DataInput(name="loop", display_name="Loop Input", info="Data to aggregate during the iteration."),
+        DataInput(name="loop_input", display_name="Loop Input", info="Data to aggregate during the iteration."),
     ]
 
     outputs = [
@@ -22,39 +22,45 @@ class LoopComponent(Component):
 
     def initialize_data(self):
         """Initialize the data list, context index, and aggregated list."""
-        if not self.ctx.get(f"{self._id}_initialized", False):
-            # Ensure data is a list of Data objects
-            if isinstance(self.data, Data):
-                data_list = [self.data]
-            elif isinstance(self.data, list):
-                data_list = self.data
-            else:
-                raise ValueError("The 'data' input must be a list of Data objects or a single Data object.")
+        if self.ctx.get(f"{self._id}_initialized", False):
+            return
 
-            # Store the initial data and context variables
-            self.update_ctx(
-                {
-                    f"{self._id}_data": data_list,
-                    f"{self._id}_index": 0,
-                    f"{self._id}_aggregated": [],
-                    f"{self._id}_initialized": True,
-                }
-            )
+        # Ensure data is a list of Data objects
+        if isinstance(self.data, Data):
+            data_list: list[Data] = [self.data]
+        elif isinstance(self.data, list):
+            if not all(isinstance(item, Data) for item in self.data):
+                msg = "All items in the data list must be Data objects."
+                raise TypeError(msg)
+            data_list = self.data
+        else:
+            msg = "The 'data' input must be a list of Data objects or a single Data object."
+            raise TypeError(msg)
+
+        # Store the initial data and context variables
+        self.update_ctx(
+            {
+                f"{self._id}_data": data_list,
+                f"{self._id}_index": 0,
+                f"{self._id}_aggregated": [],
+                f"{self._id}_initialized": True,
+            }
+        )
 
     def item_output(self) -> Data:
         """Output the next item in the list."""
         self.initialize_data()
 
         # Get data list and current index
-        data_list = self.ctx.get(f"{self._id}_data", [])
-        current_index = self.ctx.get(f"{self._id}_index", 0)
+        data_list: list[Data] = self.ctx.get(f"{self._id}_data", [])
+        current_index: int = self.ctx.get(f"{self._id}_index", 0)
 
         if current_index < len(data_list):
-            # Output current item
-            current_item = data_list[current_index]
+            # Output current item and increment index
+            current_item: Data = data_list[current_index]
             self.update_ctx({f"{self._id}_index": current_index + 1})
-            print("item_output:", current_item)
             return current_item
+
         # No more items to output
         self.stop("item")
         return None
@@ -67,17 +73,15 @@ class LoopComponent(Component):
         data_list = self.ctx.get(f"{self._id}_data", [])
         aggregated = self.ctx.get(f"{self._id}_aggregated", [])
 
-        # Check if loop input is provided
-        loop_input = self.loop
-        if loop_input:
-            # Append loop input to aggregated list
-            aggregated.append(loop_input)
+        # Check if loop input is provided and append to aggregated list
+        if self.loop_input is not None:
+            aggregated.append(self.loop_input)
             self.update_ctx({f"{self._id}_aggregated": aggregated})
 
         # Check if aggregation is complete
         if len(aggregated) >= len(data_list):
-            print("done_output:", aggregated)
-            return [data for data in aggregated]
+            return aggregated
+
         # Not all items have been processed yet
         self.stop("done")
         return None
