@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 
 from astrapy import DataAPIClient
@@ -179,19 +181,16 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     ]
 
     def get_database_list(self):
-        # Get the admin object
-        client = DataAPIClient(token=self.token)
-        admin_client = client.get_admin(token=self.token)
-        db_list = list(admin_client.list_databases())
-
-        # Generate the api endpoint for each database
+        client, admin_client = DataAPIClient(token=self.token), client.get_admin(token=self.token)
         return {
             db.info.name: {
                 "api_endpoint": f"https://{db.info.id}-{db.info.region}.apps.astra.datastax.com",
-                "collections": len(list(client.get_database(db.info.id, token=self.token).list_collection_names())),
+                "collections": sum(
+                    1 for _ in client.get_database(db.info.id, token=self.token).list_collection_names()
+                ),
                 "records": 0,
             }
-            for db in db_list
+            for db in admin_client.list_databases()
         }
 
     def get_api_endpoint(self):
