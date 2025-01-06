@@ -72,9 +72,6 @@ class BaseInputMixin(BaseModel, validate_assignment=True):  # type: ignore[call-
     dynamic: bool = False
     """Specifies if the field is dynamic. Defaults to False."""
 
-    dialog_inputs: list[Any] | None = None
-    """List of dialog inputs for the field. Default is an empty list."""
-
     info: str | None = ""
     """Additional information about the field to be shown in the tooltip. Defaults to an empty string."""
 
@@ -160,8 +157,12 @@ class RangeMixin(BaseModel):
 class DropDownMixin(BaseModel):
     options: list[str] | None = None
     """List of options for the field. Only used when is_list=True. Default is an empty list."""
+    options_metadata: list[dict[str, str]] | None = None
+    """List of dictionaries with metadata for each option."""
     combobox: CoalesceBool = False
     """Variable that defines if the user can insert custom values in the dropdown."""
+    dialog_inputs: list[dict[str, Any]] | None = None
+    """List of dialog inputs for the field. Default is an empty list."""
 
 
 class MultilineMixin(BaseModel):
