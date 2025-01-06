@@ -103,6 +103,7 @@ export default function Dropdown({
           data-testid={`value-dropdown-${id}`}
         >
           {true && <ForwardedIconComponent name={""} className="h-4 w-4" />}
+          {/* TODO: Add Logic for Icon */}
 
           {value &&
           value !== "" &&
@@ -175,14 +176,14 @@ export default function Dropdown({
     <div className="flex flex-col">
       <CommandItem
         className="flex items-center justify-start gap-2 truncate py-2 text-xs font-semibold text-muted-foreground"
-        onClick={() => setOpenDialog(true)}
+        onSelect={() => setOpenDialog(true)}
       >
         <ForwardedIconComponent name="Plus" className="h-3 w-3 text-primary" />
         {`New ${firstWord}`}
       </CommandItem>
       <CommandItem
         className="flex items-center justify-start gap-2 truncate py-2 text-xs font-semibold text-muted-foreground"
-        onClick={() => {
+        onSelect={() => {
           setOpenDialog(true); // TODO: Implement refresh list
         }}
       >
@@ -194,6 +195,7 @@ export default function Dropdown({
       </CommandItem>
       <NodeDialog
         open={openDialog}
+        dialogInputs={dialogInputs}
         onClose={() => setOpenDialog(false)}
         content={<div>Content</div>}
       />
@@ -270,7 +272,7 @@ export default function Dropdown({
     >
       <Command>
         {renderSearchInput()}
-        {renderIconOptionsList()}
+        {dialogInputs ? renderIconOptionsList() : renderOptionsList()}
       </Command>
     </PopoverContentDropdown>
   );

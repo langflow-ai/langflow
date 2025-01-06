@@ -9,12 +9,17 @@
             "dataType": "ParseData",
             "id": "ParseData-1lOsZ",
             "name": "text",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "context",
             "id": "Prompt-o2SL4",
-            "inputTypes": ["Message", "Text"],
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
             "type": "str"
           }
         },
@@ -32,12 +37,16 @@
             "dataType": "Prompt",
             "id": "Prompt-o2SL4",
             "name": "prompt",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "OpenAIModel-yjcwf",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -55,12 +64,16 @@
             "dataType": "OpenAIModel",
             "id": "OpenAIModel-yjcwf",
             "name": "text_output",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-p7okC",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -78,12 +91,17 @@
             "dataType": "ChatInput",
             "id": "ChatInput-uBsVA",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "question",
             "id": "Prompt-o2SL4",
-            "inputTypes": ["Message", "Text"],
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
             "type": "str"
           }
         },
@@ -101,12 +119,16 @@
             "dataType": "File",
             "id": "File-jTMwG",
             "name": "data",
-            "output_types": ["Data"]
+            "output_types": [
+              "Data"
+            ]
           },
           "targetHandle": {
             "fieldName": "data_inputs",
             "id": "SplitText-bByhd",
-            "inputTypes": ["Data"],
+            "inputTypes": [
+              "Data"
+            ],
             "type": "other"
           }
         },
@@ -122,12 +144,16 @@
             "dataType": "OpenAIEmbeddings",
             "id": "OpenAIEmbeddings-b229k",
             "name": "embeddings",
-            "output_types": ["Embeddings"]
+            "output_types": [
+              "Embeddings"
+            ]
           },
           "targetHandle": {
             "fieldName": "embedding_model",
             "id": "AstraDB-0959q",
-            "inputTypes": ["Embeddings"],
+            "inputTypes": [
+              "Embeddings"
+            ],
             "type": "other"
           }
         },
@@ -143,12 +169,16 @@
             "dataType": "SplitText",
             "id": "SplitText-bByhd",
             "name": "chunks",
-            "output_types": ["Data"]
+            "output_types": [
+              "Data"
+            ]
           },
           "targetHandle": {
             "fieldName": "ingest_data",
             "id": "AstraDB-0959q",
-            "inputTypes": ["Data"],
+            "inputTypes": [
+              "Data"
+            ],
             "type": "other"
           }
         },
@@ -164,12 +194,16 @@
             "dataType": "OpenAIEmbeddings",
             "id": "OpenAIEmbeddings-qVkNT",
             "name": "embeddings",
-            "output_types": ["Embeddings"]
+            "output_types": [
+              "Embeddings"
+            ]
           },
           "targetHandle": {
             "fieldName": "embedding_model",
             "id": "AstraDB-3Vxgl",
-            "inputTypes": ["Embeddings"],
+            "inputTypes": [
+              "Embeddings"
+            ],
             "type": "other"
           }
         },
@@ -185,12 +219,16 @@
             "dataType": "ChatInput",
             "id": "ChatInput-uBsVA",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "search_query",
             "id": "AstraDB-3Vxgl",
-            "inputTypes": ["Message"],
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
@@ -206,12 +244,16 @@
             "dataType": "AstraDB",
             "id": "AstraDB-3Vxgl",
             "name": "search_results",
-            "output_types": ["Data"]
+            "output_types": [
+              "Data"
+            ]
           },
           "targetHandle": {
             "fieldName": "data",
             "id": "ParseData-1lOsZ",
-            "inputTypes": ["Data"],
+            "inputTypes": [
+              "Data"
+            ],
             "type": "other"
           }
         },
@@ -229,7 +271,9 @@
           "display_name": "Chat Input",
           "id": "ChatInput-uBsVA",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -258,7 +302,9 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -271,7 +317,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "background_color",
@@ -290,7 +338,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "chat_icon",
@@ -367,7 +417,9 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as input.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -387,7 +439,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -401,7 +456,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -419,7 +476,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -453,7 +512,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "text_color",
@@ -491,7 +552,9 @@
           "display_name": "Parse Data",
           "id": "ParseData-1lOsZ",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -499,7 +562,11 @@
             "display_name": "Parse Data",
             "documentation": "",
             "edited": false,
-            "field_order": ["data", "template", "sep"],
+            "field_order": [
+              "data",
+              "template",
+              "sep"
+            ],
             "frozen": false,
             "icon": "braces",
             "legacy": false,
@@ -513,7 +580,9 @@
                 "method": "parse_data",
                 "name": "text",
                 "selected": "Message",
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -522,7 +591,9 @@
                 "method": "parse_data_as_list",
                 "name": "data_list",
                 "selected": "Data",
-                "types": ["Data"],
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -552,7 +623,9 @@
                 "display_name": "Data",
                 "dynamic": false,
                 "info": "The data to convert to text.",
-                "input_types": ["Data"],
+                "input_types": [
+                  "Data"
+                ],
                 "list": true,
                 "name": "data",
                 "placeholder": "",
@@ -585,7 +658,9 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -624,18 +699,25 @@
           "display_name": "Prompt",
           "id": "Prompt-o2SL4",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
-              "template": ["context", "question"]
+              "template": [
+                "context",
+                "question"
+              ]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
             "error": null,
-            "field_order": ["template"],
+            "field_order": [
+              "template"
+            ],
             "frozen": false,
             "full_path": null,
             "icon": "prompts",
@@ -654,7 +736,9 @@
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Message",
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -687,7 +771,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message", "Text"],
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -707,7 +794,10 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": ["Message", "Text"],
+                "input_types": [
+                  "Message",
+                  "Text"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -741,7 +831,9 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "tool_placeholder",
@@ -781,7 +873,9 @@
           "display_name": "Split Text",
           "id": "SplitText-bByhd",
           "node": {
-            "base_classes": ["Data"],
+            "base_classes": [
+              "Data"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -808,7 +902,9 @@
                 "method": "split_text",
                 "name": "chunks",
                 "selected": "Data",
-                "types": ["Data"],
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -868,7 +964,9 @@
                 "display_name": "Data Inputs",
                 "dynamic": false,
                 "info": "The data to split.",
-                "input_types": ["Data"],
+                "input_types": [
+                  "Data"
+                ],
                 "list": true,
                 "name": "data_inputs",
                 "placeholder": "",
@@ -884,7 +982,9 @@
                 "display_name": "Separator",
                 "dynamic": false,
                 "info": "The character to split on. Defaults to newline.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "separator",
@@ -986,7 +1086,10 @@
         "data": {
           "id": "OpenAIModel-yjcwf",
           "node": {
-            "base_classes": ["LanguageModel", "Message"],
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1023,7 +1126,9 @@
                 "name": "text_output",
                 "required_inputs": [],
                 "selected": "Message",
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1033,7 +1138,9 @@
                 "name": "model_output",
                 "required_inputs": [],
                 "selected": "LanguageModel",
-                "types": ["LanguageModel"],
+                "types": [
+                  "LanguageModel"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1046,7 +1153,9 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -1081,7 +1190,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -1229,7 +1340,9 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "system_message",
@@ -1285,7 +1398,9 @@
           "display_name": "Chat Output",
           "id": "ChatOutput-p7okC",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1317,7 +1432,9 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1330,7 +1447,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "background_color",
@@ -1350,7 +1469,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "chat_icon",
@@ -1388,7 +1509,9 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -1408,7 +1531,9 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -1429,7 +1554,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1445,7 +1573,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -1465,7 +1595,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -1501,7 +1633,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "text_color",
@@ -1539,7 +1673,9 @@
         "data": {
           "id": "OpenAIEmbeddings-qVkNT",
           "node": {
-            "base_classes": ["Embeddings"],
+            "base_classes": [
+              "Embeddings"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1584,7 +1720,9 @@
                 "name": "embeddings",
                 "required_inputs": [],
                 "selected": "Embeddings",
-                "types": ["Embeddings"],
+                "types": [
+                  "Embeddings"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1613,7 +1751,9 @@
                 "display_name": "Client",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "client",
@@ -1683,7 +1823,9 @@
                 "display_name": "Deployment",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "deployment",
@@ -1789,7 +1931,9 @@
                 "display_name": "OpenAI API Base",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_api_base",
@@ -1809,7 +1953,9 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "load_from_db": true,
                 "name": "openai_api_key",
                 "password": true,
@@ -1826,7 +1972,9 @@
                 "display_name": "OpenAI API Type",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_api_type",
@@ -1846,7 +1994,9 @@
                 "display_name": "OpenAI API Version",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_api_version",
@@ -1866,7 +2016,9 @@
                 "display_name": "OpenAI Organization",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_organization",
@@ -1886,7 +2038,9 @@
                 "display_name": "OpenAI Proxy",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_proxy",
@@ -1970,7 +2124,9 @@
                 "display_name": "TikToken Model Name",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "tiktoken_model_name",
@@ -2040,7 +2196,9 @@
         "data": {
           "id": "OpenAIEmbeddings-b229k",
           "node": {
-            "base_classes": ["Embeddings"],
+            "base_classes": [
+              "Embeddings"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -2085,7 +2243,9 @@
                 "name": "embeddings",
                 "required_inputs": [],
                 "selected": "Embeddings",
-                "types": ["Embeddings"],
+                "types": [
+                  "Embeddings"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2114,7 +2274,9 @@
                 "display_name": "Client",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "client",
@@ -2184,7 +2346,9 @@
                 "display_name": "Deployment",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "deployment",
@@ -2290,7 +2454,9 @@
                 "display_name": "OpenAI API Base",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_api_base",
@@ -2310,7 +2476,9 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "load_from_db": true,
                 "name": "openai_api_key",
                 "password": true,
@@ -2327,7 +2495,9 @@
                 "display_name": "OpenAI API Type",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_api_type",
@@ -2347,7 +2517,9 @@
                 "display_name": "OpenAI API Version",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_api_version",
@@ -2367,7 +2539,9 @@
                 "display_name": "OpenAI Organization",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_organization",
@@ -2387,7 +2561,9 @@
                 "display_name": "OpenAI Proxy",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "openai_proxy",
@@ -2471,7 +2647,9 @@
                 "display_name": "TikToken Model Name",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "name": "tiktoken_model_name",
@@ -2509,7 +2687,9 @@
         "data": {
           "id": "File-jTMwG",
           "node": {
-            "base_classes": ["Data"],
+            "base_classes": [
+              "Data"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -2537,7 +2717,9 @@
                 "name": "data",
                 "required_inputs": [],
                 "selected": "Data",
-                "types": ["Data"],
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2600,7 +2782,10 @@
                 "display_name": "Server File Path",
                 "dynamic": false,
                 "info": "Data object with a 'file_path' property pointing to server file or a Message object with a path to the file. Supercedes 'Path' but supports same file types.",
-                "input_types": ["Data", "Message"],
+                "input_types": [
+                  "Data",
+                  "Message"
+                ],
                 "list": true,
                 "name": "file_path",
                 "placeholder": "",
@@ -2825,7 +3010,9 @@
         "data": {
           "id": "AstraDB-0959q",
           "node": {
-            "base_classes": ["Data"],
+            "base_classes": [
+              "Data"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -2868,7 +3055,9 @@
                   "token"
                 ],
                 "selected": "Data",
-                "types": ["Data"],
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2898,7 +3087,9 @@
                 "display_name": "API Endpoint",
                 "dynamic": false,
                 "info": "The Astra DB API Endpoint to use. Overrides selection of database.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "load_from_db": true,
                 "name": "api_endpoint",
                 "password": true,
@@ -2944,7 +3135,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import os\n\nfrom astrapy import DataAPIClient\nfrom astrapy.admin import parse_api_endpoint\nfrom langchain_astradb import AstraDBVectorStore\n\nfrom langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom langflow.helpers import docs_to_data\nfrom langflow.inputs import DictInput, FloatInput, MessageTextInput, NestedDictInput\nfrom langflow.io import (\n    BoolInput,\n    DataInput,\n    DropdownInput,\n    HandleInput,\n    IntInput,\n    SecretStrInput,\n    StrInput,\n)\nfrom langflow.schema import Data\nfrom langflow.utils.version import get_version_info\n\n\nclass AstraDBVectorStoreComponent(LCVectorStoreComponent):\n    display_name: str = \"Astra DB\"\n    description: str = \"Ingest and search documents in Astra DB\"\n    documentation: str = \"https://docs.datastax.com/en/langflow/astra-components.html\"\n    name = \"AstraDB\"\n    icon: str = \"AstraDB\"\n\n    _cached_vector_store: AstraDBVectorStore | None = None\n\n    class NewDatabaseInput(DictInput):\n        title: str = \"Create New Database\"\n        description: str = \"Create a new database in Astra DB.\"\n        db_names: list[str] = []\n        status: str = \"\"\n        collection_count: int = 0\n        record_count: int = 0\n\n    class NewCollectionInput(DictInput):\n        title: str = \"Create New Collection\"\n        description: str = \"Create a new collection in Astra DB.\"\n        status: str = \"\"\n        dimensions: int = 0\n        model: str = \"\"\n        similarity_metrics: list[str] = []\n        icon: str = \"Collection\"\n\n    base_inputs = LCVectorStoreComponent.inputs\n    if \"search_query\" not in [input_.name for input_ in base_inputs]:\n        base_inputs.append(\n            MessageTextInput(\n                name=\"search_query\",\n                display_name=\"Search Query\",\n                tool_mode=True,\n            )\n        )\n    if \"ingest_data\" not in [input_.name for input_ in base_inputs]:\n        base_inputs.append(\n            DataInput(\n                name=\"ingest_data\",\n                display_name=\"Ingest Data\",\n            )\n        )\n\n    inputs = [\n        SecretStrInput(\n            name=\"token\",\n            display_name=\"Astra DB Application Token\",\n            info=\"Authentication token for accessing Astra DB.\",\n            value=\"ASTRA_DB_APPLICATION_TOKEN\",\n            required=True,\n            advanced=os.getenv(\"ASTRA_ENHANCED\", \"false\").lower() == \"true\",\n            real_time_refresh=True,\n        ),\n        SecretStrInput(\n            name=\"api_endpoint\",\n            display_name=\"API Endpoint\",\n            info=\"The Astra DB API Endpoint to use. Overrides selection of database.\",\n            refresh_button=True,\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"database_name\",\n            display_name=\"Database\",\n            info=\"Select a database in Astra DB.\",\n            required=True,\n            refresh_button=True,\n            real_time_refresh=True,\n            dialog_inputs=[NewDatabaseInput(name=\"database_input\").__dict__],\n            options=[\"Default Database\"],\n            options_metadata=[\n                {\n                    \"collections\": 0,\n                }\n            ],\n            value=\"\",\n        ),\n        DropdownInput(\n            name=\"collection_name\",\n            display_name=\"Collection\",\n            info=\"The name of the collection within Astra DB where the vectors will be stored.\",\n            required=True,\n            refresh_button=True,\n            real_time_refresh=True,\n            dialog_inputs=[NewCollectionInput(name=\"collection_input\").__dict__],\n            options=[\"Default Collection\"],\n            options_metadata=[\n                {\n                    \"provider\": \"\",\n                    \"model\": \"\",\n                    \"records\": 0,\n                }\n            ],\n            value=\"\",\n        ),\n        StrInput(\n            name=\"keyspace\",\n            display_name=\"Keyspace\",\n            info=\"Optional keyspace within Astra DB to use for the collection.\",\n            advanced=True,\n        ),\n        HandleInput(\n            name=\"embedding_model\",\n            display_name=\"Embedding Model\",\n            input_types=[\"Embeddings\"],\n            info=\"Allows an embedding model configuration.\",\n        ),\n        *base_inputs,\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Search Results\",\n            info=\"Number of search results to return.\",\n            advanced=True,\n            value=4,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            info=\"Search type to use\",\n            options=[\"Similarity\", \"Similarity with score threshold\", \"MMR (Max Marginal Relevance)\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"search_score_threshold\",\n            display_name=\"Search Score Threshold\",\n            info=\"Minimum similarity score threshold for search results. \"\n            \"(when using 'Similarity with score threshold')\",\n            value=0,\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"advanced_search_filter\",\n            display_name=\"Search Metadata Filter\",\n            info=\"Optional dictionary of filters to apply to the search query.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"content_field\",\n            display_name=\"Content Field\",\n            info=\"Field to use as the text content field for the vector store.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"ignore_invalid_documents\",\n            display_name=\"Ignore Invalid Documents\",\n            info=\"Boolean flag to determine whether to ignore invalid documents at runtime.\",\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"astradb_vectorstore_kwargs\",\n            display_name=\"AstraDBVectorStore Parameters\",\n            info=\"Optional dictionary of additional parameters for the AstraDBVectorStore.\",\n            advanced=True,\n        ),\n    ]\n\n    def get_database_list(self):\n        # Get the admin object\n        client = DataAPIClient(token=self.token)\n        admin_client = client.get_admin(token=self.token)\n        db_list = list(admin_client.list_databases())\n\n        # Generate the api endpoint for each database\n        return {\n            db.info.name: {\n                \"api_endpoint\": (api_endpoint := f\"https://{db.info.id}-{db.info.region}.apps.astra.datastax.com\"),\n                \"collections\": len(\n                    list(client.get_database(api_endpoint=api_endpoint, token=self.token).list_collection_names())\n                ),\n                \"records\": 0,\n            }\n            for db in db_list\n        }\n\n    def get_api_endpoint(self):\n        # If the API endpoint is set, return it\n        if self.api_endpoint:\n            return self.api_endpoint\n\n        # If the database is not set, nothing we can do.\n        if not self.database_name:\n            return None\n\n        # Otherwise, get the URL from the database list\n        return self.get_database_list().get(self.database_name).get(\"api_endpoint\")\n\n    def get_database(self):\n        try:\n            client = DataAPIClient(token=self.token)\n\n            return client.get_database(\n                api_endpoint=self.get_api_endpoint(),\n                token=self.token,\n            )\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error getting database: {e}\")\n\n            return None\n\n    def collection_exists(self):\n        try:\n            client = DataAPIClient(token=self.token)\n            database = client.get_database(\n                self.get_api_endpoint(),\n                token=self.token,\n            )\n            return self.collection_name in list(database.list_collections())\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error getting collection status: {e}\")\n\n            return False\n\n    def _initialize_database_options(self):\n        try:\n            return [\n                {\"name\": name, \"collections\": info[\"collections\"], \"records\": info[\"records\"]}\n                for name, info in self.get_database_list().items()\n            ]\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error fetching databases: {e}\")\n\n            return []\n\n    def _initialize_collection_options(self):\n        database = self.get_database()\n        if database is None:\n            return []\n\n        try:\n            collection_list = list(database.list_collections())\n\n            return [\n                {\n                    \"name\": col.name,\n                    \"records\": 0,\n                    \"provider\": (\n                        col.options.vector.service.provider if col.options.vector and col.options.vector.service else \"\"\n                    ),\n                    \"model\": (\n                        col.options.vector.service.model_name\n                        if col.options.vector and col.options.vector.service\n                        else \"\"\n                    ),\n                }\n                for col in collection_list\n            ]\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error fetching collections: {e}\")\n\n            return []\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):  # noqa: ARG002\n        # Refresh the database name options\n        database_options = self._initialize_database_options()\n        build_config[\"database_name\"][\"options\"] = [db[\"name\"] for db in database_options]\n        build_config[\"database_name\"][\"options_metadata\"] = [\n            {k: v for k, v in db.items() if k not in [\"name\"]} for db in database_options\n        ]\n\n        # Refresh the collection name options\n        collection_options = self._initialize_collection_options()\n\n        build_config[\"collection_name\"][\"options\"] = [col[\"name\"] for col in collection_options]\n        build_config[\"collection_name\"][\"options_metadata\"] = [\n            {k: v for k, v in col.items() if k not in [\"name\"]} for col in collection_options\n        ]\n\n        return build_config\n\n    @check_cached_vector_store\n    def build_vector_store(self):\n        try:\n            from langchain_astradb import AstraDBVectorStore\n        except ImportError as e:\n            msg = (\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n            raise ImportError(msg) from e\n\n        # Get the embedding model and additional params\n        embedding_params = {\"embedding\": self.embedding_model} if self.embedding_model else {}\n        additional_params = self.astradb_vectorstore_kwargs or {}\n\n        # Get the running environment for Langflow\n        environment = (\n            parse_api_endpoint(self.get_api_endpoint()).environment if self.get_api_endpoint() is not None else None\n        )\n\n        # Get Langflow version and platform information\n        __version__ = get_version_info()[\"version\"]\n        langflow_prefix = \"\"\n        if os.getenv(\"LANGFLOW_HOST\") is not None:\n            langflow_prefix = \"ds-\"\n\n        # Bundle up the auto-detect parameters\n        autodetect_params = {\n            \"autodetect_collection\": self.collection_exists(),  # TODO: May want to expose this option\n            \"content_field\": self.content_field or None,\n            \"ignore_invalid_documents\": self.ignore_invalid_documents,\n        }\n\n        # Attempt to build the Vector Store object\n        try:\n            vector_store = AstraDBVectorStore(\n                # Astra DB Authentication Parameters\n                token=self.token,\n                api_endpoint=self.get_api_endpoint(),\n                namespace=self.keyspace or None,\n                collection_name=self.collection_name,\n                environment=environment,\n                # Astra DB Usage Tracking Parameters\n                ext_callers=[(f\"{langflow_prefix}langflow\", __version__)],\n                # Astra DB Vector Store Parameters\n                **autodetect_params,\n                **embedding_params,\n                **additional_params,\n            )\n        except Exception as e:\n            msg = f\"Error initializing AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        self._add_documents_to_vector_store(vector_store)\n\n        return vector_store\n\n    def _add_documents_to_vector_store(self, vector_store) -> None:\n        documents = []\n        for _input in self.ingest_data or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise TypeError(msg)\n\n        if documents:\n            self.log(f\"Adding {len(documents)} documents to the Vector Store.\")\n            try:\n                vector_store.add_documents(documents)\n            except Exception as e:\n                msg = f\"Error adding documents to AstraDBVectorStore: {e}\"\n                raise ValueError(msg) from e\n        else:\n            self.log(\"No documents to add to the Vector Store.\")\n\n    def _map_search_type(self) -> str:\n        if self.search_type == \"Similarity with score threshold\":\n            return \"similarity_score_threshold\"\n        if self.search_type == \"MMR (Max Marginal Relevance)\":\n            return \"mmr\"\n        return \"similarity\"\n\n    def _build_search_args(self):\n        query = self.search_query if isinstance(self.search_query, str) and self.search_query.strip() else None\n\n        if query:\n            args = {\n                \"query\": query,\n                \"search_type\": self._map_search_type(),\n                \"k\": self.number_of_results,\n                \"score_threshold\": self.search_score_threshold,\n            }\n        elif self.advanced_search_filter:\n            args = {\n                \"n\": self.number_of_results,\n            }\n        else:\n            return {}\n\n        filter_arg = self.advanced_search_filter or {}\n        if filter_arg:\n            args[\"filter\"] = filter_arg\n\n        return args\n\n    def search_documents(self, vector_store=None) -> list[Data]:\n        vector_store = vector_store or self.build_vector_store()\n\n        self.log(f\"Search input: {self.search_query}\")\n        self.log(f\"Search type: {self.search_type}\")\n        self.log(f\"Number of results: {self.number_of_results}\")\n\n        try:\n            search_args = self._build_search_args()\n        except Exception as e:\n            msg = f\"Error in AstraDBVectorStore._build_search_args: {e}\"\n            raise ValueError(msg) from e\n\n        if not search_args:\n            self.log(\"No search input or filters provided. Skipping search.\")\n            return []\n\n        docs = []\n        search_method = \"search\" if \"query\" in search_args else \"metadata_search\"\n\n        try:\n            self.log(f\"Calling vector_store.{search_method} with args: {search_args}\")\n            docs = getattr(vector_store, search_method)(**search_args)\n        except Exception as e:\n            msg = f\"Error performing {search_method} in AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        self.log(f\"Retrieved documents: {len(docs)}\")\n\n        data = docs_to_data(docs)\n        self.log(f\"Converted documents to data: {len(data)}\")\n        self.status = data\n        return data\n\n    def get_retriever_kwargs(self):\n        search_args = self._build_search_args()\n        return {\n            \"search_type\": self._map_search_type(),\n            \"search_kwargs\": search_args,\n        }\n"
+                "value": "import os\n\nfrom astrapy import DataAPIClient\nfrom astrapy.admin import parse_api_endpoint\nfrom langchain_astradb import AstraDBVectorStore\n\nfrom langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom langflow.helpers import docs_to_data\nfrom langflow.inputs import DictInput, FloatInput, MessageTextInput, NestedDictInput\nfrom langflow.io import (\n    BoolInput,\n    DataInput,\n    DropdownInput,\n    HandleInput,\n    IntInput,\n    SecretStrInput,\n    StrInput,\n)\nfrom langflow.schema import Data\nfrom langflow.utils.version import get_version_info\n\n\nclass AstraDBVectorStoreComponent(LCVectorStoreComponent):\n    display_name: str = \"Astra DB\"\n    description: str = \"Ingest and search documents in Astra DB\"\n    documentation: str = \"https://docs.datastax.com/en/langflow/astra-components.html\"\n    name = \"AstraDB\"\n    icon: str = \"AstraDB\"\n\n    _cached_vector_store: AstraDBVectorStore | None = None\n\n    class NewDatabaseInput(DictInput):\n        title: str = \"Create New Database\"\n        description: str = \"Create a new database in Astra DB.\"\n        db_names: list[str] = []\n        status: str = \"\"\n        collection_count: int = 0\n        record_count: int = 0\n\n    class NewCollectionInput(DictInput):\n        title: str = \"Create New Collection\"\n        description: str = \"Create a new collection in Astra DB.\"\n        status: str = \"\"\n        dimensions: int = 0\n        model: str = \"\"\n        similarity_metrics: list[str] = []\n        icon: str = \"Collection\"\n\n    base_inputs = LCVectorStoreComponent.inputs\n    if \"search_query\" not in [input_.name for input_ in base_inputs]:\n        base_inputs.append(\n            MessageTextInput(\n                name=\"search_query\",\n                display_name=\"Search Query\",\n                tool_mode=True,\n            )\n        )\n    if \"ingest_data\" not in [input_.name for input_ in base_inputs]:\n        base_inputs.append(\n            DataInput(\n                name=\"ingest_data\",\n                display_name=\"Ingest Data\",\n            )\n        )\n\n    inputs = [\n        SecretStrInput(\n            name=\"token\",\n            display_name=\"Astra DB Application Token\",\n            info=\"Authentication token for accessing Astra DB.\",\n            value=\"ASTRA_DB_APPLICATION_TOKEN\",\n            required=True,\n            advanced=os.getenv(\"ASTRA_ENHANCED\", \"false\").lower() == \"true\",\n            real_time_refresh=True,\n        ),\n        SecretStrInput(\n            name=\"api_endpoint\",\n            display_name=\"API Endpoint\",\n            info=\"The Astra DB API Endpoint to use. Overrides selection of database.\",\n            refresh_button=True,\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"database_name\",\n            display_name=\"Database\",\n            info=\"Select a database in Astra DB.\",\n            required=True,\n            refresh_button=True,\n            real_time_refresh=True,\n            dialog_inputs=[NewDatabaseInput(name=\"database_input\").__dict__],\n            options=[],\n            options_metadata=[\n                {\n                    \"collections\": 0,\n                }\n            ],\n            value=\"\",\n        ),\n        DropdownInput(\n            name=\"collection_name\",\n            display_name=\"Collection\",\n            info=\"The name of the collection within Astra DB where the vectors will be stored.\",\n            required=True,\n            refresh_button=True,\n            real_time_refresh=True,\n            dialog_inputs=[NewCollectionInput(name=\"collection_input\").__dict__],\n            options=[],\n            options_metadata=[\n                {\n                    \"provider\": \"\",\n                    \"model\": \"\",\n                    \"records\": 0,\n                }\n            ],\n            value=\"\",\n        ),\n        StrInput(\n            name=\"keyspace\",\n            display_name=\"Keyspace\",\n            info=\"Optional keyspace within Astra DB to use for the collection.\",\n            advanced=True,\n        ),\n        HandleInput(\n            name=\"embedding_model\",\n            display_name=\"Embedding Model\",\n            input_types=[\"Embeddings\"],\n            info=\"Allows an embedding model configuration.\",\n        ),\n        *base_inputs,\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Search Results\",\n            info=\"Number of search results to return.\",\n            advanced=True,\n            value=4,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            info=\"Search type to use\",\n            options=[\"Similarity\", \"Similarity with score threshold\", \"MMR (Max Marginal Relevance)\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"search_score_threshold\",\n            display_name=\"Search Score Threshold\",\n            info=\"Minimum similarity score threshold for search results. \"\n            \"(when using 'Similarity with score threshold')\",\n            value=0,\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"advanced_search_filter\",\n            display_name=\"Search Metadata Filter\",\n            info=\"Optional dictionary of filters to apply to the search query.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"content_field\",\n            display_name=\"Content Field\",\n            info=\"Field to use as the text content field for the vector store.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"ignore_invalid_documents\",\n            display_name=\"Ignore Invalid Documents\",\n            info=\"Boolean flag to determine whether to ignore invalid documents at runtime.\",\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"astradb_vectorstore_kwargs\",\n            display_name=\"AstraDBVectorStore Parameters\",\n            info=\"Optional dictionary of additional parameters for the AstraDBVectorStore.\",\n            advanced=True,\n        ),\n    ]\n\n    def get_database_list(self):\n        # Get the admin object\n        client = DataAPIClient(token=self.token)\n        admin_client = client.get_admin(token=self.token)\n        db_list = list(admin_client.list_databases())\n\n        # Generate the api endpoint for each database\n        return {\n            db.info.name: {\n                \"api_endpoint\": (api_endpoint := f\"https://{db.info.id}-{db.info.region}.apps.astra.datastax.com\"),\n                \"collections\": len(\n                    list(\n                        client.get_database(\n                            api_endpoint=api_endpoint, token=self.token, keyspace=db.info.keyspace\n                        ).list_collection_names(keyspace=db.info.keyspace)\n                    )\n                ),\n                \"records\": 0,\n            }\n            for db in db_list\n        }\n\n    def get_api_endpoint(self):\n        # If the API endpoint is set, return it\n        if self.api_endpoint:\n            return self.api_endpoint\n\n        # If the database is not set, nothing we can do.\n        if not self.database_name:\n            return None\n\n        # Otherwise, get the URL from the database list\n        return self.get_database_list().get(self.database_name).get(\"api_endpoint\")\n\n    def get_keyspace(self):\n        keyspace = self.keyspace.strip()\n\n        if keyspace:\n            return keyspace\n\n        return None\n\n    def get_database_object(self):\n        try:\n            client = DataAPIClient(token=self.token)\n\n            return client.get_database(\n                api_endpoint=self.get_api_endpoint(),\n                token=self.token,\n                keyspace=self.get_keyspace(),\n            )\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error getting database: {e}\")\n\n            return None\n\n    def collection_exists(self):\n        try:\n            client = DataAPIClient(token=self.token)\n            database = client.get_database(\n                api_endpoint=self.get_api_endpoint(),\n                token=self.token,\n                keyspace=self.get_keyspace(),\n            )\n\n            return self.collection_name in list(database.list_collection_names(keyspace=self.get_keyspace()))\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error getting collection status: {e}\")\n\n            return False\n\n    def collection_hasdata(self):\n        try:\n            client = DataAPIClient(token=self.token)\n            database = client.get_database(\n                api_endpoint=self.get_api_endpoint(),\n                token=self.token,\n                keyspace=self.get_keyspace(),\n            )\n            collection = database.get_collection(self.collection_name, keyspace=self.get_keyspace())\n\n            return collection.estimated_document_count() > 0\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error checking collection data: {e}\")\n\n            return False\n\n    def _initialize_database_options(self):\n        try:\n            return [\n                {\"name\": name, \"collections\": info[\"collections\"], \"records\": info[\"records\"]}\n                for name, info in self.get_database_list().items()\n            ]\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error fetching databases: {e}\")\n\n            return []\n\n    def _initialize_collection_options(self):\n        database = self.get_database_object()\n        if database is None:\n            return []\n\n        try:\n            collection_list = list(database.list_collections(keyspace=self.get_keyspace()))\n\n            return [\n                {\n                    \"name\": col.name,\n                    \"records\": 0,\n                    \"provider\": (\n                        col.options.vector.service.provider if col.options.vector and col.options.vector.service else \"\"\n                    ),\n                    \"model\": (\n                        col.options.vector.service.model_name\n                        if col.options.vector and col.options.vector.service\n                        else \"\"\n                    ),\n                }\n                for col in collection_list\n            ]\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error fetching collections: {e}\")\n\n            return []\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):  # noqa: ARG002\n        # Refresh the database name options\n        database_options = self._initialize_database_options()\n        build_config[\"database_name\"][\"options\"] = [db[\"name\"] for db in database_options]\n        build_config[\"database_name\"][\"options_metadata\"] = [\n            {k: v for k, v in db.items() if k not in [\"name\"]} for db in database_options\n        ]\n\n        # Refresh the collection name options\n        collection_options = self._initialize_collection_options()\n\n        build_config[\"collection_name\"][\"options\"] = [col[\"name\"] for col in collection_options]\n        build_config[\"collection_name\"][\"options_metadata\"] = [\n            {k: v for k, v in col.items() if k not in [\"name\"]} for col in collection_options\n        ]\n\n        return build_config\n\n    @check_cached_vector_store\n    def build_vector_store(self):\n        try:\n            from langchain_astradb import AstraDBVectorStore\n        except ImportError as e:\n            msg = (\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n            raise ImportError(msg) from e\n\n        # Get the embedding model and additional params\n        embedding_params = {\"embedding\": self.embedding_model} if self.embedding_model else {}\n        additional_params = self.astradb_vectorstore_kwargs or {}\n\n        # Get the running environment for Langflow\n        environment = (\n            parse_api_endpoint(self.get_api_endpoint()).environment if self.get_api_endpoint() is not None else None\n        )\n\n        # Get Langflow version and platform information\n        __version__ = get_version_info()[\"version\"]\n        langflow_prefix = \"\"\n        if os.getenv(\"LANGFLOW_HOST\") is not None:\n            langflow_prefix = \"ds-\"\n\n        # Bundle up the auto-detect parameters\n        autodetect_params = {\n            \"autodetect_collection\": self.collection_exists(),  # TODO: May want to expose this option\n            \"content_field\": (\n                self.content_field\n                if self.content_field and embedding_params\n                else (\"page_content\" if not self.collection_hasdata() else None)\n            ),\n            \"ignore_invalid_documents\": self.ignore_invalid_documents,\n        }\n\n        # Attempt to build the Vector Store object\n        try:\n            vector_store = AstraDBVectorStore(\n                # Astra DB Authentication Parameters\n                token=self.token,\n                api_endpoint=self.get_api_endpoint(),\n                namespace=self.get_keyspace(),\n                collection_name=self.collection_name,\n                environment=environment,\n                # Astra DB Usage Tracking Parameters\n                ext_callers=[(f\"{langflow_prefix}langflow\", __version__)],\n                # Astra DB Vector Store Parameters\n                **autodetect_params,\n                **embedding_params,\n                **additional_params,\n            )\n        except Exception as e:\n            msg = f\"Error initializing AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        self._add_documents_to_vector_store(vector_store)\n\n        return vector_store\n\n    def _add_documents_to_vector_store(self, vector_store) -> None:\n        documents = []\n        for _input in self.ingest_data or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise TypeError(msg)\n\n        if documents:\n            self.log(f\"Adding {len(documents)} documents to the Vector Store.\")\n            try:\n                vector_store.add_documents(documents)\n            except Exception as e:\n                msg = f\"Error adding documents to AstraDBVectorStore: {e}\"\n                raise ValueError(msg) from e\n        else:\n            self.log(\"No documents to add to the Vector Store.\")\n\n    def _map_search_type(self) -> str:\n        if self.search_type == \"Similarity with score threshold\":\n            return \"similarity_score_threshold\"\n        if self.search_type == \"MMR (Max Marginal Relevance)\":\n            return \"mmr\"\n        return \"similarity\"\n\n    def _build_search_args(self):\n        query = self.search_query if isinstance(self.search_query, str) and self.search_query.strip() else None\n\n        if query:\n            args = {\n                \"query\": query,\n                \"search_type\": self._map_search_type(),\n                \"k\": self.number_of_results,\n                \"score_threshold\": self.search_score_threshold,\n            }\n        elif self.advanced_search_filter:\n            args = {\n                \"n\": self.number_of_results,\n            }\n        else:\n            return {}\n\n        filter_arg = self.advanced_search_filter or {}\n        if filter_arg:\n            args[\"filter\"] = filter_arg\n\n        return args\n\n    def search_documents(self, vector_store=None) -> list[Data]:\n        vector_store = vector_store or self.build_vector_store()\n\n        self.log(f\"Search input: {self.search_query}\")\n        self.log(f\"Search type: {self.search_type}\")\n        self.log(f\"Number of results: {self.number_of_results}\")\n\n        try:\n            search_args = self._build_search_args()\n        except Exception as e:\n            msg = f\"Error in AstraDBVectorStore._build_search_args: {e}\"\n            raise ValueError(msg) from e\n\n        if not search_args:\n            self.log(\"No search input or filters provided. Skipping search.\")\n            return []\n\n        docs = []\n        search_method = \"search\" if \"query\" in search_args else \"metadata_search\"\n\n        try:\n            self.log(f\"Calling vector_store.{search_method} with args: {search_args}\")\n            docs = getattr(vector_store, search_method)(**search_args)\n        except Exception as e:\n            msg = f\"Error performing {search_method} in AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        self.log(f\"Retrieved documents: {len(docs)}\")\n\n        data = docs_to_data(docs)\n        self.log(f\"Converted documents to data: {len(data)}\")\n        self.status = data\n        return data\n\n    def get_retriever_kwargs(self):\n        search_args = self._build_search_args()\n        return {\n            \"search_type\": self._map_search_type(),\n            \"search_kwargs\": search_args,\n        }\n"
               },
               "collection_name": {
                 "_input_type": "DropdownInput",
@@ -2954,7 +3145,7 @@
                 "dynamic": false,
                 "info": "The name of the collection within Astra DB where the vectors will be stored.",
                 "name": "collection_name",
-                "options": ["Default Collection"],
+                "options": [],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "refresh_button": true,
@@ -3022,7 +3213,7 @@
                 "has_dialog": true,
                 "info": "Select a database in Astra DB.",
                 "name": "database_name",
-                "options": ["Default Database"],
+                "options": [],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "refresh_button": true,
@@ -3040,7 +3231,9 @@
                 "display_name": "Embedding Model",
                 "dynamic": false,
                 "info": "Allows an embedding model configuration.",
-                "input_types": ["Embeddings"],
+                "input_types": [
+                  "Embeddings"
+                ],
                 "list": false,
                 "name": "embedding_model",
                 "placeholder": "",
@@ -3073,7 +3266,9 @@
                 "display_name": "Ingest Data",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Data"],
+                "input_types": [
+                  "Data"
+                ],
                 "list": false,
                 "name": "ingest_data",
                 "placeholder": "",
@@ -3125,7 +3320,9 @@
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -3184,7 +3381,9 @@
                 "display_name": "Astra DB Application Token",
                 "dynamic": false,
                 "info": "Authentication token for accessing Astra DB.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "load_from_db": true,
                 "name": "token",
                 "password": true,
@@ -3220,7 +3419,9 @@
         "data": {
           "id": "AstraDB-3Vxgl",
           "node": {
-            "base_classes": ["Data"],
+            "base_classes": [
+              "Data"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -3263,7 +3464,9 @@
                   "token"
                 ],
                 "selected": "Data",
-                "types": ["Data"],
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -3293,7 +3496,9 @@
                 "display_name": "API Endpoint",
                 "dynamic": false,
                 "info": "The Astra DB API Endpoint to use. Overrides selection of database.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "load_from_db": true,
                 "name": "api_endpoint",
                 "password": true,
@@ -3339,7 +3544,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import os\n\nfrom astrapy import DataAPIClient\nfrom astrapy.admin import parse_api_endpoint\nfrom langchain_astradb import AstraDBVectorStore\n\nfrom langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom langflow.helpers import docs_to_data\nfrom langflow.inputs import DictInput, FloatInput, MessageTextInput, NestedDictInput\nfrom langflow.io import (\n    BoolInput,\n    DataInput,\n    DropdownInput,\n    HandleInput,\n    IntInput,\n    SecretStrInput,\n    StrInput,\n)\nfrom langflow.schema import Data\nfrom langflow.utils.version import get_version_info\n\n\nclass AstraDBVectorStoreComponent(LCVectorStoreComponent):\n    display_name: str = \"Astra DB\"\n    description: str = \"Ingest and search documents in Astra DB\"\n    documentation: str = \"https://docs.datastax.com/en/langflow/astra-components.html\"\n    name = \"AstraDB\"\n    icon: str = \"AstraDB\"\n\n    _cached_vector_store: AstraDBVectorStore | None = None\n\n    class NewDatabaseInput(DictInput):\n        title: str = \"Create New Database\"\n        description: str = \"Create a new database in Astra DB.\"\n        db_names: list[str] = []\n        status: str = \"\"\n        collection_count: int = 0\n        record_count: int = 0\n\n    class NewCollectionInput(DictInput):\n        title: str = \"Create New Collection\"\n        description: str = \"Create a new collection in Astra DB.\"\n        status: str = \"\"\n        dimensions: int = 0\n        model: str = \"\"\n        similarity_metrics: list[str] = []\n        icon: str = \"Collection\"\n\n    base_inputs = LCVectorStoreComponent.inputs\n    if \"search_query\" not in [input_.name for input_ in base_inputs]:\n        base_inputs.append(\n            MessageTextInput(\n                name=\"search_query\",\n                display_name=\"Search Query\",\n                tool_mode=True,\n            )\n        )\n    if \"ingest_data\" not in [input_.name for input_ in base_inputs]:\n        base_inputs.append(\n            DataInput(\n                name=\"ingest_data\",\n                display_name=\"Ingest Data\",\n            )\n        )\n\n    inputs = [\n        SecretStrInput(\n            name=\"token\",\n            display_name=\"Astra DB Application Token\",\n            info=\"Authentication token for accessing Astra DB.\",\n            value=\"ASTRA_DB_APPLICATION_TOKEN\",\n            required=True,\n            advanced=os.getenv(\"ASTRA_ENHANCED\", \"false\").lower() == \"true\",\n            real_time_refresh=True,\n        ),\n        SecretStrInput(\n            name=\"api_endpoint\",\n            display_name=\"API Endpoint\",\n            info=\"The Astra DB API Endpoint to use. Overrides selection of database.\",\n            refresh_button=True,\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"database_name\",\n            display_name=\"Database\",\n            info=\"Select a database in Astra DB.\",\n            required=True,\n            refresh_button=True,\n            real_time_refresh=True,\n            dialog_inputs=[NewDatabaseInput(name=\"database_input\").__dict__],\n            options=[\"Default Database\"],\n            options_metadata=[\n                {\n                    \"collections\": 0,\n                }\n            ],\n            value=\"\",\n        ),\n        DropdownInput(\n            name=\"collection_name\",\n            display_name=\"Collection\",\n            info=\"The name of the collection within Astra DB where the vectors will be stored.\",\n            required=True,\n            refresh_button=True,\n            real_time_refresh=True,\n            dialog_inputs=[NewCollectionInput(name=\"collection_input\").__dict__],\n            options=[\"Default Collection\"],\n            options_metadata=[\n                {\n                    \"provider\": \"\",\n                    \"model\": \"\",\n                    \"records\": 0,\n                }\n            ],\n            value=\"\",\n        ),\n        StrInput(\n            name=\"keyspace\",\n            display_name=\"Keyspace\",\n            info=\"Optional keyspace within Astra DB to use for the collection.\",\n            advanced=True,\n        ),\n        HandleInput(\n            name=\"embedding_model\",\n            display_name=\"Embedding Model\",\n            input_types=[\"Embeddings\"],\n            info=\"Allows an embedding model configuration.\",\n        ),\n        *base_inputs,\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Search Results\",\n            info=\"Number of search results to return.\",\n            advanced=True,\n            value=4,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            info=\"Search type to use\",\n            options=[\"Similarity\", \"Similarity with score threshold\", \"MMR (Max Marginal Relevance)\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"search_score_threshold\",\n            display_name=\"Search Score Threshold\",\n            info=\"Minimum similarity score threshold for search results. \"\n            \"(when using 'Similarity with score threshold')\",\n            value=0,\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"advanced_search_filter\",\n            display_name=\"Search Metadata Filter\",\n            info=\"Optional dictionary of filters to apply to the search query.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"content_field\",\n            display_name=\"Content Field\",\n            info=\"Field to use as the text content field for the vector store.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"ignore_invalid_documents\",\n            display_name=\"Ignore Invalid Documents\",\n            info=\"Boolean flag to determine whether to ignore invalid documents at runtime.\",\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"astradb_vectorstore_kwargs\",\n            display_name=\"AstraDBVectorStore Parameters\",\n            info=\"Optional dictionary of additional parameters for the AstraDBVectorStore.\",\n            advanced=True,\n        ),\n    ]\n\n    def get_database_list(self):\n        # Get the admin object\n        client = DataAPIClient(token=self.token)\n        admin_client = client.get_admin(token=self.token)\n        db_list = list(admin_client.list_databases())\n\n        # Generate the api endpoint for each database\n        return {\n            db.info.name: {\n                \"api_endpoint\": (api_endpoint := f\"https://{db.info.id}-{db.info.region}.apps.astra.datastax.com\"),\n                \"collections\": len(\n                    list(client.get_database(api_endpoint=api_endpoint, token=self.token).list_collection_names())\n                ),\n                \"records\": 0,\n            }\n            for db in db_list\n        }\n\n    def get_api_endpoint(self):\n        # If the API endpoint is set, return it\n        if self.api_endpoint:\n            return self.api_endpoint\n\n        # If the database is not set, nothing we can do.\n        if not self.database_name:\n            return None\n\n        # Otherwise, get the URL from the database list\n        return self.get_database_list().get(self.database_name).get(\"api_endpoint\")\n\n    def get_database(self):\n        try:\n            client = DataAPIClient(token=self.token)\n\n            return client.get_database(\n                api_endpoint=self.get_api_endpoint(),\n                token=self.token,\n            )\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error getting database: {e}\")\n\n            return None\n\n    def collection_exists(self):\n        try:\n            client = DataAPIClient(token=self.token)\n            database = client.get_database(\n                self.get_api_endpoint(),\n                token=self.token,\n            )\n            return self.collection_name in list(database.list_collections())\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error getting collection status: {e}\")\n\n            return False\n\n    def _initialize_database_options(self):\n        try:\n            return [\n                {\"name\": name, \"collections\": info[\"collections\"], \"records\": info[\"records\"]}\n                for name, info in self.get_database_list().items()\n            ]\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error fetching databases: {e}\")\n\n            return []\n\n    def _initialize_collection_options(self):\n        database = self.get_database()\n        if database is None:\n            return []\n\n        try:\n            collection_list = list(database.list_collections())\n\n            return [\n                {\n                    \"name\": col.name,\n                    \"records\": 0,\n                    \"provider\": (\n                        col.options.vector.service.provider if col.options.vector and col.options.vector.service else \"\"\n                    ),\n                    \"model\": (\n                        col.options.vector.service.model_name\n                        if col.options.vector and col.options.vector.service\n                        else \"\"\n                    ),\n                }\n                for col in collection_list\n            ]\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error fetching collections: {e}\")\n\n            return []\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):  # noqa: ARG002\n        # Refresh the database name options\n        database_options = self._initialize_database_options()\n        build_config[\"database_name\"][\"options\"] = [db[\"name\"] for db in database_options]\n        build_config[\"database_name\"][\"options_metadata\"] = [\n            {k: v for k, v in db.items() if k not in [\"name\"]} for db in database_options\n        ]\n\n        # Refresh the collection name options\n        collection_options = self._initialize_collection_options()\n\n        build_config[\"collection_name\"][\"options\"] = [col[\"name\"] for col in collection_options]\n        build_config[\"collection_name\"][\"options_metadata\"] = [\n            {k: v for k, v in col.items() if k not in [\"name\"]} for col in collection_options\n        ]\n\n        return build_config\n\n    @check_cached_vector_store\n    def build_vector_store(self):\n        try:\n            from langchain_astradb import AstraDBVectorStore\n        except ImportError as e:\n            msg = (\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n            raise ImportError(msg) from e\n\n        # Get the embedding model and additional params\n        embedding_params = {\"embedding\": self.embedding_model} if self.embedding_model else {}\n        additional_params = self.astradb_vectorstore_kwargs or {}\n\n        # Get the running environment for Langflow\n        environment = (\n            parse_api_endpoint(self.get_api_endpoint()).environment if self.get_api_endpoint() is not None else None\n        )\n\n        # Get Langflow version and platform information\n        __version__ = get_version_info()[\"version\"]\n        langflow_prefix = \"\"\n        if os.getenv(\"LANGFLOW_HOST\") is not None:\n            langflow_prefix = \"ds-\"\n\n        # Bundle up the auto-detect parameters\n        autodetect_params = {\n            \"autodetect_collection\": self.collection_exists(),  # TODO: May want to expose this option\n            \"content_field\": self.content_field or None,\n            \"ignore_invalid_documents\": self.ignore_invalid_documents,\n        }\n\n        # Attempt to build the Vector Store object\n        try:\n            vector_store = AstraDBVectorStore(\n                # Astra DB Authentication Parameters\n                token=self.token,\n                api_endpoint=self.get_api_endpoint(),\n                namespace=self.keyspace or None,\n                collection_name=self.collection_name,\n                environment=environment,\n                # Astra DB Usage Tracking Parameters\n                ext_callers=[(f\"{langflow_prefix}langflow\", __version__)],\n                # Astra DB Vector Store Parameters\n                **autodetect_params,\n                **embedding_params,\n                **additional_params,\n            )\n        except Exception as e:\n            msg = f\"Error initializing AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        self._add_documents_to_vector_store(vector_store)\n\n        return vector_store\n\n    def _add_documents_to_vector_store(self, vector_store) -> None:\n        documents = []\n        for _input in self.ingest_data or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise TypeError(msg)\n\n        if documents:\n            self.log(f\"Adding {len(documents)} documents to the Vector Store.\")\n            try:\n                vector_store.add_documents(documents)\n            except Exception as e:\n                msg = f\"Error adding documents to AstraDBVectorStore: {e}\"\n                raise ValueError(msg) from e\n        else:\n            self.log(\"No documents to add to the Vector Store.\")\n\n    def _map_search_type(self) -> str:\n        if self.search_type == \"Similarity with score threshold\":\n            return \"similarity_score_threshold\"\n        if self.search_type == \"MMR (Max Marginal Relevance)\":\n            return \"mmr\"\n        return \"similarity\"\n\n    def _build_search_args(self):\n        query = self.search_query if isinstance(self.search_query, str) and self.search_query.strip() else None\n\n        if query:\n            args = {\n                \"query\": query,\n                \"search_type\": self._map_search_type(),\n                \"k\": self.number_of_results,\n                \"score_threshold\": self.search_score_threshold,\n            }\n        elif self.advanced_search_filter:\n            args = {\n                \"n\": self.number_of_results,\n            }\n        else:\n            return {}\n\n        filter_arg = self.advanced_search_filter or {}\n        if filter_arg:\n            args[\"filter\"] = filter_arg\n\n        return args\n\n    def search_documents(self, vector_store=None) -> list[Data]:\n        vector_store = vector_store or self.build_vector_store()\n\n        self.log(f\"Search input: {self.search_query}\")\n        self.log(f\"Search type: {self.search_type}\")\n        self.log(f\"Number of results: {self.number_of_results}\")\n\n        try:\n            search_args = self._build_search_args()\n        except Exception as e:\n            msg = f\"Error in AstraDBVectorStore._build_search_args: {e}\"\n            raise ValueError(msg) from e\n\n        if not search_args:\n            self.log(\"No search input or filters provided. Skipping search.\")\n            return []\n\n        docs = []\n        search_method = \"search\" if \"query\" in search_args else \"metadata_search\"\n\n        try:\n            self.log(f\"Calling vector_store.{search_method} with args: {search_args}\")\n            docs = getattr(vector_store, search_method)(**search_args)\n        except Exception as e:\n            msg = f\"Error performing {search_method} in AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        self.log(f\"Retrieved documents: {len(docs)}\")\n\n        data = docs_to_data(docs)\n        self.log(f\"Converted documents to data: {len(data)}\")\n        self.status = data\n        return data\n\n    def get_retriever_kwargs(self):\n        search_args = self._build_search_args()\n        return {\n            \"search_type\": self._map_search_type(),\n            \"search_kwargs\": search_args,\n        }\n"
+                "value": "import os\n\nfrom astrapy import DataAPIClient\nfrom astrapy.admin import parse_api_endpoint\nfrom langchain_astradb import AstraDBVectorStore\n\nfrom langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom langflow.helpers import docs_to_data\nfrom langflow.inputs import DictInput, FloatInput, MessageTextInput, NestedDictInput\nfrom langflow.io import (\n    BoolInput,\n    DataInput,\n    DropdownInput,\n    HandleInput,\n    IntInput,\n    SecretStrInput,\n    StrInput,\n)\nfrom langflow.schema import Data\nfrom langflow.utils.version import get_version_info\n\n\nclass AstraDBVectorStoreComponent(LCVectorStoreComponent):\n    display_name: str = \"Astra DB\"\n    description: str = \"Ingest and search documents in Astra DB\"\n    documentation: str = \"https://docs.datastax.com/en/langflow/astra-components.html\"\n    name = \"AstraDB\"\n    icon: str = \"AstraDB\"\n\n    _cached_vector_store: AstraDBVectorStore | None = None\n\n    class NewDatabaseInput(DictInput):\n        title: str = \"Create New Database\"\n        description: str = \"Create a new database in Astra DB.\"\n        db_names: list[str] = []\n        status: str = \"\"\n        collection_count: int = 0\n        record_count: int = 0\n\n    class NewCollectionInput(DictInput):\n        title: str = \"Create New Collection\"\n        description: str = \"Create a new collection in Astra DB.\"\n        status: str = \"\"\n        dimensions: int = 0\n        model: str = \"\"\n        similarity_metrics: list[str] = []\n        icon: str = \"Collection\"\n\n    base_inputs = LCVectorStoreComponent.inputs\n    if \"search_query\" not in [input_.name for input_ in base_inputs]:\n        base_inputs.append(\n            MessageTextInput(\n                name=\"search_query\",\n                display_name=\"Search Query\",\n                tool_mode=True,\n            )\n        )\n    if \"ingest_data\" not in [input_.name for input_ in base_inputs]:\n        base_inputs.append(\n            DataInput(\n                name=\"ingest_data\",\n                display_name=\"Ingest Data\",\n            )\n        )\n\n    inputs = [\n        SecretStrInput(\n            name=\"token\",\n            display_name=\"Astra DB Application Token\",\n            info=\"Authentication token for accessing Astra DB.\",\n            value=\"ASTRA_DB_APPLICATION_TOKEN\",\n            required=True,\n            advanced=os.getenv(\"ASTRA_ENHANCED\", \"false\").lower() == \"true\",\n            real_time_refresh=True,\n        ),\n        SecretStrInput(\n            name=\"api_endpoint\",\n            display_name=\"API Endpoint\",\n            info=\"The Astra DB API Endpoint to use. Overrides selection of database.\",\n            refresh_button=True,\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"database_name\",\n            display_name=\"Database\",\n            info=\"Select a database in Astra DB.\",\n            required=True,\n            refresh_button=True,\n            real_time_refresh=True,\n            dialog_inputs=[NewDatabaseInput(name=\"database_input\").__dict__],\n            options=[],\n            options_metadata=[\n                {\n                    \"collections\": 0,\n                }\n            ],\n            value=\"\",\n        ),\n        DropdownInput(\n            name=\"collection_name\",\n            display_name=\"Collection\",\n            info=\"The name of the collection within Astra DB where the vectors will be stored.\",\n            required=True,\n            refresh_button=True,\n            real_time_refresh=True,\n            dialog_inputs=[NewCollectionInput(name=\"collection_input\").__dict__],\n            options=[],\n            options_metadata=[\n                {\n                    \"provider\": \"\",\n                    \"model\": \"\",\n                    \"records\": 0,\n                }\n            ],\n            value=\"\",\n        ),\n        StrInput(\n            name=\"keyspace\",\n            display_name=\"Keyspace\",\n            info=\"Optional keyspace within Astra DB to use for the collection.\",\n            advanced=True,\n        ),\n        HandleInput(\n            name=\"embedding_model\",\n            display_name=\"Embedding Model\",\n            input_types=[\"Embeddings\"],\n            info=\"Allows an embedding model configuration.\",\n        ),\n        *base_inputs,\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Search Results\",\n            info=\"Number of search results to return.\",\n            advanced=True,\n            value=4,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            info=\"Search type to use\",\n            options=[\"Similarity\", \"Similarity with score threshold\", \"MMR (Max Marginal Relevance)\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        FloatInput(\n            name=\"search_score_threshold\",\n            display_name=\"Search Score Threshold\",\n            info=\"Minimum similarity score threshold for search results. \"\n            \"(when using 'Similarity with score threshold')\",\n            value=0,\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"advanced_search_filter\",\n            display_name=\"Search Metadata Filter\",\n            info=\"Optional dictionary of filters to apply to the search query.\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"content_field\",\n            display_name=\"Content Field\",\n            info=\"Field to use as the text content field for the vector store.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"ignore_invalid_documents\",\n            display_name=\"Ignore Invalid Documents\",\n            info=\"Boolean flag to determine whether to ignore invalid documents at runtime.\",\n            advanced=True,\n        ),\n        NestedDictInput(\n            name=\"astradb_vectorstore_kwargs\",\n            display_name=\"AstraDBVectorStore Parameters\",\n            info=\"Optional dictionary of additional parameters for the AstraDBVectorStore.\",\n            advanced=True,\n        ),\n    ]\n\n    def get_database_list(self):\n        # Get the admin object\n        client = DataAPIClient(token=self.token)\n        admin_client = client.get_admin(token=self.token)\n        db_list = list(admin_client.list_databases())\n\n        # Generate the api endpoint for each database\n        return {\n            db.info.name: {\n                \"api_endpoint\": (api_endpoint := f\"https://{db.info.id}-{db.info.region}.apps.astra.datastax.com\"),\n                \"collections\": len(\n                    list(\n                        client.get_database(\n                            api_endpoint=api_endpoint, token=self.token, keyspace=db.info.keyspace\n                        ).list_collection_names(keyspace=db.info.keyspace)\n                    )\n                ),\n                \"records\": 0,\n            }\n            for db in db_list\n        }\n\n    def get_api_endpoint(self):\n        # If the API endpoint is set, return it\n        if self.api_endpoint:\n            return self.api_endpoint\n\n        # If the database is not set, nothing we can do.\n        if not self.database_name:\n            return None\n\n        # Otherwise, get the URL from the database list\n        return self.get_database_list().get(self.database_name).get(\"api_endpoint\")\n\n    def get_keyspace(self):\n        keyspace = self.keyspace.strip()\n\n        if keyspace:\n            return keyspace\n\n        return None\n\n    def get_database_object(self):\n        try:\n            client = DataAPIClient(token=self.token)\n\n            return client.get_database(\n                api_endpoint=self.get_api_endpoint(),\n                token=self.token,\n                keyspace=self.get_keyspace(),\n            )\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error getting database: {e}\")\n\n            return None\n\n    def collection_exists(self):\n        try:\n            client = DataAPIClient(token=self.token)\n            database = client.get_database(\n                api_endpoint=self.get_api_endpoint(),\n                token=self.token,\n                keyspace=self.get_keyspace(),\n            )\n\n            return self.collection_name in list(database.list_collection_names(keyspace=self.get_keyspace()))\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error getting collection status: {e}\")\n\n            return False\n\n    def collection_hasdata(self):\n        try:\n            client = DataAPIClient(token=self.token)\n            database = client.get_database(\n                api_endpoint=self.get_api_endpoint(),\n                token=self.token,\n                keyspace=self.get_keyspace(),\n            )\n            collection = database.get_collection(self.collection_name, keyspace=self.get_keyspace())\n\n            return collection.estimated_document_count() > 0\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error checking collection data: {e}\")\n\n            return False\n\n    def _initialize_database_options(self):\n        try:\n            return [\n                {\"name\": name, \"collections\": info[\"collections\"], \"records\": info[\"records\"]}\n                for name, info in self.get_database_list().items()\n            ]\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error fetching databases: {e}\")\n\n            return []\n\n    def _initialize_collection_options(self):\n        database = self.get_database_object()\n        if database is None:\n            return []\n\n        try:\n            collection_list = list(database.list_collections(keyspace=self.get_keyspace()))\n\n            return [\n                {\n                    \"name\": col.name,\n                    \"records\": 0,\n                    \"provider\": (\n                        col.options.vector.service.provider if col.options.vector and col.options.vector.service else \"\"\n                    ),\n                    \"model\": (\n                        col.options.vector.service.model_name\n                        if col.options.vector and col.options.vector.service\n                        else \"\"\n                    ),\n                }\n                for col in collection_list\n            ]\n        except Exception as e:  # noqa: BLE001\n            self.log(f\"Error fetching collections: {e}\")\n\n            return []\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):  # noqa: ARG002\n        # Refresh the database name options\n        database_options = self._initialize_database_options()\n        build_config[\"database_name\"][\"options\"] = [db[\"name\"] for db in database_options]\n        build_config[\"database_name\"][\"options_metadata\"] = [\n            {k: v for k, v in db.items() if k not in [\"name\"]} for db in database_options\n        ]\n\n        # Refresh the collection name options\n        collection_options = self._initialize_collection_options()\n\n        build_config[\"collection_name\"][\"options\"] = [col[\"name\"] for col in collection_options]\n        build_config[\"collection_name\"][\"options_metadata\"] = [\n            {k: v for k, v in col.items() if k not in [\"name\"]} for col in collection_options\n        ]\n\n        return build_config\n\n    @check_cached_vector_store\n    def build_vector_store(self):\n        try:\n            from langchain_astradb import AstraDBVectorStore\n        except ImportError as e:\n            msg = (\n                \"Could not import langchain Astra DB integration package. \"\n                \"Please install it with `pip install langchain-astradb`.\"\n            )\n            raise ImportError(msg) from e\n\n        # Get the embedding model and additional params\n        embedding_params = {\"embedding\": self.embedding_model} if self.embedding_model else {}\n        additional_params = self.astradb_vectorstore_kwargs or {}\n\n        # Get the running environment for Langflow\n        environment = (\n            parse_api_endpoint(self.get_api_endpoint()).environment if self.get_api_endpoint() is not None else None\n        )\n\n        # Get Langflow version and platform information\n        __version__ = get_version_info()[\"version\"]\n        langflow_prefix = \"\"\n        if os.getenv(\"LANGFLOW_HOST\") is not None:\n            langflow_prefix = \"ds-\"\n\n        # Bundle up the auto-detect parameters\n        autodetect_params = {\n            \"autodetect_collection\": self.collection_exists(),  # TODO: May want to expose this option\n            \"content_field\": (\n                self.content_field\n                if self.content_field and embedding_params\n                else (\"page_content\" if not self.collection_hasdata() else None)\n            ),\n            \"ignore_invalid_documents\": self.ignore_invalid_documents,\n        }\n\n        # Attempt to build the Vector Store object\n        try:\n            vector_store = AstraDBVectorStore(\n                # Astra DB Authentication Parameters\n                token=self.token,\n                api_endpoint=self.get_api_endpoint(),\n                namespace=self.get_keyspace(),\n                collection_name=self.collection_name,\n                environment=environment,\n                # Astra DB Usage Tracking Parameters\n                ext_callers=[(f\"{langflow_prefix}langflow\", __version__)],\n                # Astra DB Vector Store Parameters\n                **autodetect_params,\n                **embedding_params,\n                **additional_params,\n            )\n        except Exception as e:\n            msg = f\"Error initializing AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        self._add_documents_to_vector_store(vector_store)\n\n        return vector_store\n\n    def _add_documents_to_vector_store(self, vector_store) -> None:\n        documents = []\n        for _input in self.ingest_data or []:\n            if isinstance(_input, Data):\n                documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise TypeError(msg)\n\n        if documents:\n            self.log(f\"Adding {len(documents)} documents to the Vector Store.\")\n            try:\n                vector_store.add_documents(documents)\n            except Exception as e:\n                msg = f\"Error adding documents to AstraDBVectorStore: {e}\"\n                raise ValueError(msg) from e\n        else:\n            self.log(\"No documents to add to the Vector Store.\")\n\n    def _map_search_type(self) -> str:\n        if self.search_type == \"Similarity with score threshold\":\n            return \"similarity_score_threshold\"\n        if self.search_type == \"MMR (Max Marginal Relevance)\":\n            return \"mmr\"\n        return \"similarity\"\n\n    def _build_search_args(self):\n        query = self.search_query if isinstance(self.search_query, str) and self.search_query.strip() else None\n\n        if query:\n            args = {\n                \"query\": query,\n                \"search_type\": self._map_search_type(),\n                \"k\": self.number_of_results,\n                \"score_threshold\": self.search_score_threshold,\n            }\n        elif self.advanced_search_filter:\n            args = {\n                \"n\": self.number_of_results,\n            }\n        else:\n            return {}\n\n        filter_arg = self.advanced_search_filter or {}\n        if filter_arg:\n            args[\"filter\"] = filter_arg\n\n        return args\n\n    def search_documents(self, vector_store=None) -> list[Data]:\n        vector_store = vector_store or self.build_vector_store()\n\n        self.log(f\"Search input: {self.search_query}\")\n        self.log(f\"Search type: {self.search_type}\")\n        self.log(f\"Number of results: {self.number_of_results}\")\n\n        try:\n            search_args = self._build_search_args()\n        except Exception as e:\n            msg = f\"Error in AstraDBVectorStore._build_search_args: {e}\"\n            raise ValueError(msg) from e\n\n        if not search_args:\n            self.log(\"No search input or filters provided. Skipping search.\")\n            return []\n\n        docs = []\n        search_method = \"search\" if \"query\" in search_args else \"metadata_search\"\n\n        try:\n            self.log(f\"Calling vector_store.{search_method} with args: {search_args}\")\n            docs = getattr(vector_store, search_method)(**search_args)\n        except Exception as e:\n            msg = f\"Error performing {search_method} in AstraDBVectorStore: {e}\"\n            raise ValueError(msg) from e\n\n        self.log(f\"Retrieved documents: {len(docs)}\")\n\n        data = docs_to_data(docs)\n        self.log(f\"Converted documents to data: {len(data)}\")\n        self.status = data\n        return data\n\n    def get_retriever_kwargs(self):\n        search_args = self._build_search_args()\n        return {\n            \"search_type\": self._map_search_type(),\n            \"search_kwargs\": search_args,\n        }\n"
               },
               "collection_name": {
                 "_input_type": "DropdownInput",
@@ -3349,7 +3554,7 @@
                 "dynamic": false,
                 "info": "The name of the collection within Astra DB where the vectors will be stored.",
                 "name": "collection_name",
-                "options": ["Default Collection"],
+                "options": [],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "refresh_button": true,
@@ -3417,7 +3622,7 @@
                 "has_dialog": true,
                 "info": "Select a database in Astra DB.",
                 "name": "database_name",
-                "options": ["Default Database"],
+                "options": [],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "refresh_button": true,
@@ -3435,7 +3640,9 @@
                 "display_name": "Embedding Model",
                 "dynamic": false,
                 "info": "Allows an embedding model configuration.",
-                "input_types": ["Embeddings"],
+                "input_types": [
+                  "Embeddings"
+                ],
                 "list": false,
                 "name": "embedding_model",
                 "placeholder": "",
@@ -3468,7 +3675,9 @@
                 "display_name": "Ingest Data",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Data"],
+                "input_types": [
+                  "Data"
+                ],
                 "list": false,
                 "name": "ingest_data",
                 "placeholder": "",
@@ -3520,7 +3729,9 @@
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -3579,7 +3790,9 @@
                 "display_name": "Astra DB Application Token",
                 "dynamic": false,
                 "info": "Authentication token for accessing Astra DB.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "load_from_db": true,
                 "name": "token",
                 "password": true,
@@ -3624,5 +3837,10 @@
   "is_component": false,
   "last_tested_version": "1.1.1",
   "name": "Vector Store RAG",
-  "tags": ["openai", "astradb", "rag", "q-a"]
+  "tags": [
+    "openai",
+    "astradb",
+    "rag",
+    "q-a"
+  ]
 }

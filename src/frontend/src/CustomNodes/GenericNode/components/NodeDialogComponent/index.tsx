@@ -12,12 +12,14 @@ interface NodeDialogProps {
   open: boolean;
   onClose: () => void;
   content: React.ReactNode;
+  dialogInputs?: any[];
 }
 
 export const NodeDialog: React.FC<NodeDialogProps> = ({
   open,
   onClose,
   content,
+  dialogInputs,
 }) => {
   const data = {
     title: "Connect to an Astra DB database",
@@ -25,6 +27,8 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
       "Set environment variables for a database to connect. You can create a DataStax Astra account or sign in to access your Application Tokens and Endpoints.",
     footer: <div>Footer</div>,
   };
+
+  console.log("dialogInputs", dialogInputs);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
