@@ -488,4 +488,4 @@ Advanced methods and attributes offer additional control and functionality. Unde
 
 ## Contribute Custom Components to Langflow
 
-See [How to Contribute](/contributing-how-to-contribute#submitting-components) to contribute your custom component to Langflow.
+See [How to Contribute](/contributing-components) to contribute your custom component to Langflow.
