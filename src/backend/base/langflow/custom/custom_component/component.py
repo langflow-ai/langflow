@@ -891,12 +891,13 @@ class Component(CustomComponent):
         if hasattr(self, "outputs") and any(getattr(_input, "tool_mode", False) for _input in self.inputs):
             self._append_tool_to_outputs_map()
 
+    def _should_process_output(self, output):
+        if not self._vertex or not self._vertex.outgoing_edges:
+            return True
+        return output.name in self._vertex.edges_source_names
+
     def _get_outputs_to_process(self):
-        return [
-            output
-            for output in self._outputs_map.values()
-            if not self._vertex or not self._vertex.outgoing_edges or output.name in self._vertex.edges_source_names
-        ]
+        return [output for output in self._outputs_map.values() if self._should_process_output(output)]
 
     async def _get_output_result(self, output):
         if output.cache and output.value != UNDEFINED:
