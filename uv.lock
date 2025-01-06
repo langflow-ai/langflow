@@ -1451,6 +1451,19 @@ wheels = [
 ]
 
 [[package]]
+name = "dashscope"
+version = "1.20.14"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "requests" },
+    { name = "websocket-client" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/29/ab/06425bc51305d6acd19cf04736f0fac0cc34b8ced6f31f2d41909a2e1920/dashscope-1.20.14-py3-none-any.whl", hash = "sha256:1e20f56043150ac0adb70c5ec04ac202d87267ca8da63e5c94980dd10aeab7af", size = 1264547 },
+]
+
+[[package]]
 name = "dataclasses-json"
 version = "0.6.7"
 source = { registry = "https://pypi.org/simple" }
@@ -3935,6 +3948,7 @@ dependencies = [
     { name = "composio-core" },
     { name = "composio-langchain" },
     { name = "crewai" },
+    { name = "dashscope" },
     { name = "dspy-ai" },
     { name = "duckduckgo-search" },
     { name = "elasticsearch" },
@@ -4094,6 +4108,7 @@ requires-dist = [
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "crewai", specifier = "~=0.86.0" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
+    { name = "dashscope", specifier = ">=1.20.14" },
     { name = "dspy-ai", specifier = "==2.5.41" },
     { name = "duckduckgo-search", specifier = "==6.3.7" },
     { name = "elasticsearch", specifier = "==8.16.0" },

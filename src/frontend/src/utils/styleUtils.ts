@@ -289,6 +289,7 @@ import { PostgresIcon } from "../icons/Postgres";
 import { PythonIcon } from "../icons/Python";
 import { QDrantIcon } from "../icons/QDrant";
 import { QianFanChatIcon } from "../icons/QianFanChat";
+import { QwenIcon } from "../icons/Qwen";
 import { RedisIcon } from "../icons/Redis";
 import { SambaNovaIcon } from "../icons/SambaNova";
 import { SearxIcon } from "../icons/Searx";
@@ -607,6 +608,7 @@ export const nodeIconsLucide: iconsType = {
   RedisSearch: RedisIcon,
   PostgresChatMessageHistory: PostgresIcon,
   BaiduQianfan: QianFanChatIcon,
+  Qwen: QwenIcon,
   Vectara: VectaraIcon,
   ArrowUpToLine: ArrowUpToLine,
   Cassandra: CassandraIcon,
