@@ -1,6 +1,5 @@
 import { expect, Page, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { moveSlider } from "../../utils/move-slider";
 
 // TODO: This component doesn't have slider needs updating
 test(
@@ -116,4 +115,27 @@ async function mutualValidation(page: Page) {
   await expect(page.getByTestId("max_label")).toHaveText("test2");
   await expect(page.getByTestId("icon-pencil-ruler")).toBeVisible();
   await expect(page.getByTestId("icon-palette")).toBeVisible();
+}
+async function moveSlider(
+  page: Page,
+  side: "left" | "right",
+  advanced: boolean = false,
+) {
+  const thumbSelector = `slider_thumb${advanced ? "_advanced" : ""}`;
+  const trackSelector = `slider_track${advanced ? "_advanced" : ""}`;
+
+  await page.getByTestId(thumbSelector).click();
+
+  const trackBoundingBox = await page.getByTestId(trackSelector).boundingBox();
+
+  if (trackBoundingBox) {
+    const moveDistance =
+      trackBoundingBox.width * 0.1 * (side === "left" ? -1 : 1);
+    const centerX = trackBoundingBox.x + trackBoundingBox.width / 2;
+    const centerY = trackBoundingBox.y + trackBoundingBox.height / 2;
+
+    await page.mouse.move(centerX + moveDistance, centerY);
+    await page.mouse.down();
+    await page.mouse.up();
+  }
 }
