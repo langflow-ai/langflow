@@ -77,7 +77,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             name="api_endpoint",
             display_name="API Endpoint",
             info="The Astra DB API Endpoint to use. Overrides selection of database.",
-            required=True,
             refresh_button=True,
             real_time_refresh=True,
             advanced=True,
