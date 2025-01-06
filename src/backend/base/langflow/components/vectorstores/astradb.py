@@ -188,11 +188,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             db.info.name: {
                 "api_endpoint": (api_endpoint := f"https://{db.info.id}-{db.info.region}.apps.astra.datastax.com"),
                 "collections": len(
-                    list(
-                        client.get_database(
-                            api_endpoint=api_endpoint, token=self.token
-                        ).list_collection_names()
-                    )
+                    list(client.get_database(api_endpoint=api_endpoint, token=self.token).list_collection_names())
                 ),
                 "records": 0,
             }
@@ -261,9 +257,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     "name": col.name,
                     "records": 0,
                     "provider": (
-                        col.options.vector.service.provider
-                        if col.options.vector and col.options.vector.service
-                        else ""
+                        col.options.vector.service.provider if col.options.vector and col.options.vector.service else ""
                     ),
                     "model": (
                         col.options.vector.service.model_name
