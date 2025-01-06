@@ -671,10 +671,13 @@ def _sort_single_layer_by_dependency(
     """
     # Build a map of each vertex to its index in the layer for quick lookup.
     index_map = {vertex: index for index, vertex in enumerate(layer)}
+    # Cache for storing computed maximum dependency indices.
+    cache = {}
+
     # Create a sorted copy of the layer based on dependency order.
     return sorted(
         layer,
-        key=lambda vertex: _max_dependency_index(vertex, index_map, get_vertex_successors),
+        key=lambda vertex: _max_dependency_index(vertex, index_map, get_vertex_successors, cache),
         reverse=True,
     )
 
@@ -906,3 +909,21 @@ def filter_vertices_up_to_vertex(
                 queue.append(predecessor)
 
     return filtered_vertices
+
+
+def _max_dependency_index(
+    vertex: str, index_map: dict[str, int], get_vertex_successors: Callable[[str], list[str]], cache: dict[str, int]
+) -> int:
+    """Helper function to find the maximum dependency index."""
+    if vertex in cache:
+        return cache[vertex]
+
+    successors = get_vertex_successors(vertex)
+    max_index = index_map[vertex]
+
+    for successor in successors:
+        if successor in index_map:
+            max_index = max(max_index, _max_dependency_index(successor, index_map, get_vertex_successors, cache))
+
+    cache[vertex] = max_index
+    return max_index
