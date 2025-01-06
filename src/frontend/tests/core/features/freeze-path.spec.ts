@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { evaluateReactStateChanges } from "../../utils/evaluate-input-react-state-changes";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
@@ -44,22 +45,11 @@ test(
       .getByTestId("default_slider_display_value")
       .click({ force: true });
 
-    await page.evaluate(() => {
-      const input = document.querySelector(
-        '[data-testid="slider_input"]',
-      ) as HTMLInputElement;
-      if (input) {
-        const prototype = Object.getPrototypeOf(input);
-        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-          prototype,
-          "value",
-        )?.set;
-        if (nativeInputValueSetter) {
-          nativeInputValueSetter.call(input, "1.0");
-          input.dispatchEvent(new Event("input", { bubbles: true }));
-        }
-      }
-    });
+    await evaluateReactStateChanges(
+      page,
+      '[data-testid="slider_input"]',
+      "1.0",
+    );
 
     await page.keyboard.press("Enter");
 
@@ -88,22 +78,11 @@ test(
       timeout: 1000,
     });
 
-    await page.evaluate(() => {
-      const input = document.querySelector(
-        '[data-testid="slider_input"]',
-      ) as HTMLInputElement;
-      if (input) {
-        const prototype = Object.getPrototypeOf(input);
-        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-          prototype,
-          "value",
-        )?.set;
-        if (nativeInputValueSetter) {
-          nativeInputValueSetter.call(input, "1.2");
-          input.dispatchEvent(new Event("input", { bubbles: true }));
-        }
-      }
-    });
+    await evaluateReactStateChanges(
+      page,
+      '[data-testid="slider_input"]',
+      "1.2",
+    );
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 1000,
