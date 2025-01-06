@@ -89,7 +89,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             refresh_button=True,
             real_time_refresh=True,
             dialog_inputs=[NewDatabaseInput(name="database_input").__dict__],
-            options=["Default Database"],
+            options=[],
             options_metadata=[
                 {
                     "collections": 0,
@@ -105,7 +105,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             refresh_button=True,
             real_time_refresh=True,
             dialog_inputs=[NewCollectionInput(name="collection_input").__dict__],
-            options=["Default Collection"],
+            options=[],
             options_metadata=[
                 {
                     "provider": "",
@@ -188,7 +188,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             db.info.name: {
                 "api_endpoint": (api_endpoint := f"https://{db.info.id}-{db.info.region}.apps.astra.datastax.com"),
                 "collections": len(
-                    list(client.get_database(api_endpoint=api_endpoint, token=self.token).list_collection_names())
+                    list(
+                        client.get_database(
+                            api_endpoint=api_endpoint, token=self.token, keyspace=db.info.keyspace
+                        ).list_collection_names(keyspace=db.info.keyspace)
+                    )
                 ),
                 "records": 0,
             }
@@ -207,13 +211,22 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Otherwise, get the URL from the database list
         return self.get_database_list().get(self.database_name).get("api_endpoint")
 
-    def get_database(self):
+    def get_keyspace(self):
+        keyspace = self.keyspace.strip()
+
+        if keyspace:
+            return keyspace
+
+        return None
+
+    def get_database_object(self):
         try:
             client = DataAPIClient(token=self.token)
 
             return client.get_database(
                 api_endpoint=self.get_api_endpoint(),
                 token=self.token,
+                keyspace=self.get_keyspace(),
             )
         except Exception as e:  # noqa: BLE001
             self.log(f"Error getting database: {e}")
@@ -224,12 +237,30 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         try:
             client = DataAPIClient(token=self.token)
             database = client.get_database(
-                self.get_api_endpoint(),
+                api_endpoint=self.get_api_endpoint(),
                 token=self.token,
+                keyspace=self.get_keyspace(),
             )
-            return self.collection_name in list(database.list_collections())
+
+            return self.collection_name in list(database.list_collection_names(keyspace=self.get_keyspace()))
         except Exception as e:  # noqa: BLE001
             self.log(f"Error getting collection status: {e}")
+
+            return False
+
+    def collection_hasdata(self):
+        try:
+            client = DataAPIClient(token=self.token)
+            database = client.get_database(
+                api_endpoint=self.get_api_endpoint(),
+                token=self.token,
+                keyspace=self.get_keyspace(),
+            )
+            collection = database.get_collection(self.collection_name, keyspace=self.get_keyspace())
+
+            return collection.estimated_document_count() > 0
+        except Exception as e:  # noqa: BLE001
+            self.log(f"Error checking collection data: {e}")
 
             return False
 
@@ -245,12 +276,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return []
 
     def _initialize_collection_options(self):
-        database = self.get_database()
+        database = self.get_database_object()
         if database is None:
             return []
 
         try:
-            collection_list = list(database.list_collections())
+            collection_list = list(database.list_collections(keyspace=self.get_keyspace()))
 
             return [
                 {
@@ -319,7 +350,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Bundle up the auto-detect parameters
         autodetect_params = {
             "autodetect_collection": self.collection_exists(),  # TODO: May want to expose this option
-            "content_field": self.content_field or None,
+            "content_field": (
+                self.content_field
+                if self.content_field and embedding_params
+                else ("page_content" if not self.collection_hasdata() else None)
+            ),
             "ignore_invalid_documents": self.ignore_invalid_documents,
         }
 
@@ -329,7 +364,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 # Astra DB Authentication Parameters
                 token=self.token,
                 api_endpoint=self.get_api_endpoint(),
-                namespace=self.keyspace or None,
+                namespace=self.get_keyspace(),
                 collection_name=self.collection_name,
                 environment=environment,
                 # Astra DB Usage Tracking Parameters
