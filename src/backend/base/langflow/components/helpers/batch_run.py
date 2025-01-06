@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from langflow.custom import Component
@@ -5,7 +7,7 @@ from langflow.io import DataFrameInput, HandleInput, MultilineInput, Output, Str
 from langflow.schema import DataFrame
 
 if TYPE_CHECKING:
-    from langflow.field_typing import LanguageModel
+    from langchain_core.runnables import Runnable
 
 
 class BatchRunComponent(Component):
@@ -58,7 +60,7 @@ class BatchRunComponent(Component):
 
         Returns a new DataFrame of the same length, with columns 'text_input' and 'model_response'.
         """
-        model: LanguageModel = self.model
+        model: Runnable = self.model
         system_msg = self.system_message or ""
         df: DataFrame = self.df
         col_name = self.column_name or "text"
