@@ -16,6 +16,7 @@ export default function FlowSettingsModal({
   open,
   setOpen,
   flowData,
+  details,
 }: FlowSettingsPropsType): JSX.Element {
   const saveFlow = useSaveFlow();
   const currentFlow = useFlowStore((state) => state.currentFlow);
@@ -91,8 +92,8 @@ export default function FlowSettingsModal({
       onSubmit={handleClick}
     >
       <BaseModal.Header description={SETTINGS_DIALOG_SUBTITLE}>
-        <span className="pr-2">Settings</span>
-        <IconComponent name="Settings2" className="mr-2 h-4 w-4" />
+        <span className="pr-2">Details</span>
+        <IconComponent name="SquarePen" className="mr-2 h-4 w-4" />
       </BaseModal.Header>
       <BaseModal.Content>
         <EditFlowSettings
@@ -102,7 +103,7 @@ export default function FlowSettingsModal({
           endpointName={endpoint_name}
           setName={setName}
           setDescription={setDescription}
-          setEndpointName={setEndpointName}
+          setEndpointName={details ? undefined : setEndpointName}
         />
       </BaseModal.Content>
 

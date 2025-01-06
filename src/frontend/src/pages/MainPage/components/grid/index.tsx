@@ -153,6 +153,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
         open={openSettings}
         setOpen={setOpenSettings}
         flowData={flowData}
+        details
       />
     </>
   );
