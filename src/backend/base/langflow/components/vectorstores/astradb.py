@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 
 from astrapy import DataAPIClient
@@ -195,16 +197,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         }
 
     def get_api_endpoint(self):
-        # If the API endpoint is set, return it
-        if self.api_endpoint:
-            return self.api_endpoint
-
-        # If the database is not set, nothing we can do.
-        if not self.database_name:
-            return None
-
-        # Otherwise, get the URL from the database list
-        return self.get_database_list().get(self.database_name)
+        return self.api_endpoint or self.get_database_list().get(self.database_name) if self.database_name else None
 
     def get_database(self):
         try:
@@ -222,14 +215,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     def collection_exists(self):
         try:
             client = DataAPIClient(token=self.token)
-            database = client.get_database(
-                self.get_api_endpoint(),
-                token=self.token,
-            )
-            return self.collection_name in list(database.list_collections())
-        except Exception as e:  # noqa: BLE001
+            database = client.get_database(self.get_api_endpoint(), token=self.token)
+            return self.collection_name in database.list_collections()
+        except Exception as e:
             self.log(f"Error getting collection status: {e}")
-
             return False
 
     def _initialize_database_options(self):
@@ -266,23 +255,18 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return []
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):  # noqa: ARG002
-        # Refresh the database name options
-        if field_name == "token":
-            database_options = self._initialize_database_options()
-            build_config["database_name"]["options"] = [db["name"] for db in database_options]
-            build_config["database_name"]["options_metadata"] = [
-                {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
-            ]
+        # Refresh the collection name options
+        database_options = self._initialize_database_options()
+        build_config["database_name"]["options"] = [db["name"] for db in database_options]
+        build_config["database_name"]["options_metadata"] = [
+            {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
+        ]
 
-        if field_name == "database_name":
-            # Refresh the collection name options
-            collection_options = self._initialize_collection_options()
-
-            raise ValueError(collection_options)
-            build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
-            build_config["collection_name"]["options_metadata"] = [
-                {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
-            ]
+        collection_options = self._initialize_collection_options()
+        build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
+        build_config["collection_name"]["options_metadata"] = [
+            {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
+        ]
 
         return build_config
 
@@ -432,3 +416,31 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
         }
+
+    def process_kwargs(self, kwargs):
+        inputs = {}
+        config = {}
+        for key, value in kwargs.items():
+            if key.startswith("_") or key in CONFIG_ATTRIBUTES:
+                config[key.lstrip("_")] = value
+            else:
+                inputs[key] = value
+        return inputs, config
+
+    def setup_post_initialization(self):
+        if hasattr(self, "_trace_type"):
+            self.trace_type = self._trace_type
+        if not hasattr(self, "trace_type"):
+            self.trace_type = "chain"
+
+        self._reset_all_output_values()
+        self.map_io(self.inputs, self.outputs)
+        self._set_output_types(list(self._outputs_map.values()))
+        self.set_class_code()
+        self._set_output_required_inputs()
+
+    def map_io(self, inputs, outputs):
+        if inputs is not None:
+            self.map_inputs(inputs)
+        if outputs is not None:
+            self.map_outputs(outputs)

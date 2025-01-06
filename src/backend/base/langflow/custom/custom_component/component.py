@@ -22,13 +22,18 @@ from langflow.base.tools.constants import (
     TOOLS_METADATA_INPUT_NAME,
 )
 from langflow.custom.tree_visitor import RequiredInputsVisitor
+from langflow.events.event_manager import EventManager
 from langflow.exceptions.component import StreamingError
 from langflow.field_typing import Tool  # noqa: TC001 Needed by _add_toolkit_output
+from langflow.graph.edge.schema import EdgeData
 from langflow.graph.state.model import create_state_model
+from langflow.graph.utils import has_chat_output
 from langflow.helpers.custom import format_type
+from langflow.inputs.inputs import InputTypes
 from langflow.memory import astore_message, aupdate_messages, delete_message
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
+from langflow.schema.log import LoggableType
 from langflow.schema.message import ErrorMessage, Message
 from langflow.schema.properties import Source
 from langflow.schema.table import FieldParserType, TableOptions
@@ -1002,11 +1007,10 @@ class Component(CustomComponent):
         self._logs.append(log)
         if self._tracing_service and self._vertex:
             self._tracing_service.add_log(trace_name=self.trace_name, log=log)
-        if self._event_manager is not None and self._current_output:
+        if self._event_manager and self._current_output:
             data = log.model_dump()
-            data["output"] = self._current_output
-            data["component_id"] = self._id
-            self._event_manager.on_log(data=data)
+            data.update({"output": self._current_output, "component_id": self._id})
+            self._event_manager.on_log(data)
 
     def _append_tool_output(self) -> None:
         if next((output for output in self.outputs if output.name == TOOL_OUTPUT_NAME), None) is None:
@@ -1019,7 +1023,18 @@ class Component(CustomComponent):
                 )
             )
 
+    def _should_skip_message(self, message: Message) -> bool:
+        """Check if the message should be skipped based on vertex configuration and message type."""
+        return (
+            self._vertex is not None
+            and not (self._vertex.is_output or self._vertex.is_input)
+            and not has_chat_output(self.graph.get_vertex_neighbors(self._vertex))
+            and not isinstance(message, ErrorMessage)
+        )
+
     async def send_message(self, message: Message, id_: str | None = None):
+        if self._should_skip_message(message):
+            return message
         if (hasattr(self, "graph") and self.graph.session_id) and (message is not None and not message.session_id):
             session_id = (
                 UUID(self.graph.session_id) if isinstance(self.graph.session_id, str) else self.graph.session_id
