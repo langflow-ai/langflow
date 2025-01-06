@@ -431,7 +431,7 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeM
 
     field_type: SerializableFieldTypes = FieldTypes.TEXT
     options: list[str] = Field(default_factory=list)
-    options_metadata: list[dict[str, str]] = Field(default_factory=list)
+    options_metadata: list[dict[str, Any]] = Field(default_factory=list)
     combobox: CoalesceBool = False
     dialog_inputs: list[dict[str, Any]] = Field(default_factory=list)
 

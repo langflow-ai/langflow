@@ -157,7 +157,7 @@ class RangeMixin(BaseModel):
 class DropDownMixin(BaseModel):
     options: list[str] | None = None
     """List of options for the field. Only used when is_list=True. Default is an empty list."""
-    options_metadata: list[dict[str, str]] | None = None
+    options_metadata: list[dict[str, Any]] | None = None
     """List of dictionaries with metadata for each option."""
     combobox: CoalesceBool = False
     """Variable that defines if the user can insert custom values in the dropdown."""
