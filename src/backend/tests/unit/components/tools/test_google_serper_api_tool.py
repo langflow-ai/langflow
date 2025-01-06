@@ -88,7 +88,7 @@ def test_search_serper_error_handling(mock_post, mock_get, google_serper_compone
     assert "API connection failed" in result.iloc[0]["error"]
 
 
-def test_text_search_serper(google_serper_component, mock_search_results):
+def test_text_search_serper(google_serper_component):
     with patch.object(google_serper_component, "search_serper") as mock_search:
         mock_search.return_value = DataFrame(
             [{"title": "Test Title", "link": "https://test.com", "snippet": "Test snippet"}]
