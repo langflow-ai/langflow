@@ -1,7 +1,7 @@
 import os
 
 import pytest
-from astrapy.db import AstraDB
+from astrapy import DataAPIClient
 from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
 from langchain_core.documents import Document
 from langflow.components.embeddings import OpenAIEmbeddingsComponent
@@ -38,7 +38,7 @@ def astradb_client():
 
 
 @pytest.mark.api_key_required
-async def test_base(astradb_client: AstraDB):
+async def test_base(astradb_client: DataAPIClient):
     application_token = get_astradb_application_token()
     api_endpoint = get_astradb_api_endpoint()
 
