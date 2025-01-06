@@ -211,7 +211,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             client = DataAPIClient(token=self.token)
 
             return client.get_database(
-                self.get_api_endpoint(),
+                api_endpoint=self.get_api_endpoint(),
                 token=self.token,
             )
         except Exception as e:  # noqa: BLE001
@@ -267,9 +267,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):  # noqa: ARG002
         # Refresh the collection name options
-        build_config["database_name"]["options"] = self._initialize_database_options()
-        build_config["collection_name"]["options"] = self._initialize_collection_options()
-
         database_options = self._initialize_database_options()
         build_config["database_name"]["options"] = [db["name"] for db in database_options]
         build_config["database_name"]["options_metadata"] = [
