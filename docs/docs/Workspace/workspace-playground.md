@@ -1,6 +1,5 @@
 ---
 title: Playground
-sidebar_position: 2
 slug: /workspace-playground
 ---
 
@@ -8,12 +7,9 @@ import ReactPlayer from "react-player";
 
 The **Playground** is a dynamic interface designed for real-time interaction with AIs, allowing users to chat, access memories and monitor inputs and outputs. Here, users can directly prototype and their models, making adjustments and observing different outcomes.
 
-
 As long as you have an [Input or Output](/components-io) component working, you can open it up by clicking the **Playground** button.
 
-
 ![](/img/playground.png)
-
 
 :::tip
 
@@ -21,9 +17,7 @@ Notice how the **Playground's** window arrangement changes depending on what com
 
 :::
 
-
-## Memory Management {#821a5ee2a8a44d35b49943cba630511c}
-
+## Memory Management
 
 ---
 
@@ -37,7 +31,7 @@ To view messages by session ID, from the Playground, click the Options menu of a
 
 Individual messages in chat memory can be edited or deleted. Modifying these memories will influence the behavior of the chatbot responses.
 
-To learn more about memories in Langflow, see [Chat Memory](/guides-chat-memory).
+To learn more about chat memories in Langflow, see [Memory components](/components-memories).
 
 ## Use custom Session IDs for multiple user interactions
 
@@ -76,4 +70,3 @@ curl -X POST \
     }
 }'
 ```
-
