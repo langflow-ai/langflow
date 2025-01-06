@@ -1023,7 +1023,8 @@ class Component(CustomComponent):
     def _should_skip_message(self, message: Message) -> bool:
         """Check if the message should be skipped based on vertex configuration and message type."""
         return (
-            not (self._vertex.is_output or self._vertex.is_input)
+            self._vertex is not None
+            and not (self._vertex.is_output or self._vertex.is_input)
             and not has_chat_output(self.graph.get_vertex_neighbors(self._vertex))
             and not isinstance(message, ErrorMessage)
         )
