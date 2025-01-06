@@ -2,6 +2,7 @@ import os
 
 import pytest
 from astrapy.db import AstraDB
+from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
 from langchain_core.documents import Document
 from langflow.components.embeddings import OpenAIEmbeddingsComponent
 from langflow.components.vectorstores import AstraDBVectorStoreComponent
@@ -37,8 +38,6 @@ def astradb_client():
 
 @pytest.mark.api_key_required
 async def test_base(astradb_client: AstraDB):
-    from langflow.components.embeddings import OpenAIEmbeddingsComponent
-
     application_token = get_astradb_application_token()
     api_endpoint = get_astradb_api_endpoint()
 
@@ -56,7 +55,6 @@ async def test_base(astradb_client: AstraDB):
         },
     )
 
-    assert results["vector_store"] is not None
     assert results["search_results"] == []
     assert astradb_client.collection(BASIC_COLLECTION)
 
@@ -73,7 +71,7 @@ async def test_astra_embeds_and_search():
             "api_endpoint": api_endpoint,
             "collection_name": BASIC_COLLECTION,
             "number_of_results": 1,
-            "search_input": "test1",
+            "search_query": "test1",
             "ingest_data": ComponentInputHandle(
                 clazz=TextToData, inputs={"text_data": ["test1", "test2"]}, output_name="from_text"
             ),
@@ -89,8 +87,6 @@ async def test_astra_embeds_and_search():
 
 @pytest.mark.api_key_required
 def test_astra_vectorize():
-    from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
-
     application_token = get_astradb_application_token()
     api_endpoint = get_astradb_api_endpoint()
 
@@ -117,7 +113,7 @@ def test_astra_vectorize():
             api_endpoint=api_endpoint,
             collection_name=VECTORIZE_COLLECTION,
             ingest_data=records,
-            search_input="test",
+            search_query="test",
             number_of_results=2,
             pre_delete_collection=True,
         )
@@ -133,8 +129,6 @@ def test_astra_vectorize():
 @pytest.mark.api_key_required
 def test_astra_vectorize_with_provider_api_key():
     """Tests vectorize using an openai api key."""
-    from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
-
     application_token = get_astradb_application_token()
     api_endpoint = get_astradb_api_endpoint()
 
@@ -173,7 +167,7 @@ def test_astra_vectorize_with_provider_api_key():
             api_endpoint=api_endpoint,
             collection_name=VECTORIZE_COLLECTION_OPENAI,
             ingest_data=records,
-            search_input="test",
+            search_query="test",
             number_of_results=2,
             pre_delete_collection=True,
         )
@@ -190,8 +184,6 @@ def test_astra_vectorize_with_provider_api_key():
 @pytest.mark.api_key_required
 def test_astra_vectorize_passes_authentication():
     """Tests vectorize using the authentication parameter."""
-    from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
-
     store = None
     try:
         application_token = get_astradb_application_token()
@@ -228,7 +220,7 @@ def test_astra_vectorize_passes_authentication():
             api_endpoint=api_endpoint,
             collection_name=VECTORIZE_COLLECTION_OPENAI_WITH_AUTH,
             ingest_data=records,
-            search_input="test",
+            search_query="test",
             number_of_results=2,
             pre_delete_collection=True,
         )

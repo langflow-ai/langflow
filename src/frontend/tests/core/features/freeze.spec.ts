@@ -1,36 +1,13 @@
 import { expect, test } from "@playwright/test";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "user must be able to freeze a component",
   { tag: ["@release", "@workspace", "@components"] },
 
   async ({ page }) => {
-    await page.goto("/");
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
-
-    await page.waitForSelector('[id="new-project-btn"]', {
-      timeout: 30000,
-    });
-
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForSelector('[data-testid="modal-title"]', {
-        timeout: 3000,
-      });
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
+    await awaitBootstrapTest(page);
 
     await page.getByTestId("blank-flow").click();
 
@@ -42,22 +19,13 @@ test(
       timeout: 1000,
     });
 
+    await zoomOut(page, 3);
+
     await page
       .getByTestId("inputsText Input")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-    await page.getByTestId("zoom_out").click();
-    await page
-      .locator('//*[@id="react-flow-id"]')
-      .hover()
-      .then(async () => {
-        await page.mouse.down();
-        await page.mouse.move(-800, 300);
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 100, y: 100 },
       });
-
-    await page.mouse.up();
-
-    //second component
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("url");
@@ -67,18 +35,9 @@ test(
 
     await page
       .getByTestId("dataURL")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-    await page.getByTestId("zoom_out").click();
-    await page
-      .locator('//*[@id="react-flow-id"]')
-      .hover()
-      .then(async () => {
-        await page.mouse.down();
-        await page.mouse.move(-800, 300);
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 300, y: 300 },
       });
-
-    await page.mouse.up();
 
     //third component
 
@@ -90,18 +49,9 @@ test(
 
     await page
       .getByTestId("processingSplit Text")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-    await page.getByTestId("zoom_out").click();
-    await page
-      .locator('//*[@id="react-flow-id"]')
-      .hover()
-      .then(async () => {
-        await page.mouse.down();
-        await page.mouse.move(-800, 300);
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 350, y: 100 },
       });
-
-    await page.mouse.up();
 
     //fourth component
 
@@ -113,18 +63,11 @@ test(
 
     await page
       .getByTestId("processingParse Data")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-    await page.getByTestId("zoom_out").click();
-    await page
-      .locator('//*[@id="react-flow-id"]')
-      .hover()
-      .then(async () => {
-        await page.mouse.down();
-        await page.mouse.move(-800, 300);
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 50, y: 300 },
       });
 
-    await page.mouse.up();
+    await page.getByTestId("zoom_out").click();
 
     //fifth component
 
@@ -136,18 +79,17 @@ test(
 
     await page
       .getByTestId("outputsChat Output")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-    await page.getByTestId("zoom_out").click();
-    await page
-      .locator('//*[@id="react-flow-id"]')
-      .hover()
-      .then(async () => {
-        await page.mouse.down();
-        await page.mouse.move(-800, 300);
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 600, y: 200 },
       });
 
-    await page.mouse.up();
+    await page.getByTestId("div-generic-node").nth(4).click();
+
+    await page.getByTestId("more-options-modal").click();
+
+    await page.getByTestId("expand-button-modal").click();
+
+    await page.getByTestId("fit_view").click();
 
     let outdatedComponents = await page
       .getByTestId("icon-AlertTriangle")
@@ -168,6 +110,7 @@ test(
     }
 
     await page.getByTestId("fit_view").click();
+    await zoomOut(page, 2);
 
     //connection 1
     const urlOutput = await page
@@ -193,8 +136,6 @@ test(
     await splitTextInput.hover();
     await page.mouse.up();
 
-    await page.getByTestId("fit_view").click();
-
     //connection 3
     const splitTextOutput = await page
       .getByTestId("handle-splittext-shownode-chunks-right")
@@ -218,8 +159,6 @@ test(
     );
     await chatOutputInput.hover();
     await page.mouse.up();
-
-    await page.getByTestId("fit_view").click();
 
     await page
       .getByTestId("textarea_str_input_value")
@@ -251,7 +190,8 @@ test(
       .textContent();
 
     await page.getByText("Close").last().click();
-    await page.getByText("Close").last().click();
+
+    await page.getByTestId("btn-close-modal").click();
 
     await page.getByTestId("textarea_str_input_value").first().fill(",");
 

@@ -1,4 +1,3 @@
-import asyncio
 import re
 from abc import abstractmethod
 from typing import TYPE_CHECKING, cast
@@ -18,13 +17,14 @@ from langflow.io import BoolInput, HandleInput, IntInput, MessageTextInput
 from langflow.memory import delete_message
 from langflow.schema import Data
 from langflow.schema.content_block import ContentBlock
-from langflow.schema.log import SendMessageFunctionType
 from langflow.schema.message import Message
 from langflow.template import Output
 from langflow.utils.constants import MESSAGE_SENDER_AI
 
 if TYPE_CHECKING:
     from langchain_core.messages import BaseMessage
+
+    from langflow.schema.log import SendMessageFunctionType
 
 
 DEFAULT_TOOLS_DESCRIPTION = "A helpful assistant with access to the following tools:"
@@ -57,10 +57,11 @@ class LCAgentComponent(Component):
         ),
         MultilineInput(
             name="agent_description",
-            display_name="Agent Description",
+            display_name="Agent Description [Deprecated]",
             info=(
                 "The description of the agent. This is only used when in Tool Mode. "
-                f"Defaults to '{DEFAULT_TOOLS_DESCRIPTION}' and tools are added dynamically."
+                f"Defaults to '{DEFAULT_TOOLS_DESCRIPTION}' and tools are added dynamically. "
+                "This feature is deprecated and will be removed in future versions."
             ),
             advanced=True,
             value=DEFAULT_TOOLS_DESCRIPTION,
@@ -137,6 +138,8 @@ class LCAgentComponent(Component):
                 max_iterations=max_iterations,
             )
         input_dict: dict[str, str | list[BaseMessage]] = {"input": self.input_value}
+        if hasattr(self, "system_prompt"):
+            input_dict["system_prompt"] = self.system_prompt
         if hasattr(self, "chat_history") and self.chat_history:
             input_dict["chat_history"] = data_to_messages(self.chat_history)
 
@@ -162,12 +165,12 @@ class LCAgentComponent(Component):
                     version="v2",
                 ),
                 agent_message,
-                cast(SendMessageFunctionType, self.send_message),
+                cast("SendMessageFunctionType", self.send_message),
             )
         except ExceptionWithMessageError as e:
             msg_id = e.agent_message.id
-            await asyncio.to_thread(delete_message, id_=msg_id)
-            self._send_message_event(e.agent_message, category="remove_message")
+            await delete_message(id_=msg_id)
+            await self._send_message_event(e.agent_message, category="remove_message")
             raise
         except Exception:
             raise
@@ -197,7 +200,7 @@ class LCToolsAgentComponent(LCAgentComponent):
         HandleInput(
             name="tools",
             display_name="Tools",
-            input_types=["Tool", "BaseTool", "StructuredTool"],
+            input_types=["Tool"],
             is_list=True,
             required=False,
             info="These are the tools that the agent can use to help with tasks.",
@@ -234,11 +237,11 @@ class LCToolsAgentComponent(LCAgentComponent):
         component_toolkit = _get_component_toolkit()
         tools_names = self._build_tools_names()
         agent_description = self.get_tool_description()
-        # Check if tools_description is the default value
-        if agent_description == DEFAULT_TOOLS_DESCRIPTION:
-            description = f"{agent_description}{tools_names}"
-        else:
-            description = agent_description
-        return component_toolkit(component=self).get_tools(
+        # TODO: Agent Description Depreciated Feature to be removed
+        description = f"{agent_description}{tools_names}"
+        tools = component_toolkit(component=self).get_tools(
             tool_name=self.get_tool_name(), tool_description=description, callbacks=self.get_langchain_callbacks()
         )
+        if hasattr(self, "tools_metadata"):
+            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
+        return tools

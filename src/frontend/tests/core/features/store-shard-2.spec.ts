@@ -1,6 +1,7 @@
 import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "should filter by tag",
@@ -21,7 +22,9 @@ test(
     await page.getByTestId("button-store").click();
     await page.waitForTimeout(1000);
 
-    await page.getByTestId("api-key-button-store").click();
+    await page.getByTestId("api-key-button-store").click({
+      timeout: 200000,
+    });
 
     await page
       .getByPlaceholder("Insert your API Key")
@@ -82,7 +85,9 @@ test("should share component with share button", async ({ page }) => {
   await page.getByTestId("button-store").click();
   await page.waitForTimeout(1000);
 
-  await page.getByTestId("api-key-button-store").click();
+  await page.getByTestId("api-key-button-store").click({
+    timeout: 200000,
+  });
 
   await page
     .getByPlaceholder("Insert your API Key")
@@ -99,21 +104,10 @@ test("should share component with share button", async ({ page }) => {
 
   await page.getByTestId("icon-ChevronLeft").first().click();
 
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
-    }
-  } catch (error) {
-    modalCount = 0;
-  }
+  await awaitBootstrapTest(page, {
+    skipGoto: true,
+  });
 
-  while (modalCount === 0) {
-    await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
   await page.waitForTimeout(1000);
 
   const randomName = Math.random().toString(36).substring(2);

@@ -3,7 +3,7 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { handleKeyDown } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import Markdown from "react-markdown";
 
 export default function NodeDescription({
@@ -18,7 +18,7 @@ export default function NodeDescription({
   style,
 }: {
   description?: string;
-  selected: boolean;
+  selected?: boolean;
   nodeId: string;
   emptyPlaceholder?: string;
   placeholderClassName?: string;
@@ -28,7 +28,9 @@ export default function NodeDescription({
   style?: React.CSSProperties;
 }) {
   const [inputDescription, setInputDescription] = useState(false);
-  const [nodeDescription, setNodeDescription] = useState(description);
+  const [nodeDescription, setNodeDescription] = useState<string>(
+    description ?? "",
+  );
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const setNode = useFlowStore((state) => state.setNode);
   const overflowRef = useRef<HTMLDivElement>(null);
@@ -56,8 +58,27 @@ export default function NodeDescription({
   }, [selected]);
 
   useEffect(() => {
-    setNodeDescription(description);
+    setNodeDescription(description ?? "");
   }, [description]);
+
+  const MemoizedMarkdown = memo(Markdown);
+  const renderedDescription = useMemo(
+    () =>
+      description === "" || !description ? (
+        emptyPlaceholder
+      ) : (
+        <MemoizedMarkdown
+          linkTarget="_blank"
+          className={cn(
+            "markdown prose flex w-full flex-col text-[13px] leading-5 word-break-break-word [&_pre]:whitespace-break-spaces [&_pre]:!bg-code-description-background [&_pre_code]:!bg-code-description-background",
+            mdClassName,
+          )}
+        >
+          {String(description)}
+        </MemoizedMarkdown>
+      ),
+    [description, emptyPlaceholder, mdClassName],
+  );
 
   return (
     <div
@@ -93,12 +114,7 @@ export default function NodeDescription({
             onChange={(e) => setNodeDescription(e.target.value)}
             onKeyDown={(e) => {
               handleKeyDown(e, nodeDescription, "");
-              if (
-                e.key === "Enter" &&
-                e.shiftKey === false &&
-                e.ctrlKey === false &&
-                e.altKey === false
-              ) {
+              if (e.key === "Escape") {
                 setInputDescription(false);
                 setNodeDescription(nodeDescription);
                 setNode(nodeId, (old) => ({
@@ -114,7 +130,7 @@ export default function NodeDescription({
               }
             }}
           />
-          {charLimit && (
+          {charLimit && (nodeDescription?.length ?? 0) >= charLimit - 100 && (
             <div
               className={cn(
                 "pt-1 text-left text-[13px]",
@@ -143,19 +159,7 @@ export default function NodeDescription({
             takeSnapshot();
           }}
         >
-          {description === "" || !description ? (
-            emptyPlaceholder
-          ) : (
-            <Markdown
-              linkTarget="_blank"
-              className={cn(
-                "markdown prose flex w-full flex-col text-[13px] leading-5 word-break-break-word [&_pre]:!bg-code-description-background [&_pre_code]:!bg-code-description-background",
-                mdClassName,
-              )}
-            >
-              {String(description)}
-            </Markdown>
-          )}
+          {renderedDescription}
         </div>
       )}
     </div>

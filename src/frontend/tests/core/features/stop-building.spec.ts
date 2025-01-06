@@ -1,159 +1,79 @@
 import { test } from "@playwright/test";
-import uaParser from "ua-parser-js";
-
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
+import { updateOldComponents } from "../../utils/update-old-components";
+import { zoomOut } from "../../utils/zoom-out";
 // TODO: fix this test
 test(
   "user must be able to stop a building",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    test.skip(true, "Test is flaky");
-    await page.goto("/");
-    // await page.waitForTimeout(2000);
-
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page?.getByTestId("modal-title");
-      if (modalTitleElement) {
-        modalCount = await modalTitleElement.count();
-      }
-    } catch (error) {
-      modalCount = 0;
-    }
-
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
-      modalCount = await page.getByTestId("modal-title")?.count();
-    }
-
-    const getUA = await page.evaluate(() => navigator.userAgent);
-    const userAgentInfo = uaParser(getUA);
-
+    await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
 
     //first component
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text input");
-    // await page.waitForTimeout(1000);
 
     await page
       .getByTestId("inputsText Input")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-    await page.getByTestId("zoom_out").click();
-    await page
-      .locator('//*[@id="react-flow-id"]')
-      .hover()
-      .then(async () => {
-        await page.mouse.down();
-        await page.mouse.move(-800, 300);
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 0, y: 0 },
       });
 
-    await page.mouse.up();
+    await zoomOut(page, 3);
 
     //second component
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("url");
-    // await page.waitForTimeout(1000);
 
     await page
       .getByTestId("dataURL")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-    await page.getByTestId("zoom_out").click();
-    await page
-      .locator('//*[@id="react-flow-id"]')
-      .hover()
-      .then(async () => {
-        await page.mouse.down();
-        await page.mouse.move(-800, 300);
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 100, y: 200 },
       });
-
-    await page.mouse.up();
 
     //third component
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("split text");
-    // await page.waitForTimeout(1000);
 
     await page
       .getByTestId("processingSplit Text")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-    await page.getByTestId("zoom_out").click();
-    await page
-      .locator('//*[@id="react-flow-id"]')
-      .hover()
-      .then(async () => {
-        await page.mouse.down();
-        await page.mouse.move(-800, 300);
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 300, y: 300 },
       });
-
-    await page.mouse.up();
 
     //fourth component
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("parse data");
-    // await page.waitForTimeout(1000);
 
     await page
       .getByTestId("processingParse Data")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-    await page.getByTestId("zoom_out").click();
-    await page
-      .locator('//*[@id="react-flow-id"]')
-      .hover()
-      .then(async () => {
-        await page.mouse.down();
-        await page.mouse.move(-800, 300);
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 100, y: 400 },
       });
-
-    await page.mouse.up();
 
     //fifth component
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
-    // await page.waitForTimeout(1000);
 
     await page
       .getByTestId("outputsChat Output")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-    await page.getByTestId("zoom_out").click();
-    await page
-      .locator('//*[@id="react-flow-id"]')
-      .hover()
-      .then(async () => {
-        await page.mouse.down();
-        await page.mouse.move(-800, 300);
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 600, y: 300 },
       });
 
-    await page.mouse.up();
-
-    let outdatedComponents = await page
-      .getByTestId("icon-AlertTriangle")
-      .count();
-
-    while (outdatedComponents > 0) {
-      await page.getByTestId("icon-AlertTriangle").first().click();
-      // await page.waitForTimeout(1000);
-      outdatedComponents = await page.getByTestId("icon-AlertTriangle").count();
-    }
-
-    let filledApiKey = await page.getByTestId("remove-icon-badge").count();
-    while (filledApiKey > 0) {
-      await page.getByTestId("remove-icon-badge").first().click();
-      await page.waitForTimeout(1000);
-      filledApiKey = await page.getByTestId("remove-icon-badge").count();
-    }
+    await updateOldComponents(page);
+    await removeOldApiKeys(page);
 
     await page.getByTestId("fit_view").click();
+
+    await zoomOut(page, 2);
 
     //connection 1
     const urlOutput = await page
@@ -179,8 +99,6 @@ test(
     await splitTextInput.hover();
     await page.mouse.up();
 
-    await page.getByTestId("fit_view").click();
-
     //connection 3
     const splitTextOutput = await page
       .getByTestId("handle-splittext-shownode-chunks-right")
@@ -200,7 +118,7 @@ test(
     await parseDataOutput.hover();
     await page.mouse.down();
     const chatOutputInput = await page.getByTestId(
-      "handle-chatoutput-shownode-text-left",
+      "handle-chatoutput-noshownode-text-target",
     );
     await chatOutputInput.hover();
     await page.mouse.up();
@@ -251,9 +169,15 @@ class CustomComponent(Component):
 
     await page.getByTestId("title-Custom Component").first().click();
 
-    await page.waitForTimeout(500);
+    await page.waitForSelector('[data-testid="code-button-modal"]', {
+      timeout: 3000,
+    });
+
     await page.getByTestId("code-button-modal").click();
-    await page.waitForTimeout(500);
+
+    await page.waitForSelector('[id="checkAndSaveBtn"]', {
+      timeout: 3000,
+    });
 
     await page.locator("textarea").last().press(`ControlOrMeta+a`);
     await page.keyboard.press("Backspace");
@@ -263,53 +187,17 @@ class CustomComponent(Component):
 
     await page.getByTestId("button_run_custom component").click();
 
-    await page.waitForSelector("text=Building", {
+    await page.waitForSelector("text=running", {
       timeout: 100000,
     });
 
-    await page.waitForSelector('div[class*="animate-border-beam"]', {
-      state: "visible",
-      timeout: 5000,
-    });
-
-    await page.waitForTimeout(1000);
-
-    await page.waitForSelector('div[class*="animate-border-beam"]', {
-      state: "hidden",
-      timeout: 5000,
-    });
-
-    await page.waitForSelector("text=Saved", {
+    await page.waitForSelector('[data-testid="stop_building_button"]', {
       timeout: 100000,
     });
 
-    await page.getByTestId("button_run_custom component").click();
+    await page.getByTestId("stop_building_button").last().click();
 
-    await page.waitForSelector("text=Building", {
-      timeout: 100000,
-    });
-
-    await page.waitForSelector('div[class*="animate-border-beam"]', {
-      state: "visible",
-      timeout: 5000,
-    });
-
-    await page.waitForSelector("text=Building", {
-      timeout: 100000,
-    });
-
-    await page.waitForSelector("text=Saved", {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("button_run_custom component").click();
-
-    await page.waitForSelector('div[class*="animate-border-beam"]', {
-      state: "visible",
-      timeout: 5000,
-    });
-
-    await page.waitForSelector("text=Saved", {
+    await page.waitForSelector("text=build stopped", {
       timeout: 100000,
     });
   },
