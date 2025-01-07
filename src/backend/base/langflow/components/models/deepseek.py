@@ -14,7 +14,6 @@ class DeepSeekModelComponent(LCModelComponent):
     display_name = "DeepSeek"
     description = "Generate text using DeepSeek LLMs."
     icon = "DeepSeek"
-    name = "DeepSeekModel"
 
     inputs = [
         *LCModelComponent._base_inputs,
