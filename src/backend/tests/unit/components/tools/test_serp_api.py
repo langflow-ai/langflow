@@ -2,7 +2,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_core.tools import ToolException
-
 from langflow.components.tools import SerpAPIComponent
 from langflow.custom import Component
 from langflow.custom.utils import build_custom_component_template
@@ -48,16 +47,8 @@ def test_fetch_content(mock_serpapi_wrapper):
     mock_serpapi_wrapper.return_value = mock_instance
     mock_instance.results.return_value = {
         "organic_results": [
-            {
-                "title": "Test Result 1",
-                "link": "https://test.com",
-                "snippet": "This is a test result 1"
-            },
-            {
-                "title": "Test Result 2",
-                "link": "https://test2.com",
-                "snippet": "This is a test result 2"
-            }
+            {"title": "Test Result 1", "link": "https://test.com", "snippet": "This is a test result 1"},
+            {"title": "Test Result 2", "link": "https://test2.com", "snippet": "This is a test result 2"},
         ]
     }
 
@@ -72,10 +63,12 @@ def test_fetch_content(mock_serpapi_wrapper):
 
 def test_fetch_content_text():
     component = SerpAPIComponent()
-    component.fetch_content = MagicMock(return_value=[
-        Data(text="First result", data={"title": "Title 1"}),
-        Data(text="Second result", data={"title": "Title 2"})
-    ])
+    component.fetch_content = MagicMock(
+        return_value=[
+            Data(text="First result", data={"title": "Title 1"}),
+            Data(text="Second result", data={"title": "Title 2"}),
+        ]
+    )
 
     result = component.fetch_content_text()
 
