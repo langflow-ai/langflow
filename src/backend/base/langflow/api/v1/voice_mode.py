@@ -9,12 +9,12 @@ from loguru import logger
 from sqlalchemy import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
-from langflow.api.utils import AsyncDbSession, CurrentActiveUser, DbSession
+from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.chat import build_flow
 from langflow.api.v1.schemas import InputValueRequest
 from langflow.services.auth.utils import get_current_user_by_jwt
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.deps import async_session_scope, get_variable_service
+from langflow.services.deps import get_variable_service, session_scope
 
 router = APIRouter(prefix="/voice", tags=["Voice"])
 
@@ -29,7 +29,7 @@ SESSION_INSTRUCTIONS = (
 
 async def get_flow_desc_from_db(flow_id: str) -> Flow:
     """Get flow from database."""
-    async with async_session_scope() as session:
+    async with session_scope() as session:
         stmt = select(Flow).where(Flow.id == UUID(flow_id))
         result = await session.exec(stmt)
         flow = result.scalar_one_or_none()
@@ -47,7 +47,7 @@ async def handle_function_call(
     flow_id: str,
     background_tasks: BackgroundTasks,
     current_user: CurrentActiveUser,
-    session: AsyncDbSession,
+    session: DbSession,
 ):
     try:
         conversation_id = str(uuid4())
@@ -116,16 +116,14 @@ async def websocket_endpoint(
     flow_id: str,
     background_tasks: BackgroundTasks,
     session: DbSession,
-    async_session: AsyncDbSession,
 ):
-    # Generate a unique session ID for this conversation
-    current_user = await get_current_user_by_jwt(websocket.cookies.get("access_token_lf"), async_session)
+    current_user = await get_current_user_by_jwt(websocket.cookies.get("access_token_lf"), session)
     await websocket.accept()
 
     # Check for OpenAI API key in variables first
     variable_service = get_variable_service()
     try:
-        openai_key = variable_service.get_variable(
+        openai_key = await variable_service.get_variable(
             user_id=current_user.id, name="OPENAI_API_KEY", field="voice_mode", session=session
         )
     except ValueError:
