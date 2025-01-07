@@ -2,7 +2,6 @@ import os
 from dataclasses import asdict, dataclass, field
 
 from astrapy import DataAPIClient, Database
-from astrapy.admin import parse_api_endpoint
 from langchain_astradb import AstraDBVectorStore
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
@@ -123,6 +122,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 }
             ],
             value="",
+            advanced=True,
         ),
         StrInput(
             name="keyspace",
@@ -339,6 +339,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         build_config["collection_name"]["options_metadata"] = [
             {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
         ]
+
+        # If the database is set, allow user to see collection options
+        if self.database_name:
+            build_config["collection_name"]["advanced"] = False
+        else :
+            build_config["collection_name"]["advanced"] = True
 
         return build_config
 
