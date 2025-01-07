@@ -10,24 +10,59 @@ The **API** pane presents code templates for integrating your flow into extern
 ![](/img/api-pane.png)
 
 
-### cURL
+## cURL
 
 The **cURL** tab displays sample code for posting a query to your flow. Modify the `input_value` to change your input message. Copy the code and run it to post a query to your flow and get the result.
 
+## Python API
 
-### Python API
+The **Python API** tab displays code to interact with your flow using the Python HTTP `requests` library.
 
+To use the `requests` library:
 
-The **Python API** tab displays code to interact with your flow using the Python HTTP requests library.
+1. Copy and paste the code into a Python script.
+2. Run the script and pass your message with it.
 
-
-### Python Code
-
+```python
+python3 python-api-script.py --message="tell me about something interesting"
+```
+## Python Code
 
 The **Python Code** tab displays code to interact with your flow's `.json` file using the Langflow runtime.
 
+To use your code in a Python application using the Langflow runtime, you have to first download your flow’s JSON file.
 
-### Tweaks
+1. In your **Workspace**, click **Settings**, and then select **Export**.
+
+2. Download the flow to your local machine. Make sure the flow path in the script matches the flow’s location on your machine.
+
+3. Copy and paste the code from the API tab into a Python script file.
+It will look like this:
+
+```python
+from langflow.load import run_flow_from_json
+TWEAKS = {
+  "ChatInput-kKhri": {},
+  "Prompt-KDSi5": {},
+  "ChatOutput-Vr3Q7": {},
+  "OpenAIModel-4xYtx": {}
+}
+
+result = run_flow_from_json(flow="./basic-prompting-local.json",
+                            input_value="tell me about something interesting",
+                            fallback_to_env_vars=True, # False by default
+                            tweaks=TWEAKS)
+
+print(result)
+```
+
+4. Run the script:
+
+```python
+python3 python-api-script.py
+```
+
+## Tweaks
 
 The **Tweaks** tab displays the available parameters for your flow. Modifying the parameters changes the code parameters across all windows. For example, changing the **Chat Input** component's `input_value` will change that value across all API calls.
 
@@ -163,10 +198,6 @@ In your Angular project, find the component belonging to the module where `CUST
 
 
 ## Chat Widget Configuration
-
-
----
-
 
 Use the widget API to customize your Chat Widget:
 
