@@ -1,7 +1,7 @@
 import os
 from dataclasses import asdict, dataclass, field
 
-from astrapy import AstraDBAdmin, DataAPIClient, Database
+from astrapy import DataAPIClient, Database
 from astrapy.admin import parse_api_endpoint
 from langchain_astradb import AstraDBVectorStore
 
