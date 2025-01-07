@@ -1,12 +1,21 @@
 ---
-title: Embedding Models
-sidebar_position: 6
+title: Embeddings
 slug: /components-embedding-models
 ---
 
-# Embedding Models
+# Embeddings models in Langflow
 
-Embeddings models are used to convert text into numerical vectors. These vectors can be used for various tasks such as similarity search, clustering, and classification.
+Embeddings models convert text into numerical vectors. These embeddings capture semantic meaning of the input text, and allow LLMs to understand context.
+
+Refer to your specific component's documentation for more information on parameters.
+
+## Use an embeddings model component in a flow
+
+In this example of a document ingestion pipeline, the **OpenAI** embeddings model is connected to a vector database. The component converts the text chunks into vectors and stores them in the vector database. The vectorized data can be used to inform AI workloads like chatbots, similarity searches, and agents.
+
+This embeddings component uses an OpenAI API key for authentication. Refer to your specific embeddings component's documentation for more information on authentication.
+
+![URL component in a data ingestion pipeline](/img/url-component.png)
 
 ## AI/ML
 
@@ -50,7 +59,7 @@ This component is used to load embedding models from [Amazon Bedrock](https://aw
 
 ## Astra DB vectorize
 
-Connect this component to the **Embeddings** port of the [Astra DB vector store component](components-vector-stores#astra-db-serverless) to generate embeddings.
+Connect this component to the **Embeddings** port of the [Astra DB vector store component](/components-vector-stores#astra-db-vector-store) to generate embeddings.
 
 This component requires that your Astra DB database has a collection that uses a vectorize embedding provider integration.
 For more information and instructions, see [Embedding Generation](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
@@ -211,7 +220,7 @@ This component generates embeddings using MistralAI models.
 | max_concurrent_requests | Integer | Maximum number of concurrent API requests (default: 64) |
 | max_retries | Integer | Maximum number of retry attempts for failed requests (default: 5) |
 | timeout | Integer | Request timeout in seconds (default: 120) |
-| endpoint | String | Custom API endpoint URL (default: "https://api.mistral.ai/v1/") |
+| endpoint | String | Custom API endpoint URL (default: `https://api.mistral.ai/v1/`) |
 
 #### Outputs
 
@@ -229,10 +238,10 @@ This component generates embeddings using NVIDIA models.
 
 | Name | Type | Description |
 |------|------|-------------|
-| model | String | The NVIDIA model to use for embeddings (e.g., nvidia/nv-embed-v1) |
-| base_url | String | Base URL for the NVIDIA API (default: https://integrate.api.nvidia.com/v1) |
+| model | String | The NVIDIA model to use for embeddings (e.g., `nvidia/nv-embed-v1`) |
+| base_url | String | Base URL for the NVIDIA API (default: `https://integrate.api.nvidia.com/v1`) |
 | nvidia_api_key | SecretString | API key for authenticating with NVIDIA's service |
-| temperature | Float | Model temperature for embedding generation (default: 0.1) |
+| temperature | Float | Model temperature for embedding generation (default: `0.1`) |
 
 #### Outputs
 

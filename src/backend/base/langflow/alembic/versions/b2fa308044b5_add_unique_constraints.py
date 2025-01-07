@@ -40,11 +40,17 @@ def upgrade() -> None:
                 batch_op.add_column(sa.Column("folder", sqlmodel.sql.sqltypes.AutoString(), nullable=True))
             if "user_id" not in flow_columns:
                 batch_op.add_column(sa.Column("user_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=True))
+
             indices = inspector.get_indexes("flow")
             indices_names = [index["name"] for index in indices]
             if "ix_flow_user_id" not in indices_names:
                 batch_op.create_index(batch_op.f("ix_flow_user_id"), ["user_id"], unique=False)
-            if "fk_flow_user_id_user" not in indices_names:
+
+            # Check for existing foreign key constraints
+            constraints = inspector.get_foreign_keys("flow")
+            constraint_names = [constraint["name"] for constraint in constraints]
+
+            if "fk_flow_user_id_user" not in constraint_names:
                 batch_op.create_foreign_key("fk_flow_user_id_user", "user", ["user_id"], ["id"])
 
     except Exception as e:

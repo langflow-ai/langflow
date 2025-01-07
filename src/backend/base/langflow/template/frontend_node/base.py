@@ -30,6 +30,8 @@ class FrontendNode(BaseModel):
     """Display name of the frontend node."""
     documentation: str = ""
     """Documentation of the frontend node."""
+    minimized: bool = False
+    """Whether the frontend node is minimized."""
     custom_fields: dict | None = defaultdict(list)
     """Custom fields of the frontend node."""
     output_types: list[str] = []
