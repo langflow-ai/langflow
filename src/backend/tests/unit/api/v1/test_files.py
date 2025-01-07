@@ -5,7 +5,6 @@ import tempfile
 from contextlib import suppress
 from io import BytesIO
 from pathlib import Path
-from unittest.mock import MagicMock
 
 # we need to import tmpdir
 import anyio
@@ -18,8 +17,7 @@ from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service, get_storage_service
-from langflow.services.storage.service import StorageService
+from langflow.services.deps import get_db_service
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
@@ -100,29 +98,23 @@ async def files_flow(
 
 
 @pytest.fixture
-def mock_storage_service():
-    # Create a mock instance of StorageService
-    service = MagicMock(spec=StorageService)
-    # Setup mock behaviors for the service methods as needed
-    service.save_file.return_value = None
-    service.get_file.return_value = b"file content"  # Binary content for files
-    service.list_files.return_value = ["file1.txt", "file2.jpg"]
-    service.delete_file.return_value = None
+def max_file_size_upload_fixture(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_MAX_FILE_SIZE_UPLOAD", "1")
+    yield
+    monkeypatch.undo()
 
-    # Mock the settings service with proper max_file_size_upload attribute
-    settings_mock = MagicMock()
-    settings_mock.settings = MagicMock()
-    settings_mock.settings.max_file_size_upload = 1  # Default 1MB limit
-    service.settings_service = settings_mock
 
-    return service
+@pytest.fixture
+def max_file_size_upload_10mb_fixture(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_MAX_FILE_SIZE_UPLOAD", "10")
+    yield
+    monkeypatch.undo()
 
 
 @pytest.fixture(name="files_client")
 async def files_client_fixture(
     monkeypatch,
     request,
-    mock_storage_service,
 ):
     # Set the database url to a test database
     if "noclient" in request.keywords:
@@ -143,7 +135,6 @@ async def files_client_fixture(
 
         app, db_path = await asyncio.to_thread(init_app)
 
-        app.dependency_overrides[get_storage_service] = lambda: mock_storage_service
         async with (
             LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager,
             AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/") as client,
@@ -154,20 +145,6 @@ async def files_client_fixture(
         # clear the temp db
         with suppress(FileNotFoundError):
             await anyio.Path(db_path).unlink()
-
-
-@pytest.fixture
-def max_file_size_upload_fixture(monkeypatch):
-    monkeypatch.setenv("LANGFLOW_MAX_FILE_SIZE_UPLOAD", "1")
-    yield
-    monkeypatch.undo()
-
-
-@pytest.fixture
-def max_file_size_upload_10mb_fixture(monkeypatch):
-    monkeypatch.setenv("LANGFLOW_MAX_FILE_SIZE_UPLOAD", "10")
-    yield
-    monkeypatch.undo()
 
 
 async def test_upload_file(files_client, files_created_api_key, files_flow):
@@ -190,16 +167,42 @@ async def test_upload_file(files_client, files_created_api_key, files_flow):
 
 async def test_download_file(files_client, files_created_api_key, files_flow):
     headers = {"x-api-key": files_created_api_key.api_key}
-    response = await files_client.get(f"api/v1/files/download/{files_flow.id}/test.txt", headers=headers)
+
+    # First upload a file
+    response = await files_client.post(
+        f"api/v1/files/upload/{files_flow.id}",
+        files={"file": ("test.txt", b"test content")},
+        headers=headers,
+    )
+    assert response.status_code == 201
+
+    # Get the actual filename from the response
+    file_path = response.json()["file_path"]
+    file_name = file_path.split("/")[-1]
+
+    # Then try to download it
+    response = await files_client.get(f"api/v1/files/download/{files_flow.id}/{file_name}", headers=headers)
     assert response.status_code == 200
-    assert response.content == b"file content"
+    assert response.content == b"test content"
 
 
 async def test_list_files(files_client, files_created_api_key, files_flow):
     headers = {"x-api-key": files_created_api_key.api_key}
+
+    # First upload a file
+    response = await files_client.post(
+        f"api/v1/files/upload/{files_flow.id}",
+        files={"file": ("test.txt", b"test content")},
+        headers=headers,
+    )
+    assert response.status_code == 201
+
+    # Then list the files
     response = await files_client.get(f"api/v1/files/list/{files_flow.id}", headers=headers)
     assert response.status_code == 200
-    assert response.json() == {"files": ["file1.txt", "file2.jpg"]}
+    files = response.json()["files"]
+    assert len(files) == 1
+    assert files[0].endswith("test.txt")
 
 
 async def test_delete_file(files_client, files_created_api_key, files_flow):
