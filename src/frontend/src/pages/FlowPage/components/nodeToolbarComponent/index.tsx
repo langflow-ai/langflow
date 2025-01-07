@@ -341,83 +341,104 @@ const NodeToolbarComponent = memo(
 
     const [selectedValue, setSelectedValue] = useState(null);
 
-    const handleSelectChange = useCallback((event) => {
-      setSelectedValue(event);
+    const handleSelectChange = useCallback(
+      (event) => {
+        setSelectedValue(event);
 
-      switch (event) {
-        case "save":
-          saveComponent();
-          break;
-        case "freeze":
-          freezeFunction();
-          break;
-        case "freezeAll":
-          FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
-          break;
-        case "code":
-          setOpenModal(!openModal);
-          break;
-        case "advanced":
-          setShowModalAdvanced(true);
-          break;
-        case "show":
-          takeSnapshot();
-          handleMinimize();
-          break;
-        case "Share":
-          shareComponent();
-          break;
-        case "Download":
-          downloadNode(flowComponent!);
-          break;
-        case "SaveAll":
-          addFlow({
-            flow: flowComponent,
-            override: false,
-          });
-          break;
-        case "documentation":
-          openDocs();
-          break;
-        case "disabled":
-          break;
-        case "ungroup":
-          handleungroup();
-          break;
-        case "override":
-          setShowOverrideModal(true);
-          break;
-        case "delete":
-          deleteNode(data.id);
-          break;
-        case "update":
-          updateNode();
-          break;
-        case "copy":
-          const node = nodes.filter((node) => node.id === data.id);
-          setLastCopiedSelection({ nodes: _.cloneDeep(node), edges: [] });
-          break;
-        case "duplicate":
-          paste(
-            {
-              nodes: [nodes.find((node) => node.id === data.id)!],
-              edges: [],
-            },
-            {
-              x: 50,
-              y: 10,
-              paneX: nodes.find((node) => node.id === data.id)?.position.x,
-              paneY: nodes.find((node) => node.id === data.id)?.position.y,
-            },
-          );
-          break;
-        case "toolMode":
-          handleActivateToolMode();
-          break;
-      }
+        switch (event) {
+          case "save":
+            saveComponent();
+            break;
+          case "freeze":
+            freezeFunction();
+            break;
+          case "freezeAll":
+            FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
+            break;
+          case "code":
+            setOpenModal(!openModal);
+            break;
+          case "advanced":
+            setShowModalAdvanced(true);
+            break;
+          case "show":
+            takeSnapshot();
+            handleMinimize();
+            break;
+          case "Share":
+            shareComponent();
+            break;
+          case "Download":
+            downloadNode(flowComponent!);
+            break;
+          case "SaveAll":
+            addFlow({
+              flow: flowComponent,
+              override: false,
+            });
+            break;
+          case "documentation":
+            openDocs();
+            break;
+          case "disabled":
+            break;
+          case "ungroup":
+            handleungroup();
+            break;
+          case "override":
+            setShowOverrideModal(true);
+            break;
+          case "delete":
+            deleteNode(data.id);
+            break;
+          case "update":
+            updateNode();
+            break;
+          case "copy":
+            const node = nodes.filter((node) => node.id === data.id);
+            setLastCopiedSelection({ nodes: _.cloneDeep(node), edges: [] });
+            break;
+          case "duplicate":
+            paste(
+              {
+                nodes: [nodes.find((node) => node.id === data.id)!],
+                edges: [],
+              },
+              {
+                x: 50,
+                y: 10,
+                paneX: nodes.find((node) => node.id === data.id)?.position.x,
+                paneY: nodes.find((node) => node.id === data.id)?.position.y,
+              },
+            );
+            break;
+          case "toolMode":
+            handleActivateToolMode();
+            break;
+        }
 
-      setSelectedValue(null);
-    }, []);
+        setSelectedValue(null);
+      },
+      [
+        saveComponent,
+        freezeFunction,
+        FreezeAllVertices,
+        setOpenModal,
+        setShowModalAdvanced,
+        handleMinimize,
+        shareComponent,
+        downloadNode,
+        addFlow,
+        openDocs,
+        handleungroup,
+        setShowOverrideModal,
+        deleteNode,
+        updateNode,
+        setLastCopiedSelection,
+        paste,
+        handleActivateToolMode,
+      ],
+    );
 
     const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue({
       node: data.node!,
