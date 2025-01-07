@@ -343,7 +343,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # If the database is set, allow user to see collection options
         if self.database_name:
             build_config["collection_name"]["advanced"] = False
-        else :
+        else:
             build_config["collection_name"]["advanced"] = True
 
         return build_config
