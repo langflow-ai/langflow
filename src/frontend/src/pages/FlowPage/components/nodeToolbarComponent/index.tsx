@@ -128,17 +128,17 @@ const NodeToolbarComponent = memo(
       () => Object.keys(data.node!.template).includes("code"),
       [data.node],
     );
-    // Check if any of the data.node.template fields have tool_mode as True
-    // if so we can show the tool mode button
-    const hasToolMode = useMemo(
-      () => checkHasToolMode(data.node?.template ?? {}),
-      [data.node?.template],
-    );
     const isGroup = useMemo(
       () => (data.node?.flow ? true : false),
       [data.node],
     );
 
+    // Check if any of the data.node.template fields have tool_mode as True
+    // if so we can show the tool mode button
+    const hasToolMode = useMemo(
+      () => checkHasToolMode(data.node?.template ?? {}) && !isGroup,
+      [data.node?.template, isGroup],
+    );
     const addFlow = useAddFlow();
 
     const { mutate: patchUpdateFlow } = usePatchUpdateFlow();
