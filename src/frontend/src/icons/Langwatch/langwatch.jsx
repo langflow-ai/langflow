@@ -4,7 +4,7 @@ const SvgLangwatch = (props) => (
     width="1080"
     height="1080"
     fill="none"
-    viewBox="0 0 1080 1080"
+    viewBox="0 0 42 52"
     {...props}
   >
     <path
