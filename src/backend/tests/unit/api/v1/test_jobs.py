@@ -59,7 +59,7 @@ def create_job_request():
 
 
 @pytest.fixture
-async def anoter_active_user(client):  # noqa: ARG001
+async def another_active_user(client):  # noqa: ARG001
     db_manager = get_db_service()
     async with db_manager.with_session() as session:
         user = User(
@@ -88,8 +88,8 @@ async def anoter_active_user(client):  # noqa: ARG001
 
 
 @pytest.fixture
-async def another_user_headers(client, anoter_active_user):
-    login_data = {"username": anoter_active_user.username, "password": "testpassword"}
+async def another_user_headers(client, another_active_user):
+    login_data = {"username": another_active_user.username, "password": "testpassword"}
     response = await client.post("api/v1/login", data=login_data)
     assert response.status_code == 200
     tokens = response.json()
