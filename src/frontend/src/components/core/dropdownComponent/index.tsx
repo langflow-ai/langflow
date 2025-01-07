@@ -79,7 +79,6 @@ export default function Dropdown({
   });
 
   const { isPending } = postTemplateValue;
-  console.log({ isPending });
 
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
@@ -331,7 +330,9 @@ export default function Dropdown({
     >
       <Command>
         {renderSearchInput()}
-        {dialogInputs ? renderIconOptionsList() : renderOptionsList()}
+        {dialogInputs && dialogInputs?.length > 0
+          ? renderIconOptionsList()
+          : renderOptionsList()}
       </Command>
     </PopoverContentDropdown>
   );

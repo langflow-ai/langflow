@@ -205,7 +205,7 @@ export function ParameterRenderComponent({
 
   return useMemo(
     () =>
-      templateData?.dialog_inputs ? (
+      templateData?.dialog_inputs?.length > 0 ? (
         <div className="flex flex-col">{renderComponent()}</div>
       ) : (
         <RefreshParameterComponent

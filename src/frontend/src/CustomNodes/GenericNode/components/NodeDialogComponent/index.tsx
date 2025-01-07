@@ -28,7 +28,7 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
     footer: <div>Footer</div>,
   };
 
-  console.log("dialogInputs", dialogInputs);
+  // console.log("dialogInputs", dialogInputs);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
