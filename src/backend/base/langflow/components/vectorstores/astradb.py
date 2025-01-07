@@ -243,12 +243,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def collection_data(self, collection_name: str | None = None, database: Database | None = None):
         try:
-            client = DataAPIClient(token=self.token, environment=self.environment)
-            database = client.get_database(
-                api_endpoint=self.get_api_endpoint(),
-                token=self.token,
-                keyspace=self.get_keyspace(),
-            )
+            if not database:
+                client = DataAPIClient(token=self.token, environment=self.environment)
+
+                database = client.get_database(
+                    api_endpoint=self.get_api_endpoint(),
+                    token=self.token,
+                    keyspace=self.get_keyspace(),
+                )
 
             collection = database.get_collection(collection_name, keyspace=self.get_keyspace())
 
@@ -256,7 +258,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         except Exception as e:  # noqa: BLE001
             self.log(f"Error checking collection data: {e}")
 
-            return False
+            return None
 
     def _initialize_database_options(self):
         try:
@@ -357,7 +359,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "content_field": (
                 self.content_field
                 if self.content_field and embedding_params
-                else ("page_content" if embedding_params and self.collection_data() == 0 else None)
+                else (
+                    "page_content"
+                    if embedding_params and self.collection_data(collection_name=self.collection_name) == 0
+                    else None
+                )
             ),
             "ignore_invalid_documents": self.ignore_invalid_documents,
         }
