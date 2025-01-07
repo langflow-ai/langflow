@@ -102,9 +102,18 @@ export default function Dropdown({
           className="flex items-center gap-2 truncate"
           data-testid={`value-dropdown-${id}`}
         >
-          {true && <ForwardedIconComponent name={""} className="h-4 w-4" />}
-          {/* TODO: Add Logic for Icon */}
-
+          {optionsMetaData?.[
+            filteredOptions.findIndex((option) => option === value)
+          ]?.icon && (
+            <ForwardedIconComponent
+              name={
+                optionsMetaData[
+                  filteredOptions.findIndex((option) => option === value)
+                ].icon
+              }
+              className="h-4 w-4"
+            />
+          )}
           {value &&
           value !== "" &&
           filteredOptions.find((option) => option === value)
@@ -173,25 +182,32 @@ export default function Dropdown({
   );
 
   const renderCreateOptionDialog = () => (
-    <div className="flex flex-col">
+    <CommandGroup className="flex flex-col">
       <CommandItem
-        className="flex items-center justify-start gap-2 truncate py-2 text-xs font-semibold text-muted-foreground"
+        className="flex items-center justify-start gap-2 truncate py-3 text-xs font-semibold text-muted-foreground"
         onSelect={() => setOpenDialog(true)}
       >
-        <ForwardedIconComponent name="Plus" className="h-3 w-3 text-primary" />
-        {`New ${firstWord}`}
+        <div className="flex items-center gap-2 pl-1">
+          <ForwardedIconComponent
+            name="Plus"
+            className="h-3 w-3 text-primary"
+          />
+          {`New ${firstWord}`}
+        </div>
       </CommandItem>
       <CommandItem
-        className="flex items-center justify-start gap-2 truncate py-2 text-xs font-semibold text-muted-foreground"
+        className="flex items-center justify-start gap-2 truncate py-3 text-xs font-semibold text-muted-foreground"
         onSelect={() => {
           setOpenDialog(true); // TODO: Implement refresh list
         }}
       >
-        <ForwardedIconComponent
-          name="RefreshCcw"
-          className="h-3 w-3 text-primary"
-        />
-        Refresh list
+        <div className="flex items-center gap-2 pl-1">
+          <ForwardedIconComponent
+            name="RefreshCcw"
+            className="h-3 w-3 text-primary"
+          />
+          Refresh list
+        </div>
       </CommandItem>
       <NodeDialog
         open={openDialog}
@@ -199,7 +215,7 @@ export default function Dropdown({
         onClose={() => setOpenDialog(false)}
         content={<div>Content</div>}
       />
-    </div>
+    </CommandGroup>
   );
 
   const renderIconOptionsList = () => (
@@ -219,11 +235,13 @@ export default function Dropdown({
                 data-testid={`${option}-${index}-option`}
               >
                 <div className="flex w-full items-center gap-2">
-                  <ForwardedIconComponent
-                    name=""
-                    className="h-4 w-4 shrink-0 text-primary"
-                  />
-                  <div className="flex flex-col truncate">
+                  {optionsMetaData?.[index]?.icon ? (
+                    <ForwardedIconComponent
+                      name={optionsMetaData?.[index]?.icon}
+                      className="h-4 w-4 shrink-0 text-primary"
+                    />
+                  ) : null}
+                  <div className="flex flex-col truncate pl-2">
                     <div className="truncate">{option}</div>
                     <div className="flex w-full items-center text-muted-foreground">
                       {Object.entries(optionsMetaData?.[index] || {}).map(
