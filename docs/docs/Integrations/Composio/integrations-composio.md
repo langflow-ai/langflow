@@ -90,7 +90,7 @@ Body: Hello from composio!
 }
 
 {
-  "successfull": true,
+  "successful": true,
   "data": {
     "response_data": {
       "id": "r-7515791375860110875",
