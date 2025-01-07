@@ -713,7 +713,6 @@ const NodeToolbarComponent = memo(
                       }
                       value={showNode ? "Minimize" : "Expand"}
                       icon={showNode ? "Minimize2" : "Maximize2"}
-                      dataTestId="minimize-button-modal"
                     />
                   </SelectItem>
                 )}
