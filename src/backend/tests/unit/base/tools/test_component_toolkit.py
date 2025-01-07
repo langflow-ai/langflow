@@ -1,6 +1,8 @@
 import os
 
 import pytest
+from pydantic import BaseModel
+
 from langflow.base.tools.component_tool import ComponentToolkit
 from langflow.components.langchain_utilities import ToolCallingAgentComponent
 from langflow.components.models import OpenAIModelComponent

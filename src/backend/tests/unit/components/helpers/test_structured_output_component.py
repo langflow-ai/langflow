@@ -3,6 +3,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_core.language_models import BaseLanguageModel
+from pydantic import BaseModel
+from typing_extensions import override
+
 from langflow.components.helpers.structured_output import StructuredOutputComponent
 from langflow.helpers.base_model import build_model_from_schema
 from langflow.inputs.inputs import TableInput

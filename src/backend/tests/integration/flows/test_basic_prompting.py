@@ -3,7 +3,6 @@ from langflow.components.outputs import ChatOutput
 from langflow.components.prompts import PromptComponent
 from langflow.graph import Graph
 from langflow.schema.message import Message
-
 from tests.integration.utils import run_flow
 
 

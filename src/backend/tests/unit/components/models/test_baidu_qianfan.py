@@ -6,6 +6,8 @@ from langchain_community.chat_models.baidu_qianfan_endpoint import QianfanChatEn
 from langflow.components.models.baidu_qianfan_chat import QianfanChatEndpointComponent
 from qianfan.errors import APIError
 
+from langflow.components.models.baidu_qianfan_chat import QianfanChatEndpointComponent
+
 
 @pytest.fixture
 def qianfan_credentials():

@@ -1,3 +1,5 @@
+from pydantic import BaseModel
+
 from langflow.base.tools.component_tool import ComponentToolkit
 from langflow.custom import Component
 
