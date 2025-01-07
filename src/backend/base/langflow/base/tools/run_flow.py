@@ -138,7 +138,8 @@ class RunFlowBaseComponent(Component):
                             "tool_mode": not (field_template[input_name].get("advanced", False)),
                         }
                     )
-                    for input_name in field_order if input_name in field_template
+                    for input_name in field_order
+                    if input_name in field_template
                 ]
                 new_fields += new_vertex_inputs
         return new_fields
