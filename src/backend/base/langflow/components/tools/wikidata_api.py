@@ -9,7 +9,7 @@ from langflow.schema import Data
 from langflow.schema.message import Message
 
 
-class WikidataComponent(Component):
+class WikidataAPIComponent(Component):
     display_name = "Wikidata API"
     description = "Performs a search using the Wikidata API."
     name = "WikidataAPI"
