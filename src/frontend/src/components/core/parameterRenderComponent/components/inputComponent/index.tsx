@@ -39,6 +39,7 @@ export default function InputComponent({
   onChangeFolderName,
   nodeStyle,
   isToolMode,
+  popoverWidth,
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
@@ -148,8 +149,8 @@ export default function InputComponent({
               blurOnEnter={blurOnEnter}
               options={options}
               optionsPlaceholder={optionsPlaceholder}
-              className={className}
               nodeStyle={nodeStyle}
+              popoverWidth={popoverWidth}
             />
           )}
         </>

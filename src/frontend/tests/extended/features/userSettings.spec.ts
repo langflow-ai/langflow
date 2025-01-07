@@ -44,40 +44,39 @@ test(
       .isVisible();
     await page.getByText("Add New").click();
     await page
-      .getByPlaceholder("Insert a name for the variable...")
+      .getByPlaceholder("Enter a name for the variable...")
       .fill(randomName);
-    await page.getByTestId("select-type-global-variables").first().click();
     await page.getByText("Generic", { exact: true }).last().isVisible();
     await page.getByText("Generic", { exact: true }).last().click();
 
     await page
-      .getByPlaceholder("Insert a value for the variable...")
+      .getByPlaceholder("Enter a value for the variable...")
       .fill("testtesttesttesttesttesttesttest");
     await page.getByTestId("popover-anchor-apply-to-fields").click();
 
-    await page.getByPlaceholder("Search options...").waitFor({
+    await page.getByPlaceholder("Fields").waitFor({
       state: "visible",
       timeout: 30000,
     });
 
-    await page.getByPlaceholder("Search options...").fill("System");
+    await page.getByPlaceholder("Fields").fill("System");
 
     await page.waitForSelector("text=System", { timeout: 30000 });
 
     await page.getByText("System").last().click();
 
-    await page.getByPlaceholder("Search options...").fill("openAI");
+    await page.getByPlaceholder("Fields").fill("openAI");
 
     await page.waitForSelector("text=openai", { timeout: 30000 });
 
     await page.getByText("openai").last().click();
 
-    await page.getByPlaceholder("Search options...").waitFor({
+    await page.getByPlaceholder("Fields").waitFor({
       state: "visible",
       timeout: 30000,
     });
 
-    await page.getByPlaceholder("Search options...").fill("ollama");
+    await page.getByPlaceholder("Fields").fill("ollama");
 
     await page.keyboard.press("Escape");
     await page.getByText("Save Variable", { exact: true }).click();
@@ -87,13 +86,13 @@ test(
     await page.getByText(randomName).last().click();
     await page.getByText(randomName).last().click();
 
-    await page.getByPlaceholder("Insert a name for the variable...").waitFor({
+    await page.getByPlaceholder("Enter a name for the variable...").waitFor({
       state: "visible",
       timeout: 30000,
     });
 
     await page
-      .getByPlaceholder("Insert a name for the variable...")
+      .getByPlaceholder("Enter a name for the variable...")
       .fill(randomName2);
 
     await page.getByText("Update Variable", { exact: true }).last().click();
@@ -102,13 +101,13 @@ test(
 
     await page.getByText(randomName2).last().click();
 
-    await page.getByPlaceholder("Insert a name for the variable...").waitFor({
+    await page.getByPlaceholder("Enter a name for the variable...").waitFor({
       state: "visible",
       timeout: 30000,
     });
 
     await page
-      .getByPlaceholder("Insert a name for the variable...")
+      .getByPlaceholder("Enter a name for the variable...")
       .fill(randomName3);
 
     await page.getByText("Update Variable", { exact: true }).last().click();

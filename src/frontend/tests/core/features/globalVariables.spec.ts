@@ -33,11 +33,11 @@ test(
     await page.getByTestId("icon-Globe").nth(0).click();
     await page.getByText("Add New Variable", { exact: true }).click();
     await page
-      .getByPlaceholder("Insert a name for the variable...")
+      .getByPlaceholder("Enter a name for the variable...")
       .fill(genericName);
     await page.getByText("Generic", { exact: true }).first().isVisible();
     await page
-      .getByPlaceholder("Insert a value for the variable...")
+      .getByPlaceholder("Enter a value for the variable...")
       .fill("This is a test of generic variable value");
     await page.getByText("Save Variable", { exact: true }).click();
     expect(page.getByText(genericName, { exact: true })).not.toBeNull();
@@ -45,12 +45,11 @@ test(
 
     await page.getByText("Add New Variable", { exact: true }).click();
     await page
-      .getByPlaceholder("Insert a name for the variable...")
+      .getByPlaceholder("Enter a name for the variable...")
       .fill(credentialName);
-    await page.getByTestId("select-type-global-variables").first().click();
-    await page.getByText("Credential", { exact: true }).last().click();
+    await page.getByTestId("credential-tab").click();
     await page
-      .getByPlaceholder("Insert a value for the variable...")
+      .getByPlaceholder("Enter a value for the variable...")
       .fill("This is a test of credential variable value");
     await page.getByText("Save Variable", { exact: true }).click();
     expect(page.getByText(credentialName, { exact: true })).not.toBeNull();
