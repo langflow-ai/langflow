@@ -29,7 +29,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     _cached_vector_store: AstraDBVectorStore | None = None
 
-    class NewDatabaseInput(DictInput):
+    class NewDatabaseInput():
         title: str = "Create New Database"
         description: str = "Create a new database in Astra DB."
         db_names: list[str] = []
@@ -37,7 +37,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         collection_count: int = 0
         record_count: int = 0
 
-    class NewCollectionInput(DictInput):
+    class NewCollectionInput():
         title: str = "Create New Collection"
         description: str = "Create a new collection in Astra DB."
         status: str = ""
@@ -88,7 +88,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             required=True,
             refresh_button=True,
             real_time_refresh=True,
-            dialog_inputs=[NewDatabaseInput(name="database_input").__dict__],
+            dialog_inputs=[NewDatabaseInput().__dict__],
             options=[],
             options_metadata=[
                 {
@@ -104,7 +104,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             required=True,
             refresh_button=True,
             real_time_refresh=True,
-            dialog_inputs=[NewCollectionInput(name="collection_input").__dict__],
+            dialog_inputs=[NewCollectionInput().__dict__],
             options=[],
             options_metadata=[
                 {
