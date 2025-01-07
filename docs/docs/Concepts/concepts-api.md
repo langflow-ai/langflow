@@ -3,12 +3,9 @@ title: API pane
 slug: /concepts-api
 ---
 
-import ReactPlayer from "react-player";
-
 The **API** pane presents code templates for integrating your flow into external applications.
 
 ![](/img/api-pane.png)
-
 
 ## cURL
 
