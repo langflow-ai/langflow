@@ -47,7 +47,6 @@ export default function Dropdown({
     : "Choose an option...";
 
   const { firstWord } = formatName(name);
-
   const [open, setOpen] = useState(children ? true : false);
   const [openDialog, setOpenDialog] = useState(false);
 
@@ -79,9 +78,12 @@ export default function Dropdown({
     tool_mode: nodeClass?.tool_mode ?? false,
   });
 
+  const { isPending } = postTemplateValue;
+  console.log({ isPending });
+
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
-  const handleRefreshButtonPress = () =>
+  const handleRefreshButtonPress = () => {
     mutateTemplate(
       value,
       nodeClass!,
@@ -89,6 +91,7 @@ export default function Dropdown({
       postTemplateValue,
       setErrorData,
     );
+  };
 
   useEffect(() => {
     if (disabled && value !== "") {
@@ -208,31 +211,42 @@ export default function Dropdown({
 
   const renderCreateOptionDialog = () => (
     <CommandGroup className="flex flex-col">
-      <CommandItem
-        className="flex items-center justify-start gap-2 truncate py-3 text-xs font-semibold text-muted-foreground"
-        onSelect={() => setOpenDialog(true)}
-      >
-        <div className="flex items-center gap-2 pl-1">
-          <ForwardedIconComponent
-            name="Plus"
-            className="h-3 w-3 text-primary"
-          />
-          {`New ${firstWord}`}
-        </div>
+      <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs font-semibold text-muted-foreground">
+        <Button
+          className="w-full"
+          unstyled
+          onClick={() => {
+            setOpenDialog(true);
+          }}
+        >
+          <div className="flex items-center gap-2 pl-1">
+            <ForwardedIconComponent
+              name="Plus"
+              className="h-3 w-3 text-primary"
+            />
+            {`New ${firstWord}`}
+          </div>
+        </Button>
       </CommandItem>
-      <CommandItem
-        className="flex items-center justify-start gap-2 truncate py-3 text-xs font-semibold text-muted-foreground"
-        onSelect={() => {
-          handleRefreshButtonPress();
-        }}
-      >
-        <div className="flex items-center gap-2 pl-1">
-          <ForwardedIconComponent
-            name="RefreshCcw"
-            className="h-3 w-3 text-primary"
-          />
-          Refresh list
-        </div>
+      <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs font-semibold text-muted-foreground">
+        <Button
+          className="w-full"
+          unstyled
+          onClick={() => {
+            handleRefreshButtonPress();
+          }}
+        >
+          <div className="flex items-center gap-2 pl-1">
+            <ForwardedIconComponent
+              name="RefreshCcw"
+              className={cn(
+                "h-3 w-3 text-primary",
+                isPending && "animate-spin",
+              )}
+            />
+            Refresh list
+          </div>
+        </Button>
       </CommandItem>
       <NodeDialog
         open={openDialog}
@@ -269,8 +283,11 @@ export default function Dropdown({
                   <div className="flex flex-col truncate pl-2">
                     <div className="truncate">{option}</div>
                     <div className="flex w-full items-center text-muted-foreground">
-                      {Object.entries(optionsMetaData?.[index] || {}).map(
-                        ([key, value], i, arr) => (
+                      {Object.entries(optionsMetaData?.[index] || {})
+                        .filter(
+                          ([key, value]) => value !== null && key !== "icon",
+                        )
+                        .map(([key, value], i, arr) => (
                           <div
                             key={key}
                             className={cn("flex items-center", {
@@ -289,8 +306,7 @@ export default function Dropdown({
                               })}
                             >{`${String(value)} ${key}`}</div>
                           </div>
-                        ),
-                      )}
+                        ))}
                     </div>
                   </div>
                 </div>
