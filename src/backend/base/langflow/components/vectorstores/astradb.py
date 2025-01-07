@@ -1,7 +1,7 @@
 import os
 from dataclasses import asdict, dataclass, field
 
-from astrapy import DataAPIClient, Database
+from astrapy import AstraDBAdmin, DataAPIClient, Database
 from astrapy.admin import parse_api_endpoint
 from langchain_astradb import AstraDBVectorStore
 
@@ -181,9 +181,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     ]
 
     def get_database_list(self):
+        client = DataAPIClient(token=self.token, environment=self.get_environment())
+
         # Get the admin object
-        client = DataAPIClient(token=self.token)
         admin_client = client.get_admin(token=self.token)
+
+        # Get the list of databases
         db_list = list(admin_client.list_databases())
 
         # Generate the api endpoint for each database
@@ -213,40 +216,26 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Otherwise, get the URL from the database list
         return self.get_database_list().get(self.database_name).get("api_endpoint")
 
+    def get_environment(self):
+        return parse_api_endpoint(self.get_api_endpoint()).environment if self.get_api_endpoint() is not None else None
+
     def get_keyspace(self):
-        keyspace = self.keyspace.strip()
+        keyspace = self.keyspace
 
         if keyspace:
-            return keyspace
+            return keyspace.strip()
 
         return None
 
     def get_database_object(self):
         try:
-            client = DataAPIClient(token=self.token)
+            client = DataAPIClient(token=self.token, environment=self.get_environment())
 
             return client.get_database(
                 api_endpoint=self.get_api_endpoint(),
                 token=self.token,
                 keyspace=self.get_keyspace(),
             )
-        except Exception as e:  # noqa: BLE001
-            self.log(f"Error getting database: {e}")
-
-            return None
-
-    def get_collection_object(self, database: Database | None = None):
-        try:
-            if not database:
-                client = DataAPIClient(token=self.token)
-
-                database = client.get_database(
-                    api_endpoint=self.get_api_endpoint(),
-                    token=self.token,
-                    keyspace=self.get_keyspace(),
-                )
-
-            return database.get_collection(self.collection_name, keyspace=self.get_keyspace())
         except Exception as e:  # noqa: BLE001
             self.log(f"Error getting database: {e}")
 
@@ -269,15 +258,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def collection_data(self, collection_name: str | None = None, database: Database | None = None):
         try:
-            collection_name = collection_name or self.collection_name
-
-            if not database:
-                client = DataAPIClient(token=self.token)
-                database = client.get_database(
-                    api_endpoint=self.get_api_endpoint(),
-                    token=self.token,
-                    keyspace=self.get_keyspace(),
-                )
+            client = DataAPIClient(token=self.token)
+            database = client.get_database(
+                api_endpoint=self.get_api_endpoint(),
+                token=self.token,
+                keyspace=self.get_keyspace(),
+            )
 
             collection = database.get_collection(collection_name, keyspace=self.get_keyspace())
 
@@ -368,11 +354,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         embedding_params = {"embedding": self.embedding_model} if self.embedding_model else {}
         additional_params = self.astradb_vectorstore_kwargs or {}
 
-        # Get the running environment for Langflow
-        environment = (
-            parse_api_endpoint(self.get_api_endpoint()).environment if self.get_api_endpoint() is not None else None
-        )
-
         # Get Langflow version and platform information
         __version__ = get_version_info()["version"]
         langflow_prefix = ""
@@ -385,7 +366,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "content_field": (
                 self.content_field
                 if self.content_field and embedding_params
-                else ("page_content" if self.collection_data() == 0 else None)
+                else ("page_content" if embedding_params and self.collection_data() == 0 else None)
             ),
             "ignore_invalid_documents": self.ignore_invalid_documents,
         }
@@ -398,7 +379,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 api_endpoint=self.get_api_endpoint(),
                 namespace=self.get_keyspace(),
                 collection_name=self.collection_name,
-                environment=environment,
+                environment=self.get_environment(),
                 # Astra DB Usage Tracking Parameters
                 ext_callers=[(f"{langflow_prefix}langflow", __version__)],
                 # Astra DB Vector Store Parameters
@@ -434,11 +415,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             self.log("No documents to add to the Vector Store.")
 
     def _map_search_type(self) -> str:
-        if self.search_type == "Similarity with score threshold":
-            return "similarity_score_threshold"
-        if self.search_type == "MMR (Max Marginal Relevance)":
-            return "mmr"
-        return "similarity"
+        search_type_mapping = {
+            "Similarity with score threshold": "similarity_score_threshold",
+            "MMR (Max Marginal Relevance)": "mmr",
+        }
+
+        return search_type_mapping.get(self.search_type, "similarity")
 
     def _build_search_args(self):
         query = self.search_query if isinstance(self.search_query, str) and self.search_query.strip() else None
@@ -495,10 +477,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         data = docs_to_data(docs)
         self.log(f"Converted documents to data: {len(data)}")
         self.status = data
+
         return data
 
     def get_retriever_kwargs(self):
         search_args = self._build_search_args()
+
         return {
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
