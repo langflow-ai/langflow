@@ -34,7 +34,7 @@ The flow storage location can be customized with the [LANGFLOW_CONFIG_DIR](/envi
 
 If you're new to Langflow, it's OK to feel a bit lost at first. We’ll take you on a tour, so you can orient yourself and start creating applications quickly.
 
-Langflow has four distinct regions: the [workspace](#workspace) is the main area where you build your flows. The [components sidebar](#sidebar) is on the left, and lists the available [components](#components). The [playground](#playground) and [API pane](#api-pane) are available in the upper right corner.
+Langflow has four distinct regions: the [workspace](#workspace) is the main area where you build your flows. The components sidebar is on the left, and lists the available [components](#components). The [playground](#playground) and [API pane](#api-pane) are available in the upper right corner.
 
 ![](/img/workspace.png)
 
@@ -59,21 +59,7 @@ To connect components, drag a line from the output handle (⚪) of one component
 
 For more information, see [Components overview](/concepts-components).
 
-
 <img src="/img/prompt-component.png" alt="Prompt component" style={{display: 'block', margin: 'auto', width: 300}} />
-
-
-### Components sidebar {#sidebar}
-
-Components are listed in the sidebar by component type.
-
-Component **bundles** are components grouped by provider. For example, Langchain modules like **RunnableExecutor** and **CharacterTextSplitter** are grouped under the **Langchain** bundle.
-
-The sidebar includes a component **Search** bar, and includes flags for showing or hiding **Beta** and **Legacy** components.
-
-**Beta** components are still being tested and are not suitable for production workloads.
-
-**Legacy** components are available to use but no longer supported.
 
 ## Playground
 
@@ -83,7 +69,7 @@ Chat with your flow, view inputs and outputs, and modify your AI's memories to t
 
 Either the **Chat Input** or **Chat Output** component can be opened in the **Playground** and tested in real time.
 
-For more information, see the [Playground documentation](/concepts-playground).
+For more information, see the [Playground](/concepts-playground).
 
 ![](/img/playground.png)
 

@@ -58,6 +58,87 @@ The following table lists the handle colors and their corresponding data types:
 | Text | Indigo | #4F46E5 |
 | unknown | Gray | #9CA3AF |
 
+## Component code
+
+A component inherits from a base `Component` class that defines its interface and behavior.
+
+For example, the [Recursive character text splitter](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/langchain_utilities/recursive_character.py) is a child of the [LCTextSplitterComponent](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/base/textsplitters/model.py) class.
+
+```python
+from typing import Any
+
+from langchain_text_splitters import RecursiveCharacterTextSplitter, TextSplitter
+
+from langflow.base.textsplitters.model import LCTextSplitterComponent
+from langflow.inputs.inputs import DataInput, IntInput, MessageTextInput
+from langflow.utils.util import unescape_string
+
+class RecursiveCharacterTextSplitterComponent(LCTextSplitterComponent):
+    display_name: str = "Recursive Character Text Splitter"
+    description: str = "Split text trying to keep all related text together."
+    documentation: str = "https://docs.langflow.org/components-processing"
+    name = "RecursiveCharacterTextSplitter"
+    icon = "LangChain"
+
+    inputs = [
+        IntInput(
+            name="chunk_size",
+            display_name="Chunk Size",
+            info="The maximum length of each chunk.",
+            value=1000,
+        ),
+        IntInput(
+            name="chunk_overlap",
+            display_name="Chunk Overlap",
+            info="The amount of overlap between chunks.",
+            value=200,
+        ),
+        DataInput(
+            name="data_input",
+            display_name="Input",
+            info="The texts to split.",
+            input_types=["Document", "Data"],
+        ),
+        MessageTextInput(
+            name="separators",
+            display_name="Separators",
+            info='The characters to split on.\nIf left empty defaults to ["\\n\\n", "\\n", " ", ""].',
+            is_list=True,
+        ),
+    ]
+
+    def get_data_input(self) -> Any:
+        return self.data_input
+
+    def build_text_splitter(self) -> TextSplitter:
+        if not self.separators:
+            separators: list[str] | None = None
+        else:
+            # check if the separators list has escaped characters
+            # if there are escaped characters, unescape them
+            separators = [unescape_string(x) for x in self.separators]
+
+        return RecursiveCharacterTextSplitter(
+            separators=separators,
+            chunk_size=self.chunk_size,
+            chunk_overlap=self.chunk_overlap,
+        )
+
+```
+
+Components include definitions for inputs and outputs, which will be represented in the UI with color-coded ports.
+
+**Input Definition:** Each input (like `IntInput` or `DataInput`) specifies an input's type, name, and display properties, which appear as configurable fields in the component's UI panel.
+
+**Methods:** Components have methods or functions that handle their functionality. This component has two methods.
+`get_data_input` retrieves the text data to be split from the component's input. This makes the data available to the class.
+`build_text_splitter` creates a `RecursiveCharacterTextSplitter` object by calling its parent class's `build` method. The text is split with the created splitter and passed to the next component.
+When used in a flow, this component:
+
+1. Displays its configuration options in the UI.
+2. Validates user inputs based on the input types.
+3. Processes data using the configured parameters.
+4. Passes results to the next component.
 
 ## Freeze Path
 
@@ -109,6 +190,16 @@ A component's state is stored in a database, while sidebar components are like s
 The component will keep the version number it was initialized to the workspace with. Click the **Update Component** icon (exclamation mark) to bring the component up to the `latest` version. This will change the code of the component in place so you can validate that the component was updated by checking its Python code before and after updating it.
 
 ## Components sidebar
+
+Components are listed in the sidebar by component type.
+
+Component **bundles** are components grouped by provider. For example, Langchain modules like **RunnableExecutor** and **CharacterTextSplitter** are grouped under the **Langchain** bundle.
+
+The sidebar includes a component **Search** bar, and includes flags for showing or hiding **Beta** and **Legacy** components.
+
+**Beta** components are still being tested and are not suitable for production workloads.
+
+**Legacy** components are available to use but no longer supported.
 
 
 
