@@ -298,8 +298,6 @@ async def update_flow(
         await session.commit()
         await session.refresh(db_flow)
 
-        return db_flow
-
     except Exception as e:
         if hasattr(e, "errors"):
             raise HTTPException(status_code=400, detail=str(e)) from e
@@ -316,6 +314,9 @@ async def update_flow(
             ) from e
 
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+    else:
+        return db_flow
 
 
 @router.delete("/{flow_id}", status_code=200)
