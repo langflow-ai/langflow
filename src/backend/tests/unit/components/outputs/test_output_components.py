@@ -28,11 +28,9 @@ class TestChatOutput(ComponentTestBaseWithClient):
     @pytest.fixture
     def file_names_mapping(self):
         return [
-            {"version": "1.0.15", "module": "outputs", "file_name": "ChatOutput"},
-            {"version": "1.0.16", "module": "outputs", "file_name": "ChatOutput"},
-            {"version": "1.0.17", "module": "outputs", "file_name": "ChatOutput"},
-            {"version": "1.0.18", "module": "outputs", "file_name": "ChatOutput"},
             {"version": "1.0.19", "module": "outputs", "file_name": "ChatOutput"},
+            {"version": "1.1.0", "module": "outputs", "file_name": "chat"},
+            {"version": "1.1.1", "module": "outputs", "file_name": "chat"},
         ]
 
 
