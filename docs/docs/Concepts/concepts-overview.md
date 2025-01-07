@@ -21,7 +21,7 @@ A flow can be simple as the [basic prompting flow](/get-started-quickstart), whi
 
 If you're familiar with [ReactFlow](https://reactflow.dev/learn), a **flow** is a node-based application, a **component** is a node, and the connections between components are **edges**.
 
-When a flow is run, Langflow builds a Directed Acyclic Graph (DAG) graph object from the nodes (components) and edges (connections between components), with the nodes sorted to determine the order of execution. The graph build calls the individual components' `def_build` functions to validate and prepare the nodes. This graph is then processed in dependency order. Each node is built and executed sequentially, with results from each built node being passed to nodes that are dependent on that node's result.
+When a flow is run, Langflow builds a Directed Acyclic Graph (DAG) graph object from the nodes (components) and edges (connections between components), with the nodes sorted to determine the order of execution. The graph build calls the individual components' `def_build` functions to validate and prepare the nodes. This graph is then processed in dependency order. Each node is built and executed sequentially, with results from each built node being passed to nodes that are dependent on the previous node's results.
 
 Flows are stored on local disk at these default locations:
 
@@ -45,7 +45,7 @@ The **workspace** is where you create AI applications by connecting and running 
 The workspace controls allow you to adjust your view and lock your flows in place.
 
 * Add **Notes** to flows with the **Add Note** button, similar to commenting in code.
-* To access the [Settings](#settings) menu, click [.material-icons]#settings# **Settings**.
+* To access the [Settings](#settings) menu, click ⚙️ **Settings**.
 
 This menu contains configuration for **Global Variables**, **Langflow API**, **Shortcuts**, and **Messages**.
 
@@ -59,9 +59,11 @@ To connect components, drag a line from the output handle (⚪) of one component
 
 For more information, see [Components overview](/concepts-components).
 
+
 <img src="/img/prompt-component.png" alt="Prompt component" style={{display: 'block', margin: 'auto', width: 300}} />
 
-### Components sidebar
+
+### Components sidebar {#sidebar}
 
 Components are listed in the sidebar by component type.
 
@@ -85,7 +87,7 @@ For more information, see the [Playground documentation](/concepts-playground).
 
 ![](/img/playground.png)
 
-## API
+## API pane {#api-pane}
 
 The **API** pane provides code templates to integrate your flows into external applications.
 
