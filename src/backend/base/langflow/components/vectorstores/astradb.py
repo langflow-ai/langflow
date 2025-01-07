@@ -6,7 +6,7 @@ from langchain_astradb import AstraDBVectorStore
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers import docs_to_data
-from langflow.inputs import DictInput, FloatInput, MessageTextInput, NestedDictInput
+from langflow.inputs import FloatInput, MessageTextInput, NestedDictInput
 from langflow.io import (
     BoolInput,
     DataInput,
@@ -29,7 +29,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     _cached_vector_store: AstraDBVectorStore | None = None
 
-    class NewDatabaseInput():
+    class NewDatabaseInput:
         title: str = "Create New Database"
         description: str = "Create a new database in Astra DB."
         db_names: list[str] = []
@@ -37,7 +37,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         collection_count: int = 0
         record_count: int = 0
 
-    class NewCollectionInput():
+    class NewCollectionInput:
         title: str = "Create New Collection"
         description: str = "Create a new collection in Astra DB."
         status: str = ""
