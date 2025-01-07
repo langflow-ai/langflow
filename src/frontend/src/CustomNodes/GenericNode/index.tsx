@@ -239,31 +239,34 @@ function GenericNode({
           setShowNode={(show) => {
             setNode(data.id, (old) => ({
               ...old,
-              data: { ...old.data, showNode: show },
+              data: {
+                ...old.data,
+                showNode: show,
+              },
             }));
+            updateNodeInternals(data.id);
           }}
           numberOfOutputHandles={shownOutputs.length ?? 0}
-          showNode={showNode}
+          showNode={data.showNode ?? true}
           openAdvancedModal={false}
           onCloseAdvancedModal={() => {}}
           updateNode={handleUpdateCode}
           isOutdated={isOutdated && isUserEdited}
         />
       </div>
-    ) : (
-      <></>
-    );
+    ) : null;
   }, [
     data,
     deleteNode,
     takeSnapshot,
     setNode,
-    showNode,
-    updateNodeCode,
+    data.showNode,
+    updateNodeInternals,
+    shownOutputs.length,
+    handleUpdateCode,
     isOutdated,
     isUserEdited,
     selected,
-    shortcuts,
   ]);
 
   useEffect(() => {

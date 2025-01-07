@@ -205,7 +205,18 @@ const NodeToolbarComponent = memo(
 
     const handleMinimize = useCallback(() => {
       if (isMinimal || !showNode) {
-        setShowNode(!showNode);
+        takeSnapshot();
+        const newShowNode = !showNode;
+        setShowNode(newShowNode);
+
+        setNode(data.id, (old) => ({
+          ...old,
+          data: {
+            ...old.data,
+            showNode: newShowNode,
+          },
+        }));
+
         updateNodeInternals(data.id);
         return;
       }
@@ -213,7 +224,15 @@ const NodeToolbarComponent = memo(
         title:
           "Minimization only available for components with one handle or fewer.",
       });
-    }, [isMinimal, showNode, data.id]);
+    }, [
+      isMinimal,
+      showNode,
+      data.id,
+      setNode,
+      setShowNode,
+      takeSnapshot,
+      updateNodeInternals,
+    ]);
 
     const handleungroup = useCallback(() => {
       if (isGroup) {
@@ -341,83 +360,108 @@ const NodeToolbarComponent = memo(
 
     const [selectedValue, setSelectedValue] = useState(null);
 
-    const handleSelectChange = useCallback((event) => {
-      setSelectedValue(event);
+    const handleSelectChange = useCallback(
+      (event) => {
+        setSelectedValue(event);
 
-      switch (event) {
-        case "save":
-          saveComponent();
-          break;
-        case "freeze":
-          freezeFunction();
-          break;
-        case "freezeAll":
-          FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
-          break;
-        case "code":
-          setOpenModal(!openModal);
-          break;
-        case "advanced":
-          setShowModalAdvanced(true);
-          break;
-        case "show":
-          takeSnapshot();
-          handleMinimize();
-          break;
-        case "Share":
-          shareComponent();
-          break;
-        case "Download":
-          downloadNode(flowComponent!);
-          break;
-        case "SaveAll":
-          addFlow({
-            flow: flowComponent,
-            override: false,
-          });
-          break;
-        case "documentation":
-          openDocs();
-          break;
-        case "disabled":
-          break;
-        case "ungroup":
-          handleungroup();
-          break;
-        case "override":
-          setShowOverrideModal(true);
-          break;
-        case "delete":
-          deleteNode(data.id);
-          break;
-        case "update":
-          updateNode();
-          break;
-        case "copy":
-          const node = nodes.filter((node) => node.id === data.id);
-          setLastCopiedSelection({ nodes: _.cloneDeep(node), edges: [] });
-          break;
-        case "duplicate":
-          paste(
-            {
-              nodes: [nodes.find((node) => node.id === data.id)!],
-              edges: [],
-            },
-            {
-              x: 50,
-              y: 10,
-              paneX: nodes.find((node) => node.id === data.id)?.position.x,
-              paneY: nodes.find((node) => node.id === data.id)?.position.y,
-            },
-          );
-          break;
-        case "toolMode":
-          handleActivateToolMode();
-          break;
-      }
+        switch (event) {
+          case "save":
+            saveComponent();
+            break;
+          case "freeze":
+            freezeFunction();
+            break;
+          case "freezeAll":
+            FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
+            break;
+          case "code":
+            setOpenModal(!openModal);
+            break;
+          case "advanced":
+            setShowModalAdvanced(true);
+            break;
+          case "show":
+            takeSnapshot();
+            handleMinimize();
+            break;
+          case "Share":
+            shareComponent();
+            break;
+          case "Download":
+            downloadNode(flowComponent!);
+            break;
+          case "SaveAll":
+            addFlow({
+              flow: flowComponent,
+              override: false,
+            });
+            break;
+          case "documentation":
+            openDocs();
+            break;
+          case "disabled":
+            break;
+          case "ungroup":
+            handleungroup();
+            break;
+          case "override":
+            setShowOverrideModal(true);
+            break;
+          case "delete":
+            deleteNode(data.id);
+            break;
+          case "update":
+            updateNode();
+            break;
+          case "copy":
+            const node = nodes.filter((node) => node.id === data.id);
+            setLastCopiedSelection({ nodes: _.cloneDeep(node), edges: [] });
+            break;
+          case "duplicate":
+            paste(
+              {
+                nodes: [nodes.find((node) => node.id === data.id)!],
+                edges: [],
+              },
+              {
+                x: 50,
+                y: 10,
+                paneX: nodes.find((node) => node.id === data.id)?.position.x,
+                paneY: nodes.find((node) => node.id === data.id)?.position.y,
+              },
+            );
+            break;
+          case "toolMode":
+            handleActivateToolMode();
+            break;
+        }
 
-      setSelectedValue(null);
-    }, []);
+        setSelectedValue(null);
+      },
+      [
+        handleMinimize,
+        takeSnapshot,
+        saveComponent,
+        freezeFunction,
+        FreezeAllVertices,
+        currentFlowId,
+        data.id,
+        openModal,
+        handleungroup,
+        shareComponent,
+        flowComponent,
+        openDocs,
+        deleteNode,
+        updateNode,
+        nodes,
+        paste,
+        handleActivateToolMode,
+        setLastCopiedSelection,
+        setShowModalAdvanced,
+        setShowOverrideModal,
+        addFlow,
+      ],
+    );
 
     const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue({
       node: data.node!,
