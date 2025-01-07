@@ -85,13 +85,6 @@ to access financial data and market information from Yahoo Finance."""
     def run_model(self) -> list[Data]:
         return self.fetch_content()
 
-    def fetch_content(self) -> list[Data]:
-        return self._yahoo_finance_tool(
-            self.symbol,
-            YahooFinanceMethod(self.method),
-            self.num_news,
-        )
-
     def fetch_content_text(self) -> Message:
         data = self.fetch_content()
         result_string = ""
@@ -100,14 +93,7 @@ to access financial data and market information from Yahoo Finance."""
         self.status = result_string
         return Message(text=result_string)
 
-    def _yahoo_finance_tool(
-        self,
-        symbol: str,
-        method: YahooFinanceMethod,
-        num_news: int | None = 5,
-    ) -> list[Data]:
-        ticker = yf.Ticker(symbol)
-
+    def _fetch_yfinance_data(self, ticker: yf.Ticker, method: YahooFinanceMethod, num_news: int | None) -> str:
         try:
             if method == YahooFinanceMethod.GET_INFO:
                 result = ticker.info
@@ -115,21 +101,43 @@ to access financial data and market information from Yahoo Finance."""
                 result = ticker.news[:num_news]
             else:
                 result = getattr(ticker, method.value)()
-
-            result = pprint.pformat(result)
-
-            if method == YahooFinanceMethod.GET_NEWS:
-                data_list = [
-                    Data(text=f"{article['title']}: {article['link']}", data=article)
-                    for article in ast.literal_eval(result)
-                ]
-            else:
-                data_list = [Data(text=result, data={"result": result})]
-
+            return pprint.pformat(result)
         except Exception as e:
             error_message = f"Error retrieving data: {e}"
             logger.debug(error_message)
             self.status = error_message
             raise ToolException(error_message) from e
+
+    def fetch_content(self) -> list[Data]:
+        try:
+            return self._yahoo_finance_tool(
+                self.symbol,
+                YahooFinanceMethod(self.method),
+                self.num_news,
+            )
+        except ToolException:
+            raise
+        except Exception as e:
+            error_message = f"Unexpected error: {e}"
+            logger.debug(error_message)
+            self.status = error_message
+            raise ToolException(error_message) from e
+
+    def _yahoo_finance_tool(
+        self,
+        symbol: str,
+        method: YahooFinanceMethod,
+        num_news: int | None = 5,
+    ) -> list[Data]:
+        ticker = yf.Ticker(symbol)
+        result = self._fetch_yfinance_data(ticker, method, num_news)
+
+        if method == YahooFinanceMethod.GET_NEWS:
+            data_list = [
+                Data(text=f"{article['title']}: {article['link']}", data=article)
+                for article in ast.literal_eval(result)
+            ]
+        else:
+            data_list = [Data(text=result, data={"result": result})]
 
         return data_list
