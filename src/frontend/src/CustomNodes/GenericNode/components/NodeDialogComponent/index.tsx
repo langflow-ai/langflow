@@ -7,10 +7,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { NodeInputFieldComponentType } from "@/types/components";
-import { memo, useCallback } from "react";
-import NodeInputField from "../NodeInputField";
-import RenderInputParameters from "../RenderInputParameters";
 
 interface NodeDialogProps {
   open: boolean;
