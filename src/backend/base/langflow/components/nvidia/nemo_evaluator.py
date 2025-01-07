@@ -28,16 +28,23 @@ class NVIDIANeMoEvaluatorComponent(Component):
     beta = True
 
     # Endpoint configuration
-    endpoint = "localhost:11000"
-    model_endpoint = "localhost:10000"
-    url = f"http://{endpoint}/v1/evaluations"
-    model_url = f"http://{model_endpoint}/v1/models"
+    # This assumes that the inference URL is a Kubernetes service in the same namespace as the evaluator
     inference_url = "http://nemo-nim.default.svc.cluster.local:8000/v1"
 
     headers = {"accept": "application/json", "Content-Type": "application/json"}
 
     # Define initial static inputs
     inputs = [
+        StrInput(
+            name="evaluator_base_url",
+            display_name="NVIDIA NeMo Evaluator Base URL",
+            info="The base URL of the NVIDIA NeMo Evaluator API.",
+        ),
+        StrInput(
+            name="model_base_url",
+            display_name="NVIDIA NeMo Model URL",
+            info="The base URL of the NVIDIA NIM API to obtain models that can be evaluated.",
+        ),
         DropdownInput(
             name="000_llm_name",
             display_name="LLM Name",
@@ -49,6 +56,8 @@ class NVIDIANeMoEvaluatorComponent(Component):
             name="001_tag",
             display_name="Tag",
             info="Any user-provided value. Generated results will be stored in the NeMo Data Store under this name.",
+            value="default",
+            required=True,
         ),
         DropdownInput(
             name="002_evaluation_type",
@@ -75,6 +84,8 @@ class NVIDIANeMoEvaluatorComponent(Component):
             name="110_task_name",
             display_name="Task Name",
             info="Task from https://github.com/EleutherAI/lm-evaluation-harness/tree/v0.4.3/lm_eval/tasks#tasks",
+            value="gsm8k",
+            required=True,
         ),
         IntInput(
             name="112_few_shot_examples",
@@ -193,8 +204,10 @@ class NVIDIANeMoEvaluatorComponent(Component):
 
     def fetch_models(self):
         """Fetch models from the specified API endpoint and return a list of model names."""
+        model_url = f"{self.model_base_url}/v1/models"
+
         try:
-            response = httpx.get(self.model_url, headers=self.headers)
+            response = httpx.get(model_url, headers=self.headers)
             response.raise_for_status()
             models_data = response.json()
             return [model["id"] for model in models_data.get("data", [])]
@@ -268,7 +281,7 @@ class NVIDIANeMoEvaluatorComponent(Component):
 
             logger.info("Build config update completed successfully.")
         except (httpx.RequestError, ValueError) as exc:
-            error_msg = f"Unexpected error on URL {self.url}"
+            error_msg = f"Unexpected error on URL {self.evaluator_base_url}"
             logger.exception(error_msg)
             raise ValueError(error_msg) from exc
         return build_config
@@ -285,29 +298,31 @@ class NVIDIANeMoEvaluatorComponent(Component):
             error_message = f"Unsupported evaluation type: {evaluation_type}"
             raise ValueError(error_message)
 
+        evaluator_url = f"{self.evaluator_base_url}/v1/evaluations"
+
         # Send the request and log the output
         try:
             # Format the data as a JSON string for logging
             formatted_data = json.dumps(data, indent=2)
             self.log(
-                f"Sending evaluation request to NeMo API with data: {formatted_data}", name="NeMoEvaluatorComponent"
+                f"Sending evaluation request to NeMo API with data: {formatted_data}"
             )
 
             async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.post(self.url, headers=self.headers, json=data)
+                response = await client.post(evaluator_url, headers=self.headers, json=data)
                 response.raise_for_status()
                 result = response.json()
 
                 # Log the successful response
                 formatted_result = json.dumps(result, indent=2)
-                self.log(f"Received successful evaluation response: {formatted_result}", name="NeMoEvaluatorComponent")
+                self.log(f"Received successful evaluation response: {formatted_result}")
                 return result
         except httpx.HTTPStatusError as exc:
-            error_msg = f"HTTP error {exc.response.status_code} on URL {self.url}."
+            error_msg = f"HTTP error {exc.response.status_code} on URL {evaluator_url}."
             self.log(error_msg)
             raise ValueError(error_msg) from exc
         except Exception as exc:
-            error_msg = f"Unexpected error on URL {self.url}"
+            error_msg = f"Unexpected error on URL {evaluator_url}"
             logger.exception(error_msg)
             raise ValueError(error_msg) from exc
 
