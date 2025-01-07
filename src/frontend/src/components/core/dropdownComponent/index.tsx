@@ -1,4 +1,7 @@
+import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
+import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
+import useAlertStore from "@/stores/alertStore";
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import Fuse from "fuse.js";
 import { cloneDeep } from "lodash";
@@ -22,6 +25,7 @@ import {
   PopoverContentWithoutPortal,
   PopoverTrigger,
 } from "../../ui/popover";
+import { BaseInputProps } from "../parameterRenderComponent/types";
 
 export default function Dropdown({
   disabled,
@@ -36,7 +40,8 @@ export default function Dropdown({
   children,
   name,
   dialogInputs,
-}: DropDownComponent): JSX.Element {
+  ...baseInputProps
+}: BaseInputProps & DropDownComponent): JSX.Element {
   const placeholderName = name
     ? formatPlaceholderName(name)
     : "Choose an option...";
@@ -64,6 +69,26 @@ export default function Dropdown({
     setFilteredOptions(value ? filtered : options);
     setCustomValue(value);
   };
+
+  const { nodeClass, handleNodeClass } = baseInputProps;
+
+  const postTemplateValue = usePostTemplateValue({
+    parameterId: name || "",
+    nodeId: id,
+    node: nodeClass!,
+    tool_mode: nodeClass?.tool_mode ?? false,
+  });
+
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+
+  const handleRefreshButtonPress = () =>
+    mutateTemplate(
+      value,
+      nodeClass!,
+      handleNodeClass,
+      postTemplateValue,
+      setErrorData,
+    );
 
   useEffect(() => {
     if (disabled && value !== "") {
@@ -198,7 +223,7 @@ export default function Dropdown({
       <CommandItem
         className="flex items-center justify-start gap-2 truncate py-3 text-xs font-semibold text-muted-foreground"
         onSelect={() => {
-          setOpenDialog(true); // TODO: Implement refresh list
+          handleRefreshButtonPress();
         }}
       >
         <div className="flex items-center gap-2 pl-1">
