@@ -7,6 +7,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { NodeInputFieldComponentType } from "@/types/components";
+import { memo, useCallback } from "react";
+import NodeInputField from "../NodeInputField";
+import RenderInputParameters from "../RenderInputParameters";
 
 interface NodeDialogProps {
   open: boolean;
@@ -21,30 +25,35 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
   content,
   dialogInputs,
 }) => {
-  const data = {
-    title: "Connect to an Astra DB database",
-    description:
-      "Set environment variables for a database to connect. You can create a DataStax Astra account or sign in to access your Application Tokens and Endpoints.",
-    footer: <div>Footer</div>,
+  const mockContent = {
+    status: "",
+    dimensions: 0,
+    model: "",
+    similarity_metrics: [],
   };
-
-  // console.log("dialogInputs", dialogInputs);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            <div className="flex items-center">
-              <span className="pb-2">{data.title}</span>
-            </div>
-          </DialogTitle>
-          <DialogDescription>
-            <div className="flex items-center gap-2">{data.description}</div>
-          </DialogDescription>
-        </DialogHeader>
-        <div className="">{content}</div>
-        <DialogFooter>{data.footer}</DialogFooter>
+        {dialogInputs?.map((input) => (
+          <DialogHeader>
+            <DialogTitle>
+              <div className="flex items-center">
+                <span className="pb-2">{input.title}</span>
+              </div>
+            </DialogTitle>
+            <DialogDescription>
+              <div className="flex items-center gap-2">{input.description}</div>
+            </DialogDescription>
+          </DialogHeader>
+        ))}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={() => alert("Add Logic for save")}>Save</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
