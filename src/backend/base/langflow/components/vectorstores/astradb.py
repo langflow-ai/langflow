@@ -6,10 +6,9 @@ from langchain_astradb import AstraDBVectorStore
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers import docs_to_data
-from langflow.inputs import FloatInput, MessageTextInput, NestedDictInput
+from langflow.inputs import FloatInput, NestedDictInput
 from langflow.io import (
     BoolInput,
-    DataInput,
     DropdownInput,
     HandleInput,
     IntInput,
@@ -47,23 +46,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         model: str = ""
         similarity_metrics: list[str] = field(default_factory=list)
         icon: str = "Collection"
-
-    base_inputs = LCVectorStoreComponent.inputs
-    if "search_query" not in [input_.name for input_ in base_inputs]:
-        base_inputs.append(
-            MessageTextInput(
-                name="search_query",
-                display_name="Search Query",
-                tool_mode=True,
-            )
-        )
-    if "ingest_data" not in [input_.name for input_ in base_inputs]:
-        base_inputs.append(
-            DataInput(
-                name="ingest_data",
-                display_name="Ingest Data",
-            )
-        )
 
     inputs = [
         SecretStrInput(
@@ -136,7 +118,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             input_types=["Embeddings"],
             info="Allows an embedding model configuration.",
         ),
-        *base_inputs,
+        *LCVectorStoreComponent.inputs,
         IntInput(
             name="number_of_results",
             display_name="Number of Search Results",
