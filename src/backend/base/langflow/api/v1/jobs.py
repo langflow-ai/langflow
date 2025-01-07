@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 from pydantic import BaseModel, Field
-from sqlmodel import col, select
+from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser
 from langflow.api.v1.endpoints import simple_run_flow_task
@@ -33,7 +33,7 @@ class CreateJobRequest(BaseModel):
     input_request: SimplifiedAPIRequest = Field(..., description="Input request for the flow")
 
 
-@router.post("/{flow_id_or_name}", response_model=str)
+@router.post("/{flow_id_or_name}")
 async def create_job(
     request: CreateJobRequest,
     user: CurrentActiveUser,
@@ -46,10 +46,10 @@ async def create_job(
     in the job repository and processed asynchronously.
 
     Args:
-        request (CreateJobRequest): The job creation request parameters, including
+        request: The job creation request parameters, including
             a flow input and an optional job name.
-        user (CurrentActiveUser): The currently authenticated user.
-        flow (Flow): The flow object identified by ID or name, obtained via dependency injection.
+        user: The currently authenticated user.
+        flow: The flow object identified by ID or name, obtained via dependency injection.
 
     Returns:
         str: The unique identifier (UUID string) of the newly created job.
@@ -106,7 +106,10 @@ async def get_job(
             msg = "User not found"
             raise HTTPException(status_code=404, detail=msg)
         stmt = select(Job).where(Job.id == job_id, Job.user_id == user.id)
-        return (await session.exec(stmt)).first()
+        result = (await session.exec(stmt)).first()
+        if not result:
+            raise HTTPException(status_code=404, detail="Job not found")
+        return result
 
 
 @router.get("/", response_model=list[JobRead])
@@ -131,19 +134,25 @@ async def get_jobs(
 
     Returns:
         list[JobRead]: A list of job records matching the given criteria.
+
+    Raises:
+        HTTPException:
+            - 500: If there's an error retrieving jobs or the job service is not initialized
+            - 404: If the user is not found
     """
-    if pending is not None:
-        jobs = await task_service.get_jobs(user_id=user.id, pending=pending, status=status)
-        ids = [job.id for job in jobs]
-        async with session_scope() as session:
-            stmt = select(Job).where(col(Job.id).in_(ids))
-            return (await session.exec(stmt)).all()
-    else:
-        async with session_scope() as session:
-            stmt = select(Job).where(Job.user_id == user.id)
-            if status is not None:
-                stmt = stmt.where(Job.status == status)
-            return (await session.exec(stmt)).all()
+    try:
+        if not user.id:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        return await task_service.get_jobs(user_id=user.id, pending=pending, status=status)
+    except ValueError as exc:
+        # This handles cases where the job service is not properly initialized
+        logger.error(f"Job service error: {exc}")
+        raise HTTPException(status_code=500, detail="Job service is not properly initialized") from exc
+    except Exception as exc:
+        # Handle any other unexpected errors
+        logger.error(f"Error retrieving jobs: {exc}")
+        raise HTTPException(status_code=500, detail="An error occurred while retrieving jobs") from exc
 
 
 @router.delete("/{job_id}")
