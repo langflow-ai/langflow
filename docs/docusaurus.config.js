@@ -138,7 +138,11 @@ const config = {
           },
           {
             to: "/concepts-playground",
-            from: "/guides-chat-memory",
+            from: [
+              "/workspace-playground",
+              "/workspace-logs",
+              "/guides-chat-memory",
+            ],
           },
           {
             to: "/configuration-objects",
@@ -163,6 +167,10 @@ const config = {
           {
             to: "/components-vector-stores",
             from: "/components-rag",
+          },
+          {
+            to: "/concepts-api",
+            from: "/workspace-api",
           },
           // add more redirects like this
           // {

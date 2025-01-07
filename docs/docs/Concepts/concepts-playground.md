@@ -23,6 +23,16 @@ When you run a flow in the **Playground**, Langflow calls the `/build/{flow_id}/
 
 The `build` function allows components to execute logic at runtime. For example, the [Recursive character text splitter](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/langchain_utilities/recursive_character.py) is a child of the `LCTextSplitterComponent` class. When text needs to be processed, the parent class's `build` method is called, which creates a `RecursiveCharacterTextSplitter` object and uses it to split the text according to the defined parameters. The split text is then passed on to the next component. This all occurs when the component is built.
 
+## View logs in playground
+
+The **Logs** pane provides a detailed record of all component executions within a workspace. It is designed to help you track actions, debug issues, and understand the flow of data through various components.
+
+1. To access the **Logs** pane, click your **Flow Name**, and then select **Logs**.
+
+![](/img/logs.png)
+
+2. All cells in the **Logs** view can be opened and inspected.
+
 ## Memory Management
 
 When you send a message from the **Playground** interface, the interactions for that session are stored in the **Message Logs**.
