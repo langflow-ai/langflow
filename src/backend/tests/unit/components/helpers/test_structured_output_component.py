@@ -10,8 +10,6 @@ from langflow.components.helpers.structured_output import StructuredOutputCompon
 from langflow.helpers.base_model import build_model_from_schema
 from langflow.inputs.inputs import TableInput
 from langflow.schema.data import Data
-from pydantic import BaseModel
-from typing_extensions import override
 
 
 class TestStructuredOutputComponent:
