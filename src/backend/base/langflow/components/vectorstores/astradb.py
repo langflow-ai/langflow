@@ -110,8 +110,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             options=[],
             options_metadata=[
                 {
-                    "provider": "unknown",
-                    "model": "unknown",
+                    "provider": None,
+                    "model": None,
                     "records": 0,
                     "icon": "",
                 }
@@ -312,13 +312,13 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     "provider": (
                         col.options.vector.service.provider
                         if col.options.vector and col.options.vector.service
-                        else "unknown"
+                        else None
                     ),
                     "icon": "",
                     "model": (
                         col.options.vector.service.model_name
                         if col.options.vector and col.options.vector.service
-                        else "unknown"
+                        else None
                     ),
                 }
                 for col in collection_list
