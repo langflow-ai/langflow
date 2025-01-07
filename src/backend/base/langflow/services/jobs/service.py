@@ -11,7 +11,7 @@ from apscheduler.schedulers.base import SchedulerAlreadyRunningError
 from apscheduler.triggers.date import DateTrigger
 from fastapi.encoders import jsonable_encoder
 from loguru import logger
-from sqlmodel import select
+from sqlmodel import col, select
 
 from langflow.scheduling.jobstore import AsyncSQLModelJobStore
 from langflow.scheduling.scheduler import AsyncScheduler
@@ -298,15 +298,11 @@ class JobsService(Service):
             status: Optional job status to filter by
 
         Returns:
-            list[dict]: List of jobs as dictionaries containing job attributes
+            list[JobRead]: List of jobs matching the filter criteria
 
         Raises:
             ValueError: If job store is not initialized
             Exception: If retrieving jobs fails
-
-        Note:
-            If no user_id is provided, all jobs in the store will be returned.
-            The pending filter is only applied when a user_id is provided.
         """
         await self._ensure_scheduler_running()
         if self.job_store is None:
@@ -314,13 +310,25 @@ class JobsService(Service):
             logger.error(msg)
             raise ValueError(msg)
         try:
-            if user_id:
-                jobs = await self.job_store.get_user_jobs(user_id, pending, status)
-                return [JobRead.model_validate(job, from_attributes=True) for job in jobs]
-            # For other filters, we'll need to implement corresponding methods in the jobstore
-            # For now, we'll just get all jobs if no user_id is provided
-            jobs = await self.job_store.get_all_jobs()
-            return [JobRead.model_validate(job, from_attributes=True) for job in jobs]
+            if pending is not None:
+                # When pending is provided, use job store's get_user_jobs which handles pending status
+                jobs = await self.job_store.get_user_jobs(user_id, pending=pending, status=status)
+                # Convert to list of IDs and fetch from database to ensure consistency
+                ids = [job.id for job in jobs]
+                async with session_scope() as session:
+                    stmt = select(Job).where(col(Job.id).in_(ids))
+                    db_jobs = (await session.exec(stmt)).all()
+                    return [JobRead.model_validate(job, from_attributes=True) for job in db_jobs]
+            else:
+                # When pending is not provided, directly query the database
+                async with session_scope() as session:
+                    stmt = select(Job)
+                    if user_id:
+                        stmt = stmt.where(Job.user_id == user_id)
+                    if status is not None:
+                        stmt = stmt.where(Job.status == status)
+                    db_jobs = (await session.exec(stmt)).all()
+                    return [JobRead.model_validate(job, from_attributes=True) for job in db_jobs]
         except Exception as exc:
             logger.error(f"Error getting tasks: {exc}")
             raise
