@@ -113,7 +113,6 @@ class RunFlowBaseComponent(Component):
         try:
             # Get all inputs from the graph
             new_fields = self.get_new_fields_from_graph(graph)
-            # tool_mode_inputs = [field for field in new_fields if field.get("tool_mode") is True]
             old_fields = self.get_old_fields(build_config, new_fields)
             self.delete_fields(build_config, old_fields)
             build_config = self.add_new_fields(build_config, new_fields)
@@ -129,7 +128,7 @@ class RunFlowBaseComponent(Component):
         for vertex in inputs_vertex:
             field_template = vertex.data.get("node", {}).get("template", {})
             field_order = vertex.data.get("node", {}).get("field_order", [])
-            if field_order in field_template:
+            if field_order and field_template:
                 new_vertex_inputs = [
                     dotdict(
                         {
@@ -139,21 +138,9 @@ class RunFlowBaseComponent(Component):
                             "tool_mode": not (field_template[input_name].get("advanced", False)),
                         }
                     )
-                    for input_name in field_order
+                    for input_name in field_order if input_name in field_template
                 ]
                 new_fields += new_vertex_inputs
-
-        # for vertex in inputs_vertex:
-        #     new_vertex_inputs = []
-        #     field_template = vertex.data["node"]["template"]
-        #     for inp in field_template:
-        #         if inp not in {"code", "_type"}:
-        #             field_template[inp]["display_name"] = (
-        #                 vertex.display_name + " - " + field_template[inp]["display_name"]
-        #             )
-        #             field_template[inp]["name"] = vertex.id + "|" + inp
-        #             new_vertex_inputs.append(field_template[inp])
-        #     new_fields += new_vertex_inputs
         return new_fields
 
     def add_new_fields(self, build_config: dotdict, new_fields: list[dotdict]) -> dotdict:
