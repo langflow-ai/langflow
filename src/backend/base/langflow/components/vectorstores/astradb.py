@@ -336,6 +336,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
         ]
 
+        # Allow fallback to API Endpoint if database is not set
+        if self.token and not database_options:
+            build_config["api_endpoint"]["advanced"] = False
+            build_config["database_name"]["advanced"] = True
+        else:
+            build_config["api_endpoint"]["advanced"] = True
+            build_config["database_name"]["advanced"] = False
+
         # Refresh the collection name options
         collection_options = self._initialize_collection_options()
         build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
