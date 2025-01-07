@@ -83,6 +83,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             real_time_refresh=True,
             advanced=True,
         ),
+        StrInput(
+            name="environment",
+            display_name="Environment",
+            info="The environment for the Astra DB API Endpoint.",
+            advanced=True,
+        ),
         DropdownInput(
             name="database_name",
             display_name="Database",
@@ -181,7 +187,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     ]
 
     def get_database_list(self):
-        client = DataAPIClient(token=self.token, environment=self.get_environment())
+        client = DataAPIClient(token=self.token, environment=self.environment)
 
         # Get the admin object
         admin_client = client.get_admin(token=self.token)
@@ -216,9 +222,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Otherwise, get the URL from the database list
         return self.get_database_list().get(self.database_name).get("api_endpoint")
 
-    def get_environment(self):
-        return parse_api_endpoint(self.get_api_endpoint()).environment if self.get_api_endpoint() is not None else None
-
     def get_keyspace(self):
         keyspace = self.keyspace
 
@@ -229,7 +232,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def get_database_object(self):
         try:
-            client = DataAPIClient(token=self.token, environment=self.get_environment())
+            client = DataAPIClient(token=self.token, environment=self.environment)
 
             return client.get_database(
                 api_endpoint=self.get_api_endpoint(),
@@ -243,7 +246,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def collection_exists(self):
         try:
-            client = DataAPIClient(token=self.token)
+            client = DataAPIClient(token=self.token, environment=self.environment)
             database = client.get_database(
                 api_endpoint=self.get_api_endpoint(),
                 token=self.token,
@@ -258,7 +261,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def collection_data(self, collection_name: str | None = None, database: Database | None = None):
         try:
-            client = DataAPIClient(token=self.token)
+            client = DataAPIClient(token=self.token, environment=self.environment)
             database = client.get_database(
                 api_endpoint=self.get_api_endpoint(),
                 token=self.token,
@@ -379,7 +382,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 api_endpoint=self.get_api_endpoint(),
                 namespace=self.get_keyspace(),
                 collection_name=self.collection_name,
-                environment=self.get_environment(),
+                environment=self.environment,
                 # Astra DB Usage Tracking Parameters
                 ext_callers=[(f"{langflow_prefix}langflow", __version__)],
                 # Astra DB Vector Store Parameters
