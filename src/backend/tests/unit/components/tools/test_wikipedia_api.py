@@ -75,6 +75,7 @@ def test_fetch_content_text():
     assert isinstance(result, Message)
     assert result.text == "First result\nSecond result\n"
 
+
 def test_wikipedia_error_handling(mock_wikipedia_wrapper):
     component = WikipediaAPIComponent()
 
