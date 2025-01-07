@@ -129,7 +129,7 @@ class RunFlowBaseComponent(Component):
         for vertex in inputs_vertex:
             field_template = vertex.data.get("node", {}).get("template", {})
             field_order = vertex.data.get("node", {}).get("field_order", [])
-            if field_order and field_template:
+            if field_order in field_template:
                 new_vertex_inputs = [
                     dotdict(
                         {
