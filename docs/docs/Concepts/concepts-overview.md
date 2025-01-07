@@ -81,6 +81,14 @@ For more information, see the [API pane](/concepts-api).
 
 ![](/img/api-pane.png)
 
+## View logs
+
+The **Logs** pane provides a detailed record of all component executions within a workspace.
+
+To access the **Logs** pane, click your **Flow Name**, and then select **Logs**.
+
+![](/img/logs.png)
+
 ## Projects and folders
 
 The **My Projects** page displays all the flows and components you've created in the Langflow workspace.
