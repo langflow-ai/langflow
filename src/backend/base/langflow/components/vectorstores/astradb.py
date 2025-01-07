@@ -73,7 +73,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             info="Authentication token for accessing Astra DB.",
             value="ASTRA_DB_APPLICATION_TOKEN",
             required=True,
-            advanced=os.getenv("ASTRA_ENHANCED", "false").lower() == "true",
             real_time_refresh=True,
         ),
         SecretStrInput(
@@ -268,16 +267,19 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             return False
 
-    def collection_data(self, collection: Collection | None = None):
+    def collection_data(self, collection_name: str | None = None, database: Database | None = None):
         try:
-            if not collection:
+            collection_name = collection_name or self.collection_name
+
+            if not database:
                 client = DataAPIClient(token=self.token)
                 database = client.get_database(
                     api_endpoint=self.get_api_endpoint(),
                     token=self.token,
                     keyspace=self.get_keyspace(),
                 )
-                collection = database.get_collection(self.collection_name, keyspace=self.get_keyspace())
+
+            collection = database.get_collection(collection_name, keyspace=self.get_keyspace())
 
             return collection.estimated_document_count()
         except Exception as e:  # noqa: BLE001
@@ -288,7 +290,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     def _initialize_database_options(self):
         try:
             return [
-                {"name": name, "collections": info["collections"], "records": info["records"]}
+                {"name": name, "collections": info["collections"]}
                 for name, info in self.get_database_list().items()
             ]
         except Exception as e:  # noqa: BLE001
@@ -307,15 +309,17 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return [
                 {
                     "name": col.name,
-                    "records": 0, #self.collection_data(collection=self.get_collection_object(col.name, database)),
+                    "records": self.collection_data(collection_name=col.name, database=database),
                     "provider": (
-                        col.options.vector.service.provider if col.options.vector and col.options.vector.service else ""
+                        col.options.vector.service.provider
+                        if col.options.vector and col.options.vector.service
+                        else "unknown"
                     ),
                     "icon": "",
                     "model": (
                         col.options.vector.service.model_name
                         if col.options.vector and col.options.vector.service
-                        else ""
+                        else "unknown"
                     ),
                 }
                 for col in collection_list
@@ -335,7 +339,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Refresh the collection name options
         collection_options = self._initialize_collection_options()
-
         build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
         build_config["collection_name"]["options_metadata"] = [
             {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
