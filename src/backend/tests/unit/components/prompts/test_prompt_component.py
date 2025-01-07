@@ -17,11 +17,9 @@ class TestPromptComponent(ComponentTestBaseWithClient):
     @pytest.fixture
     def file_names_mapping(self):
         return [
-            {"version": "1.0.15", "module": "prompts", "file_name": "Prompt"},
-            {"version": "1.0.16", "module": "prompts", "file_name": "Prompt"},
-            {"version": "1.0.17", "module": "prompts", "file_name": "Prompt"},
-            {"version": "1.0.18", "module": "prompts", "file_name": "Prompt"},
             {"version": "1.0.19", "module": "prompts", "file_name": "Prompt"},
+            {"version": "1.1.0", "module": "prompts", "file_name": "prompt"},
+            {"version": "1.1.1", "module": "prompts", "file_name": "prompt"},
         ]
 
     def test_post_code_processing(self, component_class, default_kwargs):

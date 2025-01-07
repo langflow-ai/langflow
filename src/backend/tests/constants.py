@@ -1,1 +1,1 @@
-SUPPORTED_VERSIONS = ["1.0.17", "1.0.18", "1.0.19"]
+SUPPORTED_VERSIONS = ["1.0.19", "1.1.0", "1.1.1"]

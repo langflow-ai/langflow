@@ -30,11 +30,9 @@ class TestChatInput(ComponentTestBaseWithClient):
     @pytest.fixture
     def file_names_mapping(self):
         return [
-            {"version": "1.0.15", "module": "inputs", "file_name": "ChatInput"},
-            {"version": "1.0.16", "module": "inputs", "file_name": "ChatInput"},
-            {"version": "1.0.17", "module": "inputs", "file_name": "ChatInput"},
-            {"version": "1.0.18", "module": "inputs", "file_name": "ChatInput"},
             {"version": "1.0.19", "module": "inputs", "file_name": "ChatInput"},
+            {"version": "1.1.0", "module": "inputs", "file_name": "chat"},
+            {"version": "1.1.1", "module": "inputs", "file_name": "chat"},
         ]
 
     async def test_message_response(self, component_class, default_kwargs):
@@ -142,9 +140,7 @@ class TestTextInputComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def file_names_mapping(self):
         return [
-            {"version": "1.0.15", "module": "inputs", "file_name": "TextInput"},
-            {"version": "1.0.16", "module": "inputs", "file_name": "TextInput"},
-            {"version": "1.0.17", "module": "inputs", "file_name": "TextInput"},
-            {"version": "1.0.18", "module": "inputs", "file_name": "TextInput"},
             {"version": "1.0.19", "module": "inputs", "file_name": "TextInput"},
+            {"version": "1.1.0", "module": "inputs", "file_name": "text"},
+            {"version": "1.1.1", "module": "inputs", "file_name": "text"},
         ]
