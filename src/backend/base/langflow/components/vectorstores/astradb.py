@@ -290,8 +290,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     def _initialize_database_options(self):
         try:
             return [
-                {"name": name, "collections": info["collections"]}
-                for name, info in self.get_database_list().items()
+                {"name": name, "collections": info["collections"]} for name, info in self.get_database_list().items()
             ]
         except Exception as e:  # noqa: BLE001
             self.log(f"Error fetching databases: {e}")
