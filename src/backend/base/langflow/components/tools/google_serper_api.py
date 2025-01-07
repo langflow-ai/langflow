@@ -70,9 +70,12 @@ class GoogleSerperAPIComponent(LCToolComponent):
         else:
             list_results = []
 
-        data = [Data(data=result, text=result.get("snippet", "")) for result in list_results]
-        self.status = data
-        return data
+		data_list = []
+	 	for result in list_results:
+	 		result["text"] = result.pop("snippet", "")
+	 		data_list.append(Data(data=result))
+        self.status = data_list
+        return data_list
 
     def build_tool(self) -> Tool:
         return StructuredTool.from_function(
