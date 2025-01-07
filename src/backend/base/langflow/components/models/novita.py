@@ -59,6 +59,7 @@ class NovitaModelComponent(LCModelComponent):
             info="The Novita API Key to use for Novita AI models.",
             advanced=False,
             value="NOVITA_API_KEY",
+            real_time_refresh=True,
         ),
         SliderInput(name="temperature", display_name="Temperature", value=0.1, range_spec=RangeSpec(min=0, max=1)),
         IntInput(
