@@ -37,7 +37,6 @@ module.exports = {
         "Concepts/concepts-components",
         "Concepts/concepts-playground",
         "Concepts/concepts-api",
-        "Concepts/concepts-logs",
       ],
     },
     {
