@@ -2,7 +2,6 @@ import os
 from dataclasses import asdict, dataclass, field
 
 from astrapy import DataAPIClient, Database
-from astrapy.admin import parse_api_endpoint
 from langchain_astradb import AstraDBVectorStore
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
