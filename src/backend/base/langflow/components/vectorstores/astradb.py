@@ -1,6 +1,7 @@
 import os
+from dataclasses import asdict, dataclass, field
 
-from astrapy import DataAPIClient
+from astrapy import Collection, DataAPIClient, Database
 from astrapy.admin import parse_api_endpoint
 from langchain_astradb import AstraDBVectorStore
 
@@ -29,21 +30,23 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     _cached_vector_store: AstraDBVectorStore | None = None
 
+    @dataclass
     class NewDatabaseInput:
         title: str = "Create New Database"
         description: str = "Create a new database in Astra DB."
-        db_names: list[str] = []
+        db_names: list[str] = field(default_factory=list)
         status: str = ""
         collection_count: int = 0
         record_count: int = 0
 
+    @dataclass
     class NewCollectionInput:
         title: str = "Create New Collection"
         description: str = "Create a new collection in Astra DB."
         status: str = ""
         dimensions: int = 0
         model: str = ""
-        similarity_metrics: list[str] = []
+        similarity_metrics: list[str] = field(default_factory=list)
         icon: str = "Collection"
 
     base_inputs = LCVectorStoreComponent.inputs
@@ -88,7 +91,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             required=True,
             refresh_button=True,
             real_time_refresh=True,
-            dialog_inputs=[NewDatabaseInput().__dict__],
+            dialog_inputs=[asdict(NewDatabaseInput())],
             options=[],
             options_metadata=[
                 {
@@ -104,13 +107,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             required=True,
             refresh_button=True,
             real_time_refresh=True,
-            dialog_inputs=[NewCollectionInput().__dict__],
+            dialog_inputs=[asdict(NewCollectionInput())],
             options=[],
             options_metadata=[
                 {
-                    "provider": "",
-                    "model": "",
+                    "provider": "unknown",
+                    "model": "unknown",
                     "records": 0,
+                    "icon": "",
                 }
             ],
             value="",
@@ -194,7 +198,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                         ).list_collection_names(keyspace=db.info.keyspace)
                     )
                 ),
-                "records": 0,
             }
             for db in db_list
         }
@@ -233,6 +236,23 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             return None
 
+    def get_collection_object(self, database: Database | None = None):
+        try:
+            if not database:
+                client = DataAPIClient(token=self.token)
+
+                database = client.get_database(
+                    api_endpoint=self.get_api_endpoint(),
+                    token=self.token,
+                    keyspace=self.get_keyspace(),
+                )
+
+            return database.get_collection(self.collection_name, keyspace=self.get_keyspace())
+        except Exception as e:  # noqa: BLE001
+            self.log(f"Error getting database: {e}")
+
+            return None
+
     def collection_exists(self):
         try:
             client = DataAPIClient(token=self.token)
@@ -248,17 +268,18 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             return False
 
-    def collection_hasdata(self):
+    def collection_data(self, collection: Collection | None = None):
         try:
-            client = DataAPIClient(token=self.token)
-            database = client.get_database(
-                api_endpoint=self.get_api_endpoint(),
-                token=self.token,
-                keyspace=self.get_keyspace(),
-            )
-            collection = database.get_collection(self.collection_name, keyspace=self.get_keyspace())
+            if not collection:
+                client = DataAPIClient(token=self.token)
+                database = client.get_database(
+                    api_endpoint=self.get_api_endpoint(),
+                    token=self.token,
+                    keyspace=self.get_keyspace(),
+                )
+                collection = database.get_collection(self.collection_name, keyspace=self.get_keyspace())
 
-            return collection.estimated_document_count() > 0
+            return collection.estimated_document_count()
         except Exception as e:  # noqa: BLE001
             self.log(f"Error checking collection data: {e}")
 
@@ -286,10 +307,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return [
                 {
                     "name": col.name,
-                    "records": 0,
+                    "records": 0, #self.collection_data(collection=self.get_collection_object(col.name, database)),
                     "provider": (
                         col.options.vector.service.provider if col.options.vector and col.options.vector.service else ""
                     ),
+                    "icon": "",
                     "model": (
                         col.options.vector.service.model_name
                         if col.options.vector and col.options.vector.service
@@ -353,7 +375,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "content_field": (
                 self.content_field
                 if self.content_field and embedding_params
-                else ("page_content" if not self.collection_hasdata() else None)
+                else ("page_content" if self.collection_data() == 0 else None)
             ),
             "ignore_invalid_documents": self.ignore_invalid_documents,
         }
