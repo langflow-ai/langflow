@@ -1,5 +1,6 @@
 import httpx
 from httpx import HTTPError
+from langchain_core.tools import ToolException
 
 from langflow.custom import Component
 from langflow.helpers.data import data_to_text
@@ -69,13 +70,13 @@ class WikidataComponent(Component):
             self.status = data
         except HTTPError as e:
             error_message = f"HTTP Error in Wikidata Search API: {e!s}"
-            return [Data(data={"error": error_message})]
+            raise ToolException(error_message) from None
         except KeyError as e:
             error_message = f"Data parsing error in Wikidata API response: {e!s}"
-            return [Data(data={"error": error_message})]
+            raise ToolException(error_message) from None
         except ValueError as e:
             error_message = f"Value error in Wikidata API: {e!s}"
-            return [Data(data={"error": error_message})]
+            raise ToolException(error_message) from None
         else:
             return data
 
