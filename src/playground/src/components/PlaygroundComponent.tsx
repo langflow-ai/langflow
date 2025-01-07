@@ -1,9 +1,7 @@
-
 const PlaygroundComponent = () => {
     return (
-        <div>
-            <h1>Welcome to the Playground</h1>
-            <p>This is a React component converted to a web component.</p>
+        <div className="bg-blue-500 text-white p-4 rounded-lg">
+            Hello, Tailwind CSS!
         </div>
     );
 };

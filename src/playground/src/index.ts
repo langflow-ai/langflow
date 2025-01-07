@@ -1,3 +1,4 @@
+import './index.css';
 import r2wc from '@r2wc/react-to-web-component';
 import PlaygroundComponent from './components/PlaygroundComponent';
 
