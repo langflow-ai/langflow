@@ -5,8 +5,7 @@ from langflow.components.helpers.batch_run import BatchRunComponent
 from langflow.schema import DataFrame
 
 from tests.base import ComponentTestBaseWithoutClient
-
-from .utils import MockLanguageModel
+from tests.unit.mock_language_model import MockLanguageModel
 
 
 class TestBatchRunComponent(ComponentTestBaseWithoutClient):
