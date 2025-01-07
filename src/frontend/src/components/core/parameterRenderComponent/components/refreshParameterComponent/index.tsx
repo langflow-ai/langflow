@@ -46,7 +46,8 @@ export function RefreshParameterComponent({
   const isFlexView = FLEX_VIEW_TYPES.includes(templateData.type ?? "");
 
   return (
-    (children || templateData.refresh_button) && (
+    (children ||
+      (templateData.refresh_button && !templateData.dialog_inputs)) && (
       <div
         className={cn(
           "flex w-full items-center justify-center gap-3",
@@ -54,7 +55,7 @@ export function RefreshParameterComponent({
         )}
       >
         {children}
-        {templateData.refresh_button && (
+        {templateData.refresh_button && !templateData.dialog_inputs && (
           <div className="shrink-0 flex-col">
             <RefreshButton
               isLoading={postTemplateValue.isPending}

@@ -175,7 +175,7 @@ export default function Dropdown({
     </div>
   );
 
-  const renderOptionsList = () => (
+  const oldRenderOptionsList = () => (
     <CommandList>
       <CommandEmpty>No values found.</CommandEmpty>
       <CommandGroup defaultChecked={false}>
@@ -208,7 +208,7 @@ export default function Dropdown({
     </CommandList>
   );
 
-  const renderCreateOptionDialog = () => (
+  const renderCustomOptionDialog = () => (
     <CommandGroup className="flex flex-col">
       <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs font-semibold text-muted-foreground">
         <Button
@@ -256,7 +256,7 @@ export default function Dropdown({
     </CommandGroup>
   );
 
-  const renderIconOptionsList = () => (
+  const renderOptionsList = () => (
     <CommandList>
       <CommandEmpty>No values found.</CommandEmpty>
       <CommandGroup defaultChecked={false}>
@@ -279,34 +279,52 @@ export default function Dropdown({
                       className="h-4 w-4 shrink-0 text-primary"
                     />
                   ) : null}
-                  <div className="flex flex-col truncate pl-2">
-                    <div className="truncate">{option}</div>
-                    <div className="flex w-full items-center text-muted-foreground">
-                      {Object.entries(optionsMetaData?.[index] || {})
-                        .filter(
-                          ([key, value]) => value !== null && key !== "icon",
-                        )
-                        .map(([key, value], i, arr) => (
-                          <div
-                            key={key}
-                            className={cn("flex items-center", {
-                              truncate: i === arr.length - 1,
-                            })}
-                          >
-                            {i > 0 && (
-                              <ForwardedIconComponent
-                                name="Circle"
-                                className="mx-1 h-1 w-1 overflow-visible fill-muted-foreground"
-                              />
-                            )}
+                  <div
+                    className={cn("flex truncate", {
+                      "flex-col":
+                        optionsMetaData && optionsMetaData?.length > 0,
+                      "w-full pl-2": !optionsMetaData?.[index]?.icon,
+                    })}
+                  >
+                    <div className="flex truncate">{option}</div>
+                    {optionsMetaData && optionsMetaData?.length > 0 ? (
+                      <div className="flex w-full items-center text-muted-foreground">
+                        {Object.entries(optionsMetaData?.[index] || {})
+                          .filter(
+                            ([key, value]) => value !== null && key !== "icon",
+                          )
+                          .map(([key, value], i, arr) => (
                             <div
-                              className={cn("text-xs", {
+                              key={key}
+                              className={cn("flex items-center", {
                                 truncate: i === arr.length - 1,
                               })}
-                            >{`${String(value)} ${key}`}</div>
-                          </div>
-                        ))}
-                    </div>
+                            >
+                              {i > 0 && (
+                                <ForwardedIconComponent
+                                  name="Circle"
+                                  className="mx-1 h-1 w-1 overflow-visible fill-muted-foreground"
+                                />
+                              )}
+                              <div
+                                className={cn("text-xs", {
+                                  truncate: i === arr.length - 1,
+                                })}
+                              >{`${String(value)} ${key}`}</div>
+                            </div>
+                          ))}
+                      </div>
+                    ) : (
+                      <div className="ml-auto flex">
+                        <ForwardedIconComponent
+                          name="Check"
+                          className={cn(
+                            "h-4 w-4 shrink-0 text-primary",
+                            value === option ? "opacity-100" : "opacity-0",
+                          )}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               </CommandItem>
@@ -315,7 +333,7 @@ export default function Dropdown({
         ))}
       </CommandGroup>
       <CommandSeparator />
-      {renderCreateOptionDialog()}
+      {dialogInputs && dialogInputs?.length > 0 && renderCustomOptionDialog()}
     </CommandList>
   );
 
@@ -330,9 +348,7 @@ export default function Dropdown({
     >
       <Command>
         {renderSearchInput()}
-        {dialogInputs && dialogInputs?.length > 0
-          ? renderIconOptionsList()
-          : renderOptionsList()}
+        {renderOptionsList()}
       </Command>
     </PopoverContentDropdown>
   );

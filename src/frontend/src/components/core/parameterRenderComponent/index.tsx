@@ -204,22 +204,19 @@ export function ParameterRenderComponent({
   };
 
   return useMemo(
-    () =>
-      templateData?.dialog_inputs?.length > 0 ? (
-        <div className="flex flex-col">{renderComponent()}</div>
-      ) : (
-        <RefreshParameterComponent
-          templateData={templateData}
-          disabled={disabled}
-          nodeId={nodeId}
-          editNode={editNode}
-          nodeClass={nodeClass}
-          handleNodeClass={handleNodeClass}
-          name={name}
-        >
-          {renderComponent()}
-        </RefreshParameterComponent>
-      ),
+    () => (
+      <RefreshParameterComponent
+        templateData={templateData}
+        disabled={disabled}
+        nodeId={nodeId}
+        editNode={editNode}
+        nodeClass={nodeClass}
+        handleNodeClass={handleNodeClass}
+        name={name}
+      >
+        {renderComponent()}
+      </RefreshParameterComponent>
+    ),
     [templateData, disabled, nodeId, editNode, nodeClass, name, templateValue],
   );
 }
