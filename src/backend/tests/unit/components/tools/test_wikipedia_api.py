@@ -35,8 +35,7 @@ def test_wikipedia_template():
 
 @pytest.fixture
 def mock_wikipedia_wrapper(mocker):
-    mock = mocker.patch("langchain_community.utilities.wikipedia.WikipediaAPIWrapper")
-    return mock
+    return mocker.patch("langchain_community.utilities.wikipedia.WikipediaAPIWrapper")
 
 
 def test_fetch_content(mock_wikipedia_wrapper):
@@ -76,7 +75,7 @@ def test_fetch_content_text():
     assert result.text == "First result\nSecond result\n"
 
 
-def test_wikipedia_error_handling(mock_wikipedia_wrapper):
+def test_wikipedia_error_handling():
     component = WikipediaAPIComponent()
 
     # Mock _build_wrapper to raise exception
