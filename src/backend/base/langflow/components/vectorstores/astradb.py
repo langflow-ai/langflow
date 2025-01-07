@@ -110,8 +110,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             options=[],
             options_metadata=[
                 {
-                    "provider": "unknown",
-                    "model": "unknown",
+                    "provider": None,
+                    "model": None,
                     "records": 0,
                     "icon": "",
                 }
@@ -312,13 +312,13 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     "provider": (
                         col.options.vector.service.provider
                         if col.options.vector and col.options.vector.service
-                        else "unknown"
+                        else None
                     ),
                     "icon": "",
                     "model": (
                         col.options.vector.service.model_name
                         if col.options.vector and col.options.vector.service
-                        else "unknown"
+                        else None
                     ),
                 }
                 for col in collection_list
@@ -335,6 +335,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         build_config["database_name"]["options_metadata"] = [
             {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
         ]
+
+        # Allow fallback to API Endpoint if database is not set
+        if self.token and not database_options:
+            build_config["api_endpoint"]["advanced"] = False
+            build_config["database_name"]["advanced"] = True
+        else:
+            build_config["api_endpoint"]["advanced"] = True
+            build_config["database_name"]["advanced"] = False
 
         # Refresh the collection name options
         collection_options = self._initialize_collection_options()
