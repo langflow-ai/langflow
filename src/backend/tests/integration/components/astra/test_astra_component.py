@@ -32,9 +32,15 @@ ALL_COLLECTIONS = [
 def astradb_client():
     api_client = DataAPIClient(token=get_astradb_application_token())
     client = api_client.get_database(get_astradb_api_endpoint())
-    yield client
+
+    yield client  # Provide the client to the test functions
+
+    # Cleanup: Drop all collections after tests
     for collection in ALL_COLLECTIONS:
-        client.drop_collection(collection)
+        try:  # noqa: SIM105
+            client.drop_collection(collection)
+        except Exception:  # noqa: BLE001, S110
+            pass
 
 
 @pytest.mark.api_key_required
@@ -115,7 +121,6 @@ def test_astra_vectorize():
             ingest_data=records,
             search_query="test",
             number_of_results=2,
-            astradb_vectorstore_kwargs={"collection_vector_service_options": options},
         )
         vector_store = component.build_vector_store()
         records = component.search_documents(vector_store=vector_store)
@@ -160,7 +165,6 @@ def test_astra_vectorize_with_provider_api_key():
             ingest_data=records,
             search_query="test",
             number_of_results=2,
-            astradb_vectorstore_kwargs={"collection_vector_service_options": options},
         )
 
         vector_store = component.build_vector_store()
@@ -206,7 +210,6 @@ def test_astra_vectorize_passes_authentication():
             ingest_data=records,
             search_query="test",
             number_of_results=2,
-            astradb_vectorstore_kwargs={"collection_vector_service_options": options},
         )
 
         vector_store = component.build_vector_store()
