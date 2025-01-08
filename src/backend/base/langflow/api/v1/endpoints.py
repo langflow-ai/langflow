@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import re
 import time
 import uuid
@@ -427,16 +426,8 @@ async def simplified_run_flow_with_upload(
             body = await request.json()
             input_request = SimplifiedAPIRequest(**body)
         else:
-            # Parse tweaks if provided
-            tweaks_dict = json.loads(data.tweaks) if data.tweaks else None
-            input_request = SimplifiedAPIRequest(
-                input_value=data.input_value,
-                input_type=data.input_type,
-                output_type=data.output_type,
-                output_component=data.output_component,
-                tweaks=tweaks_dict,
-                session_id=data.session_id,
-            )
+            input_request = data
+
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Invalid input format: {exc!s}"

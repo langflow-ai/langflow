@@ -378,6 +378,8 @@ class SimplifiedAPIRequest(BaseModel):
             except json.JSONDecodeError as e:
                 msg = f"Invalid JSON string: {e}"
                 raise ValueError(msg) from e
+        if "tweaks" in value:
+            value["tweaks"] = json.loads(value["tweaks"])
         return value
 
     @classmethod

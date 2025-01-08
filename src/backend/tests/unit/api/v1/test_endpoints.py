@@ -1,3 +1,4 @@
+import json
 from typing import Any
 
 import pytest
@@ -225,8 +226,8 @@ async def test_file_upload_with_tweaks(client: AsyncClient, file_flow_component,
         "input_value": "",
         "input_type": "text",
         "output_type": "text",
-        "output_component": "",
-        "tweaks": {"ExistingComponent": {"param": "value"}},
+        "output_cojsonent": "",
+        "tweaks": json.dumps({"ExistingComponent": {"param": "value"}}),
         "stream": "false",
     }
     response = await client.post(
