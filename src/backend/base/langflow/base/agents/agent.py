@@ -1,3 +1,4 @@
+import logging
 import re
 from abc import abstractmethod
 from typing import TYPE_CHECKING, cast
@@ -103,7 +104,8 @@ class LCAgentComponent(Component):
     ) -> Message:
         """Run the agent and process its events."""
         if not hasattr(self, "tools") or not self.tools:
-            raise ValueError("Tools are required to run the agent.")
+            error_message = "Tools are required to run the agent."
+            raise ValueError(error_message)
 
         runnable = (
             agent
@@ -123,7 +125,8 @@ class LCAgentComponent(Component):
             messages = data_to_messages(self.chat_history)
             filtered_messages = [msg for msg in messages if msg.get("content", "").strip()]
             if not filtered_messages:
-                raise ValueError("No valid messages to process in chat history.")
+                error_message = "No valid messages to process in chat history."
+                raise ValueError(error_message)
             input_dict["chat_history"] = filtered_messages
 
         session_id = getattr(self, "graph", getattr(self, "_session_id", None))
@@ -150,8 +153,8 @@ class LCAgentComponent(Component):
             await delete_message(id_=msg_id)
             await self._send_message_event(e.agent_message, category="remove_message")
             raise
-        except Exception as e:
-            self.log.error(f"An error occurred: {e}")
+        except Exception as error:
+            logging.exception("An error occurred: %s", error)
             raise
 
         self.status = result
@@ -166,9 +169,11 @@ class LCAgentComponent(Component):
         if hasattr(self, "tools") and self.tools:
             for tool in self.tools:
                 if not TOOL_NAME_PATTERN.match(tool.name):
-                    raise ValueError(
-                        f"Invalid tool name '{tool.name}': must only contain letters, numbers, underscores, dashes, and cannot contain spaces."
+                    error_message = (
+                        f"Invalid tool name '{tool.name}': must only contain letters, numbers, underscores, dashes, "
+                        "and cannot contain spaces."
                     )
+                    raise ValueError(error_message)
 
 
 class LCToolsAgentComponent(LCAgentComponent):
