@@ -1,6 +1,7 @@
 import asyncio
 from typing import TYPE_CHECKING, cast
 
+import aiofiles
 from astra_assistants.astra_assistants_manager import AssistantManager
 from langchain_core.agents import AgentFinish
 from loguru import logger
@@ -12,7 +13,7 @@ from langflow.base.astra_assistants.util import (
     wrap_base_tool_as_tool_interface,
 )
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
-from langflow.inputs import DropdownInput, HandleInput, MultilineInput, StrInput
+from langflow.inputs import DropdownInput, FileInput, HandleInput, MultilineInput, StrInput
 from langflow.memory import delete_message
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.message import Message
@@ -59,6 +60,60 @@ class AstraAssistantManager(ComponentWithCache):
             display_name="User Message",
             info="User message to pass to the run.",
         ),
+        FileInput(
+            name="file",
+            display_name="File(s) for retrieval",
+            list=True,
+            info="Files to be sent with the message.",
+            required=False,
+            show=True,
+            file_types=[
+                "txt",
+                "md",
+                "mdx",
+                "csv",
+                "json",
+                "yaml",
+                "yml",
+                "xml",
+                "html",
+                "htm",
+                "pdf",
+                "docx",
+                "py",
+                "sh",
+                "sql",
+                "js",
+                "ts",
+                "tsx",
+                "jpg",
+                "jpeg",
+                "png",
+                "bmp",
+                "image",
+                "zip",
+                "tar",
+                "tgz",
+                "bz2",
+                "gz",
+                "c",
+                "cpp",
+                "cs",
+                "css",
+                "go",
+                "java",
+                "php",
+                "rb",
+                "tex",
+                "doc",
+                "docx",
+                "ppt",
+                "pptx",
+                "xls",
+                "xlsx",
+                "jsonl",
+            ],
+        ),
         MultilineInput(
             name="input_thread_id",
             display_name="Thread ID (optional)",
@@ -81,6 +136,7 @@ class AstraAssistantManager(ComponentWithCache):
         Output(display_name="Tool output", name="tool_output", method="get_tool_output"),
         Output(display_name="Thread Id", name="output_thread_id", method="get_thread_id"),
         Output(display_name="Assistant Id", name="output_assistant_id", method="get_assistant_id"),
+        Output(display_name="Vector Store Id", name="output_vs_id", method="get_vs_id"),
     ]
 
     def __init__(self, **kwargs) -> None:
@@ -91,12 +147,18 @@ class AstraAssistantManager(ComponentWithCache):
         self._tool_output: Message = None  # type: ignore[assignment]
         self._thread_id: Message = None  # type: ignore[assignment]
         self._assistant_id: Message = None  # type: ignore[assignment]
+        self._vs_id: Message = None  # type: ignore[assignment]
         self.client = get_patched_openai_client(self._shared_component_cache)
 
     async def get_assistant_response(self) -> Message:
         await self.initialize()
         self.status = self._assistant_response
         return self._assistant_response
+
+    async def get_vs_id(self) -> Message:
+        await self.initialize()
+        self.status = self._vs_id
+        return self._vs_id
 
     async def get_tool_output(self) -> Message:
         await self.initialize()
@@ -159,6 +221,20 @@ class AstraAssistantManager(ComponentWithCache):
             thread_id=thread_id,
             assistant_id=assistant_id,
         )
+
+        if self.file:
+            async with aiofiles.open(self.file, "rb") as file_handle:
+                file_content = await file_handle.read()
+                file = assistant_manager.client.files.create(
+                    file=file_content,
+                    purpose="assistants",
+                )
+            vector_store = assistant_manager.client.beta.vector_stores.create(name="my_vs", file_ids=[file.id])
+            assistant_manager.client.beta.assistants.update(
+                assistant_manager.assistant.id,
+                tools=[{"type": "file_search"}],
+                tool_resources={"file_search": {"vector_store_ids": [vector_store.id]}},
+            )
 
         async def step_iterator():
             # Initial event
