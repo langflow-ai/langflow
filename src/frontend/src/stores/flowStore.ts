@@ -279,32 +279,35 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         ? change(get().nodes.find((node) => node.id === id)!)
         : change;
 
-    set((state) => {
-      const newNodes = state.nodes.map((node) => {
-        if (node.id === id) {
-          if (isUserChange) {
-            if ((node.data as NodeDataType).node?.frozen) {
-              (newChange.data as NodeDataType).node!.frozen = false;
-            }
+    const newNodes = get().nodes.map((node) => {
+      if (node.id === id) {
+        if (isUserChange) {
+          if ((node.data as NodeDataType).node?.frozen) {
+            (newChange.data as NodeDataType).node!.frozen = false;
           }
-          return newChange;
         }
-        return node;
-      });
+        return newChange;
+      }
+      return node;
+    });
 
-      const newEdges = cleanEdges(newNodes, get().edges);
+    const newEdges = cleanEdges(newNodes, get().edges);
 
+    set((state) => {
       if (callback) {
         // Defer the callback execution to ensure it runs after state updates are fully applied.
         queueMicrotask(callback);
       }
-
       return {
         ...state,
         nodes: newNodes,
         edges: newEdges,
       };
     });
+    get().updateCurrentFlow({ nodes: newNodes, edges: newEdges });
+    if (get().autoSaveFlow) {
+      get().autoSaveFlow!();
+    }
   },
   getNode: (id: string) => {
     return get().nodes.find((node) => node.id === id);
