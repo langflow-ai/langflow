@@ -141,7 +141,7 @@ class LCAgentComponent(Component):
         if hasattr(self, "system_prompt"):
             input_dict["system_prompt"] = self.system_prompt
         if hasattr(self, "chat_history") and self.chat_history:
-            messages = data_to_messages(self.chat_hsitory)
+            messages = data_to_messages(self.chat_history)
             filtered_messages = [msg for msg in messages if msg.get("content", "").strip()]
             if not filtered_messages:
                 raise ValueError("No valid messages to process in chat history.")
