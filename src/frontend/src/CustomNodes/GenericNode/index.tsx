@@ -412,7 +412,7 @@ function GenericNode({
               {renderNodeIcon()}
               <div className="generic-node-tooltip-div">{renderNodeName()}</div>
             </div>
-            <div>
+            <div data-testid={`${showNode ? "show" : "hide"}-node-content`}>
               {!showNode && (
                 <>
                   {renderInputParameters()}
