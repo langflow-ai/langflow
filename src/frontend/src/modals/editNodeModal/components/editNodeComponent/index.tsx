@@ -34,6 +34,7 @@ export function EditNodeComponent({
         <div className="h-full">
           {nodeClass && (
             <TableComponent
+              tableOptions={{ hide_options: true, block_hide: true }}
               domLayout={autoHeight ? "autoHeight" : undefined}
               key={"editNode"}
               tooltipShowDelay={0.5}
