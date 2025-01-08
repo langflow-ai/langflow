@@ -406,6 +406,8 @@ curl -X 'POST' \
 
 Download all flows as a ZIP file.
 
+This endpoint downloads a ZIP file containing flows for all `flow-id` values listed in the command's body.
+
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
