@@ -173,7 +173,6 @@ const NodeToolbarComponent = memo(
 
     const handleActivateToolMode = () => {
       const newValue = !flowDataNodes![index]!.data.node.tool_mode;
-      console.log("newValue", newValue);
 
       updateToolMode(data.id, newValue);
       data.node!.tool_mode = newValue;
