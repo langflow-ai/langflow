@@ -240,9 +240,7 @@ async def execute_flow(
         await log_telemetry(background_tasks, telemetry_service, start_time, success=False, error_message=error_msg)
 
         if "not found" in error_msg:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=f"Resource not found: {error_msg}"
-            ) from exc
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error_msg) from exc
 
         # For other ValueError cases, raise API exception
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
