@@ -101,6 +101,7 @@ class Settings(BaseSettings):
     components_path: list[str] = []
     langchain_cache: str = "InMemoryCache"
     load_flows_path: str | None = None
+    bundle_urls: list[str] = []
 
     # Redis
     redis_host: str = "localhost"
