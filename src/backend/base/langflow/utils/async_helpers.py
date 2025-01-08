@@ -6,7 +6,7 @@ if hasattr(asyncio, "timeout"):
 else:
 
     @asynccontextmanager
-    async def timeout_context(timeout_seconds):
+    async def timeout_context(timeout_seconds): # type: ignore[misc]
         try:
             yield await asyncio.wait_for(asyncio.Future(), timeout=timeout_seconds)
         except asyncio.TimeoutError as e:
