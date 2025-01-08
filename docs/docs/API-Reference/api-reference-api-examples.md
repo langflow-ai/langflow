@@ -18,13 +18,13 @@ You might find it helpful to set the following environment variables:
 1. Export your Langflow URL in your terminal.
 Langflow starts by default at `http://127.0.0.1:7860`.
 ```plain
-export LANGFLOW_URL='http://127.0.0.1:7860'
+export LANGFLOW_URL="http://127.0.0.1:7860"
 ```
 
 2. Export the `flow-id` in your terminal.
 The `flow-id` is found in the [API pane](/workspace-api) or in the flow's URL.
 ```plain
-export FLOW_ID='359cd752-07ea-46f2-9d3b-a4407ef618da'
+export FLOW_ID="359cd752-07ea-46f2-9d3b-a4407ef618da"
 ```
 
 3. Export the `folder-id` in your terminal.
@@ -33,7 +33,7 @@ To find your folder ID, call the Langflow [/api/v1/folders/](#read-folders) endp
   <TabItem value="curl" label="curl" default>
 ```curl
 curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/folders/' \
+  "$LANGFLOW_URL/api/v1/folders/" \
   -H 'accept: application/json'
 ```
   </TabItem>
@@ -52,7 +52,7 @@ curl -X 'GET' \
 </Tabs>
 Export the `folder-id` as an environment variable.
 ```plain
-export FOLDER_ID='1415de42-8f01-4f36-bf34-539f23e47466'
+export FOLDER_ID="1415de42-8f01-4f36-bf34-539f23e47466"
 ```
 
 The examples in this guide use environment variables for these values.
@@ -1094,7 +1094,7 @@ List all files associated with a specific flow.
 
 ```curl
 curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/files/list/$FLOW_ID' \
+  "$LANGFLOW_URL/api/v1/files/list/$FLOW_ID" \
   -H 'accept: application/json'
 ```
 
@@ -1366,19 +1366,15 @@ curl -X 'POST' \
 
 ### Webhook Run Flow
 
-Run a flow using a webhook request.
+The webhook endpoint triggers flow execution with an HTTP POST request.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/webhook/$FLOW_ID' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "webhook_data": "Your webhook data here"
-}'
+curl -X POST "$LANGFLOW_URL/api/v1/webhook/$FLOW_ID" \
+  -H "Content-Type: application/json" \
+  -d '{"path": "/tmp/test_file.txt"}'
 ```
 
   </TabItem>
@@ -1386,7 +1382,7 @@ curl -X 'POST' \
 
 ```result
 {
-  "status": "Task status"
+  {"message":"Task started in the background","status":"in progress"}
 }
 ```
 
