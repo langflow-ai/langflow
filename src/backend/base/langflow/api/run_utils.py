@@ -236,18 +236,28 @@ async def execute_flow(
             api_key_user=api_key_user,
         )
     except ValueError as exc:
-        await log_telemetry(background_tasks, telemetry_service, start_time, success=False, error_message=str(exc))
-        if "badly formed hexadecimal UUID string" in str(exc):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-        if "not found" in str(exc):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        error_msg = str(exc)
+        await log_telemetry(background_tasks, telemetry_service, start_time, success=False, error_message=error_msg)
+
+        if "not found" in error_msg:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=f"Resource not found: {error_msg}"
+            ) from exc
+
+        # For other ValueError cases, raise API exception
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
+
     except InvalidChatInputError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        # Don't log telemetry for invalid input as this is a user error
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid chat input: {exc!s}") from exc
+
     except Exception as exc:
-        await log_telemetry(background_tasks, telemetry_service, start_time, success=False, error_message=str(exc))
+        error_msg = str(exc)
+        await log_telemetry(background_tasks, telemetry_service, start_time, success=False, error_message=error_msg)
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
+
     else:
+        # Log successful execution
         await log_telemetry(background_tasks, telemetry_service, start_time, success=True)
         return result
 
