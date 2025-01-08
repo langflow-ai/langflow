@@ -148,20 +148,20 @@ const NodeToolbarComponent = memo(
       [data, numberOfOutputHandles],
     );
 
-    const [toolMode, setToolMode] = useState(() => {
-      // Check if tool mode is explicitly set on the node
-      const hasToolModeProperty = data.node?.tool_mode;
-      if (hasToolModeProperty) {
-        return hasToolModeProperty;
+    const [toolMode, setToolMode] = useState(
+      () =>
+        data.node?.tool_mode ??
+        data.node?.outputs?.some(
+          (output) => output.name === "component_as_tool",
+        ) ??
+        false,
+    );
+
+    useEffect(() => {
+      if (data.node?.tool_mode !== undefined) {
+        setToolMode(data.node?.tool_mode ?? false);
       }
-
-      // Otherwise check if node has component_as_tool output
-      const hasComponentAsTool = data.node?.outputs?.some(
-        (output) => output.name === "component_as_tool",
-      );
-
-      return hasComponentAsTool ?? false;
-    });
+    }, [data.node?.tool_mode]);
 
     const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
       data.id,
@@ -173,6 +173,7 @@ const NodeToolbarComponent = memo(
 
     const handleActivateToolMode = () => {
       const newValue = !flowDataNodes![index]!.data.node.tool_mode;
+      console.log("newValue", newValue);
 
       updateToolMode(data.id, newValue);
       data.node!.tool_mode = newValue;
