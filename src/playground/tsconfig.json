@@ -1,7 +1,27 @@
 {
-  "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ]
+  "compilerOptions": {
+    "noImplicitAny": false,
+    "strict": true,
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["../frontend/src/*"],
+      "@/components/*": ["../frontend/src/components/*"],
+      "@/types/*": ["../frontend/src/types/*"],
+      "@/utils/*": ["../frontend/src/utils/*"],
+      "@langflow/components": ["../frontend/src/components"]
+    }
+  },
+  "include": ["src", "../frontend/src/types", "../frontend/src/utils"],
+  "references": [{ "path": "./tsconfig.node.json" }]
 }

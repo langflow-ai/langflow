@@ -13,8 +13,16 @@ export default defineConfig(({ command }) => {
     plugins: [react()],
     resolve: {
       alias: {
-        '@': resolve(__dirname, './src')
-      }
+        '@langflow/components': resolve(__dirname, '../frontend/src/components'),
+        '@': resolve(__dirname, '../frontend/src'),
+        '@/components': resolve(__dirname, '../frontend/src/components'),
+        '@/types': resolve(__dirname, '../frontend/src/types'),
+        '@/utils': resolve(__dirname, '../frontend/src/utils')
+      },
+      preserveSymlinks: true
+    },
+    optimizeDeps: {
+      include: ['@langflow/components']
     }
   };
 
