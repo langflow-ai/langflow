@@ -4,7 +4,7 @@ import PlaygroundButton from "./playgroundTrigger/trigger";
 const PlaygroundComponent = () => {
     return (
         <TooltipProvider delayDuration={0}>
-            <PlaygroundButton disable={true} />
+            <PlaygroundButton disable={false} />
         </TooltipProvider>
 
     );

@@ -42,7 +42,7 @@ export default defineConfig(({ command }) => {
       ...defaultConfig,
       plugins: [
         ...defaultConfig.plugins,
-        // cssInjectedByJsPlugin(cssInjectedConfig),
+        cssInjectedByJsPlugin(),
       ],
       define: {
         "process.env.NODE_ENV": '"production"',
@@ -70,10 +70,9 @@ export default defineConfig(({ command }) => {
       ...defaultConfig,
       plugins: [
         ...defaultConfig.plugins,
-        // cssInjectedByJsPlugin({
-        //   ...cssInjectedConfig,
-        //   dev: { enableDev: true }
-        // }),
+        cssInjectedByJsPlugin({
+          dev: { enableDev: true }
+        }),
       ],
       define: {
         "process.env.NODE_ENV": '"development"',
