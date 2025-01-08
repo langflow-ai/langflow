@@ -2,11 +2,10 @@ import asyncio
 from contextlib import asynccontextmanager
 
 if hasattr(asyncio, "timeout"):
-    timeout_context = asyncio.timeout
+    timeout_context = asyncio.timeout  # type: ignore[misc]
 else:
-
     @asynccontextmanager
-    async def timeout_context(timeout_seconds): # type: ignore[misc]
+    async def timeout_context(timeout_seconds):  # type: ignore[misc]
         try:
             yield await asyncio.wait_for(asyncio.Future(), timeout=timeout_seconds)
         except asyncio.TimeoutError as e:
