@@ -6,6 +6,7 @@ import warnings
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.parse import urlencode
 
 import anyio
@@ -34,6 +35,9 @@ from langflow.logging.logger import configure
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.services.deps import get_settings_service, get_telemetry_service
 from langflow.services.utils import initialize_services, teardown_services
+
+if TYPE_CHECKING:
+    from tempfile import TemporaryDirectory
 
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
@@ -103,7 +107,7 @@ def get_lifespan(*, fix_migration=False, version=None):
         else:
             rprint("[bold green]Starting Langflow...[/bold green]")
 
-        temp_dirs = []
+        temp_dirs: list[TemporaryDirectory] = []
         try:
             await initialize_services(fix_migration=fix_migration)
             setup_llm_caching()

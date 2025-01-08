@@ -9,6 +9,7 @@ from aiofile import async_open
 from langflow.custom.directory_reader.utils import abuild_custom_component_list_from_path
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.initial_setup.setup import (
+    detect_github_url,
     get_project_data,
     load_bundles_from_urls,
     load_starter_projects,
@@ -160,11 +161,65 @@ async def test_refresh_starter_projects():
     assert "should_store_message" in new_change["nodes"][1]["data"]["node"]["template"]
 
 
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        (
+            "https://github.com/langflow-ai/langflow-bundles",
+            "https://github.com/langflow-ai/langflow-bundles/archive/refs/heads/main.zip",
+        ),
+        (
+            "https://github.com/langflow-ai/langflow-bundles/",
+            "https://github.com/langflow-ai/langflow-bundles/archive/refs/heads/main.zip",
+        ),
+        (
+            "https://github.com/langflow-ai/langflow-bundles.git",
+            "https://github.com/langflow-ai/langflow-bundles/archive/refs/heads/main.zip",
+        ),
+        (
+            "https://github.com/langflow-ai/langflow-bundles/tree/some.branch-0_1",
+            "https://github.com/langflow-ai/langflow-bundles/archive/refs/heads/some.branch-0_1.zip",
+        ),
+        (
+            "https://github.com/langflow-ai/langflow-bundles/tree/some/branch",
+            "https://github.com/langflow-ai/langflow-bundles/archive/refs/heads/some/branch.zip",
+        ),
+        (
+            "https://github.com/langflow-ai/langflow-bundles/tree/some/branch/",
+            "https://github.com/langflow-ai/langflow-bundles/archive/refs/heads/some/branch.zip",
+        ),
+        (
+            "https://github.com/langflow-ai/langflow-bundles/releases/tag/v1.0.0-0_1",
+            "https://github.com/langflow-ai/langflow-bundles/archive/refs/tags/v1.0.0-0_1.zip",
+        ),
+        (
+            "https://github.com/langflow-ai/langflow-bundles/releases/tag/foo/v1.0.0",
+            "https://github.com/langflow-ai/langflow-bundles/archive/refs/tags/foo/v1.0.0.zip",
+        ),
+        (
+            "https://github.com/langflow-ai/langflow-bundles/releases/tag/foo/v1.0.0/",
+            "https://github.com/langflow-ai/langflow-bundles/archive/refs/tags/foo/v1.0.0.zip",
+        ),
+        (
+            "https://github.com/langflow-ai/langflow-bundles/commit/68428ce16729a385fe1bcc0f1ec91fd5f5f420b9",
+            "https://github.com/langflow-ai/langflow-bundles/archive/68428ce16729a385fe1bcc0f1ec91fd5f5f420b9.zip",
+        ),
+        (
+            "https://github.com/langflow-ai/langflow-bundles/commit/68428ce16729a385fe1bcc0f1ec91fd5f5f420b9/",
+            "https://github.com/langflow-ai/langflow-bundles/archive/68428ce16729a385fe1bcc0f1ec91fd5f5f420b9.zip",
+        ),
+        ("https://example.com/myzip.zip", "https://example.com/myzip.zip"),
+    ],
+)
+async def test_detect_github_url(url, expected):
+    assert await detect_github_url(url) == expected
+
+
 @pytest.mark.usefixtures("client")
 async def test_load_bundles_from_urls():
     settings_service = get_settings_service()
     settings_service.settings.bundle_urls = [
-        "https://github.com/langflow-ai/langflow-bundles/archive/68428ce16729a385fe1bcc0f1ec91fd5f5f420b9.zip"
+        "https://github.com/langflow-ai/langflow-bundles/commit/68428ce16729a385fe1bcc0f1ec91fd5f5f420b9"
     ]
     settings_service.auth_settings.AUTO_LOGIN = True
 
