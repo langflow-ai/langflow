@@ -1372,7 +1372,8 @@ The webhook endpoint triggers flow execution with an HTTP POST request.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X POST "$LANGFLOW_URL/api/v1/webhook/$FLOW_ID" \
+curl -X POST \
+  "$LANGFLOW_URL/api/v1/webhook/$FLOW_ID" \
   -H "Content-Type: application/json" \
   -d '{"path": "/tmp/test_file.txt"}'
 ```
