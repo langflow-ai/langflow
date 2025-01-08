@@ -1,4 +1,4 @@
-import './index.css';
+import './style';
 import r2wc from '@r2wc/react-to-web-component';
 import PlaygroundComponent from './components/PlaygroundComponent';
 
@@ -11,7 +11,6 @@ declare global {
 window.__styles = window.__styles ?? {};
 
 class PlaygroundWebComponent extends r2wc(PlaygroundComponent, {
-  shadow: "open",
 }) {
   connectedCallback() {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment

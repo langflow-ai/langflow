@@ -34,7 +34,7 @@
     "eslint-plugin-react-refresh": "^0.4.16",
     "globals": "^15.14.0",
     "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.17",
+    "tailwindcss": "^3.4.0",
     "tslib": "^2.8.1",
     "typescript": "~5.6.2",
     "typescript-eslint": "^8.18.2",

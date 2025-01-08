@@ -17,7 +17,8 @@ export default defineConfig(({ command }) => {
         '@': resolve(__dirname, '../frontend/src'),
         '@/components': resolve(__dirname, '../frontend/src/components'),
         '@/types': resolve(__dirname, '../frontend/src/types'),
-        '@/utils': resolve(__dirname, '../frontend/src/utils')
+        '@/utils': resolve(__dirname, '../frontend/src/utils'),
+        '@/style': resolve(__dirname, '../frontend/src/style')
       },
       preserveSymlinks: true
     },
@@ -41,7 +42,7 @@ export default defineConfig(({ command }) => {
       ...defaultConfig,
       plugins: [
         ...defaultConfig.plugins,
-        cssInjectedByJsPlugin(cssInjectedConfig),
+        // cssInjectedByJsPlugin(cssInjectedConfig),
       ],
       define: {
         "process.env.NODE_ENV": '"production"',
@@ -69,10 +70,10 @@ export default defineConfig(({ command }) => {
       ...defaultConfig,
       plugins: [
         ...defaultConfig.plugins,
-        cssInjectedByJsPlugin({
-          ...cssInjectedConfig,
-          dev: { enableDev: true }
-        }),
+        // cssInjectedByJsPlugin({
+        //   ...cssInjectedConfig,
+        //   dev: { enableDev: true }
+        // }),
       ],
       define: {
         "process.env.NODE_ENV": '"development"',
