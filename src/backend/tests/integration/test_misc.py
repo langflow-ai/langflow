@@ -9,7 +9,8 @@ from langflow.load.load import arun_flow_from_json
 
 
 @pytest.mark.api_key_required
-async def test_run_flow_with_caching_success(client: AsyncClient, starter_project, created_api_key):
+@pytest.mark.parametrize("run_endpoint", ["/api/v1/run/", "/api/v1/run/upload/"], indirect=True)
+async def test_run_flow_with_caching_success(client: AsyncClient, starter_project, created_api_key, run_endpoint):
     flow_id = starter_project["id"]
     headers = {"x-api-key": created_api_key.api_key}
     payload = {
@@ -19,7 +20,8 @@ async def test_run_flow_with_caching_success(client: AsyncClient, starter_projec
         "tweaks": {"parameter_name": "value"},
         "stream": False,
     }
-    response = await client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
+
+    response = await run_endpoint(client, flow_id, headers, payload)
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert "outputs" in data
@@ -27,11 +29,13 @@ async def test_run_flow_with_caching_success(client: AsyncClient, starter_projec
 
 
 @pytest.mark.api_key_required
-async def test_run_flow_with_caching_invalid_flow_id(client: AsyncClient, created_api_key):
+@pytest.mark.parametrize("run_endpoint", ["/api/v1/run/", "/api/v1/run/upload/"], indirect=True)
+async def test_run_flow_with_caching_invalid_flow_id(client: AsyncClient, created_api_key, run_endpoint):
     invalid_flow_id = uuid4()
     headers = {"x-api-key": created_api_key.api_key}
     payload = {"input_value": "", "input_type": "text", "output_type": "text", "tweaks": {}, "stream": False}
-    response = await client.post(f"/api/v1/run/{invalid_flow_id}", json=payload, headers=headers)
+
+    response = await run_endpoint(client, invalid_flow_id, headers, payload)
     assert response.status_code == status.HTTP_404_NOT_FOUND
     data = response.json()
     assert "detail" in data
@@ -39,16 +43,21 @@ async def test_run_flow_with_caching_invalid_flow_id(client: AsyncClient, create
 
 
 @pytest.mark.api_key_required
-async def test_run_flow_with_caching_invalid_input_format(client: AsyncClient, starter_project, created_api_key):
+@pytest.mark.parametrize("run_endpoint", ["/api/v1/run/", "/api/v1/run/upload/"], indirect=True)
+async def test_run_flow_with_caching_invalid_input_format(
+    client: AsyncClient, starter_project, created_api_key, run_endpoint
+):
     flow_id = starter_project["id"]
     headers = {"x-api-key": created_api_key.api_key}
     payload = {"input_value": {"key": "value"}, "input_type": "text", "output_type": "text", "tweaks": {}}
-    response = await client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
+
+    response = await run_endpoint(client, flow_id, headers, payload)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
 @pytest.mark.api_key_required
-async def test_run_flow_with_invalid_tweaks(client, starter_project, created_api_key):
+@pytest.mark.parametrize("run_endpoint", ["/api/v1/run/", "/api/v1/run/upload/"], indirect=True)
+async def test_run_flow_with_invalid_tweaks(client, starter_project, created_api_key, run_endpoint):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
     payload = {
@@ -57,12 +66,14 @@ async def test_run_flow_with_invalid_tweaks(client, starter_project, created_api
         "output_type": "text",
         "tweaks": {"invalid_tweak": "value"},
     }
-    response = await client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
+
+    response = await run_endpoint(client, flow_id, headers, payload)
     assert response.status_code == status.HTTP_200_OK
 
 
 @pytest.mark.api_key_required
-async def test_run_with_inputs_and_outputs(client, starter_project, created_api_key):
+@pytest.mark.parametrize("run_endpoint", ["/api/v1/run/", "/api/v1/run/upload/"], indirect=True)
+async def test_run_with_inputs_and_outputs(client, starter_project, created_api_key, run_endpoint):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = starter_project["id"]
     payload = {
@@ -72,7 +83,8 @@ async def test_run_with_inputs_and_outputs(client, starter_project, created_api_
         "tweaks": {"parameter_name": "value"},
         "stream": False,
     }
-    response = await client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
+
+    response = await run_endpoint(client, flow_id, headers, payload)
     assert response.status_code == status.HTTP_200_OK, response.text
 
 
