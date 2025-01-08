@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import re
 import time
+import uuid
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID
 
 import sqlalchemy as sa
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, Form, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from loguru import logger
@@ -44,7 +47,13 @@ from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_session_service, get_settings_service, get_task_service, get_telemetry_service
+from langflow.services.deps import (
+    get_session_service,
+    get_settings_service,
+    get_storage_service,
+    get_task_service,
+    get_telemetry_service,
+)
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.version import get_version_info
@@ -54,6 +63,9 @@ if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
 
 router = APIRouter(tags=["Base"])
+
+# Add this pattern before the router definition
+FILE_NAME_PATTERN = re.compile(r"^([^:]+)::([^:]+)::(.+)$")
 
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
@@ -295,6 +307,178 @@ async def simplified_run_flow(
     if flow is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
     start_time = time.perf_counter()
+
+    if stream:
+        asyncio_queue: asyncio.Queue = asyncio.Queue()
+        asyncio_queue_client_consumed: asyncio.Queue = asyncio.Queue()
+        event_manager = create_stream_tokens_event_manager(queue=asyncio_queue)
+        main_task = asyncio.create_task(
+            run_flow_generator(
+                flow=flow,
+                input_request=input_request,
+                api_key_user=api_key_user,
+                event_manager=event_manager,
+                client_consumed_queue=asyncio_queue_client_consumed,
+            )
+        )
+
+        async def on_disconnect() -> None:
+            logger.debug("Client disconnected, closing tasks")
+            main_task.cancel()
+
+        return StreamingResponse(
+            consume_and_yield(asyncio_queue, asyncio_queue_client_consumed),
+            background=on_disconnect,
+            media_type="text/event-stream",
+        )
+
+    try:
+        result = await simple_run_flow(
+            flow=flow,
+            input_request=input_request,
+            stream=stream,
+            api_key_user=api_key_user,
+        )
+        end_time = time.perf_counter()
+        background_tasks.add_task(
+            telemetry_service.log_package_run,
+            RunPayload(
+                run_is_webhook=False,
+                run_seconds=int(end_time - start_time),
+                run_success=True,
+                run_error_message="",
+            ),
+        )
+
+    except ValueError as exc:
+        background_tasks.add_task(
+            telemetry_service.log_package_run,
+            RunPayload(
+                run_is_webhook=False,
+                run_seconds=int(time.perf_counter() - start_time),
+                run_success=False,
+                run_error_message=str(exc),
+            ),
+        )
+        if "badly formed hexadecimal UUID string" in str(exc):
+            # This means the Flow ID is not a valid UUID which means it can't find the flow
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        if "not found" in str(exc):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+        raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
+    except InvalidChatInputError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except Exception as exc:
+        background_tasks.add_task(
+            telemetry_service.log_package_run,
+            RunPayload(
+                run_is_webhook=False,
+                run_seconds=int(time.perf_counter() - start_time),
+                run_success=False,
+                run_error_message=str(exc),
+            ),
+        )
+        raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
+
+    return result
+
+
+@router.post("/run/upload/{flow_id_or_name}", response_model_exclude_none=True)  # noqa: RUF100, FAST003
+async def simplified_run_flow_with_upload(
+    *,
+    background_tasks: BackgroundTasks,
+    flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
+    data: Annotated[SimplifiedAPIRequest, Depends(SimplifiedAPIRequest.as_form)],
+    stream: bool = Form(default=False),
+    files: list[UploadFile] | None = None,
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],
+    request: Request,
+):
+    """Executes a specified flow by ID with support for streaming and telemetry.
+
+    This endpoint executes a flow identified by ID or name, with options for streaming the response
+    and tracking execution metrics. It handles both streaming and non-streaming execution modes.
+
+    Args:
+        background_tasks (BackgroundTasks): FastAPI background task manager
+        flow (FlowRead | None): The flow to execute, loaded via dependency
+        data (SimplifiedAPIRequest): The input parameters for the flow
+        stream (bool): Whether to stream the response
+        files (list[UploadFile]): List of files to be uploaded and used in the flow
+        api_key_user (UserRead): Authenticated user from API key
+        request (Request): The incoming request
+
+    Returns:
+        Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results
+        or a RunResponse with the complete execution results
+
+    Raises:
+        HTTPException: For flow not found (404), invalid input (400), or file handling errors
+        APIException: For internal execution errors (500)
+    """
+    if files is None:
+        files = []
+    telemetry_service = get_telemetry_service()
+    storage_service = get_storage_service()
+
+    try:
+        # Check if the request has a JSON body
+        if request.headers.get("content-type", "").lower() == "application/json":
+            body = await request.json()
+            input_request = SimplifiedAPIRequest(**body)
+        else:
+            # Parse tweaks if provided
+            tweaks_dict = json.loads(data.tweaks) if data.tweaks else None
+            input_request = SimplifiedAPIRequest(
+                input_value=data.input_value,
+                input_type=data.input_type,
+                output_type=data.output_type,
+                output_component=data.output_component,
+                tweaks=tweaks_dict,
+                session_id=data.session_id,
+            )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Invalid input format: {exc!s}"
+        ) from exc
+
+    if flow is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
+    start_time = time.perf_counter()
+
+    # Process files if any
+    if files:
+        file_tweaks: dict[str, dict[str, Any]] = {}
+        for file in files:
+            # Expect filename format: "ComponentName::input_name::filename"
+            match = FILE_NAME_PATTERN.match(file.filename)
+            if not match:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid file name format: {file.filename}. Must be 'ComponentName::input_name::filename'",
+                )
+
+            component_name = match.group(1)
+            input_name = match.group(2)
+            original_filename = match.group(3)
+
+            # Save file and get path
+            file_name = f"{uuid.uuid4()}_{original_filename}"
+            await storage_service.save_file(flow_id=str(flow.id), file_name=file_name, data=await file.read())
+
+            # Add file path to tweaks
+            file_path = storage_service.build_full_path(flow_id=str(flow.id), file_name=file_name)
+
+            # Initialize component tweaks if not exists
+            if component_name not in file_tweaks:
+                file_tweaks[component_name] = {input_name: {}}
+
+            file_tweaks[component_name][input_name]["file_path"] = file_path
+
+        # Merge file tweaks with existing tweaks
+        if input_request.tweaks is None:
+            input_request.tweaks = {}
+        input_request.tweaks.update(file_tweaks)
 
     if stream:
         asyncio_queue: asyncio.Queue = asyncio.Queue()
