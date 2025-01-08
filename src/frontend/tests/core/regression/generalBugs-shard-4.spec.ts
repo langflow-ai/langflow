@@ -26,7 +26,7 @@ test(
     await page.getByTestId("fit_view").click();
 
     await page.getByTestId("flow-configuration-button").click();
-    await page.getByText("Flow Settings").click();
+    await page.getByText("Edit Details").click();
     await page.getByPlaceholder("Flow name").fill(randomName);
     await page.getByText("Save").last().click();
     await page.getByTestId("icon-ChevronLeft").last().click();
@@ -73,7 +73,7 @@ test(
     await page.getByTestId(`card-${randomName}`).first().click();
 
     await page.getByTestId("flow-configuration-button").click();
-    await page.getByText("Flow Settings").click();
+    await page.getByText("Edit Details").click();
     await page.getByPlaceholder("Flow name").fill(secondRandomName);
     await page.getByText("Save").last().click();
     await page.getByTestId("icon-ChevronLeft").last().click();
