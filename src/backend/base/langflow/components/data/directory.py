@@ -87,10 +87,13 @@ class DirectoryComponent(Component):
         if not types:
             types = TEXT_FILE_TYPES
 
-        # Only allow file types that are in TEXT_FILE_TYPES
-        valid_types = [t for t in types if t in TEXT_FILE_TYPES]
-        if not valid_types:
-            return []
+        # Check if all specified types are valid
+        invalid_types = [t for t in types if t not in TEXT_FILE_TYPES]
+        if invalid_types:
+            msg = f"Invalid file types specified: {invalid_types}. Valid types are: {TEXT_FILE_TYPES}"
+            raise ValueError(msg)
+
+        valid_types = types
 
         file_paths = retrieve_file_paths(
             resolved_path, load_hidden=load_hidden, recursive=recursive, depth=depth, types=valid_types
