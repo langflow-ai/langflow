@@ -309,11 +309,11 @@ async def update_flow(
             raise HTTPException(
                 status_code=400, detail=f"{column.capitalize().replace('_', ' ')} must be unique"
             ) from e
-        
+
         if hasattr(e, "status_code"):
             raise HTTPException(status_code=e.status_code, detail=str(e)) from e
         raise HTTPException(status_code=500, detail=str(e)) from e
-    
+
     else:
         return db_flow
 
