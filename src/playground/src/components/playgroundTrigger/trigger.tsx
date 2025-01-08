@@ -20,7 +20,7 @@ const PlaygroundButton = ({disable}:{disable:boolean}) => {
 
   const DisabledButton = () => (
     <div
-      className="playground-btn-flow-toolbar cursor-not-allowed text-muted-foreground duration-150"
+      className="text-red-500 playground-btn-flow-toolbar cursor-not-allowed text-muted-foreground duration-150"
       data-testid="playground-btn-flow"
     >
       <PlayIcon />

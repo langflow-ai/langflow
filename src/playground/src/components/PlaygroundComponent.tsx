@@ -1,8 +1,12 @@
+import { TooltipProvider } from "@/components";
+import PlaygroundButton from "./playgroundTrigger/trigger";
+
 const PlaygroundComponent = () => {
     return (
-        <div className="bg-blue-500 text-white p-4 rounded-lg">
-            Hello, Tailwind CSS!
-        </div>
+        <TooltipProvider delayDuration={0}>
+            <PlaygroundButton disable={true} />
+        </TooltipProvider>
+
     );
 };
 
