@@ -6,7 +6,7 @@ from langflow.custom import Component
 from langflow.field_typing import Text, VectorStore
 from langflow.helpers.data import docs_to_data
 from langflow.io import DataInput, MultilineInput, Output
-from langflow.schema import Data
+from langflow.schema import Data, DataFrame
 
 if TYPE_CHECKING:
     from langchain_core.documents import Document
