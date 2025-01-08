@@ -1,6 +1,7 @@
 import copy
 
 import pytest
+
 from langflow.graph.graph import utils
 
 
@@ -505,7 +506,6 @@ def test_get_sorted_vertices_simple():
         "C": {"successors": ["D"], "predecessors": ["B"]},
         "D": {"successors": [], "predecessors": ["C"]},
     }
-    parent_node_map = {v: None for v in vertices_ids}
     in_degree_map = {"ChatInput1": 0, "B": 1, "C": 1, "D": 1}
     successor_map = {"ChatInput1": ["B"], "B": ["C"], "C": ["D"], "D": []}
     predecessor_map = {"ChatInput1": [], "B": ["ChatInput1"], "C": ["B"], "D": ["C"]}
@@ -525,7 +525,6 @@ def test_get_sorted_vertices_simple():
         stop_component_id=None,
         start_component_id=None,
         graph_dict=graph_dict,
-        parent_node_map=parent_node_map,
         in_degree_map=in_degree_map,
         successor_map=successor_map,
         predecessor_map=predecessor_map,
@@ -551,7 +550,6 @@ def test_get_sorted_vertices_with_cycle():
         "B": {"successors": ["C"], "predecessors": ["A"]},
         "C": {"successors": ["A"], "predecessors": ["B"]},
     }
-    parent_node_map = {v: None for v in vertices_ids}
     in_degree_map = {"A": 1, "B": 1, "C": 1}
     successor_map = {"A": ["B"], "B": ["C"], "C": ["A"]}
     predecessor_map = {"A": ["C"], "B": ["A"], "C": ["B"]}
@@ -572,7 +570,6 @@ def test_get_sorted_vertices_with_cycle():
         stop_component_id="B",
         start_component_id=None,
         graph_dict=graph_dict,
-        parent_node_map=parent_node_map,
         in_degree_map=in_degree_map,
         successor_map=successor_map,
         predecessor_map=predecessor_map,
@@ -601,7 +598,6 @@ def test_get_sorted_vertices_with_stop():
         "D": {"successors": ["E"], "predecessors": ["C"]},
         "E": {"successors": [], "predecessors": ["D"]},
     }
-    parent_node_map = {v: None for v in vertices_ids}
     in_degree_map = {"A": 0, "B": 1, "C": 1, "D": 1, "E": 1}
     successor_map = {"A": ["B"], "B": ["C"], "C": ["D"], "D": ["E"], "E": []}
     predecessor_map = {"A": [], "B": ["A"], "C": ["B"], "D": ["C"], "E": ["D"]}
@@ -621,7 +617,6 @@ def test_get_sorted_vertices_with_stop():
         stop_component_id="C",
         start_component_id=None,
         graph_dict=graph_dict,
-        parent_node_map=parent_node_map,
         in_degree_map=in_degree_map,
         successor_map=successor_map,
         predecessor_map=predecessor_map,
@@ -642,7 +637,6 @@ def test_get_sorted_vertices_with_complex_cycle(graph_with_loop):
     vertices_ids = list(graph_with_loop.keys())
     cycle_vertices = {"Loop", "Parse Data 1", "YouTube Transcripts"}  # Known cycle in the graph
     graph_dict = graph_with_loop
-    parent_node_map = {v: None for v in vertices_ids}
 
     # Build in_degree_map from predecessors
     in_degree_map = {vertex: len(data["predecessors"]) for vertex, data in graph_with_loop.items()}
@@ -668,7 +662,6 @@ def test_get_sorted_vertices_with_complex_cycle(graph_with_loop):
         stop_component_id=None,
         start_component_id=None,
         graph_dict=graph_dict,
-        parent_node_map=parent_node_map,
         in_degree_map=in_degree_map,
         successor_map=successor_map,
         predecessor_map=predecessor_map,
@@ -719,7 +712,6 @@ def test_get_sorted_vertices_with_stop_at_chroma(graph_with_loop):
     vertices_ids = list(graph_with_loop.keys())
     cycle_vertices = {"Loop", "Parse Data 1", "YouTube Transcripts"}  # Known cycle in the graph
     graph_dict = graph_with_loop
-    parent_node_map = {v: None for v in vertices_ids}
 
     # Build in_degree_map from predecessors
     in_degree_map = {vertex: len(data["predecessors"]) for vertex, data in graph_with_loop.items()}
@@ -745,7 +737,6 @@ def test_get_sorted_vertices_with_stop_at_chroma(graph_with_loop):
         stop_component_id="Chroma DB",  # Stop at ChromaDB
         start_component_id=None,
         graph_dict=graph_dict,
-        parent_node_map=parent_node_map,
         in_degree_map=in_degree_map,
         successor_map=successor_map,
         predecessor_map=predecessor_map,
@@ -802,7 +793,6 @@ def test_get_sorted_vertices_exact_sequence(graph_with_loop):
     vertices_ids = list(graph_with_loop.keys())
     cycle_vertices = {"Loop", "Parse Data 1", "YouTube Transcripts"}  # Known cycle in the graph
     graph_dict = graph_with_loop
-    parent_node_map = {v: None for v in vertices_ids}
 
     # Build in_degree_map from predecessors
     in_degree_map = {vertex: len(data["predecessors"]) for vertex, data in graph_with_loop.items()}
@@ -828,7 +818,6 @@ def test_get_sorted_vertices_exact_sequence(graph_with_loop):
         stop_component_id=None,
         start_component_id=None,
         graph_dict=graph_dict,
-        parent_node_map=parent_node_map,
         in_degree_map=in_degree_map,
         successor_map=successor_map,
         predecessor_map=predecessor_map,

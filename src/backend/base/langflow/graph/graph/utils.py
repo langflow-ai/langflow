@@ -768,7 +768,6 @@ def get_sorted_vertices(
         stop_component_id: ID of the stop component (if any)
         start_component_id: ID of the start component (if any)
         graph_dict: Dictionary containing graph information
-        parent_node_map: Map of vertex IDs to their parent node IDs
         in_degree_map: Map of vertex IDs to their in-degree
         successor_map: Map of vertex IDs to their successors
         predecessor_map: Map of vertex IDs to their predecessors
