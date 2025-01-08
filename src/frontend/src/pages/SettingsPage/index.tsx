@@ -47,16 +47,7 @@ export default function SettingsPage(): JSX.Element {
         />
       ),
     },
-    {
-      title: "Langflow Store",
-      href: "/settings/store",
-      icon: (
-        <ForwardedIconComponent
-          name="Store"
-          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
-        />
-      ),
-    },
+
     {
       title: "Shortcuts",
       href: "/settings/shortcuts",
@@ -80,16 +71,30 @@ export default function SettingsPage(): JSX.Element {
   );
 
   if (!ENABLE_DATASTAX_LANGFLOW) {
-    sidebarNavItems.splice(2, 0, {
-      title: "Langflow API Keys",
-      href: "/settings/api-keys",
-      icon: (
-        <ForwardedIconComponent
-          name="Key"
-          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
-        />
-      ),
-    });
+    const langflowItems = [
+      {
+        title: "Langflow API Keys",
+        href: "/settings/api-keys",
+        icon: (
+          <ForwardedIconComponent
+            name="Key"
+            className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+          />
+        ),
+      },
+      {
+        title: "Langflow Store",
+        href: "/settings/store",
+        icon: (
+          <ForwardedIconComponent
+            name="Store"
+            className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+          />
+        ),
+      },
+    ];
+
+    sidebarNavItems.splice(2, 0, ...langflowItems);
   }
 
   return (
