@@ -46,6 +46,7 @@ export type InputComponentType = {
   onChangeFolderName?: (e: any) => void;
   nodeStyle?: boolean;
   isToolMode?: boolean;
+  popoverWidth?: string;
 };
 export type DropDownComponent = {
   disabled?: boolean;
@@ -783,7 +784,7 @@ export type toolbarSelectItemProps = {
   value: string;
   icon: string;
   style?: string;
-  dataTestId: string;
+  dataTestId?: string;
   ping?: boolean;
   shortcut: string;
 };

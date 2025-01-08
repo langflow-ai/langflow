@@ -1,5 +1,4 @@
 # from langflow.field_typing import Data
-import asyncio
 from contextlib import AsyncExitStack
 
 import httpx
@@ -11,6 +10,7 @@ from langflow.components.tools.mcp_stdio import create_input_schema_from_json_sc
 from langflow.custom import Component
 from langflow.field_typing import Tool
 from langflow.io import MessageTextInput, Output
+from langflow.utils.async_helpers import timeout_context
 
 # Define constant for status code
 HTTP_TEMPORARY_REDIRECT = 307
@@ -39,7 +39,7 @@ class MCPSseClient:
             headers = {}
         url = await self.pre_check_redirect(url)
 
-        async with asyncio.timeout(timeout_seconds):
+        async with timeout_context(timeout_seconds):
             sse_transport = await self.exit_stack.enter_async_context(
                 sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds)
             )
