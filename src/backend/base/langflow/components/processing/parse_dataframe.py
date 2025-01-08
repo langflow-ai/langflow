@@ -1,6 +1,5 @@
 from langflow.custom import Component
-from langflow.io import DataFrameInput, MultilineInput, StrInput, Output
-from langflow.schema import DataFrame, Data
+from langflow.io import DataFrameInput, MultilineInput, Output, StrInput
 from langflow.schema.message import Message
 
 
@@ -14,11 +13,7 @@ class ParseDataFrameComponent(Component):
     name = "ParseDataFrame"
 
     inputs = [
-        DataFrameInput(
-            name="df",
-            display_name="DataFrame",
-            info="The DataFrame to convert to text rows."
-        ),
+        DataFrameInput(name="df", display_name="DataFrame", info="The DataFrame to convert to text rows."),
         MultilineInput(
             name="template",
             display_name="Template",
@@ -33,7 +28,7 @@ class ParseDataFrameComponent(Component):
             display_name="Separator",
             advanced=True,
             value="\n",
-            info="String that joins all row texts when building the single Text output."
+            info="String that joins all row texts when building the single Text output.",
         ),
     ]
 
@@ -53,8 +48,7 @@ class ParseDataFrameComponent(Component):
         return df, template, sep
 
     def parse_data(self) -> Message:
-        """
-        Converts each row of the DataFrame into a formatted string using the template,
+        """Converts each row of the DataFrame into a formatted string using the template,
         then joins them with `sep`. Returns a single combined string as a Message.
         """
         df, template, sep = self._clean_args()
