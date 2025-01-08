@@ -70,7 +70,7 @@ Create a new flow.
 
 ```curl
 curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/flows/' \
+  "$LANGFLOW_URL/api/v1/flows/" \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -136,7 +136,7 @@ Retrieve a list of flows with pagination support.
 
 ```bash
 curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/flows/?remove_example_flows=false&components_only=false&get_all=true&header_flows=false&page=1&size=50' \
+  "$LANGFLOW_URL/api/v1/flows/?remove_example_flows=false&components_only=false&get_all=true&header_flows=false&page=1&size=50" \
   -H 'accept: application/json'
 ```
 
@@ -158,7 +158,7 @@ To retrieve only the flows from a specific folder, pass `folder_id` in the query
 
 ```bash
 curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/flows/?remove_example_flows=true&components_only=false&get_all=false&folder_id=1415de42-8f01-4f36-bf34-539f23e47466&header_flows=false&page=1&size=1' \
+  "$LANGFLOW_URL/api/v1/flows/?remove_example_flows=true&components_only=false&get_all=false&folder_id=$FOLDER_ID&header_flows=false&page=1&size=1" \
   -H 'accept: application/json'
 ```
 
@@ -182,9 +182,9 @@ Read a specific flow by its ID.
 
 ```bash
 curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/flows/$FLOW_ID' \
+  "$LANGFLOW_URL/api/v1/flows/$FLOW_ID" \
   -H 'accept: application/json'
- ```
+```
 
 </TabItem>
 
@@ -214,9 +214,9 @@ This example changes the value for `endpoint_name` from a random UUID to `my_new
 <Tabs>
 <TabItem value="curl" label="curl" default>
 
- ```bash
+```bash
 curl -X 'PATCH' \
-  '$LANGFLOW_URL/api/v1/flows/01ce083d-748b-4b8d-97b6-33adbb6a528a' \
+  "$LANGFLOW_URL/api/v1/flows/$FLOW_ID" \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -227,7 +227,7 @@ curl -X 'PATCH' \
   "endpoint_name": "my_new_endpoint_name",
   "locked": true
 }'
- ```
+```
 
 </TabItem>
 <TabItem value="result" label="Result">
@@ -262,11 +262,11 @@ Delete a specific flow by its ID.
 <Tabs>
     <TabItem value="curl" label="curl" default>
 
- ```bash
+```bash
 curl -X 'DELETE' \
-  '$LANGFLOW_URL/api/v1/flows/$FLOW_ID' \
+  "$LANGFLOW_URL/api/v1/flows/$FLOW_ID" \
   -H 'accept: application/json'
- ```
+```
 
 </TabItem>
 
@@ -290,7 +290,7 @@ Create multiple new flows.
 
 ```curl
 curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/flows/batch/' \
+  "$LANGFLOW_URL/api/v1/flows/batch/" \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -360,7 +360,7 @@ This example uploads a local file named `agent-with-astra-db-tool.json`.
 
 ```curl
 curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/flows/upload/' \
+  "$LANGFLOW_URL/api/v1/flows/upload/?folder_id=$FOLDER_ID" \
   -H 'accept: application/json' \
   -H 'Content-Type: multipart/form-data' \
   -F 'file=@agent-with-astra-db-tool.json;type=application/json'
@@ -390,7 +390,7 @@ The target `folder_id` must already exist before uploading a flow. Call the [/ap
 
 ```curl
 curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/flows/upload/?folder_id=$FOLDER_ID' \
+  "$LANGFLOW_URL/api/v1/flows/upload/?folder_id=$FOLDER_ID" \
   -H 'accept: application/json' \
   -H 'Content-Type: multipart/form-data' \
   -F 'file=@agent-with-astra-db-tool.json;type=application/json'
@@ -407,7 +407,7 @@ This endpoint downloads a ZIP file containing flows for all `flow-id` values lis
 
 ```curl
 curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/flows/download/' \
+  "$LANGFLOW_URL/api/v1/flows/download/" \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '[
@@ -436,7 +436,7 @@ Retrieve a list of basic example flows.
 
 ```curl
 curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/flows/basic_examples/' \
+  "$LANGFLOW_URL/api/v1/flows/basic_examples/" \
   -H 'accept: application/json'
 ```
 
@@ -464,7 +464,7 @@ Retrieve Vertex Builds for a specific flow.
 
 ```curl
 curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/monitor/builds?flow_id=$FLOW_ID' \
+  "$LANGFLOW_URL/api/v1/monitor/builds?flow_id=$FLOW_ID" \
   -H 'accept: application/json'
 ```
 
@@ -487,7 +487,7 @@ Delete Vertex Builds for a specific flow.
 
 ```curl
 curl -X 'DELETE' \
-  '$LANGFLOW_URL/api/v1/monitor/builds?flow_id=$FLOW_ID' \
+  "$LANGFLOW_URL/api/v1/monitor/builds?flow_id=$FLOW_ID" \
   -H 'accept: */*'
 ```
 
@@ -550,7 +550,7 @@ curl -X "GET" \
     "sender": "Machine",
     "sender_name": "AI",
     "session_id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
-    "text": "Hello! It’s great to see you here! What exciting project or idea are you thinking about diving into today? Whether it’s something fresh and innovative or a classic concept with a twist, I’m here to help you get started! Let’s brainstorm together!",
+    "text": "Hello! It's great to see you here! What exciting project or idea are you thinking about diving into today? Whether it's something fresh and innovative or a classic concept with a twist, I'm here to help you get started! Let's brainstorm together!",
     "files": "[]",
     "edit": false,
     "properties": {
@@ -1081,7 +1081,7 @@ curl -X POST \
 Your chatbot describes the image file you sent.
 
 ```plain
-"text": "This flowchart appears to represent a complex system for processing financial inquiries using various AI agents and tools. Here’s a breakdown of its components and how they might work together..."
+"text": "This flowchart appears to represent a complex system for processing financial inquiries using various AI agents and tools. Here's a breakdown of its components and how they might work together..."
 ```
 
 
@@ -1127,7 +1127,7 @@ The `--output` flag is optional.
 
 ```curl
 curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/files/download/$FLOW_ID/2024-12-30_15-19-43_the_oscar_award.csv' \
+  "$LANGFLOW_URL/api/v1/files/download/$FLOW_ID/2024-12-30_15-19-43_the_oscar_award.csv" \
   -H 'accept: application/json' \
   --output output-file.csv
 ```
@@ -1157,8 +1157,8 @@ The `--output` flag is optional.
 
 ```curl
 curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/files/images/$FLOW_ID/2024-12-30_15-42-44_image-file.png' \
-  -H 'accept: application/json'
+  "$LANGFLOW_URL/api/v1/files/images/$FLOW_ID/2024-12-30_15-42-44_image-file.png" \
+  -H 'accept: application/json' \
   --output output-image.png
 ```
 
@@ -1184,7 +1184,7 @@ This example deletes the `2024-12-30_15-42-44_image-file.png` file from Langflow
 
 ```curl
 curl -X 'DELETE' \
-  '$LANGFLOW_URL/api/v1/files/delete/$FLOW_ID/2024-12-30_15-42-44_image-file.png' \
+  "$LANGFLOW_URL/api/v1/files/delete/$FLOW_ID/2024-12-30_15-42-44_image-file.png" \
   -H 'accept: application/json'
 ```
 
@@ -1309,7 +1309,7 @@ This operation returns a dictionary of all Langflow components.
 
 ```curl
 curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/all' \
+  "$LANGFLOW_URL/api/v1/all" \
   -H 'accept: application/json'
 ```
 
@@ -1411,7 +1411,7 @@ Get the status of a task.
 
 ```curl
 curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/task/TASK_ID' \
+  "$LANGFLOW_URL/api/v1/task/TASK_ID" \
   -H 'accept: application/json'
 ```
 
@@ -1443,7 +1443,7 @@ Get the version of the Langflow API.
 
 ```curl
 curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/version' \
+  "$LANGFLOW_URL/api/v1/version" \
   -H 'accept: application/json'
 ```
 
