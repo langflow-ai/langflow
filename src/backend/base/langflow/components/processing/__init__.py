@@ -26,4 +26,5 @@ __all__ = [
     "SelectDataComponent",
     "SplitTextComponent",
     "UpdateDataComponent",
+    "ParseDataFrameComponent",
 ]
