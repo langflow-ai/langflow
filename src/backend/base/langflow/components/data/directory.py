@@ -67,6 +67,8 @@ class DirectoryComponent(Component):
 
     outputs = [
         Output(display_name="Data", name="data", method="load_directory"),
+        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+
     ]
 
     def load_directory(self) -> list[Data]:
@@ -97,3 +99,6 @@ class DirectoryComponent(Component):
         valid_data = [x for x in loaded_data if x is not None and isinstance(x, Data)]
         self.status = valid_data
         return valid_data
+        
+    def as_dataframe(self) -> DataFrame:
+        return DataFrame(self.load_directory())
