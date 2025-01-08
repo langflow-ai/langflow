@@ -306,7 +306,7 @@ async def simplified_run_flow(
 async def simplified_run_flow_with_upload(
     *,
     background_tasks: BackgroundTasks,
-    flow: Annotated[FlowRead | None, Depends(get_flow_by_id_or_endpoint_name)],
+    flow: Annotated[FlowRead, Depends(get_flow_by_id_or_endpoint_name)],
     data: Annotated[SimplifiedAPIRequest, Depends(SimplifiedAPIRequest.as_form)],
     stream: bool = Form(default=False),
     files: list[UploadFile] | None = None,
