@@ -1,17 +1,12 @@
+import json
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    field_serializer,
-    field_validator,
-    model_serializer,
-)
+from fastapi import Form
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer, model_validator
 
 from langflow.graph.schema import RunOutputs
 from langflow.graph.utils import serialize_field
@@ -348,6 +343,61 @@ class SimplifiedAPIRequest(BaseModel):
     )
     tweaks: Tweaks | None = Field(default=None, description="The tweaks")
     session_id: str | None = Field(default=None, description="The session id")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "input_value": "What is the capital of France?",
+                    "input_type": "chat",
+                    "output_type": "chat",
+                },
+                {
+                    "input_value": "Tell me about Paris",
+                    "input_type": "chat",
+                    "output_type": "chat",
+                    "tweaks": {"ChatOpenAI-XYZ": {"model_name": "gpt-4", "temperature": 0.7}},
+                },
+                {
+                    "input_value": '{"key": "value"}',
+                    "input_type": "json",
+                    "output_type": "json",
+                    "output_component": "JsonOutput-ABC",
+                },
+            ]
+        }
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def validate_form_data(cls, value: Any) -> Any:
+        """Validate form data before model instantiation."""
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except json.JSONDecodeError as e:
+                msg = f"Invalid JSON string: {e}"
+                raise ValueError(msg) from e
+        return value
+
+    @classmethod
+    def as_form(
+        cls,
+        input_value: Annotated[str | None, Form()] = "",
+        input_type: Annotated[InputType | None, Form()] = "chat",
+        output_type: Annotated[OutputType | None, Form()] = "chat",
+        output_component: Annotated[str | None, Form()] = "",
+        tweaks: Annotated[str | None, Form()] = None,
+        session_id: Annotated[str | None, Form()] = None,
+    ) -> "SimplifiedAPIRequest":
+        return cls(
+            input_value=input_value,
+            input_type=input_type,
+            output_type=output_type,
+            output_component=output_component,
+            tweaks=tweaks,
+            session_id=session_id,
+        )
 
 
 # (alias) type ReactFlowJsonObject<NodeData = any, EdgeData = any> = {
