@@ -44,12 +44,7 @@ from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import (
-    get_session_service,
-    get_settings_service,
-    get_task_service,
-    get_telemetry_service,
-)
+from langflow.services.deps import get_session_service, get_settings_service, get_task_service, get_telemetry_service
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.version import get_version_info
@@ -343,9 +338,6 @@ async def simplified_run_flow_with_upload(
     - 422: Invalid input format
     - 500: Internal server error during execution
     """
-    if flow is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
-
     try:
         # Check if the request has a JSON body
         if request.headers.get("content-type", "").lower() == "application/json":
@@ -361,20 +353,12 @@ async def simplified_run_flow_with_upload(
     # Process uploaded files if any
     input_request = await process_uploaded_files(files, str(flow.id), input_request)
 
-    if stream:
-        return await setup_streaming_response(
-            flow=flow,
-            input_request=input_request,
-            api_key_user=api_key_user,
-            client_consumed_queue=asyncio.Queue(),
-        )
-
-    return await execute_flow(
+    return await simplified_run_flow(
+        background_tasks=background_tasks,
         flow=flow,
         input_request=input_request,
-        api_key_user=api_key_user,
-        background_tasks=background_tasks,
         stream=stream,
+        api_key_user=api_key_user,
     )
 
 
