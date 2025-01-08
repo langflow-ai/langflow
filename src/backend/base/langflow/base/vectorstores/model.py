@@ -143,7 +143,7 @@ class LCVectorStoreComponent(Component):
         )
         self.status = search_results
         return search_results
-    
+
     def as_dataframe(self) -> DataFrame:
         return DataFrame(self.search_documents())
 
