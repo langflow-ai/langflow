@@ -58,9 +58,8 @@ def format_directory_path(path: str) -> str:
 
 def retrieve_file_paths(
     path: str,
-    *,
-    load_hidden: bool,
-    recursive: bool,
+    load_hidden: bool,  # noqa: FBT001
+    recursive: bool,  # noqa: FBT001
     depth: int,
     types: list[str] = TEXT_FILE_TYPES,
 ) -> list[str]:
