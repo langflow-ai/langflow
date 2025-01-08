@@ -36,7 +36,6 @@ class URLComponent(Component):
         Output(display_name="Data", name="data", method="fetch_content"),
         Output(display_name="Text", name="text", method="fetch_content_text"),
         Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
-
     ]
 
     def ensure_url(self, string: str) -> str:
@@ -90,6 +89,6 @@ class URLComponent(Component):
         result_string = data_to_text("{text}", data)
         self.status = result_string
         return Message(text=result_string)
-        
+
     def as_dataframe(self) -> DataFrame:
         return DataFrame(self.fetch_content())

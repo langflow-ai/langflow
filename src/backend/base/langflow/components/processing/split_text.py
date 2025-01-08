@@ -3,7 +3,6 @@ from langchain_text_splitters import CharacterTextSplitter
 from langflow.custom import Component
 from langflow.io import HandleInput, IntInput, MessageTextInput, Output
 from langflow.schema import Data, DataFrame
-from langflow.schema import Message
 from langflow.utils.util import unescape_string
 
 
@@ -45,7 +44,6 @@ class SplitTextComponent(Component):
     outputs = [
         Output(display_name="Chunks", name="chunks", method="split_text"),
         Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
-
     ]
 
     def _docs_to_data(self, docs):
@@ -65,6 +63,6 @@ class SplitTextComponent(Component):
         data = self._docs_to_data(docs)
         self.status = data
         return data
-        
+
     def as_dataframe(self) -> DataFrame:
         return DataFrame(self.split_text())
