@@ -73,7 +73,7 @@ class DirectoryComponent(Component):
 
     def load_directory(self) -> list[Data]:
         path = self.path
-        types = self.types or TEXT_FILE_TYPES
+        types = self.types
         depth = self.depth
         max_concurrency = self.max_concurrency
         load_hidden = self.load_hidden
@@ -83,12 +83,18 @@ class DirectoryComponent(Component):
 
         resolved_path = self.resolve_path(path)
 
-        file_paths = retrieve_file_paths(
-            resolved_path, load_hidden=load_hidden, recursive=recursive, depth=depth, types=types
-        )
+        # If no types are specified, use all supported types
+        if not types:
+            types = TEXT_FILE_TYPES
 
-        if types:
-            file_paths = [fp for fp in file_paths if any(fp.endswith(ext) for ext in types)]
+        # Only allow file types that are in TEXT_FILE_TYPES
+        valid_types = [t for t in types if t in TEXT_FILE_TYPES]
+        if not valid_types:
+            return []
+
+        file_paths = retrieve_file_paths(
+            resolved_path, load_hidden=load_hidden, recursive=recursive, depth=depth, types=valid_types
+        )
 
         loaded_data = []
         if use_multithreading:
