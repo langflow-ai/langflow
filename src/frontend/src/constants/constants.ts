@@ -832,6 +832,11 @@ export const defaultShortcuts = [
     shortcut: "mod+y",
   },
   {
+    display_name: "Redo (alternative)",
+    name: "Redo Alt",
+    shortcut: "mod+shift+z",
+  },
+  {
     display_name: "Group",
     name: "Group",
     shortcut: "mod+g",
