@@ -2,6 +2,7 @@ from langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_
 from langflow.custom import Component
 from langflow.io import BoolInput, IntInput, MessageTextInput, MultiselectInput
 from langflow.schema import Data
+from langflow.schema.dataframe import DataFrame
 from langflow.template import Output
 
 

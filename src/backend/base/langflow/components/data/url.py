@@ -6,6 +6,7 @@ from langflow.custom import Component
 from langflow.helpers.data import data_to_text
 from langflow.io import DropdownInput, MessageTextInput, Output
 from langflow.schema import Data
+from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 
 

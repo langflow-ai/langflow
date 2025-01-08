@@ -42,20 +42,21 @@ class ParseDataFrameComponent(Component):
     ]
 
     def _clean_args(self):
-        df = self.df
+        dataframe = self.df
         template = self.template or "{text}"
         sep = self.sep or "\n"
-        return df, template, sep
+        return dataframe, template, sep
 
     def parse_data(self) -> Message:
-        """Converts each row of the DataFrame into a formatted string using the template,
-        then joins them with `sep`. Returns a single combined string as a Message.
+        """Converts each row of the DataFrame into a formatted string using the template.
+
+        Then joins them with `sep`. Returns a single combined string as a Message.
         """
-        df, template, sep = self._clean_args()
+        dataframe, template, sep = self._clean_args()
 
         lines = []
         # For each row in the DataFrame, build a dict and format
-        for _, row in df.iterrows():
+        for _, row in dataframe.iterrows():
             row_dict = row.to_dict()
             text_line = template.format(**row_dict)  # e.g. template="{text}", row_dict={"text": "Hello"}
             lines.append(text_line)
