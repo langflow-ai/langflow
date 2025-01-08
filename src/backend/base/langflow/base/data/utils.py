@@ -56,6 +56,8 @@ def format_directory_path(path: str) -> str:
     return path.replace("\n", "\\n")
 
 
+# Ignoring FBT001 because the DirectoryComponent in 1.0.19
+# calls this function without keyword arguments
 def retrieve_file_paths(
     path: str,
     load_hidden: bool,  # noqa: FBT001
