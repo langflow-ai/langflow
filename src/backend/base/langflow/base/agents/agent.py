@@ -144,7 +144,8 @@ class LCAgentComponent(Component):
             messages = data_to_messages(self.chat_history)
             filtered_messages = [msg for msg in messages if msg.get("content", "").strip()]
             if not filtered_messages:
-                raise ValueError("No valid messages to process in chat history.")
+                error_message = "No valid messages to process in chat history."
+                raise ValueError(error_message)
             input_dict["chat_history"] = filtered_messages
         if hasattr(self, "graph"):
             session_id = self.graph.session_id
