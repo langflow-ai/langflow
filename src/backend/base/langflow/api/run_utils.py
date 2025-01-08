@@ -3,7 +3,7 @@ import re
 import time
 import uuid
 from collections.abc import AsyncGenerator
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import sqlalchemy as sa
 from fastapi import BackgroundTasks, HTTPException, UploadFile, status
@@ -15,6 +15,7 @@ from langflow.events.event_manager import EventManager, create_stream_tokens_eve
 from langflow.exceptions.api import APIException, InvalidChatInputError
 from langflow.graph.graph.base import Graph
 from langflow.processing.process import process_tweaks, run_graph_internal
+from langflow.schema.graph import Tweaks
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_storage_service, get_telemetry_service
@@ -291,7 +292,7 @@ async def process_uploaded_files(
         file_tweaks[component_name][input_name]["file_path"] = file_path
 
     if input_request.tweaks is None:
-        input_request.tweaks = {}
+        input_request.tweaks = cast(Tweaks, {})
     input_request.tweaks.update(file_tweaks)
 
     return input_request
