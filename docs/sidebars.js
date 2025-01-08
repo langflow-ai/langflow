@@ -142,7 +142,7 @@ module.exports = {
         {
           type: "doc",
           id: "API-Reference/api-reference-api-examples",
-          label: "API Examples",
+          label: "API examples",
         },
         {
           type: "link",

@@ -28,20 +28,16 @@ export FLOW_ID='359cd752-07ea-46f2-9d3b-a4407ef618da'
 ```
 
 3. Export the `folder-id` in your terminal.
-  1. To find your folder ID, call the Langflow [/api/v1/folders/](#read-folders) endpoint for a list of folders.
-
+To find your folder ID, call the Langflow [/api/v1/folders/](#read-folders) endpoint for a list of folders.
 <Tabs>
   <TabItem value="curl" label="curl" default>
-
 ```curl
 curl -X 'GET' \
   '$LANGFLOW_URL/api/v1/folders/' \
   -H 'accept: application/json'
 ```
-
   </TabItem>
   <TabItem value="result" label="Result">
-
 ```plain
 [
   {
@@ -54,9 +50,7 @@ curl -X 'GET' \
 ```
   </TabItem>
 </Tabs>
-
-  2. Export the `folder-id` as an environment variable.
-
+Export the `folder-id` as an environment variable.
 ```plain
 export FOLDER_ID='1415de42-8f01-4f36-bf34-539f23e47466'
 ```
@@ -511,15 +505,37 @@ curl -X 'DELETE' \
 
 Retrieve messages with optional filters.
 
-This example retrieves messages sent by `Machine` and `AI` in a given chat session.
-
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
 ```curl
 curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/monitor/messages?flow_id=$FLOW_ID&session_id=01ce083d-748b-4b8d-97b6-33adbb6a528a&sender=Machine&sender_name=AI&order_by=timestamp' \
+  'http://127.0.0.1:7860/api/v1/monitor/messages' \
   -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+A list of all messages.
+```
+
+ </TabItem>
+</Tabs>
+
+You can filter messages by `flow_id`, `session_id`, `sender`, and `sender_name`.
+Results can be ordered with the `order_by` query string.
+
+This example retrieves messages sent by `Machine` and `AI` in a given chat session (`session_id`) and orders the messages by timestamp.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X "GET" \
+  "$LANGFLOW_URL/api/v1/monitor/messages?flow_id=$FLOW_ID&session_id=01ce083d-748b-4b8d-97b6-33adbb6a528a&sender=Machine&sender_name=AI&order_by=timestamp" \
+  -H "accept: application/json"
 ```
 
   </TabItem>
@@ -610,11 +626,11 @@ This example updates the `text` value of message `3ab66cc6-c048-48f8-ab07-570f5a
 
 ```curl
 curl -X 'PUT' \
-  '$LANGFLOW_URL/api/v1/monitor/messages/3ab66cc6-c048-48f8-ab07-570f5af7b160' \
+  "$LANGFLOW_URL/api/v1/monitor/messages/3ab66cc6-c048-48f8-ab07-570f5af7b160" \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{
-  "text": "testing 1234",
+  "text": "testing 1234"
 }'
 ```
 
@@ -633,14 +649,14 @@ curl -X 'PUT' \
 
 Update the session ID for messages.
 
-This example updates `01ce083d-748b-4b8d-97b6-33adbb6a528a` to `different_session_id`.
+This example updates the `session_ID` value `01ce083d-748b-4b8d-97b6-33adbb6a528a` to `different_session_id`.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
 ```curl
 curl -X 'PATCH' \
-  '$LANGFLOW_URL/api/v1/monitor/messages/session/01ce083d-748b-4b8d-97b6-33adbb6a528a?new_session_id=different_session_id' \
+  "$LANGFLOW_URL/api/v1/monitor/messages/session/01ce083d-748b-4b8d-97b6-33adbb6a528a?new_session_id=different_session_id" \
   -H 'accept: application/json'
 ```
 
@@ -793,18 +809,14 @@ Create a new folder.
 
 ```curl
 curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/folders/' \
+  "$LANGFLOW_URL/api/v1/folders/" \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{
   "name": "new_folder_name",
   "description": "string",
-  "components_list": [
-    "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-  ],
-  "flows_list": [
-    "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-  ]
+  "components_list": [],
+  "flows_list": []
 }'
 ```
 
@@ -822,6 +834,25 @@ curl -X 'POST' \
 
   </TabItem>
 </Tabs>
+
+To add flows and components at folder creation, retrieve the `components_list` and `flows_list` values from the [/api/v1/store/components](#get-all-components) and [/api/v1/flows/read](#read-flows) endpoints and add them to the request body.
+
+```curl
+curl -X 'POST' \
+  "$LANGFLOW_URL/api/v1/folders/" \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "name": "new_folder_name",
+  "description": "string",
+  "components_list": [
+    "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+  ],
+  "flows_list": [
+    "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+  ]
+}'
+```
 
 ### Read Folder
 
@@ -857,7 +888,11 @@ curl -X 'GET' \
 
 ### Update Folder
 
-Update the information of a specific folder.
+Update the information of a specific folder with a `PATCH` request.
+
+Each PATCH request will update the folder with the values you send.
+Only the fields you include in your request are updated.
+If you send the same values multiple times, the update is still processed, even if the values are unchanged.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
@@ -976,15 +1011,16 @@ Use the `/files` endpoint to add or delete files between your local machine and 
 
 ### Upload File
 
-Upload a file to a specific flow.
+Upload a file to an existing flow.
 
 This example uploads `the_oscar_award.csv`.
+
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
 ```curl
 curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/files/upload/92f9a4c5-cfc8-4656-ae63-1f0881163c28' \
+  '$LANGFLOW_URL/api/v1/files/upload/$FLOW_ID' \
   -H 'accept: application/json' \
   -H 'Content-Type: multipart/form-data' \
   -F 'file=@the_oscar_award.csv'
@@ -1264,7 +1300,7 @@ curl -X 'GET' \
 
 Use the base Langflow API for running your flow and retrieving configuration information.
 
-### Get all
+### Get all components
 
 This operation returns a dictionary of all Langflow components.
 
@@ -1294,7 +1330,7 @@ Execute a specified flow by ID or name with simplified input.
 
 ```curl
 curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/run/92f9a4c5-cfc8-4656-ae63-1f0881163c28?stream=false' \
+  "$LANGFLOW_URL/api/v1/run/$FLOW_ID?stream=false" \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -1483,14 +1519,14 @@ curl -X 'GET' \
 
 ### Get Config
 
-Retrieve the configuration information.
+Retrieve the Langflow configuration information.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
 ```curl
 curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/config' \
+  "$LANGFLOW_URL/api/v1/config" \
   -H 'accept: application/json'
 ```
 
@@ -1508,29 +1544,6 @@ curl -X 'GET' \
     "health_check_max_retries": 5,
     "max_file_size_upload": 100
 }
-```
-
-  </TabItem>
-</Tabs>
-
-## Get starter projects
-
-Retrieve starter projects.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/starter-projects/' \
-  -H 'accept: application/json'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-A list of starter projects.
 ```
 
   </TabItem>
