@@ -1,9 +1,9 @@
 {
-  "id": "d0c576ca-bbd1-4ff7-9743-df13c466e50e",
+  "id": "be747461-bfd5-4c84-ac1d-1a513895dac3",
   "data": {
     "nodes": [
       {
-        "id": "SplitText-yHP2W",
+        "id": "SplitText-3iFUx",
         "type": "genericNode",
         "position": {
           "x": 481.67029556544435,
@@ -151,7 +151,7 @@
           },
           "showNode": true,
           "type": "SplitText",
-          "id": "SplitText-yHP2W"
+          "id": "SplitText-3iFUx"
         },
         "selected": false,
         "measured": {
@@ -160,7 +160,7 @@
         }
       },
       {
-        "id": "LoopComponent-tmjwm",
+        "id": "LoopComponent-7DApw",
         "type": "genericNode",
         "position": {
           "x": 985.7835516756679,
@@ -281,7 +281,7 @@
           },
           "showNode": true,
           "type": "LoopComponent",
-          "id": "LoopComponent-tmjwm"
+          "id": "LoopComponent-7DApw"
         },
         "selected": false,
         "measured": {
@@ -290,7 +290,7 @@
         }
       },
       {
-        "id": "ParseData-AcG9w",
+        "id": "ParseData-NlQKq",
         "type": "genericNode",
         "position": {
           "x": 1519.4837108212814,
@@ -437,7 +437,7 @@
           },
           "showNode": true,
           "type": "ParseData",
-          "id": "ParseData-AcG9w"
+          "id": "ParseData-NlQKq"
         },
         "selected": false,
         "measured": {
@@ -447,7 +447,7 @@
         "dragging": false
       },
       {
-        "id": "Prompt-EQyGq",
+        "id": "Prompt-etahu",
         "type": "genericNode",
         "position": {
           "x": 2059.7522966861834,
@@ -589,7 +589,7 @@
           },
           "showNode": true,
           "type": "Prompt",
-          "id": "Prompt-EQyGq"
+          "id": "Prompt-etahu"
         },
         "selected": false,
         "measured": {
@@ -599,7 +599,7 @@
         "dragging": false
       },
       {
-        "id": "MessagetoData-VANnZ",
+        "id": "MessagetoData-S04rp",
         "type": "genericNode",
         "position": {
           "x": 2631.0708755107958,
@@ -688,7 +688,7 @@
           },
           "showNode": true,
           "type": "MessagetoData",
-          "id": "MessagetoData-VANnZ"
+          "id": "MessagetoData-S04rp"
         },
         "selected": false,
         "measured": {
@@ -698,7 +698,7 @@
         "dragging": false
       },
       {
-        "id": "ParseData-cY8dB",
+        "id": "ParseData-oFUPG",
         "type": "genericNode",
         "position": {
           "x": 1575.264392019407,
@@ -844,7 +844,7 @@
           },
           "showNode": true,
           "type": "ParseData",
-          "id": "ParseData-cY8dB"
+          "id": "ParseData-oFUPG"
         },
         "selected": false,
         "measured": {
@@ -854,7 +854,7 @@
         "dragging": false
       },
       {
-        "id": "ChatOutput-PtFZA",
+        "id": "ChatOutput-n0KRZ",
         "type": "genericNode",
         "position": {
           "x": 2026.3742175369935,
@@ -1124,7 +1124,7 @@
           },
           "showNode": true,
           "type": "ChatOutput",
-          "id": "ChatOutput-PtFZA"
+          "id": "ChatOutput-n0KRZ"
         },
         "selected": false,
         "measured": {
@@ -1134,7 +1134,7 @@
         "dragging": false
       },
       {
-        "id": "MessagetoData-LUXBv",
+        "id": "MessagetoData-tjsf8",
         "type": "genericNode",
         "position": {
           "x": -45,
@@ -1223,7 +1223,7 @@
           },
           "showNode": true,
           "type": "MessagetoData",
-          "id": "MessagetoData-LUXBv"
+          "id": "MessagetoData-tjsf8"
         },
         "selected": false,
         "measured": {
@@ -1232,7 +1232,7 @@
         }
       },
       {
-        "id": "ChatInput-0lBOM",
+        "id": "ChatInput-5DmLD",
         "type": "genericNode",
         "position": {
           "x": -690,
@@ -1357,7 +1357,7 @@
                 "placeholder": "",
                 "show": true,
                 "name": "input_value",
-                "value": "",
+                "value": "\"lorem ipsum dolor sit amet lorem ipsum dolor sit amet lorem ipsum dolor sit amet. lorem ipsum dolor sit amet lorem ipsum dolor sit amet lorem ipsum dolor sit amet. lorem ipsum dolor sit amet lorem ipsum dolor sit amet lorem ipsum dolor sit amet.\"",
                 "display_name": "Text",
                 "advanced": false,
                 "input_types": [
@@ -1518,13 +1518,14 @@
             "tool_mode": false,
             "category": "inputs",
             "key": "ChatInput",
-            "score": 0.0020353564437605998
+            "score": 0.0020353564437605998,
+            "lf_version": "1.1.1"
           },
           "showNode": true,
           "type": "ChatInput",
-          "id": "ChatInput-0lBOM"
+          "id": "ChatInput-5DmLD"
         },
-        "selected": true,
+        "selected": false,
         "measured": {
           "width": 320,
           "height": 234
@@ -1533,15 +1534,15 @@
     ],
     "edges": [
       {
-        "source": "SplitText-yHP2W",
-        "target": "LoopComponent-tmjwm",
-        "sourceHandle": "{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-yHP2Wœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œLoopComponent-tmjwmœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "id": "reactflow__edge-SplitText-yHP2W{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-yHP2Wœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}-LoopComponent-tmjwm{œfieldNameœ:œdataœ,œidœ:œLoopComponent-tmjwmœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "SplitText-3iFUx",
+        "target": "LoopComponent-7DApw",
+        "sourceHandle": "{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-3iFUxœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}",
+        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œLoopComponent-7DApwœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-SplitText-3iFUx{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-3iFUxœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}-LoopComponent-7DApw{œfieldNameœ:œdataœ,œidœ:œLoopComponent-7DApwœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "data": {
           "sourceHandle": {
             "dataType": "SplitText",
-            "id": "SplitText-yHP2W",
+            "id": "SplitText-3iFUx",
             "name": "chunks",
             "output_types": [
               "Data"
@@ -1549,7 +1550,7 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "LoopComponent-tmjwm",
+            "id": "LoopComponent-7DApw",
             "inputTypes": [
               "Data"
             ],
@@ -1561,15 +1562,15 @@
         "className": ""
       },
       {
-        "source": "LoopComponent-tmjwm",
-        "target": "ParseData-AcG9w",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-tmjwmœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-AcG9wœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "id": "reactflow__edge-LoopComponent-tmjwm{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-tmjwmœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParseData-AcG9w{œfieldNameœ:œdataœ,œidœ:œParseData-AcG9wœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "LoopComponent-7DApw",
+        "target": "ParseData-NlQKq",
+        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-7DApwœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-NlQKqœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LoopComponent-7DApw{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-7DApwœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParseData-NlQKq{œfieldNameœ:œdataœ,œidœ:œParseData-NlQKqœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "data": {
           "sourceHandle": {
             "dataType": "LoopComponent",
-            "id": "LoopComponent-tmjwm",
+            "id": "LoopComponent-7DApw",
             "name": "item",
             "output_types": [
               "Data"
@@ -1577,7 +1578,7 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-AcG9w",
+            "id": "ParseData-NlQKq",
             "inputTypes": [
               "Data"
             ],
@@ -1589,15 +1590,15 @@
         "className": ""
       },
       {
-        "source": "ParseData-AcG9w",
-        "target": "Prompt-EQyGq",
-        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-AcG9wœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
-        "targetHandle": "{œfieldNameœ:œtextœ,œidœ:œPrompt-EQyGqœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "id": "reactflow__edge-ParseData-AcG9w{œdataTypeœ:œParseDataœ,œidœ:œParseData-AcG9wœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-EQyGq{œfieldNameœ:œtextœ,œidœ:œPrompt-EQyGqœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ParseData-NlQKq",
+        "target": "Prompt-etahu",
+        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-NlQKqœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "targetHandle": "{œfieldNameœ:œtextœ,œidœ:œPrompt-etahuœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ParseData-NlQKq{œdataTypeœ:œParseDataœ,œidœ:œParseData-NlQKqœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-etahu{œfieldNameœ:œtextœ,œidœ:œPrompt-etahuœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-AcG9w",
+            "id": "ParseData-NlQKq",
             "name": "text",
             "output_types": [
               "Message"
@@ -1605,7 +1606,7 @@
           },
           "targetHandle": {
             "fieldName": "text",
-            "id": "Prompt-EQyGq",
+            "id": "Prompt-etahu",
             "inputTypes": [
               "Message",
               "Text"
@@ -1618,15 +1619,15 @@
         "className": ""
       },
       {
-        "source": "LoopComponent-tmjwm",
-        "target": "ParseData-cY8dB",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-tmjwmœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataœ]}",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-cY8dBœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "id": "reactflow__edge-LoopComponent-tmjwm{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-tmjwmœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataœ]}-ParseData-cY8dB{œfieldNameœ:œdataœ,œidœ:œParseData-cY8dBœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "LoopComponent-7DApw",
+        "target": "ParseData-oFUPG",
+        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-7DApwœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataœ]}",
+        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-oFUPGœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LoopComponent-7DApw{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-7DApwœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataœ]}-ParseData-oFUPG{œfieldNameœ:œdataœ,œidœ:œParseData-oFUPGœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "data": {
           "sourceHandle": {
             "dataType": "LoopComponent",
-            "id": "LoopComponent-tmjwm",
+            "id": "LoopComponent-7DApw",
             "name": "done",
             "output_types": [
               "Data"
@@ -1634,7 +1635,7 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-cY8dB",
+            "id": "ParseData-oFUPG",
             "inputTypes": [
               "Data"
             ],
@@ -1646,15 +1647,15 @@
         "className": ""
       },
       {
-        "source": "ParseData-cY8dB",
-        "target": "ChatOutput-PtFZA",
-        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-cY8dBœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-PtFZAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "id": "reactflow__edge-ParseData-cY8dB{œdataTypeœ:œParseDataœ,œidœ:œParseData-cY8dBœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-PtFZA{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-PtFZAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ParseData-oFUPG",
+        "target": "ChatOutput-n0KRZ",
+        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-oFUPGœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-n0KRZœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ParseData-oFUPG{œdataTypeœ:œParseDataœ,œidœ:œParseData-oFUPGœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-n0KRZ{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-n0KRZœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-cY8dB",
+            "id": "ParseData-oFUPG",
             "name": "text",
             "output_types": [
               "Message"
@@ -1662,7 +1663,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-PtFZA",
+            "id": "ChatOutput-n0KRZ",
             "inputTypes": [
               "Message"
             ],
@@ -1674,14 +1675,14 @@
         "className": ""
       },
       {
-        "source": "MessagetoData-VANnZ",
-        "sourceHandle": "{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-VANnZœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
-        "target": "LoopComponent-tmjwm",
-        "targetHandle": "{œfieldNameœ:œloop_inputœ,œidœ:œLoopComponent-tmjwmœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "MessagetoData-S04rp",
+        "sourceHandle": "{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-S04rpœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
+        "target": "LoopComponent-7DApw",
+        "targetHandle": "{œfieldNameœ:œloop_inputœ,œidœ:œLoopComponent-7DApwœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "data": {
           "targetHandle": {
             "fieldName": "loop_input",
-            "id": "LoopComponent-tmjwm",
+            "id": "LoopComponent-7DApw",
             "inputTypes": [
               "Data"
             ],
@@ -1689,26 +1690,27 @@
           },
           "sourceHandle": {
             "dataType": "MessagetoData",
-            "id": "MessagetoData-VANnZ",
+            "id": "MessagetoData-S04rp",
             "name": "data",
             "output_types": [
               "Data"
             ]
           }
         },
-        "id": "xy-edge__MessagetoData-VANnZ{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-VANnZœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-tmjwm{œfieldNameœ:œloop_inputœ,œidœ:œLoopComponent-tmjwmœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-MessagetoData-S04rp{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-S04rpœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-7DApw{œfieldNameœ:œloop_inputœ,œidœ:œLoopComponent-7DApwœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "animated": false,
-        "className": ""
+        "className": "",
+        "selected": false
       },
       {
-        "source": "Prompt-EQyGq",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-EQyGqœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "MessagetoData-VANnZ",
-        "targetHandle": "{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-VANnZœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-etahu",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-etahuœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "MessagetoData-S04rp",
+        "targetHandle": "{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-S04rpœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "message",
-            "id": "MessagetoData-VANnZ",
+            "id": "MessagetoData-S04rp",
             "inputTypes": [
               "Message"
             ],
@@ -1716,26 +1718,27 @@
           },
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-EQyGq",
+            "id": "Prompt-etahu",
             "name": "prompt",
             "output_types": [
               "Message"
             ]
           }
         },
-        "id": "xy-edge__Prompt-EQyGq{œdataTypeœ:œPromptœ,œidœ:œPrompt-EQyGqœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-MessagetoData-VANnZ{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-VANnZœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-etahu{œdataTypeœ:œPromptœ,œidœ:œPrompt-etahuœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-MessagetoData-S04rp{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-S04rpœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "animated": false,
-        "className": ""
+        "className": "",
+        "selected": false
       },
       {
-        "source": "MessagetoData-LUXBv",
-        "sourceHandle": "{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-LUXBvœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
-        "target": "SplitText-yHP2W",
-        "targetHandle": "{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-yHP2Wœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "MessagetoData-tjsf8",
+        "sourceHandle": "{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-tjsf8œ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
+        "target": "SplitText-3iFUx",
+        "targetHandle": "{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-3iFUxœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "data": {
           "targetHandle": {
             "fieldName": "data_inputs",
-            "id": "SplitText-yHP2W",
+            "id": "SplitText-3iFUx",
             "inputTypes": [
               "Data"
             ],
@@ -1743,26 +1746,27 @@
           },
           "sourceHandle": {
             "dataType": "MessagetoData",
-            "id": "MessagetoData-LUXBv",
+            "id": "MessagetoData-tjsf8",
             "name": "data",
             "output_types": [
               "Data"
             ]
           }
         },
-        "id": "xy-edge__MessagetoData-LUXBv{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-LUXBvœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-yHP2W{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-yHP2Wœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-MessagetoData-tjsf8{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-tjsf8œ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-3iFUx{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-3iFUxœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "animated": false,
-        "className": ""
+        "className": "",
+        "selected": false
       },
       {
-        "source": "ChatInput-0lBOM",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-0lBOMœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "MessagetoData-LUXBv",
-        "targetHandle": "{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-LUXBvœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-5DmLD",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5DmLDœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "MessagetoData-tjsf8",
+        "targetHandle": "{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-tjsf8œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "message",
-            "id": "MessagetoData-LUXBv",
+            "id": "MessagetoData-tjsf8",
             "inputTypes": [
               "Message"
             ],
@@ -1770,24 +1774,27 @@
           },
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-0lBOM",
+            "id": "ChatInput-5DmLD",
             "name": "message",
             "output_types": [
               "Message"
             ]
           }
         },
-        "id": "xy-edge__ChatInput-0lBOM{œdataTypeœ:œChatInputœ,œidœ:œChatInput-0lBOMœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-MessagetoData-LUXBv{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-LUXBvœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "id": "reactflow__edge-ChatInput-5DmLD{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5DmLDœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-MessagetoData-tjsf8{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-tjsf8œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "className": "",
+        "animated": false,
+        "selected": false
       }
     ],
     "viewport": {
-      "x": 444.73920505922183,
-      "y": 204.0371820099449,
-      "zoom": 0.46894360031646354
+      "x": 649.2461009365782,
+      "y": 198.83971831735653,
+      "zoom": 0.39782207958222354
     }
   },
   "description": "test loop",
-  "name": "loop_test",
+  "name": "loop_test2",
   "last_tested_version": "1.1.1",
   "endpoint_name": null,
   "is_component": false
