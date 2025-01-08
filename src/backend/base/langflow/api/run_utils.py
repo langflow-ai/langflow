@@ -10,7 +10,7 @@ from fastapi import BackgroundTasks, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
 from loguru import logger
 
-from langflow.api.v1.schemas import InputValueRequest, RunResponse, SimplifiedAPIRequest, Tweaks
+from langflow.api.v1.schemas import InputValueRequest, RunResponse, SimplifiedAPIRequest
 from langflow.events.event_manager import EventManager, create_stream_tokens_event_manager
 from langflow.exceptions.api import APIException, InvalidChatInputError
 from langflow.graph.graph.base import Graph
@@ -283,7 +283,7 @@ async def process_uploaded_files(
         file_tweaks[component_name][input_name]["file_path"] = file_path
 
     if input_request.tweaks is None:
-        input_request.tweaks = Tweaks()
+        input_request.tweaks = {}
     input_request.tweaks.update(file_tweaks)
 
     return input_request
