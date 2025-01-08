@@ -1393,59 +1393,6 @@ curl -X 'POST' \
   </TabItem>
 </Tabs>
 
-### Experimental Run Flow
-
-Execute a specified flow by ID with advanced options.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/run/advanced/$FLOW_ID' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "inputs": [
-    {
-      "components": [
-        "components_id",
-        "Component Name"
-      ],
-      "input_value": "input_value",
-      "session": "session_id"
-    }
-  ],
-  "outputs": [
-    "string"
-  ],
-  "tweaks": {
-    "Component Name": {
-      "parameter_name": "value"
-    },
-    "component_id": {
-      "parameter_name": "value"
-    },
-    "parameter_name": "value"
-  },
-  "stream": false,
-  "session_id": "string"
-}'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```result
-{
-  "result": "Advanced flow execution result",
-  "session_id": "session_uuid"
-}
-```
-
-  </TabItem>
-</Tabs>
-
 ### Process
 
 :::info
