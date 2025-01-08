@@ -1,7 +1,8 @@
 import { TooltipProvider } from "@/components";
 import PlaygroundButton from "./playgroundTrigger/trigger";
 
-const PlaygroundComponent = () => {
+function PlaygroundComponent() {
+
     return (
         <TooltipProvider delayDuration={0}>
             <PlaygroundButton disable={false} />
