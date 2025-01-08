@@ -18,13 +18,47 @@ You might find it helpful to set the following environment variables:
 1. Export your Langflow URL in your terminal.
 Langflow starts by default at `http://127.0.0.1:7860`.
 ```plain
-export LANGFLOW_URL="http://127.0.0.1:7860"
+export LANGFLOW_URL='http://127.0.0.1:7860'
 ```
 
 2. Export the `flow-id` in your terminal.
 The `flow-id` is found in the [API pane](/workspace-api) or in the flow's URL.
 ```plain
-export FLOW_ID="359cd752-07ea-46f2-9d3b-a4407ef618da"
+export FLOW_ID='359cd752-07ea-46f2-9d3b-a4407ef618da'
+```
+
+3. Export the `folder-id` in your terminal.
+  1. To find your folder ID, call the Langflow [/api/v1/folders/](#read-folders) endpoint for a list of folders.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/folders/' \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+[
+  {
+    "name": "My Projects",
+    "description": "Manage your own projects. Download and upload folders.",
+    "id": "1415de42-8f01-4f36-bf34-539f23e47466",
+    "parent_id": null
+  }
+]
+```
+  </TabItem>
+</Tabs>
+
+  2. Export the `folder-id` as an environment variable.
+
+```plain
+export FOLDER_ID='1415de42-8f01-4f36-bf34-539f23e47466'
 ```
 
 The examples in this guide use environment variables for these values.
@@ -404,7 +438,7 @@ A list of example flows.
 
 ## Monitor
 
-Use the `/monitor` endpoint to monitor and modify messages passed between Langflow components.
+Use the `/monitor` endpoint to monitor and modify messages passed between Langflow components, vertex builds, and transactions.
 
 ### Get Vertex Builds
 
@@ -699,44 +733,9 @@ Use the `/folders` endpoint to create, read, update, and delete folders.
 
 Folders store your flows and components.
 
-You might find it helpful to set the `folder-id` environment variable in your terminal.
-
-The examples in this guide use environment variables for these values.
-
-1. To find your folder ID, use the Langflow API endpoint [Read folders](#read-folders).
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/folders/' \
-  -H 'accept: application/json'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-[
-  {
-    "name": "My Projects",
-    "description": "Manage your own projects. Download and upload folders.",
-    "id": "1415de42-8f01-4f36-bf34-539f23e47466",
-    "parent_id": null
-  }
-]
-```
-  </TabItem>
-</Tabs>
-
-2. Export the `folder-id` you want to as an environment variable.
-
-```plain
-export FOLDER_ID="1415de42-8f01-4f36-bf34-539f23e47466"
-```
-
 ### Read folders
+
+Get a list of Langflow folders.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
