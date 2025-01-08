@@ -1,6 +1,6 @@
 from crewai import Agent, Crew, Process, Task
 
-from langflow.base.agents.crewai.crew import Agent, BaseCrewComponent
+from langflow.base.agents.crewai.crew import BaseCrewComponent
 from langflow.io import HandleInput
 from langflow.schema.message import Message
 
