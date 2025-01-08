@@ -7,6 +7,7 @@ import pytest
 import respx
 from httpx import Response
 from langflow.components import data
+from langflow.schema import DataFrame, Message
 
 
 @pytest.fixture
@@ -198,3 +199,99 @@ def test_url_component():
     assert all(value.data for value in data_)
     assert all(value.text for value in data_)
     assert all(value.source for value in data_)
+
+
+@pytest.mark.parametrize(
+    ("format_type", "expected_content"),
+    [
+        ("Text", "test content"),
+        ("Raw HTML", "<html>test content</html>"),
+    ],
+)
+@patch("langchain_community.document_loaders.AsyncHtmlLoader.load")
+@patch("langchain_community.document_loaders.WebBaseLoader.load")
+def test_url_component_formats(mock_web_load, mock_html_load, format_type, expected_content):
+    """Test URL component with different format types."""
+    url_component = data.URLComponent()
+    url_component.set_attributes({"urls": ["https://example.com"], "format": format_type})
+
+    # Mock the appropriate loader based on format
+    if format_type == "Raw HTML":
+        mock_html_load.return_value = [Mock(page_content=expected_content, metadata={"source": "https://example.com"})]
+        mock_web_load.assert_not_called()
+    else:
+        mock_web_load.return_value = [Mock(page_content=expected_content, metadata={"source": "https://example.com"})]
+        mock_html_load.assert_not_called()
+
+    # Test fetch_content
+    content = url_component.fetch_content()
+    assert len(content) == 1
+    assert content[0].text == expected_content
+    assert content[0].source == "https://example.com"
+
+
+@patch("langchain_community.document_loaders.WebBaseLoader.load")
+def test_url_component_as_dataframe(mock_web_load):
+    """Test URL component's as_dataframe method."""
+    url_component = data.URLComponent()
+    urls = ["https://example1.com", "https://example2.com"]
+    url_component.set_attributes({"urls": urls})
+
+    # Mock the loader response
+    mock_web_load.return_value = [
+        Mock(page_content="content1", metadata={"source": urls[0]}),
+        Mock(page_content="content2", metadata={"source": urls[1]}),
+    ]
+
+    # Test as_dataframe
+    data_frame = url_component.as_dataframe()
+    assert isinstance(data_frame, DataFrame)
+    assert len(data_frame) == 2
+    assert list(data_frame.columns) == ["text", "source"]
+    assert data_frame.iloc[0]["text"] == "content1"
+    assert data_frame.iloc[0]["source"] == urls[0]
+    assert data_frame.iloc[1]["text"] == "content2"
+    assert data_frame.iloc[1]["source"] == urls[1]
+
+
+def test_url_component_invalid_url():
+    """Test URL component with invalid URLs."""
+    url_component = data.URLComponent()
+    url_component.set_attributes({"urls": ["not_a_valid_url"]})
+    with pytest.raises(ValueError, match="Invalid URL"):
+        url_component.fetch_content()
+
+
+@patch("langchain_community.document_loaders.WebBaseLoader.load")
+def test_url_component_fetch_content_text(mock_web_load):
+    """Test URL component's fetch_content_text method."""
+    url_component = data.URLComponent()
+    url_component.set_attributes({"urls": ["https://example.com"]})
+
+    # Mock the loader response
+    mock_web_load.return_value = [Mock(page_content="test content", metadata={"source": "https://example.com"})]
+
+    # Test fetch_content_text
+    message = url_component.fetch_content_text()
+    assert isinstance(message, Message)
+    assert message.text == "test content"
+
+
+@patch("langchain_community.document_loaders.WebBaseLoader.load")
+def test_url_component_multiple_urls(mock_web_load):
+    """Test URL component with multiple URLs."""
+    url_component = data.URLComponent()
+    urls = ["https://example1.com", "https://example2.com", "https://example3.com"]
+    url_component.set_attributes({"urls": urls})
+
+    # Mock the loader response
+    mock_web_load.return_value = [
+        Mock(page_content=f"content{i}", metadata={"source": url}) for i, url in enumerate(urls, 1)
+    ]
+
+    # Test fetch_content
+    content = url_component.fetch_content()
+    assert len(content) == 3
+    for i, (item, url) in enumerate(zip(content, urls, strict=False)):
+        assert item.text == f"content{i+1}"
+        assert item.source == url
