@@ -153,7 +153,11 @@ unit_tests: ## run unit tests
 	if [ "$(ff)" = "true" ]; then \
 		EXTRA_ARGS="$$EXTRA_ARGS --ff"; \
 	fi; \
-	uv run pytest src/backend/tests --ignore=src/backend/tests/integration $$EXTRA_ARGS --instafail -ra -m 'not api_key_required' --durations-path src/backend/tests/.test_durations --splitting-algorithm least_duration $(args)
+	uv run pytest src/backend/tests/unit \
+	--ignore=src/backend/tests/integration $$EXTRA_ARGS \
+	--instafail -ra -m 'not api_key_required' \
+	--durations-path src/backend/tests/.test_durations \
+	--splitting-algorithm least_duration $(args)
 
 unit_tests_looponfail:
 	@make unit_tests args="-f"
