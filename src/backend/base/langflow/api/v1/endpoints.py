@@ -468,7 +468,7 @@ async def simplified_run_flow_with_upload(
 
         # Merge file tweaks with existing tweaks
         if input_request.tweaks is None:
-            input_request.tweaks = {}
+            input_request.tweaks = Tweaks()
         input_request.tweaks.update(file_tweaks)
 
     if stream:
