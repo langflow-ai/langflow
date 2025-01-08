@@ -23,6 +23,7 @@ from langflow.utils.constants import MESSAGE_SENDER_AI
 
 if TYPE_CHECKING:
     from langchain_core.messages import BaseMessage
+
     from langflow.schema.log import SendMessageFunctionType
 
 
