@@ -6,6 +6,7 @@ import pkgutil
 import threading
 import uuid
 from json.decoder import JSONDecodeError
+from pathlib import Path
 from typing import Any
 
 import astra_assistants.tools as astra_assistants_tools
@@ -153,3 +154,11 @@ def wrap_base_tool_as_tool_interface(base_tool: BaseTool) -> ToolInterface:
 
     # Return an instance of our newly minted class
     return WrappedDynamicTool(base_tool)
+
+
+def sync_upload(file_path, client):
+    with Path.open(file_path, "rb") as sync_file_handle:
+        return client.files.create(
+            file=sync_file_handle,  # Pass the sync file handle
+            purpose="assistants",
+        )

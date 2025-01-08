@@ -1,7 +1,7 @@
 import asyncio
+from asyncio import to_thread
 from typing import TYPE_CHECKING, cast
 
-import aiofiles
 from astra_assistants.astra_assistants_manager import AssistantManager
 from langchain_core.agents import AgentFinish
 from loguru import logger
@@ -10,6 +10,7 @@ from langflow.base.agents.events import ExceptionWithMessageError, process_agent
 from langflow.base.astra_assistants.util import (
     get_patched_openai_client,
     litellm_model_names,
+    sync_upload,
     wrap_base_tool_as_tool_interface,
 )
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
@@ -223,12 +224,7 @@ class AstraAssistantManager(ComponentWithCache):
         )
 
         if self.file:
-            async with aiofiles.open(self.file, "rb") as file_handle:
-                file_content = await file_handle.read()
-                file = assistant_manager.client.files.create(
-                    file=file_content,
-                    purpose="assistants",
-                )
+            file = await to_thread(sync_upload(self.file, assistant_manager.client))
             vector_store = assistant_manager.client.beta.vector_stores.create(name="my_vs", file_ids=[file.id])
             assistant_manager.client.beta.assistants.update(
                 assistant_manager.assistant.id,
