@@ -8,7 +8,7 @@ from langflow.inputs.inputs import TableInput
 from langflow.schema.data import Data
 from pydantic import BaseModel
 
-from tests.unit.useful import MockLanguageModel
+from tests.unit.mock_language_model import MockLanguageModel
 
 
 class TestStructuredOutputComponent:
