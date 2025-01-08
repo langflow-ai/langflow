@@ -79,16 +79,8 @@ module.exports = {
         "Configuration/configuration-cli",
         "Configuration/configuration-global-variables",
         "Configuration/environment-variables",
+        "Configuration/configuration-objects",
         "Configuration/configuration-security-best-practices"
-      ],
-    },
-    {
-      type: "category",
-      label: "Guides",
-      items: [
-        "Guides/guides-chat-memory",
-        "Guides/guides-data-message",
-        "Guides/guides-new-to-llms",
       ],
     },
     {

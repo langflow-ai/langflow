@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
@@ -27,7 +27,9 @@ test("user must be able outdated message on error", async ({ page }) => {
     dataTransfer,
   });
 
-  await page.waitForTimeout(3000);
+  await page.waitForSelector("data-testid=list-card", {
+    timeout: 3000,
+  });
 
   await page.getByTestId("list-card").first().click();
 
@@ -37,8 +39,7 @@ test("user must be able outdated message on error", async ({ page }) => {
 
   await page.getByTestId("button_run_chat output").click();
 
-  await page.waitForSelector("text=there are outdated components in the flow", {
-    timeout: 30000,
-    state: "visible",
-  });
+  await expect(
+    page.getByText("there are outdated components in the flow"),
+  ).toBeVisible({ timeout: 30000 });
 });
