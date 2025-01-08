@@ -87,10 +87,7 @@ const RenderInputParameters = ({
 
       return (
         <NodeInputField
-          lastInput={
-            idx === templateFields.length - 1 &&
-            !(shownOutputs.length > 0 || showHiddenOutputs)
-          }
+          lastInput={!(shownOutputs.length > 0 || showHiddenOutputs)}
           key={memoizedKey}
           data={data}
           colors={memoizedColor.colors}

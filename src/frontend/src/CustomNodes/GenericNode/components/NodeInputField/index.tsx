@@ -109,8 +109,8 @@ export default function NodeInputField({
     <div
       ref={ref}
       className={cn(
-        "relative mt-1 flex min-h-10 w-full flex-wrap items-center justify-between px-5 py-2",
-        lastInput ? "rounded-b-[0.69rem]" : "",
+        "relative flex min-h-10 w-full flex-wrap items-center justify-between px-5 py-2",
+        lastInput ? "rounded-b-[0.69rem] pb-5" : "",
         isToolMode && "bg-primary/10",
         (name === "code" && type === "code") || (name.includes("code") && proxy)
           ? "hidden"
