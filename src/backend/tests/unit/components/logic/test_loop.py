@@ -54,9 +54,15 @@ async def test_build_flow_loop(client, json_loop_test, logged_in_headers):
 async def test_run_flow_loop(client: AsyncClient, created_api_key, json_loop_test, logged_in_headers):
     flow_id = await _create_flow(client, json_loop_test, logged_in_headers)
     headers = {"x-api-key": created_api_key.api_key}
-    payload = {"input_value": TEXT, "input_type": "chat", "output_type": "chat", "tweaks": {}}
+    payload = {
+        "input_value": TEXT,
+        "input_type": "chat",
+        "session_id": f"{flow_id}run",
+        "output_type": "chat",
+        "tweaks": {},
+    }
     response = await client.post(f"/api/v1/run/{flow_id}", json=payload, headers=headers)
     data = response.json()
     assert "outputs" in data
     assert "session_id" in data
-    assert len(data["outputs"]) > 0
+    assert len(data["outputs"][-1]["outputs"]) > 0
