@@ -30,12 +30,26 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     @dataclass
     class NewDatabaseInput:
-        title: str = "Create New Database"
-        description: str = "Create a new database in Astra DB."
-        db_names: list[str] = field(default_factory=list)
-        status: str = ""
-        collection_count: int = 0
-        record_count: int = 0
+        new_database_name: StrInput = field(default_factory=lambda: StrInput(
+            name="new_database_name",
+            display_name="New Database Name",
+            info="Name of the new database to create in Astra DB.",
+            required=True,
+        ))
+        cloud_provider: DropdownInput = field(default_factory=lambda: DropdownInput(
+            name="cloud_provider",
+            display_name="Cloud Provider",
+            info="Cloud provider for the new database.",
+            options=["Amazon Web Services", "Google Cloud Platform", "Microsoft Azure"],
+            required=True,
+        ))
+        region: DropdownInput = field(default_factory=lambda: DropdownInput(
+            name="region",
+            display_name="Region",
+            info="Region for the new database.",
+            options=["us-east-2", "ap-south-1", "eu-west-1", "us-east1", "westus3"],
+            required=True,
+        ))
 
     @dataclass
     class NewCollectionInput:
