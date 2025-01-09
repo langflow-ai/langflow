@@ -56,7 +56,7 @@ export default function InputListComponent({
   );
 
   const removeInput = useCallback(
-    (index: number, e: React.MouseEvent) => {
+    (index: number, e: React.MouseEvent | KeyboardEvent) => {
       e.preventDefault();
       const newInputList = _.cloneDeep(value);
       newInputList.splice(index, 1);
@@ -67,7 +67,7 @@ export default function InputListComponent({
   );
 
   const handleDuplicateInput = useCallback(
-    (index: number, e: React.MouseEvent) => {
+    (index: number, e: React.MouseEvent | KeyboardEvent) => {
       e.preventDefault();
       const newInputList = _.cloneDeep(value);
       newInputList.splice(index, 0, newInputList[index]);
