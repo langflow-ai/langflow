@@ -14,6 +14,7 @@ class CalculatorToolComponent(Component):
     display_name = "Calculator"
     description = "Perform basic arithmetic operations on a given expression."
     icon = "calculator"
+    name = "Calculator"
 
     inputs = [
         MessageTextInput(
