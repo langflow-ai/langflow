@@ -1,6 +1,9 @@
 import SideBarButtonsComponent from "@/components/core/sidebarComponent";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { ENABLE_PROFILE_ICONS } from "@/customization/feature-flags";
+import {
+  ENABLE_DATASTAX_LANGFLOW,
+  ENABLE_PROFILE_ICONS,
+} from "@/customization/feature-flags";
 import useAuthStore from "@/stores/authStore";
 import { useStoreStore } from "@/stores/storeStore";
 import { Outlet } from "react-router-dom";
@@ -44,16 +47,7 @@ export default function SettingsPage(): JSX.Element {
         />
       ),
     },
-    {
-      title: "Langflow API",
-      href: "/settings/api-keys",
-      icon: (
-        <ForwardedIconComponent
-          name="Key"
-          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
-        />
-      ),
-    },
+
     {
       title: "Shortcuts",
       href: "/settings/shortcuts",
@@ -75,6 +69,34 @@ export default function SettingsPage(): JSX.Element {
       ),
     },
   );
+
+  if (!ENABLE_DATASTAX_LANGFLOW) {
+    const langflowItems = [
+      {
+        title: "Langflow API Keys",
+        href: "/settings/api-keys",
+        icon: (
+          <ForwardedIconComponent
+            name="Key"
+            className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+          />
+        ),
+      },
+      {
+        title: "Langflow Store",
+        href: "/settings/store",
+        icon: (
+          <ForwardedIconComponent
+            name="Store"
+            className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+          />
+        ),
+      },
+    ];
+
+    sidebarNavItems.splice(2, 0, ...langflowItems);
+  }
+
   return (
     <PageLayout
       backTo={"/"}
