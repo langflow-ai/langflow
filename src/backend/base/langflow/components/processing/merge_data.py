@@ -74,7 +74,7 @@ class MergeDataComponent(Component):
                 for key, value in data_input.data.items():
                     if key in result_data and isinstance(value, str):
                         if isinstance(result_data[key], list):
-                            cast(list[str], result_data[key]).append(value)
+                            cast("list[str]", result_data[key]).append(value)
                         else:
                             result_data[key] = [result_data[key], value]
                     else:

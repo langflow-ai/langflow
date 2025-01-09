@@ -1,6 +1,5 @@
 ---
 title: Contribute components
-sidebar_position: 4
 slug: /contributing-components
 ---
 
