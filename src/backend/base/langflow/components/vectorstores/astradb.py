@@ -73,7 +73,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 name="embedding_generation_provider",
                 display_name="Embedding Generation Provider",
                 info="Provider to use for generating embeddings.",
-                options=["Bring my own", "NVIDIA", "OpenAI"],
+                options=[],
                 required=True,
             )
         )
@@ -82,14 +82,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 name="embedding_generation_model",
                 display_name="Embedding Generation Model",
                 info="Model to use for generating embeddings.",
-                options=[
-                    "Bring my own",
-                    "NV-Embed-QA",
-                    "text-embedding-3-small",
-                    "text-embedding-3-large",
-                    "text-embedding-4-small",
-                    "text-embedding-ada-002",
-                ],
+                options=[],
+                required=True,
             )
         )
 
