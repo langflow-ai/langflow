@@ -55,8 +55,90 @@ Export the `folder-id` as an environment variable.
 export FOLDER_ID="1415de42-8f01-4f36-bf34-539f23e47466"
 ```
 
+4. Export the Langflow API key as an environment variable.
+To create a Langflow API key, run the following command in the Langflow CLI.
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+```plain
+langflow api-key
+```
+  </TabItem>
+  <TabItem value="result" label="Result">
+```plain
+API Key Created Successfully:
+sk-...
+```
+  </TabItem>
+</Tabs>
+Export the generated API key as an environment variable.
+```plain
+export LANGFLOW_API_KEY="sk-..."
+```
+
 The examples in this guide use environment variables for these values.
 
+## Build
+
+Use the `/build` endpoint to build vertices and flows.
+
+### Build flow
+
+This example builds a flow with a given `flow_id`.
+
+The `/build` endpoint requires a Langflow API key. For more, see [API keys](/configuration-api-keys).
+
+<Tabs>
+   <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'POST' \
+  "$LANGFLOW_URL/api/v1/build/$FLOW_ID/flow" \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -d '{}'
+```
+
+   </TabItem>
+   <TabItem value="result" label="Result">
+
+```plain
+{"event": "vertices_sorted", "data": {"ids": ["ChatInput-FV52m"], "to_run": ["ChatInput-FV52m", "OpenAIModel-Uksag", "Prompt-eZJiw", "ChatOutput-c7Ehh"]}}
+
+{"event": "add_message", "data": {"timestamp": "2025-01-09T21:13:05", "sender": "User", "sender_name": "User", "session_id": "801abb1e-19b9-4278-9632-179b6d84f126", "text": "Hello", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": null, "display_name": null, "source": null}, "icon": "", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "0579ffe2-6205-4ddd-b8d4-076bf0c2e4b8", "flow_id": "801abb1e-19b9-4278-9632-179b6d84f126"}}
+
+{"event": "end_vertex", "data": {"build_data": {"id": "Prompt-eZJiw", "inactivated_vertices": [], "next_vertices_ids": ["OpenAIModel-Uksag"], "top_level_vertices": ["OpenAIModel-Uksag"], "valid": true, "params": "None", "data": {"results": {}, "outputs": {"prompt": {"message": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.", "type": "text"}}, "logs": {"prompt": []}, "message": {"prompt": {"repr": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.", "raw": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.", "type": "text"}}, "artifacts": {"prompt": {"repr": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.", "raw": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.", "type": "text"}}, "timedelta": 0.005919291055761278, "duration": "6 ms", "used_frozen_result": false}, "timestamp": "2025-01-09T21:13:05.741845Z"}}}
+
+{"event": "add_message", "data": {"timestamp": "2025-01-09T21:13:06", "sender": "Machine", "sender_name": "AI", "session_id": "801abb1e-19b9-4278-9632-179b6d84f126", "text": "Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": "OpenAIModel-Uksag", "display_name": "OpenAI", "source": "gpt-4o-mini"}, "icon": "OpenAI", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "c576b97d-bdc1-4b81-86b7-89077e84d46c", "flow_id": "801abb1e-19b9-4278-9632-179b6d84f126"}}
+
+{"event": "end", "data": {}}
+```
+
+   </TabItem>
+</Tabs>
+
+This output is abbreviated, but the order of events illustrates how Langflow runs components.
+
+1. Langflow first sorts the vertices by dependencies (edges) in the `vertices_sorted` event:
+```
+ChatInput-FV52m → Prompt-eZJiw → OpenAIModel-Uksag → ChatOutput-c7Ehh
+```
+2. The Chat Input component receives user input in the `add_message` event.
+3. The Prompt component is executed with the received input in the `end_vertex` event.
+4. The Open AI model's response occurs in the next `add_message` event.
+5. The clean `end` event tells you the flow executed with no errors.
+
+You can also pass values for `start_component_id` and `stop_component_id` in the body of the command to control where the flow run will start and stop.
+For example, to stop flow execution at the Open AI model component, run the following command:
+
+```curl
+curl -X 'POST' \
+  "$LANGFLOW_URL/api/v1/build/$FLOW_ID/flow" \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -d '{"stop_component_id": "OpenAIModel-Uksag"}'
+```
 ## Flows
 
 Use the `/flows` endpoint to create, read, update, and delete flows.
@@ -836,6 +918,8 @@ curl -X 'POST' \
 </Tabs>
 
 To add flows and components at folder creation, retrieve the `components_list` and `flows_list` values from the [/api/v1/store/components](#get-all-components) and [/api/v1/flows/read](#read-flows) endpoints and add them to the request body.
+
+Adding a flow to a folder will move the flow from its previous location, not copy it.
 
 ```curl
 curl -X 'POST' \
