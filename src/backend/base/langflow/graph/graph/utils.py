@@ -9,16 +9,21 @@ PRIORITY_LIST_OF_INPUTS = ["webhook", "chat"]
 MAX_CYCLE_APPEARANCES = 2
 
 
-def find_start_component_id(vertices):
+def find_start_component_id(vertices, *, is_webhook: bool = False):
     """Finds the component ID from a list of vertices based on a priority list of input types.
 
     Args:
         vertices (list): A list of vertex IDs.
+        is_webhook (bool, optional): Whether the flow is being run as a webhook. Defaults to False.
 
     Returns:
         str or None: The component ID that matches the highest priority input type, or None if no match is found.
     """
-    for input_type_str in PRIORITY_LIST_OF_INPUTS:
+    # Set priority list based on whether this is a webhook flow
+    priority_inputs = ["webhook"] if is_webhook else PRIORITY_LIST_OF_INPUTS
+
+    # Check input types in priority order
+    for input_type_str in priority_inputs:
         component_id = next((vertex_id for vertex_id in vertices if input_type_str in vertex_id.lower()), None)
         if component_id:
             return component_id
@@ -722,7 +727,10 @@ def sort_chat_inputs_first(
         ValueError: If there are multiple chat inputs in the graph
     """
     chat_input = None
-    for layer in vertices_layers:
+    chat_input_layer_idx = None
+
+    # Find chat input and validate only one exists
+    for layer_idx, layer in enumerate(vertices_layers):
         for vertex_id in layer:
             if "ChatInput" in vertex_id and get_vertex_predecessors(vertex_id):
                 return vertices_layers
@@ -731,11 +739,19 @@ def sort_chat_inputs_first(
                     msg = "Only one chat input is allowed in the graph"
                     raise ValueError(msg)
                 chat_input = vertex_id
+                chat_input_layer_idx = layer_idx
 
     if not chat_input:
         return vertices_layers
 
-    # Create new layers without the chat input, maintaining original layer structure
+    # If chat input already in first layer, just move it to index 0
+    if chat_input_layer_idx == 0:
+        first_layer = vertices_layers[0]
+        first_layer.remove(chat_input)
+        first_layer.insert(0, chat_input)
+        return vertices_layers
+
+    # Otherwise create new layers with chat input first
     result_layers = []
     for layer in vertices_layers:
         layer_vertices = [v for v in layer if v != chat_input]
