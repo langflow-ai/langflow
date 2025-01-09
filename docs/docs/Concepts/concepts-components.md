@@ -144,9 +144,13 @@ When used in a flow, this component:
 
 After a component runs, **Freeze Path** locks the component's previous output state to prevent it from re-running.
 
-If you’re expecting consistent output from a component and don’t need to re-run it, click **Freeze Path**. A <Icon name="Snowflake" aria-label="Snowflake"/> icon appears on all frozen components.
+If you’re expecting consistent output from a component and don’t need to re-run it, click **Freeze Path**. 
 
 Enabling **Freeze Path** freezes all components upstream of the selected component.
+
+If you only want to freeze a single component, select **Freeze** instead.
+
+A <Icon name="Snowflake" aria-label="Snowflake"/> icon appears on all frozen components.
 
 ## Additional component options
 
