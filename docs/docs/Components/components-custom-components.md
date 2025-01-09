@@ -1,5 +1,5 @@
 ---
-title: Create custom components
+title: Create custom Python components
 slug: /components-custom-components
 ---
 

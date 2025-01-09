@@ -3,9 +3,9 @@ title: Components
 slug: /concepts-components
 ---
 
-# Langflow components overview
-
 import Icon from "@site/src/components/icon";
+
+# Langflow components overview
 
 A component is a single building block within a flow with inputs, outputs, functions, and parameters that define its functionality. A single component is like a class within a larger application.
 
@@ -144,10 +144,9 @@ When used in a flow, this component:
 
 After a component runs, **Freeze Path** locks the component's previous output state to prevent it from re-running.
 
-If you’re expecting consistent output from a component and don’t need to re-run it, click **Freeze Path**.
+If you’re expecting consistent output from a component and don’t need to re-run it, click **Freeze Path**. A <Icon name="Snowflake" aria-label="Snowflake"/> icon appears on all frozen components.
 
-Enabling **Freeze Path** freezes all components downstream of the selected component.
-
+Enabling **Freeze Path** freezes all components upstream of the selected component.
 
 ## Additional component options
 
