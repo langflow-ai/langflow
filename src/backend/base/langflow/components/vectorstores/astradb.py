@@ -412,8 +412,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         if documents and self.deletion_field:
             self.log(f"Deleting documents where {self.deletion_field}")
             try:
-                database = self.get_database()
-                collection = database.get_collection(self.get_collection_choice(), keyspace=self.keyspace or None)
+                database = self.get_database_object()
+                collection = database.get_collection(self.collection_name, keyspace=self.get_keyspace())
                 delete_values = list({doc.metadata[self.deletion_field] for doc in documents})
                 self.log(f"Deleting documents where {self.deletion_field} matches {delete_values}.")
                 collection.delete_many({f"metadata.{self.deletion_field}": {"$in": delete_values}})
