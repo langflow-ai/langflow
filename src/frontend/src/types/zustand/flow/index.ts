@@ -53,6 +53,12 @@ export type FlowPoolType = {
 };
 
 export type FlowStoreType = {
+  //key x, y
+  positionDictionary: { [key: number]: number };
+  isPositionAvailable: (position: { x: number; y: number }) => boolean;
+  setPositionDictionary: (positionDictionary: {
+    [key: number]: number;
+  }) => void;
   fitViewNode: (nodeId: string) => void;
   autoSaveFlow: (() => void) | undefined;
   componentsToUpdate: string[];
