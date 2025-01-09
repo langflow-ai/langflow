@@ -7,6 +7,7 @@ import { useMemo, useRef, useState } from "react";
 import { ForwardedIconComponent } from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import { InputProps, TableComponentType } from "../../types";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 
 export default function TableNodeComponent({
   tableTitle,
@@ -38,10 +39,10 @@ export default function TableNodeComponent({
           const dateParts = params.newValue.split("/");
           return dateParts.length === 3
             ? new Date(
-                parseInt(dateParts[2]),
-                parseInt(dateParts[1]) - 1,
-                parseInt(dateParts[0]),
-              )
+              parseInt(dateParts[2]),
+              parseInt(dateParts[1]) - 1,
+              parseInt(dateParts[0]),
+            )
             : null;
         },
         valueFormatter: (params) => {
@@ -68,7 +69,24 @@ export default function TableNodeComponent({
   const componentColumns = columns
     ? columns
     : generateBackendColumnsFromValue(value ?? [], table_options);
-  const AgColumns = FormatColumns(componentColumns);
+  let AgColumns = FormatColumns(componentColumns);
+  // add info to each column
+  AgColumns = AgColumns.map((col) => {
+    if (col.context?.info) {
+      return {
+        ...col,
+        headerComponent: () => (<div className="flex items-center gap-1">
+          <div>{col.headerName}</div>
+          <ShadTooltip content={col.context?.info}>
+            <div>
+              <ForwardedIconComponent name="Info" className="h-4 w-4" />
+            </div>
+          </ShadTooltip>
+        </div>),
+      };
+    }
+    return col
+  });
   function setAllRows() {
     if (agGrid.current && !agGrid.current.api.isDestroyed()) {
       const rows: any = [];
