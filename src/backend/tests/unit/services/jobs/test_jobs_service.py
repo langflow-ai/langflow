@@ -31,8 +31,13 @@ async def task_service_with_mock_listeners():
 
 
 # Create a mock task function that has all the kwargs
-def mock_task_func(**kwargs):
+async def mock_task_func(**kwargs):
     return kwargs
+
+
+async def failing_mock_task_func(**kwargs):  # noqa: ARG001
+    msg = "Simulated failure"
+    raise ValueError(msg)
 
 
 @pytest.fixture
@@ -169,3 +174,88 @@ async def test_invalid_job_id(task_service: JobsService):
     # Both handlers should handle non-existent jobs gracefully
     await task_service._handle_job_executed(invalid_success_event)
     await task_service._handle_job_error(invalid_error_event)
+
+
+@pytest.mark.asyncio
+async def test_job_cancellation(task_service: JobsService, sample_job: Job):
+    """Test cancelling a scheduled job."""
+    # Cancel the job
+    cancelled = await task_service.cancel_job(sample_job.id)
+    assert cancelled is True
+
+    # Verify job status
+    async with session_scope() as session:
+        stmt = select(Job).where(Job.id == sample_job.id)
+        updated_job = (await session.exec(stmt)).first()
+        assert updated_job is not None
+        assert updated_job.status == JobStatus.CANCELLED
+        assert updated_job.is_active is False
+
+
+@pytest.mark.asyncio
+async def test_job_result_size_limits(task_service: JobsService, sample_job: Job):
+    """Test handling of large job results."""
+    # Create a large result payload
+    large_result = {
+        "data": "x" * 1_000_000,  # 1MB of data
+        "metadata": {"size": "very large"},
+    }
+
+    # Create success event with large result
+    event = JobExecutionEvent(
+        code=0,
+        job_id=sample_job.id,
+        jobstore="default",
+        retval=large_result,
+        scheduled_run_time=sample_job.next_run_time,
+    )
+
+    # Handle the event
+    await task_service._handle_job_executed(event)
+
+    # Verify the job result was handled appropriately
+    async with session_scope() as session:
+        stmt = select(Job).where(Job.id == sample_job.id)
+        updated_job = (await session.exec(stmt)).first()
+        assert updated_job is not None
+        assert updated_job.status == JobStatus.COMPLETED
+        # Verify result was either truncated or properly stored
+        assert isinstance(updated_job.result, dict)
+        assert "data" in updated_job.result
+
+
+@pytest.mark.asyncio
+async def test_concurrent_job_creation(task_service: JobsService, active_user, simple_api_test):
+    """Test creating multiple jobs concurrently."""
+    num_jobs = 5
+    job_ids = []
+
+    # Create multiple jobs concurrently
+    async def create_job(index: int):
+        return await task_service.create_job(
+            task_func=mock_task_func,
+            run_at=None,
+            name=f"Concurrent Job {index}",
+            kwargs={
+                "flow": simple_api_test,
+                "input_request": {"input_value": f"concurrent test {index}"},
+                "stream": False,
+                "api_key_user": active_user,
+            },
+        )
+
+    # Create jobs concurrently
+    tasks = [create_job(i) for i in range(num_jobs)]
+    job_ids = await asyncio.gather(*tasks)
+
+    # Verify all jobs were created successfully
+    async with session_scope() as session:
+        for job_id in job_ids:
+            stmt = select(Job).where(Job.id == job_id)
+            job = (await session.exec(stmt)).first()
+            assert job is not None
+            assert job.status == JobStatus.COMPLETED
+            assert job.is_active is True
+
+    # Verify all jobs have unique IDs
+    assert len(set(job_ids)) == num_jobs
