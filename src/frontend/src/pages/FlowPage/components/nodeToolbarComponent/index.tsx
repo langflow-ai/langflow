@@ -5,7 +5,6 @@ import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import ToggleShadComponent from "@/components/core/parameterRenderComponent/components/toggleShadComponent";
 import { Button } from "@/components/ui/button";
-import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 import useAddFlow from "@/hooks/flows/use-add-flow";
@@ -93,7 +92,6 @@ const NodeToolbarComponent = memo(
         });
       },
     });
-    const updateToolMode = useFlowStore((state) => state.updateToolMode);
 
     const flowDataNodes = useMemo(
       () => currentFlow?.data?.nodes,
@@ -114,7 +112,6 @@ const NodeToolbarComponent = memo(
       node: data.node!,
       nodeId: data.id,
       parameterId: "tool_mode",
-      tool_mode: data.node!.tool_mode ?? false,
     });
 
     const isSaved = flows?.some((flow) =>
@@ -140,8 +137,6 @@ const NodeToolbarComponent = memo(
       [data.node?.template, isGroup],
     );
     const addFlow = useAddFlow();
-
-    const { mutate: patchUpdateFlow } = usePatchUpdateFlow();
 
     const isMinimal = useMemo(
       () => countHandlesFn(data) <= 1 && numberOfOutputHandles <= 1,
@@ -172,13 +167,8 @@ const NodeToolbarComponent = memo(
     };
 
     const handleActivateToolMode = () => {
-      const newValue = !flowDataNodes![index]!.data.node.tool_mode;
-
-      updateToolMode(data.id, newValue);
-      data.node!.tool_mode = newValue;
-
+      const newValue = !toolMode;
       setToolMode(newValue);
-
       mutateTemplate(
         newValue,
         data.node!,
@@ -186,21 +176,9 @@ const NodeToolbarComponent = memo(
         postToolModeValue,
         setErrorData,
         "tool_mode",
-        () => {
-          currentFlow!.data!.nodes[index]!.data.node.tool_mode = newValue;
-          patchUpdateFlow({
-            id: currentFlow?.id!,
-            name: currentFlow?.name!,
-            data: currentFlow?.data!,
-            description: currentFlow?.description!,
-            folder_id: currentFlow?.folder_id!,
-            endpoint_name: currentFlow?.endpoint_name!,
-          });
-        },
+        () => updateNodeInternals(data.id),
+        newValue,
       );
-
-      updateNodeInternals(data.id);
-      return newValue;
     };
 
     const handleMinimize = useCallback(() => {
@@ -437,6 +415,7 @@ const NodeToolbarComponent = memo(
         setLastCopiedSelection,
         paste,
         handleActivateToolMode,
+        toolMode,
       ],
     );
 

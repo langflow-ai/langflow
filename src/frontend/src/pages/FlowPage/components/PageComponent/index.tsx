@@ -188,7 +188,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
 
   useEffect(() => {
     useFlowStore.setState({ autoSaveFlow });
-  });
+  }, [autoSaveFlow]);
 
   function handleUndo(e: KeyboardEvent) {
     if (!isWrappedWithClass(e, "noflow")) {

@@ -49,7 +49,6 @@ export default function NodeInputField({
     node: data.node!,
     nodeId: data.id,
     parameterId: name,
-    tool_mode: data.node!.tool_mode ?? false,
   });
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const { handleNodeClass } = useHandleNodeClass(data.id);
