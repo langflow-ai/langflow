@@ -23,7 +23,7 @@ To use the `requests` library:
 ```python
 python3 python-api-script.py --message="tell me about something interesting"
 ```
-## Python Code
+## Python code
 
 The **Python Code** tab displays code to interact with your flow's `.json` file using the Langflow runtime.
 
@@ -108,7 +108,7 @@ Your chatbot describes the image file you sent.
 "text": "This flowchart appears to represent a complex system for processing financial inquiries using various AI agents and tools. Here’s a breakdown of its components and how they might work together..."
 ```
 
-## Chat Widget
+## Chat widget
 
 The **Chat Widget HTML** tab displays code that can be inserted in the `<body>` of your HTML to interact with your flow.
 
@@ -133,7 +133,7 @@ To embed the Chat Widget into any HTML page, insert the code snippet. inside a 
   ></langflow-chat>
 ```
 
-### Embed your flow with React
+### Embed the chat widget with React
 
 To embed the Chat Widget using React, insert this `<script>` tag into the React _index.html_ file, inside the `<body>`tag:
 
@@ -149,7 +149,7 @@ declare global {  namespace JSX {    interface IntrinsicElements {      "langflo
 
 Finally, you can place the component anywhere in your code to display the Chat Widget.
 
-### Embed your flow with Angular
+### Embed the chat widget with Angular
 
 To use the chat widget in Angular, first add this `<script>` tag into the Angular _index.html_ file, inside the `<body>` tag.
 

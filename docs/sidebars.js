@@ -44,6 +44,7 @@ module.exports = {
       label: "Components",
       items: [
         "Components/components-agents",
+        "Components/components-custom-components",
         "Components/components-data",
         "Components/components-embedding-models",
         "Components/components-helpers",
@@ -56,7 +57,6 @@ module.exports = {
         "Components/components-prompts",
         "Components/components-tools",
         "Components/components-vector-stores",
-        "Components/components-custom-components",
       ],
     },
     {
