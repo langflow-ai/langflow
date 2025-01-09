@@ -71,7 +71,7 @@ class DirectoryComponent(Component):
 
     def load_directory(self) -> list[Data]:
         path = self.path
-        types = self.types if self.types else TEXT_FILE_TYPES
+        types = self.types or TEXT_FILE_TYPES
         depth = self.depth
         max_concurrency = self.max_concurrency
         load_hidden = self.load_hidden
