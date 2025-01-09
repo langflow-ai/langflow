@@ -479,6 +479,7 @@ export const nodeColorsName: { [char: string]: string } = {
   BaseChatMemory: "cyan",
   BaseChatMessageHistory: "orange",
   Memory: "orange",
+  DataFrame: "rose",
 };
 
 export const SIDEBAR_CATEGORIES = [
