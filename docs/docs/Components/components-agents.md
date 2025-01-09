@@ -1,16 +1,33 @@
 ---
 title: Agents
-sidebar_position: 12
 slug: /components-agents
 ---
 
 # Agent components in Langflow
 
-Agent components are used to define the behavior and capabilities of AI agents in your flow. Agents can interact with APIs, databases, and other services and use LLMs as a reasoning engine to decide which course to take in your flow.
+Agent components define the behavior and capabilities of AI agents in your flow.
+
+Agents use LLMs as a reasoning engine to decide which of the connected tool components to use to solve a problem.
+
+Tools in agentic functions are, essentially, functions that the agent can call to perform tasks or access external resources.
+A function is wrapped as a `Tool` object, with a common interface the agent understands.
+Agents become aware of tools through tool registration, where the agent is provided a list of available tools, typically at agent initialization. The `Tool` object's description tells the agent what the tool can do.
+
+The agent then uses a connected LLM to reason through the problem to decide which tool is best for the job.
+
+## Use an agent in a flow
+
+The [simple agent starter project](/starter-projects-simple-agent) uses an [agent component](#agent-component) connected to URL and Calculator tools to answer a user's questions. The OpenAI LLM acts as a brain for the agent to decide which tool to use. Tools are connected to agent components at the **Tools** port.
+
+![Simple agent starter flow](/img/starter-flow-simple-agent.png)
+
+For a multi-agent example, see [Create a problem-solving agent](/agents-tool-calling-agent-component).
 
 ## Agent component {#agent-component}
 
 This component creates an agent that can use tools to answer questions and perform tasks based on given instructions.
+
+The component includes an LLM model integration, a system message prompt, and a **Tools** port to connect tools to extend its capabilities.
 
 For more information on this component, see the [tool calling agent documentation](/agents-tool-calling-agent-component).
 

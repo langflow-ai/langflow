@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "should be able to see output preview from grouped components and connect components with a single click",
@@ -23,10 +24,7 @@ test(
       .getByTestId("inputsText Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {});
 
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
+    await zoomOut(page, 4);
 
     await page
       .getByTestId("inputsText Input")
@@ -115,19 +113,13 @@ test(
 
     const hasGradientUnlocked = await unlockedHandle?.evaluate((el) => {
       const style = window.getComputedStyle(el);
-      return (
-        style.backgroundImage.includes("conic-gradient") &&
-        style.backgroundImage.includes("rgb(79, 70, 229)")
-      );
+      return style.backgroundColor === "rgb(79, 70, 229)";
     });
 
     const secondHasGradientUnlocked = await secondUnlockedHandle?.evaluate(
       (el) => {
         const style = window.getComputedStyle(el);
-        return (
-          style.backgroundImage.includes("conic-gradient") &&
-          style.backgroundImage.includes("rgb(79, 70, 229)")
-        );
+        return style.backgroundColor === "rgb(79, 70, 229)";
       },
     );
 
@@ -139,10 +131,7 @@ test(
     const fourthHasGradientUnlocked = await fourthUnlockedHandle?.evaluate(
       (el) => {
         const style = window.getComputedStyle(el);
-        return (
-          style.backgroundImage.includes("conic-gradient") &&
-          style.backgroundImage.includes("rgb(79, 70, 229)")
-        );
+        return style.backgroundColor === "rgb(79, 70, 229)";
       },
     );
 
@@ -156,18 +145,21 @@ test(
       .nth(1);
     await elementCombineTextInput1.click();
 
+    await page.getByTitle("fit view").click();
+
+    await zoomOut(page, 2);
+
     await page
       .getByTestId("title-Combine Text")
       .first()
       .click({ modifiers: ["Control"] });
-    await page
-      .getByTestId("title-delimiter")
-      .last()
-      .click({ modifiers: ["Control"] });
 
-    await page.getByRole("button", { name: "Group" }).click();
+    await page.waitForSelector('[data-testid="group-node"]', {
+      timeout: 3000,
+      state: "visible",
+    });
 
-    await page.getByTitle("fit view").click();
+    await page.getByTestId("group-node").click();
 
     //connection 2
     const elementTextOutput0 = page

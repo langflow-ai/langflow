@@ -44,9 +44,10 @@ test(
     await page
       .getByTestId("outputsChat Output")
       .first()
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 0, y: 0 },
+      });
+
     await adjustScreenView(page);
 
     await page.getByTestId("sidebar-search-input").click();
@@ -54,11 +55,9 @@ test(
     await page
       .getByTestId("processingParse Data")
       .first()
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-
-    await page.mouse.up();
-    await page.mouse.down();
-    await adjustScreenView(page);
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 300, y: 400 },
+      });
 
     let visibleElementHandle;
 
@@ -115,7 +114,7 @@ test(
 
     // Move to the second element
     const chatOutputElement = await page
-      .getByTestId("handle-chatoutput-shownode-text-left")
+      .getByTestId("handle-chatoutput-noshownode-text-target")
       .all();
 
     for (const element of chatOutputElement) {

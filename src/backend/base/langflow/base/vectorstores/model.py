@@ -2,12 +2,10 @@ from abc import abstractmethod
 from functools import wraps
 from typing import TYPE_CHECKING
 
-from loguru import logger
-
 from langflow.custom import Component
 from langflow.field_typing import Text, VectorStore
 from langflow.helpers.data import docs_to_data
-from langflow.io import Output
+from langflow.io import DataInput, MultilineInput, Output
 from langflow.schema import Data
 
 if TYPE_CHECKING:
@@ -53,6 +51,19 @@ class LCVectorStoreComponent(Component):
                 raise TypeError(msg)
 
     trace_type = "retriever"
+
+    inputs = [
+        MultilineInput(
+            name="search_query",
+            display_name="Search Query",
+            tool_mode=True,
+        ),
+        DataInput(
+            name="ingest_data",
+            display_name="Ingest Data",
+        ),
+    ]
+
     outputs = [
         Output(
             display_name="Search Results",
@@ -111,20 +122,20 @@ class LCVectorStoreComponent(Component):
 
     def search_documents(self) -> list[Data]:
         """Search for documents in the vector store."""
-        search_query: str = self.search_query
-        if not search_query:
-            self.status = ""
-            return []
-
         if self._cached_vector_store is not None:
             vector_store = self._cached_vector_store
         else:
             vector_store = self.build_vector_store()
             self._cached_vector_store = vector_store
 
-        logger.debug(f"Search input: {search_query}")
-        logger.debug(f"Search type: {self.search_type}")
-        logger.debug(f"Number of results: {self.number_of_results}")
+        search_query: str = self.search_query
+        if not search_query:
+            self.status = ""
+            return []
+
+        self.log(f"Search input: {search_query}")
+        self.log(f"Search type: {self.search_type}")
+        self.log(f"Number of results: {self.number_of_results}")
 
         search_results = self.search_with_vector_store(
             search_query, self.search_type, vector_store, k=self.number_of_results

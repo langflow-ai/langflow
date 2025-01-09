@@ -1,14 +1,14 @@
 from uuid import UUID
 
 from langflow.services.database.models.message.model import MessageTable, MessageUpdate
-from langflow.services.deps import async_session_scope
+from langflow.services.deps import session_scope
 from langflow.utils.async_helpers import run_until_complete
 
 
 async def _update_message(message_id: UUID | str, message: MessageUpdate | dict):
     if not isinstance(message, MessageUpdate):
         message = MessageUpdate(**message)
-    async with async_session_scope() as session:
+    async with session_scope() as session:
         db_message = await session.get(MessageTable, message_id)
         if not db_message:
             msg = "Message not found"

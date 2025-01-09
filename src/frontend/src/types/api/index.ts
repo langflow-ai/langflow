@@ -4,7 +4,7 @@ import {
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
-import { Edge, Node, Viewport } from "reactflow";
+import { Edge, Node, Viewport } from "@xyflow/react";
 import { ChatInputType, ChatOutputType } from "../chat";
 import { FlowType } from "../flow";
 //kind and class are just representative names to represent the actual structure of the object received by the API
@@ -103,16 +103,6 @@ export type OutputFieldType = {
   display_name: string;
   hidden?: boolean;
   proxy?: OutputFieldProxyType;
-};
-export type sendAllProps = {
-  nodes: Node[];
-  edges: Edge[];
-  name: string;
-  description: string;
-  viewport: Viewport;
-  inputs: { text?: string };
-  chatKey: string;
-  chatHistory: { message: string | object; isSend: boolean }[];
 };
 export type errorsTypeAPI = {
   function: { errors: Array<string> };

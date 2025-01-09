@@ -170,9 +170,15 @@ def create_function(code, function_name):
 def create_class(code, class_name):
     """Dynamically create a class from a string of code and a specified class name.
 
-    :param code: String containing the Python code defining the class
-    :param class_name: Name of the class to be created
-    :return: A function that, when called, returns an instance of the created class
+    Args:
+        code: String containing the Python code defining the class
+        class_name: Name of the class to be created
+
+    Returns:
+         A function that, when called, returns an instance of the created class
+
+    Raises:
+        ValueError: If the code contains syntax errors or the class definition is invalid
     """
     if not hasattr(ast, "TypeIgnore"):
         ast.TypeIgnore = create_type_ignore_class()
@@ -199,7 +205,8 @@ def create_class(code, class_name):
 def create_type_ignore_class():
     """Create a TypeIgnore class for AST module if it doesn't exist.
 
-    :return: TypeIgnore class
+    Returns:
+        TypeIgnore class
     """
 
     class TypeIgnore(ast.AST):
@@ -211,8 +218,15 @@ def create_type_ignore_class():
 def prepare_global_scope(code, module):
     """Prepares the global scope with necessary imports from the provided code module.
 
-    :param module: AST parsed module
-    :return: Dictionary representing the global scope with imported modules
+    Args:
+        code: The Python code
+        module: AST parsed module
+
+    Returns:
+        Dictionary representing the global scope with imported modules
+
+    Raises:
+        ModuleNotFoundError: If a module is not found in the code
     """
     exec_globals = globals().copy()
     exec_globals.update(get_default_imports(code))
@@ -250,9 +264,12 @@ def prepare_global_scope(code, module):
 def extract_class_code(module, class_name):
     """Extracts the AST node for the specified class from the module.
 
-    :param module: AST parsed module
-    :param class_name: Name of the class to extract
-    :return: AST node of the specified class
+    Args:
+        module: AST parsed module
+        class_name: Name of the class to extract
+
+    Returns:
+        AST node of the specified class
     """
     class_code = next(node for node in module.body if isinstance(node, ast.ClassDef) and node.name == class_name)
 
@@ -263,8 +280,11 @@ def extract_class_code(module, class_name):
 def compile_class_code(class_code):
     """Compiles the AST node of a class into a code object.
 
-    :param class_code: AST node of the class
-    :return: Compiled code object of the class
+    Args:
+        class_code: AST node of the class
+
+    Returns:
+        Compiled code object of the class
     """
     return compile(ast.Module(body=[class_code], type_ignores=[]), "<string>", "exec")
 
@@ -272,10 +292,13 @@ def compile_class_code(class_code):
 def build_class_constructor(compiled_class, exec_globals, class_name):
     """Builds a constructor function for the dynamically created class.
 
-    :param compiled_class: Compiled code object of the class
-    :param exec_globals: Global scope with necessary imports
-    :param class_name: Name of the class
-    :return: Constructor function for the class
+    Args:
+        compiled_class: Compiled code object of the class
+        exec_globals: Global scope with necessary imports
+        class_name: Name of the class
+
+    Returns:
+         Constructor function for the class
     """
     exec(compiled_class, exec_globals, locals())
     exec_globals[class_name] = locals()[class_name]
@@ -313,9 +336,12 @@ def get_default_imports(code_string):
 def find_names_in_code(code, names):
     """Finds if any of the specified names are present in the given code string.
 
-    :param code: The source code as a string.
-    :param names: A list of names to check for in the code.
-    :return: A set of names that are found in the code.
+    Args:
+        code: The source code as a string.
+        names: A list of names to check for in the code.
+
+    Returns:
+        A set of names that are found in the code.
     """
     return {name for name in names if name in code}
 
@@ -339,7 +365,7 @@ def extract_class_name(code: str) -> str:
         str: Name of the first Component subclass found
 
     Raises:
-        ValueError: If no Component subclass is found in the code
+        TypeError: If no Component subclass is found in the code
     """
     try:
         module = ast.parse(code)

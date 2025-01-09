@@ -1,9 +1,9 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
+import { useUpdateNodeInternals } from "@xyflow/react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { useUpdateNodeInternals } from "reactflow";
 import { Button } from "../../components/ui/button";
 import {
   TOOLTIP_HIDDEN_OUTPUTS,
@@ -65,7 +65,7 @@ function GenericNode({
   selected,
 }: {
   data: NodeDataType;
-  selected: boolean;
+  selected?: boolean;
   xPos?: number;
   yPos?: number;
 }): JSX.Element {
@@ -181,8 +181,10 @@ function GenericNode({
     () =>
       data.node?.outputs?.some(
         (output) => output.name === "component_as_tool",
-      ) ?? false,
-    [data.node?.outputs],
+      ) ??
+      data.node?.tool_mode ??
+      false,
+    [data.node?.outputs, data.node?.tool_mode],
   );
 
   const hasToolMode = useMemo(
@@ -412,7 +414,7 @@ function GenericNode({
               {renderNodeIcon()}
               <div className="generic-node-tooltip-div">{renderNodeName()}</div>
             </div>
-            <div>
+            <div data-testid={`${showNode ? "show" : "hide"}-node-content`}>
               {!showNode && (
                 <>
                   {renderInputParameters()}

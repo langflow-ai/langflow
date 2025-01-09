@@ -629,7 +629,7 @@ export const TIMEOUT_ERROR_DESCRIPION = "Server is busy.";
 export const SIGN_UP_SUCCESS = "Account created! Await admin activation. ";
 
 export const API_PAGE_PARAGRAPH =
-  "Your secret API keys are listed below. Do not share your API key with others, or expose it in the browser or other client-side code.";
+  "Your secret Langflow API keys are listed below. Do not share your API key with others, or expose it in the browser or other client-side code.";
 
 export const API_PAGE_USER_KEYS =
   "This user does not have any keys assigned at the moment.";
@@ -740,6 +740,8 @@ export const BUNDLES_SIDEBAR_FOLDER_NAMES = [
   "Notion",
   "AssemblyAI",
   "assemblyai",
+  "LangWatch",
+  "langwatch",
 ];
 
 export const AUTHORIZED_DUPLICATE_REQUESTS = [
@@ -763,6 +765,11 @@ export const defaultShortcuts = [
     display_name: "Controls",
     name: "Advanced Settings",
     shortcut: "mod+shift+a",
+  },
+  {
+    display_name: "Search Components on Sidebar",
+    name: "Search Components Sidebar",
+    shortcut: "/",
   },
   {
     display_name: "Minimize",
@@ -823,6 +830,11 @@ export const defaultShortcuts = [
     display_name: "Redo",
     name: "Redo",
     shortcut: "mod+y",
+  },
+  {
+    display_name: "Redo (alternative)",
+    name: "Redo Alt",
+    shortcut: "mod+shift+z",
   },
   {
     display_name: "Group",

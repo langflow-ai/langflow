@@ -6,7 +6,7 @@ import pytest
 from langflow.services.database.models.variable.model import VariableUpdate
 from langflow.services.deps import get_settings_service
 from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
-from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
+from langflow.services.variable.constants import CREDENTIAL_TYPE
 from langflow.services.variable.service import DatabaseVariableService
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
@@ -137,7 +137,7 @@ async def test_update_variable(service, session: AsyncSession):
     assert result.value != old_value
     assert result.value != new_value
     assert result.default_fields == []
-    assert result.type == GENERIC_TYPE
+    assert result.type == CREDENTIAL_TYPE
     assert isinstance(result.created_at, datetime)
     assert isinstance(result.updated_at, datetime)
 
@@ -237,6 +237,6 @@ async def test_create_variable(service, session: AsyncSession):
     assert result.name == name
     assert result.value != value
     assert result.default_fields == []
-    assert result.type == GENERIC_TYPE
+    assert result.type == CREDENTIAL_TYPE
     assert isinstance(result.created_at, datetime)
     assert isinstance(result.updated_at, datetime)
