@@ -309,6 +309,10 @@ class JobsService(Service):
             msg = "Job store not initialized"
             logger.error(msg)
             raise ValueError(msg)
+        if user_id is None:
+            msg = "User ID is required"
+            logger.error(msg)
+            raise ValueError(msg)
         try:
             if pending is not None:
                 # When pending is provided, use job store's get_user_jobs which handles pending status
