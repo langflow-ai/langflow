@@ -1,12 +1,14 @@
 from collections.abc import Generator
 from enum import Enum
+from typing import Literal
+
+from pydantic import BaseModel
+from typing_extensions import TypedDict
+
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from langflow.schema.serialize import recursive_serialize_or_str
-from pydantic import BaseModel
-from typing import Literal
-from typing_extensions import TypedDict
 
 INPUT_FIELD_NAME = "input_value"
 
