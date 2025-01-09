@@ -172,7 +172,7 @@ The following keyboard shortcuts are available when a component is selected.
 | Docs | ⌘ + D | Opens related documentation. |
 | Minimize | ⌘ + Q | Minimizes the current component. |
 | Freeze | ⌘ + F | Freezes the current component state. |
-| Freeze Path | ⌘ + F | Freezes the current component state and all upstream components. |
+| Freeze Path | ⌘ + Shift + F | Freezes the current component state and all upstream components. |
 | Download | ⌘ + D | Downloads the current component as a JSON file. |
 | Delete | ⌘ + ⌫ | Deletes the component. |
 
