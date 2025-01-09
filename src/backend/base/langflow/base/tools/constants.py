@@ -26,10 +26,7 @@ TOOL_TABLE_SCHEMA = [
         "name": "tags",
         "display_name": "Tool Identifiers",
         "type": "str",
-        "description": (
-            "These are the default identifiers for the tools and cannot be changed. "
-            "Tool Name and Tool Description are the only editable fields."
-        ),
+        "description": ("The default identifiers for the tools and cannot be changed."),
         "disable_edit": True,
         "sortable": False,
         "filterable": False,
@@ -41,7 +38,7 @@ TOOL_TABLE_SCHEMA = [
         "type": "str",
         "description": (
             "Add commands to the tool. These commands will be used to run the tool. Start all commands with a `/`. "
-            "You can add multiple commands separated by a comma. "
+            "You can add multiple commands separated by a comma.\n"
             "Example: `/command1`, `/command2`, `/command3`"
         ),
         "sortable": False,
