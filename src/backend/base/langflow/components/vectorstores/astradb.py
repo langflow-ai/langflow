@@ -1,7 +1,8 @@
+from collections import defaultdict
 import os
 from dataclasses import asdict, dataclass, field
 
-from astrapy import DataAPIClient, Database
+from astrapy import AstraDBAdmin, DataAPIClient, Database
 from langchain_astradb import AstraDBVectorStore
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
@@ -329,6 +330,33 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             return None
 
+    def get_vectorize_providers(self):
+        try:
+            self.log("Dynamically updating list of Vectorize providers.")
+
+            # Get the admin object
+            admin = AstraDBAdmin(token=self.token)
+            db_admin = admin.get_database_admin(self.get_api_endpoint())
+
+            # Get the list of embedding providers
+            embedding_providers = db_admin.find_embedding_providers().as_dict()
+
+            vectorize_providers_mapping = {}
+            # Map the provider display name to the provider key and models
+            for provider_key, provider_data in embedding_providers["embeddingProviders"].items():
+                display_name = provider_data["displayName"]
+                models = [model["name"] for model in provider_data["models"]]
+
+                # TODO: https://astra.datastax.com/api/v2/graphql
+                vectorize_providers_mapping[display_name] = [provider_key, models]
+
+            # Sort the resulting dictionary
+            return defaultdict(list, dict(sorted(vectorize_providers_mapping.items())))
+        except Exception as e:  # noqa: BLE001
+            self.log(f"Error fetching Vectorize providers: {e}")
+
+            return {}
+
     def _initialize_database_options(self):
         try:
             return [
@@ -393,12 +421,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
         ]
 
-        # If the database is set, allow user to see collection options
-        if self.database_name:
-            build_config["collection_name"]["advanced"] = False
-        else:
-            build_config["collection_name"]["advanced"] = True
-
         # Get list of regions for a given cloud provider
         cloud_provider = (
             build_config["database_name"]["dialog_inputs"]["cloud_provider"]["value"] or "Amazon Web Services"
@@ -407,6 +429,40 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         build_config["database_name"]["dialog_inputs"]["region"]["options"] = self.map_cloud_providers()[
             cloud_provider
         ]["regions"]
+
+        # If no database selected, we are done
+        if not self.database_name:
+            build_config["collection_name"]["advanced"] = True
+
+            return build_config
+
+        # If the database is set, allow user to see collection options
+        build_config["collection_name"]["advanced"] = False
+
+        # For the final step, get the list of vectorize providers
+        vectorize_providers = self.get_vectorize_providers()
+        if not vectorize_providers:
+            return build_config
+
+        # Allow the user to see the embedding provider options
+        provider_options = build_config["collection_name"]["dialog_inputs"][
+            "embedding_generation_provider"]["options"]
+        if not provider_options:
+            # If the collection is set, allow user to see embedding options
+            build_config["collection_name"]["dialog_inputs"]["embedding_generation_provider"]["options"] = (
+                ["Bring your own", "Nvidia", *[key for key in vectorize_providers if key != "Nvidia"]]
+            )
+
+        # And allow the user to see the models based on a selected provider
+        model_options = build_config["collection_name"]["dialog_inputs"]["embedding_generation_model"]["options"]
+        if not model_options:
+            embedding_provider = (
+                build_config["collection_name"]["dialog_inputs"]["embedding_generation_provider"]["value"]
+            )
+
+            build_config["collection_name"]["dialog_inputs"]["embedding_generation_model"]["options"] = (
+                vectorize_providers.get(embedding_provider, [[], []])[1]
+            )
 
         return build_config
 
