@@ -1,6 +1,5 @@
 ---
 title: Travel planning agent
-sidebar_position: 8
 slug: /tutorials-travel-planning-agent
 ---
 

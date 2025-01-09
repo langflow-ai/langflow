@@ -1,6 +1,5 @@
 ---
 title: Kubernetes
-sidebar_position: 1
 slug: /deployment-kubernetes
 ---
 
@@ -84,7 +83,7 @@ kubectl port-forward -n langflow svc/langflow-langflow-runtime 7860:7860
 ```
 
 
-Now you can access LangFlow at [http://localhost:7860/](http://localhost:7860/).
+Now you can access LangFlow at `http://localhost:7860/`.
 
 
 ### LangFlow version {#645c6ef7984d4da0bcc4170bab0ff415}
@@ -258,7 +257,7 @@ kubectl port-forward -n langflow svc/langflow-my-langflow-app 7860:7860
 ```
 
 
-Now you can access the API at [http://localhost:7860/api/v1/flows](http://localhost:7860/api/v1/flows) and execute the flow:
+Now you can access the API at `http://localhost:7860/api/v1/flows` and execute the flow:
 
 
 ```shell
