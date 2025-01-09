@@ -445,20 +445,21 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return build_config
 
         # Allow the user to see the embedding provider options
-        provider_options = build_config["collection_name"]["dialog_inputs"][
-            "embedding_generation_provider"]["options"]
+        provider_options = build_config["collection_name"]["dialog_inputs"]["embedding_generation_provider"]["options"]
         if not provider_options:
             # If the collection is set, allow user to see embedding options
-            build_config["collection_name"]["dialog_inputs"]["embedding_generation_provider"]["options"] = (
-                ["Bring your own", "Nvidia", *[key for key in vectorize_providers if key != "Nvidia"]]
-            )
+            build_config["collection_name"]["dialog_inputs"]["embedding_generation_provider"]["options"] = [
+                "Bring your own",
+                "Nvidia",
+                *[key for key in vectorize_providers if key != "Nvidia"],
+            ]
 
         # And allow the user to see the models based on a selected provider
         model_options = build_config["collection_name"]["dialog_inputs"]["embedding_generation_model"]["options"]
         if not model_options:
-            embedding_provider = (
-                build_config["collection_name"]["dialog_inputs"]["embedding_generation_provider"]["value"]
-            )
+            embedding_provider = build_config["collection_name"]["dialog_inputs"]["embedding_generation_provider"][
+                "value"
+            ]
 
             build_config["collection_name"]["dialog_inputs"]["embedding_generation_model"]["options"] = (
                 vectorize_providers.get(embedding_provider, [[], []])[1]
