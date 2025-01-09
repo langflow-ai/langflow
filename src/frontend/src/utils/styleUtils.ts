@@ -36,6 +36,7 @@ import {
   Boxes,
   Braces,
   BrainCircuit,
+  ChartNetwork,
   Check,
   CheckCheck,
   CheckCircle2,
@@ -478,6 +479,7 @@ export const nodeColorsName: { [char: string]: string } = {
   BaseChatMemory: "cyan",
   BaseChatMessageHistory: "orange",
   Memory: "orange",
+  DataFrame: "rose",
 };
 
 export const SIDEBAR_CATEGORIES = [
@@ -919,6 +921,7 @@ export const nodeIconsLucide: iconsType = {
   CornerDownLeft,
   ChevronsDownUp,
   OptionIcon,
+  ChartNetwork,
   Option: OptionIcon,
   FreezeAll: freezeAllIcon,
   Table,
