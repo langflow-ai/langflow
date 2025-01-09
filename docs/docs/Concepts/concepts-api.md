@@ -114,53 +114,48 @@ The **Chat Widget HTML** tab displays code that can be inserted in the `<body
 
 The **Langflow Chat Widget** is a powerful web component that enables communication with a Langflow project. This widget allows for a chat interface embedding, allowing the integration of Langflow into web applications effortlessly.
 
-
 You can get the HTML code embedded with the chat by clicking the Code button at the Sidebar after building a flow.
-
 
 Clicking the Chat Widget HTML tab, you'll get the code to be inserted. Read below to learn how to use it with HTML, React and Angular.
 
+### Embed the chat widget into HTML
 
-### Embed your flow into HTML
+To embed the Chat Widget into any HTML page, insert the code snippet. inside a `<body>` tag.
 
+```html
+<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.6/dist/build/static/js/bundle.min.js""></script>
 
-The Chat Widget can be embedded into any HTML page, inside a `<body>` tag, as demonstrated in the video below.
+  <langflow-chat
+    window_title="Basic Prompting"
+    flow_id="801abb1e-19b9-4278-9632-179b6d84f126"
+    host_url="http://localhost:7860"
 
+  ></langflow-chat>
+```
 
 ### Embed your flow with React
 
-
 To embed the Chat Widget using React, insert this `<script>` tag into the React _index.html_ file, inside the `<body>`tag:
-
 
 ```javascript
 <script src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
 ```
 
-
 Declare your Web Component and encapsulate it in a React component.
-
 
 ```javascript
 declare global {  namespace JSX {    interface IntrinsicElements {      "langflow-chat": any;    }  }}export default function ChatWidget({ className }) {  return (    <div className={className}>      <langflow-chat        chat_inputs='{"your_key":"value"}'        chat_input_field="your_chat_key"        flow_id="your_flow_id"        host_url="langflow_url"      ></langflow-chat>    </div>  );}
 ```
 
-
-
 Finally, you can place the component anywhere in your code to display the Chat Widget.
-
 
 ### Embed your flow with Angular
 
-
 To use the chat widget in Angular, first add this `<script>` tag into the Angular _index.html_ file, inside the `<body>` tag.
-
 
 ```javascript
 <script src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@main/dist/build/static/js/bundle.min.js"></script>
 ```
-
-
 
 When you use a custom web component in an Angular template, the Angular compiler might show a warning when it doesn't recognize the custom elements by default. To suppress this warning, add `CUSTOM_ELEMENTS_SCHEMA` to the module's `@NgModule.schemas`.
 
@@ -175,15 +170,11 @@ When you use a custom web component in an Angular template, the Angular compiler
 @NgModule({  declarations: [    // ... Other components and directives ...  ],  imports: [    // ... Other imported modules ...  ],  schemas: [CUSTOM_ELEMENTS_SCHEMA], // Add the CUSTOM_ELEMENTS_SCHEMA here})export class YourModule {}
 ```
 
-
-
 In your Angular project, find the component belonging to the module where `CUSTOM_ELEMENTS_SCHEMA` was added. Inside the template, add the `langflow-chat` tag to include the Chat Widget in your component's view:
-
 
 ```javascript
 <langflow-chat  chat_inputs='{"your_key":"value"}'  chat_input_field="your_chat_key"  flow_id="your_flow_id"  host_url="langflow_url"></langflow-chat>
 ```
-
 
 :::tip
 
@@ -191,21 +182,13 @@ In your Angular project, find the component belonging to the module where `CUST
 
 :::
 
-
-
-
 ## Chat Widget Configuration
 
 Use the widget API to customize your Chat Widget:
 
-
 :::caution
-
 Props with the type JSON need to be passed as stringified JSONs, with the format \{"key":"value"\}.
-
 :::
-
-
 
 
 | Prop                  | Type    | Required | Description                                                                                                                                                      |
