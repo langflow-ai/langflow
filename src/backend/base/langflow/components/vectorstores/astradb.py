@@ -30,42 +30,55 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     @dataclass
     class NewDatabaseInput:
-        new_database_name: StrInput = field(
-            default_factory=lambda: StrInput(
-                name="new_database_name",
-                display_name="New Database Name",
-                info="Name of the new database to create in Astra DB.",
-                required=True,
-            )
-        )
-        cloud_provider: DropdownInput = field(
-            default_factory=lambda: DropdownInput(
-                name="cloud_provider",
-                display_name="Cloud Provider",
-                info="Cloud provider for the new database.",
-                options=["Amazon Web Services", "Google Cloud Platform", "Microsoft Azure"],
-                required=True,
-            )
-        )
-        region: DropdownInput = field(
-            default_factory=lambda: DropdownInput(
-                name="region",
-                display_name="Region",
-                info="Region for the new database.",
-                options=["us-east-2", "ap-south-1", "eu-west-1", "us-east1", "westus3"],
-                required=True,
-            )
-        )
+        new_database_name: StrInput = field(default_factory=lambda: StrInput(
+            name="new_database_name",
+            display_name="New Database Name",
+            info="Name of the new database to create in Astra DB.",
+            required=True,
+        ))
+        cloud_provider: DropdownInput = field(default_factory=lambda: DropdownInput(
+            name="cloud_provider",
+            display_name="Cloud Provider",
+            info="Cloud provider for the new database.",
+            options=["Amazon Web Services", "Google Cloud Platform", "Microsoft Azure"],
+            required=True,
+        ))
+        region: DropdownInput = field(default_factory=lambda: DropdownInput(
+            name="region",
+            display_name="Region",
+            info="Region for the new database.",
+            options=[],
+            required=True,
+        ))
 
     @dataclass
     class NewCollectionInput:
-        title: str = "Create New Collection"
-        description: str = "Create a new collection in Astra DB."
-        status: str = ""
-        dimensions: int = 0
-        model: str = ""
-        similarity_metrics: list[str] = field(default_factory=list)
-        icon: str = "Collection"
+        new_collection_name: StrInput = field(default_factory=lambda: StrInput(
+            name="new_collection_name",
+            display_name="New Collection Name",
+            info="Name of the new collection to create in Astra DB.",
+            required=True,
+        ))
+        embedding_generation_provider: DropdownInput = field(default_factory=lambda: DropdownInput(
+            name="embedding_generation_provider",
+            display_name="Embedding Generation Provider",
+            info="Provider to use for generating embeddings.",
+            options=["Bring my own", "NVIDIA", "OpenAI"],
+            required=True,
+        ))
+        embedding_generation_model: DropdownInput = field(default_factory=lambda: DropdownInput(
+            name="embedding_generation_model",
+            display_name="Embedding Generation Model",
+            info="Model to use for generating embeddings.",
+            options=[
+                "Bring my own",
+                "NV-Embed-QA",
+                "text-embedding-3-small",
+                "text-embedding-3-large",
+                "text-embedding-4-small",
+                "text-embedding-ada-002"
+            ],
+        ))
 
     inputs = [
         SecretStrInput(
@@ -97,7 +110,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             required=True,
             refresh_button=True,
             real_time_refresh=True,
-            dialog_inputs=[asdict(NewDatabaseInput())],
+            dialog_inputs=asdict(NewDatabaseInput()),
             options=[],
             options_metadata=[
                 {
@@ -113,7 +126,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             required=True,
             refresh_button=True,
             real_time_refresh=True,
-            dialog_inputs=[asdict(NewCollectionInput())],
+            dialog_inputs=asdict(NewCollectionInput()),
             options=[],
             options_metadata=[
                 {
@@ -195,6 +208,22 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             advanced=True,
         ),
     ]
+
+    def map_cloud_providers(self):
+        return {
+            "Amazon Web Services": {
+                "id": "aws",
+                "regions": ["us-east-2", "ap-south-1", "eu-west-1"],
+            },
+            "Google Cloud Platform": {
+                "id": "gcp",
+                "regions": ["us-east1"],
+            },
+            "Microsoft Azure": {
+                "id": "azure",
+                "regions": ["westus3"],
+            }
+        }
 
     def get_database_list(self):
         client = DataAPIClient(token=self.token, environment=self.environment)
@@ -357,6 +386,16 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             build_config["collection_name"]["advanced"] = False
         else:
             build_config["collection_name"]["advanced"] = True
+
+        # Get list of regions for a given cloud provider
+        cloud_provider = (
+            build_config["database_name"]["dialog_inputs"]["cloud_provider"]["value"]
+            or "Amazon Web Services"
+        )
+        # if cloud_provider:  # TODO: Restore when functionality is live
+        build_config["database_name"]["dialog_inputs"]["region"]["options"] = (
+            self.map_cloud_providers()[cloud_provider]["regions"]
+        )
 
         return build_config
 
