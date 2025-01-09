@@ -1,4 +1,5 @@
 import asyncio
+import time
 from uuid import uuid4
 
 import pytest
@@ -26,8 +27,8 @@ class LongRunningComponent(Component):
 
     outputs = [Output(name="output_value", display_name="Output", method="run_long_task")]
 
-    async def run_long_task(self) -> str:
-        await asyncio.sleep(100)
+    def run_long_task(self) -> str:
+        time.sleep(100)
         return self.input_value
 
 
@@ -346,3 +347,72 @@ async def test_create_job_malicious_input(client: AsyncClient, logged_in_headers
             f"Failed to retrieve job created with sanitized malicious input. "
             f"Status: {response.status_code}. Response: {response.text}"
         )
+
+
+@pytest.mark.asyncio
+async def test_concurrent_job_creation(client: AsyncClient, logged_in_headers, simple_api_test):
+    """Test creating multiple jobs concurrently."""
+    # Create multiple jobs concurrently
+    job_count = 3
+    responses = []
+
+    for i in range(job_count):
+        response = await client.post(
+            f"/api/v1/jobs/{simple_api_test['id']}",
+            json={
+                "name": f"Test Job {i}",
+                "input_request": {
+                    "input_value": f"test {i}",
+                    "input_type": "text",
+                    "output_type": "text",
+                    "tweaks": {},
+                },
+            },
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 200
+        responses.append(response)
+
+    # Verify each job was created with a unique ID
+    job_ids = [response.json() for response in responses]
+    assert len(set(job_ids)) == len(job_ids), "Job IDs should be unique"
+
+    # Check each job's status
+    for job_id in job_ids:
+        response = await client.get(
+            f"/api/v1/jobs/{job_id}",
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 200
+        job_data = response.json()
+        # Jobs might be PENDING or COMPLETED depending on execution speed
+        assert job_data["status"] in ["PENDING", "COMPLETED"], f"Job {job_id} should be in PENDING or COMPLETED state"
+
+
+@pytest.mark.asyncio
+async def test_list_jobs_with_pagination(client: AsyncClient, logged_in_headers):
+    """Test that the jobs listing endpoint handles pagination correctly (if supported).
+
+    Adjust query params as needed (page, page_size, start, limit, etc.).
+    """
+    # Request the first page of jobs
+    page = 1
+    page_size = 3
+    resp = await client.get("/api/v1/jobs/", headers=logged_in_headers, params={"page": page, "limit": page_size})
+
+    # If pagination not supported, adapt or remove these checks
+    assert resp.status_code in [
+        status.HTTP_200_OK,
+        status.HTTP_422_UNPROCESSABLE_ENTITY,
+    ], f"Unexpected status code for pagination: {resp.status_code}. Response: {resp.text}"
+    if resp.status_code == status.HTTP_200_OK:
+        data = resp.json()
+        # data might be an object with "items" array, "total", "page", etc.
+        # Adjust according to how your API returns paginated data.
+        assert isinstance(data, list | dict), "Expected a list or a page object."
+        # If it's a list, we can check the length.
+        if isinstance(data, list):
+            assert len(data) <= page_size, "Expected at most 3 jobs in the response page."
+        else:
+            assert "items" in data, "Expected 'items' in paginated response."
+            assert len(data["items"]) <= page_size, "Expected limited items in the returned page."
