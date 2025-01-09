@@ -146,8 +146,7 @@ def update_target_handle(new_edge, g_nodes):
         dict: The updated edge.
     """
     target_handle = new_edge["data"]["targetHandle"]
-    proxy = target_handle.get("proxy")
-    if proxy:
+    if proxy := target_handle.get("proxy"):
         proxy_id = proxy["id"]
         for node in g_nodes:
             if node["id"] == proxy_id:
@@ -190,8 +189,7 @@ def set_new_target_handle(proxy_id, new_edge, target_handle, node) -> None:
             "id": field_template_proxy["id"],
         }
 
-    input_types = target_handle.get("inputTypes")
-    if input_types:
+    if input_types := target_handle.get("inputTypes"):
         new_target_handle["inputTypes"] = input_types
 
     new_edge["data"]["targetHandle"] = new_target_handle
