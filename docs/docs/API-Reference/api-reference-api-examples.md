@@ -724,7 +724,7 @@ HTTP/1.1 204 No Content
 
 ### Get Transactions
 
-Retrieve all transactions (interactions with the LLM) for a specific flow.
+Retrieve all transactions (interactions between components) for a specific flow.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
@@ -1321,9 +1321,9 @@ A dictionary of all Langflow components.
   </TabItem>
 </Tabs>
 
-### Simplified Run Flow
+### Run Flow
 
-Execute a specified flow by ID or name with simplified input.
+Execute a specified flow by ID or name.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
