@@ -66,30 +66,12 @@ class NVIDIANeMoCustomizerComponent(Component):
             name="model_name",
             display_name="Model Name",
             info="Model to train",
-            options=[
-                "codellama-70b",
-                "gemma-7b",
-                "gpt-43b-002",
-                "gpt8b-4k",
-                "llama-2-13b",
-                "llama-2-70b",
-                "llama-2-7b",
-                "meta/llama-3_1-70b-instruct",
-                "meta/llama-3_1-8b-instruct",
-                "meta/llama3-70b-instruct",
-                "meta/llama3-8b-instruct",
-                "mistral-7b",
-                "mixtral-8x7b",
-            ],
-            value="mixtral-8x7b",
             refresh_button=True,
         ),
         DropdownInput(
             name="training_type",
             display_name="Training Type",
             info="Select the type of training to use",
-            options=["p-tuning", "lora", "fine-tuning"],
-            value="lora",  # Default value
         ),
         IntInput(
             name="epochs", display_name="Epochs", info="Number of times to cycle through the training data", value=5
@@ -112,15 +94,16 @@ class NVIDIANeMoCustomizerComponent(Component):
         Output(display_name="Job Result", name="data", method="customize"),
     ]
 
-    async def update_build_config(self, build_config, field_value, field_name=None):
+    def update_build_config(self, build_config, field_value, field_name=None):
         """Updates the component's configuration based on the selected option or refresh button."""
         models_url = f"{self.base_url}/v2/availableParentModels"
         try:
             if field_name == "model_name":
                 self.log(f"Refreshing model names from endpoint {models_url}, value: {field_value}")
 
-                async with httpx.AsyncClient(timeout=5.0) as client:
-                    response = await client.get(models_url, headers=self.headers)
+                # Use a synchronous HTTP client
+                with httpx.Client(timeout=5.0) as client:
+                    response = client.get(models_url, headers=self.headers)
                     response.raise_for_status()
 
                     models_data = response.json()
@@ -128,7 +111,31 @@ class NVIDIANeMoCustomizerComponent(Component):
 
                     build_config["model_name"]["options"] = model_names
 
-                    self.log("Updated model_name dropdown options.")
+                self.log("Updated model_name dropdown options.")
+
+            if field_name == "training_type":
+                # Use a synchronous HTTP client
+                with httpx.Client(timeout=5.0) as client:
+                    response = client.get(models_url, headers=self.headers)
+                    response.raise_for_status()
+
+                    models_data = response.json()
+
+                    # Logic to update `training_type` dropdown based on selected model
+                    selected_model_name = getattr(self, "model_name", None)
+                    if selected_model_name:
+                        # Find the selected model in the response
+                        selected_model = next(
+                            (model for model in models_data.get("models", []) if model["name"] == selected_model_name),
+                            None
+                        )
+
+                        if selected_model:
+                            # Update `training_type` dropdown with training types of the selected model
+                            training_types = selected_model.get("training_types", [])
+                            build_config["training_type"]["options"] = training_types
+                            self.log(f"Updated training_type dropdown options: {training_types}")
+
         except httpx.HTTPStatusError as exc:
             error_msg = f"HTTP error {exc.response.status_code} on {models_url}"
             self.log(error_msg)
@@ -146,6 +153,7 @@ class NVIDIANeMoCustomizerComponent(Component):
         if self.training_data is not None:
             dataset_name = await self.process_and_upload_dataset()
         self.log(f"dataset_name: {dataset_name}")
+
         data = {
             "parent_model_id": self.model_name,
             "dataset": dataset_name,
@@ -154,10 +162,14 @@ class NVIDIANeMoCustomizerComponent(Component):
                 "epochs": int(self.epochs),
                 "batch_size": int(self.batch_size),
                 "learning_rate": float(self.learning_rate),
-                "adapter_dim": 16,
             },
             "sha": "main",
         }
+
+        # Add `adapter_dim` only if training_type is "lora"
+        if self.training_type == "lora":
+            data["hyperparameters"]["adapter_dim"] = 16
+
         customizations_url = f"{self.base_url}/v2/customizations"
         try:
             formatted_data = json.dumps(data, indent=2)
