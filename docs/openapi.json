@@ -361,7 +361,7 @@
                 "tags": [
                     "Base"
                 ],
-                "summary": "Simplified Run Flow",
+                "summary": "Run Flow",
                 "description": "Executes a specified flow by ID with support for streaming and telemetry.\n\nThis endpoint executes a flow identified by ID or name, with options for streaming the response\nand tracking execution metrics. It handles both streaming and non-streaming execution modes.\n\nArgs:\n    background_tasks (BackgroundTasks): FastAPI background task manager\n    flow (FlowRead | None): The flow to execute, loaded via dependency\n    input_request (SimplifiedAPIRequest | None): Input parameters for the flow\n    stream (bool): Whether to stream the response\n    api_key_user (UserRead): Authenticated user from API key\n    request (Request): The incoming HTTP request\n\nReturns:\n    Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results\n    or a RunResponse with the complete execution results\n\nRaises:\n    HTTPException: For flow not found (404) or invalid input (400)\n    APIException: For internal execution errors (500)\n\nNotes:\n    - Supports both streaming and non-streaming execution modes\n    - Tracks execution time and success/failure via telemetry\n    - Handles graceful client disconnection in streaming mode\n    - Provides detailed error handling with appropriate HTTP status codes\n    - In streaming mode, uses EventManager to handle events:\n        - \"add_message\": New messages during execution\n        - \"token\": Individual tokens during streaming\n        - \"end\": Final execution result",
                 "operationId": "simplified_run_flow_api_v1_run__flow_id_or_name__post",
                 "security": [
