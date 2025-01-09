@@ -4052,9 +4052,14 @@
     }
   },
   "description": "Extracts links from web pages and processes the content using Graph RAG Chain with Maximal Marginal Relevance (MMR) traversal.",
+  "icon": "chartNetwork",
   "endpoint_name": null,
   "id": "d671259c-c29e-466e-9bbf-622b9dccac38",
   "is_component": false,
   "last_tested_version": "1.1.1",
-  "name": "RagGraph"
+  "name": "Graph RAG",
+  "tags": [
+    "rag",
+    "q-a"
+  ]
 }
