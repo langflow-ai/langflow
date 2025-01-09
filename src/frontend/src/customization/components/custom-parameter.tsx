@@ -15,6 +15,7 @@ export function CustomParameterComponent({
   disabled,
   placeholder,
   isToolMode,
+  metadata,
 }: {
   handleOnNewValue: handleOnNewValueType;
   name: string;
@@ -27,6 +28,7 @@ export function CustomParameterComponent({
   disabled: boolean;
   placeholder?: string;
   isToolMode?: boolean;
+  metadata?: any;
 }) {
   return (
     <ParameterRenderComponent
@@ -41,6 +43,7 @@ export function CustomParameterComponent({
       disabled={disabled}
       placeholder={placeholder}
       isToolMode={isToolMode}
+      metadata={metadata}
     />
   );
 }

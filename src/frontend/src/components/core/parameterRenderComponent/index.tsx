@@ -32,6 +32,7 @@ export function ParameterRenderComponent({
   disabled,
   placeholder,
   isToolMode,
+  metadata,
 }: {
   handleOnNewValue: handleOnNewValueType;
   name: string;
@@ -44,6 +45,7 @@ export function ParameterRenderComponent({
   disabled: boolean;
   placeholder?: string;
   isToolMode?: boolean;
+  metadata?: any;
 }) {
   const id = (
     templateData.type +
@@ -64,6 +66,7 @@ export function ParameterRenderComponent({
       readonly: templateData.readonly,
       placeholder,
       isToolMode,
+      metadata,
     };
     if (TEXT_FIELD_TYPES.includes(templateData.type ?? "")) {
       if (templateData.list) {

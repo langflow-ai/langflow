@@ -11,9 +11,15 @@ from langflow.schema.message import Message
 
 class URLComponent(Component):
     display_name = "URL"
-    description = "Fetch content from one or more URLs."
+    description = "Load and retrive data from specified URLs."
     icon = "layout-template"
     name = "URL"
+    metadata = {
+        "render_parameters": {
+            "placeholder": "Enter a URL...",
+            "button_text": "Add URL",
+        }
+    }
 
     inputs = [
         MessageTextInput(
