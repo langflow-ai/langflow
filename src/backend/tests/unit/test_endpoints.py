@@ -257,7 +257,7 @@ async def test_get_vertices(client, added_flow_webhook_test, logged_in_headers):
     # The important part is before the - (ConversationBufferMemory, PromptTemplate, ChatOpenAI, LLMChain)
     ids = [_id.split("-")[0] for _id in response.json()["ids"]]
 
-    assert set(ids) == {"ChatInput"}
+    assert set(ids) == {"ChatInput", "Webhook"}
 
 
 async def test_build_vertex_invalid_flow_id(client, logged_in_headers):

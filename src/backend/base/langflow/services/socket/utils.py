@@ -8,6 +8,7 @@ from sqlmodel import select
 from langflow.api.utils import format_elapsed_time
 from langflow.api.v1.schemas import ResultDataResponse, VertexBuildResponse
 from langflow.graph.graph.base import Graph
+from langflow.graph.graph.utils import layered_topological_sort
 from langflow.graph.utils import log_vertex_build
 from langflow.graph.vertex.base import Vertex
 from langflow.services.database.models.flow.model import Flow
@@ -32,7 +33,12 @@ async def get_vertices(sio, sid, flow_id, chat_service) -> None:
 
         graph = Graph.from_payload(flow.data)
         chat_service.set_cache(flow_id, graph)
-        vertices = graph.layered_topological_sort(graph.vertices)
+        vertices = layered_topological_sort(
+            set(graph.get_vertex_ids()),
+            graph.in_degree_map,
+            graph.successor_map,
+            graph.predecessor_map,
+        )
 
         # Emit the vertices to the client
         await sio.emit("vertices_order", data=vertices, to=sid)
