@@ -44,7 +44,7 @@ from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_session_service, get_settings_service, get_task_service, get_telemetry_service
+from langflow.services.deps import get_jobs_service, get_session_service, get_settings_service, get_telemetry_service
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.version import get_version_info
@@ -163,8 +163,9 @@ async def simple_run_flow_task(
             event_manager=event_manager,
         )
 
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.exception(f"Error running flow {flow.id} task")
+        raise
 
 
 async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio.Queue) -> AsyncGenerator:
@@ -393,6 +394,7 @@ async def webhook_run_flow(
         HTTPException: If the flow is not found or if there is an error processing the request.
     """
     telemetry_service = get_telemetry_service()
+    jobs_service = get_jobs_service()
     start_time = time.perf_counter()
     logger.debug("Received webhook request")
     error_msg = ""
@@ -422,12 +424,17 @@ async def webhook_run_flow(
                 session_id=None,
             )
 
-            logger.debug("Starting background task")
-            background_tasks.add_task(
-                simple_run_flow_task,
-                flow=flow,
-                input_request=input_request,
-                api_key_user=user,
+            logger.debug("Creating job")
+            job_id = await jobs_service.create_job(
+                task_func=simple_run_flow_task,
+                run_at=None,
+                name=f"webhook_{flow.name}_{time.time()}",
+                kwargs={
+                    "flow": flow,
+                    "input_request": input_request,
+                    "stream": False,
+                    "api_key_user": user,
+                },
             )
         except Exception as exc:
             error_msg = str(exc)
@@ -443,7 +450,7 @@ async def webhook_run_flow(
             ),
         )
 
-    return {"message": "Task started in the background", "status": "in progress"}
+    return {"message": "Job created successfully", "status": "pending", "job_id": job_id}
 
 
 @router.post(
@@ -590,28 +597,15 @@ async def process() -> None:
 
 
 @router.get("/task/{task_id}")
-async def get_task_status(task_id: str) -> TaskStatusResponse:
-    task_service = get_task_service()
-    task = task_service.get_task(task_id)
-    result = None
-    if task is None:
-        raise HTTPException(status_code=404, detail="Task not found")
-    if task.ready():
-        result = task.result
-        # If result isinstance of Exception, can we get the traceback?
-        if isinstance(result, Exception):
-            logger.exception(task.traceback)
-
-        if isinstance(result, dict) and "result" in result:
-            result = result["result"]
-        elif hasattr(result, "result"):
-            result = result.result
-
-    if task.status == "FAILURE":
-        result = str(task.result)
-        logger.error(f"Task {task_id} failed: {task.traceback}")
-
-    return TaskStatusResponse(status=task.status, result=result)
+async def get_task_status(task_id: str) -> TaskStatusResponse:  # noqa: ARG001
+    # Deprecate this endpoint
+    logger.warning(
+        "The /task endpoint is deprecated and will be removed in a future version. Please use /jobs instead."
+    )
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="The /task endpoint is deprecated and will be removed in a future version. Please use /jobs instead.",
+    )
 
 
 @router.post(

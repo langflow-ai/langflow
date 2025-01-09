@@ -173,6 +173,7 @@ dependencies = [
     "defusedxml>=0.7.1,<1.0.0",
     "pypdf~=5.1.0",
     "validators>=0.34.0",
+    "apscheduler==3.11.0",
 ]
 
 [project.urls]

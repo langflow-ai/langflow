@@ -98,6 +98,19 @@ class Settings(BaseSettings):
     """The port on which Langflow will expose Prometheus metrics. 9090 is the default port."""
 
     remove_api_keys: bool = False
+
+    # Job Webhook settings
+    job_webhook_enabled: bool = False
+    """If set to True, Langflow will send webhook notifications when jobs are completed."""
+    job_webhook_url: str | None = None
+    """The URL to send job completion webhooks to."""
+    job_webhook_secret: str | None = None
+    """Optional secret key to include in job webhook headers for authentication."""
+    job_webhook_retries: int = 3
+    """Number of times to retry failed webhook deliveries."""
+    job_webhook_timeout: int = 5
+    """Timeout in seconds for webhook requests."""
+
     components_path: list[str] = []
     langchain_cache: str = "InMemoryCache"
     load_flows_path: str | None = None
