@@ -198,7 +198,7 @@ export default function SliderComponent({
   const ringClassInputClass = "ring-[1px] ring-slider-input-border";
 
   return (
-    <div className="w-full rounded-lg pb-2">
+    <div className="w-full rounded-lg">
       <Case condition={!sliderButtons}>
         <div className="noflow nowheel nopan nodelete nodrag flex items-center justify-end">
           <div
