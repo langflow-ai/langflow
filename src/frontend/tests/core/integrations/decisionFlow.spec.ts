@@ -1,4 +1,4 @@
-import { Page, test } from "@playwright/test";
+import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
@@ -247,7 +247,7 @@ test(
       .nth(1)
       .click();
     await page
-      .getByTestId("handle-chatinput-shownode-message-right")
+      .getByTestId("handle-chatinput-noshownode-message-source")
       .nth(0)
       .click();
     await page
@@ -333,7 +333,7 @@ test(
       .nth(2)
       .click();
     await page
-      .getByTestId("handle-chatoutput-shownode-text-left")
+      .getByTestId("handle-chatoutput-noshownode-text-target")
       .nth(0)
       .click();
     await page
@@ -341,7 +341,7 @@ test(
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-chatoutput-shownode-text-left")
+      .getByTestId("handle-chatoutput-noshownode-text-target")
       .nth(1)
       .click();
     const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");

@@ -60,13 +60,13 @@ CHAT_COMPONENTS = [InterfaceComponentTypes.ChatInput, InterfaceComponentTypes.Ch
 RECORDS_COMPONENTS = [InterfaceComponentTypes.DataOutput]
 INPUT_COMPONENTS = [
     InterfaceComponentTypes.ChatInput,
-    InterfaceComponentTypes.TextInput,
     InterfaceComponentTypes.WebhookInput,
+    InterfaceComponentTypes.TextInput,
 ]
 OUTPUT_COMPONENTS = [
     InterfaceComponentTypes.ChatOutput,
-    InterfaceComponentTypes.TextOutput,
     InterfaceComponentTypes.DataOutput,
+    InterfaceComponentTypes.TextOutput,
 ]
 
 

@@ -38,6 +38,7 @@ class LangWatchTracer(BaseTracer):
             self.trace = self._client.trace(
                 trace_id=str(self.trace_id),
             )
+            self.trace.__enter__()
             self.spans: dict[str, ContextSpan] = {}
 
             name_without_id = " - ".join(trace_name.split(" - ")[0:-1])
@@ -126,8 +127,8 @@ class LangWatchTracer(BaseTracer):
         if not self._ready:
             return
         self.trace.root_span.end(
-            input=self._convert_to_langwatch_types(inputs),
-            output=self._convert_to_langwatch_types(outputs),
+            input=self._convert_to_langwatch_types(inputs) if self.trace.root_span.input is None else None,
+            output=self._convert_to_langwatch_types(outputs) if self.trace.root_span.output is None else None,
             error=error,
         )
 
@@ -135,7 +136,10 @@ class LangWatchTracer(BaseTracer):
             self.trace.update(metadata=(self.trace.metadata or {}) | {"labels": [f"Flow: {metadata['flow_name']}"]})
 
         if self.trace.api_key or self._client.api_key:
-            self.trace.deferred_send_spans()
+            try:
+                self.trace.__exit__(None, None, None)
+            except ValueError:  # ignoring token was created in a different Context errors
+                return
 
     def _convert_to_langwatch_types(self, io_dict: dict[str, Any] | None):
         from langwatch.utils import autoconvert_typed_values
