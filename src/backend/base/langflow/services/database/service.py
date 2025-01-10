@@ -141,7 +141,7 @@ class DatabaseService(Service):
                 if session.is_active:
                     await session.commit()
             except Exception:
-                logger.exception("An error occurred during the session scope.")
+                logger.error("An error occurred during the session scope.")
                 await session.rollback()
                 raise
 
