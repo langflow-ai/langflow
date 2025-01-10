@@ -3,11 +3,10 @@ import json
 import mimetypes
 import re
 import tempfile
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
-from zoneinfo import ZoneInfo
 
 import httpx
 import validators
@@ -177,11 +176,12 @@ class APIRequestComponent(Component):
             )
 
             redirection_history = [
-                {"url": str(redirect.url), "status_code": redirect.status_code} for redirect in response.history
+                {
+                    "url": redirect.headers.get("Location", str(redirect.url)),
+                    "status_code": redirect.status_code,
+                }
+                for redirect in response.history
             ]
-
-            if response.is_redirect:
-                redirection_history.append({"url": str(response.url), "status_code": response.status_code})
 
             is_binary, file_path = self._response_info(response, with_file_path=save_to_file)
             response_headers = self._headers_to_dict(response.headers)
@@ -196,11 +196,12 @@ class APIRequestComponent(Component):
                 if file_path:
                     async with async_open(file_path, mode, encoding=encoding) as f:
                         await f.write(response.content if is_binary else response.text)
+                        await f.flush()  # Ensure the file is flushed to disk
+                    metadata["file_path"] = str(file_path)
 
                 if include_httpx_metadata:
                     metadata.update(
                         {
-                            "file_path": str(file_path),
                             "headers": headers,
                             "status_code": response.status_code,
                             "response_headers": response_headers,
@@ -347,7 +348,7 @@ class APIRequestComponent(Component):
                 extracted_filename = filename_match.group(1)
                 # Ensure the filename is unique
                 if (component_temp_dir / extracted_filename).exists():
-                    timestamp = datetime.now(ZoneInfo("UTC")).strftime("%Y%m%d%H%M%S%f")
+                    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
                     filename = f"{timestamp}-{extracted_filename}"
                 else:
                     filename = extracted_filename
@@ -355,7 +356,7 @@ class APIRequestComponent(Component):
         # Step 3: Infer file extension or use part of the request URL if no filename
         if not filename:
             # Extract the last segment of the URL path
-            url_path = urlparse(str(response.request.url)).path
+            url_path = urlparse(str(response.request.url) if response.request else "").path
             base_name = Path(url_path).name  # Get the last segment of the path
             if not base_name:  # If the path ends with a slash or is empty
                 base_name = "response"
@@ -366,7 +367,7 @@ class APIRequestComponent(Component):
                 extension = ".bin" if is_binary else ".txt"  # Default extensions
 
             # Combine the base name with timestamp and extension
-            timestamp = datetime.now(ZoneInfo("UTC")).strftime("%Y%m%d%H%M%S%f")
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
             filename = f"{timestamp}-{base_name}{extension}"
 
         # Step 4: Define the full file path
