@@ -26,10 +26,20 @@ test(
 
     await zoomOut(page, 4);
 
+    await page.waitForTimeout(500);
+
     await page
       .getByTestId("inputsText Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 500, y: 150 },
+      });
+
+    await page.waitForTimeout(500);
+
+    await page
+      .getByTestId("inputsText Input")
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 670, y: 200 },
       });
 
     await page.getByTestId("sidebar-search-input").click();
@@ -161,7 +171,7 @@ test(
 
     await page.getByTestId("group-node").click();
 
-    //connection 2
+    //connection 1
     const elementTextOutput0 = page
       .getByTestId("handle-textinput-shownode-text-right")
       .nth(0);
@@ -171,16 +181,27 @@ test(
     );
     await elementGroupInput0.click();
 
-    //connection 3
+    //connection 2
     const elementTextOutput1 = page
       .getByTestId("handle-textinput-shownode-text-right")
-      .nth(2);
+      .nth(4);
     await elementTextOutput1.click();
-
     const elementGroupInput1 = page
       .getByTestId("handle-groupnode-shownode-second text-left")
-      .nth(1);
+      .first();
     await elementGroupInput1.click();
+
+    //connection 3
+    const elementTextOutput2 = page
+      .getByTestId("handle-textinput-shownode-text-right")
+      .nth(2);
+    await elementTextOutput2.click();
+
+    const elementGroupInput2 = page
+      .getByTestId("handle-groupnode-shownode-second text-left")
+      .nth(1)
+      .last();
+    await elementGroupInput2.click();
 
     //connection 4
     const elementGroupOutput = page
