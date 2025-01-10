@@ -5,7 +5,7 @@ slug: /concepts-playground
 
 import Icon from "@site/src/components/icon";
 
-The **Playground** is a dynamic interface designed for real-time interaction with AIs, allowing users to chat, access memories, and monitor inputs and outputs. Here, users can directly prototype and their models, making adjustments and observing different outcomes.
+The **Playground** is a dynamic interface designed for real-time interaction with LLMs, allowing users to chat, access memories, and monitor inputs and outputs. Here, users can directly prototype and their models, making adjustments and observing different outcomes.
 
 As long as you have an [Input or Output](/components-io) component working, you can open it by clicking the **Playground** button.
 The Playground's window arrangement changes depending on what components are being used.
@@ -38,32 +38,39 @@ The `session_id` value can be configured in the **Advanced Settings** of the **C
 
 To have more than one session in a single flow, pass a specific Session ID to a flow with the `session_id` parameter in the URL. All the components in the flow will automatically use this `session_id` value.
 
-To post a message to a flow with a specific Session ID with curl:
+To post a message to a flow with a specific Session ID with curl, enter the following command:
 
 ```bash
-curl -X POST \
-    "http://127.0.0.1:7860/api/v1/run/4017e9f2-1fec-4643-bb05-165a8b50c4b3?stream=false" \
-    -H 'Content-Type: application/json' \
-    -d '{"input_value": "message",
-    "output_type": "chat",
-    "input_type": "chat",
-    "session_id": "YOUR_SESSION_ID"
-}'
+   curl -X POST "http://127.0.0.1:7860/api/v1/run/$FLOW_ID" \
+   -H 'Content-Type: application/json' \
+   -d '{
+       "session_id": "custom_session_123",
+       "input_value": "message",
+       "input_type": "chat",
+       "output_type": "chat"
+   }'
 ```
 
-Check your flow's **Playground**. In addition to the messages stored for the Default Session, a new session is started with your new Session ID.
+Check your flow's **Playground**. In addition to the messages stored for the Default Session, a new session is started with your custom Session ID.
 
-**Chat Input** and **Chat Output** components can also store a `session_id` parameter as a **Tweak** for specific sessions. The Playground will still display all available sessions, but the flow will use the value stored in the `session_id` tweak.
+**Chat Input** and **Chat Output** components can be modified to store a `session_id` parameter as a **Tweak** for specific sessions. This allows you to use the same flow for multiple sessions with different `session_id` values. 
+
+To post a message to a flow with a specific Session ID using the `session_id` parameter as a **Tweak**, enter the following command:
 
 ```bash
-curl -X POST \
-    "http://127.0.0.1:7860/api/v1/run/4017e9f2-1fec-4643-bb05-165a8b50c4b3?stream=false" \
-    -H 'Content-Type: application/json' \
-    -d '{"input_value": "message",
-    "output_type": "chat",
-    "input_type": "chat",
+curl -X POST "http://127.0.0.1:7860/api/v1/run/$FLOW_ID" \
+-H 'Content-Type: application/json' \
+-d '{
     "tweaks": {
-        "session_id": "YOUR_SESSION_ID"
-    }
+        "session_id": "custom_session_123"
+    },
+    "input_value": "message",
+    "input_type": "chat",
+    "output_type": "chat"
 }'
 ```
+
+You can only have one **Chat Input** component per flow, but by using multiple `session_id` values, you maintain separate conversation histories for different users or purposes.
+
+The Playground will still display all available sessions, but the value stored in the `session_id` tweak will override the flow's `session_id` value.
+
