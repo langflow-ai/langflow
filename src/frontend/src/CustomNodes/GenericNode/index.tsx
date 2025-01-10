@@ -181,8 +181,10 @@ function GenericNode({
     () =>
       data.node?.outputs?.some(
         (output) => output.name === "component_as_tool",
-      ) ?? false,
-    [data.node?.outputs],
+      ) ??
+      data.node?.tool_mode ??
+      false,
+    [data.node?.outputs, data.node?.tool_mode],
   );
 
   const hasToolMode = useMemo(
@@ -412,7 +414,7 @@ function GenericNode({
               {renderNodeIcon()}
               <div className="generic-node-tooltip-div">{renderNodeName()}</div>
             </div>
-            <div>
+            <div data-testid={`${showNode ? "show" : "hide"}-node-content`}>
               {!showNode && (
                 <>
                   {renderInputParameters()}
