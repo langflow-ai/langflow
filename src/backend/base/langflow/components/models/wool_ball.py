@@ -187,7 +187,8 @@ class WoolBallComponent(Component):
         labels = [label.strip() for label in self.candidate_labels.split(",") if label.strip()]
 
         if not labels:
-            raise ValueError("At least one valid candidate label is required for Zero-Shot Classification")
+            error_message = "At least one valid candidate label is required for Zero-Shot Classification"
+            raise ValueError(error_message)
 
         endpoint = "/v1/zero-shot-classification"
         payload = {"Text": self.text, "CandidateLabels": labels}
