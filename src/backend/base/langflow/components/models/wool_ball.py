@@ -1,5 +1,6 @@
 import unicodedata
 from typing import Any
+import logging
 
 import requests
 
@@ -7,6 +8,15 @@ from langflow.custom import Component
 from langflow.io import DropdownInput, Output, SecretStrInput, StrInput
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
+
+# Define constants for status codes
+SUCCESS_STATUS_CODE = 200
+UNAUTHORIZED_STATUS_CODE = 401
+RATE_LIMIT_STATUS_CODE = 429
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class WoolBallComponent(Component):
@@ -20,7 +30,6 @@ class WoolBallComponent(Component):
         "Summary",
         "Character to Image",
     ]
-    SUCCESS_STATUS_CODE = 200
     display_name = "Wool Ball"
     description = "Perform various AI tasks using the Wool Ball API."
     icon = "WoolBall"
@@ -31,13 +40,11 @@ class WoolBallComponent(Component):
         try:
             endpoint = "/v1/languages"
             response = requests.get(f"{self.API_BASE_URL}{endpoint}", timeout=5)
-            if response.status_code == self.SUCCESS_STATUS_CODE:
+            if response.status_code == SUCCESS_STATUS_CODE:
                 languages_data = response.json().get("data", [])
                 return [lang["code"] for lang in languages_data]
         except requests.exceptions.RequestException as e:
-            print(f"Error fetching languages: {e}")
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
+            logger.error(f"Error fetching languages: {e}")
         return ["por_Latn", "eng_Latn", "spa_Latn"]
 
     inputs = [
@@ -215,13 +222,17 @@ class WoolBallComponent(Component):
             response.raise_for_status()
             return response.json()
         except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 401:
-                raise ValueError("Invalid API key.")
-            if e.response.status_code == 429:
-                raise ValueError("Rate limit exceeded.")
-            raise ValueError(f"HTTP Error: {e.response.status_code}") from e
+            if e.response.status_code == UNAUTHORIZED_STATUS_CODE:
+                error_message = "Invalid API key."
+                raise ValueError(error_message) from None
+            if e.response.status_code == RATE_LIMIT_STATUS_CODE:
+                error_message = "Rate limit exceeded."
+                raise ValueError(error_message) from None
+            error_message = f"HTTP Error: {e.response.status_code}"
+            raise ValueError(error_message) from e
         except ValueError:
-            raise ValueError("Invalid response from API")
+            error_message = "Invalid response from API"
+            raise ValueError(error_message) from None
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         if field_name == "task_type":
