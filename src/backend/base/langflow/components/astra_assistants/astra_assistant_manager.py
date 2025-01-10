@@ -224,13 +224,16 @@ class AstraAssistantManager(ComponentWithCache):
         )
 
         if self.file:
-            file = await to_thread(sync_upload(self.file, assistant_manager.client))
+            file = await to_thread(sync_upload, self.file, assistant_manager.client)
             vector_store = assistant_manager.client.beta.vector_stores.create(name="my_vs", file_ids=[file.id])
-            assistant_manager.client.beta.assistants.update(
+            assistant_tools = assistant_manager.assistant.tools
+            assistant_tools += [{"type": "file_search"}]
+            assistant = assistant_manager.client.beta.assistants.update(
                 assistant_manager.assistant.id,
-                tools=[{"type": "file_search"}],
+                tools=assistant_tools,
                 tool_resources={"file_search": {"vector_store_ids": [vector_store.id]}},
             )
+            assistant_manager.assistant = assistant
 
         async def step_iterator():
             # Initial event
@@ -240,9 +243,31 @@ class AstraAssistantManager(ComponentWithCache):
             result = await assistant_manager.run_thread(content=content, tool=tool_obj)
 
             # Tool usage if present
-            if "output" in result:
-                yield {"event": "on_tool_start", "name": "tool", "data": {"input": {"text": self.user_message}}}
+            if "output" in result and "arguments" in result:
+                yield {"event": "on_tool_start", "name": "tool", "data": {"input": {"text": str(result["arguments"])}}}
                 yield {"event": "on_tool_end", "name": "tool", "data": {"output": result["output"]}}
+
+            if "file_search" in result and result["file_search"] is not None:
+                yield {"event": "on_tool_start", "name": "tool", "data": {"input": {"text": self.user_message}}}
+                file_search_str = ""
+                for chunk in result["file_search"].to_dict().get("chunks", []):
+                    file_search_str += f"## Chunk ID: `{chunk['chunk_id']}`\n"
+                    file_search_str += f"**Content:**\n\n```\n{chunk['content']}\n```\n\n"
+                    if "score" in chunk:
+                        file_search_str += f"**Score:** {chunk['score']}\n\n"
+                    if "file_id" in chunk:
+                        file_search_str += f"**File ID:** `{chunk['file_id']}`\n\n"
+                    if "file_name" in chunk:
+                        file_search_str += f"**File Name:** `{chunk['file_name']}`\n\n"
+                    if "bytes" in chunk:
+                        file_search_str += f"**Bytes:** {chunk['bytes']}\n\n"
+                    if "search_string" in chunk:
+                        file_search_str += f"**Search String:** {chunk['search_string']}\n\n"
+                yield {"event": "on_tool_end", "name": "tool", "data": {"output": file_search_str}}
+
+            if "text" not in result:
+                msg = f"No text in result, {result}"
+                raise ValueError(msg)
 
             self._assistant_response = Message(text=result["text"])
             if "decision" in result:

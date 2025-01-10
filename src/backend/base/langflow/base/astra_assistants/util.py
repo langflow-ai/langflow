@@ -157,7 +157,7 @@ def wrap_base_tool_as_tool_interface(base_tool: BaseTool) -> ToolInterface:
 
 
 def sync_upload(file_path, client):
-    with Path.open(file_path, "rb") as sync_file_handle:
+    with Path(file_path).open("rb") as sync_file_handle:
         return client.files.create(
             file=sync_file_handle,  # Pass the sync file handle
             purpose="assistants",
