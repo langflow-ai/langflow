@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 from pathlib import Path
 
 from aiofile import async_open
@@ -8,6 +9,7 @@ from loguru import logger
 
 from langflow.graph import Graph
 from langflow.graph.schema import RunOutputs
+from langflow.load.utils import replace_tweaks_with_env
 from langflow.logging.logger import configure
 from langflow.processing.process import process_tweaks, run_graph
 from langflow.utils.async_helpers import run_until_complete
@@ -51,6 +53,9 @@ async def aload_flow_from_json(
     # override env variables with .env file
     if env_file:
         await asyncio.to_thread(load_dotenv, env_file, override=True)
+        if tweaks is not None:
+            env_vars = {key: os.getenv(key) for key in os.environ}
+            tweaks = replace_tweaks_with_env(tweaks=tweaks, env_vars=env_vars)
 
     # Update settings with cache and components path
     await update_settings(cache=cache)
