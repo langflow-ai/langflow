@@ -472,7 +472,9 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as input.",
-                "input_types": [],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -4050,8 +4052,8 @@
     }
   },
   "description": "Extracts links from web pages and processes the content using Graph RAG Chain with Maximal Marginal Relevance (MMR) traversal.",
-  "endpoint_name": null,
   "icon": "chartNetwork",
+  "endpoint_name": null,
   "id": "d671259c-c29e-466e-9bbf-622b9dccac38",
   "is_component": false,
   "last_tested_version": "1.1.1",
