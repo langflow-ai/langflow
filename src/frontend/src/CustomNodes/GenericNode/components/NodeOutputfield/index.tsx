@@ -1,8 +1,11 @@
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
+import { TextSearch } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
-import { default as IconComponent } from "../../../../components/common/genericIconComponent";
+import ForwardedIconComponent, {
+  default as IconComponent,
+} from "../../../../components/common/genericIconComponent";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import { Button } from "../../../../components/ui/button";
 import useFlowStore from "../../../../stores/flowStore";
@@ -113,7 +116,9 @@ const InspectButton = memo(
       unstyled
       onClick={onClick}
     >
-      <ScanEyeIcon
+      <IconComponent
+        name="TextSearchIcon"
+        strokeWidth={ICON_STROKE_WIDTH}
         className={cn(
           "icon-size",
           isToolMode
