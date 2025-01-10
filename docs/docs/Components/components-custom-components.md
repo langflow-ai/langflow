@@ -9,6 +9,46 @@ Since Langflow operates with Python behind the scenes, you can implement any Pyt
 
 Custom Components create reusable and configurable components to enhance the capabilities of Langflow, making it a powerful tool for developing complex processing between user and AI messages.
 
+## Directory Structure Requirements
+
+When using custom components with the `LANGFLOW_COMPONENTS_PATH` environment variable, components must be organized in a specific directory structure to be properly loaded and displayed in the UI:
+
+```
+/your/custom/components/path/    # Base directory (set by LANGFLOW_COMPONENTS_PATH)
+    └── category_name/          # Required category subfolder (determines menu name)
+        └── custom_component.py # Component file
+```
+
+### Important Notes:
+
+1. **Category Folders**: Components must be placed inside a category subfolder, not directly in the base directory
+   - The category folder name determines where the component appears in the UI menu
+   - For example, to add a component to the "Helpers" menu, place it in a `helpers` subfolder
+
+2. **Correct Structure Example**:
+   ```
+   /app/custom_components/          # LANGFLOW_COMPONENTS_PATH
+       └── helpers/                 # Shows up as "Helpers" menu
+           └── custom_component.py  # Your component
+   ```
+
+3. **Incorrect Structure Example**:
+   ```
+   /app/custom_components/          # LANGFLOW_COMPONENTS_PATH
+       └── custom_component.py      # Won't be loaded - missing category folder!
+   ```
+
+4. **Multiple Categories**: You can have multiple category folders to organize components into different menus:
+   ```
+   /app/custom_components/
+       ├── helpers/
+       │   └── helper_component.py
+       └── tools/
+           └── tool_component.py
+   ```
+
+This structure is required for Langflow to properly discover and load your custom components. Components placed directly in the base directory will not be loaded.
+
 ## Create a custom component in Langflow
 
 Creating custom components in Langflow involves creating a Python class that defines the component's functionality, inputs, and outputs.
