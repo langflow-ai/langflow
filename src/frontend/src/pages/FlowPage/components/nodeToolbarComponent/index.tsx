@@ -145,18 +145,24 @@ const NodeToolbarComponent = memo(
 
     const [toolMode, setToolMode] = useState(
       () =>
-        data.node?.tool_mode ??
+        data.node?.tool_mode ||
         data.node?.outputs?.some(
           (output) => output.name === "component_as_tool",
-        ) ??
+        ) ||
         false,
     );
 
     useEffect(() => {
       if (data.node?.tool_mode !== undefined) {
-        setToolMode(data.node?.tool_mode ?? false);
+        setToolMode(
+          data.node?.tool_mode ||
+            data.node?.outputs?.some(
+              (output) => output.name === "component_as_tool",
+            ) ||
+            false,
+        );
       }
-    }, [data.node?.tool_mode]);
+    }, [data.node?.tool_mode, data.node?.outputs]);
 
     const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
       data.id,

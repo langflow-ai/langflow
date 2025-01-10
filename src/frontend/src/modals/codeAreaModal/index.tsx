@@ -123,15 +123,6 @@ export default function CodeAreaModal({
           if (data && type) {
             setValue(code);
             setNodeClass(data, type);
-            if (componentId) {
-              setNode(componentId, (old) => ({
-                ...old,
-                data: {
-                  ...old.data,
-                  node: data,
-                },
-              }));
-            }
             setError({ detail: { error: undefined, traceback: undefined } });
             setOpen(false);
           }
