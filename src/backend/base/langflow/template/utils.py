@@ -83,6 +83,9 @@ def update_frontend_node_with_template_values(frontend_node, raw_frontend_node):
     if "tool_mode" in raw_frontend_node:
         frontend_node["tool_mode"] = raw_frontend_node["tool_mode"]
 
+    if frontend_node["tool_mode"]:
+        frontend_node["outputs"] = raw_frontend_node["outputs"]
+
     if not frontend_node["edited"]:
         frontend_node["display_name"] = raw_frontend_node["display_name"]
         frontend_node["description"] = raw_frontend_node["description"]
