@@ -45,7 +45,6 @@ export default function NodeInputField({
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const myData = useTypesStore((state) => state.data);
-  const metadata = data.node?.metadata ?? {};
   const postTemplateValue = usePostTemplateValue({
     node: data.node!,
     nodeId: data.id,
