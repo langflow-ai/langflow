@@ -125,30 +125,38 @@ def test_vector_store_rag_dump_components_and_edges(ingestion_graph, rag_graph):
 
     ingestion_data = ingestion_graph_dump["data"]
     ingestion_nodes = ingestion_data["nodes"]
-    assert len(ingestion_nodes) == 4
     ingestion_edges = ingestion_data["edges"]
 
-    # Sort nodes by id to check components
-    ingestion_nodes = sorted(ingestion_nodes, key=operator.itemgetter("id"))
+    # Define expected nodes with their types
+    expected_nodes = {
+        "file-123": "File",
+        "openai-embeddings-123": "OpenAIEmbeddings",
+        "text-splitter-123": "SplitText",
+        "ingestion-vector-store-123": "AstraDB",
+    }
 
-    # Check components in the ingestion graph
-    assert ingestion_nodes[0]["data"]["type"] == "File"
-    assert ingestion_nodes[0]["id"] == "file-123"
+    # Verify number of nodes
+    assert len(ingestion_nodes) == len(expected_nodes), "Unexpected number of nodes"
 
-    assert ingestion_nodes[1]["data"]["type"] == "OpenAIEmbeddings"
-    assert ingestion_nodes[1]["id"] == "openai-embeddings-123"
+    # Create a mapping of node IDs to their data for easier lookup
+    node_map = {node["id"]: node["data"] for node in ingestion_nodes}
 
-    assert ingestion_nodes[2]["data"]["type"] == "SplitText"
-    assert ingestion_nodes[2]["id"] == "text-splitter-123"
+    # Verify each expected node exists with correct type
+    for node_id, expected_type in expected_nodes.items():
+        assert node_id in node_map, f"Missing node {node_id}"
+        assert node_map[node_id]["type"] == expected_type, (
+            f"Node {node_id} has incorrect type. " f"Expected {expected_type}, got {node_map[node_id]['type']}"
+        )
 
-    assert ingestion_nodes[3]["data"]["type"] == "AstraDB"
-    assert ingestion_nodes[3]["id"] == "vector-store-123"
+    # Verify all nodes in graph are expected
+    unexpected_nodes = set(node_map.keys()) - set(expected_nodes.keys())
+    assert not unexpected_nodes, f"Found unexpected nodes: {unexpected_nodes}"
 
     # Check edges in the ingestion graph
     expected_ingestion_edges = [
         ("file-123", "text-splitter-123"),
-        ("text-splitter-123", "vector-store-123"),
-        ("openai-embeddings-123", "vector-store-123"),
+        ("text-splitter-123", "ingestion-vector-store-123"),
+        ("openai-embeddings-123", "ingestion-vector-store-123"),
     ]
     assert len(ingestion_edges) == len(expected_ingestion_edges)
 
@@ -239,7 +247,7 @@ def test_vector_store_rag_add(ingestion_graph: Graph, rag_graph: Graph):
             {"id": "file-123", "type": "File"},
             {"id": "openai-embeddings-123", "type": "OpenAIEmbeddings"},
             {"id": "text-splitter-123", "type": "SplitText"},
-            {"id": "vector-store-123", "type": "AstraDB"},
+            {"id": "ingestion-vector-store-123", "type": "AstraDB"},
             {"id": "chatinput-123", "type": "ChatInput"},
             {"id": "chatoutput-123", "type": "ChatOutput"},
             {"id": "openai-123", "type": "OpenAIModel"},
@@ -258,8 +266,8 @@ def test_vector_store_rag_add(ingestion_graph: Graph, rag_graph: Graph):
     # Expected edges in the combined graph (both ingestion and RAG edges)
     expected_combined_edges = [
         ("file-123", "text-splitter-123"),
-        ("text-splitter-123", "vector-store-123"),
-        ("openai-embeddings-123", "vector-store-123"),
+        ("text-splitter-123", "ingestion-vector-store-123"),
+        ("openai-embeddings-123", "ingestion-vector-store-123"),
         ("chatinput-123", "rag-vector-store-123"),
         ("openai-embeddings-124", "rag-vector-store-123"),
         ("chatinput-123", "prompt-123"),
