@@ -1,18 +1,17 @@
 import requests
 from typing import Any
 from langflow.custom import Component
-from langflow.io import DropdownInput, Output, StrInput, SecretStrInput, FileInput
+from langflow.io import DropdownInput, Output, StrInput, SecretStrInput
 from langflow.schema.message import Message
 from langflow.schema.dotdict import dotdict
-from urllib.parse import unquote
 import unicodedata
 
 class WoolBallComponent(Component):
     API_BASE_URL = "https://api.woolball.xyz"
     TTS_LANGUAGES = ["pt", "en", "es"]
     TASK_TYPES = [
-        "Text to Speech",
         "Text Generation",
+        "Text to Speech",
         "Translation",
         "Zero-Shot Classification",
         "Summary",
@@ -49,6 +48,7 @@ class WoolBallComponent(Component):
             display_name="Input Text",
             info="The text to process.",
             input_types=["str", "Document", "BaseMessage"],
+            show=False,
         ),
         DropdownInput(
             name="source_language",
@@ -56,6 +56,7 @@ class WoolBallComponent(Component):
             options=[],
             info="The source language for translation.",
             input_types=["str"],
+            show=False,
         ),
         DropdownInput(
             name="target_language",
@@ -63,12 +64,14 @@ class WoolBallComponent(Component):
             options=TTS_LANGUAGES,
             info="The target language for translation or speech.",
             input_types=["str"],
+            show=False,
         ),
         StrInput(
             name="candidate_labels",
             display_name="Candidate Labels",
             info="Enter possible categories separated by commas",
             input_types=["str", "List"],
+            show=False,
         ),
         SecretStrInput(
             name="api_key",
@@ -81,6 +84,29 @@ class WoolBallComponent(Component):
     outputs = [
         Output(display_name="Result", name="result", method="process_task"),
     ]
+
+    FIELD_MAPPING = {
+        "Text Generation": ["text", "api_key"],
+        "Text to Speech": ["text", "target_language", "api_key"],
+        "Translation": ["text", "source_language", "target_language", "api_key"],
+        "Zero-Shot Classification": ["text", "candidate_labels", "api_key"],
+        "Summary": ["text", "api_key"],
+        "Character to Image": ["text", "api_key"]
+    }
+
+    def build(self, build_config: dotdict) -> dotdict:
+        fields_to_hide = ["text", "source_language", "target_language", "candidate_labels"]
+        for field in fields_to_hide:
+            if field in build_config:
+                build_config[field]["show"] = False
+        
+        default_task = self.TASK_TYPES[0]
+        if default_task in self.FIELD_MAPPING:
+            for field in self.FIELD_MAPPING[default_task]:
+                if field in build_config:
+                    build_config[field]["show"] = True
+
+        return build_config
 
     def process_task(self) -> Message:
         if not self.api_key:
@@ -185,16 +211,9 @@ class WoolBallComponent(Component):
         endpoint = "/v1/char-to-image"
         url = f"{self.API_BASE_URL}{endpoint}?character={character}"
         
-        response = requests.get(
-            url, 
-            headers=headers
-        )
-        
+        response = requests.get(url, headers=headers)
         data = self.handle_api_response(response)
-        return Message(
-            text="Image generated successfully", 
-            additional_kwargs={"image_data": data['data']}
-        )
+        return Message(text="Image generated successfully", additional_kwargs={"image_data": data['data']})
 
     def handle_api_response(self, response: requests.Response) -> dict:
         try:
@@ -223,17 +242,8 @@ class WoolBallComponent(Component):
                 build_config["target_language"]["options"] = languages
                 build_config["source_language"]["options"] = languages
 
-            field_mapping = {
-                "Text to Speech": ["text", "target_language", "api_key"],
-                "Text Generation": ["text", "api_key"],
-                "Translation": ["text", "source_language", "target_language", "api_key"],
-                "Zero-Shot Classification": ["text", "candidate_labels", "api_key"],
-                "Summary": ["text", "api_key"],
-                "Character to Image": ["text", "api_key"]
-            }
-
-            if field_value in field_mapping:
-                for field in field_mapping[field_value]:
+            if field_value in self.FIELD_MAPPING:
+                for field in self.FIELD_MAPPING[field_value]:
                     if field in build_config:
                         build_config[field]["show"] = True
 
