@@ -1181,11 +1181,7 @@
                 "display_name": "DataFrame",
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "required_inputs": [
-                  "api_endpoint",
-                  "collection_name",
-                  "token"
-                ],
+                "required_inputs": [],
                 "selected": "DataFrame",
                 "types": [
                   "DataFrame"
@@ -2790,11 +2786,7 @@
                 "display_name": "DataFrame",
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "required_inputs": [
-                  "api_endpoint",
-                  "collection_name",
-                  "token"
-                ],
+                "required_inputs": [],
                 "selected": "DataFrame",
                 "types": [
                   "DataFrame"
