@@ -1,4 +1,5 @@
 import TableAutoCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAutoCellRender";
+import useAlertStore from "@/stores/alertStore";
 import { ColumnField, FormatterType } from "@/types/utils/functions";
 import { ColDef, ColGroupDef, ValueParserParams } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
@@ -526,17 +527,26 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       field: col.name,
       sortable: col.sortable,
       filter: col.filterable,
-      editable: !col.disable_edit,
+      context: col.description ? { info: col.description } : {},
+      cellClass: col.disable_edit ? "cell-disable-edit" : "",
       valueParser: (params: ValueParserParams) => {
-        const { context, newValue, colDef } = params;
+        const { context, newValue, colDef, oldValue } = params;
         if (
           context.field_parsers &&
           context.field_parsers[colDef.field ?? ""]
         ) {
-          return parseString(
-            newValue,
-            context.field_parsers[colDef.field ?? ""],
-          );
+          try {
+            return parseString(
+              newValue,
+              context.field_parsers[colDef.field ?? ""],
+            );
+          } catch (error: any) {
+            useAlertStore.getState().setErrorData({
+              title: "Error parsing string",
+              list: [String(error.message ?? error)],
+            });
+            return oldValue;
+          }
         }
         return newValue;
       },
@@ -551,15 +561,17 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
         formatter: col.formatter,
       };
       if (col.formatter !== FormatterType.text || col.edit_mode !== "inline") {
-        newCol.cellRenderer = TableAutoCellRender;
-      } else {
-        newCol.wrapText = true;
-        newCol.autoHeight = true;
-        newCol.cellEditor = "agLargeTextCellEditor";
-        newCol.cellEditorPopup = true;
-        newCol.cellEditorParams = {
-          maxLength: 100000000,
-        };
+        if (col.edit_mode === "popover") {
+          newCol.wrapText = true;
+          newCol.autoHeight = true;
+          newCol.cellEditor = "agLargeTextCellEditor";
+          newCol.cellEditorPopup = true;
+          newCol.cellEditorParams = {
+            maxLength: 100000000,
+          };
+        } else {
+          newCol.cellRenderer = TableAutoCellRender;
+        }
       }
     }
     return newCol;

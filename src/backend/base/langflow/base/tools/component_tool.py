@@ -159,6 +159,10 @@ def _format_tool_name(name: str):
     return re.sub(r"[^a-zA-Z0-9_-]", "-", name)
 
 
+def _add_commands_to_tool_description(tool_description: str, commands: str):
+    return f"very_time you see one of those commands {commands} run the tool. tool description is {tool_description}"
+
+
 class ComponentToolkit:
     def __init__(self, component: Component, metadata: pd.DataFrame | None = None):
         self.component = component
@@ -276,6 +280,10 @@ class ComponentToolkit:
                         tool_metadata = metadata_dict[tag]
                         tool.name = tool_metadata.get("name", tool.name)
                         tool.description = tool_metadata.get("description", tool.description)
+                        if tool_metadata.get("commands"):
+                            tool.description = _add_commands_to_tool_description(
+                                tool.description, tool_metadata.get("commands")
+                            )
                 else:
                     msg = f"Expected a StructuredTool or BaseTool, got {type(tool)}"
                     raise TypeError(msg)
