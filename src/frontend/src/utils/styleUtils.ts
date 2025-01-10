@@ -452,13 +452,13 @@ export const nodeColorsName: { [char: string]: string } = {
   vectorsearch: "yellow",
   textsplitters: "fuchsia",
   toolkits: "red",
-  wrappers: "pink",
+  wrappers: "rose",
   notion: "slate",
   Notion: "slate",
   AssemblyAI: "blue",
   assemblyai: "blue",
   helpers: "cyan",
-  prototypes: "pink",
+  prototypes: "rose",
   astra_assistants: "indigo",
   langchain_utilities: "sky",
   output_parsers: "yellow",
@@ -479,7 +479,7 @@ export const nodeColorsName: { [char: string]: string } = {
   BaseChatMemory: "cyan",
   BaseChatMessageHistory: "orange",
   Memory: "orange",
-  DataFrame: "rose",
+  DataFrame: "pink",
 };
 
 export const SIDEBAR_CATEGORIES = [
