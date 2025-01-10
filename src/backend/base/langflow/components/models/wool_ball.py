@@ -1,11 +1,13 @@
-import requests
-from typing import Any
-from langflow.custom import Component
-from langflow.io import DropdownInput, Output, StrInput, SecretStrInput, FileInput
-from langflow.schema.message import Message
-from langflow.schema.dotdict import dotdict
-from urllib.parse import unquote
 import unicodedata
+from typing import Any
+
+import requests
+
+from langflow.custom import Component
+from langflow.io import DropdownInput, Output, SecretStrInput, StrInput
+from langflow.schema.dotdict import dotdict
+from langflow.schema.message import Message
+
 
 class WoolBallComponent(Component):
     API_BASE_URL = "https://api.woolball.xyz"
@@ -16,7 +18,7 @@ class WoolBallComponent(Component):
         "Translation",
         "Zero-Shot Classification",
         "Summary",
-        "Character to Image"
+        "Character to Image",
     ]
 
     display_name = "Wool Ball"
@@ -86,28 +88,24 @@ class WoolBallComponent(Component):
         if not self.api_key:
             raise ValueError("API key is required")
 
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
+        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
 
         try:
             if self.task_type == "Text to Speech":
                 return self._handle_tts(headers)
-            elif self.task_type == "Text Generation":
+            if self.task_type == "Text Generation":
                 return self._handle_text_generation(headers)
-            elif self.task_type == "Translation":
+            if self.task_type == "Translation":
                 return self._handle_translation(headers)
-            elif self.task_type == "Zero-Shot Classification":
+            if self.task_type == "Zero-Shot Classification":
                 return self._handle_zero_shot_classification(headers)
-            elif self.task_type == "Summary":
+            if self.task_type == "Summary":
                 return self._handle_summary(headers)
-            elif self.task_type == "Character to Image":
+            if self.task_type == "Character to Image":
                 return self._handle_char_to_image(headers)
-            else:
-                raise ValueError("Invalid task type selected")
+            raise ValueError("Invalid task type selected")
         except requests.exceptions.RequestException as e:
-            raise ValueError(f"API request failed: {str(e)}") from e
+            raise ValueError(f"API request failed: {e!s}") from e
 
     def _handle_tts(self, headers):
         if not self.text or not self.target_language:
@@ -116,7 +114,7 @@ class WoolBallComponent(Component):
         endpoint = f"/v1/text-to-speech/{self.target_language}?text={self.text}"
         response = requests.get(f"{self.API_BASE_URL}{endpoint}", headers=headers)
         data = self.handle_api_response(response)
-        return Message(text="Audio generated successfully", additional_kwargs={"audio_data": data['data']})
+        return Message(text="Audio generated successfully", additional_kwargs={"audio_data": data["data"]})
 
     def _handle_text_generation(self, headers):
         if not self.text:
@@ -125,45 +123,34 @@ class WoolBallComponent(Component):
         endpoint = f"/v1/completions?text={self.text}"
         response = requests.get(f"{self.API_BASE_URL}{endpoint}", headers=headers)
         data = self.handle_api_response(response)
-        return Message(text=data['data'])
+        return Message(text=data["data"])
 
     def _handle_translation(self, headers):
         if not self.text or not self.source_language or not self.target_language:
             raise ValueError("Text, source language, and target language are required for Translation")
 
         endpoint = "/v1/translation"
-        payload = {
-            "Text": self.text,
-            "SrcLang": self.source_language,
-            "TgtLang": self.target_language
-        }
+        payload = {"Text": self.text, "SrcLang": self.source_language, "TgtLang": self.target_language}
         response = requests.post(f"{self.API_BASE_URL}{endpoint}", headers=headers, json=payload)
         data = self.handle_api_response(response)
-        return Message(text=data['data'])
+        return Message(text=data["data"])
 
     def _handle_zero_shot_classification(self, headers):
         if not self.text or not self.candidate_labels:
             raise ValueError("Text and candidate labels are required for Zero-Shot Classification")
 
         labels = [label.strip() for label in self.candidate_labels.split(",") if label.strip()]
-        
+
         if not labels:
             raise ValueError("At least one valid candidate label is required")
 
         endpoint = "/v1/zero-shot-classification"
-        payload = {
-            "Text": self.text,
-            "CandidateLabels": labels
-        }
+        payload = {"Text": self.text, "CandidateLabels": labels}
 
-        response = requests.post(
-            f"{self.API_BASE_URL}{endpoint}", 
-            headers=headers, 
-            json=payload
-        )
-        
+        response = requests.post(f"{self.API_BASE_URL}{endpoint}", headers=headers, json=payload)
+
         data = self.handle_api_response(response)
-        return Message(text=str(data['data']))
+        return Message(text=str(data["data"]))
 
     def _handle_summary(self, headers):
         if not self.text:
@@ -173,28 +160,22 @@ class WoolBallComponent(Component):
         payload = {"text": self.text}
         response = requests.post(f"{self.API_BASE_URL}{endpoint}", headers=headers, json=payload)
         data = self.handle_api_response(response)
-        return Message(text=data['data'])
+        return Message(text=data["data"])
 
     def _handle_char_to_image(self, headers):
         if not self.text:
             raise ValueError("Character is required for Character to Image")
 
-        normalized_text = unicodedata.normalize('NFC', self.text.strip())
+        normalized_text = unicodedata.normalize("NFC", self.text.strip())
         character = next(char for char in normalized_text)
-        
+
         endpoint = "/v1/char-to-image"
         url = f"{self.API_BASE_URL}{endpoint}?character={character}"
-        
-        response = requests.get(
-            url, 
-            headers=headers
-        )
-        
+
+        response = requests.get(url, headers=headers)
+
         data = self.handle_api_response(response)
-        return Message(
-            text="Image generated successfully", 
-            additional_kwargs={"image_data": data['data']}
-        )
+        return Message(text="Image generated successfully", additional_kwargs={"image_data": data["data"]})
 
     def handle_api_response(self, response: requests.Response) -> dict:
         try:
@@ -203,7 +184,7 @@ class WoolBallComponent(Component):
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 401:
                 raise ValueError("Invalid API key.")
-            elif e.response.status_code == 429:
+            if e.response.status_code == 429:
                 raise ValueError("Rate limit exceeded.")
             raise ValueError(f"HTTP Error: {e.response.status_code}") from e
         except ValueError:
@@ -229,7 +210,7 @@ class WoolBallComponent(Component):
                 "Translation": ["text", "source_language", "target_language", "api_key"],
                 "Zero-Shot Classification": ["text", "candidate_labels", "api_key"],
                 "Summary": ["text", "api_key"],
-                "Character to Image": ["text", "api_key"]
+                "Character to Image": ["text", "api_key"],
             }
 
             if field_value in field_mapping:
