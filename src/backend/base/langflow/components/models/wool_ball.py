@@ -44,7 +44,7 @@ class WoolBallComponent(Component):
                 languages_data = response.json().get("data", [])
                 return [lang["code"] for lang in languages_data]
         except requests.exceptions.RequestException as e:
-            logger.exception(e)
+            logger.exception("An error occurred while listing languages.")
         return ["por_Latn", "eng_Latn", "spa_Latn"]
 
     inputs = [
@@ -160,7 +160,8 @@ class WoolBallComponent(Component):
 
     def _handle_text_generation(self, headers):
         if not self.text:
-            raise ValueError("Text is required for Text Generation")
+            error_message = "Text is required for Text Generation"
+            raise ValueError(error_message)
 
         endpoint = f"/v1/completions?text={self.text}"
         response = requests.get(f"{self.API_BASE_URL}{endpoint}", headers=headers, timeout=60)
@@ -169,7 +170,8 @@ class WoolBallComponent(Component):
 
     def _handle_translation(self, headers):
         if not self.text or not self.source_language or not self.target_language:
-            raise ValueError("Text, source language, and target language are required for Translation")
+            error_message = "Text, source language, and target language are required for Translation"
+            raise ValueError(error_message)
 
         endpoint = "/v1/translation"
         payload = {"Text": self.text, "SrcLang": self.source_language, "TgtLang": self.target_language}
@@ -179,12 +181,13 @@ class WoolBallComponent(Component):
 
     def _handle_zero_shot_classification(self, headers):
         if not self.text or not self.candidate_labels:
-            raise ValueError("Text and candidate labels are required for Zero-Shot Classification")
+            error_message = "Text and candidate labels are required for Zero-Shot Classification"
+            raise ValueError(error_message)
 
         labels = [label.strip() for label in self.candidate_labels.split(",") if label.strip()]
 
         if not labels:
-            raise ValueError("At least one valid candidate label is required")
+            raise ValueError("At least one valid candidate label is required for Zero-Shot Classification")
 
         endpoint = "/v1/zero-shot-classification"
         payload = {"Text": self.text, "CandidateLabels": labels}
