@@ -1,5 +1,6 @@
-import logging
 import requests
+
+import logging
 import unicodedata
 from typing import Any
 
