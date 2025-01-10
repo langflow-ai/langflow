@@ -19,7 +19,7 @@ export default function InputListComponent({
   componentName,
   id,
   placeholder,
-  metadata,
+  listAddLabel,
 }: InputProps<string[], InputListComponentType>): JSX.Element {
   const [dropdownOpen, setDropdownOpen] = useState<number | null>(null);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
@@ -105,10 +105,7 @@ export default function InputListComponent({
                     ? "text-primary"
                     : "text-muted-foreground",
                 )}
-                placeholder={getPlaceholder(
-                  disabled,
-                  metadata?.render_parameters?.placeholder ?? placeholder,
-                )}
+                placeholder={getPlaceholder(disabled, placeholder)}
                 onChange={(event) =>
                   handleInputChange(index, event.target.value)
                 }
@@ -153,8 +150,7 @@ export default function InputListComponent({
           className="btn-add-input-list"
           data-testid={`input-list-add-more-${editNode ? "edit" : "view"}`}
         >
-          <span className="mr-2 text-lg">+</span>{" "}
-          {metadata?.render_parameters?.button_text ?? "Add More"}
+          <span className="mr-2 text-lg">+</span> {listAddLabel ?? "Add More"}
         </Button>
       )}
     </div>

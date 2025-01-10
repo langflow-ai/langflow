@@ -188,9 +188,12 @@ export default function NodeInputField({
             handleNodeClass={handleNodeClass}
             nodeClass={data.node!}
             disabled={disabled}
-            placeholder={isToolMode ? DEFAULT_TOOLSET_PLACEHOLDER : undefined}
+            placeholder={
+              isToolMode
+                ? DEFAULT_TOOLSET_PLACEHOLDER
+                : data.node?.template[name].placeholder
+            }
             isToolMode={isToolMode}
-            metadata={metadata}
           />
         )}
       </div>

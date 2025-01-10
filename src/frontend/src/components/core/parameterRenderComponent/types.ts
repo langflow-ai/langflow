@@ -73,6 +73,7 @@ export type StrRenderComponentType = {
 export type InputListComponentType = {
   componentName?: string;
   id?: string;
+  listAddLabel?: string;
 };
 
 export type DropDownComponentType = {

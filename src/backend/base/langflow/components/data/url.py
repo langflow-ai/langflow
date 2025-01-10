@@ -14,12 +14,6 @@ class URLComponent(Component):
     description = "Load and retrive data from specified URLs."
     icon = "layout-template"
     name = "URL"
-    metadata = {
-        "render_parameters": {
-            "placeholder": "Enter a URL...",
-            "button_text": "Add URL",
-        }
-    }
 
     inputs = [
         MessageTextInput(
@@ -28,6 +22,8 @@ class URLComponent(Component):
             info="Enter one or more URLs, by clicking the '+' button.",
             is_list=True,
             tool_mode=True,
+            placeholder="Enter a URL...",
+            list_add_label="Add URL"
         ),
         DropdownInput(
             name="format",
