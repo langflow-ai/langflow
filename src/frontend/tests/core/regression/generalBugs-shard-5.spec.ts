@@ -234,18 +234,6 @@ test(
       .nth(2)
       .fill(thirdRandomName);
 
-    // await page
-    //   .locator(".primary-input.noflow.nopan")
-    //   .nth(5)
-    //   .waitFor({ state: "visible" });
-    // await page
-    //   .locator(".primary-input.noflow.nopan")
-    //   .nth(6)
-    //   .waitFor({ state: "visible" });
-
-    // await page.locator(".primary-input.noflow.nopan").nth(5).fill("-");
-    // await page.locator(".primary-input.noflow.nopan").nth(6).fill("-");
-
     await page.getByTestId("button_run_text output").last().click();
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
