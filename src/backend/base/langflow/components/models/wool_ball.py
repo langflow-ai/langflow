@@ -43,7 +43,7 @@ class WoolBallComponent(Component):
             if response.status_code == SUCCESS_STATUS_CODE:
                 languages_data = response.json().get("data", [])
                 return [lang["code"] for lang in languages_data]
-        except requests.exceptions.RequestException as e:
+        except requests.exceptions.RequestException:
             logger.exception("An error occurred while listing languages.")
         return ["por_Latn", "eng_Latn", "spa_Latn"]
 
