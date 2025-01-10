@@ -111,6 +111,10 @@ test(
     ).not.toBeVisible();
     await expect(page.getByTestId("logicCondition")).not.toBeVisible();
 
+    await page.getByTestId("edit-button-modal").click();
+
+    await page.getByTestId("showheaders").click();
+    await page.getByText("Close").last().click();
     await page.getByTestId("handle-apirequest-shownode-headers-left").click();
 
     await expect(page.getByTestId("disclosure-data")).toBeVisible();
