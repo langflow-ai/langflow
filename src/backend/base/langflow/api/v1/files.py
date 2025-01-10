@@ -1,4 +1,5 @@
 import hashlib
+import json
 from datetime import datetime, timezone
 from http import HTTPStatus
 from io import BytesIO
@@ -6,16 +7,21 @@ from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 
 from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.api.v1.schemas import UploadFileResponse
+from langflow.api.v1.schemas import RunResponse, SimplifiedAPIRequest, UploadFileResponse
+from langflow.graph.schema import ResultData, RunOutputs
+from langflow.services.auth.utils import api_key_security
 from langflow.services.database.models.flow import Flow
+from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.settings.service import SettingsService
 from langflow.services.storage.service import StorageService
 from langflow.services.storage.utils import build_content_type_from_extension
+
+from .endpoints import simplified_run_flow
 
 router = APIRouter(tags=["Files"], prefix="/files")
 
@@ -69,6 +75,92 @@ async def upload_file(
         return UploadFileResponse(flow_id=str(flow.id), file_path=f"{folder}/{full_file_name}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.post("/upload/run/{flow_id}", status_code=HTTPStatus.CREATED)
+async def upload_and_run_file(
+    *,
+    file: UploadFile,
+    flow: Annotated[Flow, Depends(get_flow)],
+    current_user: CurrentActiveUser,
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
+    background_tasks: BackgroundTasks,
+    input_request: str = Form(None),
+    stream: bool = Form(default=False),
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],
+    file_path_field: str = Form("input_value"),
+) -> RunResponse:
+    input_request_dict = json.loads(input_request) if input_request else {}
+    input_request_obj = SimplifiedAPIRequest(**input_request_dict)
+    return await _upload_and_run_file(
+        file=file,
+        flow=flow,
+        current_user=current_user,
+        storage_service=storage_service,
+        settings_service=settings_service,
+        background_tasks=background_tasks,
+        input_request=input_request_obj,
+        stream=stream,
+        api_key_user=api_key_user,
+        file_path_field=file_path_field,
+    )
+
+
+async def _upload_and_run_file(
+    *,
+    file: UploadFile,
+    flow: Annotated[Flow, Depends(get_flow)],
+    current_user: CurrentActiveUser,
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
+    background_tasks: BackgroundTasks,
+    input_request: SimplifiedAPIRequest | None = None,
+    stream: bool = False,
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],
+    file_path_field: str = "input_value",
+) -> RunResponse:
+    try:
+        # Rely on upload_file to validate the user/flow combination
+        upload_results = await upload_file(
+            file=file,
+            flow=flow,
+            current_user=current_user,
+            storage_service=storage_service,
+            settings_service=settings_service,
+        )
+
+        upload_outputs = RunOutputs(
+            inputs={
+                "filename": file.filename,
+                "content_type": file.content_type,
+                "size": file.size,
+            },
+            outputs=[ResultData(results=upload_results)],
+        )
+
+        if not hasattr(upload_results, "file_path") or not upload_results.file_path:
+            raise HTTPException(status_code=500, detail="Invalid upload response")
+
+        full_path = str(upload_results.file_path)
+        input_request = input_request or SimplifiedAPIRequest()
+        input_request.set_value_by_path(file_path_field, full_path)
+
+        run_response = await simplified_run_flow(
+            background_tasks=background_tasks,
+            flow=flow,
+            input_request=input_request,
+            stream=stream,
+            api_key_user=api_key_user,
+        )
+
+        # Prepend the upload outputs as that happened first
+        run_response.outputs.insert(0, upload_outputs)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    else:
+        return run_response
 
 
 @router.get("/download/{flow_id}/{file_name}")
