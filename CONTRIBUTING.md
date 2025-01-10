@@ -35,7 +35,7 @@ so that more people can benefit from it.
 
 You can develop Langflow locally and contribute to the Project!
 
-See [DEVELOPMENT.md](DEVELOPMENT.md) for instructions on setting up and using a development envrionment.
+See [DEVELOPMENT.md](DEVELOPMENT.md) for instructions on setting up and using a development environment.
 
 ## Opening a pull request
 
