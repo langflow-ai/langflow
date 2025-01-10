@@ -180,6 +180,7 @@ export function ParameterRenderComponent({
             table_options={templateData?.table_options}
             trigger_icon={templateData?.trigger_icon}
             trigger_text={templateData?.trigger_text}
+            table_icon={templateData?.table_icon}
           />
         );
       case "slider":
