@@ -75,7 +75,6 @@ export default function Dropdown({
     parameterId: name || "",
     nodeId: id,
     node: nodeClass!,
-    tool_mode: nodeClass?.tool_mode ?? false,
   });
 
   const { isPending } = postTemplateValue;
