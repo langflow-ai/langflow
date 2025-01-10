@@ -44,7 +44,7 @@ class WoolBallComponent(Component):
                 languages_data = response.json().get("data", [])
                 return [lang["code"] for lang in languages_data]
         except requests.exceptions.RequestException as e:
-            logger.error(f"Error fetching languages: {e}")
+            logger.exception(e)
         return ["por_Latn", "eng_Latn", "spa_Latn"]
 
     inputs = [
@@ -140,7 +140,7 @@ class WoolBallComponent(Component):
                 return self._handle_summary(headers)
             if self.task_type == "Character to Image":
                 return self._handle_char_to_image(headers)
-            
+
             error_message = "Invalid task type selected"
             raise ValueError(error_message)
         except requests.exceptions.RequestException as e:
@@ -149,7 +149,8 @@ class WoolBallComponent(Component):
 
     def _handle_tts(self, headers):
         if not self.text or not self.target_language:
-            raise ValueError("Text and target language are required for Text to Speech")
+            error_msg = "Text and target language are required for Text to Speech"
+            raise ValueError(error_msg)
 
         endpoint = f"/v1/text-to-speech/{self.target_language}?text={self.text}"
         response = requests.get(f"{self.API_BASE_URL}{endpoint}", headers=headers)
