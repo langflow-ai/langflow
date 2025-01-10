@@ -1,6 +1,6 @@
+import logging
 import unicodedata
 from typing import Any
-import logging
 
 import requests
 
@@ -103,7 +103,7 @@ class WoolBallComponent(Component):
         "Translation": ["text", "source_language", "target_language", "api_key"],
         "Zero-Shot Classification": ["text", "candidate_labels", "api_key"],
         "Summary": ["text", "api_key"],
-        "Character to Image": ["text", "api_key"]
+        "Character to Image": ["text", "api_key"],
     }
 
     def build(self, build_config: dotdict) -> dotdict:
@@ -140,7 +140,7 @@ class WoolBallComponent(Component):
                 return self._handle_summary(headers)
             if self.task_type == "Character to Image":
                 return self._handle_char_to_image(headers)
-            
+
             error_message = "Invalid task type selected"
             raise ValueError(error_message)
         except requests.exceptions.RequestException as e:
