@@ -116,7 +116,7 @@ test("should share component with share button", async ({ page }) => {
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
   await page.waitForTimeout(1000);
   const flowName = await page.getByTestId("flow_name").innerText();
-  await page.getByTestId("flow_name").click();
+  await page.getByTestId("flow_menu_trigger").click();
   await page.getByText("Edit Details").click();
   const flowDescription = await page
     .getByPlaceholder("Flow description")

@@ -283,7 +283,10 @@ export const MenuBar = ({}: {}): JSX.Element => {
             )}
           </div>
           <DropdownMenu>
-            <DropdownMenuTrigger className="group">
+            <DropdownMenuTrigger
+              className="group"
+              data-testid="flow_menu_trigger"
+            >
               <IconComponent
                 name="ChevronDown"
                 className="flex h-5 w-5 text-muted-foreground hover:text-primary"
