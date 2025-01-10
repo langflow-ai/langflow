@@ -45,3 +45,6 @@ class Tweaks(RootModel):
 
     def items(self):
         return self.root.items()
+
+    def update(self, other: dict[str, Any]) -> None:
+        self.root.update(other)
