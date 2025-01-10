@@ -55,11 +55,19 @@ test(
         targetPosition: { x: 10, y: 10 },
       });
 
+    await page.waitForTimeout(500);
+
+    await page.getByTestId("popover-anchor-input-delimiter").fill("-");
+
     await page
       .getByTestId("processingCombine Text")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 200, y: 10 },
       });
+
+    await page.waitForTimeout(500);
+
+    await page.getByTestId("popover-anchor-input-delimiter").last().fill("-");
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text");
@@ -223,18 +231,20 @@ test(
 
     await page
       .getByPlaceholder("Type something...", { exact: true })
-      .nth(4)
+      .nth(2)
       .fill(thirdRandomName);
 
-    await page
-      .getByPlaceholder("Type something...", { exact: true })
-      .nth(3)
-      .fill("-");
+    // await page
+    //   .locator(".primary-input.noflow.nopan")
+    //   .nth(5)
+    //   .waitFor({ state: "visible" });
+    // await page
+    //   .locator(".primary-input.noflow.nopan")
+    //   .nth(6)
+    //   .waitFor({ state: "visible" });
 
-    await page
-      .getByPlaceholder("Type something...", { exact: true })
-      .nth(2)
-      .fill("-");
+    // await page.locator(".primary-input.noflow.nopan").nth(5).fill("-");
+    // await page.locator(".primary-input.noflow.nopan").nth(6).fill("-");
 
     await page.getByTestId("button_run_text output").last().click();
 
