@@ -144,6 +144,7 @@ class AstraAssistantManager(ComponentWithCache):
         super().__init__(**kwargs)
         self.lock = asyncio.Lock()
         self.initialized: bool = False
+        self.tools = []  # type: ignore[assignment]
         self._assistant_response: Message = None  # type: ignore[assignment]
         self._tool_output: Message = None  # type: ignore[assignment]
         self._thread_id: Message = None  # type: ignore[assignment]
