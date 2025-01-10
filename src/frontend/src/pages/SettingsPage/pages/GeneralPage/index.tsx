@@ -24,10 +24,10 @@ import {
   patchUserInputStateType,
 } from "../../../../types/components";
 import useScrollToElement from "../hooks/use-scroll-to-element";
+import StoreApiKeyFormComponent from "../StoreApiKeyPage/components/StoreApiKeyForm";
 import GeneralPageHeaderComponent from "./components/GeneralPageHeader";
 import PasswordFormComponent from "./components/PasswordForm";
 import ProfilePictureFormComponent from "./components/ProfilePictureForm";
-import StoreApiKeyFormComponent from "./components/StoreApiKeyForm";
 
 export const GeneralPage = () => {
   const { scrollId } = useParams();
@@ -162,16 +162,6 @@ export const GeneralPage = () => {
             cnfPassword={cnfPassword}
             handleInput={handleInput}
             handlePatchPassword={handlePatchPassword}
-          />
-        )}
-        {hasStore && (
-          <StoreApiKeyFormComponent
-            apikey={apikey}
-            handleInput={handleInput}
-            handleSaveKey={handleSaveKey}
-            loadingApiKey={loadingApiKey}
-            validApiKey={validApiKey}
-            hasApiKey={hasApiKey}
           />
         )}
       </div>
