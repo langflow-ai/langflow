@@ -144,7 +144,8 @@ class WoolBallComponent(Component):
             error_message = "Invalid task type selected"
             raise ValueError(error_message)
         except requests.exceptions.RequestException as e:
-            error_message = f"API request failed: {e!s}"
+            error_message = "API request failed"
+            logger.exception(error_message)
             raise ValueError(error_message) from e
 
     def _handle_tts(self, headers):
@@ -153,7 +154,7 @@ class WoolBallComponent(Component):
             raise ValueError(error_msg)
 
         endpoint = f"/v1/text-to-speech/{self.target_language}?text={self.text}"
-        response = requests.get(f"{self.API_BASE_URL}{endpoint}", headers=headers)
+        response = requests.get(f"{self.API_BASE_URL}{endpoint}", headers=headers, timeout=60)
         data = self.handle_api_response(response)
         return Message(text="Audio generated successfully", additional_kwargs={"audio_data": data["data"]})
 
@@ -162,7 +163,7 @@ class WoolBallComponent(Component):
             raise ValueError("Text is required for Text Generation")
 
         endpoint = f"/v1/completions?text={self.text}"
-        response = requests.get(f"{self.API_BASE_URL}{endpoint}", headers=headers)
+        response = requests.get(f"{self.API_BASE_URL}{endpoint}", headers=headers, timeout=60)
         data = self.handle_api_response(response)
         return Message(text=data["data"])
 
@@ -172,7 +173,7 @@ class WoolBallComponent(Component):
 
         endpoint = "/v1/translation"
         payload = {"Text": self.text, "SrcLang": self.source_language, "TgtLang": self.target_language}
-        response = requests.post(f"{self.API_BASE_URL}{endpoint}", headers=headers, json=payload)
+        response = requests.post(f"{self.API_BASE_URL}{endpoint}", headers=headers, json=payload, timeout=60)
         data = self.handle_api_response(response)
         return Message(text=data["data"])
 
@@ -188,24 +189,26 @@ class WoolBallComponent(Component):
         endpoint = "/v1/zero-shot-classification"
         payload = {"Text": self.text, "CandidateLabels": labels}
 
-        response = requests.post(f"{self.API_BASE_URL}{endpoint}", headers=headers, json=payload)
+        response = requests.post(f"{self.API_BASE_URL}{endpoint}", headers=headers, json=payload, timeout=60)
 
         data = self.handle_api_response(response)
         return Message(text=str(data["data"]))
 
     def _handle_summary(self, headers):
         if not self.text:
-            raise ValueError("Text is required for Summary")
+            error_message = "Text is required for Summary"
+            raise ValueError(error_message)
 
         endpoint = "/v1/summarization"
         payload = {"text": self.text}
-        response = requests.post(f"{self.API_BASE_URL}{endpoint}", headers=headers, json=payload)
+        response = requests.post(f"{self.API_BASE_URL}{endpoint}", headers=headers, json=payload, timeout=60)
         data = self.handle_api_response(response)
         return Message(text=data["data"])
 
     def _handle_char_to_image(self, headers):
         if not self.text:
-            raise ValueError("Character is required for Character to Image")
+            error_message = "Character is required for Character to Image"
+            raise ValueError(error_message)
 
         normalized_text = unicodedata.normalize("NFC", self.text.strip())
         character = next(char for char in normalized_text)
@@ -213,7 +216,7 @@ class WoolBallComponent(Component):
         endpoint = "/v1/char-to-image"
         url = f"{self.API_BASE_URL}{endpoint}?character={character}"
 
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=60)
 
         data = self.handle_api_response(response)
         return Message(text="Image generated successfully", additional_kwargs={"image_data": data["data"]})
