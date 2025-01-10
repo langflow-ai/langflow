@@ -236,7 +236,6 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
         [
             (["txt"], 1),
             (["json"], 1),
-            (["exe"], 0),  # exe is not in TEXT_FILE_TYPES
             (["txt", "json"], 2),
         ],
     )
@@ -269,6 +268,31 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
                 # e.g., verify that the extension is indeed in file_types
                 file_ext = Path(r.data["file_path"]).suffix.lstrip(".")
                 assert file_ext in file_types, f"Unexpected file extension: {file_ext}"
+
+    def test_directory_invalid_type(self):
+        """Test DirectoryComponent raises error with invalid file type."""
+        directory_component = DirectoryComponent()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create test file
+            (Path(temp_dir) / "test.exe").write_text("test", encoding="utf-8")
+
+            directory_component.set_attributes(
+                {
+                    "path": str(temp_dir),
+                    "types": ["exe"],
+                    "use_multithreading": False,
+                    "silent_errors": False,
+                }
+            )
+
+            with pytest.raises(
+                ValueError, match="Invalid file types specified: \\['exe'\\]. Valid types are:"
+            ) as exc_info:
+                directory_component.load_directory()
+
+            assert "Invalid file types specified: ['exe']" in str(exc_info.value)
+            assert "Valid types are:" in str(exc_info.value)
 
     def test_directory_with_hidden_files(self):
         """Test DirectoryComponent with hidden files."""
