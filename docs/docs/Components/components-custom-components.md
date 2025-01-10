@@ -1,5 +1,5 @@
 ---
-title: Create custom components
+title: Create custom Python components
 slug: /components-custom-components
 ---
 
@@ -9,9 +9,12 @@ Since Langflow operates with Python behind the scenes, you can implement any Pyt
 
 Custom Components create reusable and configurable components to enhance the capabilities of Langflow, making it a powerful tool for developing complex processing between user and AI messages.
 
-## Directory Structure Requirements
+## Directory structure requirements
 
-When using custom components with the `LANGFLOW_COMPONENTS_PATH` environment variable, components must be organized in a specific directory structure to be properly loaded and displayed in the UI:
+By default, Langflow looks for custom components in the `langflow/components` directory.
+
+If you're creating custom components in a different location using the [LANGFLOW_COMPONENTS_PATH](/environment-variables#LANGFLOW_COMPONENTS_PATH)
+`LANGFLOW_COMPONENTS_PATH` environment variable, components must be organized in a specific directory structure to be properly loaded and displayed in the UI:
 
 ```
 /your/custom/components/path/    # Base directory (set by LANGFLOW_COMPONENTS_PATH)
@@ -19,35 +22,32 @@ When using custom components with the `LANGFLOW_COMPONENTS_PATH` environment var
         └── custom_component.py # Component file
 ```
 
-### Important Notes:
+Components must be placed inside **category folders**, not directly in the base directory.
+The category folder name determines where the component appears in the UI menu.
 
-1. **Category Folders**: Components must be placed inside a category subfolder, not directly in the base directory
-   - The category folder name determines where the component appears in the UI menu
-   - For example, to add a component to the "Helpers" menu, place it in a `helpers` subfolder
+For example, to add a component to the **Helpers** menu, place it in a `helpers` subfolder:
 
-2. **Correct Structure Example**:
-   ```
-   /app/custom_components/          # LANGFLOW_COMPONENTS_PATH
-       └── helpers/                 # Shows up as "Helpers" menu
-           └── custom_component.py  # Your component
-   ```
+```
+/app/custom_components/          # LANGFLOW_COMPONENTS_PATH
+    └── helpers/                 # Shows up as "Helpers" menu
+        └── custom_component.py  # Your component
+```
 
-3. **Incorrect Structure Example**:
-   ```
-   /app/custom_components/          # LANGFLOW_COMPONENTS_PATH
-       └── custom_component.py      # Won't be loaded - missing category folder!
-   ```
+You can have **multiple category folders** to organize components into different menus:
+```
+/app/custom_components/
+    ├── helpers/
+    │   └── helper_component.py
+    └── tools/
+        └── tool_component.py
+```
 
-4. **Multiple Categories**: You can have multiple category folders to organize components into different menus:
-   ```
-   /app/custom_components/
-       ├── helpers/
-       │   └── helper_component.py
-       └── tools/
-           └── tool_component.py
-   ```
+This folder structure is required for Langflow to properly discover and load your custom components. Components placed directly in the base directory will not be loaded.
 
-This structure is required for Langflow to properly discover and load your custom components. Components placed directly in the base directory will not be loaded.
+```
+/app/custom_components/          # LANGFLOW_COMPONENTS_PATH
+    └── custom_component.py      # Won't be loaded - missing category folder!
+```
 
 ## Create a custom component in Langflow
 
@@ -63,7 +63,7 @@ from langflow.schema import Data
 class CustomComponent(Component):
     display_name = "Custom Component"
     description = "Use as a template to create your own component."
-    documentation: str = "http://docs.langflow.org/components/custom"
+    documentation: str = "https://docs.langflow.org/components-custom-components"
     icon = "custom_components"
     name = "CustomComponent"
 
@@ -84,7 +84,7 @@ class CustomComponent(Component):
 
 You can create your class in your favorite text editor outside of Langflow and paste it in later, or just follow along in the code pane.
 
-1. In Langflow, from under **Helpers**, drag a **Custom Component** into the workspace.
+1. In Langflow, click **+ Custom Component** to add a custom component into the workspace.
 2. Open the component's code pane.
 3. Import dependencies.
 Your custom component inherits from the langflow `Component` class so you need to include it.
