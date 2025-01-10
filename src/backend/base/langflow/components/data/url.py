@@ -6,6 +6,7 @@ from langflow.custom import Component
 from langflow.helpers.data import data_to_text
 from langflow.io import DropdownInput, MessageTextInput, Output
 from langflow.schema import Data
+from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 
 
@@ -37,6 +38,7 @@ class URLComponent(Component):
     outputs = [
         Output(display_name="Data", name="data", method="fetch_content"),
         Output(display_name="Text", name="text", method="fetch_content_text"),
+        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
     ]
 
     def ensure_url(self, string: str) -> str:
@@ -90,3 +92,6 @@ class URLComponent(Component):
         result_string = data_to_text("{text}", data)
         self.status = result_string
         return Message(text=result_string)
+
+    def as_dataframe(self) -> DataFrame:
+        return DataFrame(self.fetch_content())

@@ -32,6 +32,7 @@ export type TableComponentType = {
   table_options?: TableOptionsTypeAPI;
   trigger_text?: string;
   trigger_icon?: string;
+  table_icon?: string;
 };
 
 export type FloatComponentType = {
