@@ -1176,7 +1176,7 @@ class Component(CustomComponent):
     ) -> Message | None:
         """Send an error message to the frontend."""
         flow_id = self.graph.flow_id if hasattr(self, "graph") else None
-        if not flow_id or not session_id:
+        if not session_id:
             return None
         error_message = ErrorMessage(
             flow_id=flow_id,
