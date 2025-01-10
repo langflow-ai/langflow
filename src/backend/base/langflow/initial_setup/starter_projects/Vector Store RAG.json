@@ -3075,7 +3075,12 @@
                 "display_name": "DataFrame",
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "required_inputs": [],
+                "required_inputs": [
+                  "api_endpoint",
+                  "collection_name",
+                  "collection_name_new",
+                  "token"
+                ],
                 "selected": "DataFrame",
                 "types": [
                   "DataFrame"
@@ -3506,7 +3511,12 @@
                 "display_name": "DataFrame",
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "required_inputs": [],
+                "required_inputs": [
+                  "api_endpoint",
+                  "collection_name",
+                  "collection_name_new",
+                  "token"
+                ],
                 "selected": "DataFrame",
                 "types": [
                   "DataFrame"
