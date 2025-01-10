@@ -2,6 +2,7 @@ from langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_
 from langflow.custom import Component
 from langflow.io import BoolInput, IntInput, MessageTextInput, MultiselectInput
 from langflow.schema import Data
+from langflow.schema.dataframe import DataFrame
 from langflow.template import Output
 
 
@@ -67,11 +68,12 @@ class DirectoryComponent(Component):
 
     outputs = [
         Output(display_name="Data", name="data", method="load_directory"),
+        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
     ]
 
     def load_directory(self) -> list[Data]:
         path = self.path
-        types = self.types or TEXT_FILE_TYPES
+        types = self.types
         depth = self.depth
         max_concurrency = self.max_concurrency
         load_hidden = self.load_hidden
@@ -81,12 +83,21 @@ class DirectoryComponent(Component):
 
         resolved_path = self.resolve_path(path)
 
-        file_paths = retrieve_file_paths(
-            resolved_path, load_hidden=load_hidden, recursive=recursive, depth=depth, types=types
-        )
+        # If no types are specified, use all supported types
+        if not types:
+            types = TEXT_FILE_TYPES
 
-        if types:
-            file_paths = [fp for fp in file_paths if any(fp.endswith(ext) for ext in types)]
+        # Check if all specified types are valid
+        invalid_types = [t for t in types if t not in TEXT_FILE_TYPES]
+        if invalid_types:
+            msg = f"Invalid file types specified: {invalid_types}. Valid types are: {TEXT_FILE_TYPES}"
+            raise ValueError(msg)
+
+        valid_types = types
+
+        file_paths = retrieve_file_paths(
+            resolved_path, load_hidden=load_hidden, recursive=recursive, depth=depth, types=valid_types
+        )
 
         loaded_data = []
         if use_multithreading:
@@ -97,3 +108,6 @@ class DirectoryComponent(Component):
         valid_data = [x for x in loaded_data if x is not None and isinstance(x, Data)]
         self.status = valid_data
         return valid_data
+
+    def as_dataframe(self) -> DataFrame:
+        return DataFrame(self.load_directory())

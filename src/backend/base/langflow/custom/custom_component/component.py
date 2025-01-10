@@ -1173,9 +1173,11 @@ class Component(CustomComponent):
         session_id: str,
         trace_name: str,
         source: Source,
-    ) -> Message:
+    ) -> Message | None:
         """Send an error message to the frontend."""
         flow_id = self.graph.flow_id if hasattr(self, "graph") else None
+        if not session_id:
+            return None
         error_message = ErrorMessage(
             flow_id=flow_id,
             exception=exception,
