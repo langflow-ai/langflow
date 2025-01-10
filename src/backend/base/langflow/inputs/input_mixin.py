@@ -123,6 +123,7 @@ class ListableInputMixin(BaseModel):
     is_list: bool = Field(default=False, alias="list")
     list_add_label: str | None = Field(default="Add More")
 
+
 # Specific mixin for fields needing database interaction
 class DatabaseLoadMixin(BaseModel):
     load_from_db: bool = Field(default=True)
