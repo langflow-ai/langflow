@@ -9,6 +9,7 @@ from typing_extensions import TypedDict
 
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.content_types import TextContent, ToolContent
+from langflow.schema.dataframe import DataFrame
 from langflow.schema.log import SendMessageFunctionType
 from langflow.schema.message import Message
 
@@ -159,7 +160,11 @@ async def handle_on_tool_end(
     tool_content = tool_blocks_map.get(tool_key)
 
     if tool_content and isinstance(tool_content, ToolContent):
-        tool_content.output = event["data"].get("output")
+        output = event["data"].get("output")
+        if isinstance(output, DataFrame):
+            tool_content.output = output.to_dict(orient="records")
+        else:
+            tool_content.output = output
         duration = _calculate_duration(start_time)
         tool_content.duration = duration
         tool_content.header = {"title": f"Executed **{tool_content.name}**", "icon": "Hammer"}
