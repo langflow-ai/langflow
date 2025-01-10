@@ -21,11 +21,12 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
     def component_class(self):
         """Return the component class to test."""
         return LoopComponent
-    
+
     @pytest.fixture
     def file_names_mapping(self):
         """Return an empty list since this component doesn't have version-specific files."""
         return []
+
     async def _create_flow(self, client, json_loop_test, logged_in_headers):
         vector_store = orjson.loads(json_loop_test)
         data = vector_store["data"]
