@@ -686,8 +686,8 @@ export const TOOLTIP_OUTDATED_NODE =
 
 export const CHAT_SECOND_INITIAL_TEXT = "to inspect previous messages.";
 
-export const TOOLTIP_OPEN_HIDDEN_OUTPUTS = "Show hidden outputs";
-export const TOOLTIP_HIDDEN_OUTPUTS = "Hide outputs";
+export const TOOLTIP_OPEN_HIDDEN_OUTPUTS = "Expand hidden outputs";
+export const TOOLTIP_HIDDEN_OUTPUTS = "Collapse hidden outputs";
 
 export const ZERO_NOTIFICATIONS = "No new notifications";
 

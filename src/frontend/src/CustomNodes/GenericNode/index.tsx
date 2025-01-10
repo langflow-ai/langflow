@@ -48,11 +48,11 @@ const HiddenOutputsButton = memo(
   }) => (
     <Button
       unstyled
-      className="group flex h-6 w-6 items-center justify-center rounded-full border bg-background hover:border-foreground hover:text-foreground"
+      className="group m-auto h-[1.75rem] w-[1.75rem] place-items-center items-center rounded-full border bg-muted hover:text-foreground"
       onClick={onClick}
     >
       <ForwardedIconComponent
-        name={showHiddenOutputs ? "EyeOff" : "Eye"}
+        name={showHiddenOutputs ? "ChevronsDownUp" : "ChevronsUpDown"}
         strokeWidth={1.5}
         className="h-4 w-4 text-placeholder-foreground group-hover:text-foreground"
       />
@@ -455,8 +455,8 @@ function GenericNode({
                 <ShadTooltip
                   content={
                     showHiddenOutputs
-                      ? TOOLTIP_HIDDEN_OUTPUTS
-                      : TOOLTIP_OPEN_HIDDEN_OUTPUTS
+                      ? `${TOOLTIP_HIDDEN_OUTPUTS} (${hiddenOutputs?.length})`
+                      : `${TOOLTIP_OPEN_HIDDEN_OUTPUTS} (${hiddenOutputs?.length})`
                   }
                 >
                   <div
