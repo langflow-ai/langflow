@@ -1,9 +1,9 @@
 {
-  "id": "be747461-bfd5-4c84-ac1d-1a513895dac3",
+  "id": "ea877b5d-5a45-4d30-8562-54fe2176a623",
   "data": {
     "nodes": [
       {
-        "id": "SplitText-3iFUx",
+        "id": "SplitText-HpHsL",
         "type": "genericNode",
         "position": {
           "x": 481.67029556544435,
@@ -16,7 +16,7 @@
               "data_inputs": {
                 "trace_as_metadata": true,
                 "list": true,
-                "required": false,
+                "required": true,
                 "placeholder": "",
                 "show": true,
                 "name": "data_inputs",
@@ -47,7 +47,8 @@
                 "info": "Number of characters to overlap between chunks.",
                 "title_case": false,
                 "type": "int",
-                "_input_type": "IntInput"
+                "_input_type": "IntInput",
+                "load_from_db": false
               },
               "chunk_size": {
                 "tool_mode": false,
@@ -64,7 +65,8 @@
                 "info": "The maximum number of characters in each chunk.",
                 "title_case": false,
                 "type": "int",
-                "_input_type": "IntInput"
+                "_input_type": "IntInput",
+                "load_from_db": false
               },
               "code": {
                 "type": "code",
@@ -73,7 +75,7 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
-                "value": "from langchain_text_splitters import CharacterTextSplitter\n\nfrom langflow.custom import Component\nfrom langflow.io import HandleInput, IntInput, MessageTextInput, Output\nfrom langflow.schema import Data\nfrom langflow.utils.util import unescape_string\n\n\nclass SplitTextComponent(Component):\n    display_name: str = \"Split Text\"\n    description: str = \"Split text into chunks based on specified criteria.\"\n    icon = \"scissors-line-dashed\"\n    name = \"SplitText\"\n\n    inputs = [\n        HandleInput(\n            name=\"data_inputs\",\n            display_name=\"Data Inputs\",\n            info=\"The data to split.\",\n            input_types=[\"Data\"],\n            is_list=True,\n        ),\n        IntInput(\n            name=\"chunk_overlap\",\n            display_name=\"Chunk Overlap\",\n            info=\"Number of characters to overlap between chunks.\",\n            value=200,\n        ),\n        IntInput(\n            name=\"chunk_size\",\n            display_name=\"Chunk Size\",\n            info=\"The maximum number of characters in each chunk.\",\n            value=1000,\n        ),\n        MessageTextInput(\n            name=\"separator\",\n            display_name=\"Separator\",\n            info=\"The character to split on. Defaults to newline.\",\n            value=\"\\n\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Chunks\", name=\"chunks\", method=\"split_text\"),\n    ]\n\n    def _docs_to_data(self, docs):\n        return [Data(text=doc.page_content, data=doc.metadata) for doc in docs]\n\n    def split_text(self) -> list[Data]:\n        separator = unescape_string(self.separator)\n\n        documents = [_input.to_lc_document() for _input in self.data_inputs if isinstance(_input, Data)]\n\n        splitter = CharacterTextSplitter(\n            chunk_overlap=self.chunk_overlap,\n            chunk_size=self.chunk_size,\n            separator=separator,\n        )\n        docs = splitter.split_documents(documents)\n        data = self._docs_to_data(docs)\n        self.status = data\n        return data\n",
+                "value": "from langchain_text_splitters import CharacterTextSplitter\n\nfrom langflow.custom import Component\nfrom langflow.io import HandleInput, IntInput, MessageTextInput, Output\nfrom langflow.schema import Data, DataFrame\nfrom langflow.utils.util import unescape_string\n\n\nclass SplitTextComponent(Component):\n    display_name: str = \"Split Text\"\n    description: str = \"Split text into chunks based on specified criteria.\"\n    icon = \"scissors-line-dashed\"\n    name = \"SplitText\"\n\n    inputs = [\n        HandleInput(\n            name=\"data_inputs\",\n            display_name=\"Data Inputs\",\n            info=\"The data to split.\",\n            input_types=[\"Data\"],\n            is_list=True,\n            required=True,\n        ),\n        IntInput(\n            name=\"chunk_overlap\",\n            display_name=\"Chunk Overlap\",\n            info=\"Number of characters to overlap between chunks.\",\n            value=200,\n        ),\n        IntInput(\n            name=\"chunk_size\",\n            display_name=\"Chunk Size\",\n            info=\"The maximum number of characters in each chunk.\",\n            value=1000,\n        ),\n        MessageTextInput(\n            name=\"separator\",\n            display_name=\"Separator\",\n            info=\"The character to split on. Defaults to newline.\",\n            value=\"\\n\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Chunks\", name=\"chunks\", method=\"split_text\"),\n        Output(display_name=\"DataFrame\", name=\"dataframe\", method=\"as_dataframe\"),\n    ]\n\n    def _docs_to_data(self, docs):\n        return [Data(text=doc.page_content, data=doc.metadata) for doc in docs]\n\n    def split_text(self) -> list[Data]:\n        separator = unescape_string(self.separator)\n\n        documents = [_input.to_lc_document() for _input in self.data_inputs if isinstance(_input, Data)]\n\n        splitter = CharacterTextSplitter(\n            chunk_overlap=self.chunk_overlap,\n            chunk_size=self.chunk_size,\n            separator=separator,\n        )\n        docs = splitter.split_documents(documents)\n        data = self._docs_to_data(docs)\n        self.status = data\n        return data\n\n    def as_dataframe(self) -> DataFrame:\n        return DataFrame(self.split_text())\n",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -110,7 +112,8 @@
             "description": "Split text into chunks based on specified criteria.",
             "icon": "scissors-line-dashed",
             "base_classes": [
-              "Data"
+              "Data",
+              "DataFrame"
             ],
             "display_name": "Split Text",
             "documentation": "",
@@ -131,6 +134,17 @@
                 "method": "split_text",
                 "value": "__UNDEFINED__",
                 "cache": true
+              },
+              {
+                "types": [
+                  "DataFrame"
+                ],
+                "selected": "DataFrame",
+                "name": "dataframe",
+                "display_name": "DataFrame",
+                "method": "as_dataframe",
+                "value": "__UNDEFINED__",
+                "cache": true
               }
             ],
             "field_order": [
@@ -144,23 +158,20 @@
             "edited": false,
             "metadata": {},
             "tool_mode": false,
-            "category": "processing",
-            "key": "SplitText",
-            "score": 0.0006561452663029057,
             "lf_version": "1.1.1"
           },
           "showNode": true,
           "type": "SplitText",
-          "id": "SplitText-3iFUx"
+          "id": "SplitText-HpHsL"
         },
         "selected": false,
         "measured": {
           "width": 320,
-          "height": 475
+          "height": 523
         }
       },
       {
-        "id": "LoopComponent-7DApw",
+        "id": "LoopComponent-GsRXp",
         "type": "genericNode",
         "position": {
           "x": 985.7835516756679,
@@ -281,7 +292,7 @@
           },
           "showNode": true,
           "type": "LoopComponent",
-          "id": "LoopComponent-7DApw"
+          "id": "LoopComponent-GsRXp"
         },
         "selected": false,
         "measured": {
@@ -290,7 +301,7 @@
         }
       },
       {
-        "id": "ParseData-NlQKq",
+        "id": "ParseData-fobTl",
         "type": "genericNode",
         "position": {
           "x": 1519.4837108212814,
@@ -437,7 +448,7 @@
           },
           "showNode": true,
           "type": "ParseData",
-          "id": "ParseData-NlQKq"
+          "id": "ParseData-fobTl"
         },
         "selected": false,
         "measured": {
@@ -447,7 +458,7 @@
         "dragging": false
       },
       {
-        "id": "Prompt-etahu",
+        "id": "Prompt-y1BZN",
         "type": "genericNode",
         "position": {
           "x": 2059.7522966861834,
@@ -589,7 +600,7 @@
           },
           "showNode": true,
           "type": "Prompt",
-          "id": "Prompt-etahu"
+          "id": "Prompt-y1BZN"
         },
         "selected": false,
         "measured": {
@@ -599,7 +610,7 @@
         "dragging": false
       },
       {
-        "id": "MessagetoData-S04rp",
+        "id": "MessagetoData-hwl5P",
         "type": "genericNode",
         "position": {
           "x": 2631.0708755107958,
@@ -688,7 +699,7 @@
           },
           "showNode": true,
           "type": "MessagetoData",
-          "id": "MessagetoData-S04rp"
+          "id": "MessagetoData-hwl5P"
         },
         "selected": false,
         "measured": {
@@ -698,7 +709,7 @@
         "dragging": false
       },
       {
-        "id": "ParseData-oFUPG",
+        "id": "ParseData-p7Jdw",
         "type": "genericNode",
         "position": {
           "x": 1575.264392019407,
@@ -736,7 +747,7 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
-                "value": "from langflow.custom import Component\nfrom langflow.helpers.data import data_to_text, data_to_text_list\nfrom langflow.io import DataInput, MultilineInput, Output, StrInput\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass ParseDataComponent(Component):\n    display_name = \"Parse Data\"\n    description = \"Convert Data into plain text following a specified template.\"\n    icon = \"braces\"\n    name = \"ParseData\"\n\n    inputs = [\n        DataInput(name=\"data\", display_name=\"Data\", info=\"The data to convert to text.\", is_list=True),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. \"\n            \"It can contain the keys {text}, {data} or any other key in the Data.\",\n            value=\"{text}\",\n        ),\n        StrInput(name=\"sep\", display_name=\"Separator\", advanced=True, value=\"\\n\"),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Text\",\n            name=\"text\",\n            info=\"Data as a single Message, with each input Data separated by Separator\",\n            method=\"parse_data\",\n        ),\n        Output(\n            display_name=\"Data List\",\n            name=\"data_list\",\n            info=\"Data as a list of new Data, each having `text` formatted by Template\",\n            method=\"parse_data_as_list\",\n        ),\n    ]\n\n    def _clean_args(self) -> tuple[list[Data], str, str]:\n        data = self.data if isinstance(self.data, list) else [self.data]\n        template = self.template\n        sep = self.sep\n        return data, template, sep\n\n    def parse_data(self) -> Message:\n        data, template, sep = self._clean_args()\n        result_string = data_to_text(template, data, sep)\n        self.status = result_string\n        return Message(text=result_string)\n\n    def parse_data_as_list(self) -> list[Data]:\n        data, template, _ = self._clean_args()\n        text_list, data_list = data_to_text_list(template, data)\n        for item, text in zip(data_list, text_list, strict=True):\n            item.set_text(text)\n        self.status = data_list\n        return data_list\n",
+                "value": "from langflow.custom import Component\nfrom langflow.helpers.data import data_to_text, data_to_text_list\nfrom langflow.io import DataInput, MultilineInput, Output, StrInput\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\nclass ParseDataComponent(Component):\n    display_name = \"Parse Data\"\n    description = \"Convert Data into plain text following a specified template.\"\n    icon = \"braces\"\n    name = \"ParseData\"\n\n    inputs = [\n        DataInput(name=\"data\", display_name=\"Data\", info=\"The data to convert to text.\", is_list=True),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. \"\n            \"It can contain the keys {text}, {data} or any other key in the Data.\",\n            value=\"{text}\",\n        ),\n        StrInput(name=\"sep\", display_name=\"Separator\", advanced=True, value=\"\\n\"),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Text\",\n            name=\"text\",\n            info=\"Data as a single Message, with each input Data separated by Separator\",\n            method=\"parse_data\",\n        ),\n        Output(\n            display_name=\"Data List\",\n            name=\"data_list\",\n            info=\"Data as a list of new Data, each having `text` formatted by Template\",\n            method=\"parse_data_as_list\",\n        ),\n    ]\n\n    def _clean_args(self) -> tuple[list[Data], str, str]:\n        data = self.data if isinstance(self.data, list) else [self.data]\n        template = self.template\n        sep = self.sep\n        return data, template, sep\n\n    def parse_data(self) -> Message:\n        data, template, sep = self._clean_args()\n        result_string = data_to_text(template, data, sep)\n        self.status = result_string\n        return Message(text=result_string)\n\n    def parse_data_as_list(self) -> list[Data]:\n        data, template, _ = self._clean_args()\n        text_list, data_list = data_to_text_list(template, data)\n        for item, text in zip(data_list, text_list, strict=True):\n            item.set_text(text)\n        self.status = data_list\n        return data_list\n",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -834,17 +845,14 @@
             ],
             "beta": false,
             "legacy": false,
-            "edited": false,
+            "edited": true,
             "metadata": {},
             "tool_mode": false,
-            "category": "processing",
-            "key": "ParseData",
-            "score": 0.007568328950209746,
             "lf_version": "1.1.1"
           },
           "showNode": true,
           "type": "ParseData",
-          "id": "ParseData-oFUPG"
+          "id": "ParseData-p7Jdw"
         },
         "selected": false,
         "measured": {
@@ -854,7 +862,7 @@
         "dragging": false
       },
       {
-        "id": "ChatOutput-n0KRZ",
+        "id": "ChatOutput-5dE2M",
         "type": "genericNode",
         "position": {
           "x": 2026.3742175369935,
@@ -1124,9 +1132,9 @@
           },
           "showNode": true,
           "type": "ChatOutput",
-          "id": "ChatOutput-n0KRZ"
+          "id": "ChatOutput-5dE2M"
         },
-        "selected": false,
+        "selected": true,
         "measured": {
           "width": 320,
           "height": 234
@@ -1134,7 +1142,7 @@
         "dragging": false
       },
       {
-        "id": "MessagetoData-tjsf8",
+        "id": "MessagetoData-bRpLW",
         "type": "genericNode",
         "position": {
           "x": -45,
@@ -1223,7 +1231,7 @@
           },
           "showNode": true,
           "type": "MessagetoData",
-          "id": "MessagetoData-tjsf8"
+          "id": "MessagetoData-bRpLW"
         },
         "selected": false,
         "measured": {
@@ -1232,7 +1240,7 @@
         }
       },
       {
-        "id": "ChatInput-5DmLD",
+        "id": "ChatInput-I5urc",
         "type": "genericNode",
         "position": {
           "x": -690,
@@ -1335,7 +1343,7 @@
                 "list": false,
                 "show": true,
                 "multiline": true,
-                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n",
+                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n",
                 "fileTypes": [],
                 "file_path": "",
                 "password": false,
@@ -1360,9 +1368,7 @@
                 "value": "\"lorem ipsum dolor sit amet lorem ipsum dolor sit amet lorem ipsum dolor sit amet. lorem ipsum dolor sit amet lorem ipsum dolor sit amet lorem ipsum dolor sit amet. lorem ipsum dolor sit amet lorem ipsum dolor sit amet lorem ipsum dolor sit amet.\"",
                 "display_name": "Text",
                 "advanced": false,
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": [],
                 "dynamic": false,
                 "info": "Message to be passed as input.",
                 "title_case": false,
@@ -1516,14 +1522,11 @@
             "edited": false,
             "metadata": {},
             "tool_mode": false,
-            "category": "inputs",
-            "key": "ChatInput",
-            "score": 0.0020353564437605998,
             "lf_version": "1.1.1"
           },
           "showNode": true,
           "type": "ChatInput",
-          "id": "ChatInput-5DmLD"
+          "id": "ChatInput-I5urc"
         },
         "selected": false,
         "measured": {
@@ -1534,15 +1537,15 @@
     ],
     "edges": [
       {
-        "source": "SplitText-3iFUx",
-        "target": "LoopComponent-7DApw",
-        "sourceHandle": "{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-3iFUxœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œLoopComponent-7DApwœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "id": "reactflow__edge-SplitText-3iFUx{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-3iFUxœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}-LoopComponent-7DApw{œfieldNameœ:œdataœ,œidœ:œLoopComponent-7DApwœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "SplitText-HpHsL",
+        "target": "LoopComponent-GsRXp",
+        "sourceHandle": "{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-HpHsLœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}",
+        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œLoopComponent-GsRXpœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-SplitText-HpHsL{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-HpHsLœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}-LoopComponent-GsRXp{œfieldNameœ:œdataœ,œidœ:œLoopComponent-GsRXpœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "data": {
           "sourceHandle": {
             "dataType": "SplitText",
-            "id": "SplitText-3iFUx",
+            "id": "SplitText-HpHsL",
             "name": "chunks",
             "output_types": [
               "Data"
@@ -1550,7 +1553,7 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "LoopComponent-7DApw",
+            "id": "LoopComponent-GsRXp",
             "inputTypes": [
               "Data"
             ],
@@ -1562,15 +1565,15 @@
         "className": ""
       },
       {
-        "source": "LoopComponent-7DApw",
-        "target": "ParseData-NlQKq",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-7DApwœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-NlQKqœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "id": "reactflow__edge-LoopComponent-7DApw{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-7DApwœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParseData-NlQKq{œfieldNameœ:œdataœ,œidœ:œParseData-NlQKqœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "LoopComponent-GsRXp",
+        "target": "ParseData-fobTl",
+        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GsRXpœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-fobTlœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LoopComponent-GsRXp{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GsRXpœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParseData-fobTl{œfieldNameœ:œdataœ,œidœ:œParseData-fobTlœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "data": {
           "sourceHandle": {
             "dataType": "LoopComponent",
-            "id": "LoopComponent-7DApw",
+            "id": "LoopComponent-GsRXp",
             "name": "item",
             "output_types": [
               "Data"
@@ -1578,7 +1581,7 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-NlQKq",
+            "id": "ParseData-fobTl",
             "inputTypes": [
               "Data"
             ],
@@ -1590,15 +1593,15 @@
         "className": ""
       },
       {
-        "source": "ParseData-NlQKq",
-        "target": "Prompt-etahu",
-        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-NlQKqœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
-        "targetHandle": "{œfieldNameœ:œtextœ,œidœ:œPrompt-etahuœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "id": "reactflow__edge-ParseData-NlQKq{œdataTypeœ:œParseDataœ,œidœ:œParseData-NlQKqœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-etahu{œfieldNameœ:œtextœ,œidœ:œPrompt-etahuœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ParseData-fobTl",
+        "target": "Prompt-y1BZN",
+        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-fobTlœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "targetHandle": "{œfieldNameœ:œtextœ,œidœ:œPrompt-y1BZNœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ParseData-fobTl{œdataTypeœ:œParseDataœ,œidœ:œParseData-fobTlœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-y1BZN{œfieldNameœ:œtextœ,œidœ:œPrompt-y1BZNœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-NlQKq",
+            "id": "ParseData-fobTl",
             "name": "text",
             "output_types": [
               "Message"
@@ -1606,7 +1609,7 @@
           },
           "targetHandle": {
             "fieldName": "text",
-            "id": "Prompt-etahu",
+            "id": "Prompt-y1BZN",
             "inputTypes": [
               "Message",
               "Text"
@@ -1619,15 +1622,15 @@
         "className": ""
       },
       {
-        "source": "LoopComponent-7DApw",
-        "target": "ParseData-oFUPG",
-        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-7DApwœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataœ]}",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-oFUPGœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "id": "reactflow__edge-LoopComponent-7DApw{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-7DApwœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataœ]}-ParseData-oFUPG{œfieldNameœ:œdataœ,œidœ:œParseData-oFUPGœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "LoopComponent-GsRXp",
+        "target": "ParseData-p7Jdw",
+        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GsRXpœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataœ]}",
+        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-p7Jdwœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-LoopComponent-GsRXp{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-GsRXpœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataœ]}-ParseData-p7Jdw{œfieldNameœ:œdataœ,œidœ:œParseData-p7Jdwœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "data": {
           "sourceHandle": {
             "dataType": "LoopComponent",
-            "id": "LoopComponent-7DApw",
+            "id": "LoopComponent-GsRXp",
             "name": "done",
             "output_types": [
               "Data"
@@ -1635,7 +1638,7 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-oFUPG",
+            "id": "ParseData-p7Jdw",
             "inputTypes": [
               "Data"
             ],
@@ -1647,15 +1650,15 @@
         "className": ""
       },
       {
-        "source": "ParseData-oFUPG",
-        "target": "ChatOutput-n0KRZ",
-        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-oFUPGœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-n0KRZœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "id": "reactflow__edge-ParseData-oFUPG{œdataTypeœ:œParseDataœ,œidœ:œParseData-oFUPGœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-n0KRZ{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-n0KRZœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ParseData-p7Jdw",
+        "target": "ChatOutput-5dE2M",
+        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-p7Jdwœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-5dE2Mœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ParseData-p7Jdw{œdataTypeœ:œParseDataœ,œidœ:œParseData-p7Jdwœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-5dE2M{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-5dE2Mœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-oFUPG",
+            "id": "ParseData-p7Jdw",
             "name": "text",
             "output_types": [
               "Message"
@@ -1663,7 +1666,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-n0KRZ",
+            "id": "ChatOutput-5dE2M",
             "inputTypes": [
               "Message"
             ],
@@ -1675,14 +1678,14 @@
         "className": ""
       },
       {
-        "source": "MessagetoData-S04rp",
-        "sourceHandle": "{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-S04rpœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
-        "target": "LoopComponent-7DApw",
-        "targetHandle": "{œfieldNameœ:œloop_inputœ,œidœ:œLoopComponent-7DApwœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "MessagetoData-hwl5P",
+        "sourceHandle": "{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-hwl5Pœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
+        "target": "LoopComponent-GsRXp",
+        "targetHandle": "{œfieldNameœ:œloop_inputœ,œidœ:œLoopComponent-GsRXpœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "data": {
           "targetHandle": {
             "fieldName": "loop_input",
-            "id": "LoopComponent-7DApw",
+            "id": "LoopComponent-GsRXp",
             "inputTypes": [
               "Data"
             ],
@@ -1690,27 +1693,27 @@
           },
           "sourceHandle": {
             "dataType": "MessagetoData",
-            "id": "MessagetoData-S04rp",
+            "id": "MessagetoData-hwl5P",
             "name": "data",
             "output_types": [
               "Data"
             ]
           }
         },
-        "id": "reactflow__edge-MessagetoData-S04rp{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-S04rpœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-7DApw{œfieldNameœ:œloop_inputœ,œidœ:œLoopComponent-7DApwœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-MessagetoData-hwl5P{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-hwl5Pœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-GsRXp{œfieldNameœ:œloop_inputœ,œidœ:œLoopComponent-GsRXpœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "animated": false,
         "className": "",
         "selected": false
       },
       {
-        "source": "Prompt-etahu",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-etahuœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "MessagetoData-S04rp",
-        "targetHandle": "{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-S04rpœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-y1BZN",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-y1BZNœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "MessagetoData-hwl5P",
+        "targetHandle": "{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-hwl5Pœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "message",
-            "id": "MessagetoData-S04rp",
+            "id": "MessagetoData-hwl5P",
             "inputTypes": [
               "Message"
             ],
@@ -1718,27 +1721,27 @@
           },
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-etahu",
+            "id": "Prompt-y1BZN",
             "name": "prompt",
             "output_types": [
               "Message"
             ]
           }
         },
-        "id": "reactflow__edge-Prompt-etahu{œdataTypeœ:œPromptœ,œidœ:œPrompt-etahuœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-MessagetoData-S04rp{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-S04rpœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-y1BZN{œdataTypeœ:œPromptœ,œidœ:œPrompt-y1BZNœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-MessagetoData-hwl5P{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-hwl5Pœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "animated": false,
         "className": "",
         "selected": false
       },
       {
-        "source": "MessagetoData-tjsf8",
-        "sourceHandle": "{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-tjsf8œ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
-        "target": "SplitText-3iFUx",
-        "targetHandle": "{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-3iFUxœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "MessagetoData-bRpLW",
+        "sourceHandle": "{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-bRpLWœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
+        "target": "SplitText-HpHsL",
+        "targetHandle": "{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-HpHsLœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "data": {
           "targetHandle": {
             "fieldName": "data_inputs",
-            "id": "SplitText-3iFUx",
+            "id": "SplitText-HpHsL",
             "inputTypes": [
               "Data"
             ],
@@ -1746,27 +1749,27 @@
           },
           "sourceHandle": {
             "dataType": "MessagetoData",
-            "id": "MessagetoData-tjsf8",
+            "id": "MessagetoData-bRpLW",
             "name": "data",
             "output_types": [
               "Data"
             ]
           }
         },
-        "id": "reactflow__edge-MessagetoData-tjsf8{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-tjsf8œ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-3iFUx{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-3iFUxœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-MessagetoData-bRpLW{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-bRpLWœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-HpHsL{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-HpHsLœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "animated": false,
         "className": "",
         "selected": false
       },
       {
-        "source": "ChatInput-5DmLD",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5DmLDœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "MessagetoData-tjsf8",
-        "targetHandle": "{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-tjsf8œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-I5urc",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-I5urcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "MessagetoData-bRpLW",
+        "targetHandle": "{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-bRpLWœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "message",
-            "id": "MessagetoData-tjsf8",
+            "id": "MessagetoData-bRpLW",
             "inputTypes": [
               "Message"
             ],
@@ -1774,27 +1777,27 @@
           },
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-5DmLD",
+            "id": "ChatInput-I5urc",
             "name": "message",
             "output_types": [
               "Message"
             ]
           }
         },
-        "id": "reactflow__edge-ChatInput-5DmLD{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5DmLDœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-MessagetoData-tjsf8{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-tjsf8œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-I5urc{œdataTypeœ:œChatInputœ,œidœ:œChatInput-I5urcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-MessagetoData-bRpLW{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-bRpLWœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "className": "",
         "animated": false,
         "selected": false
       }
     ],
     "viewport": {
-      "x": 649.2461009365782,
-      "y": 198.83971831735653,
-      "zoom": 0.39782207958222354
+      "x": -755.8978150871496,
+      "y": -539.6443803296752,
+      "zoom": 0.837519829999097
     }
   },
   "description": "test loop",
-  "name": "loop_test2",
+  "name": "LoopTest",
   "last_tested_version": "1.1.1",
   "endpoint_name": null,
   "is_component": false
