@@ -432,6 +432,7 @@ export const nodeColors: { [char: string]: string } = {
 };
 
 export const nodeColorsName: { [char: string]: string } = {
+  // custom_components: "#ab11ab",
   inputs: "emerald",
   outputs: "red",
   data: "sky",
@@ -463,7 +464,6 @@ export const nodeColorsName: { [char: string]: string } = {
   astra_assistants: "indigo",
   langchain_utilities: "sky",
   output_parsers: "yellow",
-  // custom_components: "#ab11ab",
   retrievers: "yellow",
   str: "indigo",
   Text: "indigo",

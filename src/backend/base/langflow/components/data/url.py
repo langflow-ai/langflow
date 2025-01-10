@@ -12,7 +12,7 @@ from langflow.schema.message import Message
 
 class URLComponent(Component):
     display_name = "URL"
-    description = "Fetch content from one or more URLs."
+    description = "Load and retrive data from specified URLs."
     icon = "layout-template"
     name = "URL"
 
@@ -23,6 +23,8 @@ class URLComponent(Component):
             info="Enter one or more URLs, by clicking the '+' button.",
             is_list=True,
             tool_mode=True,
+            placeholder="Enter a URL...",
+            list_add_label="Add URL",
         ),
         DropdownInput(
             name="format",
