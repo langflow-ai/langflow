@@ -5,7 +5,7 @@ from typing import Any
 import requests
 
 from langflow.custom import Component
-from langflow.io import DropdownInput, Output, SecretStrInput, StrInput
+from langflow.io import DropdownInput, Output, SecretStrInput, MessageTextInput
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
 
@@ -55,11 +55,11 @@ class WoolBallComponent(Component):
             info="Select the type of AI processing task.",
             real_time_refresh=True,
         ),
-        StrInput(
+        MessageTextInput(
             name="text",
             display_name="Input Text",
             info="The text to process.",
-            input_types=["str", "Document", "BaseMessage"],
+            input_types=["Message"],
             show=False,
         ),
         DropdownInput(
@@ -67,7 +67,7 @@ class WoolBallComponent(Component):
             display_name="Source Language",
             options=[],
             info="The source language for translation.",
-            input_types=["str"],
+            input_types=["Message"],
             show=False,
         ),
         DropdownInput(
@@ -75,21 +75,21 @@ class WoolBallComponent(Component):
             display_name="Target Language",
             options=TTS_LANGUAGES,
             info="The target language for translation or speech.",
-            input_types=["str"],
+            input_types=["Message"],
             show=False,
         ),
-        StrInput(
+        MessageTextInput(
             name="candidate_labels",
             display_name="Candidate Labels",
             info="Enter possible categories separated by commas",
-            input_types=["str", "List"],
+            input_types=["Message"],
             show=False,
         ),
         SecretStrInput(
             name="api_key",
             display_name="API Key",
             info="Your Wool Ball API key.",
-            input_types=["str"],
+            input_types=["Message"],
         ),
     ]
 
