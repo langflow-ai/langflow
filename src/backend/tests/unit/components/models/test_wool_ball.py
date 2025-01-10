@@ -1,16 +1,14 @@
 import pytest
 import requests
-from unittest.mock import Mock, patch, mock_open
+from unittest.mock import Mock, patch
 from langflow.components.models.wool_ball import WoolBallComponent
 from langflow.schema.message import Message
 from langflow.schema.dotdict import dotdict
 
-# Fixture for the component
 @pytest.fixture
 def wool_ball_component():
     return WoolBallComponent()
 
-# Fixture for mock headers
 @pytest.fixture
 def mock_headers():
     return {
@@ -19,17 +17,13 @@ def mock_headers():
     }
 
 def test_wool_ball_inputs(wool_ball_component):
-    """Test if all required inputs are present with correct types"""
     inputs = wool_ball_component.inputs
-
-    # Check required inputs
     input_names = [inp.name for inp in inputs]
     required_inputs = [
         "task_type",
         "text",
         "source_language",
         "target_language",
-        "file_input",
         "candidate_labels",
         "api_key"
     ]
@@ -38,109 +32,35 @@ def test_wool_ball_inputs(wool_ball_component):
         assert name in input_names, f"Missing input: {name}"
 
 def test_wool_ball_task_types(wool_ball_component):
-    """Test if all task types are properly defined"""
     expected_tasks = [
         "Text to Speech",
-        "Speech to Text",
         "Text Generation",
         "Translation",
         "Zero-Shot Classification",
-        "Sentiment Analysis",
-        "Image+text to text",
-        "Image Classification",
-        "Zero-Shot Image Classification",
-        "Summary and summarization",
+        "Summary",
         "Character to Image"
     ]
     
     assert wool_ball_component.TASK_TYPES == expected_tasks
 
-def test_supported_languages(wool_ball_component):
-    """Test if supported languages are properly defined"""
-    expected_languages = ["por_Latn", "eng_Latn", "spa_Latn"]
-    assert wool_ball_component.SUPPORTED_LANGUAGES == expected_languages
-
-@pytest.mark.parametrize(
-    "status_code,expected_error",
-    [
-        (401, "Could not validate API key"),
-        (429, "Rate limit exceeded"),
-        (500, "API request failed: 500"),
-    ],
-)
-def test_exception_handling(wool_ball_component, status_code, expected_error):
-    """Test exception handling for different HTTP status codes"""
+@patch('requests.get')
+def test_text_generation(mock_get, wool_ball_component, mock_headers):
     mock_response = Mock()
-    mock_response.status_code = status_code
-    mock_response.text = "Error message"
-    
-    mock_exception = requests.exceptions.HTTPError()
-    mock_exception.response = mock_response
-    
-    with pytest.raises(ValueError, match=expected_error):
-        wool_ball_component._get_exception_message(mock_exception)
-
-@patch('requests.post')
-def test_text_to_speech(mock_post, wool_ball_component, mock_headers):
-    """Test Text to Speech task"""
-    # Mock response
-    mock_response = Mock()
-    mock_response.json.return_value = {"audio": "base64_audio_data"}
+    mock_response.json.return_value = {"data": "generated content"}
     mock_response.status_code = 200
-    mock_post.return_value = mock_response
-
-    # Set component attributes
-    wool_ball_component.text = "Test text"
-    wool_ball_component.target_language = "eng_Latn"
-    wool_ball_component.api_key = "test_api_key"
-
-    # Test the handler
-    result = wool_ball_component._handle_tts(mock_headers)
-    
-    assert isinstance(result, Message)
-    assert result.additional_kwargs["audio_data"] == "base64_audio_data"
-    mock_post.assert_called_once()
-
-@patch('requests.post')
-def test_speech_to_text(mock_post, wool_ball_component, mock_headers):
-    """Test Speech to Text task"""
-    # Mock response
-    mock_response = Mock()
-    mock_response.json.return_value = {"text": "transcribed text"}
-    mock_response.status_code = 200
-    mock_post.return_value = mock_response
-
-    # Mock file
-    mock_file = mock_open(read_data=b"audio data")
-    
-    with patch('builtins.open', mock_file):
-        wool_ball_component.file_input = "test.wav"
-        result = wool_ball_component._handle_stt(mock_headers)
-    
-    assert isinstance(result, Message)
-    assert result.text == "transcribed text"
-    mock_post.assert_called_once()
-
-@patch('requests.post')
-def test_text_generation(mock_post, wool_ball_component, mock_headers):
-    """Test Text Generation task"""
-    mock_response = Mock()
-    mock_response.json.return_value = {"generated_text": "generated content"}
-    mock_response.status_code = 200
-    mock_post.return_value = mock_response
+    mock_get.return_value = mock_response
 
     wool_ball_component.text = "Input text"
     result = wool_ball_component._handle_text_generation(mock_headers)
     
     assert isinstance(result, Message)
     assert result.text == "generated content"
-    mock_post.assert_called_once()
+    mock_get.assert_called_once()
 
 @patch('requests.post')
 def test_translation(mock_post, wool_ball_component, mock_headers):
-    """Test Translation task"""
     mock_response = Mock()
-    mock_response.json.return_value = {"translated_text": "translated content"}
+    mock_response.json.return_value = {"data": "translated content"}
     mock_response.status_code = 200
     mock_post.return_value = mock_response
 
@@ -154,120 +74,165 @@ def test_translation(mock_post, wool_ball_component, mock_headers):
     assert result.text == "translated content"
     mock_post.assert_called_once()
 
-def test_build_config(wool_ball_component):
-    """Test build configuration updates"""
-    # Primeiro, chamar o build da classe pai
-    build_config = wool_ball_component.build()
+def test_input_types(wool_ball_component):
+    inputs = wool_ball_component.inputs
+    expected_input_types = {
+        "text": ["str", "Document", "BaseMessage"],
+        "source_language": ["str"],
+        "target_language": ["str"],
+        "candidate_labels": ["str", "List"],
+        "api_key": ["str"]
+    }
     
-    # Verificar se é um dotdict
-    assert isinstance(build_config, dotdict), "build_config deve ser um dotdict"
-    
-    # Verificar campos necessários
-    required_fields = [
-        "task_type", "text", "source_language", 
-        "target_language", "candidate_labels", "file_input"
-    ]
-    for field in required_fields:
-        assert field in build_config, f"Campo {field} não encontrado"
-        assert isinstance(build_config[field], dict), f"Campo {field} não é um dicionário"
-    
-    # Verificar valor padrão do task_type
-    assert "task_type" in build_config
-    assert "value" in build_config["task_type"]
-    assert build_config["task_type"]["value"] == "Text Generation"
+    for input_field in inputs:
+        if input_field.name in expected_input_types:
+            assert hasattr(input_field, "input_types"), f"{input_field.name} deve ter input_types"
+            assert input_field.input_types == expected_input_types[input_field.name], \
+                f"input_types incorretos para {input_field.name}"
 
-def test_update_build_config_with_none(wool_ball_component):
-    """Test update_build_config with None input"""
-    result = wool_ball_component.update_build_config(
-        build_config=None,
-        field_value="Text Generation",
-        field_name="task_type"
-    )
-    
-    assert isinstance(result, dotdict)
-    assert "text" in result
-    assert result["text"]["show"] is True
+@patch('requests.get')
+def test_update_build_config_languages(mock_get, wool_ball_component):
+    mock_response = Mock()
+    mock_response.json.return_value = {"data": [{"code": "en"}, {"code": "pt"}]}
+    mock_response.status_code = 200
+    mock_get.return_value = mock_response
 
-@pytest.mark.parametrize(
-    "task_type,required_fields",
-    [
-        ("Text to Speech", ["text", "target_language"]),
-        ("Speech to Text", ["file_input"]),
-        ("Text Generation", ["text"]),
-        ("Translation", ["text", "source_language", "target_language"]),
-        ("Zero-Shot Classification", ["text", "candidate_labels"]),
-        ("Sentiment Analysis", ["file_input"]),
-        ("Image+text to text", ["text", "file_input"]),
-        ("Image Classification", ["file_input"]),
-        ("Zero-Shot Image Classification", ["file_input", "candidate_labels"]),
-        ("Summary and summarization", ["text"]),
-        ("Character to Image", ["text"]),
-    ],
-)
-def test_field_visibility(wool_ball_component, task_type, required_fields):
-    """Test field visibility for different task types"""
-    # Criar configuração inicial como dotdict
     build_config = dotdict({
-        "task_type": {"value": task_type},
+        "source_language": {"options": []},
+        "target_language": {"options": []}
     })
     
-    # Inicializar campos
-    all_fields = ["text", "source_language", "target_language", "candidate_labels", "file_input"]
-    for field in all_fields:
-        build_config[field] = {"show": False}
-    
-    # Atualizar configuração
     updated_config = wool_ball_component.update_build_config(
         build_config=build_config,
-        field_value=task_type,
+        field_value="Translation",
         field_name="task_type"
     )
     
-    # Verificações
-    assert isinstance(updated_config, dotdict), "updated_config deve ser um dotdict"
-    
-    # Verificar campos visíveis
-    for field in required_fields:
-        assert field in updated_config, f"Campo {field} não encontrado"
-        assert updated_config[field]["show"] is True, f"Campo {field} deveria estar visível para {task_type}"
+    assert len(updated_config["source_language"]["options"]) > 0
+    assert len(updated_config["target_language"]["options"]) > 0
 
-def test_initial_build_config(wool_ball_component):
-    """Test the initial build configuration structure"""
-    build_config = wool_ball_component.build()
-    
-    # Verificar campos necessários
-    required_fields = [
-        "task_type", "text", "source_language", 
-        "target_language", "file_input", "candidate_labels"
-    ]
-    
-    for field in required_fields:
-        assert field in build_config, f"Campo {field} não encontrado"
-        if field == "task_type":
-            assert "value" in build_config[field]
-            assert build_config[field]["value"] == "Text Generation"
-        else:
-            assert "show" in build_config[field]
+@patch('requests.get')
+def test_text_to_speech(mock_get, wool_ball_component, mock_headers):
+    mock_response = Mock()
+    mock_response.json.return_value = {"data": "base64_audio_data"}
+    mock_response.status_code = 200
+    mock_get.return_value = mock_response
 
-def test_update_build_config_structure(wool_ball_component):
-    """Test the update_build_config method structure"""
-    initial_config = wool_ball_component.build()
+    wool_ball_component.text = "Test text"
+    wool_ball_component.target_language = "en"
+    result = wool_ball_component._handle_tts(mock_headers)
     
-    for task_type in wool_ball_component.TASK_TYPES:
+    assert isinstance(result, Message)
+    assert result.additional_kwargs["audio_data"] == "base64_audio_data"
+    mock_get.assert_called_once()
+
+@patch('requests.post')
+def test_zero_shot_classification(mock_post, wool_ball_component, mock_headers):
+    mock_response = Mock()
+    mock_response.json.return_value = {"data": {"labels": ["category1", "category2"], "scores": [0.8, 0.2]}}
+    mock_response.status_code = 200
+    mock_post.return_value = mock_response
+
+    wool_ball_component.text = "Test text"
+    wool_ball_component.candidate_labels = "category1,category2"
+    result = wool_ball_component._handle_zero_shot_classification(mock_headers)
+    
+    assert isinstance(result, Message)
+    assert isinstance(result.text, str)
+    mock_post.assert_called_once()
+
+@patch('requests.post')
+def test_summary(mock_post, wool_ball_component, mock_headers):
+    mock_response = Mock()
+    mock_response.json.return_value = {"data": "summarized text"}
+    mock_response.status_code = 200
+    mock_post.return_value = mock_response
+
+    wool_ball_component.text = "Long text to summarize"
+    result = wool_ball_component._handle_summary(mock_headers)
+    
+    assert isinstance(result, Message)
+    assert result.text == "summarized text"
+    mock_post.assert_called_once()
+
+@patch('requests.get')
+def test_char_to_image(mock_get, wool_ball_component, mock_headers):
+    mock_response = Mock()
+    mock_response.json.return_value = {"data": "base64_image_data"}
+    mock_response.status_code = 200
+    mock_get.return_value = mock_response
+
+    wool_ball_component.text = "A"
+    result = wool_ball_component._handle_char_to_image(mock_headers)
+    
+    assert isinstance(result, Message)
+    assert result.additional_kwargs["image_data"] == "base64_image_data"
+    mock_get.assert_called_once()
+
+def test_error_handling(wool_ball_component, mock_headers):
+    with pytest.raises(ValueError, match="API key is required"):
+        wool_ball_component.process_task()
+
+    wool_ball_component.api_key = "test_key"
+    wool_ball_component.task_type = "invalid_task"
+    with pytest.raises(ValueError, match="Invalid task type selected"):
+        wool_ball_component.process_task()
+
+    wool_ball_component.task_type = "Text to Speech"
+    with pytest.raises(ValueError, match="Text and target language are required"):
+        wool_ball_component._handle_tts(mock_headers)
+
+    wool_ball_component.task_type = "Translation"
+    with pytest.raises(ValueError, match="Text, source language, and target language are required"):
+        wool_ball_component._handle_translation(mock_headers)
+
+@patch('requests.get')
+def test_list_languages(mock_get, wool_ball_component):
+    mock_response = Mock()
+    mock_response.json.return_value = {"data": [{"code": "en"}, {"code": "pt"}]}
+    mock_response.status_code = 200
+    mock_get.return_value = mock_response
+
+    languages = wool_ball_component.list_languages()
+    assert len(languages) > 0
+    assert all(isinstance(lang, str) for lang in languages)
+
+    mock_get.side_effect = requests.exceptions.RequestException
+    languages = wool_ball_component.list_languages()
+    assert languages == ["por_Latn", "eng_Latn", "spa_Latn"]
+
+def test_update_build_config_all_tasks(wool_ball_component):
+    build_config = dotdict({
+        "text": {"show": False},
+        "source_language": {"show": False, "options": []},
+        "target_language": {"show": False, "options": []},
+        "candidate_labels": {"show": False},
+        "api_key": {"show": False}
+    })
+
+    task_field_mapping = {
+        "Text to Speech": ["text", "target_language", "api_key"],
+        "Text Generation": ["text", "api_key"],
+        "Translation": ["text", "source_language", "target_language", "api_key"],
+        "Zero-Shot Classification": ["text", "candidate_labels", "api_key"],
+        "Summary": ["text", "api_key"],
+        "Character to Image": ["text", "api_key"]
+    }
+
+    for task_type, expected_fields in task_field_mapping.items():
         updated_config = wool_ball_component.update_build_config(
-            build_config=initial_config.copy(),
+            build_config=build_config.copy(),
             field_value=task_type,
             field_name="task_type"
         )
         
-        # Verificar estrutura básica
-        assert "task_type" in updated_config
+        for field in expected_fields:
+            assert updated_config[field]["show"] is True, f"Campo {field} deveria estar visível para {task_type}"
         
-        # Verificar se todos os campos têm o atributo show
-        all_fields = ["text", "source_language", "target_language", "candidate_labels", "file_input"]
-        for field in all_fields:
-            assert field in updated_config, f"Campo {field} não encontrado para {task_type}"
-            assert "show" in updated_config[field], f"Atributo 'show' não encontrado em {field} para {task_type}"
+        all_fields = ["text", "source_language", "target_language", "candidate_labels", "api_key"]
+        hidden_fields = [f for f in all_fields if f not in expected_fields]
+        for field in hidden_fields:
+            assert updated_config[field]["show"] is False, f"Campo {field} deveria estar oculto para {task_type}"
 
 if __name__ == "__main__":
     pytest.main([__file__]) 
