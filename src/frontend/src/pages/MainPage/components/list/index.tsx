@@ -10,6 +10,7 @@ import {
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
+import FlowSettingsModal from "@/modals/flowSettingsModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { FlowType } from "@/types/flow";
@@ -30,6 +31,7 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
   const { deleteFlow } = useDeleteFlow();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { folderId } = useParams();
+  const [openSettings, setOpenSettings] = useState(false);
   const isComponent = flowData.is_component ?? false;
   const setFlowToCanvas = useFlowsManagerStore(
     (state) => state.setFlowToCanvas,
@@ -144,6 +146,9 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
               <DropdownComponent
                 flowData={flowData}
                 setOpenDelete={setOpenDelete}
+                handleEdit={() => {
+                  setOpenSettings(true);
+                }}
                 handlePlaygroundClick={() => {
                   // handlePlaygroundClick();
                 }}
@@ -163,6 +168,12 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
           <></>
         </DeleteConfirmationModal>
       )}
+      <FlowSettingsModal
+        open={openSettings}
+        setOpen={setOpenSettings}
+        flowData={flowData}
+        details
+      />
     </>
   );
 };

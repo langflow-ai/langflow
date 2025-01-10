@@ -10,10 +10,10 @@ import {
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
+import FlowSettingsModal from "@/modals/flowSettingsModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { FlowType } from "@/types/flow";
-import { getInputsAndOutputs } from "@/utils/storeUtils";
 import { swatchColors } from "@/utils/styleUtils";
 import { cn, getNumberFromString } from "@/utils/utils";
 import { useState } from "react";
@@ -27,6 +27,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
   const navigate = useCustomNavigate();
 
   const [openDelete, setOpenDelete] = useState(false);
+  const [openSettings, setOpenSettings] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const { deleteFlow } = useDeleteFlow();
 
@@ -124,6 +125,9 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
                 <DropdownComponent
                   flowData={flowData}
                   setOpenDelete={setOpenDelete}
+                  handleEdit={() => {
+                    setOpenSettings(true);
+                  }}
                 />
               </DropdownMenuContent>
             </DropdownMenu>
@@ -145,6 +149,12 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
           <></>
         </DeleteConfirmationModal>
       )}
+      <FlowSettingsModal
+        open={openSettings}
+        setOpen={setOpenSettings}
+        flowData={flowData}
+        details
+      />
     </>
   );
 };

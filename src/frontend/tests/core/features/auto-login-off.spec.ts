@@ -128,8 +128,8 @@ test(
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
 
-    await page.getByTestId("flow-configuration-button").click();
-    await page.getByText("Flow Settings", { exact: true }).last().click();
+    await page.getByTestId("flow_menu_trigger").click();
+    await page.getByText("Edit Details", { exact: true }).last().click();
 
     await page.getByPlaceholder("Flow Name").fill(randomFlowName);
 
@@ -201,8 +201,8 @@ test(
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
 
-    await page.getByTestId("flow-configuration-button").click();
-    await page.getByText("Flow Settings", { exact: true }).last().click();
+    await page.getByTestId("flow_menu_trigger").click();
+    await page.getByText("Edit Details", { exact: true }).last().click();
 
     await page.getByPlaceholder("Flow Name").fill(secondRandomFlowName);
 
