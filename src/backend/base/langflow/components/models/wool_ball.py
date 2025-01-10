@@ -20,7 +20,7 @@ class WoolBallComponent(Component):
         "Summary",
         "Character to Image",
     ]
-
+    SUCCESS_STATUS_CODE = 200
     display_name = "Wool Ball"
     description = "Perform various AI tasks using the Wool Ball API."
     icon = "WoolBall"
@@ -30,12 +30,14 @@ class WoolBallComponent(Component):
     def list_languages(self) -> list:
         try:
             endpoint = "/v1/languages"
-            response = requests.get(f"{self.API_BASE_URL}{endpoint}")
-            if response.status_code == 200:
+            response = requests.get(f"{self.API_BASE_URL}{endpoint}", timeout=5)
+            if response.status_code == self.SUCCESS_STATUS_CODE:
                 languages_data = response.json().get("data", [])
                 return [lang["code"] for lang in languages_data]
-        except:
-            pass
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching languages: {e}")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
         return ["por_Latn", "eng_Latn", "spa_Latn"]
 
     inputs = [
@@ -102,7 +104,7 @@ class WoolBallComponent(Component):
         for field in fields_to_hide:
             if field in build_config:
                 build_config[field]["show"] = False
-        
+
         default_task = self.TASK_TYPES[0]
         if default_task in self.FIELD_MAPPING:
             for field in self.FIELD_MAPPING[default_task]:
@@ -113,7 +115,8 @@ class WoolBallComponent(Component):
 
     def process_task(self) -> Message:
         if not self.api_key:
-            raise ValueError("API key is required")
+            error_message = "API key is required"
+            raise ValueError(error_message)
 
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
 
@@ -130,9 +133,12 @@ class WoolBallComponent(Component):
                 return self._handle_summary(headers)
             if self.task_type == "Character to Image":
                 return self._handle_char_to_image(headers)
-            raise ValueError("Invalid task type selected")
+            
+            error_message = "Invalid task type selected"
+            raise ValueError(error_message)
         except requests.exceptions.RequestException as e:
-            raise ValueError(f"API request failed: {e!s}") from e
+            error_message = f"API request failed: {e!s}"
+            raise ValueError(error_message) from e
 
     def _handle_tts(self, headers):
         if not self.text or not self.target_language:
