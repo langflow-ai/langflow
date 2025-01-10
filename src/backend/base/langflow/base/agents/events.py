@@ -25,16 +25,8 @@ class InputDict(TypedDict):
 
 
 def _build_agent_input_text_content(agent_input_dict: InputDict) -> str:
-    chat_history = agent_input_dict.get("chat_history", [])
-    messages = [
-        f"**{message.type.upper()}**: {message.content}"
-        for message in chat_history
-        if isinstance(message, BaseMessage) and message.content
-    ]
     final_input = agent_input_dict.get("input", "")
-    if messages and final_input not in messages[-1]:
-        messages.append(f"**HUMAN**: {final_input}")
-    return "  \n".join(messages)
+    return f"**Input**: {final_input}"
 
 
 def _calculate_duration(start_time: float) -> int:
@@ -149,7 +141,8 @@ async def handle_on_tool_start(
     agent_message.content_blocks[0].contents.append(tool_content)
 
     agent_message = await send_message_method(message=agent_message)
-    tool_blocks_map[tool_key] = agent_message.content_blocks[0].contents[-1]
+    if agent_message.content_blocks and agent_message.content_blocks[0].contents:
+        tool_blocks_map[tool_key] = agent_message.content_blocks[0].contents[-1]
     return agent_message, new_start_time
 
 

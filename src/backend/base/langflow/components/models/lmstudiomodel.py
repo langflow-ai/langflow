@@ -3,14 +3,12 @@ from urllib.parse import urljoin
 
 import httpx
 from langchain_openai import ChatOpenAI
-from pydantic.v1 import SecretStr
 from typing_extensions import override
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs import DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
-from langflow.inputs.inputs import HandleInput
 
 
 class LMStudioModelComponent(LCModelComponent):
@@ -20,24 +18,25 @@ class LMStudioModelComponent(LCModelComponent):
     name = "LMStudioModel"
 
     @override
-    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
+    async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
         if field_name == "model_name":
             base_url_dict = build_config.get("base_url", {})
             base_url_load_from_db = base_url_dict.get("load_from_db", False)
             base_url_value = base_url_dict.get("value")
             if base_url_load_from_db:
-                base_url_value = self.variables(base_url_value)
+                base_url_value = await self.get_variables(base_url_value, field_name)
             elif not base_url_value:
                 base_url_value = "http://localhost:1234/v1"
-            build_config["model_name"]["options"] = self.get_model(base_url_value)
+            build_config["model_name"]["options"] = await self.get_model(base_url_value)
 
         return build_config
 
-    def get_model(self, base_url_value: str) -> list[str]:
+    @staticmethod
+    async def get_model(base_url_value: str) -> list[str]:
         try:
             url = urljoin(base_url_value, "/v1/models")
-            with httpx.Client() as client:
-                response = client.get(url)
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url)
                 response.raise_for_status()
                 data = response.json()
 
@@ -84,13 +83,6 @@ class LMStudioModelComponent(LCModelComponent):
             advanced=True,
             value=1,
         ),
-        HandleInput(
-            name="output_parser",
-            display_name="Output Parser",
-            info="The parser to use to parse the output of the model",
-            advanced=True,
-            input_types=["OutputParser"],
-        ),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
@@ -102,14 +94,12 @@ class LMStudioModelComponent(LCModelComponent):
         base_url = self.base_url or "http://localhost:1234/v1"
         seed = self.seed
 
-        api_key = SecretStr(lmstudio_api_key) if lmstudio_api_key else None
-
         return ChatOpenAI(
             max_tokens=max_tokens or None,
             model_kwargs=model_kwargs,
             model=model_name,
             base_url=base_url,
-            api_key=api_key,
+            api_key=lmstudio_api_key,
             temperature=temperature if temperature is not None else 0.1,
             seed=seed,
         )

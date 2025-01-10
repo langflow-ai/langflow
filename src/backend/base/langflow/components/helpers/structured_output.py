@@ -18,6 +18,7 @@ class StructuredOutputComponent(Component):
         "Transforms LLM responses into **structured data formats**. Ideal for extracting specific information "
         "or creating consistent outputs."
     )
+    name = "StructuredOutput"
     icon = "braces"
 
     inputs = [
@@ -26,36 +27,46 @@ class StructuredOutputComponent(Component):
             display_name="Language Model",
             info="The language model to use to generate the structured output.",
             input_types=["LanguageModel"],
+            required=True,
         ),
-        MessageTextInput(name="input_value", display_name="Input message"),
+        MessageTextInput(
+            name="input_value",
+            display_name="Input Message",
+            info="The input message to the language model.",
+            tool_mode=True,
+        ),
         StrInput(
             name="schema_name",
             display_name="Schema Name",
             info="Provide a name for the output data schema.",
+            advanced=True,
         ),
         TableInput(
             name="output_schema",
             display_name="Output Schema",
             info="Define the structure and data types for the model's output.",
-            value=[
+            required=True,
+            table_schema=[
                 {
                     "name": "name",
                     "display_name": "Name",
                     "type": "str",
                     "description": "Specify the name of the output field.",
+                    "default": "field",
                 },
                 {
                     "name": "description",
                     "display_name": "Description",
                     "type": "str",
                     "description": "Describe the purpose of the output field.",
+                    "default": "description of field",
                 },
                 {
                     "name": "type",
                     "display_name": "Type",
                     "type": "str",
                     "description": (
-                        "Indicate the data type of the output field " "(e.g., str, int, float, bool, list, dict)."
+                        "Indicate the data type of the output field (e.g., str, int, float, bool, list, dict)."
                     ),
                     "default": "text",
                 },
@@ -67,9 +78,11 @@ class StructuredOutputComponent(Component):
                     "default": "False",
                 },
             ],
+            value=[{"name": "field", "description": "description of field", "type": "text", "multiple": "False"}],
         ),
         BoolInput(
             name="multiple",
+            advanced=True,
             display_name="Generate Multiple",
             info="Set to True if the model should generate a list of outputs instead of a single output.",
         ),
@@ -80,6 +93,8 @@ class StructuredOutputComponent(Component):
     ]
 
     def build_structured_output(self) -> Data:
+        schema_name = self.schema_name or "OutputModel"
+
         if not hasattr(self.llm, "with_structured_output"):
             msg = "Language model does not support structured output."
             raise TypeError(msg)
@@ -90,8 +105,8 @@ class StructuredOutputComponent(Component):
         output_model_ = build_model_from_schema(self.output_schema)
         if self.multiple:
             output_model = create_model(
-                self.schema_name,
-                objects=(list[output_model_], Field(description=f"A list of {self.schema_name}.")),  # type: ignore[valid-type]
+                schema_name,
+                objects=(list[output_model_], Field(description=f"A list of {schema_name}.")),  # type: ignore[valid-type]
             )
         else:
             output_model = output_model_

@@ -6,19 +6,19 @@ from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage
 from loguru import logger
 from sqlalchemy import delete
-from sqlmodel import Session, col, select
+from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.schema.message import Message
 from langflow.services.database.models.message.model import MessageRead, MessageTable
-from langflow.services.deps import async_session_scope, session_scope
-from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
+from langflow.services.deps import session_scope
+from langflow.utils.async_helpers import run_until_complete
 
 
 def _get_variable_query(
     sender: str | None = None,
     sender_name: str | None = None,
-    session_id: str | None = None,
+    session_id: str | UUID | None = None,
     order_by: str | None = "timestamp",
     order: str | None = "DESC",
     flow_id: UUID | None = None,
@@ -44,13 +44,15 @@ def _get_variable_query(
 def get_messages(
     sender: str | None = None,
     sender_name: str | None = None,
-    session_id: str | None = None,
+    session_id: str | UUID | None = None,
     order_by: str | None = "timestamp",
     order: str | None = "DESC",
     flow_id: UUID | None = None,
     limit: int | None = None,
 ) -> list[Message]:
-    """Retrieves messages from the monitor service based on the provided filters.
+    """DEPRECATED - Retrieves messages from the monitor service based on the provided filters.
+
+    DEPRECATED: Use `aget_messages` instead.
 
     Args:
         sender (Optional[str]): The sender of the messages (e.g., "Machine" or "User")
@@ -64,16 +66,13 @@ def get_messages(
     Returns:
         List[Data]: A list of Data objects representing the retrieved messages.
     """
-    with session_scope() as session:
-        stmt = _get_variable_query(sender, sender_name, session_id, order_by, order, flow_id, limit)
-        messages = session.exec(stmt)
-        return [Message(**d.model_dump()) for d in messages]
+    return run_until_complete(aget_messages(sender, sender_name, session_id, order_by, order, flow_id, limit))
 
 
 async def aget_messages(
     sender: str | None = None,
     sender_name: str | None = None,
-    session_id: str | None = None,
+    session_id: str | UUID | None = None,
     order_by: str | None = "timestamp",
     order: str | None = "DESC",
     flow_id: UUID | None = None,
@@ -93,13 +92,21 @@ async def aget_messages(
     Returns:
         List[Data]: A list of Data objects representing the retrieved messages.
     """
-    async with async_session_scope() as session:
+    async with session_scope() as session:
         stmt = _get_variable_query(sender, sender_name, session_id, order_by, order, flow_id, limit)
         messages = await session.exec(stmt)
         return [await Message.create(**d.model_dump()) for d in messages]
 
 
-def add_messages(messages: Message | list[Message], flow_id: str | None = None):
+def add_messages(messages: Message | list[Message], flow_id: str | UUID | None = None):
+    """DEPRECATED - Add a message to the monitor service.
+
+    DEPRECATED: Use `aadd_messages` instead.
+    """
+    return run_until_complete(aadd_messages(messages, flow_id=flow_id))
+
+
+async def aadd_messages(messages: Message | list[Message], flow_id: str | UUID | None = None):
     """Add a message to the monitor service."""
     if not isinstance(messages, list):
         messages = [messages]
@@ -111,27 +118,7 @@ def add_messages(messages: Message | list[Message], flow_id: str | None = None):
 
     try:
         messages_models = [MessageTable.from_message(msg, flow_id=flow_id) for msg in messages]
-        with session_scope() as session:
-            messages_models = add_messagetables(messages_models, session)
-        return [Message(**message.model_dump()) for message in messages_models]
-    except Exception as e:
-        logger.exception(e)
-        raise
-
-
-async def aadd_messages(messages: Message | list[Message], flow_id: str | None = None):
-    """Add a message to the monitor service."""
-    if not isinstance(messages, list):
-        messages = [messages]
-
-    if not all(isinstance(message, Message) for message in messages):
-        types = ", ".join([str(type(message)) for message in messages])
-        msg = f"The messages must be instances of Message. Found: {types}"
-        raise ValueError(msg)
-
-    try:
-        messages_models = [MessageTable.from_message(msg, flow_id=flow_id) for msg in messages]
-        async with async_session_scope() as session:
+        async with session_scope() as session:
             messages_models = await aadd_messagetables(messages_models, session)
         return [await Message.create(**message.model_dump()) for message in messages_models]
     except Exception as e:
@@ -139,35 +126,19 @@ async def aadd_messages(messages: Message | list[Message], flow_id: str | None =
         raise
 
 
-def update_messages(messages: Message | list[Message]) -> list[Message]:
-    if not isinstance(messages, list):
-        messages = [messages]
-
-    with session_scope() as session:
-        updated_messages: list[MessageTable] = []
-        for message in messages:
-            msg = session.get(MessageTable, message.id)
-            if msg:
-                msg.sqlmodel_update(message.model_dump(exclude_unset=True, exclude_none=True))
-                session.add(msg)
-                session.commit()
-                session.refresh(msg)
-                updated_messages.append(msg)
-            else:
-                logger.warning(f"Message with id {message.id} not found")
-        return [MessageRead.model_validate(message, from_attributes=True) for message in updated_messages]
-
-
 async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
     if not isinstance(messages, list):
         messages = [messages]
 
-    async with async_session_scope() as session:
+    async with session_scope() as session:
         updated_messages: list[MessageTable] = []
         for message in messages:
             msg = await session.get(MessageTable, message.id)
             if msg:
-                msg.sqlmodel_update(message.model_dump(exclude_unset=True, exclude_none=True))
+                msg = msg.sqlmodel_update(message.model_dump(exclude_unset=True, exclude_none=True))
+                # Convert flow_id to UUID if it's a string preventing error when saving to database
+                if msg.flow_id and isinstance(msg.flow_id, str):
+                    msg.flow_id = UUID(msg.flow_id)
                 session.add(msg)
                 await session.commit()
                 await session.refresh(msg)
@@ -175,26 +146,6 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
             else:
                 logger.warning(f"Message with id {message.id} not found")
         return [MessageRead.model_validate(message, from_attributes=True) for message in updated_messages]
-
-
-def add_messagetables(messages: list[MessageTable], session: Session):
-    for message in messages:
-        try:
-            session.add(message)
-            session.commit()
-            session.refresh(message)
-        except Exception as e:
-            logger.exception(e)
-            raise
-
-    new_messages = []
-    for msg in messages:
-        msg.properties = json.loads(msg.properties) if isinstance(msg.properties, str) else msg.properties  # type: ignore[arg-type]
-        msg.content_blocks = [json.loads(j) if isinstance(j, str) else j for j in msg.content_blocks]  # type: ignore[arg-type]
-        msg.category = msg.category or ""
-        new_messages.append(msg)
-
-    return [MessageRead.model_validate(message, from_attributes=True) for message in new_messages]
 
 
 async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession):
@@ -219,17 +170,14 @@ async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession
 
 
 def delete_messages(session_id: str) -> None:
-    """Delete messages from the monitor service based on the provided session ID.
+    """DEPRECATED - Delete messages from the monitor service based on the provided session ID.
+
+    DEPRECATED: Use `adelete_messages` instead.
 
     Args:
         session_id (str): The session ID associated with the messages to delete.
     """
-    with session_scope() as session:
-        session.exec(
-            delete(MessageTable)
-            .where(col(MessageTable.session_id) == session_id)
-            .execution_options(synchronize_session="fetch")
-        )
+    return run_until_complete(adelete_messages(session_id))
 
 
 async def adelete_messages(session_id: str) -> None:
@@ -238,7 +186,7 @@ async def adelete_messages(session_id: str) -> None:
     Args:
         session_id (str): The session ID associated with the messages to delete.
     """
-    async with async_session_scope() as session:
+    async with session_scope() as session:
         stmt = (
             delete(MessageTable)
             .where(col(MessageTable.session_id) == session_id)
@@ -253,7 +201,7 @@ async def delete_message(id_: str) -> None:
     Args:
         id_ (str): The ID of the message to delete.
     """
-    async with async_session_scope() as session:
+    async with session_scope() as session:
         message = await session.get(MessageTable, id_)
         if message:
             await session.delete(message)
@@ -262,13 +210,15 @@ async def delete_message(id_: str) -> None:
 
 def store_message(
     message: Message,
-    flow_id: str | None = None,
+    flow_id: str | UUID | None = None,
 ) -> list[Message]:
-    """Stores a message in the memory.
+    """DEPRECATED: Stores a message in the memory.
+
+    DEPRECATED: Use `astore_message` instead.
 
     Args:
         message (Message): The message to store.
-        flow_id (Optional[str]): The flow ID associated with the message.
+        flow_id (Optional[str | UUID]): The flow ID associated with the message.
             When running from the CustomComponent you can access this using `self.graph.flow_id`.
 
     Returns:
@@ -277,32 +227,12 @@ def store_message(
     Raises:
         ValueError: If any of the required parameters (session_id, sender, sender_name) is not provided.
     """
-    if not message:
-        logger.warning("No message provided.")
-        return []
-
-    required_fields = ["session_id", "sender", "sender_name"]
-    missing_fields = [field for field in required_fields if not getattr(message, field)]
-    if missing_fields:
-        missing_descriptions = {
-            "session_id": "session_id (unique conversation identifier)",
-            "sender": f"sender (e.g., '{MESSAGE_SENDER_USER}' or '{MESSAGE_SENDER_AI}')",
-            "sender_name": "sender_name (display name, e.g., 'User' or 'Assistant')",
-        }
-        missing = ", ".join(missing_descriptions[field] for field in missing_fields)
-        msg = (
-            f"It looks like we're missing some important information: {missing}. "
-            "Please ensure that your message includes all the required fields."
-        )
-        raise ValueError(msg)
-    if hasattr(message, "id") and message.id:
-        return update_messages([message])
-    return add_messages([message], flow_id=flow_id)
+    return run_until_complete(astore_message(message, flow_id=flow_id))
 
 
 async def astore_message(
     message: Message,
-    flow_id: str | None = None,
+    flow_id: str | UUID | None = None,
 ) -> list[Message]:
     """Stores a message in the memory.
 
@@ -326,10 +256,14 @@ async def astore_message(
         raise ValueError(msg)
     if hasattr(message, "id") and message.id:
         return await aupdate_messages([message])
+    if flow_id and not isinstance(flow_id, UUID):
+        flow_id = UUID(flow_id)
     return await aadd_messages([message], flow_id=flow_id)
 
 
 class LCBuiltinChatMemory(BaseChatMessageHistory):
+    """DEPRECATED: Kept for backward compatibility."""
+
     def __init__(
         self,
         flow_id: str,

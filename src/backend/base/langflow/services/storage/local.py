@@ -21,12 +21,15 @@ class LocalStorageService(StorageService):
     async def save_file(self, flow_id: str, file_name: str, data: bytes) -> None:
         """Save a file in the local storage.
 
-        :param flow_id: The identifier for the flow.
-        :param file_name: The name of the file to be saved.
-        :param data: The byte content of the file.
-        :raises FileNotFoundError: If the specified flow does not exist.
-        :raises IsADirectoryError: If the file name is a directory.
-        :raises PermissionError: If there is no permission to write the file.
+        Args:
+            flow_id: The identifier for the flow.
+            file_name: The name of the file to be saved.
+            data: The byte content of the file.
+
+        Raises:
+            FileNotFoundError: If the specified flow does not exist.
+            IsADirectoryError: If the file name is a directory.
+            PermissionError: If there is no permission to write the file.
         """
         folder_path = self.data_dir / flow_id
         await folder_path.mkdir(parents=True, exist_ok=True)
@@ -43,10 +46,15 @@ class LocalStorageService(StorageService):
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
         """Retrieve a file from the local storage.
 
-        :param flow_id: The identifier for the flow.
-        :param file_name: The name of the file to be retrieved.
-        :return: The byte content of the file.
-        :raises FileNotFoundError: If the file does not exist.
+        Args:
+            flow_id: The identifier for the flow.
+            file_name: The name of the file to be retrieved.
+
+        Returns:
+            The byte content of the file.
+
+        Raises:
+            FileNotFoundError: If the file does not exist.
         """
         file_path = self.data_dir / flow_id / file_name
         if not await file_path.exists():
@@ -63,10 +71,17 @@ class LocalStorageService(StorageService):
     async def list_files(self, flow_id: str):
         """List all files in a specified flow.
 
-        :param flow_id: The identifier for the flow.
-        :return: A list of file names.
-        :raises FileNotFoundError: If the flow directory does not exist.
+        Args:
+            flow_id: The identifier for the flow.
+
+        Returns:
+            A list of file names.
+
+        Raises:
+            FileNotFoundError: If the flow directory does not exist.
         """
+        if not isinstance(flow_id, str):
+            flow_id = str(flow_id)
         folder_path = self.data_dir / flow_id
         if not await folder_path.exists() or not await folder_path.is_dir():
             logger.warning(f"Flow {flow_id} directory does not exist.")

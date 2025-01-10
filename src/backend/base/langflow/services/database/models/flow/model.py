@@ -9,7 +9,12 @@ import emoji
 from emoji import purely_emoji
 from fastapi import HTTPException, status
 from loguru import logger
-from pydantic import BaseModel, field_serializer, field_validator
+from pydantic import (
+    BaseModel,
+    ValidationInfo,
+    field_serializer,
+    field_validator,
+)
 from sqlalchemy import Text, UniqueConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
@@ -198,30 +203,25 @@ class FlowRead(FlowBase):
 
 
 class FlowHeader(BaseModel):
-    """Model representing a header for a flow - Without the data.
+    """Model representing a header for a flow - Without the data."""
 
-    Attributes:
-    -----------
-    id : UUID
-        Unique identifier for the flow.
-    name : str
-        The name of the flow.
-    folder_id : UUID | None, optional
-        The ID of the folder containing the flow. None if not associated with a folder.
-    is_component : bool | None, optional
-        Flag indicating whether the flow is a component.
-    endpoint_name : str | None, optional
-        The name of the endpoint associated with this flow.
-    description : str | None, optional
-        A description of the flow.
-    """
+    id: UUID = Field(description="Unique identifier for the flow")
+    name: str = Field(description="The name of the flow")
+    folder_id: UUID | None = Field(
+        None,
+        description="The ID of the folder containing the flow. None if not associated with a folder",
+    )
+    is_component: bool | None = Field(None, description="Flag indicating whether the flow is a component")
+    endpoint_name: str | None = Field(None, description="The name of the endpoint associated with this flow")
+    description: str | None = Field(None, description="A description of the flow")
+    data: dict | None = Field(None, description="The data of the component, if is_component is True")
 
-    id: UUID
-    name: str
-    folder_id: UUID | None = None
-    is_component: bool | None = None
-    endpoint_name: str | None = None
-    description: str | None = None
+    @field_validator("data", mode="before")
+    @classmethod
+    def validate_flow_header(cls, value: dict, info: ValidationInfo):
+        if not info.data["is_component"]:
+            return None
+        return value
 
 
 class FlowUpdate(SQLModel):

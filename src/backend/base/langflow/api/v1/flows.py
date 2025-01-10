@@ -12,18 +12,12 @@ import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
-from fastapi_pagination import Page, Params, add_pagination
+from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.api.utils import (
-    CurrentActiveUser,
-    DbSession,
-    cascade_delete_flow,
-    remove_api_keys,
-    validate_is_component,
-)
+from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
@@ -31,8 +25,6 @@ from langflow.services.database.models.flow.model import FlowHeader
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
-from langflow.services.database.models.transactions.crud import get_transactions_by_flow_id
-from langflow.services.database.models.vertex_builds.crud import get_vertex_builds_by_flow_id
 from langflow.services.deps import get_settings_service
 from langflow.services.settings.service import SettingsService
 
@@ -221,16 +213,7 @@ async def read_flows(
             if remove_example_flows and starter_folder_id:
                 flows = [flow for flow in flows if flow.folder_id != starter_folder_id]
             if header_flows:
-                return [
-                    {
-                        "id": flow.id,
-                        "name": flow.name,
-                        "folder_id": flow.folder_id,
-                        "is_component": flow.is_component,
-                        "description": flow.description,
-                    }
-                    for flow in flows
-                ]
+                return [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
             return flows
 
         stmt = stmt.where(Flow.folder_id == folder_id)
@@ -438,15 +421,7 @@ async def delete_multiple_flows(
             await db.exec(select(Flow).where(col(Flow.id).in_(flow_ids)).where(Flow.user_id == user.id))
         ).all()
         for flow in flows_to_delete:
-            transactions_to_delete = await get_transactions_by_flow_id(db, flow.id)
-            for transaction in transactions_to_delete:
-                await db.delete(transaction)
-
-            builds_to_delete = await get_vertex_builds_by_flow_id(db, flow.id)
-            for build in builds_to_delete:
-                await db.delete(build)
-
-            await db.delete(flow)
+            await cascade_delete_flow(db, flow.id)
 
         await db.commit()
         return {"deleted": len(flows_to_delete)}
@@ -521,6 +496,3 @@ async def read_basic_examples(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
-
-
-add_pagination(router)

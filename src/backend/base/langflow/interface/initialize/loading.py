@@ -57,7 +57,7 @@ async def get_instance_results(
     fallback_to_env_vars: bool = False,
     base_type: str = "component",
 ):
-    custom_params = update_params_with_load_from_db_fields(
+    custom_params = await update_params_with_load_from_db_fields(
         custom_component, custom_params, vertex.load_from_db_fields, fallback_to_env_vars=fallback_to_env_vars
     )
     with warnings.catch_warnings():
@@ -103,7 +103,7 @@ def convert_kwargs(params):
     return params
 
 
-def update_params_with_load_from_db_fields(
+async def update_params_with_load_from_db_fields(
     custom_component: CustomComponent,
     params,
     load_from_db_fields,
@@ -111,11 +111,11 @@ def update_params_with_load_from_db_fields(
     fallback_to_env_vars=False,
 ):
     for field in load_from_db_fields:
-        if field not in params:
+        if field not in params or not params[field]:
             continue
 
         try:
-            key = custom_component.variables(params[field], field)
+            key = await custom_component.get_variables(params[field], field)
         except ValueError as e:
             if any(reason in str(e) for reason in ["User id is not set", "variable not found."]):
                 raise

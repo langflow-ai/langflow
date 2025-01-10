@@ -141,7 +141,7 @@ def parse_context(curl_command):
 
     for curl_header in parsed_args.headers:
         if curl_header.startswith(":"):
-            occurrence = [m.start() for m in re.finditer(":", curl_header)]
+            occurrence = [m.start() for m in re.finditer(r":", curl_header)]
             header_key, header_value = curl_header[: occurrence[1]], curl_header[occurrence[1] + 1 :]
         else:
             header_key, header_value = curl_header.split(":", 1)

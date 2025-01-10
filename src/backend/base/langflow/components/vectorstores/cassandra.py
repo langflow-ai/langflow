@@ -1,16 +1,13 @@
 from langchain_community.vectorstores import Cassandra
-from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.inputs import BoolInput, DictInput, FloatInput
 from langflow.io import (
-    DataInput,
     DropdownInput,
     HandleInput,
     IntInput,
     MessageTextInput,
-    MultilineInput,
     SecretStrInput,
 )
 from langflow.schema import Data
@@ -77,14 +74,9 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             display_name="Cluster arguments",
             info="Optional dictionary of additional keyword arguments for the Cassandra cluster.",
             advanced=True,
-            is_list=True,
+            list=True,
         ),
-        MultilineInput(name="search_query", display_name="Search Query"),
-        DataInput(
-            name="ingest_data",
-            display_name="Ingest Data",
-            is_list=True,
-        ),
+        *LCVectorStoreComponent.inputs,
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         IntInput(
             name="number_of_results",
@@ -114,7 +106,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             display_name="Search Metadata Filter",
             info="Optional dictionary of filters to apply to the search query.",
             advanced=True,
-            is_list=True,
+            list=True,
         ),
         MessageTextInput(
             name="body_search",
@@ -184,7 +176,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             setup_mode = SetupMode.ASYNC
 
         if documents:
-            logger.debug(f"Adding {len(documents)} documents to the Vector Store.")
+            self.log(f"Adding {len(documents)} documents to the Vector Store.")
             table = Cassandra.from_documents(
                 documents=documents,
                 embedding=self.embedding,
@@ -195,7 +187,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
                 body_index_options=body_index_options,
             )
         else:
-            logger.debug("No documents to add to the Vector Store.")
+            self.log("No documents to add to the Vector Store.")
             table = Cassandra(
                 embedding=self.embedding,
                 table_name=self.table_name,
@@ -216,16 +208,16 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
     def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
 
-        logger.debug(f"Search input: {self.search_query}")
-        logger.debug(f"Search type: {self.search_type}")
-        logger.debug(f"Number of results: {self.number_of_results}")
+        self.log(f"Search input: {self.search_query}")
+        self.log(f"Search type: {self.search_type}")
+        self.log(f"Number of results: {self.number_of_results}")
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             try:
                 search_type = self._map_search_type()
                 search_args = self._build_search_args()
 
-                logger.debug(f"Search args: {search_args}")
+                self.log(f"Search args: {search_args}")
 
                 docs = vector_store.search(query=self.search_query, search_type=search_type, **search_args)
             except KeyError as e:
@@ -237,7 +229,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
                     raise ValueError(msg) from e
                 raise
 
-            logger.debug(f"Retrieved documents: {len(docs)}")
+            self.log(f"Retrieved documents: {len(docs)}")
 
             data = docs_to_data(docs)
             self.status = data

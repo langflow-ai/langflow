@@ -12,6 +12,7 @@ from docstring_parser import parse
 from langflow.logging.logger import logger
 from langflow.schema import Data
 from langflow.services.deps import get_settings_service
+from langflow.services.utils import initialize_settings_service
 from langflow.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from langflow.utils import constants
 
@@ -402,7 +403,7 @@ def build_loader_repr_from_data(data: list[Data]) -> str:
     return "0 data"
 
 
-def update_settings(
+async def update_settings(
     *,
     config: str | None = None,
     cache: str | None = None,
@@ -416,15 +417,13 @@ def update_settings(
     max_file_size_upload: int = 100,
 ) -> None:
     """Update the settings from a config file."""
-    from langflow.services.utils import initialize_settings_service
-
     # Check for database_url in the environment variables
 
     initialize_settings_service()
     settings_service = get_settings_service()
     if config:
         logger.debug(f"Loading settings from {config}")
-        settings_service.settings.update_from_yaml(config, dev=dev)
+        await settings_service.settings.update_from_yaml(config, dev=dev)
     if remove_api_keys:
         logger.debug(f"Setting remove_api_keys to {remove_api_keys}")
         settings_service.settings.update_settings(remove_api_keys=remove_api_keys)

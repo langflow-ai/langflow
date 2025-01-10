@@ -18,10 +18,13 @@ class S3StorageService(StorageService):
     async def save_file(self, folder: str, file_name: str, data) -> None:
         """Save a file to the S3 bucket.
 
-        :param folder: The folder in the bucket to save the file.
-        :param file_name: The name of the file to be saved.
-        :param data: The byte content of the file.
-        :raises Exception: If an error occurs during file saving.
+        Args:
+            folder: The folder in the bucket to save the file.
+            file_name: The name of the file to be saved.
+            data: The byte content of the file.
+
+        Raises:
+            Exception: If an error occurs during file saving.
         """
         try:
             self.s3_client.put_object(Bucket=self.bucket, Key=f"{folder}/{file_name}", Body=data)
@@ -36,10 +39,15 @@ class S3StorageService(StorageService):
     async def get_file(self, folder: str, file_name: str):
         """Retrieve a file from the S3 bucket.
 
-        :param folder: The folder in the bucket where the file is stored.
-        :param file_name: The name of the file to be retrieved.
-        :return: The byte content of the file.
-        :raises Exception: If an error occurs during file retrieval.
+        Args:
+            folder: The folder in the bucket where the file is stored.
+            file_name: The name of the file to be retrieved.
+
+        Returns:
+            The byte content of the file.
+
+        Raises:
+            Exception: If an error occurs during file retrieval.
         """
         try:
             response = self.s3_client.get_object(Bucket=self.bucket, Key=f"{folder}/{file_name}")
@@ -52,9 +60,14 @@ class S3StorageService(StorageService):
     async def list_files(self, folder: str):
         """List all files in a specified folder of the S3 bucket.
 
-        :param folder: The folder in the bucket to list files from.
-        :return: A list of file names.
-        :raises Exception: If an error occurs during file listing.
+        Args:
+            folder: The folder in the bucket to list files from.
+
+        Returns:
+            A list of file names.
+
+        Raises:
+            Exception: If an error occurs during file listing.
         """
         try:
             response = self.s3_client.list_objects_v2(Bucket=self.bucket, Prefix=folder)
@@ -69,9 +82,12 @@ class S3StorageService(StorageService):
     async def delete_file(self, folder: str, file_name: str) -> None:
         """Delete a file from the S3 bucket.
 
-        :param folder: The folder in the bucket where the file is stored.
-        :param file_name: The name of the file to be deleted.
-        :raises Exception: If an error occurs during file deletion.
+        Args:
+            folder: The folder in the bucket where the file is stored.
+            file_name: The name of the file to be deleted.
+
+        Raises:
+            Exception: If an error occurs during file deletion.
         """
         try:
             self.s3_client.delete_object(Bucket=self.bucket, Key=f"{folder}/{file_name}")

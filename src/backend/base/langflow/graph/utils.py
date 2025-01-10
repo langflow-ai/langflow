@@ -176,6 +176,7 @@ async def log_vertex_build(
     try:
         if not get_settings_service().settings.vertex_builds_storage_enabled:
             return
+
         vertex_build = VertexBuildBase(
             flow_id=flow_id,
             id=vertex_id,
@@ -207,3 +208,13 @@ def rewrite_file_path(file_path: str):
         consistent_file_path = "/".join(file_path_split)
 
     return [consistent_file_path]
+
+
+def has_output_vertex(vertices: dict[Vertex, int]):
+    return any(vertex.is_output for vertex in vertices)
+
+
+def has_chat_output(vertices: dict[Vertex, int]):
+    from langflow.graph.schema import InterfaceComponentTypes
+
+    return any(InterfaceComponentTypes.ChatOutput in vertex.id for vertex in vertices)

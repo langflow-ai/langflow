@@ -26,9 +26,9 @@ from langflow.graph.graph.utils import (
     find_all_cycle_edges,
     find_cycle_vertices,
     find_start_component_id,
+    get_sorted_vertices,
     process_flow,
     should_continue,
-    sort_up_to_vertex,
 )
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex, VertexStates
@@ -726,6 +726,7 @@ class Graph:
         stream: bool,
         session_id: str,
         fallback_to_env_vars: bool,
+        event_manager: EventManager | None = None,
     ) -> list[ResultData | None]:
         """Runs the graph with the given inputs.
 
@@ -737,6 +738,7 @@ class Graph:
             stream (bool): Whether to stream the results or not.
             session_id (str): The session ID for the graph.
             fallback_to_env_vars (bool): Whether to fallback to environment variables.
+            event_manager (EventManager | None): The event manager for the graph.
 
         Returns:
             List[Optional["ResultData"]]: The outputs of the graph.
@@ -770,7 +772,11 @@ class Graph:
         try:
             # Prioritize the webhook component if it exists
             start_component_id = find_start_component_id(self._is_input_vertices)
-            await self.process(start_component_id=start_component_id, fallback_to_env_vars=fallback_to_env_vars)
+            await self.process(
+                start_component_id=start_component_id,
+                fallback_to_env_vars=fallback_to_env_vars,
+                event_manager=event_manager,
+            )
             self.increment_run_count()
         except Exception as exc:
             self._end_all_traces_async(error=exc)
@@ -804,6 +810,7 @@ class Graph:
         session_id: str | None = None,
         stream: bool = False,
         fallback_to_env_vars: bool = False,
+        event_manager: EventManager | None = None,
     ) -> list[RunOutputs]:
         """Runs the graph with the given inputs.
 
@@ -815,6 +822,7 @@ class Graph:
             session_id (Optional[str], optional): The session ID for the graph. Defaults to None.
             stream (bool, optional): Whether to stream the results or not. Defaults to False.
             fallback_to_env_vars (bool, optional): Whether to fallback to environment variables. Defaults to False.
+            event_manager (EventManager | None): The event manager for the graph.
 
         Returns:
             List[RunOutputs]: The outputs of the graph.
@@ -847,6 +855,7 @@ class Graph:
                 stream=stream,
                 session_id=session_id or "",
                 fallback_to_env_vars=fallback_to_env_vars,
+                event_manager=event_manager,
             )
             run_output_object = RunOutputs(inputs=run_inputs, outputs=run_outputs)
             logger.debug(f"Run outputs: {run_output_object}")
@@ -1101,7 +1110,8 @@ class Graph:
             return False
         return self.vertex_edges_are_identical(vertex, other_vertex)
 
-    def vertex_edges_are_identical(self, vertex: Vertex, other_vertex: Vertex) -> bool:
+    @staticmethod
+    def vertex_edges_are_identical(vertex: Vertex, other_vertex: Vertex) -> bool:
         same_length = len(vertex.edges) == len(other_vertex.edges)
         if not same_length:
             return False
@@ -1494,7 +1504,13 @@ class Graph:
                 vertices.append(vertex)
         return vertices
 
-    async def process(self, *, fallback_to_env_vars: bool, start_component_id: str | None = None) -> Graph:
+    async def process(
+        self,
+        *,
+        fallback_to_env_vars: bool,
+        start_component_id: str | None = None,
+        event_manager: EventManager | None = None,
+    ) -> Graph:
         """Processes the graph with vertices in each layer run in parallel."""
         first_layer = self.sort_vertices(start_component_id=start_component_id)
         vertex_task_run_count: dict[str, int] = {}
@@ -1520,6 +1536,7 @@ class Graph:
                         fallback_to_env_vars=fallback_to_env_vars,
                         get_cache=chat_service.get_cache,
                         set_cache=chat_service.set_cache,
+                        event_manager=event_manager,
                     ),
                     name=f"{vertex.display_name} Run {vertex_task_run_count.get(vertex_id, 0)}",
                 )
@@ -1747,7 +1764,8 @@ class Graph:
             new_edge = Edge(source, target, edge)
         return new_edge
 
-    def _get_vertex_class(self, node_type: str, node_base_type: str, node_id: str) -> type[Vertex]:
+    @staticmethod
+    def _get_vertex_class(node_type: str, node_base_type: str, node_id: str) -> type[Vertex]:
         """Returns the node class based on the node type."""
         # First we check for the node_base_type
         node_name = node_id.split("-")[0]
@@ -1830,7 +1848,8 @@ class Graph:
         self._record_snapshot()
         return self
 
-    def get_children_by_vertex_type(self, vertex: Vertex, vertex_type: str) -> list[Vertex]:
+    @staticmethod
+    def get_children_by_vertex_type(vertex: Vertex, vertex_type: str) -> list[Vertex]:
         """Returns the children of a vertex based on the vertex type."""
         children = []
         vertex_types = [vertex.data["type"]]
@@ -1853,169 +1872,25 @@ class Graph:
             f"{edges_repr}"
         )
 
-    def layered_topological_sort(
-        self,
-        vertices: list[Vertex],
-        *,
-        filter_graphs: bool = False,
-    ) -> list[list[str]]:
-        """Performs a layered topological sort of the vertices in the graph."""
-        vertices_ids = {vertex.id for vertex in vertices}
-        # Queue for vertices with no incoming edges
-        in_degree_map = self.in_degree_map.copy()
-        if self.is_cyclic and all(in_degree_map.values()):
-            # This means we have a cycle because all vertex have in_degree_map > 0
-            # because of this we set the queue to start on the ._start if it exists
-            if self._start is not None:
-                queue = deque([self._start._id])
-            else:
-                # Find the chat input component
-                chat_input = find_start_component_id(vertices_ids)
-                if chat_input is None:
-                    msg = "No input component found and no start component provided"
-                    raise ValueError(msg)
-                queue = deque([chat_input])
-        else:
-            queue = deque(
-                vertex.id
-                for vertex in vertices
-                # if filter_graphs then only vertex.is_input will be considered
-                if in_degree_map[vertex.id] == 0 and (not filter_graphs or vertex.is_input)
-            )
-        layers: list[list[str]] = []
-        visited = set(queue)
+    def get_vertex_predecessors_ids(self, vertex_id: str) -> list[str]:
+        """Get the predecessor IDs of a vertex."""
+        return [v.id for v in self.get_predecessors(self.get_vertex(vertex_id))]
 
-        current_layer = 0
-        while queue:
-            layers.append([])  # Start a new layer
-            layer_size = len(queue)
-            for _ in range(layer_size):
-                vertex_id = queue.popleft()
-                visited.add(vertex_id)
+    def get_vertex_successors_ids(self, vertex_id: str) -> list[str]:
+        """Get the successor IDs of a vertex."""
+        return [v.id for v in self.get_vertex(vertex_id).successors]
 
-                layers[current_layer].append(vertex_id)
-                for neighbor in self.successor_map[vertex_id]:
-                    # only vertices in `vertices_ids` should be considered
-                    # because vertices by have been filtered out
-                    # in a previous step. All dependencies of theirs
-                    # will be built automatically if required
-                    if neighbor not in vertices_ids:
-                        continue
+    def get_vertex_input_status(self, vertex_id: str) -> bool:
+        """Check if a vertex is an input vertex."""
+        return self.get_vertex(vertex_id).is_input
 
-                    in_degree_map[neighbor] -= 1  # 'remove' edge
-                    if in_degree_map[neighbor] == 0 and neighbor not in visited:
-                        queue.append(neighbor)
+    def get_parent_map(self) -> dict[str, str | None]:
+        """Get the parent node map for all vertices."""
+        return {vertex.id: vertex.parent_node_id for vertex in self.vertices}
 
-                    # if > 0 it might mean not all predecessors have added to the queue
-                    # so we should process the neighbors predecessors
-                    elif in_degree_map[neighbor] > 0:
-                        for predecessor in self.predecessor_map[neighbor]:
-                            if predecessor not in queue and predecessor not in visited:
-                                queue.append(predecessor)
-
-            current_layer += 1  # Next layer
-        return self.refine_layers(layers)
-
-    def refine_layers(self, initial_layers):
-        # Map each vertex to its current layer
-        vertex_to_layer = {}
-        for layer_index, layer in enumerate(initial_layers):
-            for vertex in layer:
-                vertex_to_layer[vertex] = layer_index
-
-        # Build the adjacency list for reverse lookup (dependencies)
-
-        refined_layers = [[] for _ in initial_layers]  # Start with empty layers
-        new_layer_index_map = defaultdict(int)
-
-        # Map each vertex to its new layer index
-        # by finding the lowest layer index of its dependencies
-        # and subtracting 1
-        # If a vertex has no dependencies, it will be placed in the first layer
-        # If a vertex has dependencies, it will be placed in the lowest layer index of its dependencies
-        # minus 1
-        for vertex_id, deps in self.successor_map.items():
-            indexes = [vertex_to_layer[dep] for dep in deps if dep in vertex_to_layer]
-            new_layer_index = max(min(indexes, default=0) - 1, 0)
-            new_layer_index_map[vertex_id] = new_layer_index
-
-        for layer_index, layer in enumerate(initial_layers):
-            for vertex_id in layer:
-                # Place the vertex in the highest possible layer where its dependencies are met
-                new_layer_index = new_layer_index_map[vertex_id]
-                if new_layer_index > layer_index:
-                    refined_layers[new_layer_index].append(vertex_id)
-                    vertex_to_layer[vertex_id] = new_layer_index
-                else:
-                    refined_layers[layer_index].append(vertex_id)
-
-        # Remove empty layers if any
-        return [layer for layer in refined_layers if layer]
-
-    def sort_chat_inputs_first(self, vertices_layers: list[list[str]]) -> list[list[str]]:
-        # First check if any chat inputs have dependencies
-        for layer in vertices_layers:
-            for vertex_id in layer:
-                if "ChatInput" in vertex_id and self.get_predecessors(self.get_vertex(vertex_id)):
-                    return vertices_layers
-
-        # If no chat inputs have dependencies, move them to first layer
-        chat_inputs_first = []
-        for layer in vertices_layers:
-            layer_chat_inputs_first = [vertex_id for vertex_id in layer if "ChatInput" in vertex_id]
-            chat_inputs_first.extend(layer_chat_inputs_first)
-            for vertex_id in layer_chat_inputs_first:
-                # Remove the ChatInput from the layer
-                layer.remove(vertex_id)
-
-        if not chat_inputs_first:
-            return vertices_layers
-
-        return [chat_inputs_first, *vertices_layers]
-
-    def sort_layer_by_dependency(self, vertices_layers: list[list[str]]) -> list[list[str]]:
-        """Sorts the vertices in each layer by dependency, ensuring no vertex depends on a subsequent vertex."""
-        sorted_layers = []
-
-        for layer in vertices_layers:
-            sorted_layer = self._sort_single_layer_by_dependency(layer)
-            sorted_layers.append(sorted_layer)
-
-        return sorted_layers
-
-    def _sort_single_layer_by_dependency(self, layer: list[str]) -> list[str]:
-        """Sorts a single layer by dependency using a stable sorting method."""
-        # Build a map of each vertex to its index in the layer for quick lookup.
-        index_map = {vertex: index for index, vertex in enumerate(layer)}
-        # Create a sorted copy of the layer based on dependency order.
-        return sorted(layer, key=lambda vertex: self._max_dependency_index(vertex, index_map), reverse=True)
-
-    def _max_dependency_index(self, vertex_id: str, index_map: dict[str, int]) -> int:
-        """Finds the highest index a given vertex's dependencies occupy in the same layer."""
-        vertex = self.get_vertex(vertex_id)
-        max_index = -1
-        for successor in vertex.successors:  # Assuming vertex.successors is a list of successor vertex identifiers.
-            if successor.id in index_map:
-                max_index = max(max_index, index_map[successor.id])
-        return max_index
-
-    def __to_dict(self) -> dict[str, dict[str, list[str]]]:
-        """Converts the graph to a dictionary."""
-        result: dict = {}
-        for vertex in self.vertices:
-            vertex_id = vertex.id
-            sucessors = [i.id for i in self.get_all_successors(vertex)]
-            predecessors = [i.id for i in self.get_predecessors(vertex)]
-            result |= {vertex_id: {"successors": sucessors, "predecessors": predecessors}}
-        return result
-
-    def __filter_vertices(self, vertex_id: str, *, is_start: bool = False):
-        dictionaryized_graph = self.__to_dict()
-        parent_node_map = {vertex.id: vertex.parent_node_id for vertex in self.vertices}
-        vertex_ids = sort_up_to_vertex(
-            graph=dictionaryized_graph, vertex_id=vertex_id, parent_node_map=parent_node_map, is_start=is_start
-        )
-        return [self.get_vertex(vertex_id) for vertex_id in vertex_ids]
+    def get_vertex_ids(self) -> list[str]:
+        """Get all vertex IDs in the graph."""
+        return [vertex.id for vertex in self.vertices]
 
     def sort_vertices(
         self,
@@ -2024,43 +1899,32 @@ class Graph:
     ) -> list[str]:
         """Sorts the vertices in the graph."""
         self.mark_all_vertices("ACTIVE")
-        if stop_component_id in self.cycle_vertices:
-            # Make the stop into a start because we are in a cycle and
-            # we cannot know where is the input or output
-            start_component_id = stop_component_id
-            stop_component_id = None
-        if stop_component_id is not None:
-            self.stop_vertex = stop_component_id
-            vertices = self.__filter_vertices(stop_component_id)
 
-        elif start_component_id:
-            vertices = self.__filter_vertices(start_component_id, is_start=True)
+        first_layer, remaining_layers = get_sorted_vertices(
+            vertices_ids=self.get_vertex_ids(),
+            cycle_vertices=self.cycle_vertices,
+            stop_component_id=stop_component_id,
+            start_component_id=start_component_id,
+            graph_dict=self.__to_dict(),
+            in_degree_map=self.in_degree_map,
+            successor_map=self.successor_map,
+            predecessor_map=self.predecessor_map,
+            is_input_vertex=self.get_vertex_input_status,
+            get_vertex_predecessors=self.get_vertex_predecessors_ids,
+            get_vertex_successors=self.get_vertex_successors_ids,
+            is_cyclic=self.is_cyclic,
+        )
 
-        else:
-            vertices = self.vertices
-            # without component_id we are probably running in the chat
-            # so we want to pick only graphs that start with ChatInput or
-            # TextInput
-
-        vertices_layers = self.layered_topological_sort(vertices)
-        vertices_layers = self.sort_by_avg_build_time(vertices_layers)
-        # Sort the chat inputs first to speed up sending the User message to the UI
-        vertices_layers = self.sort_chat_inputs_first(vertices_layers)
-        # Now we should sort each layer in a way that we make sure
-        # vertex V does not depend on vertex V+1
-        vertices_layers = self.sort_layer_by_dependency(vertices_layers)
         self.increment_run_count()
-        self._sorted_vertices_layers = vertices_layers
-        first_layer = vertices_layers[0]
-        # save the only the rest
-        self.vertices_layers = vertices_layers[1:]
-        self.vertices_to_run = set(chain.from_iterable(vertices_layers))
+        self._sorted_vertices_layers = [first_layer, *remaining_layers]
+        self.vertices_layers = remaining_layers
+        self.vertices_to_run = set(chain.from_iterable([first_layer, *remaining_layers]))
         self.build_run_map()
-        # Return just the first layer
         self._first_layer = first_layer
         return first_layer
 
-    def sort_interface_components_first(self, vertices_layers: list[list[str]]) -> list[list[str]]:
+    @staticmethod
+    def sort_interface_components_first(vertices_layers: list[list[str]]) -> list[list[str]]:
         """Sorts the vertices in the graph so that vertices containing ChatInput or ChatOutput come first."""
 
         def contains_interface_component(vertex):
@@ -2098,9 +1962,6 @@ class Graph:
 
         This method is responsible for building the run map for the graph,
         which maps each node in the graph to its corresponding run function.
-
-        Returns:
-            None
         """
         self.run_manager.build_run_map(predecessor_map=self.predecessor_map, vertices_to_run=self.vertices_to_run)
 
@@ -2170,7 +2031,8 @@ class Graph:
                 in_degree[vertex.id] = 0
         return in_degree
 
-    def build_adjacency_maps(self, edges: list[CycleEdge]) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
+    @staticmethod
+    def build_adjacency_maps(edges: list[CycleEdge]) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
         """Returns the adjacency maps for the graph."""
         predecessor_map: dict[str, list[str]] = defaultdict(list)
         successor_map: dict[str, list[str]] = defaultdict(list)
@@ -2178,3 +2040,13 @@ class Graph:
             predecessor_map[edge.target_id].append(edge.source_id)
             successor_map[edge.source_id].append(edge.target_id)
         return predecessor_map, successor_map
+
+    def __to_dict(self) -> dict[str, dict[str, list[str]]]:
+        """Converts the graph to a dictionary."""
+        result: dict = {}
+        for vertex in self.vertices:
+            vertex_id = vertex.id
+            sucessors = [i.id for i in self.get_all_successors(vertex)]
+            predecessors = [i.id for i in self.get_predecessors(vertex)]
+            result |= {vertex_id: {"successors": sucessors, "predecessors": predecessors}}
+        return result
