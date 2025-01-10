@@ -101,9 +101,24 @@ class MemoryComponent(Component):
                 sender=sender,
                 sender_name=sender_name,
                 session_id=session_id,
-                limit=n_messages,
+                limit=n_messages + 1,  # Fetch one extra to exclude current round's duplicate
                 order=order,
             )
+
+            # Reverse the order for descending, as they are fetched in inversion
+            if order == "DESC":
+                stored = stored[::-1]
+
+            # For the case where both "Machine and User" messages are considered, ensure
+            # the conversation history maintains a Q-A format.
+            # The last message should be an AI response (Machine), not a USER message.
+            if sender is None:
+                while len(stored) > 0 and stored[-1].sender == MESSAGE_SENDER_USER:
+                    stored.pop(-1)
+
+            # Adjust messages to meet the n_messages limit after initially fetching n_messages+1.
+            if len(stored) > n_messages:
+                stored = stored[-n_messages:] if order == "DESC" else stored[:n_messages]
         self.status = stored
         return stored
 
