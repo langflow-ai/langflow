@@ -16,7 +16,7 @@ from langflow.services.database.models import User
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
-from langflow.services.deps import async_session_scope, get_session
+from langflow.services.deps import get_session, session_scope
 from langflow.services.store.utils import get_lf_version_from_pypi
 
 if TYPE_CHECKING:
@@ -140,8 +140,8 @@ def format_elapsed_time(elapsed_time: float) -> str:
     return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
-async def _get_flow_name(flow_id: str) -> str:
-    async with async_session_scope() as session:
+async def _get_flow_name(flow_id: uuid.UUID) -> str:
+    async with session_scope() as session:
         flow = await session.get(Flow, flow_id)
         if flow is None:
             msg = f"Flow {flow_id} not found"
@@ -149,20 +149,21 @@ async def _get_flow_name(flow_id: str) -> str:
     return flow.name
 
 
-async def build_graph_from_data(flow_id: str, payload: dict, **kwargs):
+async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwargs):
     """Build and cache the graph."""
     # Get flow name
     if "flow_name" not in kwargs:
-        flow_name = await _get_flow_name(flow_id)
+        flow_name = await _get_flow_name(flow_id if isinstance(flow_id, uuid.UUID) else uuid.UUID(flow_id))
         kwargs["flow_name"] = flow_name
-    graph = Graph.from_payload(payload, flow_id, **kwargs)
+    str_flow_id = str(flow_id)
+    graph = Graph.from_payload(payload, str_flow_id, **kwargs)
     for vertex_id in graph.has_session_id_vertices:
         vertex = graph.get_vertex(vertex_id)
         if vertex is None:
             msg = f"Vertex {vertex_id} not found"
             raise ValueError(msg)
         if not vertex.raw_params.get("session_id"):
-            vertex.update_raw_params({"session_id": flow_id}, overwrite=True)
+            vertex.update_raw_params({"session_id": str_flow_id}, overwrite=True)
 
     run_id = uuid.uuid4()
     graph.set_run_id(run_id)
@@ -171,7 +172,7 @@ async def build_graph_from_data(flow_id: str, payload: dict, **kwargs):
     return graph
 
 
-async def build_graph_from_db_no_cache(flow_id: str, session: AsyncSession):
+async def build_graph_from_db_no_cache(flow_id: uuid.UUID, session: AsyncSession):
     """Build and cache the graph."""
     flow: Flow | None = await session.get(Flow, flow_id)
     if not flow or not flow.data:
@@ -180,20 +181,22 @@ async def build_graph_from_db_no_cache(flow_id: str, session: AsyncSession):
     return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, user_id=str(flow.user_id))
 
 
-async def build_graph_from_db(flow_id: str, session: AsyncSession, chat_service: ChatService):
-    graph = await build_graph_from_db_no_cache(flow_id, session)
-    await chat_service.set_cache(flow_id, graph)
+async def build_graph_from_db(flow_id: uuid.UUID, session: AsyncSession, chat_service: ChatService):
+    graph = await build_graph_from_db_no_cache(flow_id=flow_id, session=session)
+    await chat_service.set_cache(str(flow_id), graph)
     return graph
 
 
 async def build_and_cache_graph_from_data(
-    flow_id: str,
+    flow_id: uuid.UUID | str,
     chat_service: ChatService,
     graph_data: dict,
 ):  # -> Graph | Any:
     """Build and cache the graph."""
-    graph = Graph.from_payload(graph_data, flow_id)
-    await chat_service.set_cache(flow_id, graph)
+    # Convert flow_id to str if it's UUID
+    str_flow_id = str(flow_id) if isinstance(flow_id, uuid.UUID) else flow_id
+    graph = Graph.from_payload(graph_data, str_flow_id)
+    await chat_service.set_cache(str_flow_id, graph)
     return graph
 
 
@@ -261,8 +264,7 @@ def get_suggestion_message(outdated_components: list[str]) -> str:
         )
     components = ", ".join(outdated_components)
     return (
-        f"The flow contains {count} outdated components. "
-        f"We recommend updating the following components: {components}."
+        f"The flow contains {count} outdated components. We recommend updating the following components: {components}."
     )
 
 
@@ -281,6 +283,11 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None
     try:
         await session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id))
         await session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id))
+        # TODO: Verify if deleting messages is safe in terms of session id relevance
+        # If we delete messages directly, rather than setting flow_id to null,
+        # it might cause unexpected behaviors because the session id could still be
+        # used elsewhere to search for these messages.
+        # await session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))
         await session.exec(delete(Flow).where(Flow.id == flow_id))
     except Exception as e:
         msg = f"Unable to cascade delete flow: ${flow_id}"

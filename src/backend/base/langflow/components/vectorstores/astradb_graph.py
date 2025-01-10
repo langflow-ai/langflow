@@ -2,18 +2,16 @@ import os
 
 import orjson
 from astrapy.admin import parse_api_endpoint
-from loguru import logger
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers import docs_to_data
-from langflow.inputs import DictInput, FloatInput
-from langflow.io import (
+from langflow.inputs import (
     BoolInput,
-    DataInput,
+    DictInput,
     DropdownInput,
+    FloatInput,
     HandleInput,
     IntInput,
-    MultilineInput,
     SecretStrInput,
     StrInput,
 )
@@ -23,7 +21,6 @@ from langflow.schema import Data
 class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
     display_name: str = "Astra DB Graph"
     description: str = "Implementation of Graph Vector Store using Astra DB"
-    documentation: str = "https://python.langchain.com/api_reference/astradb/graph_vectorstores/langchain_astradb.graph_vectorstores.AstraDBGraphVectorStore.html"
     name = "AstraDBGraph"
     icon: str = "AstraDB"
 
@@ -55,15 +52,7 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
             info="Metadata key used for incoming links.",
             advanced=True,
         ),
-        MultilineInput(
-            name="search_input",
-            display_name="Search Input",
-        ),
-        DataInput(
-            name="ingest_data",
-            display_name="Ingest Data",
-            is_list=True,
-        ),
+        *LCVectorStoreComponent.inputs,
         StrInput(
             name="keyspace",
             display_name="Keyspace",
@@ -71,11 +60,10 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
             advanced=True,
         ),
         HandleInput(
-            name="embedding",
+            name="embedding_model",
             display_name="Embedding Model",
             input_types=["Embeddings"],
-            info="Embedding model.",
-            required=True,
+            info="Allows an embedding model configuration.",
         ),
         DropdownInput(
             name="metric",
@@ -129,14 +117,14 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
             display_name="Metadata Indexing Include",
             info="Optional list of metadata fields to include in the indexing.",
             advanced=True,
-            is_list=True,
+            list=True,
         ),
         StrInput(
             name="metadata_indexing_exclude",
             display_name="Metadata Indexing Exclude",
             info="Optional list of metadata fields to exclude from the indexing.",
             advanced=True,
-            is_list=True,
+            list=True,
         ),
         StrInput(
             name="collection_indexing_policy",
@@ -156,8 +144,14 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
             name="search_type",
             display_name="Search Type",
             info="Search type to use",
-            options=["Similarity", "Similarity with score threshold", "MMR (Max Marginal Relevance)"],
-            value="Similarity",
+            options=[
+                "Similarity",
+                "Similarity with score threshold",
+                "MMR (Max Marginal Relevance)",
+                "Graph Traversal",
+                "MMR (Max Marginal Relevance) Graph Traversal",
+            ],
+            value="MMR (Max Marginal Relevance) Graph Traversal",
             advanced=True,
         ),
         FloatInput(
@@ -199,8 +193,10 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
             raise ValueError(msg) from e
 
         try:
+            self.log(f"Initializing Graph Vector Store {self.collection_name}")
+
             vector_store = AstraDBGraphVectorStore(
-                embedding=self.embedding,
+                embedding=self.embedding_model,
                 collection_name=self.collection_name,
                 metadata_incoming_links_key=self.metadata_incoming_links_key or "incoming_links",
                 token=self.token,
@@ -216,7 +212,7 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
                 pre_delete_collection=self.pre_delete_collection,
                 metadata_indexing_include=[s for s in self.metadata_indexing_include if s] or None,
                 metadata_indexing_exclude=[s for s in self.metadata_indexing_exclude if s] or None,
-                collection_indexing_policy=orjson.dumps(self.collection_indexing_policy)
+                collection_indexing_policy=orjson.loads(self.collection_indexing_policy.encode("utf-8"))
                 if self.collection_indexing_policy
                 else None,
             )
@@ -224,6 +220,7 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
             msg = f"Error initializing AstraDBGraphVectorStore: {e}"
             raise ValueError(msg) from e
 
+        self.log(f"Vector Store initialized: {vector_store.astra_env.collection_name}")
         self._add_documents_to_vector_store(vector_store)
 
         return vector_store
@@ -238,21 +235,29 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
                 raise TypeError(msg)
 
         if documents:
-            logger.debug(f"Adding {len(documents)} documents to the Vector Store.")
+            self.log(f"Adding {len(documents)} documents to the Vector Store.")
             try:
                 vector_store.add_documents(documents)
             except Exception as e:
                 msg = f"Error adding documents to AstraDBGraphVectorStore: {e}"
                 raise ValueError(msg) from e
         else:
-            logger.debug("No documents to add to the Vector Store.")
+            self.log("No documents to add to the Vector Store.")
 
     def _map_search_type(self) -> str:
-        if self.search_type == "Similarity with score threshold":
-            return "similarity_score_threshold"
-        if self.search_type == "MMR (Max Marginal Relevance)":
-            return "mmr"
-        return "similarity"
+        match self.search_type:
+            case "Similarity":
+                return "similarity"
+            case "Similarity with score threshold":
+                return "similarity_score_threshold"
+            case "MMR (Max Marginal Relevance)":
+                return "mmr"
+            case "Graph Traversal":
+                return "traversal"
+            case "MMR (Max Marginal Relevance) Graph Traversal":
+                return "mmr_traversal"
+            case _:
+                return "similarity"
 
     def _build_search_args(self):
         args = {
@@ -270,27 +275,38 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
         if not vector_store:
             vector_store = self.build_vector_store()
 
-        logger.debug(f"Search input: {self.search_input}")
-        logger.debug(f"Search type: {self.search_type}")
-        logger.debug(f"Number of results: {self.number_of_results}")
+        self.log("Searching for documents in AstraDBGraphVectorStore.")
+        self.log(f"Search query: {self.search_query}")
+        self.log(f"Search type: {self.search_type}")
+        self.log(f"Number of results: {self.number_of_results}")
 
-        if self.search_input and isinstance(self.search_input, str) and self.search_input.strip():
+        if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             try:
                 search_type = self._map_search_type()
                 search_args = self._build_search_args()
 
-                docs = vector_store.search(query=self.search_input, search_type=search_type, **search_args)
+                docs = vector_store.search(query=self.search_query, search_type=search_type, **search_args)
+
+                # Drop links from the metadata. At this point the links don't add any value for building the
+                # context and haven't been restored to json which causes the conversion to fail.
+                self.log("Removing links from metadata.")
+                for doc in docs:
+                    if "links" in doc.metadata:
+                        doc.metadata.pop("links")
+
             except Exception as e:
                 msg = f"Error performing search in AstraDBGraphVectorStore: {e}"
                 raise ValueError(msg) from e
 
-            logger.debug(f"Retrieved documents: {len(docs)}")
+            self.log(f"Retrieved documents: {len(docs)}")
 
             data = docs_to_data(docs)
-            logger.debug(f"Converted documents to data: {len(data)}")
+
+            self.log(f"Converted documents to data: {len(data)}")
+
             self.status = data
             return data
-        logger.debug("No search input provided. Skipping search.")
+        self.log("No search input provided. Skipping search.")
         return []
 
     def get_retriever_kwargs(self):

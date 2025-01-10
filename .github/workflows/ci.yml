@@ -39,23 +39,56 @@ on:
         default: "['3.10']"
   pull_request:
     types: [synchronize, labeled]
-
+  merge_group:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  check-nightly-status:
+    name: Check Nightly Status
+    runs-on: ubuntu-latest
+    outputs:
+      should-proceed: ${{ steps.check-workflow.outputs.success }}
+    steps:
+      - name: Check nightly workflow status
+        id: check-workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const workflow_name = 'nightly_build.yml';
+            const { data: runs } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: workflow_name,
+              per_page: 1,
+              status: 'completed'
+            });
+
+            if (runs.workflow_runs.length === 0) {
+              console.log('No completed workflow runs found');
+              return core.setOutput('success', 'true');
+            }
+
+            const lastRun = runs.workflow_runs[0];
+            const success = lastRun.conclusion === 'success';
+            console.log(`Last nightly build status: ${lastRun.conclusion}`);
+            core.setOutput('success', success.toString());
+
   set-ci-condition:
+    needs: check-nightly-status
     name: Should Run CI
     runs-on: ubuntu-latest
     outputs:
-      should-run-ci: ${{ (contains( github.event.pull_request.labels.*.name, 'lgtm') && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call') }}
+      should-run-ci: ${{ (needs.check-nightly-status.outputs.should-proceed == 'true' || github.event_name == 'workflow_dispatch') && ((contains( github.event.pull_request.labels.*.name, 'lgtm') && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || github.event_name == 'merge_group')) }}
     steps:
       #  Do anything just to make the job run
       - run: echo "Debug CI Condition"
       - run: echo "Labels -> ${{ join(github.event.pull_request.labels.*.name, ',') }}"
       - run: echo "IsDraft -> ${{ github.event.pull_request.draft }}"
       - run: echo "Event name -> ${{ github.event_name }}"
+      - run: echo "Nightly build status -> ${{ needs.check-nightly-status.outputs.should-proceed }}"
+
   path-filter:
     needs: set-ci-condition
     if: ${{ needs.set-ci-condition.outputs.should-run-ci == 'true' }}

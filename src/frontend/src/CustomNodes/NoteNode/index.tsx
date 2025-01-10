@@ -1,22 +1,20 @@
 import {
   COLOR_OPTIONS,
-  NOTE_NODE_MAX_HEIGHT,
-  NOTE_NODE_MAX_WIDTH,
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
-import { noteDataType } from "@/types/flow";
+import { NoteDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
+import { NodeResizer } from "@xyflow/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { NodeResizer } from "reactflow";
 import NodeDescription from "../GenericNode/components/NodeDescription";
 import NoteToolbarComponent from "./NoteToolbarComponent";
 function NoteNode({
   data,
   selected,
 }: {
-  data: noteDataType;
-  selected: boolean;
+  data: NoteDataType;
+  selected?: boolean;
 }) {
   const bgColor =
     Object.keys(COLOR_OPTIONS).find(
@@ -50,8 +48,6 @@ function NoteNode({
       <NodeResizer
         minWidth={NOTE_NODE_MIN_WIDTH}
         minHeight={NOTE_NODE_MIN_HEIGHT}
-        maxHeight={NOTE_NODE_MAX_HEIGHT}
-        maxWidth={NOTE_NODE_MAX_WIDTH}
         onResize={(_, params) => {
           const { width, height } = params;
           setSize({ width: width - 25, height: height - 25 });
@@ -62,8 +58,6 @@ function NoteNode({
       <div
         data-testid="note_node"
         style={{
-          maxHeight: NOTE_NODE_MAX_HEIGHT,
-          maxWidth: NOTE_NODE_MAX_WIDTH,
           minWidth: NOTE_NODE_MIN_WIDTH,
           minHeight: NOTE_NODE_MIN_HEIGHT,
           backgroundColor: COLOR_OPTIONS[bgColor] ?? "#00000000",

@@ -9,7 +9,7 @@ from typing_extensions import override
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
-from langflow.services.database.models.variable.model import Variable, VariableCreate
+from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead
 from langflow.services.variable.base import VariableService
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.kubernetes_secrets import KubernetesSecretManager, encode_user_id
@@ -79,15 +79,9 @@ class KubernetesSecretService(VariableService, Service):
         raise ValueError(msg)
 
     @override
-    def get_variable(
-        self,
-        user_id: UUID | str,
-        name: str,
-        field: str,
-        session: Session,
-    ) -> str:
+    async def get_variable(self, user_id: UUID | str, name: str, field: str, session: AsyncSession) -> str:
         secret_name = encode_user_id(user_id)
-        key, value = self.resolve_variable(secret_name, user_id, name)
+        key, value = await asyncio.to_thread(self.resolve_variable, secret_name, user_id, name)
         if key.startswith(CREDENTIAL_TYPE + "_") and field == "session_id":
             msg = (
                 f"variable {name} of type 'Credential' cannot be used in a Session ID field "
@@ -97,12 +91,12 @@ class KubernetesSecretService(VariableService, Service):
         return value
 
     @override
-    def list_variables_sync(
+    async def list_variables(
         self,
         user_id: UUID | str,
         session: Session,
     ) -> list[str | None]:
-        variables = self.kubernetes_secrets.get_secret(name=encode_user_id(user_id))
+        variables = await asyncio.to_thread(self.kubernetes_secrets.get_secret, name=encode_user_id(user_id))
         if not variables:
             return []
 
@@ -113,14 +107,6 @@ class KubernetesSecretService(VariableService, Service):
             else:
                 names.append(key)
         return names
-
-    @override
-    async def list_variables(
-        self,
-        user_id: UUID | str,
-        session: AsyncSession,
-    ) -> list[str | None]:
-        return await asyncio.to_thread(self.list_variables_sync, user_id, session.sync_session)
 
     def _update_variable(
         self,
@@ -184,3 +170,35 @@ class KubernetesSecretService(VariableService, Service):
             default_fields=default_fields,
         )
         return Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
+
+    @override
+    async def get_all(self, user_id: UUID | str, session: AsyncSession) -> list[VariableRead]:
+        secret_name = encode_user_id(user_id)
+        variables = await asyncio.to_thread(self.kubernetes_secrets.get_secret, name=secret_name)
+        if not variables:
+            return []
+
+        variables_read = []
+        for key, value in variables.items():
+            name = key
+            type_ = GENERIC_TYPE
+            if key.startswith(CREDENTIAL_TYPE + "_"):
+                name = key[len(CREDENTIAL_TYPE) + 1 :]
+                type_ = CREDENTIAL_TYPE
+
+            decrypted_value = None
+            if type_ == GENERIC_TYPE:
+                decrypted_value = value
+
+            variable_base = VariableCreate(
+                name=name,
+                type=type_,
+                value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service),
+                default_fields=[],
+            )
+            variable = Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
+            variable_read = VariableRead.model_validate(variable, from_attributes=True)
+            variable_read.value = decrypted_value
+            variables_read.append(variable_read)
+
+        return variables_read

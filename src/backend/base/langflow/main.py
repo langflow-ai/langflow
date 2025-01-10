@@ -6,6 +6,7 @@ import warnings
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.parse import urlencode
 
 import anyio
@@ -13,17 +14,19 @@ from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi_pagination import add_pagination
 from loguru import logger
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from rich import print as rprint
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from langflow.api import health_check_router, log_router, router
 from langflow.initial_setup.setup import (
     create_or_update_starter_projects,
     initialize_super_user_if_needed,
+    load_bundles_from_urls,
     load_flows_from_directory,
 )
 from langflow.interface.types import get_and_cache_all_types_dict
@@ -32,6 +35,9 @@ from langflow.logging.logger import configure
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.services.deps import get_settings_service, get_telemetry_service
 from langflow.services.utils import initialize_services, teardown_services
+
+if TYPE_CHECKING:
+    from tempfile import TemporaryDirectory
 
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
@@ -44,7 +50,7 @@ class RequestCancelledMiddleware(BaseHTTPMiddleware):
     def __init__(self, app) -> None:
         super().__init__(app)
 
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         sentinel = object()
 
         async def cancel_handler():
@@ -67,7 +73,7 @@ class RequestCancelledMiddleware(BaseHTTPMiddleware):
 
 
 class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         try:
             response = await call_next(request)
         except Exception as exc:
@@ -100,10 +106,14 @@ def get_lifespan(*, fix_migration=False, version=None):
             rprint(f"[bold green]Starting Langflow v{version}...[/bold green]")
         else:
             rprint("[bold green]Starting Langflow...[/bold green]")
+
+        temp_dirs: list[TemporaryDirectory] = []
         try:
             await initialize_services(fix_migration=fix_migration)
             setup_llm_caching()
             await initialize_super_user_if_needed()
+            temp_dirs, bundles_components_paths = await load_bundles_from_urls()
+            get_settings_service().settings.components_path.extend(bundles_components_paths)
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
             await create_or_update_starter_projects(all_types_dict)
             telemetry_service.start()
@@ -119,6 +129,8 @@ def get_lifespan(*, fix_migration=False, version=None):
             logger.info("Cleaning up resources...")
             await teardown_services()
             await logger.complete()
+            temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
+            await asyncio.gather(*temp_dir_cleanups)
             # Final message
             rprint("[bold red]Langflow shutdown complete[/bold red]")
 
@@ -229,6 +241,7 @@ def create_app():
 
     FastAPIInstrumentor.instrument_app(app)
 
+    add_pagination(app)
     return app
 
 

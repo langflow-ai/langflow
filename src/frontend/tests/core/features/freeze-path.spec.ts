@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { evaluateReactStateChanges } from "../../utils/evaluate-input-react-state-changes";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
@@ -35,11 +36,22 @@ test(
     await page.getByTestId("dropdown_str_model_name").click();
     await page.getByTestId("gpt-4o-1-option").click();
 
-    await page.waitForSelector('[data-testid="float_float_temperature"]', {
+    await page.waitForSelector('[data-testid="default_slider_display_value"]', {
       timeout: 1000,
     });
 
-    await page.getByTestId("float_float_temperature").fill("1.0");
+    await page.getByTestId("fit_view").click();
+    await page
+      .getByTestId("default_slider_display_value")
+      .click({ force: true });
+
+    await evaluateReactStateChanges(
+      page,
+      '[data-testid="slider_input"]',
+      "1.0",
+    );
+
+    await page.keyboard.press("Enter");
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 1000,
@@ -62,12 +74,15 @@ test(
 
     await page.getByText("Close").first().click();
 
-    await page.waitForSelector('[data-testid="float_float_temperature"]', {
-      timeout: 3000,
+    await page.waitForSelector('[data-testid="default_slider_display_value"]', {
+      timeout: 1000,
     });
 
-    await page.getByTestId("float_float_temperature").fill("");
-    await page.getByTestId("float_float_temperature").fill("1.2");
+    await evaluateReactStateChanges(
+      page,
+      '[data-testid="slider_input"]',
+      "1.2",
+    );
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 1000,

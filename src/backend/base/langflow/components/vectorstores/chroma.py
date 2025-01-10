@@ -2,11 +2,11 @@ from copy import deepcopy
 
 from chromadb.config import Settings
 from langchain_chroma import Chroma
-from loguru import logger
+from typing_extensions import override
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.base.vectorstores.utils import chroma_collection_to_data
-from langflow.io import BoolInput, DataInput, DropdownInput, HandleInput, IntInput, MultilineInput, StrInput
+from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, StrInput
 from langflow.schema import Data
 
 
@@ -15,7 +15,6 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
 
     display_name: str = "Chroma DB"
     description: str = "Chroma Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/docs/integrations/vectorstores/chroma"
     name = "Chroma"
     icon = "Chroma"
 
@@ -29,15 +28,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             name="persist_directory",
             display_name="Persist Directory",
         ),
-        MultilineInput(
-            name="search_query",
-            display_name="Search Query",
-        ),
-        DataInput(
-            name="ingest_data",
-            display_name="Ingest Data",
-            is_list=True,
-        ),
+        *LCVectorStoreComponent.inputs,
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         StrInput(
             name="chroma_server_cors_allow_origins",
@@ -92,6 +83,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
+    @override
     @check_cached_vector_store
     def build_vector_store(self) -> Chroma:
         """Builds the Chroma object."""
@@ -153,7 +145,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
                 raise TypeError(msg)
 
         if documents and self.embedding is not None:
-            logger.debug(f"Adding {len(documents)} documents to the Vector Store.")
+            self.log(f"Adding {len(documents)} documents to the Vector Store.")
             vector_store.add_documents(documents)
         else:
-            logger.debug("No documents to add to the Vector Store.")
+            self.log("No documents to add to the Vector Store.")

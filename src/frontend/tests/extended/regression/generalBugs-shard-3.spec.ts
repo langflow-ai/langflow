@@ -42,7 +42,7 @@ test(
     await page.mouse.up();
     await page.mouse.down();
 
-    await adjustScreenView(page);
+    await adjustScreenView(page, { numberOfZoomOut: 1 });
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat input");
@@ -59,18 +59,25 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("openai");
 
-    await adjustScreenView(page);
+    await adjustScreenView(page, { numberOfZoomOut: 1 });
 
     await page
       .getByTestId("modelsOpenAI")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
     await page.mouse.down();
+    await page.mouse.up();
 
     await initialGPTsetup(page);
 
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 5000,
+      state: "visible",
+    });
+    // This causes the Chat Input to be hidden
+    // await page.getByTestId("fit_view").click();
+
     const elementsChatInput = await page
-      .locator('[data-testid="handle-chatinput-shownode-message-right"]')
+      .locator('[data-testid="handle-chatinput-noshownode-message-source"]')
       .all();
 
     let visibleElementHandle;
@@ -82,12 +89,8 @@ test(
       }
     }
 
-    // Click and hold on the first element
-    await page.getByTestId("zoom_in").click();
-    await page.getByTestId("zoom_in").click();
-
     await page.locator(".react-flow__pane").click();
-
+    await adjustScreenView(page, { numberOfZoomOut: 1 });
     await visibleElementHandle.hover();
     await page.mouse.down();
 
@@ -122,7 +125,7 @@ test(
 
     // Move to the second element
     const elementsChatOutput = await page
-      .getByTestId("handle-chatoutput-shownode-text-left")
+      .getByTestId("handle-chatoutput-noshownode-text-target")
       .all();
 
     for (const element of elementsChatOutput) {

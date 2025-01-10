@@ -1,9 +1,19 @@
 from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES
 from langflow.base.io.chat import ChatComponent
 from langflow.inputs import BoolInput
-from langflow.io import DropdownInput, FileInput, MessageTextInput, MultilineInput, Output
+from langflow.io import (
+    DropdownInput,
+    FileInput,
+    MessageTextInput,
+    MultilineInput,
+    Output,
+)
 from langflow.schema.message import Message
-from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
+from langflow.utils.constants import (
+    MESSAGE_SENDER_AI,
+    MESSAGE_SENDER_NAME_USER,
+    MESSAGE_SENDER_USER,
+)
 
 
 class ChatInput(ChatComponent):
@@ -11,6 +21,7 @@ class ChatInput(ChatComponent):
     description = "Get chat inputs from the Playground."
     icon = "MessagesSquare"
     name = "ChatInput"
+    minimized = True
 
     inputs = [
         MultilineInput(
@@ -18,6 +29,7 @@ class ChatInput(ChatComponent):
             display_name="Text",
             value="",
             info="Message to be passed as input.",
+            input_types=[],
         ),
         BoolInput(
             name="should_store_message",
@@ -89,7 +101,11 @@ class ChatInput(ChatComponent):
             sender_name=self.sender_name,
             session_id=self.session_id,
             files=self.files,
-            properties={"background_color": background_color, "text_color": text_color, "icon": icon},
+            properties={
+                "background_color": background_color,
+                "text_color": text_color,
+                "icon": icon,
+            },
         )
         if self.session_id and isinstance(message, Message) and self.should_store_message:
             stored_message = await self.send_message(

@@ -11,7 +11,9 @@ from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.langchain_utilities.tool_calling import (
     ToolCallingAgentComponent,
 )
+from langflow.custom.utils import update_component_build_config
 from langflow.io import BoolInput, DropdownInput, MultilineInput, Output
+from langflow.logging import logger
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
 
@@ -61,35 +63,56 @@ class AgentComponent(ToolCallingAgentComponent):
     outputs = [Output(name="response", display_name="Response", method="message_response")]
 
     async def message_response(self) -> Message:
-        llm_model, display_name = self.get_llm()
-        self.model_name = get_model_name(llm_model, display_name=display_name)
-        if llm_model is None:
-            msg = "No language model selected"
-            raise ValueError(msg)
-        self.chat_history = await self.get_memory_data()
+        try:
+            llm_model, display_name = self.get_llm()
+            if llm_model is None:
+                msg = "No language model selected"
+                raise ValueError(msg)
+            self.model_name = get_model_name(llm_model, display_name=display_name)
+        except Exception as e:
+            # Log the error for debugging purposes
+            logger.error(f"Error retrieving language model: {e}")
+            raise
+
+        try:
+            self.chat_history = await self.get_memory_data()
+        except Exception as e:
+            logger.error(f"Error retrieving chat history: {e}")
+            raise
 
         if self.add_current_date_tool:
-            if not isinstance(self.tools, list):  # type: ignore[has-type]
-                self.tools = []
-            # Convert CurrentDateComponent to a StructuredTool
-            current_date_tool = CurrentDateComponent().to_toolkit()[0]
-            if isinstance(current_date_tool, StructuredTool):
-                self.tools.append(current_date_tool)
-            else:
-                msg = "CurrentDateComponent must be converted to a StructuredTool"
-                raise ValueError(msg)
+            try:
+                if not isinstance(self.tools, list):  # type: ignore[has-type]
+                    self.tools = []
+                # Convert CurrentDateComponent to a StructuredTool
+                current_date_tool = CurrentDateComponent().to_toolkit()[0]
+                if isinstance(current_date_tool, StructuredTool):
+                    self.tools.append(current_date_tool)
+                else:
+                    msg = "CurrentDateComponent must be converted to a StructuredTool"
+                    raise TypeError(msg)
+            except Exception as e:
+                logger.error(f"Error adding current date tool: {e}")
+                raise
 
         if not self.tools:
             msg = "Tools are required to run the agent."
+            logger.error(msg)
             raise ValueError(msg)
-        self.set(
-            llm=llm_model,
-            tools=self.tools,
-            chat_history=self.chat_history,
-            input_value=self.input_value,
-            system_prompt=self.system_prompt,
-        )
-        agent = self.create_agent_runnable()
+
+        try:
+            self.set(
+                llm=llm_model,
+                tools=self.tools,
+                chat_history=self.chat_history,
+                input_value=self.input_value,
+                system_prompt=self.system_prompt,
+            )
+            agent = self.create_agent_runnable()
+        except Exception as e:
+            logger.error(f"Error setting up the agent: {e}")
+            raise
+
         return await self.run_agent(agent)
 
     async def get_memory_data(self):
@@ -136,7 +159,9 @@ class AgentComponent(ToolCallingAgentComponent):
                 value.input_types = []
         return build_config
 
-    def update_build_config(self, build_config: dotdict, field_value: str, field_name: str | None = None) -> dotdict:
+    async def update_build_config(
+        self, build_config: dotdict, field_value: str, field_name: str | None = None
+    ) -> dotdict:
         # Iterate over all providers in the MODEL_PROVIDERS_DICT
         # Existing logic for updating build_config
         if field_name == "agent_llm":
@@ -145,7 +170,9 @@ class AgentComponent(ToolCallingAgentComponent):
                 component_class = provider_info.get("component_class")
                 if component_class and hasattr(component_class, "update_build_config"):
                     # Call the component class's update_build_config method
-                    build_config = component_class.update_build_config(build_config, field_value, field_name)
+                    build_config = await update_component_build_config(
+                        component_class, build_config, field_value, field_name
+                    )
 
             provider_configs: dict[str, tuple[dict, list[dict]]] = {
                 provider: (
@@ -216,6 +243,8 @@ class AgentComponent(ToolCallingAgentComponent):
                     # remove the prefix from the field_name
                     if isinstance(field_name, str) and isinstance(prefix, str):
                         field_name = field_name.replace(prefix, "")
-                    build_config = component_class.update_build_config(build_config, field_value, field_name)
+                    build_config = await update_component_build_config(
+                        component_class, build_config, field_value, field_name
+                    )
 
         return build_config

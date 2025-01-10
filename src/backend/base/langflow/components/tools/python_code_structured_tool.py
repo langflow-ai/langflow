@@ -98,7 +98,9 @@ class PythonCodeStructuredTool(LCToolComponent):
     ]
 
     @override
-    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
+    async def update_build_config(
+        self, build_config: dotdict, field_value: Any, field_name: str | None = None
+    ) -> dotdict:
         if field_name is None:
             return build_config
 
@@ -226,22 +228,22 @@ class PythonCodeStructuredTool(LCToolComponent):
             return_direct=self.return_direct,
         )
 
-    def post_code_processing(self, new_frontend_node: dict, current_frontend_node: dict):
+    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):
         """This function is called after the code validation is done."""
-        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
-        frontend_node["template"] = self.update_build_config(
+        frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)
+        frontend_node["template"] = await self.update_build_config(
             frontend_node["template"],
             frontend_node["template"]["tool_code"]["value"],
             "tool_code",
         )
-        frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
+        frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)
         for key in frontend_node["template"]:
             if key in self.DEFAULT_KEYS:
                 continue
-            frontend_node["template"] = self.update_build_config(
+            frontend_node["template"] = await self.update_build_config(
                 frontend_node["template"], frontend_node["template"][key]["value"], key
             )
-            frontend_node = super().post_code_processing(new_frontend_node, current_frontend_node)
+            frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)
         return frontend_node
 
     def _parse_code(self, code: str) -> tuple[list[dict], list[dict]]:

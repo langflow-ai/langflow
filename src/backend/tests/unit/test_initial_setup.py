@@ -1,17 +1,24 @@
+import asyncio
+import uuid
 from datetime import datetime
+from pathlib import Path
 
 import anyio
 import pytest
+from aiofile import async_open
 from langflow.custom.directory_reader.utils import abuild_custom_component_list_from_path
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.initial_setup.setup import (
+    detect_github_url,
     get_project_data,
+    load_bundles_from_urls,
     load_starter_projects,
     update_projects_components_with_latest_component_versions,
 )
 from langflow.interface.types import aget_all_types_dict
+from langflow.services.database.models import Flow
 from langflow.services.database.models.folder.model import Folder
-from langflow.services.deps import async_session_scope
+from langflow.services.deps import get_settings_service, session_scope
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
@@ -52,7 +59,7 @@ async def test_get_project_data():
 
 @pytest.mark.usefixtures("client")
 async def test_create_or_update_starter_projects():
-    async with async_session_scope() as session:
+    async with session_scope() as session:
         # Get the number of projects returned by load_starter_projects
         num_projects = len(await load_starter_projects())
 
@@ -152,3 +159,86 @@ async def test_refresh_starter_projects():
 
     assert "should_store_message" not in graph_data["nodes"][1]["data"]["node"]["template"]
     assert "should_store_message" in new_change["nodes"][1]["data"]["node"]["template"]
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        (
+            "https://github.com/langflow-ai/langflow-bundles",
+            "https://github.com/langflow-ai/langflow-bundles/archive/refs/heads/main.zip",
+        ),
+        (
+            "https://github.com/langflow-ai/langflow-bundles/",
+            "https://github.com/langflow-ai/langflow-bundles/archive/refs/heads/main.zip",
+        ),
+        (
+            "https://github.com/langflow-ai/langflow-bundles.git",
+            "https://github.com/langflow-ai/langflow-bundles/archive/refs/heads/main.zip",
+        ),
+        (
+            "https://github.com/langflow-ai/langflow-bundles/tree/some.branch-0_1",
+            "https://github.com/langflow-ai/langflow-bundles/archive/refs/heads/some.branch-0_1.zip",
+        ),
+        (
+            "https://github.com/langflow-ai/langflow-bundles/tree/some/branch",
+            "https://github.com/langflow-ai/langflow-bundles/archive/refs/heads/some/branch.zip",
+        ),
+        (
+            "https://github.com/langflow-ai/langflow-bundles/tree/some/branch/",
+            "https://github.com/langflow-ai/langflow-bundles/archive/refs/heads/some/branch.zip",
+        ),
+        (
+            "https://github.com/langflow-ai/langflow-bundles/releases/tag/v1.0.0-0_1",
+            "https://github.com/langflow-ai/langflow-bundles/archive/refs/tags/v1.0.0-0_1.zip",
+        ),
+        (
+            "https://github.com/langflow-ai/langflow-bundles/releases/tag/foo/v1.0.0",
+            "https://github.com/langflow-ai/langflow-bundles/archive/refs/tags/foo/v1.0.0.zip",
+        ),
+        (
+            "https://github.com/langflow-ai/langflow-bundles/releases/tag/foo/v1.0.0/",
+            "https://github.com/langflow-ai/langflow-bundles/archive/refs/tags/foo/v1.0.0.zip",
+        ),
+        (
+            "https://github.com/langflow-ai/langflow-bundles/commit/68428ce16729a385fe1bcc0f1ec91fd5f5f420b9",
+            "https://github.com/langflow-ai/langflow-bundles/archive/68428ce16729a385fe1bcc0f1ec91fd5f5f420b9.zip",
+        ),
+        (
+            "https://github.com/langflow-ai/langflow-bundles/commit/68428ce16729a385fe1bcc0f1ec91fd5f5f420b9/",
+            "https://github.com/langflow-ai/langflow-bundles/archive/68428ce16729a385fe1bcc0f1ec91fd5f5f420b9.zip",
+        ),
+        ("https://example.com/myzip.zip", "https://example.com/myzip.zip"),
+    ],
+)
+async def test_detect_github_url(url, expected):
+    assert await detect_github_url(url) == expected
+
+
+@pytest.mark.usefixtures("client")
+async def test_load_bundles_from_urls():
+    settings_service = get_settings_service()
+    settings_service.settings.bundle_urls = [
+        "https://github.com/langflow-ai/langflow-bundles/commit/68428ce16729a385fe1bcc0f1ec91fd5f5f420b9"
+    ]
+    settings_service.auth_settings.AUTO_LOGIN = True
+
+    temp_dirs, components_paths = await load_bundles_from_urls()
+
+    try:
+        assert len(components_paths) == 1
+        assert "langflow-bundles-68428ce16729a385fe1bcc0f1ec91fd5f5f420b9/components" in components_paths[0]
+
+        async with async_open(Path(components_paths[0]) / "embeddings" / "openai2.py") as f:
+            content = await f.read()
+            assert "OpenAIEmbeddings2Component" in content
+
+        assert len(temp_dirs) == 1
+
+        async with session_scope() as session:
+            stmt = select(Flow).where(Flow.id == uuid.UUID("c54f9130-f2fa-4a3e-b22a-3856d946351b"))
+            flow = (await session.exec(stmt)).first()
+            assert flow is not None
+    finally:
+        for temp_dir in temp_dirs:
+            await asyncio.to_thread(temp_dir.cleanup)

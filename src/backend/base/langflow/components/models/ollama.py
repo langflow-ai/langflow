@@ -6,7 +6,6 @@ from langchain_ollama import ChatOllama
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.inputs.inputs import HandleInput
 from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, StrInput
 
 
@@ -16,7 +15,7 @@ class ChatOllamaComponent(LCModelComponent):
     icon = "Ollama"
     name = "OllamaModel"
 
-    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
+    async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
         if field_name == "mirostat":
             if field_value == "Disabled":
                 build_config["mirostat_eta"]["advanced"] = True
@@ -40,10 +39,10 @@ class ChatOllamaComponent(LCModelComponent):
             base_url_load_from_db = base_url_dict.get("load_from_db", False)
             base_url_value = base_url_dict.get("value")
             if base_url_load_from_db:
-                base_url_value = self.variables(base_url_value, field_name)
+                base_url_value = await self.get_variables(base_url_value, field_name)
             elif not base_url_value:
                 base_url_value = "http://localhost:11434"
-            build_config["model_name"]["options"] = self.get_model(base_url_value)
+            build_config["model_name"]["options"] = await self.get_model(base_url_value)
         if field_name == "keep_alive_flag":
             if field_value == "Keep":
                 build_config["keep_alive"]["value"] = "-1"
@@ -56,11 +55,12 @@ class ChatOllamaComponent(LCModelComponent):
 
         return build_config
 
-    def get_model(self, base_url_value: str) -> list[str]:
+    @staticmethod
+    async def get_model(base_url_value: str) -> list[str]:
         try:
             url = urljoin(base_url_value, "/api/tags")
-            with httpx.Client() as client:
-                response = client.get(url)
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url)
                 response.raise_for_status()
                 data = response.json()
 
@@ -165,13 +165,6 @@ class ChatOllamaComponent(LCModelComponent):
         ),
         StrInput(name="system", display_name="System", info="System to use for generating text.", advanced=True),
         StrInput(name="template", display_name="Template", info="Template to use for generating text.", advanced=True),
-        HandleInput(
-            name="output_parser",
-            display_name="Output Parser",
-            info="The parser to use to parse the output of the model",
-            advanced=True,
-            input_types=["OutputParser"],
-        ),
         *LCModelComponent._base_inputs,
     ]
 

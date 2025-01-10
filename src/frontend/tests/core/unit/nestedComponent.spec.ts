@@ -23,7 +23,6 @@ test(
       .getByTestId("dataAPI Request")
       .first()
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.click('//*[@id="react-flow-id"]');
 
     await adjustScreenView(page);
 

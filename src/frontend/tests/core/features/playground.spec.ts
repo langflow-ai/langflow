@@ -22,7 +22,9 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="outputsChat Output"]', {
+      timeout: 100000,
+    });
 
     await page
       .getByTestId("outputsChat Output")
@@ -39,7 +41,9 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat input");
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="inputsChat Input"]', {
+      timeout: 100000,
+    });
 
     await page
       .getByTestId("inputsChat Input")
@@ -53,7 +57,9 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text output");
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="outputsText Output"]', {
+      timeout: 100000,
+    });
 
     await page
       .getByTestId("outputsText Output")
@@ -69,7 +75,7 @@ test(
     await page.getByTestId("zoom_out").click();
 
     const elementsChatInput = await page
-      .locator('[data-testid="handle-chatinput-shownode-message-right"]')
+      .locator('[data-testid="handle-chatinput-noshownode-message-source"]')
       .all();
 
     let visibleElementHandle;
@@ -127,7 +133,7 @@ test(
 
     //
     const elementsChatOutput = await page
-      .getByTestId("handle-chatoutput-shownode-text-left")
+      .getByTestId("handle-chatoutput-noshownode-text-target")
       .all();
 
     for (const element of elementsChatOutput) {
@@ -168,7 +174,6 @@ test(
       .filter({ hasText: /^Usermessage 1$/ })
       .getByTestId("icon-Pen")
       .click();
-    await page.waitForTimeout(500);
 
     await page.getByTestId("textarea").fill("edit_1");
     await page.getByTestId("save-button").click();
@@ -177,8 +182,6 @@ test(
     // check cancel edit
     await page.getByTestId("sender_name_user").hover();
     await page.getByTestId("icon-Pen").first().click();
-    await page.waitForTimeout(500);
-
     await page.getByTestId("textarea").fill("cancel_edit");
     await page.getByTestId("cancel-button").click();
     await page.getByTestId("chat-message-User-edit_1").click();
@@ -190,7 +193,6 @@ test(
       .click();
     await page.getByTestId("chat-message-AI-message 1").hover();
     await page.getByTestId("icon-Pen").last().click();
-    await page.waitForTimeout(500);
 
     await page.getByTestId("textarea").fill("edit_bot_1");
     await page.getByTestId("save-button").click();
@@ -198,7 +200,6 @@ test(
     // check cancel edit bot
     await page.getByTestId("chat-message-AI-edit_bot_1").hover();
     await page.getByTestId("icon-Pen").last().click();
-    await page.waitForTimeout(500);
 
     await page.getByTestId("textarea").fill("edit_bot_cancel");
     await page.getByTestId("cancel-button").click();
@@ -241,23 +242,47 @@ test(
     await page.getByTestId("chat-message-User-session_after_delete").click();
     await expect(page.getByTestId("session-selector")).toBeVisible();
 
-    // check new chat
-    await page.getByTestId("new-chat").click();
-    await page.waitForTimeout(5000);
-    await page.getByText("New chat").click();
-    await page.getByTestId("input-chat-playground").click();
-    await page.getByTestId("input-chat-playground").fill("second session");
-    await page.keyboard.press("Enter");
-    await page.waitForTimeout(5000);
-
-    await page.getByTestId("chat-message-User-second session").click();
-    await page
-      .getByTestId("chat-message-AI-second session")
-      .getByText("second session")
-      .click();
-    expect(await page.getByTestId("session-selector").count()).toBe(2);
-
-    const sessionElements = await page.getByTestId("session-selector").all();
-    expect(sessionElements.length).toBe(2);
+    // check helpful button
+    await page.getByTestId("chat-message-AI-session_after_delete").hover();
+    await page.getByTestId("helpful-button").click();
+    await page.getByTestId("chat-message-AI-session_after_delete").hover();
+    await expect(page.getByTestId("icon-ThumbUpIconCustom")).toBeVisible({
+      timeout: 10000,
+    });
+    await page.getByTestId("helpful-button").click();
+    await page.getByTestId("chat-message-AI-session_after_delete").hover();
+    await expect(page.getByTestId("icon-ThumbUpIconCustom")).toBeVisible({
+      timeout: 10000,
+      visible: false,
+    });
+    // check not helpful button
+    await page.getByTestId("chat-message-AI-session_after_delete").hover();
+    await page.getByTestId("not-helpful-button").click();
+    await page.getByTestId("chat-message-AI-session_after_delete").hover();
+    await expect(page.getByTestId("icon-ThumbDownIconCustom")).toBeVisible({
+      timeout: 10000,
+    });
+    await page.getByTestId("not-helpful-button").click();
+    await page.getByTestId("chat-message-AI-session_after_delete").hover();
+    await expect(page.getByTestId("icon-ThumbDownIconCustom")).toBeVisible({
+      timeout: 10000,
+      visible: false,
+    });
+    // check switch feedback
+    await page.getByTestId("chat-message-AI-session_after_delete").hover();
+    await page.getByTestId("helpful-button").click();
+    await page.getByTestId("chat-message-AI-session_after_delete").hover();
+    await expect(page.getByTestId("icon-ThumbUpIconCustom")).toBeVisible({
+      timeout: 10000,
+    });
+    await page.getByTestId("not-helpful-button").click();
+    await page.getByTestId("chat-message-AI-session_after_delete").hover();
+    await expect(page.getByTestId("icon-ThumbDownIconCustom")).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(page.getByTestId("icon-ThumbUpIconCustom")).toBeVisible({
+      timeout: 10000,
+      visible: false,
+    });
   },
 );

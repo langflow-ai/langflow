@@ -19,7 +19,7 @@ class SQLAgentComponent(LCAgentComponent):
         HandleInput(
             name="extra_tools",
             display_name="Extra Tools",
-            input_types=["Tool", "BaseTool"],
+            input_types=["Tool"],
             is_list=True,
             advanced=True,
         ),
