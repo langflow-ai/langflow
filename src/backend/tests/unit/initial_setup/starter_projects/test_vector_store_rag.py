@@ -15,6 +15,7 @@ from langflow.components.vectorstores import AstraDBVectorStoreComponent
 from langflow.graph import Graph
 from langflow.graph.graph.constants import Finish
 from langflow.schema import Data
+from langflow.schema.dataframe import DataFrame
 
 
 @pytest.fixture
@@ -29,15 +30,15 @@ def ingestion_graph():
     openai_embeddings.set(
         openai_api_key="sk-123", openai_api_base="https://api.openai.com/v1", openai_api_type="openai"
     )
-    vector_store = AstraDBVectorStoreComponent(_id="vector-store-123")
+    vector_store = AstraDBVectorStoreComponent(_id="ingestion-vector-store-123")
+    vector_store.set_on_output(name="search_results", value=[Data(text="This is a test file.")], cache=True)
+    vector_store.set_on_output(name="dataframe", value=DataFrame(data=[Data(text="This is a test file.")]), cache=True)
     vector_store.set(
         embedding_model=openai_embeddings.build_embeddings,
         ingest_data=text_splitter.split_text,
         api_endpoint="https://astra.example.com",
         token="token",  # noqa: S106
     )
-    vector_store.set_on_output(name="search_results", value=[Data(text="This is a test file.")], cache=True)
-
     return Graph(file_component, vector_store)
 
 
@@ -55,14 +56,16 @@ def rag_graph():
         embedding_model=openai_embeddings.build_embeddings,
     )
     # Mock search_documents
+    data_list = [
+        Data(data={"text": "Hello, world!"}),
+        Data(data={"text": "Goodbye, world!"}),
+    ]
     rag_vector_store.set_on_output(
         name="search_results",
-        value=[
-            Data(data={"text": "Hello, world!"}),
-            Data(data={"text": "Goodbye, world!"}),
-        ],
+        value=data_list,
         cache=True,
     )
+    rag_vector_store.set_on_output(name="dataframe", value=DataFrame(data=data_list), cache=True)
     parse_data = ParseDataComponent(_id="parse-data-123")
     parse_data.set(data=rag_vector_store.search_documents)
     prompt_component = PromptComponent(_id="prompt-123")
@@ -93,7 +96,7 @@ def test_vector_store_rag(ingestion_graph, rag_graph):
         "file-123",
         "text-splitter-123",
         "openai-embeddings-123",
-        "vector-store-123",
+        "ingestion-vector-store-123",
     ]
     assert rag_graph is not None
     rag_ids = [
