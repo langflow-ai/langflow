@@ -1,11 +1,10 @@
 import logging
+import requests
 import unicodedata
 from typing import Any
 
-import requests
-
 from langflow.custom import Component
-from langflow.io import DropdownInput, Output, SecretStrInput, MessageTextInput
+from langflow.io import DropdownInput, MessageTextInput, Output, SecretStrInput
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
 
