@@ -101,6 +101,7 @@ class Settings(BaseSettings):
     components_path: list[str] = []
     langchain_cache: str = "InMemoryCache"
     load_flows_path: str | None = None
+    bundle_urls: list[str] = []
 
     # Redis
     redis_host: str = "localhost"
@@ -180,6 +181,12 @@ class Settings(BaseSettings):
     """The maximum number of transactions to keep in the database."""
     max_vertex_builds_to_keep: int = 3000
     """The maximum number of vertex builds to keep in the database."""
+
+    # MCP Server
+    mcp_server_enabled: bool = True
+    """If set to False, Langflow will not enable the MCP server."""
+    mcp_server_enable_progress_notifications: bool = False
+    """If set to False, Langflow will not send progress notifications in the MCP server."""
 
     @field_validator("dev")
     @classmethod
