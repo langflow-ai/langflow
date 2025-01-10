@@ -186,6 +186,7 @@ class TableMixin(BaseModel):
     table_schema: TableSchema | list[Column] | None = None
     trigger_text: str = Field(default="Open table")
     trigger_icon: str = Field(default="Table")
+    table_icon: str = Field(default="Table")
     table_options: TableOptions | None = None
 
     @field_validator("table_schema")
