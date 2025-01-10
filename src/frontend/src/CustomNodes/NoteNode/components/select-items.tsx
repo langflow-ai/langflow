@@ -2,12 +2,12 @@ import { ForwardedIconComponent } from "@/components/common/genericIconComponent
 import { SelectItem } from "@/components/ui/select";
 import { SelectContentWithoutPortal } from "@/components/ui/select-custom";
 import ToolbarSelectItem from "@/pages/FlowPage/components/nodeToolbarComponent/toolbarSelectItem";
-import { noteDataType } from "@/types/flow";
+import { NoteDataType } from "@/types/flow";
 
 import { memo } from "react";
 
 export const SelectItems = memo(
-  ({ shortcuts, data }: { shortcuts: any[]; data: noteDataType }) => (
+  ({ shortcuts, data }: { shortcuts: any[]; data: NoteDataType }) => (
     <SelectContentWithoutPortal>
       <SelectItem value="duplicate">
         <ToolbarSelectItem

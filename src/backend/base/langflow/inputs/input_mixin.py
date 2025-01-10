@@ -121,6 +121,7 @@ class MetadataTraceMixin(BaseModel):
 # Mixin for input fields that can be listable
 class ListableInputMixin(BaseModel):
     is_list: bool = Field(default=False, alias="list")
+    list_add_label: str | None = Field(default="Add More")
 
 
 # Specific mixin for fields needing database interaction

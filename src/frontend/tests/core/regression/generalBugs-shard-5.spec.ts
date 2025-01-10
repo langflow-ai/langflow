@@ -26,10 +26,20 @@ test(
 
     await zoomOut(page, 4);
 
+    await page.waitForTimeout(500);
+
     await page
       .getByTestId("inputsText Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 500, y: 150 },
+      });
+
+    await page.waitForTimeout(500);
+
+    await page
+      .getByTestId("inputsText Input")
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 670, y: 200 },
       });
 
     await page.getByTestId("sidebar-search-input").click();
@@ -45,11 +55,19 @@ test(
         targetPosition: { x: 10, y: 10 },
       });
 
+    await page.waitForTimeout(500);
+
+    await page.getByTestId("popover-anchor-input-delimiter").fill("-");
+
     await page
       .getByTestId("processingCombine Text")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 200, y: 10 },
       });
+
+    await page.waitForTimeout(500);
+
+    await page.getByTestId("popover-anchor-input-delimiter").last().fill("-");
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("text");
@@ -161,7 +179,7 @@ test(
 
     await page.getByTestId("group-node").click();
 
-    //connection 2
+    //connection 1
     const elementTextOutput0 = page
       .getByTestId("handle-textinput-shownode-text-right")
       .nth(0);
@@ -171,16 +189,27 @@ test(
     );
     await elementGroupInput0.click();
 
-    //connection 3
+    //connection 2
     const elementTextOutput1 = page
       .getByTestId("handle-textinput-shownode-text-right")
-      .nth(2);
+      .nth(4);
     await elementTextOutput1.click();
-
     const elementGroupInput1 = page
       .getByTestId("handle-groupnode-shownode-second text-left")
-      .nth(1);
+      .first();
     await elementGroupInput1.click();
+
+    //connection 3
+    const elementTextOutput2 = page
+      .getByTestId("handle-textinput-shownode-text-right")
+      .nth(2);
+    await elementTextOutput2.click();
+
+    const elementGroupInput2 = page
+      .getByTestId("handle-groupnode-shownode-second text-left")
+      .nth(1)
+      .last();
+    await elementGroupInput2.click();
 
     //connection 4
     const elementGroupOutput = page
@@ -202,18 +231,8 @@ test(
 
     await page
       .getByPlaceholder("Type something...", { exact: true })
-      .nth(4)
-      .fill(thirdRandomName);
-
-    await page
-      .getByPlaceholder("Type something...", { exact: true })
-      .nth(3)
-      .fill("-");
-
-    await page
-      .getByPlaceholder("Type something...", { exact: true })
       .nth(2)
-      .fill("-");
+      .fill(thirdRandomName);
 
     await page.getByTestId("button_run_text output").last().click();
 

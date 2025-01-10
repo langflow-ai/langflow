@@ -54,7 +54,7 @@ test(
     await page
       .getByTestId("processingParse Data")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 400 },
+        targetPosition: { x: 100, y: 500 },
       });
 
     //fifth component

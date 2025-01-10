@@ -15,6 +15,7 @@ export type BaseInputProps<valueType = any> = {
   readonly?: boolean;
   placeholder?: string;
   isToolMode?: boolean;
+  metadata?: any;
 };
 
 // Generic type for composing input props
@@ -73,6 +74,7 @@ export type StrRenderComponentType = {
 export type InputListComponentType = {
   componentName?: string;
   id?: string;
+  listAddLabel?: string;
 };
 
 export type DropDownComponentType = {
