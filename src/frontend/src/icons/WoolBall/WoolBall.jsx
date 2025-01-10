@@ -1,6 +1,6 @@
+import styled from "@emotion/styled";
 import * as React from "react";
 import { SVGProps, forwardRef } from "react";
-import styled from "@emotion/styled";
 
 const EmojiContainer = styled.div`
   display: inline-flex;
@@ -31,4 +31,4 @@ const SvgWoolBall = (props) => (
   </div>
 );
 
-export default SvgWoolBall; 
+export default SvgWoolBall;
