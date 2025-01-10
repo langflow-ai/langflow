@@ -256,6 +256,7 @@ import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
 import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
 import { FirecrawlIcon } from "../icons/Firecrawl";
+import { GigaChatIcon } from "../icons/GigaChat";
 import { GitBookIcon } from "../icons/GitBook";
 import { GitLoaderIcon } from "../icons/GitLoader";
 import { GoogleIcon } from "../icons/Google";
@@ -667,6 +668,7 @@ export const nodeIconsLucide: iconsType = {
   Needle: NeedleIcon,
   NVIDIA: NvidiaIcon,
   ChatOpenAI: OpenAiIcon,
+  GigaChat: GigaChatIcon,
   AzureChatOpenAI: OpenAiIcon,
   OpenAI: OpenAiIcon,
   OpenRouter: OpenRouterIcon,

@@ -91,6 +91,7 @@ dependencies = [
     "langchain-anthropic==0.3.0",
     "langchain-astradb==0.5.2",
     "langchain-openai==0.2.12",
+    "langchain-gigachat==0.3.2",
     "langchain-google-vertexai==2.0.7",
     "langchain-groq==0.2.1",
     "langchain-pinecone==0.2.0",
