@@ -1,8 +1,7 @@
+import logging
+import requests
 import unicodedata
 from typing import Any
-import logging
-
-import requests
 
 from langflow.custom import Component
 from langflow.io import DropdownInput, Output, SecretStrInput, StrInput
