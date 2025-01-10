@@ -99,7 +99,7 @@ export default function InputListComponent({
                 type="text"
                 value={singleValue}
                 className={cn(
-                  editNode ? "input-edit-node pr-6" : "",
+                  editNode ? "input-edit-node pr-6" : "pr-10",
                   disabled ? "disabled-state" : "",
                   focusedIndex === index
                     ? "text-primary"
