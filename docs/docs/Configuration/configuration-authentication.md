@@ -104,7 +104,7 @@ LANGFLOW_SUPERUSER_PASSWORD=securepassword
 
 ### LANGFLOW_SECRET_KEY
 
-This environment variable holds a secret key used for encrypting the superuser's password.
+This environment variable holds a secret key used for encrypting sensitive data like API keys.
 
 ```bash
 LANGFLOW_SECRET_KEY=dBuuuB_FHLvU8T9eUNlxQF9ppqRxwWpXXQ42kM2_fb
@@ -114,11 +114,9 @@ Langflow uses the [Fernet](https://pypi.org/project/cryptography/) library for s
 
 ### Create a LANGFLOW_SECRET_KEY
 
-The `LANGFLOW_SECRET_KEY` is used for encrypting sensitive data like API keys. It must be:
+The `LANGFLOW_SECRET_KEY` is used for encrypting sensitive data. It must be:
 - At least 32 bytes long
 - URL-safe base64 encoded
-
-If no key is provided, Langflow will automatically generate a secure key. This is not recommended for production environments.
 
 1. To create a `LANGFLOW_SECRET_KEY`, run the following command:
 
@@ -151,6 +149,7 @@ python -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token
 </Tabs>
 
 The command generates a secure key like `dBuuuB_FHLvU8T9eUNlxQF9ppqRxwWpXXQ42kM2_fbg`.
+Treat the generated secure key as you would an application access token. Do not commit the key to code and keep it in a safe place.
 
 2. Create a `.env` file with the following configuration, and include your generated secret key value.
 ```bash
@@ -167,6 +166,8 @@ uv run langflow run --env-file .env
 ```
 
 The generated secret key value is now used to encrypt your global variables.
+
+If no key is provided, Langflow will automatically generate a secure key. This is not recommended for production environments, because in a multi-instance deployment like Kubernetes, auto-generated keys won't be able to decrypt data encrypted by other instances. Instead, you should explicitly set the `LANGFLOW_SECRET_KEY` environment variable in the deployment configuration to be the same across all instances.
 
 ### LANGFLOW_NEW_USER_IS_ACTIVE
 
