@@ -1,7 +1,8 @@
 import logging
-import requests
 import unicodedata
 from typing import Any
+
+import requests
 
 from langflow.custom import Component
 from langflow.io import DropdownInput, Output, SecretStrInput, StrInput
@@ -102,7 +103,7 @@ class WoolBallComponent(Component):
         "Translation": ["text", "source_language", "target_language", "api_key"],
         "Zero-Shot Classification": ["text", "candidate_labels", "api_key"],
         "Summary": ["text", "api_key"],
-        "Character to Image": ["text", "api_key"]
+        "Character to Image": ["text", "api_key"],
     }
 
     def build(self, build_config: dotdict) -> dotdict:
