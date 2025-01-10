@@ -209,3 +209,14 @@ code {
   resize: none !important;
   height: 100% !important;
 }
+
+.cell-disable-edit {
+  cursor: not-allowed;
+}
+
+.cell-disable-edit.ag-cell-focus {
+  outline: none !important;
+  border: 0px !important;
+  box-shadow: none !important;
+  border-radius: 0px !important;
+}
