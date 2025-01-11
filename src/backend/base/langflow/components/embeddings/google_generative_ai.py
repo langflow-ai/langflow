@@ -1,5 +1,4 @@
 # from langflow.field_typing import Data
-import numpy as np
 
 # TODO: remove ignore once the google package is published with types
 from google.ai.generativelanguage_v1beta.types import BatchEmbedContentsRequest
@@ -46,7 +45,7 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                 batch_size: int = 100,
                 task_type: str | None = None,
                 titles: list[str] | None = None,
-                output_dimensionality: int | None = 1536,
+                output_dimensionality: int | None = 768,
             ) -> list[list[float]]:
                 """Embed a list of strings.
 
@@ -89,7 +88,7 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                     except Exception as e:
                         msg = f"Error embedding content: {e}"
                         raise GoogleGenerativeAIError(msg) from e
-                    embeddings.extend([list(np.pad(e.values, (0, 768), "constant")) for e in result.embeddings])
+                    embeddings.extend([list(e.values) for e in result.embeddings])
                 return embeddings
 
             def embed_query(
@@ -97,7 +96,7 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                 text: str,
                 task_type: str | None = None,
                 title: str | None = None,
-                output_dimensionality: int | None = 1536,
+                output_dimensionality: int | None = 768,
             ) -> list[float]:
                 """Embed a text.
 
