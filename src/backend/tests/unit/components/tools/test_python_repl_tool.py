@@ -9,22 +9,30 @@ def test_python_repl_tool_template():
     frontend_node, _ = build_custom_component_template(component)
     assert "outputs" in frontend_node
     output_names = [output["name"] for output in frontend_node["outputs"]]
-    assert "api_run_model" in output_names
-    assert "api_build_tool" in output_names
+    assert "results" in output_names
     assert all(output["types"] != [] for output in frontend_node["outputs"])
 
     # Additional assertions specific to PythonREPLToolComponent
     input_names = [input_["name"] for input_ in frontend_node["template"].values() if isinstance(input_, dict)]
-    # assert "input_value" in input_names
-    assert "name" in input_names
-    assert "description" in input_names
     assert "global_imports" in input_names
+    assert "python_code" in input_names
 
+    # Test global_imports input configuration
     global_imports_input = next(
         input_
         for input_ in frontend_node["template"].values()
         if isinstance(input_, dict) and input_["name"] == "global_imports"
     )
     assert global_imports_input["type"] == "str"
-    # assert global_imports_input["combobox"] is True
     assert global_imports_input["value"] == "math"
+    assert global_imports_input["required"] is True
+
+    # Test python_code input configuration
+    python_code_input = next(
+        input_
+        for input_ in frontend_node["template"].values()
+        if isinstance(input_, dict) and input_["name"] == "python_code"
+    )
+    assert python_code_input["type"] == "code"
+    assert python_code_input["value"] == "print('Hello, World!')"
+    assert python_code_input["required"] is True
