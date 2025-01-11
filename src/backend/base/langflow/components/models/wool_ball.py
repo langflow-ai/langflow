@@ -47,6 +47,17 @@ class WoolBallComponent(Component):
             logger.exception("An error occurred while listing languages.")
         return ["por_Latn", "eng_Latn", "spa_Latn"]
 
+    def list_completion_models(self) -> list:
+        try:
+            endpoint = "/v1/models/completions"
+            response = requests.get(f"{self.API_BASE_URL}{endpoint}", timeout=5)
+            if response.status_code == SUCCESS_STATUS_CODE:
+                models_data = response.json().get("data", [])
+                return [model["model"] for model in models_data]
+        except requests.exceptions.RequestException:
+            logger.exception("An error occurred while listing languages.")
+        return ["HuggingFaceTB/SmolLM2-135M-Instruct"]
+
     inputs = [
         DropdownInput(
             name="task_type",
@@ -54,6 +65,13 @@ class WoolBallComponent(Component):
             options=TASK_TYPES,
             info="Select the type of AI processing task.",
             real_time_refresh=True,
+        ),
+        DropdownInput(
+            name="model_name",
+            display_name="Model Name",
+            options=TASK_TYPES,
+            info="Select the model of AI processing task.",
+            show=False,
         ),
         MessageTextInput(
             name="text",
@@ -98,7 +116,7 @@ class WoolBallComponent(Component):
     ]
 
     FIELD_MAPPING = {
-        "Text Generation": ["text", "api_key"],
+        "Text Generation": ["model_name", "text", "api_key"],
         "Text to Speech": ["text", "target_language", "api_key"],
         "Translation": ["text", "source_language", "target_language", "api_key"],
         "Zero-Shot Classification": ["text", "candidate_labels", "api_key"],
@@ -107,7 +125,7 @@ class WoolBallComponent(Component):
     }
 
     def build(self, build_config: dotdict) -> dotdict:
-        fields_to_hide = ["text", "source_language", "target_language", "candidate_labels"]
+        fields_to_hide = ["model_name", "text", "source_language", "target_language", "candidate_labels"]
         for field in fields_to_hide:
             if field in build_config:
                 build_config[field]["show"] = False
@@ -159,11 +177,11 @@ class WoolBallComponent(Component):
         return Message(text="Audio generated successfully", additional_kwargs={"audio_data": data["data"]})
 
     def _handle_text_generation(self, headers):
-        if not self.text:
+        if not self.text or not self.model_name:
             error_message = "Text is required for Text Generation"
             raise ValueError(error_message)
 
-        endpoint = f"/v1/completions?text={self.text}"
+        endpoint = f"/v1/completions?model={self.model_name}&text={self.text}"
         response = requests.get(f"{self.API_BASE_URL}{endpoint}", headers=headers, timeout=60)
         data = self.handle_api_response(response)
         return Message(text=data["data"])
@@ -251,6 +269,9 @@ class WoolBallComponent(Component):
 
             if field_value == "Text to Speech":
                 build_config["target_language"]["options"] = self.TTS_LANGUAGES
+            elif field_value == "Text Generation":
+                models = self.list_completion_models()
+                build_config["model_name"]["options"] = models
             elif field_value == "Translation":
                 languages = self.list_languages()
                 build_config["target_language"]["options"] = languages
