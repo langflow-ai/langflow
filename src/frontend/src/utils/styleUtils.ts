@@ -238,6 +238,7 @@ import { AgentQLIcon } from "../icons/AgentQL";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
 import { ArizeIcon } from "../icons/Arize";
+import { ArXivIcon } from "../icons/ArXiv";
 import { AssemblyAIIcon } from "../icons/AssemblyAI";
 import { AstraDBIcon } from "../icons/AstraDB";
 import { AzureIcon } from "../icons/Azure";
@@ -623,6 +624,7 @@ export const nodeIconsLucide: iconsType = {
   AmazonBedrockEmbeddings: AWSIcon,
   Amazon: AWSIcon,
   Anthropic: AnthropicIcon,
+  ArXiv: ArXivIcon,
   ChatAnthropic: AnthropicIcon,
   assemblyai: AssemblyAIIcon,
   AgentQL: AgentQLIcon,
