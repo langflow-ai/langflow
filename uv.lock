@@ -474,6 +474,15 @@ wheels = [
 ]
 
 [[package]]
+name = "base58"
+version = "2.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7f/45/8ae61209bb9015f516102fa559a2914178da1d5868428bd86a1b4421141d/base58-2.1.1.tar.gz", hash = "sha256:c5d0cb3f5b6e81e8e35da5754388ddcc6d0d14b6c6a132cb93d69ed580a7278c", size = 6528 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4a/45/ec96b29162a402fc4c1c5512d114d7b3787b9d1c2ec241d9568b4816ee23/base58-2.1.1-py3-none-any.whl", hash = "sha256:11a36f4d3ce51dfc1043f3218591ac4eb1ceb172919cebe05b52a5bcc8d245c2", size = 5621 },
+]
+
+[[package]]
 name = "bce-python-sdk"
 version = "0.9.25"
 source = { registry = "https://pypi.org/simple" }
@@ -1187,6 +1196,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/2a/49/f188adfe27b5a7062d6f08c1f048928150f9f40a24e510d4d9f489df17b6/composio_langchain-0.6.13.tar.gz", hash = "sha256:6b3119536cbd4cf2d0ed6920eb8fce6ac1e67b5970597a591f0695f97c611816", size = 4433 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/45/6e/43bc6e3f084b653562dfed722d93e6cdaa846220040beda020ce7f5b850a/composio_langchain-0.6.13-py3-none-any.whl", hash = "sha256:e3faaee8a67717cf66fb2a29be927b147bd545a25446f2c4470337968358abec", size = 4843 },
+]
+
+[[package]]
+name = "construct"
+version = "2.10.70"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/02/77/8c84b98eca70d245a2a956452f21d57930d22ab88cbeed9290ca630cf03f/construct-2.10.70.tar.gz", hash = "sha256:4d2472f9684731e58cc9c56c463be63baa1447d674e0d66aeb5627b22f512c29", size = 86337 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b2/fb/08b3f4bf05da99aba8ffea52a558758def16e8516bc75ca94ff73587e7d3/construct-2.10.70-py3-none-any.whl", hash = "sha256:c80be81ef595a1a821ec69dc16099550ed22197615f4320b57cc9ce2a672cb30", size = 63020 },
 ]
 
 [[package]]
@@ -4271,6 +4289,7 @@ dependencies = [
     { name = "rich" },
     { name = "sentry-sdk", extra = ["fastapi", "loguru"] },
     { name = "setuptools" },
+    { name = "solathon" },
     { name = "spider-client" },
     { name = "sqlmodel" },
     { name = "typer" },
@@ -4426,6 +4445,7 @@ requires-dist = [
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.0.0" },
     { name = "sentry-sdk", extras = ["fastapi", "loguru"], specifier = ">=2.5.1,<3.0.0" },
     { name = "setuptools", specifier = ">=70,<76.0.0" },
+    { name = "solathon", specifier = ">=1.0.6" },
     { name = "spider-client", specifier = ">=0.0.27,<1.0.0" },
     { name = "sqlmodel", specifier = "==0.0.22" },
     { name = "typer", specifier = ">=0.13.0,<1.0.0" },
@@ -6943,6 +6963,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/c7/2c/94ed7b91db81d61d7096ac8f2d325ec562fc75e35f3baea8749c85b28784/PyPika-0.48.9.tar.gz", hash = "sha256:838836a61747e7c8380cd1b7ff638694b7a7335345d0f559b04b2cd832ad5378", size = 67259 }
 
 [[package]]
+name = "pypng"
+version = "0.20220715.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/93/cd/112f092ec27cca83e0516de0a3368dbd9128c187fb6b52aaaa7cde39c96d/pypng-0.20220715.0.tar.gz", hash = "sha256:739c433ba96f078315de54c0db975aee537cbc3e1d0ae4ed9aab0ca1e427e2c1", size = 128992 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3e/b9/3766cc361d93edb2ce81e2e1f87dd98f314d7d513877a342d31b30741680/pypng-0.20220715.0-py3-none-any.whl", hash = "sha256:4a43e969b8f5aaafb2a415536c1a8ec7e341cd6a3f957fd5b5f32a4cfeed902c", size = 58057 },
+]
+
+[[package]]
 name = "pyproject-hooks"
 version = "1.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -7454,6 +7483,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/6d/74/66d5af14618b8b53a642d178fb2e598db6e9000decc038aa064bba690ee6/qianfan-0.3.5.tar.gz", hash = "sha256:b71847888bd99d61cee5f84f614f431204f3d656d71dd7ae1d0f9bc9ae51b42b", size = 211966 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4d/dc/e5d1262d3c3be20b71749743db28643ae2e3ebf7bb46929cde12f7a187e8/qianfan-0.3.5-py3-none-any.whl", hash = "sha256:0d5712c93ec6877c4176aae21ff58b41ccfef7ba661c6e19c07209c353353a16", size = 304772 },
+]
+
+[[package]]
+name = "qrcode"
+version = "7.4.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "pypng" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/30/35/ad6d4c5a547fe9a5baf85a9edbafff93fc6394b014fab30595877305fa59/qrcode-7.4.2.tar.gz", hash = "sha256:9dd969454827e127dbd93696b20747239e6d540e082937c90f14ac95b30f5845", size = 535974 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/24/79/aaf0c1c7214f2632badb2771d770b1500d3d7cbdf2590ae62e721ec50584/qrcode-7.4.2-py3-none-any.whl", hash = "sha256:581dca7a029bcb2deef5d01068e39093e80ef00b4a61098a2182eac59d01643a", size = 46197 },
 ]
 
 [[package]]
@@ -8193,6 +8236,24 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a2/87/a6771e1546d97e7e041b6ae58d80074f81b7d5121207425c964ddf5cfdbd/sniffio-1.3.1.tar.gz", hash = "sha256:f4324edc670a0f49750a81b895f35c3adb843cca46f0530f79fc1babb23789dc", size = 20372 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e9/44/75a9c9421471a6c4805dbf2356f7c181a29c1879239abab1ea2cc8f38b40/sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2", size = 10235 },
+]
+
+[[package]]
+name = "solathon"
+version = "1.0.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "base58" },
+    { name = "construct" },
+    { name = "httpx" },
+    { name = "pillow" },
+    { name = "pynacl" },
+    { name = "qrcode" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/38/0d/0a091da69f59276b0bccb81d03500827d956ccaa7c8d10d7525bbaffabd6/solathon-1.0.6.tar.gz", hash = "sha256:a337cc758076bfb2d32b2306c58d7b3693c472536f4ef456cb21790d88d2f110", size = 29585 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/55/1d/11bb205face417f8e2954dc9c219bb83e90b05ea60bcbd5bdd0f6962b4df/solathon-1.0.6-py3-none-any.whl", hash = "sha256:9d55b6d1b0e8938d3763bdf5e9ded2d92d7a51623a842a09eeb17ec1cd4b2e12", size = 38055 },
 ]
 
 [[package]]
