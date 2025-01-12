@@ -1,0 +1,209 @@
+---
+title: Components
+slug: /concepts-components
+---
+
+import Icon from "@site/src/components/icon";
+
+# Langflow components overview
+
+A component is a single building block within a flow with inputs, outputs, functions, and parameters that define its functionality. A single component is like a class within a larger application.
+
+To add a component to a flow, drag it from the **Component** menu to the **Workspace**.
+
+Learn more about components and how they work on this page.
+
+## Component menu
+
+Each component is unique, but all have a menu bar at the top that looks something like this.
+
+<img src="/img/openai-model-component.png" alt="Open AI component" style={{display: 'block', margin: 'auto', width: 300}} />
+
+Use these controls to do the following:
+
+- **Code** — Modify the component's Python code and save your changes.
+- **Controls** — Adjust all component parameters.
+- **Freeze Path** — After a component runs, lock its previous output state to prevent it from re-running.
+
+Click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> **All** to see additional options for a component.
+
+To view a component’s output and logs, click the <Icon name="View" aria-label="View icon" />**Visibility** icon.
+
+To run a single component, click ▶️ **Play**.
+
+A ✅**Check** indicates that the component ran successfully.
+
+Running a single component with the **Play** button is different from running the entire flow. In a single component run, the `build_vertex` function is called, which builds and runs only the single component with direct inputs provided through the UI (the `inputs_dict` parameter). The  `VertexBuildResult` data is passed to the `build_and_run` method, which calls the component's `build` method and runs it. Unlike running the full flow, running a single component does not automatically execute its upstream dependencies.
+
+## Component ports
+
+Handles (<Icon name="Circle" size="16" aria-label="A circle on the side of a component" />) on the side of a component indicate the types of inputs and outputs that can be connected at that port. Hover over a handle to see connection details.
+
+<img src="/img/prompt-component.png" alt="Prompt component" style={{display: 'block', margin: 'auto', width: 300}} />
+
+### Component port data type colors
+
+The following table lists the handle colors and their corresponding data types:
+
+| Data Type | Handle Color | Hex Code |
+|-----------|--------------|----------|
+| BaseLanguageModel | Fuchsia | #c026d3 |
+| Data | Red | #dc2626 |
+| Document | Lime | #65a30d |
+| Embeddings | Emerald | #10b981 |
+| LanguageModel | Fuchsia | #c026d3 |
+| Message | Indigo | #4f46e5 |
+| Prompt | Violet | #7c3aed |
+| str | Indigo | #4F46E5 |
+| Text | Indigo | #4F46E5 |
+| unknown | Gray | #9CA3AF |
+
+## Component code
+
+A component inherits from a base `Component` class that defines its interface and behavior.
+
+For example, the [Recursive character text splitter](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/langchain_utilities/recursive_character.py) is a child of the [LCTextSplitterComponent](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/base/textsplitters/model.py) class.
+
+```python
+from typing import Any
+
+from langchain_text_splitters import RecursiveCharacterTextSplitter, TextSplitter
+
+from langflow.base.textsplitters.model import LCTextSplitterComponent
+from langflow.inputs.inputs import DataInput, IntInput, MessageTextInput
+from langflow.utils.util import unescape_string
+
+class RecursiveCharacterTextSplitterComponent(LCTextSplitterComponent):
+    display_name: str = "Recursive Character Text Splitter"
+    description: str = "Split text trying to keep all related text together."
+    documentation: str = "https://docs.langflow.org/components-processing"
+    name = "RecursiveCharacterTextSplitter"
+    icon = "LangChain"
+
+    inputs = [
+        IntInput(
+            name="chunk_size",
+            display_name="Chunk Size",
+            info="The maximum length of each chunk.",
+            value=1000,
+        ),
+        IntInput(
+            name="chunk_overlap",
+            display_name="Chunk Overlap",
+            info="The amount of overlap between chunks.",
+            value=200,
+        ),
+        DataInput(
+            name="data_input",
+            display_name="Input",
+            info="The texts to split.",
+            input_types=["Document", "Data"],
+        ),
+        MessageTextInput(
+            name="separators",
+            display_name="Separators",
+            info='The characters to split on.\nIf left empty defaults to ["\\n\\n", "\\n", " ", ""].',
+            is_list=True,
+        ),
+    ]
+
+    def get_data_input(self) -> Any:
+        return self.data_input
+
+    def build_text_splitter(self) -> TextSplitter:
+        if not self.separators:
+            separators: list[str] | None = None
+        else:
+            # check if the separators list has escaped characters
+            # if there are escaped characters, unescape them
+            separators = [unescape_string(x) for x in self.separators]
+
+        return RecursiveCharacterTextSplitter(
+            separators=separators,
+            chunk_size=self.chunk_size,
+            chunk_overlap=self.chunk_overlap,
+        )
+
+```
+
+Components include definitions for inputs and outputs, which will be represented in the UI with color-coded ports.
+
+**Input Definition:** Each input (like `IntInput` or `DataInput`) specifies an input's type, name, and display properties, which appear as configurable fields in the component's UI panel.
+
+**Methods:** Components have methods or functions that handle their functionality. This component has two methods.
+`get_data_input` retrieves the text data to be split from the component's input. This makes the data available to the class.
+`build_text_splitter` creates a `RecursiveCharacterTextSplitter` object by calling its parent class's `build` method. The text is split with the created splitter and passed to the next component.
+When used in a flow, this component:
+
+1. Displays its configuration options in the UI.
+2. Validates user inputs based on the input types.
+3. Processes data using the configured parameters.
+4. Passes results to the next component.
+
+## Freeze Path
+
+After a component runs, **Freeze Path** locks the component's previous output state to prevent it from re-running.
+
+If you’re expecting consistent output from a component and don’t need to re-run it, click **Freeze Path**. 
+
+Enabling **Freeze Path** freezes all components upstream of the selected component.
+
+If you only want to freeze a single component, select **Freeze** instead.
+
+A <Icon name="Snowflake" aria-label="Snowflake"/> icon appears on all frozen components.
+
+## Additional component options
+
+Click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> **All** to see additional options for a component.
+
+To modify a component's name or description, double-click in the **Name** or **Description** fields. Component descriptions accept markdown syntax.
+
+### Component shortcuts
+
+The following keyboard shortcuts are available when a component is selected.
+
+| Menu Item | Mac Shortcut | Description |
+|-----------|----------|-------------|
+| Code | ⌘ + C | Opens the code editor for the component. |
+| Advanced | ⌘ + A | Opens advanced settings for the component. |
+| Save | ⌘ + S | Saves the current state of the component to Saved components in the sidebar. |
+| Duplicate | ⌘ + D | Creates a duplicate of the component. |
+| Copy | ⌘ + C | Copies the selected component. Paste it in the workspace with ⌘ + V. |
+| Docs | ⌘ + D | Opens related documentation. |
+| Minimize | ⌘ + Q | Minimizes the current component. |
+| Freeze | ⌘ + F | Freezes the current component state. |
+| Freeze Path | ⌘ + Shift + F | Freezes the current component state and all upstream components. |
+| Download | ⌘ + D | Downloads the current component as a JSON file. |
+| Delete | ⌘ + ⌫ | Deletes the component. |
+
+## Group components in the workspace
+
+Multiple components can be grouped into a single component for reuse. This is useful when combining large flows into single components (like RAG with a vector database, for example) and saving space.
+
+1. Hold **Shift** and drag to select components.
+2. Select **Group**.
+3. The components merge into a single component.
+4. Double-click the name and description to change them.
+5. Save your grouped component to in the sidebar for later use.
+
+## Component version
+
+A component's state is stored in a database, while sidebar components are like starter templates. As soon as you drag a component from the sidebar to the workspace, the two components are no longer in parity.
+
+The component will keep the version number it was initialized to the workspace with. Click the **Update Component** icon (exclamation mark) to bring the component up to the `latest` version. This will change the code of the component in place so you can validate that the component was updated by checking its Python code before and after updating it.
+
+## Components sidebar
+
+Components are listed in the sidebar by component type.
+
+Component **bundles** are components grouped by provider. For example, Langchain modules like **RunnableExecutor** and **CharacterTextSplitter** are grouped under the **Langchain** bundle.
+
+The sidebar includes a component **Search** bar, and includes flags for showing or hiding **Beta** and **Legacy** components.
+
+**Beta** components are still being tested and are not suitable for production workloads.
+
+**Legacy** components are available to use but no longer supported.
+
+
+
+
