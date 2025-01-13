@@ -144,7 +144,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 }
             ],
             value="",
-            advanced=True,
         ),
         StrInput(
             name="keyspace",
@@ -157,6 +156,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             display_name="Embedding Model",
             input_types=["Embeddings"],
             info="Allows an embedding model configuration.",
+            advanced=True,
         ),
         *LCVectorStoreComponent.inputs,
         IntInput(
@@ -305,7 +305,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             return False
 
-    def collection_data(self, collection_name: str | None = None, database: Database | None = None):
+    def collection_data(self, collection_name: str, database: Database | None = None):
         try:
             if not database:
                 client = DataAPIClient(token=self.token, environment=self.environment)
@@ -394,44 +394,55 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):  # noqa: ARG002
         # Refresh the database name options
-        database_options = self._initialize_database_options()
-        build_config["database_name"]["options"] = [db["name"] for db in database_options]
-        build_config["database_name"]["options_metadata"] = [
-            {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
-        ]
+        if field_name in ["token", "environment"] or not build_config["database_name"]["options"]:
+            # Reset the list of collections
+            build_config["collection_name"]["options"] = []
+            build_config["collection_name"]["options_metadata"] = []
+            build_config["database_name"]["value"] = None
 
-        # Allow fallback to API Endpoint if database is not set
-        if self.token and not database_options:
-            build_config["api_endpoint"]["advanced"] = False
-            build_config["database_name"]["advanced"] = True
-        else:
-            build_config["api_endpoint"]["advanced"] = True
-            build_config["database_name"]["advanced"] = False
+            # Get the list of databases
+            database_options = self._initialize_database_options()
+            build_config["database_name"]["options"] = [db["name"] for db in database_options]
+            build_config["database_name"]["options_metadata"] = [
+                {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
+            ]
 
-        # Refresh the collection name options
-        collection_options = self._initialize_collection_options()
-        build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
-        build_config["collection_name"]["options_metadata"] = [
-            {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
-        ]
-
-        # Get list of regions for a given cloud provider
-        cloud_provider = (
-            build_config["database_name"]["dialog_inputs"]["cloud_provider"]["value"] or "Amazon Web Services"
-        )
-        # if cloud_provider:  # TODO: Restore when functionality is live
-        build_config["database_name"]["dialog_inputs"]["region"]["options"] = self.map_cloud_providers()[
-            cloud_provider
-        ]["regions"]
-
-        # If no database selected, we are done
-        if not self.database_name:
-            build_config["collection_name"]["advanced"] = True
+            # Get list of regions for a given cloud provider
+            cloud_provider = (
+                build_config["database_name"]["dialog_inputs"]["cloud_provider"]["value"] or "Amazon Web Services"
+            )
+            # if cloud_provider:  # TODO: Restore when functionality is live
+            build_config["database_name"]["dialog_inputs"]["region"]["options"] = self.map_cloud_providers()[
+                cloud_provider
+            ]["regions"]
 
             return build_config
 
-        # If the database is set, allow user to see collection options
-        build_config["collection_name"]["advanced"] = False
+        # Refresh the collection name options
+        if field_name in ["database_name", "api_endpoint"] or not build_config["collection_name"]["options"]:
+            build_config["collection_name"]["value"] = None
+
+            # Reset the list of collections
+            collection_options = self._initialize_collection_options()
+            build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
+            build_config["collection_name"]["options_metadata"] = [
+                {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
+            ]
+
+            return build_config
+
+        # Hide embedding model option if opriona_metadata provider is not null
+        if field_name == "collection_name":
+            # Find location of the name in the options list
+            index_of_name = build_config["collection_name"]["options"].index(field_value)
+            value_of_provider = build_config["collection_name"]["options_metadata"][index_of_name]["provider"]
+
+            if value_of_provider:
+                build_config["embedding_model"]["advanced"] = True
+                build_config["embedding_model"]["required"] = False
+            else:
+                build_config["embedding_model"]["advanced"] = False
+                build_config["embedding_model"]["required"] = True
 
         # For the final step, get the list of vectorize providers
         vectorize_providers = self.get_vectorize_providers()
