@@ -250,7 +250,6 @@ export default function Dropdown({
         open={openDialog}
         dialogInputs={dialogInputs}
         onClose={() => setOpenDialog(false)}
-        content={<div>Content</div>}
       />
     </CommandGroup>
   );
