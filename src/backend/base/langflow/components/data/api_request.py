@@ -1,6 +1,5 @@
 import asyncio
 import json
-import mimetypes
 import re
 import tempfile
 from datetime import datetime, timezone
@@ -183,7 +182,7 @@ class APIRequestComponent(Component):
                 for redirect in response.history
             ]
 
-            is_binary, file_path = self._response_info(response, with_file_path=save_to_file)
+            is_binary, file_path = await self._response_info(response, with_file_path=save_to_file)
             response_headers = self._headers_to_dict(response.headers)
 
             metadata: dict[str, Any] = {
@@ -315,7 +314,9 @@ class APIRequestComponent(Component):
         self.status = results
         return results
 
-    def _response_info(self, response: httpx.Response, *, with_file_path: bool = False) -> tuple[bool, Path | None]:
+    async def _response_info(
+        self, response: httpx.Response, *, with_file_path: bool = False
+    ) -> tuple[bool, Path | None]:
         """Determine the file path and whether the response content is binary.
 
         Args:
@@ -335,23 +336,18 @@ class APIRequestComponent(Component):
 
         # Step 1: Set up a subdirectory for the component in the OS temp directory
         component_temp_dir = Path(tempfile.gettempdir()) / self.__class__.__name__
-        component_temp_dir.mkdir(parents=True, exist_ok=True)
+
+        # Use asyncio.to_thread to ensure mkdir does not block the event loop
+        await asyncio.to_thread(component_temp_dir.mkdir, parents=True, exist_ok=True)
 
         # Step 2: Extract filename from Content-Disposition
         filename = None
         if "Content-Disposition" in response.headers:
             content_disposition = response.headers["Content-Disposition"]
             filename_match = re.search(r'filename="(.+?)"', content_disposition)
-            if not filename_match:  # Try to match RFC 5987 style
-                filename_match = re.search(r"filename\*=(?:UTF-8'')?(.+)", content_disposition)
             if filename_match:
                 extracted_filename = filename_match.group(1)
-                # Ensure the filename is unique
-                if (component_temp_dir / extracted_filename).exists():
-                    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
-                    filename = f"{timestamp}-{extracted_filename}"
-                else:
-                    filename = extracted_filename
+                filename = extracted_filename
 
         # Step 3: Infer file extension or use part of the request URL if no filename
         if not filename:
@@ -362,16 +358,29 @@ class APIRequestComponent(Component):
                 base_name = "response"
 
             # Infer file extension
-            extension = mimetypes.guess_extension(content_type.split(";")[0]) if content_type else None
-            if not extension:
-                extension = ".bin" if is_binary else ".txt"  # Default extensions
-
-            # Combine the base name with timestamp and extension
-            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
-            filename = f"{timestamp}-{base_name}{extension}"
+            content_type_to_extension = {
+                "text/plain": ".txt",
+                "application/json": ".json",
+                "image/jpeg": ".jpg",
+                "image/png": ".png",
+                "application/octet-stream": ".bin",
+            }
+            extension = content_type_to_extension.get(content_type, ".bin" if is_binary else ".txt")
+            filename = f"{base_name}{extension}"
 
         # Step 4: Define the full file path
         file_path = component_temp_dir / filename
+
+        # Step 5: As .exists() causes issues in async (blockbuster) on 3.11+, and we want to use the
+        # given filename unless the file already exists in which case we add a timestamp to it,
+        # we end up doing some odd-looking code:
+        try:
+            # This will raise FileExistsError if the file exists
+            await asyncio.to_thread(open, file_path, "x")
+        except FileExistsError:
+            # If file exists, append a timestamp to the filename
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+            file_path = component_temp_dir / f"{timestamp}-{filename}"
 
         return is_binary, file_path
 

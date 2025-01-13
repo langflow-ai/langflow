@@ -132,23 +132,23 @@ async def test_save_to_file_behavior(api_request, save_to_file, expected_propert
         assert metadata["result"] == response_content.encode("utf-8"), "Response content mismatch in metadata"
 
 
-def test_response_info_binary_content(api_request):
+async def test_response_info_binary_content(api_request):
     response = Mock()
     response.headers = {"Content-Type": "application/octet-stream"}
-    is_binary, file_path = api_request._response_info(response, with_file_path=False)
+    is_binary, file_path = await api_request._response_info(response, with_file_path=False)
     assert is_binary is True
     assert file_path is None
 
 
-def test_response_info_non_binary_content(api_request):
+async def test_response_info_non_binary_content(api_request):
     response = Mock()
     response.headers = {"Content-Type": "text/plain"}
-    is_binary, file_path = api_request._response_info(response, with_file_path=False)
+    is_binary, file_path = await api_request._response_info(response, with_file_path=False)
     assert is_binary is False
     assert file_path is None
 
 
-def test_response_info_filename_from_content_disposition(api_request):
+async def test_response_info_filename_from_content_disposition(api_request):
     response = Mock()
     response.headers = {
         "Content-Disposition": 'attachment; filename="thisfile.txt"',
@@ -157,20 +157,20 @@ def test_response_info_filename_from_content_disposition(api_request):
     response.request = Mock()
     response.request.url = "https://example.com/testfile"
 
-    is_binary, file_path = api_request._response_info(response, with_file_path=True)
+    is_binary, file_path = await api_request._response_info(response, with_file_path=True)
 
     assert is_binary is False
     assert file_path.parent == Path(tempfile.gettempdir()) / "APIRequestComponent"
     assert file_path.name.endswith("thisfile.txt")
 
 
-def test_response_info_default_filename(api_request):
+async def test_response_info_default_filename(api_request):
     response = Mock()
     response.headers = {"Content-Type": "text/plain"}
     response.request = Mock()
     response.request.url = "https://example.com/testfile"
 
-    is_binary, file_path = api_request._response_info(response, with_file_path=True)
+    is_binary, file_path = await api_request._response_info(response, with_file_path=True)
 
     assert is_binary is False
     assert file_path.parent == Path(tempfile.gettempdir()) / "APIRequestComponent"
