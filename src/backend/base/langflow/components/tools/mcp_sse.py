@@ -38,19 +38,23 @@ class MCPSseClient:
         if headers is None:
             headers = {}
         url = await self.pre_check_redirect(url)
+        
+        # Use asyncio.timeout() instead of timeout_context
+        try:
+            async with asyncio.timeout(timeout_seconds):
+                sse_transport = await self.exit_stack.enter_async_context(
+                    sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds)
+                )
+                self.sse, self.write = sse_transport
+                self.session = await self.exit_stack.enter_async_context(ClientSession(self.sse, self.write))
 
-        async with timeout_context(timeout_seconds):
-            sse_transport = await self.exit_stack.enter_async_context(
-                sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds)
-            )
-            self.sse, self.write = sse_transport
-            self.session = await self.exit_stack.enter_async_context(ClientSession(self.sse, self.write))
+                await self.session.initialize()
 
-            await self.session.initialize()
-
-            # List available tools
-            response = await self.session.list_tools()
-            return response.tools
+                # List available tools
+                response = await self.session.list_tools()
+                return response.tools
+        except asyncio.TimeoutError:
+            raise TimeoutError(f"Connection to {url} timed out after {timeout_seconds} seconds")
 
 
 class MCPSse(Component):
