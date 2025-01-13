@@ -1,6 +1,7 @@
 import os
 from collections import defaultdict
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field, fields
+from typing import Any
 
 from astrapy import AstraDBAdmin, DataAPIClient, Database
 from langchain_astradb import AstraDBVectorStore
@@ -30,62 +31,77 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     _cached_vector_store: AstraDBVectorStore | None = None
 
     @dataclass
-    class NewDatabaseInput:
-        new_database_name: StrInput = field(
-            default_factory=lambda: StrInput(
-                name="new_database_name",
-                display_name="New Database Name",
-                info="Name of the new database to create in Astra DB.",
-                required=True,
+    class DialogInput:
+        @dataclass
+        class NewDatabaseInput:
+            new_database_name: StrInput = field(
+                default_factory=lambda: StrInput(
+                    name="new_database_name",
+                    display_name="New Database Name",
+                    info="Name of the new database to create in Astra DB.",
+                    required=True,
+                )
             )
-        )
-        cloud_provider: DropdownInput = field(
-            default_factory=lambda: DropdownInput(
-                name="cloud_provider",
-                display_name="Cloud Provider",
-                info="Cloud provider for the new database.",
-                options=["Amazon Web Services", "Google Cloud Platform", "Microsoft Azure"],
-                required=True,
+            cloud_provider: DropdownInput = field(
+                default_factory=lambda: DropdownInput(
+                    name="cloud_provider",
+                    display_name="Cloud Provider",
+                    info="Cloud provider for the new database.",
+                    options=["Amazon Web Services", "Google Cloud Platform", "Microsoft Azure"],
+                    required=True,
+                )
             )
-        )
-        region: DropdownInput = field(
-            default_factory=lambda: DropdownInput(
-                name="region",
-                display_name="Region",
-                info="Region for the new database.",
-                options=[],
-                required=True,
+            region: DropdownInput = field(
+                default_factory=lambda: DropdownInput(
+                    name="region",
+                    display_name="Region",
+                    info="Region for the new database.",
+                    options=[],
+                    required=True,
+                )
             )
-        )
 
-    @dataclass
-    class NewCollectionInput:
-        new_collection_name: StrInput = field(
-            default_factory=lambda: StrInput(
-                name="new_collection_name",
-                display_name="New Collection Name",
-                info="Name of the new collection to create in Astra DB.",
-                required=True,
+        @dataclass
+        class NewCollectionInput:
+            new_collection_name: StrInput = field(
+                default_factory=lambda: StrInput(
+                    name="new_collection_name",
+                    display_name="New Collection Name",
+                    info="Name of the new collection to create in Astra DB.",
+                    required=True,
+                )
             )
-        )
-        embedding_generation_provider: DropdownInput = field(
-            default_factory=lambda: DropdownInput(
-                name="embedding_generation_provider",
-                display_name="Embedding Generation Provider",
-                info="Provider to use for generating embeddings.",
-                options=[],
-                required=True,
+            embedding_generation_provider: DropdownInput = field(
+                default_factory=lambda: DropdownInput(
+                    name="embedding_generation_provider",
+                    display_name="Embedding Generation Provider",
+                    info="Provider to use for generating embeddings.",
+                    options=[],
+                    required=True,
+                )
             )
-        )
-        embedding_generation_model: DropdownInput = field(
-            default_factory=lambda: DropdownInput(
-                name="embedding_generation_model",
-                display_name="Embedding Generation Model",
-                info="Model to use for generating embeddings.",
-                options=[],
-                required=True,
+            embedding_generation_model: DropdownInput = field(
+                default_factory=lambda: DropdownInput(
+                    name="embedding_generation_model",
+                    display_name="Embedding Generation Model",
+                    info="Model to use for generating embeddings.",
+                    options=[],
+                    required=True,
+                )
             )
-        )
+        database_inputs: list[Any] = field(init=False)
+        collection_inputs: list[Any] = field(init=False)
+
+        def __post_init__(self):
+            # Initialize the fields with ordered lists from the respective data classes
+            database_instance = self.NewDatabaseInput()
+            collection_instance = self.NewCollectionInput()
+
+            self.database_inputs = [getattr(database_instance, field.name) for field in fields(self.NewDatabaseInput)]
+            self.collection_inputs = [
+                getattr(collection_instance, field.name)
+                for field in fields(self.NewCollectionInput)
+            ]
 
     inputs = [
         SecretStrInput(
@@ -117,7 +133,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             required=True,
             refresh_button=True,
             real_time_refresh=True,
-            dialog_inputs=asdict(NewDatabaseInput()),
+            dialog_inputs=DialogInput().database_inputs,
             options=[],
             options_metadata=[
                 {
@@ -133,7 +149,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             required=True,
             refresh_button=True,
             real_time_refresh=True,
-            dialog_inputs=asdict(NewCollectionInput()),
+            dialog_inputs=DialogInput().collection_inputs,
             options=[],
             options_metadata=[
                 {
@@ -156,7 +172,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             display_name="Embedding Model",
             input_types=["Embeddings"],
             info="Allows an embedding model configuration.",
-            advanced=True,
+            required=True,
         ),
         *LCVectorStoreComponent.inputs,
         IntInput(
@@ -409,10 +425,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             # Get list of regions for a given cloud provider
             cloud_provider = (
-                build_config["database_name"]["dialog_inputs"]["cloud_provider"]["value"] or "Amazon Web Services"
+                build_config["database_name"]["dialog_inputs"][1]["value"] or "Amazon Web Services"
             )
             # if cloud_provider:  # TODO: Restore when functionality is live
-            build_config["database_name"]["dialog_inputs"]["region"]["options"] = self.map_cloud_providers()[
+            build_config["database_name"]["dialog_inputs"][2]["options"] = self.map_cloud_providers()[
                 cloud_provider
             ]["regions"]
 
@@ -450,23 +466,23 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return build_config
 
         # Allow the user to see the embedding provider options
-        provider_options = build_config["collection_name"]["dialog_inputs"]["embedding_generation_provider"]["options"]
+        provider_options = build_config["collection_name"]["dialog_inputs"][1]["options"]
         if not provider_options:
             # If the collection is set, allow user to see embedding options
-            build_config["collection_name"]["dialog_inputs"]["embedding_generation_provider"]["options"] = [
+            build_config["collection_name"]["dialog_inputs"][1]["options"] = [
                 "Bring your own",
                 "Nvidia",
                 *[key for key in vectorize_providers if key != "Nvidia"],
             ]
 
         # And allow the user to see the models based on a selected provider
-        model_options = build_config["collection_name"]["dialog_inputs"]["embedding_generation_model"]["options"]
+        model_options = build_config["collection_name"]["dialog_inputs"][2]["options"]
         if not model_options:
-            embedding_provider = build_config["collection_name"]["dialog_inputs"]["embedding_generation_provider"][
+            embedding_provider = build_config["collection_name"]["dialog_inputs"][1][
                 "value"
             ]
 
-            build_config["collection_name"]["dialog_inputs"]["embedding_generation_model"]["options"] = (
+            build_config["collection_name"]["dialog_inputs"][2]["options"] = (
                 vectorize_providers.get(embedding_provider, [[], []])[1]
             )
 
