@@ -1,4 +1,5 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
 import {
   Command,
@@ -77,7 +78,11 @@ const CommandItemContent = ({
   <div className="group flex w-full items-center justify-between">
     <div className="flex items-center justify-between">
       <SelectionIndicator isSelected={isSelected} />
-      <span className="max-w-52 truncate pr-2">{option}</span>
+      <ShadTooltip content={option}>
+        <div className="max-w-52 truncate pr-2">
+          <span>{option}</span>
+        </div>
+      </ShadTooltip>
     </div>
     {optionButton && optionButton(option)}
   </div>
