@@ -631,6 +631,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
               backgroundColor: `${shadowBoxBackgroundColor}`,
               opacity: 0.7,
               pointerEvents: "none",
+              display: "none",
             }}
           ></div>
         </div>
