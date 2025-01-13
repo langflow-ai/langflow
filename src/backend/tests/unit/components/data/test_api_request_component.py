@@ -2,11 +2,11 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock
 
+import aiofiles
 import aiofiles.os
 import httpx
 import pytest
 import respx
-from aiofile import async_open
 from httpx import Response
 from langflow.components import data
 
@@ -111,7 +111,9 @@ async def test_save_to_file_behavior(api_request, save_to_file, expected_propert
 
     # Check returned metadata
     metadata = result.data
-    assert set(metadata.keys()) == expected_properties, f"Unexpected properties: {set(metadata.keys())}"
+    assert (
+        set(metadata.keys()) == expected_properties
+    ), f"Unexpected properties: {set(metadata.keys())}. Raw result: {result.data}"
 
     if save_to_file:
         # Validate that file_path exists in metadata
@@ -120,7 +122,7 @@ async def test_save_to_file_behavior(api_request, save_to_file, expected_propert
 
         # Validate that the file exists and its content matches the response
         assert await aiofiles.os.path.exists(file_path), "Saved file does not exist"
-        async with async_open(file_path, "r") as f:
+        async with aiofiles.open(file_path) as f:
             file_content = await f.read()
         assert file_content == response_content, "File content does not match response content"
 
