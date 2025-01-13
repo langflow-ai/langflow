@@ -15,6 +15,7 @@ export type BaseInputProps<valueType = any> = {
   readonly?: boolean;
   placeholder?: string;
   isToolMode?: boolean;
+  metadata?: any;
 };
 
 // Generic type for composing input props
@@ -31,6 +32,7 @@ export type TableComponentType = {
   table_options?: TableOptionsTypeAPI;
   trigger_text?: string;
   trigger_icon?: string;
+  table_icon?: string;
 };
 
 export type FloatComponentType = {
@@ -72,6 +74,7 @@ export type StrRenderComponentType = {
 export type InputListComponentType = {
   componentName?: string;
   id?: string;
+  listAddLabel?: string;
 };
 
 export type DropDownComponentType = {

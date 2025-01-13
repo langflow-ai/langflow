@@ -15,6 +15,7 @@ class FormatterType(str, Enum):
 
 class EditMode(str, Enum):
     MODAL = "modal"
+    POPOVER = "popover"
     INLINE = "inline"
 
 
@@ -83,6 +84,9 @@ class FieldParserType(str, Enum):
     KEBAB_CASE = "kebab_case"
     LOWERCASE = "lowercase"
     UPPERCASE = "uppercase"
+    NO_BLANK = "no_blank"
+    VALID_CSV = ("valid_csv",)
+    COMMANDS = "commands"
 
 
 class TableOptions(BaseModel):
@@ -96,3 +100,4 @@ class TableOptions(BaseModel):
     hide_options: bool = Field(default=False)
     field_validators: dict[str, list[FieldValidatorType] | FieldValidatorType] | None = Field(default=None)
     field_parsers: dict[str, list[FieldParserType] | FieldParserType] | None = Field(default=None)
+    description: str | None = Field(default=None)
