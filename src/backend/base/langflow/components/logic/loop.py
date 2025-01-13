@@ -56,11 +56,11 @@ class LoopComponent(Component):
     def item_output(self) -> Data:
         """Output the next item in the list or stop if done."""
         self.initialize_data()
-        current_item = None
+        current_item = Data(text="")
 
         if self.evaluate_stop_loop():
             self.stop("item")
-            return None
+            return Data(text="")
 
         # Get data list and current index
         data_list, current_index = self.loop_variables()
@@ -69,7 +69,7 @@ class LoopComponent(Component):
             try:
                 current_item = data_list[current_index]
             except IndexError:
-                current_item = None
+                current_item = Data(text="")
         self.aggregated_output()
         self.update_ctx({f"{self._id}_index": current_index + 1})
         return current_item
@@ -84,7 +84,7 @@ class LoopComponent(Component):
 
             return self.ctx.get(f"{self._id}_aggregated", [])
         self.stop("done")
-        return None
+        return Data(text="")
 
     def loop_variables(self):
         """Retrieve loop variables from context."""

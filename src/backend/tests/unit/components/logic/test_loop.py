@@ -4,6 +4,7 @@ import pytest
 from httpx import AsyncClient
 from langflow.components.logic.loop import LoopComponent
 from langflow.memory import aget_messages
+from langflow.schema.data import Data
 from langflow.services.database.models.flow import FlowCreate
 from orjson import orjson
 
@@ -27,6 +28,19 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
         """Return an empty list since this component doesn't have version-specific files."""
         return []
 
+    @pytest.fixture
+    def default_kwargs(self):
+        """Return the default kwargs for the component."""
+        return {
+            "data": [[Data(text="Hello World")]],
+            "loop_input": [Data(text=TEXT)],
+        }
+
+    def test_latest_version(self, default_kwargs) -> None:
+        """Test that the component works with the latest version."""
+        result = LoopComponent(**default_kwargs)
+        assert result is not None, "Component returned None for the latest version."
+
     async def _create_flow(self, client, json_loop_test, logged_in_headers):
         vector_store = orjson.loads(json_loop_test)
         data = vector_store["data"]
@@ -45,7 +59,6 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
         assert messages[1].session_id == flow_id
         assert messages[1].sender == "Machine"
         assert messages[1].sender_name == "AI"
-        assert messages[1].text != ""
         assert len(messages[1].text) > 0
 
     async def test_build_flow_loop(self, client, json_loop_test, logged_in_headers):
