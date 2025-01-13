@@ -392,7 +392,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             return []
 
-    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):  # noqa: ARG002
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         # Refresh the database name options
         if field_name in ["token", "environment"] or not build_config["database_name"]["options"]:
             # Reset the list of collections
