@@ -89,6 +89,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     required=True,
                 )
             )
+
         database_inputs: list[Any] = field(init=False)
         collection_inputs: list[Any] = field(init=False)
 
@@ -98,10 +99,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             collection_instance = self.NewCollectionInput()
 
             self.database_inputs = [getattr(database_instance, field.name) for field in fields(self.NewDatabaseInput)]
-            self.collection_inputs = [
-                getattr(collection_instance, field.name)
-                for field in fields(self.NewCollectionInput)
-            ]
+            self.collection_inputs = [getattr(collection_instance, field.name) for field in fields(self.NewCollectionInput)]
 
     inputs = [
         SecretStrInput(
@@ -424,13 +422,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             ]
 
             # Get list of regions for a given cloud provider
-            cloud_provider = (
-                build_config["database_name"]["dialog_inputs"][1]["value"] or "Amazon Web Services"
-            )
+            cloud_provider = build_config["database_name"]["dialog_inputs"][1]["value"] or "Amazon Web Services"
             # if cloud_provider:  # TODO: Restore when functionality is live
-            build_config["database_name"]["dialog_inputs"][2]["options"] = self.map_cloud_providers()[
-                cloud_provider
-            ]["regions"]
+            build_config["database_name"]["dialog_inputs"][2]["options"] = self.map_cloud_providers()[cloud_provider][
+                "regions"
+            ]
 
             return build_config
 
@@ -478,13 +474,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # And allow the user to see the models based on a selected provider
         model_options = build_config["collection_name"]["dialog_inputs"][2]["options"]
         if not model_options:
-            embedding_provider = build_config["collection_name"]["dialog_inputs"][1][
-                "value"
-            ]
+            embedding_provider = build_config["collection_name"]["dialog_inputs"][1]["value"]
 
-            build_config["collection_name"]["dialog_inputs"][2]["options"] = (
-                vectorize_providers.get(embedding_provider, [[], []])[1]
-            )
+            build_config["collection_name"]["dialog_inputs"][2]["options"] = vectorize_providers.get(
+                embedding_provider, [[], []]
+            )[1]
 
         return build_config
 
