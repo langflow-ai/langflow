@@ -276,7 +276,7 @@ async def update_flow(
             raise HTTPException(status_code=404, detail="Flow not found")
 
         update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
-        
+
         if settings_service.settings.remove_api_keys:
             update_data = remove_api_keys(update_data)
 
