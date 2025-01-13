@@ -147,9 +147,6 @@ class LCVectorStoreComponent(Component):
     def as_dataframe(self) -> DataFrame:
         return DataFrame(self.search_documents())
 
-    def as_dataframe(self) -> DataFrame:
-        return DataFrame(self.search_documents())
-
     def get_retriever_kwargs(self):
         """Get the retriever kwargs. Implementations can override this method to provide custom retriever kwargs."""
         return {}
