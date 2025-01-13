@@ -103,13 +103,17 @@ curl -X 'POST' \
    <TabItem value="result" label="Result">
 
 ```plain
-{"event": "vertices_sorted", "data": {"ids": ["ChatInput-FV52m"], "to_run": ["ChatInput-FV52m", "OpenAIModel-Uksag", "Prompt-eZJiw", "ChatOutput-c7Ehh"]}}
+{"event": "vertices_sorted", "data": {"ids": ["Prompt-CDhMB", "ChatInput-8VNJS"], "to_run": ["ChatOutput-Up0tW", "OpenAIModel-mXCyV", "Prompt-CDhMB", "ChatInput-8VNJS"]}}
 
-{"event": "add_message", "data": {"timestamp": "2025-01-09T21:13:05", "sender": "User", "sender_name": "User", "session_id": "801abb1e-19b9-4278-9632-179b6d84f126", "text": "Hello", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": null, "display_name": null, "source": null}, "icon": "", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "0579ffe2-6205-4ddd-b8d4-076bf0c2e4b8", "flow_id": "801abb1e-19b9-4278-9632-179b6d84f126"}}
+{"event": "add_message", "data": {"timestamp": "2025-01-13T21:27:27", "sender": "User", "sender_name": "User", "session_id": "b68d9bfb-6382-455a-869b-b99a3a3a3cf6", "text": "", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": null, "display_name": null, "source": null}, "icon": "", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "3942f4e3-4fff-4507-bb58-c96c7b6b8515", "flow_id": "b68d9bfb-6382-455a-869b-b99a3a3a3cf6"}}
 
-{"event": "end_vertex", "data": {"build_data": {"id": "Prompt-eZJiw", "inactivated_vertices": [], "next_vertices_ids": ["OpenAIModel-Uksag"], "top_level_vertices": ["OpenAIModel-Uksag"], "valid": true, "params": "None", "data": {"results": {}, "outputs": {"prompt": {"message": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.", "type": "text"}}, "logs": {"prompt": []}, "message": {"prompt": {"repr": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.", "raw": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.", "type": "text"}}, "artifacts": {"prompt": {"repr": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.", "raw": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.", "type": "text"}}, "timedelta": 0.005919291055761278, "duration": "6 ms", "used_frozen_result": false}, "timestamp": "2025-01-09T21:13:05.741845Z"}}}
+{"event": "end_vertex", "data": {"build_data": {"id": "Prompt-CDhMB", "inactivated_vertices": [], "next_vertices_ids": [], "top_level_vertices": [], "valid": true, "params": "None", "data": {"results": {}, "outputs": {"prompt": {"message": "You are a helpful AI assistant", "type": "text"}}, "logs": {"prompt": []}, "message": {"prompt": {"repr": "You are a helpful AI assistant", "raw": "You are a helpful AI assistant", "type": "text"}}, "artifacts": {"prompt": {"repr": "You are a helpful AI assistant", "raw": "You are a helpful AI assistant", "type": "text"}}, "timedelta": 0.007543042069301009, "duration": "8 ms", "used_frozen_result": false}, "timestamp": "2025-01-13T21:27:27.231841Z"}}}
 
-{"event": "add_message", "data": {"timestamp": "2025-01-09T21:13:06", "sender": "Machine", "sender_name": "AI", "session_id": "801abb1e-19b9-4278-9632-179b6d84f126", "text": "Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": "OpenAIModel-Uksag", "display_name": "OpenAI", "source": "gpt-4o-mini"}, "icon": "OpenAI", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "c576b97d-bdc1-4b81-86b7-89077e84d46c", "flow_id": "801abb1e-19b9-4278-9632-179b6d84f126"}}
+{"event": "token", "data": {"chunk": "", "id": "fda55d2e-d24c-498e-92a8-03ca2141265e", "timestamp": "2025-01-13 21:27:27 UTC"}}
+
+{"event": "token", "data": {"chunk": "Hello", "id": "fda55d2e-d24c-498e-92a8-03ca2141265e", "timestamp": "2025-01-13 21:27:27 UTC"}}
+
+{"event": "token", "data": {"chunk": "!", "id": "fda55d2e-d24c-498e-92a8-03ca2141265e", "timestamp": "2025-01-13 21:27:27 UTC"}}
 
 {"event": "end", "data": {}}
 ```
@@ -121,11 +125,12 @@ This output is abbreviated, but the order of events illustrates how Langflow run
 
 1. Langflow first sorts the vertices by dependencies (edges) in the `vertices_sorted` event:
 ```
-ChatInput-FV52m → Prompt-eZJiw → OpenAIModel-Uksag → ChatOutput-c7Ehh
+ChatInput-8VNJS → Prompt-CDhMB → OpenAIModel-mXCyV → ChatOutput-Up0tW
 ```
 2. The Chat Input component receives user input in the `add_message` event.
 3. The Prompt component is executed with the received input in the `end_vertex` event.
-4. The Open AI model's response occurs in the next `add_message` event.
+4. The Open AI model's responses stream as `token` events.
+The `token` event represents individual pieces of text as they're generated by an LLM.
 5. The clean `end` event tells you the flow executed with no errors.
 
 You can also pass values for `start_component_id` and `stop_component_id` in the body of the command to control where the flow run will start and stop.
@@ -139,6 +144,7 @@ curl -X 'POST' \
   -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{"stop_component_id": "OpenAIModel-Uksag"}'
 ```
+
 ## Flows
 
 Use the `/flows` endpoint to create, read, update, and delete flows.
