@@ -5,6 +5,7 @@ import {
 import {
   Connection,
   Edge,
+  getOutgoers,
   Node,
   OnSelectionChangeParams,
   ReactFlowJsonObject,
@@ -18,8 +19,8 @@ import {
   IS_MAC,
   LANGFLOW_SUPPORTED_TYPES,
   OUTPUT_TYPES,
-  SUCCESS_BUILD,
   specialCharsRegex,
+  SUCCESS_BUILD,
 } from "../constants/constants";
 import { DESCRIPTIONS } from "../flow_constants";
 import {
@@ -219,7 +220,7 @@ export function isValidConnection(
   { source, target, sourceHandle, targetHandle }: Connection,
   nodes: AllNodeType[],
   edges: EdgeType[],
-) {
+): boolean {
   if (source === target) {
     return false;
   }
@@ -247,6 +248,35 @@ export function isValidConnection(
     ) {
       return true;
     }
+  }
+  if (
+    targetHandleObject.output_types &&
+    (targetHandleObject.output_types.some(
+      (n) => n === sourceHandleObject.dataType,
+    ) ||
+      sourceHandleObject.output_types.some(
+        (t) =>
+          targetHandleObject.output_types?.some((n) => n === t) ||
+          t === targetHandleObject.type,
+      ))
+  ) {
+    // Check if this connection would create a cycle
+    const targetNode = nodes.find((n) => n.id === target);
+
+    const hasCycle = (node, visited = new Set()): boolean => {
+      if (visited.has(node.id)) return false;
+
+      visited.add(node.id);
+
+      for (const outgoer of getOutgoers(node, nodes, edges)) {
+        if (outgoer.id === source) return true;
+        if (hasCycle(outgoer, visited)) return true;
+      }
+      return false;
+    };
+
+    if (targetNode?.id === source) return false;
+    return hasCycle(targetNode);
   }
   return false;
 }
