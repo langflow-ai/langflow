@@ -48,7 +48,7 @@ const HiddenOutputsButton = memo(
   }) => (
     <Button
       unstyled
-      className="group m-auto h-[1.75rem] w-[1.75rem] place-items-center items-center rounded-full border bg-muted hover:text-foreground"
+      className="group flex h-[1.75rem] w-[1.75rem] items-center justify-center rounded-full border bg-muted hover:text-foreground"
       onClick={onClick}
     >
       <ForwardedIconComponent
@@ -461,7 +461,7 @@ function GenericNode({
                 >
                   <div
                     className={cn(
-                      "absolute left-0 right-0 flex justify-center",
+                      "absolute left-1/2 flex -translate-x-1/2 justify-center",
                       (shownOutputs && shownOutputs.length > 0) ||
                         showHiddenOutputs
                         ? "bottom-[-0.8rem]"
