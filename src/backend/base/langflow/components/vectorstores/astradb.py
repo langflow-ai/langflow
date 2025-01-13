@@ -4,7 +4,7 @@ from dataclasses import dataclass, field, fields
 from typing import Any
 
 from astrapy import AstraDBAdmin, DataAPIClient, Database
-from langchain_astradb import AstraDBVectorStore
+from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers import docs_to_data
@@ -232,7 +232,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
-    def map_cloud_providers(self):
+    @classmethod
+    def map_cloud_providers(cls):
         return {
             "Amazon Web Services": {
                 "id": "aws",
@@ -248,11 +249,66 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             },
         }
 
-    def get_database_list(self):
-        client = DataAPIClient(token=self.token, environment=self.environment)
+    @classmethod
+    def create_database_api(
+        cls,
+        token: str,
+        new_database_name: str,
+        cloud_provider: str,
+        region: str,
+    ):
+        client = DataAPIClient(token=token)
 
         # Get the admin object
-        admin_client = client.get_admin(token=self.token)
+        admin_client = client.get_admin(token=token)
+
+        # Call the create database function
+        return admin_client.create_database(
+            name=new_database_name,
+            cloud_provider=cloud_provider,
+            region=region,
+        )
+
+    @classmethod
+    def create_collection_api(
+        cls,
+        token: str,
+        database_name: str,
+        new_collection_name: str,
+        api_endpoint: str | None = None,
+        dimension: int | None = None,
+        embedding_generation_provider: str | None = None,
+        embedding_generation_model: str | None = None,
+    ):
+        client = DataAPIClient(token=token)
+        api_endpoint = cls.get_api_endpoint_static(token=token, database_name=database_name, api_endpoint=api_endpoint)
+
+        # Get the database object
+        database = client.get_database(api_endpoint=api_endpoint, token=token)
+
+        # Build vectorize options, if needed
+        vectorize_options = None
+        if not dimension:
+            vectorize_options = CollectionVectorServiceOptions(
+                provider=embedding_generation_provider,
+                model_name=embedding_generation_model,
+                authentication=None,
+                parameters=None,
+            )
+
+        # Create the collection
+        return database.create_collection(
+            name=new_collection_name,
+            dimension=dimension,
+            service=vectorize_options,
+        )
+
+    @classmethod
+    def get_database_list_static(cls, token: str, environment: str | None = None):
+        client = DataAPIClient(token=token, environment=environment)
+
+        # Get the admin object
+        admin_client = client.get_admin(token=token)
 
         # Get the list of databases
         db_list = list(admin_client.list_databases())
@@ -264,7 +320,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 "collections": len(
                     list(
                         client.get_database(
-                            api_endpoint=api_endpoint, token=self.token, keyspace=db.info.keyspace
+                            api_endpoint=api_endpoint, token=token, keyspace=db.info.keyspace
                         ).list_collection_names(keyspace=db.info.keyspace)
                     )
                 ),
@@ -272,17 +328,35 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             for db in db_list
         }
 
-    def get_api_endpoint(self):
+    def get_database_list(self):
+        return self.get_database_list_static(token=self.token, environment=self.environment)
+
+    @classmethod
+    def get_api_endpoint_static(
+        cls,
+        token: str,
+        environment: str | None = None,
+        api_endpoint: str | None = None,
+        database_name: str | None = None
+    ):
         # If the API endpoint is set, return it
-        if self.api_endpoint:
-            return self.api_endpoint
+        if api_endpoint:
+            return api_endpoint
 
         # If the database is not set, nothing we can do.
-        if not self.database_name:
+        if not database_name:
             return None
 
         # Otherwise, get the URL from the database list
-        return self.get_database_list().get(self.database_name).get("api_endpoint")
+        return cls.get_database_list_static(token=token, environment=environment).get(database_name).get("api_endpoint")
+
+    def get_api_endpoint(self):
+        return self.get_api_endpoint_static(
+            token=self.token,
+            environment=self.environment,
+            api_endpoint=self.api_endpoint,
+            database_name=self.database_name,
+        )
 
     def get_keyspace(self):
         keyspace = self.keyspace
@@ -346,7 +420,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             # Get the admin object
             admin = AstraDBAdmin(token=self.token)
-            db_admin = admin.get_database_admin(self.get_api_endpoint())
+            db_admin = admin.get_database_admin(api_endpoint=self.get_api_endpoint())
 
             # Get the list of embedding providers
             embedding_providers = db_admin.find_embedding_providers().as_dict()
