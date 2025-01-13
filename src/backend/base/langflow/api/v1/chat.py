@@ -172,10 +172,10 @@ async def build_flow(
                     result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
                     flow_name = result.first()
                     graph = await build_graph_from_data(
-                        flow_id=flow_id_str, 
-                        payload=data.model_dump(), 
-                        user_id=str(current_user.id), 
-                        flow_name=flow_name
+                        flow_id=flow_id_str,
+                        payload=data.model_dump(),
+                        user_id=str(current_user.id),
+                        flow_name=flow_name,
                     )
 
             graph.validate_stream()
