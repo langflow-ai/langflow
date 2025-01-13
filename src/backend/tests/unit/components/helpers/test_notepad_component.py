@@ -178,3 +178,117 @@ class TestNotepadComponent(ComponentTestBaseWithoutClient):
         # Step 4: Verify only "Value 2" remains
         assert len(result3) == 1
         assert result3.iloc[0]["value"] == "Value 2"
+
+    async def test_add_value_out_of_range_position(self, component_class):
+        """Test adding values with out-of-range positions.
+
+        Values should be appended at the end when position is:
+        - Negative
+        - Beyond the notepad length
+        """
+        component: NotepadComponent = component_class(input_value="First Value", operation="add")
+        self._add_mock_vertex(component)
+        await component.process_and_get_notepad()
+
+        # Test negative position
+        component = component.set(input_value="Second Value", operation="add", position=-1)
+        result = await component.process_and_get_notepad()
+        assert len(result) == 2
+        assert result.iloc[-1]["value"] == "Second Value"
+
+        # Test position beyond length
+        component = component.set(input_value="Third Value", operation="add", position=10)
+        result = await component.process_and_get_notepad()
+        assert len(result) == 3
+        assert result.iloc[-1]["value"] == "Third Value"
+
+    async def test_remove_value_invalid_cases(self, component_class):
+        """Test removing values with invalid inputs.
+
+        Tests:
+        - Removing with invalid positions raises ValueError
+        - Removing non-existent values leaves notepad unchanged
+        - Removing from empty notepad leaves notepad unchanged
+        """
+        # Setup initial data
+        component: NotepadComponent = component_class(input_value="Value 1", operation="add")
+        self._add_mock_vertex(component)
+        await component.process_and_get_notepad()
+
+        # Test removing with invalid position (negative)
+        component = component.set(operation="remove", position=-1)
+        with pytest.raises(
+            ValueError, match="Error performing operation remove on notepad: Position -1 is out of bounds"
+        ):
+            await component.process_and_get_notepad()
+
+        # Test removing with position beyond length
+        component = component.set(operation="remove", position=10)
+        with pytest.raises(
+            ValueError, match="Error performing operation remove on notepad: Position 10 is out of bounds"
+        ):
+            await component.process_and_get_notepad()
+
+        # Test removing non-existent value (should leave notepad unchanged)
+        # Reset position to None for value-based removal
+        component = component.set(operation="remove", input_value="Non-existent Value", position=None)
+        result = await component.process_and_get_notepad()
+        assert len(result) == 1  # Notepad should remain unchanged
+
+        # Create empty notepad for empty notepad test
+        empty_component: NotepadComponent = component_class(operation="remove")
+        self._add_mock_vertex(empty_component)
+        result = await empty_component.process_and_get_notepad()
+        assert len(result) == 0  # Should handle empty notepad gracefully
+
+    async def test_edit_value_edge_cases(self, component_class):
+        """Test editing values with edge cases.
+
+        Tests:
+        - Editing with invalid positions
+        - Editing the last row when position is beyond length
+        """
+        # Setup initial data
+        component: NotepadComponent = component_class(input_value="Original", operation="add")
+        self._add_mock_vertex(component)
+        await component.process_and_get_notepad()
+
+        # Add second value
+        component = component.set(input_value="Second", operation="add")
+        await component.process_and_get_notepad()
+
+        # Test editing with negative position (should edit last row)
+        component = component.set(operation="edit", input_value="Modified Last", position=-1)
+        result = await component.process_and_get_notepad()
+        assert result.iloc[-1]["value"] == "Modified Last"
+
+        # Test editing with position beyond length (should edit last row)
+        component = component.set(operation="edit", input_value="Modified Beyond", position=10)
+        result = await component.process_and_get_notepad()
+        assert result.iloc[-1]["value"] == "Modified Beyond"
+
+    async def test_invalid_operation(self, component_class):
+        """Test that invalid operations raise appropriate errors."""
+        component: NotepadComponent = component_class(input_value="Test", operation="invalid_op")
+        self._add_mock_vertex(component)
+
+        with pytest.raises(ValueError, match="Invalid operation: invalid_op"):
+            await component.process_and_get_notepad()
+
+    async def test_multiple_notepad_instances(self, component_class):
+        """Test that multiple notepads can be managed using different notepad names."""
+        # Create first notepad
+        component1: NotepadComponent = component_class(input_value="Value 1", operation="add", notepad_name="notepad1")
+        self._add_mock_vertex(component1)
+        result1 = await component1.process_and_get_notepad()
+
+        # Create second notepad
+        component2: NotepadComponent = component_class(input_value="Value 2", operation="add", notepad_name="notepad2")
+        self._add_mock_vertex(component2)
+        result2 = await component2.process_and_get_notepad()
+
+        # Verify each notepad has its own content
+        assert len(result1) == 1
+        assert len(result2) == 1
+        assert result1.iloc[0]["value"] == "Value 1"
+        assert result2.iloc[0]["value"] == "Value 2"
