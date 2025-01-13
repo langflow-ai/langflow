@@ -275,14 +275,12 @@ async def update_flow(
         if not db_flow:
             raise HTTPException(status_code=404, detail="Flow not found")
 
-        if flow.data is None:
-            flow.data = db_flow.data
-
-        flow_data = flow.model_dump(exclude_unset=True)
+        update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
+        
         if settings_service.settings.remove_api_keys:
-            flow_data = remove_api_keys(flow_data)
+            update_data = remove_api_keys(update_data)
 
-        for key, value in flow_data.items():
+        for key, value in update_data.items():
             setattr(db_flow, key, value)
 
         webhook_component = get_webhook_component_in_flow(db_flow.data)
@@ -314,8 +312,7 @@ async def update_flow(
             raise HTTPException(status_code=e.status_code, detail=str(e)) from e
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-    else:
-        return db_flow
+    return db_flow
 
 
 @router.delete("/{flow_id}", status_code=200)
