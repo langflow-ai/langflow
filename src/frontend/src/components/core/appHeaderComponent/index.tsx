@@ -1,6 +1,6 @@
 import AlertDropdown from "@/alerts/alertDropDown";
 import DataStaxLogo from "@/assets/DataStaxLogo.svg?react";
-import LangflowLogo from "@/assets/LangflowLogo.svg?react";
+import TotogiLogo from "@/assets/totogi-logo-rgb.svg?react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -53,17 +53,18 @@ export default function AppHeader(): JSX.Element {
         <Button
           unstyled
           onClick={() => navigate("/")}
-          className="mr-1 flex h-8 w-8 items-center"
+          className="mr-1 flex h-12 w-12 items-center"
           data-testid="icon-ChevronLeft"
         >
           {ENABLE_DATASTAX_LANGFLOW ? (
             <DataStaxLogo className="fill-black dark:fill-[white]" />
           ) : ENABLE_NEW_LOGO ? (
-            <LangflowLogo className="h-5 w-6" />
+            <TotogiLogo className="h-10 w-14" />
           ) : (
             <span className="fill-black text-2xl dark:fill-white">⛓️</span>
           )}
         </Button>
+        <span className="text-lg font-medium text-primary">BSS Magic</span>
         {ENABLE_DATASTAX_LANGFLOW && (
           <>
             <CustomOrgSelector />
@@ -88,7 +89,7 @@ export default function AppHeader(): JSX.Element {
                 window.open("https://github.com/langflow-ai/langflow", "_blank")
               }
             >
-              <GithubStarComponent />
+              
             </Button>
           </>
         )}

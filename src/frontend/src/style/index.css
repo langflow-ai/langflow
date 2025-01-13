@@ -6,26 +6,26 @@
 
 @layer base {
   :root {
-    --font-sans: "Inter", sans-serif;
+    --font-sans: "Poppins", "Inter", system-ui, sans-serif;
     --font-mono: "JetBrains Mono", monospace;
     --font-chivo: "Chivo", sans-serif;
 
-    --foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
-    --background: 0 0% 100%; /* hsl(0, 0%, 100%) */
+    --foreground: 240 10% 3.9%;
+    --background: 0 0% 100%;
     --muted: 240 5% 96%; /* hsl(240, 5%, 96%) */
     --muted-foreground: 240 4% 46%; /* hsl(240, 4%, 46%) */
     --card: 0 0% 100%; /* hsl(0, 0%, 100%) */
-    --card-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
+    --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --popover-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --border: 240 6% 90%; /* hsl(240, 6%, 90%) */
     --input: 240 6% 90%; /* hsl(240, 6%, 90%) */
-    --primary-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
-    --primary: 0 0% 0%; /* hsl(0, 0%, 0%) */
+    --primary-foreground: 0 0% 100%;
+    --primary: 272 63% 48%;
     --secondary: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --secondary-foreground: 240 4% 16%; /* hsl(240, 4%, 16%) */
-    --accent: 240 5% 96%; /* hsl(240, 5%, 96%) */
-    --accent-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
+    --accent: 240 5% 96%;
+    --accent-foreground: 240 10% 3.9%;
     --destructive: 0 72% 51%; /* hsl(0, 72%, 51%) */
     --destructive-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --ring: 0 0% 0%; /* hsl(0, 0%, 0%) */
@@ -167,21 +167,27 @@
     --tool-mode-gradient-2: #ff3276;
 
     --slider-input-border: #d4d4d8;
+
+    --chart-1: 272 63% 48%;
+    --chart-2: 215 100% 50%;
+    --chart-3: 187 100% 42%;
+    --chart-4: 152 57% 58%;
+    --chart-5: 0 84% 60%;
   }
 
   .dark {
-    --foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
-    --background: 240 6% 10%; /* hsl(240, 6%, 10%) */
+    --foreground: 0 0% 98%;
+    --background: 240 10% 3.9%;
     --muted: 240 4% 16%; /* hsl(240, 4%, 16%) */
     --muted-foreground: 240 5% 65%; /* hsl(240, 5%, 65%) */
-    --card: 240 6% 10%; /* hsl(240, 6%, 10%) */
-    --card-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
     --popover: 240 6% 10%; /* hsl(240, 6%, 10%) */
     --popover-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --border: 240 5% 26%; /* hsl(240, 5%, 26%) */
     --input: 240 5% 34%; /* hsl(240, 5%, 34%) */
-    --primary-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
-    --primary: 0 0% 100%; /* hsl(0, 0%, 100%) */
+    --primary-foreground: 0 0% 98%;
+    --primary: 272 63% 48%;
     --secondary: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --secondary-foreground: 240 6% 90%; /* hsl(240, 6%, 90%) */
     --accent: 240 4% 16%; /* hsl(240, 4%, 16%) */
@@ -323,5 +329,34 @@
     --node-ring: 240 6% 90%;
 
     --slider-input-border: #d4d4d8;
+
+    --chart-1: 272 63% 60%;
+    --chart-2: 215 100% 60%;
+    --chart-3: 187 100% 52%;
+    --chart-4: 152 57% 68%;
+    --chart-5: 0 84% 70%;
   }
+}
+
+/* Add scrollbar styling */
+*::-webkit-scrollbar {
+  @apply absolute right-1.5 w-2;
+}
+
+*::-webkit-scrollbar-track {
+  @apply mb-2 mt-2 bg-transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-purple-200/50;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  @apply bg-purple-300/50;
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(233, 213, 255, 0.5) transparent;
 }
