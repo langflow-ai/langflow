@@ -1,5 +1,5 @@
 ---
-title: Dockers
+title: Docker
 lug: /deployment-docker
 ---
 

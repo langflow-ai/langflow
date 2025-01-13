@@ -3,9 +3,10 @@ title: Authentication
 slug: /configuration-authentication
 ---
 
-The login functionality in Langflow serves to authenticate users and protect sensitive routes in the application.
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
-Starting from version 0.5, Langflow introduces an enhanced login mechanism that is governed by a few environment variables. This allows new secure features.
+The login functionality in Langflow serves to authenticate users and protect sensitive routes in the application.
 
 ## Create a superuser and new users in Langflow
 
@@ -103,11 +104,70 @@ LANGFLOW_SUPERUSER_PASSWORD=securepassword
 
 ### LANGFLOW_SECRET_KEY
 
-This environment variable holds a secret key used for encrypting the superuser's password. Make sure to set this to a secure, randomly generated string.
+This environment variable holds a secret key used for encrypting sensitive data like API keys.
 
 ```bash
-LANGFLOW_SECRET_KEY=randomly_generated_secure_key
+LANGFLOW_SECRET_KEY=dBuuuB_FHLvU8T9eUNlxQF9ppqRxwWpXXQ42kM2_fb
 ```
+
+Langflow uses the [Fernet](https://pypi.org/project/cryptography/) library for secret key encryption.
+
+### Create a LANGFLOW_SECRET_KEY
+
+The `LANGFLOW_SECRET_KEY` is used for encrypting sensitive data. It must be:
+- At least 32 bytes long
+- URL-safe base64 encoded
+
+1. To create a `LANGFLOW_SECRET_KEY`, run the following command:
+
+<Tabs>
+<TabItem value="unix" label="macOS/Linux">
+
+```bash
+# Copy to clipboard (macOS)
+python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | pbcopy
+
+# Copy to clipboard (Linux)
+python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | xclip -selection clipboard
+
+# Or just print
+python3 -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')"
+```
+</TabItem>
+
+<TabItem value="windows" label="Windows">
+
+```bash
+# Copy to clipboard
+python -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')" | clip
+
+# Or just print
+python -c "from secrets import token_urlsafe; print(f'LANGFLOW_SECRET_KEY={token_urlsafe(32)}')"
+```
+
+</TabItem>
+</Tabs>
+
+The command generates a secure key like `dBuuuB_FHLvU8T9eUNlxQF9ppqRxwWpXXQ42kM2_fbg`.
+Treat the generated secure key as you would an application access token. Do not commit the key to code and keep it in a safe place.
+
+2. Create a `.env` file with the following configuration, and include your generated secret key value.
+```bash
+LANGFLOW_AUTO_LOGIN=False
+LANGFLOW_SUPERUSER=admin
+LANGFLOW_SUPERUSER_PASSWORD=securepassword
+LANGFLOW_SECRET_KEY=dBuuuB_FHLvU8T9eUNlxQF9ppqRxwWpXXQ42kM2_fbg  # Your generated key
+LANGFLOW_NEW_USER_IS_ACTIVE=False
+```
+
+3. Start Langflow with the values from your `.env` file.
+```bash
+uv run langflow run --env-file .env
+```
+
+The generated secret key value is now used to encrypt your global variables.
+
+If no key is provided, Langflow will automatically generate a secure key. This is not recommended for production environments, because in a multi-instance deployment like Kubernetes, auto-generated keys won't be able to decrypt data encrypted by other instances. Instead, you should explicitly set the `LANGFLOW_SECRET_KEY` environment variable in the deployment configuration to be the same across all instances.
 
 ### LANGFLOW_NEW_USER_IS_ACTIVE
 
