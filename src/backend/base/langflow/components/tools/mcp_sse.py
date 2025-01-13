@@ -1,5 +1,6 @@
 # from langflow.field_typing import Data
 from contextlib import AsyncExitStack
+import asyncio
 
 import httpx
 from mcp import ClientSession, types
@@ -37,8 +38,7 @@ class MCPSseClient:
         if headers is None:
             headers = {}
         url = await self.pre_check_redirect(url)
-
-        # Use asyncio.timeout() instead of timeout_context
+        
         try:
             async with asyncio.timeout(timeout_seconds):
                 sse_transport = await self.exit_stack.enter_async_context(
