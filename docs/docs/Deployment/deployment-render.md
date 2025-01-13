@@ -1,6 +1,5 @@
 ---
 title: Render
-sidebar_position: 4
 slug: /deployment-render
 ---
 

@@ -1,6 +1,5 @@
 ---
 title: Notion Conversational Agent
-sidebar_position: 2
 slug: /integrations/notion/notion-agent-conversational
 ---
 
