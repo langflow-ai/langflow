@@ -101,6 +101,7 @@ export type sourceHandleType = {
 //left side
 export type targetHandleType = {
   inputTypes?: string[];
+  output_types?: string[];
   type: string;
   fieldName: string;
   id: string;
