@@ -337,7 +337,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         token: str,
         environment: str | None = None,
         api_endpoint: str | None = None,
-        database_name: str | None = None
+        database_name: str | None = None,
     ):
         # If the API endpoint is set, return it
         if api_endpoint:
