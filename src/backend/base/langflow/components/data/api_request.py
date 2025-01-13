@@ -7,9 +7,10 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
+import aiofiles
+import aiofiles.os as aiofiles_os
 import httpx
 import validators
-from aiofile import async_open
 
 from langflow.base.curl.parse import parse_context
 from langflow.custom import Component
@@ -193,9 +194,16 @@ class APIRequestComponent(Component):
                 mode = "wb" if is_binary else "w"
                 encoding = response.encoding if mode == "w" else None
                 if file_path:
-                    async with async_open(file_path, mode, encoding=encoding) as f:
-                        await f.write(response.content if is_binary else response.text)
-                        await f.flush()  # Ensure the file is flushed to disk
+                    # Ensure parent directory exists
+                    await aiofiles_os.makedirs(file_path.parent, exist_ok=True)
+                    if is_binary:
+                        async with aiofiles.open(file_path, "wb") as f:
+                            await f.write(response.content)
+                            await f.flush()
+                    else:
+                        async with aiofiles.open(file_path, "w", encoding=encoding) as f:
+                            await f.write(response.text)
+                            await f.flush()
                     metadata["file_path"] = str(file_path)
 
                 if include_httpx_metadata:
@@ -337,8 +345,8 @@ class APIRequestComponent(Component):
         # Step 1: Set up a subdirectory for the component in the OS temp directory
         component_temp_dir = Path(tempfile.gettempdir()) / self.__class__.__name__
 
-        # Use asyncio.to_thread to ensure mkdir does not block the event loop
-        await asyncio.to_thread(component_temp_dir.mkdir, parents=True, exist_ok=True)
+        # Create directory asynchronously
+        await aiofiles_os.makedirs(component_temp_dir, exist_ok=True)
 
         # Step 2: Extract filename from Content-Disposition
         filename = None
@@ -371,12 +379,11 @@ class APIRequestComponent(Component):
         # Step 4: Define the full file path
         file_path = component_temp_dir / filename
 
-        # Step 5: As .exists() causes issues in async (blockbuster) on 3.11+, and we want to use the
-        # given filename unless the file already exists in which case we add a timestamp to it,
-        # we end up doing some odd-looking code:
+        # Step 5: Check if file exists asynchronously and handle accordingly
         try:
-            # This will raise FileExistsError if the file exists
-            await asyncio.to_thread(open, file_path, "x")
+            # Try to create the file exclusively (x mode) to check existence
+            async with aiofiles.open(file_path, "x") as _:
+                pass  # File created successfully, we can use this path
         except FileExistsError:
             # If file exists, append a timestamp to the filename
             timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
