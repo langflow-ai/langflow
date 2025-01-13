@@ -80,6 +80,7 @@ class LoopComponent(Component):
 
         if self.evaluate_stop_loop():
             self.stop("item")
+            self.start("done")
 
             return self.ctx.get(f"{self._id}_aggregated", [])
         self.stop("done")
