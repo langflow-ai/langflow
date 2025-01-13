@@ -65,6 +65,7 @@ export function ParameterRenderComponent({
       placeholder,
       isToolMode,
     };
+
     if (TEXT_FIELD_TYPES.includes(templateData.type ?? "")) {
       if (templateData.list) {
         if (!templateData.options) {
@@ -73,6 +74,7 @@ export function ParameterRenderComponent({
               {...baseInputProps}
               componentName={name}
               id={`inputlist_${id}`}
+              listAddLabel={templateData?.list_add_label}
             />
           );
         }
