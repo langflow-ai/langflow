@@ -86,6 +86,7 @@ export default function InputListComponent({
           disabled={disabled}
           editNode={editNode}
           componentName={componentName || ""}
+          listAddLabel={listAddLabel || "Add More"}
         />
       )}
 
@@ -99,11 +100,9 @@ export default function InputListComponent({
                 type="text"
                 value={singleValue}
                 className={cn(
+                  "w-full text-primary",
                   editNode ? "input-edit-node pr-6" : "pr-10",
                   disabled ? "disabled-state" : "",
-                  focusedIndex === index
-                    ? "text-primary"
-                    : "text-muted-foreground",
                 )}
                 placeholder={getPlaceholder(disabled, placeholder)}
                 onChange={(event) =>
@@ -118,7 +117,7 @@ export default function InputListComponent({
                 <div
                   className={cn(
                     "absolute h-6 w-16",
-                    editNode ? "translate-x-[12rem]" : "translate-x-[11.1rem]",
+                    editNode ? "translate-x-[11rem]" : "translate-x-[11.1rem]",
                   )}
                   style={{
                     pointerEvents: "none",
@@ -136,23 +135,23 @@ export default function InputListComponent({
                   editNode={editNode}
                   handleDuplicateInput={handleDuplicateInput}
                   removeInput={removeInput}
+                  canDelete={value.length > 1}
                 />
               )}
             </div>
           </div>
         ))}
+        {editNode && !disabled && (
+          <Button
+            unstyled
+            onClick={addNewInput}
+            className="btn-add-input-list"
+            data-testid={`input-list-add-more-${editNode ? "edit" : "view"}`}
+          >
+            <span className="mr-2 text-lg">+</span> {listAddLabel || "Add More"}
+          </Button>
+        )}
       </div>
-
-      {!disabled && (
-        <Button
-          unstyled
-          onClick={addNewInput}
-          className="btn-add-input-list"
-          data-testid={`input-list-add-more-${editNode ? "edit" : "view"}`}
-        >
-          <span className="mr-2 text-lg">+</span> {listAddLabel ?? "Add More"}
-        </Button>
-      )}
     </div>
   );
 }
