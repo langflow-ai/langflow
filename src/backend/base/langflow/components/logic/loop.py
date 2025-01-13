@@ -47,40 +47,42 @@ class LoopComponent(Component):
         msg = "The 'data' input must be a list of Data objects or a single Data object."
         raise TypeError(msg)
 
-    def evaluate(self) -> bool:
+    def evaluate_stop_loop(self) -> bool:
         """Evaluate whether to stop item or done output."""
         current_index = self.ctx.get(f"{self._id}_index", 0)
         data_length = len(self.ctx.get(f"{self._id}_data", []))
-        return current_index >= data_length
+        return current_index > data_length
 
     def item_output(self) -> Data:
         """Output the next item in the list or stop if done."""
         self.initialize_data()
+        current_item = None
 
-        if self.evaluate():
+        if self.evaluate_stop_loop():
             self.stop("item")
             return None
 
         # Get data list and current index
         data_list, current_index = self.loop_variables()
-
         if current_index < len(data_list):
             # Output current item and increment index
-            current_item = data_list[current_index]
-            self.update_ctx({f"{self._id}_index": current_index + 1})
-            self.aggregated_output()
-            return current_item
-
-        return None
+            try:
+                current_item = data_list[current_index]
+            except IndexError:
+                current_item = None
+        self.aggregated_output()
+        self.update_ctx({f"{self._id}_index": current_index + 1})
+        return current_item
 
     def done_output(self) -> Data:
         """Trigger the done output when iteration is complete."""
         self.initialize_data()
 
-        if self.evaluate():
+        if self.evaluate_stop_loop():
             self.stop("item")
-            return self.aggregated_output()
 
+            return self.ctx.get(f"{self._id}_aggregated", [])
+        self.stop("done")
         return None
 
     def loop_variables(self):
@@ -99,15 +101,8 @@ class LoopComponent(Component):
         aggregated = self.ctx.get(f"{self._id}_aggregated", [])
 
         # Check if loop input is provided and append to aggregated list
-        if self.loop_input is not None:
+        if self.loop_input is not None and not isinstance(self.loop_input, str) and len(aggregated) <= len(data_list):
             aggregated.append(self.loop_input)
             self.update_ctx({f"{self._id}_aggregated": aggregated})
 
-        # Check if aggregation is complete
-        if len(aggregated) >= len(data_list):
-            self.stop("item")
-            return aggregated
-
-        # Not all items have been processed yet
-        self.stop("done")
-        return None
+        return aggregated
