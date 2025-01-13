@@ -1148,7 +1148,7 @@ wheels = [
 
 [[package]]
 name = "composio-core"
-version = "0.6.7"
+version = "0.6.13"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -1168,14 +1168,14 @@ dependencies = [
     { name = "sentry-sdk" },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/07/d0/e5a43b4c2ebdd994262c682ecaa9641dc2dbc0c57cbe63fa735bec17b626/composio_core-0.6.7.tar.gz", hash = "sha256:b87f0b804d87945b4eae556468b9efc75f751d256bbf2c20fb8ae5b6a31a2818", size = 306803 }
+sdist = { url = "https://files.pythonhosted.org/packages/c5/23/2d949902f65033de351f60727f5a5347bc4758fcb7ef09f6278bb1777b99/composio_core-0.6.13.tar.gz", hash = "sha256:6b5fce8e92d31117889af24a09b28adbd55f3d371bf2d4fe63e7e79fe535a284", size = 306541 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e4/73/c7cec57beaa7846d22eb87b3d15048fd014032a7be06ad4d297b99feeabc/composio_core-0.6.7-py3-none-any.whl", hash = "sha256:03cedeffe417b919d1021c1bc4751f54bd05829b52ff3285f7984e14bdf91efe", size = 469603 },
+    { url = "https://files.pythonhosted.org/packages/ae/42/471007474634951e0a89419bd76ad4060faa8bf2562b084115efc1deda34/composio_core-0.6.13-py3-none-any.whl", hash = "sha256:13a8d81d5ac7cd46a7bcce5f030c87dc73b3b1a849ea329889bd03b8547373b5", size = 468229 },
 ]
 
 [[package]]
 name = "composio-langchain"
-version = "0.6.7"
+version = "0.6.13"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "composio-core" },
@@ -1184,9 +1184,9 @@ dependencies = [
     { name = "langchainhub" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fe/ba/b88fe93c9475670ca1fb529f638f5dfa64378a95373b5a5fa386a3808794/composio_langchain-0.6.7.tar.gz", hash = "sha256:adeab3a87b0e6eb7e96048cef6b988dbe699b6a493a82fac2d371ab940e7e54e", size = 4266 }
+sdist = { url = "https://files.pythonhosted.org/packages/2a/49/f188adfe27b5a7062d6f08c1f048928150f9f40a24e510d4d9f489df17b6/composio_langchain-0.6.13.tar.gz", hash = "sha256:6b3119536cbd4cf2d0ed6920eb8fce6ac1e67b5970597a591f0695f97c611816", size = 4433 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/41/7c/bbbe361fe16ac629d8f5b3874a9b444958033cdc81f2474f808c9ed82209/composio_langchain-0.6.7-py3-none-any.whl", hash = "sha256:f8653b6a7e6b03a61b679a096e278744d3009ebaf3741d7e24e5120a364f212e", size = 4683 },
+    { url = "https://files.pythonhosted.org/packages/45/6e/43bc6e3f084b653562dfed722d93e6cdaa846220040beda020ce7f5b850a/composio_langchain-0.6.13-py3-none-any.whl", hash = "sha256:e3faaee8a67717cf66fb2a29be927b147bd545a25446f2c4470337968358abec", size = 4843 },
 ]
 
 [[package]]
@@ -4033,7 +4033,7 @@ local = [
     { name = "sentence-transformers" },
 ]
 
-[package.dev-dependencies]
+[package.dependency-groups]
 dev = [
     { name = "asgi-lifespan" },
     { name = "blockbuster" },
@@ -4089,8 +4089,8 @@ requires-dist = [
     { name = "certifi", specifier = ">=2023.11.17,<2025.0.0" },
     { name = "chromadb", specifier = "==0.5.23" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse-connect'", specifier = "==0.7.19" },
-    { name = "composio-core", specifier = "==0.6.7" },
-    { name = "composio-langchain", specifier = "==0.6.7" },
+    { name = "composio-core", specifier = "==0.6.13" },
+    { name = "composio-langchain", specifier = "==0.6.13" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "crewai", specifier = "~=0.86.0" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
@@ -4175,7 +4175,7 @@ requires-dist = [
     { name = "zep-python", specifier = "==2.0.2" },
 ]
 
-[package.metadata.requires-dev]
+[package.metadata.dependency-groups]
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
     { name = "blockbuster", specifier = ">=1.5.8,<1.6" },
@@ -4332,7 +4332,7 @@ local = [
     { name = "sentence-transformers" },
 ]
 
-[package.dev-dependencies]
+[package.dependency-groups]
 dev = [
     { name = "asgi-lifespan" },
     { name = "pytest-codspeed" },
@@ -4444,7 +4444,7 @@ requires-dist = [
     { name = "vulture", marker = "extra == 'dev'", specifier = ">=2.11" },
 ]
 
-[package.metadata.requires-dev]
+[package.metadata.dependency-groups]
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
     { name = "pytest-codspeed", specifier = ">=3.0.0" },
