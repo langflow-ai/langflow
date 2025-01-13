@@ -24,20 +24,12 @@ export const ButtonInputList = ({
   return (
     <>
       <ShadTooltip content={listAddLabel} side="top" align="center">
-        <div
-          onClick={addNewInput}
-          className={cn(
-            "hit-area-icon group absolute flex -translate-y-8 translate-x-[15.5rem] items-center justify-center bg-background text-center hover:bg-muted",
-            disabled
-              ? "pointer-events-none bg-background hover:bg-background"
-              : "",
-          )}
-        >
           <Button
-            unstyled
-            size="icon"
+            onClick={addNewInput}
+            variant="ghost"
+            size="iconMd"
             className={cn(
-              "hit-area-icon flex items-center justify-center",
+              "absolute group -translate-y-7 translate-x-[15.0rem]",
               getButtonClassName(disabled),
             )}
             data-testid={getTestId("plus", index, editNode, componentName)}
@@ -53,7 +45,6 @@ export const ButtonInputList = ({
               strokeWidth={ICON_STROKE_WIDTH}
             />
           </Button>
-        </div>
       </ShadTooltip>
     </>
   );
