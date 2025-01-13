@@ -428,6 +428,7 @@ export const nodeColors: { [char: string]: string } = {
   LanguageModel: "#c026d3",
   Agent: "#903BBE",
   Tool: "#00fbfc",
+  MessageTextInput: "#4F46E5",
 };
 
 export const nodeColorsName: { [char: string]: string } = {
@@ -480,6 +481,7 @@ export const nodeColorsName: { [char: string]: string } = {
   BaseChatMessageHistory: "orange",
   Memory: "orange",
   DataFrame: "pink",
+  MessageTextInput: "indigo",
 };
 
 export const SIDEBAR_CATEGORIES = [
