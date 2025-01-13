@@ -152,7 +152,6 @@ async def build_flow(
     start_component_id: str | None = None,
     log_builds: bool | None = True,
     current_user: CurrentActiveUser,
-    session: DbSession,
 ):
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
