@@ -1277,6 +1277,7 @@ class Component(CustomComponent):
 
         This is a public utility method that subclasses can use to create consistent,
         user-friendly error messages that reference inputs by their display names.
+        The input name is placed at the beginning to ensure it's visible even if the message is truncated.
 
         Args:
             input_name (str): The name of the input.
@@ -1286,13 +1287,14 @@ class Component(CustomComponent):
             str: The formatted error message with display name.
         """
         display_name = self.get_input_display_name(input_name)
-        return f"{message} (Input: {display_name})"
+        return f"[Input: {display_name}] {message}"
 
     def build_output_error_message(self, output_name: str, message: str) -> str:
         """Build an error message for an output.
 
         This is a public utility method that subclasses can use to create consistent,
         user-friendly error messages that reference outputs by their display names.
+        The output name is placed at the beginning to ensure it's visible even if the message is truncated.
 
         Args:
             output_name (str): The name of the output.
@@ -1302,13 +1304,14 @@ class Component(CustomComponent):
             str: The formatted error message with display name.
         """
         display_name = self.get_output_display_name(output_name)
-        return f"{message} (Output: {display_name})"
+        return f"[Output: {display_name}] {message}"
 
     def build_component_error_message(self, message: str) -> str:
         """Build an error message for the component.
 
         This is a public utility method that subclasses can use to create consistent,
         user-friendly error messages that reference the component by its display name.
+        The component name is placed at the beginning to ensure it's visible even if the message is truncated.
 
         Args:
             message (str): The error message.
@@ -1316,4 +1319,4 @@ class Component(CustomComponent):
         Returns:
             str: The formatted error message with component display name.
         """
-        return f"{message} (Component: {self.display_name or self.__class__.__name__})"
+        return f"[Component: {self.display_name or self.__class__.__name__}] {message}"
