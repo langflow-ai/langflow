@@ -104,7 +104,7 @@ export const EXPORT_DIALOG_SUBTITLE = "Export flow as JSON file.";
  * @constant
  */
 export const SETTINGS_DIALOG_SUBTITLE =
-  "Customize workspace settings and preferences.";
+  "Customize your flow details and settings.";
 
 /**
  * The base text for subtitle of Flow Logs (Menubar)
@@ -686,8 +686,8 @@ export const TOOLTIP_OUTDATED_NODE =
 
 export const CHAT_SECOND_INITIAL_TEXT = "to inspect previous messages.";
 
-export const TOOLTIP_OPEN_HIDDEN_OUTPUTS = "Show hidden outputs";
-export const TOOLTIP_HIDDEN_OUTPUTS = "Hide outputs";
+export const TOOLTIP_OPEN_HIDDEN_OUTPUTS = "Expand hidden outputs";
+export const TOOLTIP_HIDDEN_OUTPUTS = "Collapse hidden outputs";
 
 export const ZERO_NOTIFICATIONS = "No new notifications";
 
