@@ -52,14 +52,27 @@ def remove_value(notepad: DataFrame, value: str, position: int | None = None) ->
 
     Returns:
         DataFrame: A new DataFrame with the specified value removed
+
+    Raises:
+        ValueError: If position is not a valid integer or is out of bounds
     """
     notepad_length = notepad.shape[0]
-    if position is not None and 0 <= position < notepad_length:
-        # Remove at specific position
+
+    # If position is provided, validate it's within bounds
+    if position is not None:
+        if not isinstance(position, int):
+            msg = f"Position must be an integer, got {type(position)}"
+            raise ValueError(msg)
+        if position < 0 or position >= notepad_length:
+            msg = f"Position {position} is out of bounds for notepad of length {notepad_length}"
+            raise ValueError(msg)
+        # Remove at valid position
         return notepad.drop(notepad.index[position]).reset_index(drop=True)
+
+    # Remove by value if it exists
     if notepad_length > 0 and len(notepad[notepad["value"] == value]) > 0:
-        # Remove by value
         return notepad[notepad["value"] != value].reset_index(drop=True)
+
     return notepad
 
 
@@ -214,7 +227,7 @@ class NotepadComponent(Component):
         try:
             new_df = operation_func(notepad, value, position)
         except Exception as exc:
-            msg = f"Error performing operation: {operation}"
+            msg = f"Error performing operation {operation} on notepad: {exc}"
             raise ValueError(msg) from exc
 
         if not isinstance(new_df, DataFrame):
