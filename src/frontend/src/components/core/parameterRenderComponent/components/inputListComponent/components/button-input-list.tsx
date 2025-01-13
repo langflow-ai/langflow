@@ -24,27 +24,27 @@ export const ButtonInputList = ({
   return (
     <>
       <ShadTooltip content={listAddLabel} side="top" align="center">
-          <Button
-            onClick={addNewInput}
-            variant="ghost"
-            size="iconMd"
+        <Button
+          onClick={addNewInput}
+          variant="ghost"
+          size="iconMd"
+          className={cn(
+            "group absolute -translate-y-7 translate-x-[15.0rem]",
+            getButtonClassName(disabled),
+          )}
+          data-testid={getTestId("plus", index, editNode, componentName)}
+          disabled={disabled}
+        >
+          <IconComponent
+            name="Plus"
             className={cn(
-              "absolute group -translate-y-7 translate-x-[15.0rem]",
-              getButtonClassName(disabled),
+              "icon-size justify-self-center text-muted-foreground",
+              !disabled && "hover:cursor-pointer hover:text-foreground",
+              "group-hover:text-foreground",
             )}
-            data-testid={getTestId("plus", index, editNode, componentName)}
-            disabled={disabled}
-          >
-            <IconComponent
-              name="Plus"
-              className={cn(
-                "icon-size justify-self-center text-muted-foreground",
-                !disabled && "hover:cursor-pointer hover:text-foreground",
-                "group-hover:text-foreground",
-              )}
-              strokeWidth={ICON_STROKE_WIDTH}
-            />
-          </Button>
+            strokeWidth={ICON_STROKE_WIDTH}
+          />
+        </Button>
       </ShadTooltip>
     </>
   );
