@@ -99,7 +99,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             collection_instance = self.NewCollectionInput()
 
             self.database_inputs = [getattr(database_instance, field.name) for field in fields(self.NewDatabaseInput)]
-            self.collection_inputs = [getattr(collection_instance, field.name) for field in fields(self.NewCollectionInput)]
+            self.collection_inputs = [
+                getattr(collection_instance, field.name) for field in fields(self.NewCollectionInput)
+            ]
 
     inputs = [
         SecretStrInput(
