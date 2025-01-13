@@ -1,7 +1,7 @@
+import { Badge } from "@/components/ui/badge";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
-import { TextSearch } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import ForwardedIconComponent, {
   default as IconComponent,
@@ -233,6 +233,41 @@ function NodeOutputField({
     }
   }, [disabledOutput, data.node?.outputs, handleUpdateOutputHide, index]);
 
+  const LoopHandle = useMemo(() => {
+    if (data.node?.outputs![index].allows_loop) {
+      return (
+        <HandleRenderComponent
+          left={true}
+          nodes={nodes}
+          tooltipTitle={tooltipTitle}
+          id={id}
+          title={title}
+          edges={edges}
+          nodeId={data.id}
+          myData={myData}
+          colors={colors}
+          setFilterEdge={setFilterEdge}
+          showNode={showNode}
+          testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+          colorName={colorName}
+        />
+      );
+    }
+  }, [
+    nodes,
+    tooltipTitle,
+    id,
+    title,
+    edges,
+    data.id,
+    myData,
+    colors,
+    setFilterEdge,
+    showNode,
+    data?.type,
+    colorName,
+  ]);
+
   const Handle = useMemo(
     () => (
       <HandleRenderComponent
@@ -278,8 +313,14 @@ function NodeOutputField({
         isToolMode && "bg-primary",
       )}
     >
+      {LoopHandle}
       <div className="flex w-full items-center justify-end truncate text-sm">
         <div className="flex flex-1">
+          {data.node?.outputs![index].allows_loop && (
+            <Badge variant="pinkStatic" size="xq" className="mr-2 px-1">
+              <ForwardedIconComponent name="Infinity" className="h-4 w-4" />
+            </Badge>
+          )}
           <HideShowButton
             disabled={disabledOutput}
             onClick={() => handleUpdateOutputHide()}
