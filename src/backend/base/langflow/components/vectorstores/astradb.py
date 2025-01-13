@@ -483,12 +483,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             # Get list of regions for a given cloud provider
             cloud_provider = (
-                build_config["database_name"]["dialog_inputs"]["cloud_provider"]["value"]
-                or "Amazon Web Services"
+                build_config["database_name"]["dialog_inputs"]["cloud_provider"]["value"] or "Amazon Web Services"
             )
-            build_config["database_name"]["dialog_inputs"]["region"]["options"] = (
-                self.map_cloud_providers()[cloud_provider]["regions"]
-            )
+            build_config["database_name"]["dialog_inputs"]["region"]["options"] = self.map_cloud_providers()[
+                cloud_provider
+            ]["regions"]
 
             return build_config
 
@@ -536,9 +535,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # And allow the user to see the models based on a selected provider
         model_options = build_config["collection_name"]["dialog_inputs"]["embedding_generation_model"]["options"]
         if not model_options:
-            embedding_provider = build_config["collection_name"]["dialog_inputs"][
-                "embedding_generation_provider"
-            ]["value"]
+            embedding_provider = build_config["collection_name"]["dialog_inputs"]["embedding_generation_provider"][
+                "value"
+            ]
 
             build_config["collection_name"]["dialog_inputs"]["embedding_generation_model"]["options"] = (
                 vectorize_providers.get(embedding_provider, [[], []])[1]
