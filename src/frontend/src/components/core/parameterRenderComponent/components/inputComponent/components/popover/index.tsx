@@ -78,7 +78,7 @@ const CommandItemContent = ({
   <div className="group flex w-full items-center justify-between">
     <div className="flex items-center justify-between">
       <SelectionIndicator isSelected={isSelected} />
-      <ShadTooltip content={option}>
+      <ShadTooltip content={option} side="left">
         <div className="max-w-52 truncate pr-2">
           <span>{option}</span>
         </div>
