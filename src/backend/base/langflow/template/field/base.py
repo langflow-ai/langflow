@@ -7,7 +7,15 @@ from typing import (  # type: ignore[attr-defined]
     _UnionGenericAlias,  # type: ignore[attr-defined]
 )
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 from langflow.field_typing import Text
 from langflow.field_typing.range_spec import RangeSpec
@@ -143,7 +151,11 @@ class Input(BaseModel):
             msg = "file_types must be a list"
             raise ValueError(msg)  # noqa: TRY004
         return [
-            (f".{file_type}" if isinstance(file_type, str) and not file_type.startswith(".") else file_type)
+            (
+                f".{file_type}"
+                if isinstance(file_type, str) and not file_type.startswith(".")
+                else file_type
+            )
             for file_type in value
         ]
 
@@ -188,6 +200,9 @@ class Output(BaseModel):
 
     required_inputs: list[str] | None = Field(default=None)
     """List of required inputs for this output."""
+
+    allows_loop: bool = Field(default=False)
+    """Specifies if the output allows looping."""
 
     def to_dict(self):
         return self.model_dump(by_alias=True, exclude_none=True)
