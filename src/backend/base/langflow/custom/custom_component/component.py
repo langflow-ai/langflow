@@ -897,7 +897,7 @@ class Component(CustomComponent):
         return output.name in self._vertex.edges_source_names
 
     def _get_outputs_to_process(self):
-        return [output for output in self._outputs_map.values() if self._should_process_output(output)]
+        return (output for output in self._outputs_map.values() if self._should_process_output(output))
 
     async def _get_output_result(self, output):
         if output.cache and output.value != UNDEFINED:
