@@ -8,12 +8,12 @@ from langflow.schema import Data
 from langflow.schema.message import Message
 
 
-class TavilyComponent(Component):
+class TavilySearchToolComponent(Component):
     display_name = "Tavily AI Search"
     description = """**Tavily AI** is a search engine optimized for LLMs and RAG, \
         aimed at efficient, quick, and persistent search results."""
     icon = "TavilyIcon"
-    name = "TavilyAI"
+    name = "TavilyAISearch"
     documentation = "https://docs.tavily.com/"
 
     inputs = [
