@@ -72,9 +72,9 @@ test(
 
     await page.getByText("Close").last().click();
 
-    await page.getByTestId("input-list-add-more-view").click();
-    await page.getByTestId("input-list-add-more-view").click();
-    await page.getByTestId("input-list-add-more-view").click();
+    await page.getByTestId("input-list-plus-btn_urls-0").click();
+    await page.getByTestId("input-list-plus-btn_urls-0").click();
+    await page.getByTestId("input-list-plus-btn_urls-0").click();
 
     expect(
       await page.getByTestId("input-list-dropdown-menu-0-view").count(),
