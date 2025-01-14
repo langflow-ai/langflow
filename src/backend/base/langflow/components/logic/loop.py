@@ -105,5 +105,4 @@ class LoopComponent(Component):
         if self.loop_input is not None and not isinstance(self.loop_input, str) and len(aggregated) <= len(data_list):
             aggregated.append(self.loop_input)
             self.update_ctx({f"{self._id}_aggregated": aggregated})
-
         return aggregated
