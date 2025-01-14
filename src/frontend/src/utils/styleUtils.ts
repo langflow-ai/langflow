@@ -304,6 +304,7 @@ import { VertexAIIcon } from "../icons/VertexAI";
 import { WeaviateIcon } from "../icons/Weaviate";
 import SvgWikipedia from "../icons/Wikipedia/Wikipedia";
 import SvgWolfram from "../icons/Wolfram/Wolfram";
+import { TotogiIcon } from "@/icons/Totogi";
 import { HackerNewsIcon } from "../icons/hackerNews";
 import { MistralIcon } from "../icons/mistral";
 import { SupabaseIcon } from "../icons/supabase";
@@ -407,6 +408,9 @@ export const nodeColors: { [char: string]: string } = {
   wrappers: "#E6277A",
   notion: "#000000",
   Notion: "#000000",
+  totogi_ontology: "#000000",
+  totogi: "#000000",
+  Totogi: "#000000",
   AssemblyAI: "#213ED7",
   assemblyai: "#213ED7",
   helpers: "#31A3CC",
@@ -532,7 +536,33 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Git", name: "git", icon: "GitLoader" },
   { display_name: "Confluence", name: "confluence", icon: "Confluence" },
   { display_name: "Mem0", name: "mem0", icon: "Mem0" },
+  { display_name: "Totogi", name: "totogi_ontology", icon: "Totogi" },
+// // ];
+
+// export const SIDEBAR_TOTOGI_ONTOLOGY_SERVICES = [
+  { category: "Customer", display_name: "Appointments", name: "customer_appointments", icon: "Totogi" },
+  { category: "Customer", display_name: "Bills", name: "customer_bills", icon: "Totogi" },
+  { category: "Customer", display_name: "Customer Detail", name: "customer_detail", icon: "Totogi" },
+  { category: "Customer", display_name: "Payments", name: "customer_payments", icon: "Totogi" },
+  { category: "Customer", display_name: "Prepaid Balances", name: "customer_prepaid_balances", icon: "Totogi" },
+  { category: "Customer", display_name: "Reccomendations", name: "customer_reccomendations", icon: "Totogi" },
+  { category: "Customer", display_name: "Shopping Cart", name: "customer_shopping_cart", icon: "Totogi" },
+  { category: "Customer", display_name: "Quotes", name: "customer_quotes", icon: "Totogi" },
+  { category: "Customer", display_name: "Risk", name: "customer_risk", icon: "Totogi" },
+  { category: "Product", display_name: "Catalog", name: "product_catalog", icon: "Totogi" },
+  { category: "Product", display_name: "Inventory", name: "product_inventory", icon: "Totogi" },
+  { category: "Product", display_name: "Orders", name: "product_orders", icon: "Totogi" },
+  { category: "Product", display_name: "Qualification", name: "product_qualification", icon: "Totogi" },
+  { category: "Product", display_name: "Promotions", name: "product_promotions", icon: "Totogi" },
+  { category: "Service", display_name: "Incident Management", name: "service_incident_management", icon: "Totogi" },
+  { category: "Service", display_name: "Service Problem", name: "service_problem", icon: "Totogi" },
+  { category: "Service", display_name: "Service Request", name: "service_service_request", icon: "Totogi" },
+  { category: "Service", display_name: "Trouble Ticket", name: "service_trouble_ticket", icon: "Totogi" },
+  { category: "Security", display_name: "Identity", name: "security_identity", icon: "Totogi" },
+  { category: "Security", display_name: "Permissions", name: "security_permissions", icon: "Totogi" },
+  { category: "Security", display_name: "Audit", name: "security_audit", icon: "Totogi" },
 ];
+
 
 export const categoryIcons = {
   saved_components: GradientSave,
@@ -686,6 +716,7 @@ export const nodeIconsLucide: iconsType = {
   VertexAIEmbeddings: VertexAIIcon,
   Share3: ShareIcon,
   Share4: Share2Icon,
+  Totogi: TotogiIcon,
   WikipediaAPIWrapper: SvgWikipedia,
   WolframAlphaAPIWrapper: SvgWolfram,
   WikipediaQueryRun: SvgWikipedia,

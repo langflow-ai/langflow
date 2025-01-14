@@ -26,6 +26,7 @@ import isWrappedWithClass from "../PageComponent/utils/is-wrapped-with-class";
 import { CategoryGroup } from "./components/categoryGroup";
 import NoResultsMessage from "./components/emptySearchComponent";
 import MemoizedSidebarGroup from "./components/sidebarBundles";
+import MemoizedTotogiOntologySidebarGroup from "./components/sidebarTotogiOntology";
 import SidebarMenuButtons from "./components/sidebarFooterButtons";
 import { SidebarHeaderComponent } from "./components/sidebarHeader";
 import { applyBetaFilter } from "./helpers/apply-beta-filter";
@@ -340,6 +341,10 @@ export function FlowSidebarComponent() {
         data={data}
       />
       <SidebarContent>
+        {console.log('DataFilter:', JSON.stringify(dataFilter, null, 2))}
+        {console.log('Categories:', JSON.stringify(CATEGORIES, null, 2))}
+        {console.log('Bundles:', JSON.stringify(BUNDLES, null, 2))}
+        {console.log('Has results:', hasResults)}
         {hasResults ? (
           <>
             {hasCategoryItems && (

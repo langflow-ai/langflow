@@ -736,6 +736,9 @@ export const PRIORITY_SIDEBAR_ORDER = [
 ];
 
 export const BUNDLES_SIDEBAR_FOLDER_NAMES = [
+  "Totogi",
+  "totogi",
+  "totogi_ontology",
   "notion",
   "Notion",
   "AssemblyAI",
