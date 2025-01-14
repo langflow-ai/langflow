@@ -44,7 +44,7 @@ class AstraAssistantManager(ComponentWithCache):
             info="Instructions for the assistant, think of these as the system prompt.",
         ),
         HandleInput(
-            name="tools",
+            name="input_tools",
             display_name="Tools",
             input_types=["Tool"],
             is_list=True,
@@ -57,9 +57,7 @@ class AstraAssistantManager(ComponentWithCache):
         #    options=tool_names,
         # ),
         MultilineInput(
-            name="user_message",
-            display_name="User Message",
-            info="User message to pass to the run.",
+            name="user_message", display_name="User Message", info="User message to pass to the run.", tool_mode=True
         ),
         FileInput(
             name="file",
@@ -119,32 +117,34 @@ class AstraAssistantManager(ComponentWithCache):
             name="input_thread_id",
             display_name="Thread ID (optional)",
             info="ID of the thread",
+            advanced=True,
         ),
         MultilineInput(
             name="input_assistant_id",
             display_name="Assistant ID (optional)",
             info="ID of the assistant",
+            advanced=True,
         ),
         MultilineInput(
             name="env_set",
             display_name="Environment Set",
             info="Dummy input to allow chaining with Dotenv Component.",
+            advanced=True,
         ),
     ]
 
     outputs = [
         Output(display_name="Assistant Response", name="assistant_response", method="get_assistant_response"),
-        Output(display_name="Tool output", name="tool_output", method="get_tool_output"),
-        Output(display_name="Thread Id", name="output_thread_id", method="get_thread_id"),
-        Output(display_name="Assistant Id", name="output_assistant_id", method="get_assistant_id"),
-        Output(display_name="Vector Store Id", name="output_vs_id", method="get_vs_id"),
+        Output(display_name="Tool output", name="tool_output", method="get_tool_output", hidden=True),
+        Output(display_name="Thread Id", name="output_thread_id", method="get_thread_id", hidden=True),
+        Output(display_name="Assistant Id", name="output_assistant_id", method="get_assistant_id", hidden=True),
+        Output(display_name="Vector Store Id", name="output_vs_id", method="get_vs_id", hidden=True),
     ]
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.lock = asyncio.Lock()
         self.initialized: bool = False
-        self.tools = []  # type: ignore[assignment]
         self._assistant_response: Message = None  # type: ignore[assignment]
         self._tool_output: Message = None  # type: ignore[assignment]
         self._thread_id: Message = None  # type: ignore[assignment]
@@ -185,10 +185,12 @@ class AstraAssistantManager(ComponentWithCache):
 
     async def process_inputs(self) -> None:
         logger.info(f"env_set is {self.env_set}")
-        logger.info(self.tools)
+        logger.info(self.input_tools)
         tools = []
         tool_obj = None
-        for tool in self.tools:
+        if self.input_tools is None:
+            self.input_tools = []
+        for tool in self.input_tools:
             tool_obj = wrap_base_tool_as_tool_interface(tool)
             tools.append(tool_obj)
 
