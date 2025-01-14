@@ -32,78 +32,82 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     @dataclass
     class NewDatabaseInput:
         functionality: str = "create"
-        fields: dict[str, dict] = field(default_factory=lambda: {
-            "data": {
-                "id": "astra-newdb",
-                "node": {
-                    "description": "Create a new database in Astra DB.",
-                    "display_name": "Create New Database",
-                    "field_order": ["new_database_name", "cloud_provider", "region"],
-                    "template": {
-                        "new_database_name": StrInput(
-                            name="new_database_name",
-                            display_name="New Database Name",
-                            info="Name of the new database to create in Astra DB.",
-                            required=True,
-                        ),
-                        "cloud_provider": DropdownInput(
-                            name="cloud_provider",
-                            display_name="Cloud Provider",
-                            info="Cloud provider for the new database.",
-                            options=["Amazon Web Services", "Google Cloud Platform", "Microsoft Azure"],
-                            required=True,
-                        ),
-                        "region": DropdownInput(
-                            name="region",
-                            display_name="Region",
-                            info="Region for the new database.",
-                            options=[],
-                            required=True,
-                        ),
+        fields: dict[str, dict] = field(
+            default_factory=lambda: {
+                "data": {
+                    "id": "astra-newdb",
+                    "node": {
+                        "description": "Create a new database in Astra DB.",
+                        "display_name": "Create New Database",
+                        "field_order": ["new_database_name", "cloud_provider", "region"],
+                        "template": {
+                            "new_database_name": StrInput(
+                                name="new_database_name",
+                                display_name="New Database Name",
+                                info="Name of the new database to create in Astra DB.",
+                                required=True,
+                            ),
+                            "cloud_provider": DropdownInput(
+                                name="cloud_provider",
+                                display_name="Cloud Provider",
+                                info="Cloud provider for the new database.",
+                                options=["Amazon Web Services", "Google Cloud Platform", "Microsoft Azure"],
+                                required=True,
+                            ),
+                            "region": DropdownInput(
+                                name="region",
+                                display_name="Region",
+                                info="Region for the new database.",
+                                options=[],
+                                required=True,
+                            ),
+                        },
                     },
-                },
+                }
             }
-        })
+        )
 
     @dataclass
     class NewCollectionInput:
         functionality: str = "create"
-        fields: dict[str, dict] = field(default_factory=lambda: {
-            "data": {
-                "id": "astra-newcl",
-                "node": {
-                    "description": "Create a new collection in Astra DB.",
-                    "display_name": "Create New Collection",
-                    "field_order": [
-                        "new_collection_name",
-                        "embedding_generation_provider",
-                        "embedding_generation_model"
-                    ],
-                    "template": {
-                        "new_collection_name": StrInput(
-                            name="new_collection_name",
-                            display_name="New Collection Name",
-                            info="Name of the new collection to create in Astra DB.",
-                            required=True,
-                        ),
-                        "embedding_generation_provider": DropdownInput(
-                            name="embedding_generation_provider",
-                            display_name="Embedding Generation Provider",
-                            info="Provider to use for generating embeddings.",
-                            options=[],
-                            required=True,
-                        ),
-                        "embedding_generation_model": DropdownInput(
-                            name="embedding_generation_model",
-                            display_name="Embedding Generation Model",
-                            info="Model to use for generating embeddings.",
-                            options=[],
-                            required=True,
-                        ),
+        fields: dict[str, dict] = field(
+            default_factory=lambda: {
+                "data": {
+                    "id": "astra-newcl",
+                    "node": {
+                        "description": "Create a new collection in Astra DB.",
+                        "display_name": "Create New Collection",
+                        "field_order": [
+                            "new_collection_name",
+                            "embedding_generation_provider",
+                            "embedding_generation_model",
+                        ],
+                        "template": {
+                            "new_collection_name": StrInput(
+                                name="new_collection_name",
+                                display_name="New Collection Name",
+                                info="Name of the new collection to create in Astra DB.",
+                                required=True,
+                            ),
+                            "embedding_generation_provider": DropdownInput(
+                                name="embedding_generation_provider",
+                                display_name="Embedding Generation Provider",
+                                info="Provider to use for generating embeddings.",
+                                options=[],
+                                required=True,
+                            ),
+                            "embedding_generation_model": DropdownInput(
+                                name="embedding_generation_model",
+                                display_name="Embedding Generation Model",
+                                info="Model to use for generating embeddings.",
+                                options=[],
+                                required=True,
+                            ),
+                        },
                     },
-                },
+                }
             }
-        })
+        )
 
     inputs = [
         SecretStrInput(
@@ -501,9 +505,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             # Get list of regions for a given cloud provider
             cloud_provider = (
-                build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-                    "cloud_provider"
-                ]["value"] or "Amazon Web Services"
+                build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["cloud_provider"][
+                    "value"
+                ]
+                or "Amazon Web Services"
             )
             build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["region"][
                 "options"
