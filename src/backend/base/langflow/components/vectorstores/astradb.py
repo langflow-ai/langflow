@@ -117,6 +117,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             value="ASTRA_DB_APPLICATION_TOKEN",
             required=True,
             real_time_refresh=True,
+            input_types=[],
         ),
         SecretStrInput(
             name="api_endpoint",
