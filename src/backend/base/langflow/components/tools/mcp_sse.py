@@ -92,6 +92,7 @@ class MCPSse(Component):
                 Tool(
                     name=tool.name,  # maybe format this
                     description=tool.description,
+                    args_schema=args_schema,
                     coroutine=create_tool_coroutine(tool.name, args_schema, self.client.session),
                     func=create_tool_func(tool.name, self.client.session),
                 )
