@@ -123,7 +123,11 @@ export const MenuBar = ({}: {}): JSX.Element => {
     }
     // return savedText;
     return (
-      <div className="shrink-0 text-xs font-medium text-accent-emerald-foreground">
+      <div
+        data-testid="menu_status_saved_flow_button"
+        id="menu_status_saved_flow_button"
+        className="shrink-0 text-xs font-medium text-accent-emerald-foreground"
+      >
         Saved
       </div>
     );
@@ -214,7 +218,11 @@ export const MenuBar = ({}: {}): JSX.Element => {
 
   return currentFlow && onFlowPage ? (
     <div className="flex items-center justify-center gap-2 truncate">
-      <div className="header-menu-bar hidden w-20 max-w-fit grow justify-end truncate md:flex">
+      <div
+        className="header-menu-bar hidden w-20 max-w-fit grow justify-end truncate md:flex"
+        data-testid="menu_flow_bar"
+        id="menu_flow_bar_navigation"
+      >
         {currentFolder?.name && (
           <div className="hidden truncate md:flex">
             <div
@@ -273,6 +281,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               <div
                 className="truncate font-semibold text-primary"
                 data-testid="flow_name"
+                id="flow_name"
                 onClick={() => {
                   setEditingName(true);
                   setFlowName(currentFlow.name);
@@ -299,6 +308,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
                   handleAddFlow();
                 }}
                 className="cursor-pointer"
+                data-testid="menu_new_flow_button"
+                id="menu_new_flow_button"
               >
                 <IconComponent name="Plus" className="header-menu-options" />
                 New
@@ -309,6 +320,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
                   setOpenSettings(true);
                 }}
                 className="cursor-pointer"
+                data-testid="menu_edit_flow_button"
+                id="menu_edit_flow_button"
               >
                 <IconComponent
                   name="SquarePen"
@@ -320,6 +333,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
                 <DropdownMenuItem
                   onClick={handleSave}
                   className="cursor-pointer"
+                  data-testid="menu_save_flow_button"
+                  id="menu_save_flow_button"
                 >
                   <ToolbarSelectItem
                     value="Save"
@@ -338,6 +353,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
                   setOpenLogs(true);
                 }}
                 className="cursor-pointer"
+                data-testid="menu_logs_flow_button"
+                id="menu_logs_flow_button"
               >
                 <IconComponent
                   name="ScrollText"
@@ -361,6 +378,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
                       });
                     });
                 }}
+                data-testid="menu_import_flow_button"
+                id="menu_import_flow_button"
               >
                 <IconComponent name="FileUp" className="header-menu-options" />
                 Import
@@ -379,6 +398,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
                   undo();
                 }}
                 className="cursor-pointer"
+                data-testid="menu_undo_flow_button"
+                id="menu_undo_flow_button"
               >
                 <ToolbarSelectItem
                   value="Undo"
@@ -395,6 +416,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
                   redo();
                 }}
                 className="cursor-pointer"
+                data-testid="menu_redo_flow_button"
+                id="menu_redo_flow_button"
               >
                 <ToolbarSelectItem
                   value="Redo"
@@ -411,6 +434,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
                   handleReloadComponents();
                 }}
                 className="cursor-pointer"
+                data-testid="menu_refresh_flow_button"
+                id="menu_refresh_flow_button"
               >
                 <IconComponent
                   name="RefreshCcw"
