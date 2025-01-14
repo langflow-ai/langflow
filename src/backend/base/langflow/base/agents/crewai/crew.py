@@ -62,7 +62,7 @@ def convert_llm(llm: Any, excluded_keys=None) -> LLM:
     if isinstance(llm, LLM):
         return llm
 
-    # Check if we should use model_name or model
+    # Check if we should use model_name model, or something else
     if hasattr(llm, "model_name") and llm.model_name:
         model_name = llm.model_name
     elif hasattr(llm, "model") and llm.model:
