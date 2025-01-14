@@ -324,7 +324,7 @@ class Settings(BaseSettings):
     @field_validator("database_driver_async", mode="before")
     @classmethod
     def set_database_driver_async(cls, value):
-        if value:= os.getenv("LANGFLOW_DATABASE_DRIVER_ASYNC"):
+        if value := os.getenv("LANGFLOW_DATABASE_DRIVER_ASYNC"):
             logger.debug("Adding LANGFLOW_DATABASE_DRIVER_ASYNC to database_driver_async")
 
         logger.debug(f"Database driver async: {value}")
