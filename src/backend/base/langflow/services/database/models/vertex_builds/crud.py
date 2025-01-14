@@ -32,7 +32,7 @@ async def get_vertex_builds_by_flow_id(
 
 
 async def log_vertex_build(db: AsyncSession, vertex_build: VertexBuildBase) -> VertexBuildTable:
-    """Log a vertex build and maintain maximum builds per vertex.
+    """Log a vertex build and maintain maximum builds globally and per vertex.
 
     Args:
         db: Database session
@@ -47,24 +47,35 @@ async def log_vertex_build(db: AsyncSession, vertex_build: VertexBuildBase) -> V
     table = VertexBuildTable(**vertex_build.model_dump())
 
     try:
-        # Get max entries setting
-        max_entries = get_settings_service().settings.max_vertex_builds_per_vertex
+        settings = get_settings_service().settings
+        max_global = settings.max_vertex_builds_to_keep
+        max_per_vertex = settings.max_vertex_builds_per_vertex
 
-        # Delete older entries in a single transaction
-        delete_older = delete(VertexBuildTable).where(
+        # First delete older entries globally
+        delete_global = delete(VertexBuildTable).where(
+            VertexBuildTable.id.in_(
+                select(VertexBuildTable.id)
+                .order_by(VertexBuildTable.timestamp.desc())
+                .offset(max_global - 1)  # Keep newest max_global-1 plus the one we're adding
+            )
+        )
+
+        # Then delete older entries per vertex
+        delete_per_vertex = delete(VertexBuildTable).where(
             VertexBuildTable.flow_id == vertex_build.flow_id,
             VertexBuildTable.id == vertex_build.id,
             VertexBuildTable.build_id.in_(
                 select(VertexBuildTable.build_id)
                 .where(VertexBuildTable.flow_id == vertex_build.flow_id, VertexBuildTable.id == vertex_build.id)
                 .order_by(VertexBuildTable.timestamp.desc())
-                .offset(max_entries - 1)  # Keep newest max_entries-1 plus the one we're adding
+                .offset(max_per_vertex - 1)  # Keep newest max_per_vertex-1 plus the one we're adding
             ),
         )
 
-        # Add new entry and execute delete in same transaction
+        # Execute both deletes and add new entry in same transaction
         db.add(table)
-        await db.exec(delete_older)
+        await db.exec(delete_global)
+        await db.exec(delete_per_vertex)
         await db.commit()
         await db.refresh(table)
 
