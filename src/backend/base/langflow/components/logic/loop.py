@@ -38,7 +38,6 @@ class LoopComponent(Component):
             }
         )
 
-
     def _validate_data(self, data):
         """Validate and return a list of Data objects."""
         if isinstance(data, Data):
