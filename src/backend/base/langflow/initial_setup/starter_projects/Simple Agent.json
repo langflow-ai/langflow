@@ -2,12 +2,10 @@
   "data": {
     "edges": [
       {
-        "animated": false,
-        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-sTYr3",
+            "id": "ChatInput-ilDxB",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,27 +13,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-yGhD2",
+            "id": "Agent-WQiI8",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-sTYr3{œdataTypeœ:œChatInputœ,œidœ:œChatInput-sTYr3œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-yGhD2{œfieldNameœ:œinput_valueœ,œidœ:œAgent-yGhD2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-ilDxB{œdataTypeœ:œChatInputœ,œidœ:œChatInput-ilDxBœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-WQiI8{œfieldNameœ:œinput_valueœ,œidœ:œAgent-WQiI8œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-sTYr3",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-sTYr3œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-yGhD2",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-yGhD2œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-ilDxB",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-ilDxBœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-WQiI8",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-WQiI8œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
-        "animated": false,
-        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-yGhD2",
+            "id": "Agent-WQiI8",
             "name": "response",
             "output_types": [
               "Message"
@@ -43,55 +39,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-Tkzec",
+            "id": "ChatOutput-8jO4X",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-yGhD2{œdataTypeœ:œAgentœ,œidœ:œAgent-yGhD2œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Tkzec{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Tkzecœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-WQiI8{œdataTypeœ:œAgentœ,œidœ:œAgent-WQiI8œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-8jO4X{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-8jO4Xœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-yGhD2",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-yGhD2œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-Tkzec",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Tkzecœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-WQiI8",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-WQiI8œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-8jO4X",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-8jO4Xœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "CalculatorTool",
-            "id": "CalculatorTool-IfWT1",
-            "name": "api_build_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-yGhD2",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-CalculatorTool-IfWT1{œdataTypeœ:œCalculatorToolœ,œidœ:œCalculatorTool-IfWT1œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-Agent-yGhD2{œfieldNameœ:œtoolsœ,œidœ:œAgent-yGhD2œ,œinputTypesœ:[œToolœ,œBaseToolœ,œStructuredToolœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "CalculatorTool-IfWT1",
-        "sourceHandle": "{œdataTypeœ: œCalculatorToolœ, œidœ: œCalculatorTool-IfWT1œ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-yGhD2",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-yGhD2œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-FOPyh",
+            "id": "URL-mRzJq",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -99,19 +65,45 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-yGhD2",
+            "id": "Agent-WQiI8",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-URL-FOPyh{œdataTypeœ:œURLœ,œidœ:œURL-FOPyhœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-yGhD2{œfieldNameœ:œtoolsœ,œidœ:œAgent-yGhD2œ,œinputTypesœ:[œToolœ,œBaseToolœ,œStructuredToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-URL-mRzJq{œdataTypeœ:œURLœ,œidœ:œURL-mRzJqœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-WQiI8{œfieldNameœ:œtoolsœ,œidœ:œAgent-WQiI8œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "URL-FOPyh",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-FOPyhœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-yGhD2",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-yGhD2œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "URL-mRzJq",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-mRzJqœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-WQiI8",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-WQiI8œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "CalculatorTool",
+            "id": "CalculatorTool-d6fIp",
+            "name": "api_build_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-WQiI8",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-CalculatorTool-d6fIp{œdataTypeœ:œCalculatorToolœ,œidœ:œCalculatorTool-d6fIpœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-Agent-WQiI8{œfieldNameœ:œtoolsœ,œidœ:œAgent-WQiI8œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "CalculatorTool-d6fIp",
+        "sourceHandle": "{œdataTypeœ: œCalculatorToolœ, œidœ: œCalculatorTool-d6fIpœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-WQiI8",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-WQiI8œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -119,7 +111,7 @@
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Agent",
-          "id": "Agent-yGhD2",
+          "id": "Agent-WQiI8",
           "node": {
             "base_classes": [
               "Message"
@@ -676,24 +668,21 @@
           },
           "type": "Agent"
         },
-        "dragging": false,
-        "height": 648,
-        "id": "Agent-yGhD2",
-        "position": {
-          "x": 2306.5155821255557,
-          "y": 332.5289520982579
+        "id": "Agent-WQiI8",
+        "measured": {
+          "height": 645,
+          "width": 320
         },
-        "positionAbsolute": {
-          "x": 2306.5155821255557,
-          "y": 332.5289520982579
+        "position": {
+          "x": 1652.2479633316434,
+          "y": 297.9085084144251
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatInput-sTYr3",
+          "id": "ChatInput-ilDxB",
           "node": {
             "base_classes": [
               "Message"
@@ -798,7 +787,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
               },
               "files": {
                 "_input_type": "FileInput",
@@ -848,9 +837,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as input.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": [],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -973,26 +960,23 @@
           },
           "type": "ChatInput"
         },
-        "dragging": false,
-        "height": 234,
-        "id": "ChatInput-sTYr3",
-        "position": {
-          "x": 1939.9269765193949,
-          "y": 965.3667152408464
+        "id": "ChatInput-ilDxB",
+        "measured": {
+          "height": 233,
+          "width": 320
         },
-        "positionAbsolute": {
-          "x": 1939.9269765193949,
-          "y": 965.3667152408464
+        "position": {
+          "x": 1285.6593577254828,
+          "y": 930.7462715570136
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-Tkzec",
+          "id": "ChatOutput-8jO4X",
           "node": {
             "base_classes": [
               "Message"
@@ -1250,24 +1234,21 @@
           },
           "type": "ChatOutput"
         },
-        "dragging": false,
-        "height": 234,
-        "id": "ChatOutput-Tkzec",
-        "position": {
-          "x": 2683.9938458383212,
-          "y": 556.5828467235146
+        "id": "ChatOutput-8jO4X",
+        "measured": {
+          "height": 233,
+          "width": 320
         },
-        "positionAbsolute": {
-          "x": 2683.9938458383212,
-          "y": 556.5828467235146
+        "position": {
+          "x": 2029.726227044409,
+          "y": 521.9624030396819
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
-          "id": "URL-FOPyh",
+          "id": "URL-mRzJq",
           "node": {
             "base_classes": [
               "Data",
@@ -1374,30 +1355,78 @@
           },
           "type": "URL"
         },
-        "dragging": false,
-        "height": 320,
-        "id": "URL-FOPyh",
-        "position": {
-          "x": 1942.4405475324484,
-          "y": 274.6204436838327
+        "id": "URL-mRzJq",
+        "measured": {
+          "height": 319,
+          "width": 320
         },
-        "positionAbsolute": {
-          "x": 1942.4405475324484,
-          "y": 274.6204436838327
+        "position": {
+          "x": 1288.1729287385363,
+          "y": 240
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {
-          "id": "CalculatorTool-IfWT1",
+          "id": "note-SOOQu",
+          "node": {
+            "description": "# 📖 README\nRun an Agent with URL and Calculator tools available for its use. \nThe Agent decides which tool to use to solve a problem.\n## Quick start\n\n1. Add your OpenAI API key to the Agent.\n2. Open the Playground and chat with the Agent. Request some information about a recipe, and then ask to add two numbers together. In the responses, the Agent will use different tools to solve different problems.\n\n## Next steps\nConnect more tools to the Agent to create your perfect assistant.\n\nFor more, see the [Langflow docs](https://docs.langflow.org/agents-tool-calling-agent-component).",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "neutral"
+            }
+          },
+          "type": "note"
+        },
+        "id": "note-SOOQu",
+        "measured": {
+          "height": 325,
+          "width": 325
+        },
+        "position": {
+          "x": 660,
+          "y": 288.504681406951
+        },
+        "selected": false,
+        "type": "noteNode"
+      },
+      {
+        "data": {
+          "id": "note-YaXmP",
+          "node": {
+            "description": "### 💡 Add your OpenAI API key here👇",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "transparent"
+            }
+          },
+          "type": "note"
+        },
+        "id": "note-YaXmP",
+        "measured": {
+          "height": 324,
+          "width": 324
+        },
+        "position": {
+          "x": 1648.6876745095624,
+          "y": 253.8646618156497
+        },
+        "selected": false,
+        "type": "noteNode"
+      },
+      {
+        "data": {
+          "id": "CalculatorTool-d6fIp",
           "node": {
             "base_classes": [
               "Data",
               "Tool"
             ],
             "beta": false,
+            "category": "tools",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Perform basic arithmetic operations on a given expression.",
@@ -1409,9 +1438,10 @@
             ],
             "frozen": false,
             "icon": "calculator",
+            "key": "CalculatorTool",
             "legacy": false,
-            "lf_version": "1.1.0.dev4",
             "metadata": {},
+            "minimized": false,
             "output_types": [],
             "outputs": [
               {
@@ -1440,6 +1470,7 @@
               }
             ],
             "pinned": false,
+            "score": 0.001,
             "template": {
               "_type": "Component",
               "code": {
@@ -1458,7 +1489,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import ast\nimport operator\n\nfrom langchain.tools import StructuredTool\nfrom langchain_core.tools import ToolException\nfrom loguru import logger\nfrom pydantic import BaseModel, Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import MessageTextInput\nfrom langflow.schema import Data\n\n\nclass CalculatorToolComponent(LCToolComponent):\n    display_name = \"Calculator\"\n    description = \"Perform basic arithmetic operations on a given expression.\"\n    icon = \"calculator\"\n    name = \"CalculatorTool\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"expression\",\n            display_name=\"Expression\",\n            info=\"The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').\",\n        ),\n    ]\n\n    class CalculatorToolSchema(BaseModel):\n        expression: str = Field(..., description=\"The arithmetic expression to evaluate.\")\n\n    def run_model(self) -> list[Data]:\n        return self._evaluate_expression(self.expression)\n\n    def build_tool(self) -> Tool:\n        return StructuredTool.from_function(\n            name=\"calculator\",\n            description=\"Evaluate basic arithmetic expressions. Input should be a string containing the expression.\",\n            func=self._eval_expr_with_error,\n            args_schema=self.CalculatorToolSchema,\n        )\n\n    def _eval_expr(self, node):\n        # Define the allowed operators\n        operators = {\n            ast.Add: operator.add,\n            ast.Sub: operator.sub,\n            ast.Mult: operator.mul,\n            ast.Div: operator.truediv,\n            ast.Pow: operator.pow,\n        }\n        if isinstance(node, ast.Num):\n            return node.n\n        if isinstance(node, ast.BinOp):\n            return operators[type(node.op)](self._eval_expr(node.left), self._eval_expr(node.right))\n        if isinstance(node, ast.UnaryOp):\n            return operators[type(node.op)](self._eval_expr(node.operand))\n        if isinstance(node, ast.Call):\n            msg = (\n                \"Function calls like sqrt(), sin(), cos() etc. are not supported. \"\n                \"Only basic arithmetic operations (+, -, *, /, **) are allowed.\"\n            )\n            raise TypeError(msg)\n        msg = f\"Unsupported operation or expression type: {type(node).__name__}\"\n        raise TypeError(msg)\n\n    def _eval_expr_with_error(self, expression: str) -> list[Data]:\n        try:\n            return self._evaluate_expression(expression)\n        except Exception as e:\n            raise ToolException(str(e)) from e\n\n    def _evaluate_expression(self, expression: str) -> list[Data]:\n        try:\n            # Parse the expression and evaluate it\n            tree = ast.parse(expression, mode=\"eval\")\n            result = self._eval_expr(tree.body)\n\n            # Format the result to a reasonable number of decimal places\n            formatted_result = f\"{result:.6f}\".rstrip(\"0\").rstrip(\".\")\n\n            self.status = formatted_result\n            return [Data(data={\"result\": formatted_result})]\n\n        except (SyntaxError, TypeError, KeyError) as e:\n            error_message = f\"Invalid expression: {e}\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n        except ZeroDivisionError:\n            error_message = \"Error: Division by zero\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n        except Exception as e:  # noqa: BLE001\n            logger.opt(exception=True).debug(\"Error evaluating expression\")\n            error_message = f\"Error: {e}\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n"
+                "value": "import ast\nimport operator\n\nfrom langchain.tools import StructuredTool\nfrom langchain_core.tools import ToolException\nfrom loguru import logger\nfrom pydantic import BaseModel, Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import MessageTextInput\nfrom langflow.schema import Data\n\n\nclass CalculatorToolComponent(LCToolComponent):\n    display_name = \"Calculator\"\n    description = \"Perform basic arithmetic operations on a given expression.\"\n    icon = \"calculator\"\n    name = \"CalculatorTool\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"expression\",\n            display_name=\"Expression\",\n            info=\"The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').\",\n        ),\n    ]\n\n    class CalculatorToolSchema(BaseModel):\n        expression: str = Field(..., description=\"The arithmetic expression to evaluate.\")\n\n    def run_model(self) -> list[Data]:\n        return self._evaluate_expression(self.expression)\n\n    def build_tool(self) -> Tool:\n        return StructuredTool.from_function(\n            name=\"calculator\",\n            description=\"Evaluate basic arithmetic expressions. Input should be a string containing the expression.\",\n            func=self._eval_expr_with_error,\n            args_schema=self.CalculatorToolSchema,\n        )\n\n    def _eval_expr(self, node):\n        if isinstance(node, ast.Num):\n            return node.n\n        if isinstance(node, ast.BinOp):\n            left_val = self._eval_expr(node.left)\n            right_val = self._eval_expr(node.right)\n            return self.operators[type(node.op)](left_val, right_val)\n        if isinstance(node, ast.UnaryOp):\n            operand_val = self._eval_expr(node.operand)\n            return self.operators[type(node.op)](operand_val)\n        if isinstance(node, ast.Call):\n            msg = (\n                \"Function calls like sqrt(), sin(), cos() etc. are not supported. \"\n                \"Only basic arithmetic operations (+, -, *, /, **) are allowed.\"\n            )\n            raise TypeError(msg)\n        msg = f\"Unsupported operation or expression type: {type(node).__name__}\"\n        raise TypeError(msg)\n\n    def _eval_expr_with_error(self, expression: str) -> list[Data]:\n        try:\n            return self._evaluate_expression(expression)\n        except Exception as e:\n            raise ToolException(str(e)) from e\n\n    def _evaluate_expression(self, expression: str) -> list[Data]:\n        try:\n            # Parse the expression and evaluate it\n            tree = ast.parse(expression, mode=\"eval\")\n            result = self._eval_expr(tree.body)\n\n            # Format the result to a reasonable number of decimal places\n            formatted_result = f\"{result:.6f}\".rstrip(\"0\").rstrip(\".\")\n\n            self.status = formatted_result\n            return [Data(data={\"result\": formatted_result})]\n\n        except (SyntaxError, TypeError, KeyError) as e:\n            error_message = f\"Invalid expression: {e}\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n        except ZeroDivisionError:\n            error_message = \"Error: Division by zero\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n        except Exception as e:  # noqa: BLE001\n            logger.opt(exception=True).debug(\"Error evaluating expression\")\n            error_message = f\"Error: {e}\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n\n    def __init__(self, *args, **kwargs):\n        super().__init__(*args, **kwargs)\n        self.operators = {\n            ast.Add: operator.add,\n            ast.Sub: operator.sub,\n            ast.Mult: operator.mul,\n            ast.Div: operator.truediv,\n            ast.Pow: operator.pow,\n        }\n"
               },
               "expression": {
                 "_input_type": "MessageTextInput",
@@ -1476,7 +1507,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "tool_mode": true,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1485,94 +1516,26 @@
             },
             "tool_mode": false
           },
+          "showNode": true,
           "type": "CalculatorTool"
         },
-        "dragging": false,
-        "height": 302,
-        "id": "CalculatorTool-IfWT1",
-        "position": {
-          "x": 1938.2271796804105,
-          "y": 629.2915039696703
+        "id": "CalculatorTool-d6fIp",
+        "measured": {
+          "height": 301,
+          "width": 320
         },
-        "positionAbsolute": {
-          "x": 1938.2271796804105,
-          "y": 629.2915039696703
+        "position": {
+          "x": 1263.0695485066078,
+          "y": 604.8992509251098
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
-      },
-      {
-        "data": {
-          "id": "note-QuJAF",
-          "node": {
-            "description": "# 📖 README\nRun an Agent with URL and Calculator tools available for its use. \nThe Agent decides which tool to use to solve a problem.\n## Quick start\n\n1. Add your OpenAI API key to the Agent.\n2. Open the Playground and chat with the Agent. Request some information about a recipe, and then ask to add two numbers together. In the responses, the Agent will use different tools to solve different problems.\n\n## Next steps\nConnect more tools to the Agent to create your perfect assistant.\n\nFor more, see the [Langflow docs](https://docs.langflow.org/agents-tool-calling-agent-component).",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "neutral"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 571,
-        "id": "note-QuJAF",
-        "position": {
-          "x": 1314.267618793912,
-          "y": 323.12512509078374
-        },
-        "positionAbsolute": {
-          "x": 1314.267618793912,
-          "y": 323.12512509078374
-        },
-        "resizing": false,
-        "selected": false,
-        "style": {
-          "height": 571,
-          "width": 600
-        },
-        "type": "noteNode",
-        "width": 600
-      },
-      {
-        "data": {
-          "id": "note-uxxuk",
-          "node": {
-            "description": "### 💡 Add your OpenAI API key here👇",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "transparent"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 324,
-        "id": "note-uxxuk",
-        "position": {
-          "x": 2302.9552933034743,
-          "y": 288.4851054994825
-        },
-        "positionAbsolute": {
-          "x": 2302.9552933034743,
-          "y": 288.4851054994825
-        },
-        "resizing": false,
-        "selected": false,
-        "style": {
-          "height": 324,
-          "width": 330
-        },
-        "type": "noteNode",
-        "width": 330
+        "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -813.150138361608,
-      "y": -64.1501688971494,
-      "zoom": 0.6612152367588026
+      "x": -41,
+      "y": 2,
+      "zoom": 1
     }
   },
   "description": "A simple but powerful starter agent.",
