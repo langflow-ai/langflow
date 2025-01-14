@@ -52,9 +52,9 @@ class MCPSseClient:
                 # List available tools
                 response = await self.session.list_tools()
                 return response.tools
-        except asyncio.TimeoutError:
-            raise TimeoutError(f"Connection to {url} timed out after {timeout_seconds} seconds")
-
+        except asyncio.TimeoutError as err:
+            error_message = f"Connection to {url} timed out after {timeout_seconds} seconds"
+            raise TimeoutError(error_message) from err
 
 class MCPSse(Component):
     client = MCPSseClient()
