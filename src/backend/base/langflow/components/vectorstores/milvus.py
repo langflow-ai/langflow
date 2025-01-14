@@ -22,7 +22,7 @@ class MilvusVectorStoreComponent(LCVectorStoreComponent):
     icon = "Milvus"
 
     inputs = [
-        StrInput(name="collection_name", display_name="Collection Name", value="langflow",required=True,),
+        StrInput(name="collection_name", display_name="Collection Name", value="langflow", required=True),
         StrInput(name="collection_description", display_name="Collection Description", value=""),
         StrInput(
             name="uri",
@@ -53,7 +53,7 @@ class MilvusVectorStoreComponent(LCVectorStoreComponent):
         BoolInput(name="drop_old", display_name="Drop Old Collection", value=False, advanced=True),
         FloatInput(name="timeout", display_name="Timeout", advanced=True),
         *LCVectorStoreComponent.inputs,
-        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"],required=True,),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"], required=True),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",

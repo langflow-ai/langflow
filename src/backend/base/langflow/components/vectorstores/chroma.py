@@ -31,7 +31,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             required=True,
         ),
         *LCVectorStoreComponent.inputs,
-        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"],required=True,),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"], required=True),
         StrInput(
             name="chroma_server_cors_allow_origins",
             display_name="Server CORS Allow Origins",

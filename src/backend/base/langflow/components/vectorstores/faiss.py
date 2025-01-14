@@ -36,7 +36,7 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
             advanced=True,
             value=True,
         ),
-        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"],required=True,),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"], required=True),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",

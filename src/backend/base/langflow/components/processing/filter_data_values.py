@@ -16,7 +16,13 @@ class DataFilterComponent(Component):
     name = "FilterDataValues"
 
     inputs = [
-        DataInput(name="input_data", display_name="Input Data", info="The list of data items to filter.", is_list=True,required=True,),
+        DataInput(
+            name="input_data",
+            display_name="Input Data",
+            info="The list of data items to filter.",
+            is_list=True,
+            required=True,
+        ),
         MessageTextInput(
             name="filter_key",
             display_name="Filter Key",

@@ -14,7 +14,7 @@ class PromptComponent(Component):
     name = "Prompt"
 
     inputs = [
-        PromptInput(name="template", display_name="Template", required=True,),
+        PromptInput(name="template", display_name="Template", required=True),
         MessageTextInput(
             name="tool_placeholder",
             display_name="Tool Placeholder",
