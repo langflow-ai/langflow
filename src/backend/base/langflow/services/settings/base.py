@@ -326,12 +326,6 @@ class Settings(BaseSettings):
         if os.getenv("LANGFLOW_DATABASE_DRIVER_ASYNC"):
             logger.debug("Adding LANGFLOW_DATABASE_DRIVER_ASYNC to database_driver_async")
             value = os.getenv("LANGFLOW_DATABASE_DRIVER_ASYNC")
-        else:
-            value = None
-            logger.debug(
-                "There's no information about database_driver_async."
-                "It might be a problem whether using a database different from Postgres and SQLite."
-            )
 
         logger.debug(f"Database driver async: {value}")
         return value
