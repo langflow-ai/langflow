@@ -22,7 +22,7 @@ class MergeDataComponent(Component):
     MIN_INPUTS_REQUIRED = 2
 
     inputs = [
-        DataInput(name="data_inputs", display_name="Data Inputs", info="Data to combine", is_list=True),
+        DataInput(name="data_inputs", display_name="Data Inputs", info="Data to combine", is_list=True, required=True),
         DropdownInput(
             name="operation",
             display_name="Operation Type",
