@@ -11,7 +11,7 @@ class RunFlowComponent(RunFlowBaseComponent):
     display_name = "Run Flow"
     description = "Creates a tool component from a Flow that takes all its inputs and runs it."
     name = "RunFlow"
-    icon = "waypoints"
+    icon = "Workflow"
 
     inputs = RunFlowBaseComponent._base_inputs
     outputs = RunFlowBaseComponent._base_outputs
