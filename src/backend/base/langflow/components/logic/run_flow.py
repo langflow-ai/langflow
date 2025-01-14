@@ -4,19 +4,17 @@ from loguru import logger
 
 from langflow.base.tools.run_flow import RunFlowBaseComponent
 from langflow.helpers.flow import run_flow
-from langflow.schema import Data, dotdict
-from langflow.schema.dataframe import DataFrame
-from langflow.schema.message import Message
+from langflow.schema import dotdict
 
 
 class RunFlowComponent(RunFlowBaseComponent):
     display_name = "Run Flow"
     description = "Creates a tool component from a Flow that takes all its inputs and runs it."
     name = "RunFlow"
-    beta: bool = True
-    icon = "Workflow"
+    icon = "waypoints"
 
     inputs = RunFlowBaseComponent._base_inputs
+    outputs = RunFlowBaseComponent._base_outputs
 
     async def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "flow_name_selected":
@@ -33,15 +31,6 @@ class RunFlowComponent(RunFlowBaseComponent):
                     msg = f"Error building graph for flow {field_value}"
                     logger.exception(msg)
                     raise RuntimeError(msg) from e
-        if field_name == "flow_json" and field_value:
-            try:
-                graph = await self.get_graph()
-                build_config = self.update_build_config_from_graph(build_config, graph)
-            except Exception as e:
-                msg = f"Error building graph for flow {field_value}"
-                logger.exception(msg)
-                raise RuntimeError(msg) from e
-
         return build_config
 
     async def run_flow_with_tweaks(self):
@@ -77,27 +66,3 @@ class RunFlowComponent(RunFlowBaseComponent):
             # run_id=self.graph.run_id,
             session_id=self.graph.session_id or self.session_id,
         )
-
-    async def data_output(self) -> Data:
-        """Return the data output."""
-        run_outputs = await self.run_flow_with_tweaks()
-        if isinstance(run_outputs[0], Data):
-            return run_outputs[0]
-        return Data(data=run_outputs[0].outputs[0].results["message"].data)
-
-    async def dataframe_output(self) -> Data:
-        """Return the dataframe output."""
-        run_outputs = await self.run_flow_with_tweaks()
-        if isinstance(run_outputs[0], DataFrame):
-            return run_outputs[0]
-        data_output = run_outputs[0].outputs[0].results["message"].data
-        return DataFrame(data=data_output if isinstance(data_output, list) else [data_output])
-
-    async def message_output(self) -> Message:
-        run_outputs = await self.run_flow_with_tweaks()
-        message = run_outputs[0].outputs[0].results["message"]
-        if isinstance(message, Message):
-            return message
-        if isinstance(message, str):
-            return Message(content=message)
-        return Message(content=run_outputs[0].outputs[0].results["message"].data["text"])

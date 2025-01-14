@@ -1,8 +1,5 @@
-import json
 from abc import abstractmethod
-from pathlib import Path
 
-from aiofile import async_open
 from loguru import logger
 
 from langflow.base.tools.constants import TOOLS_METADATA_INPUT_NAME
@@ -13,13 +10,13 @@ from langflow.graph.graph.base import Graph
 from langflow.graph.vertex.base import Vertex
 from langflow.helpers.flow import get_flow_inputs
 from langflow.inputs.inputs import (
-    BoolInput,
     DropdownInput,
-    FileInput,
     InputTypes,
     MessageInput,
 )
 from langflow.schema import Data, dotdict
+from langflow.schema.dataframe import DataFrame
+from langflow.schema.message import Message
 from langflow.template import Output
 
 
@@ -45,30 +42,15 @@ class RunFlowBaseComponent(Component):
             value="",
             advanced=True,
         ),
-        FileInput(
-            name="flow_json",
-            display_name="Flow JSON",
-            info="The flow JSON to run.",
-            value="",
-            file_types=["json"],
-            advanced=True,
-            refresh_button=True,
-        ),
-        BoolInput(
-            name="return_direct",
-            display_name="Return Direct",
-            info="Return the result directly from the Tool.",
-            advanced=True,
-        ),
     ]
-    outputs = [
+    _base_outputs: list[Output] = [
         Output(name="flow_outputs_data", display_name="Flow Data Output", method="data_output", hidden=True),
         Output(
             name="flow_outputs_dataframe", display_name="Flow Dataframe Output", method="dataframe_output", hidden=True
         ),
         Output(name="flow_outputs_message", display_name="Flow Message Output", method="message_output"),
     ]
-    default_keys = ["code", "_type", "flow_name_selected", "session_id", "flow_json", "return_direct"]
+    default_keys = ["code", "_type", "flow_name_selected", "session_id"]
     FLOW_INPUTS: list[dotdict] = []
     flow_tweak_data: dict = {}
 
@@ -76,17 +58,40 @@ class RunFlowBaseComponent(Component):
     async def run_flow_with_tweaks(self) -> list[Data]:
         """Run the flow with tweaks."""
 
-    @abstractmethod
-    async def data_output(self) -> list[Data]:
+    async def data_output(self) -> Data:
         """Return the data output."""
+        run_outputs = await self.run_flow_with_tweaks()
+        first_output = run_outputs[0]
 
-    @abstractmethod
-    async def dataframe_output(self) -> list[Data]:
+        if isinstance(first_output, Data):
+            return first_output
+
+        message_data = first_output.outputs[0].results["message"].data
+        return Data(data=message_data)
+
+    async def dataframe_output(self) -> DataFrame:
         """Return the dataframe output."""
+        run_outputs = await self.run_flow_with_tweaks()
+        first_output = run_outputs[0]
 
-    @abstractmethod
-    async def message_output(self) -> list[Data]:
+        if isinstance(first_output, DataFrame):
+            return first_output
+
+        message_data = first_output.outputs[0].results["message"].data
+        return DataFrame(data=message_data if isinstance(message_data, list) else [message_data])
+
+    async def message_output(self) -> Message:
         """Return the message output."""
+        run_outputs = await self.run_flow_with_tweaks()
+        message_result = run_outputs[0].outputs[0].results["message"]
+
+        if isinstance(message_result, Message):
+            return message_result
+
+        if isinstance(message_result, str):
+            return Message(content=message_result)
+
+        return Message(content=message_result.data["text"])
 
     async def get_flow_names(self) -> list[str]:
         # TODO: get flfow ID with flow name
@@ -102,17 +107,6 @@ class RunFlowBaseComponent(Component):
         return None
 
     async def get_graph(self, flow_name_selected: str | None = None) -> Graph:
-        if self.flow_json and isinstance(self.flow_json, str | Path):
-            try:
-                if self.flow_json:
-                    file_path = Path(self.flow_json)
-                    async with async_open(file_path, encoding="utf-8") as f:
-                        content = await f.read()
-                        flow_graph = json.loads(content)
-                        return Graph.from_payload(flow_graph["data"])
-            except Exception as e:
-                msg = "Error loading flow from JSON"
-                raise ValueError(msg) from e
         if flow_name_selected:
             flow_data = await self.get_flow(flow_name_selected)
             if flow_data:
