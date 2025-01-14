@@ -102,9 +102,7 @@ const KeypairListComponent = ({
           disabled
             ? "pointer-events-none bg-background hover:bg-background"
             : "",
-          isFirstItem
-            ? "bg-background hover:bg-muted"
-            : "hover:bg-muted hover:text-destructive",
+          isFirstItem ? "bg-background hover:bg-muted" : "hover:bg-smooth-red",
         )}
       >
         <IconComponent
