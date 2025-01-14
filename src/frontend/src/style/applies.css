@@ -1254,7 +1254,7 @@
   }
 
   .hit-area-icon {
-    @apply h-8 w-8 rounded-md;
+    @apply h-7 w-7 rounded-md;
   }
 
   .node-toolbar-buttons {

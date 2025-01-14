@@ -10,6 +10,7 @@ import { GRADIENT_CLASS } from "@/constants/constants";
 import { cn } from "../../../../../utils/utils";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import { InputListComponentType, InputProps } from "../../types";
+import { DeleteButtonInputList } from "./components/delete-button-input-list";
 
 export default function InputListComponent({
   value = [""],
@@ -66,16 +67,16 @@ export default function InputListComponent({
     [value, handleOnNewValue],
   );
 
-  const handleDuplicateInput = useCallback(
-    (index: number, e: React.MouseEvent | KeyboardEvent) => {
-      e.preventDefault();
-      const newInputList = _.cloneDeep(value);
-      newInputList.splice(index, 0, newInputList[index]);
-      handleOnNewValue({ value: newInputList });
-      setDropdownOpen(null);
-    },
-    [value, handleOnNewValue],
-  );
+  // const handleDuplicateInput = useCallback(
+  //   (index: number, e: React.MouseEvent | KeyboardEvent) => {
+  //     e.preventDefault();
+  //     const newInputList = _.cloneDeep(value);
+  //     newInputList.splice(index, 0, newInputList[index]);
+  //     handleOnNewValue({ value: newInputList });
+  //     setDropdownOpen(null);
+  //   },
+  //   [value, handleOnNewValue],
+  // );
 
   return (
     <div className={cn("w-full", editNode && "max-h-52")}>
@@ -127,6 +128,8 @@ export default function InputListComponent({
                 />
               )}
 
+              {/* 
+              We will add this back in a future release
               {!disabled && (
                 <DropdownMenuInputList
                   index={index}
@@ -136,6 +139,16 @@ export default function InputListComponent({
                   handleDuplicateInput={handleDuplicateInput}
                   removeInput={removeInput}
                   canDelete={value.length > 1}
+                />
+              )} */}
+
+              {value.length > 1 && (
+                <DeleteButtonInputList
+                  index={index}
+                  removeInput={(e) => removeInput(index, e)}
+                  disabled={disabled}
+                  editNode={editNode}
+                  componentName={componentName || ""}
                 />
               )}
             </div>
