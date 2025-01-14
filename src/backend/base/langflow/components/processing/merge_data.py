@@ -22,7 +22,7 @@ class MergeDataComponent(Component):
     MIN_INPUTS_REQUIRED = 2
 
     inputs = [
-        DataInput(name="data_inputs", display_name="Data Inputs", info="Dados para combinar", is_list=True),
+        DataInput(name="data_inputs", display_name="Data Inputs", info="Data to combine", is_list=True),
         DropdownInput(
             name="operation",
             display_name="Operation Type",
@@ -43,7 +43,7 @@ class MergeDataComponent(Component):
             combined_dataframe = self._process_operation(operation)
             self.status = combined_dataframe
         except Exception as e:
-            logger.error(f"Erro durante operação {operation}: {e!s}")
+            logger.error(f"Error during operation {operation}: {e!s}")
             raise
         else:
             return combined_dataframe
