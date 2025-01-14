@@ -56,6 +56,7 @@ class MCPSseClient:
             error_message = f"Connection to {url} timed out after {timeout_seconds} seconds"
             raise TimeoutError(error_message) from err
 
+
 class MCPSse(Component):
     client = MCPSseClient()
     tools = types.ListToolsResult
