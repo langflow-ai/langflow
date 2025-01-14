@@ -1278,7 +1278,7 @@
   }
 
   .btn-add-input-list {
-    @apply mt-3 flex h-8 w-full items-center justify-center rounded-md p-2 text-sm hover:bg-muted;
+    @apply flex h-8 w-full items-center justify-center rounded-md p-2 text-sm hover:bg-muted;
   }
 }
 

@@ -1,4 +1,5 @@
 import IconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { cn } from "@/utils/utils";
@@ -11,45 +12,49 @@ export const ButtonInputList = ({
   disabled,
   editNode,
   componentName,
+  listAddLabel,
 }: {
   index: number;
   addNewInput: (e) => void;
   disabled: boolean;
   editNode: boolean;
   componentName: string;
+  listAddLabel: string;
 }) => {
   return (
     <>
-      <div
-        onClick={addNewInput}
-        className={cn(
-          "hit-area-icon group absolute flex -translate-y-8 translate-x-[15.5rem] items-center justify-center bg-background text-center hover:bg-muted",
-          disabled
-            ? "pointer-events-none bg-background hover:bg-background"
-            : "",
-        )}
-      >
-        <Button
-          unstyled
-          size="icon"
+      <ShadTooltip content={listAddLabel} side="top" align="center">
+        <div
+          onClick={addNewInput}
           className={cn(
-            "hit-area-icon flex items-center justify-center",
-            getButtonClassName(disabled),
+            "hit-area-icon group absolute flex -translate-y-8 translate-x-[15.36rem] items-center justify-center bg-background text-center hover:bg-muted",
+            disabled
+              ? "pointer-events-none bg-background hover:bg-background"
+              : "",
           )}
-          data-testid={getTestId("plus", index, editNode, componentName)}
-          disabled={disabled}
         >
-          <IconComponent
-            name="Plus"
+          <Button
+            unstyled
+            size="icon"
             className={cn(
-              "icon-size justify-self-center text-muted-foreground",
-              !disabled && "hover:cursor-pointer hover:text-foreground",
-              "group-hover:text-foreground",
+              "hit-area-icon flex items-center justify-center",
+              getButtonClassName(disabled),
             )}
-            strokeWidth={ICON_STROKE_WIDTH}
-          />
-        </Button>
-      </div>
+            data-testid={getTestId("plus", index, editNode, componentName)}
+            disabled={disabled}
+          >
+            <IconComponent
+              name="Plus"
+              className={cn(
+                "icon-size justify-self-center text-muted-foreground",
+                !disabled && "hover:cursor-pointer hover:text-foreground",
+                "group-hover:text-foreground",
+              )}
+              strokeWidth={ICON_STROKE_WIDTH}
+            />
+          </Button>
+        </div>
+      </ShadTooltip>
     </>
   );
 };
