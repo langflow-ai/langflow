@@ -4220,6 +4220,7 @@ name = "langflow-base"
 version = "0.1.1"
 source = { editable = "src/backend/base" }
 dependencies = [
+    { name = "aiofile" },
     { name = "aiofiles" },
     { name = "alembic" },
     { name = "assemblyai" },
@@ -4342,6 +4343,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
     { name = "aiofiles", specifier = ">=24.1.0,<25.0.0" },
     { name = "alembic", specifier = ">=1.13.0,<2.0.0" },
     { name = "assemblyai", specifier = ">=0.33.0,<1.0.0" },
