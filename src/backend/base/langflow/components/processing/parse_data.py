@@ -12,13 +12,14 @@ class ParseDataComponent(Component):
     name = "ParseData"
 
     inputs = [
-        DataInput(name="data", display_name="Data", info="The data to convert to text.", is_list=True),
+        DataInput(name="data", display_name="Data", info="The data to convert to text.", is_list=True, required=True),
         MultilineInput(
             name="template",
             display_name="Template",
             info="The template to use for formatting the data. "
             "It can contain the keys {text}, {data} or any other key in the Data.",
             value="{text}",
+            required=True,
         ),
         StrInput(name="sep", display_name="Separator", advanced=True, value="\n"),
     ]
