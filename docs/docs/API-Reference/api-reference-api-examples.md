@@ -87,8 +87,6 @@ This example builds a flow with a given `flow_id`.
 
 LLM chat responses are streamed back as `token` events until the `end` event closes the connection.
 
-The `/build` endpoint requires a Langflow API key. For more, see [API keys](/configuration-api-keys).
-
 <Tabs>
    <TabItem value="curl" label="curl" default>
 
