@@ -63,7 +63,7 @@ class LoopComponent(Component):
 
         # No more items to output
         self.stop("item")
-        return None
+        return None  # type: ignore [return-value]
 
     def done_output(self) -> Data:
         """Return the aggregated list once all items are processed."""
@@ -84,4 +84,4 @@ class LoopComponent(Component):
 
         # Not all items have been processed yet
         self.stop("done")
-        return None
+        return None  # type: ignore [return-value]
