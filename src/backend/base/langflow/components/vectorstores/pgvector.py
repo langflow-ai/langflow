@@ -25,7 +25,6 @@ class PGVectorStoreComponent(LCVectorStoreComponent):
             value=4,
             advanced=True,
         ),
-        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
     ]
 
     @check_cached_vector_store
