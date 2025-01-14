@@ -5,7 +5,7 @@ from sqlmodel import col, delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.database.models.vertex_builds.model import VertexBuildBase, VertexBuildTable
-from langflow.services.settings.manager import get_settings_service
+from langflow.services.deps import get_settings_service
 
 
 async def get_vertex_builds_by_flow_id(
