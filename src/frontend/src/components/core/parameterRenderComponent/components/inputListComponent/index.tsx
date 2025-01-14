@@ -93,16 +93,16 @@ export default function InputListComponent({
 
       <div className="mt-2 flex w-full flex-col gap-3">
         {value.map((singleValue, index) => (
-          <div key={index} className="relative flex w-full items-center gap-2">
-            <div className="group flex flex-1 items-center rounded-md bg-background">
+          <div key={index} className="flex w-full items-center">
+            <div className="group relative flex-1">
               <Input
                 ref={index === 0 ? inputRef : null}
                 disabled={disabled}
                 type="text"
                 value={singleValue}
                 className={cn(
-                  "w-full text-primary",
-                  editNode ? "input-edit-node pr-6" : "pr-10",
+                  "w-full pr-10 text-primary",
+                  editNode ? "input-edit-node" : "",
                   disabled ? "disabled-state" : "",
                 )}
                 placeholder={getPlaceholder(disabled, placeholder)}
@@ -113,19 +113,16 @@ export default function InputListComponent({
                 onFocus={() => setFocusedIndex(index)}
                 onBlur={() => setFocusedIndex(null)}
               />
-
-              {focusedIndex !== index && !disabled && (
-                <div
-                  className={cn(
-                    "absolute h-6 w-16",
-                    editNode ? "translate-x-[11rem]" : "translate-x-[11.1rem]",
-                  )}
-                  style={{
-                    pointerEvents: "none",
-                    background: GRADIENT_CLASS,
-                  }}
-                  aria-hidden="true"
-                />
+              {value.length > 1 && (
+                <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                  <DeleteButtonInputList
+                    index={index}
+                    removeInput={(e) => removeInput(index, e)}
+                    disabled={disabled}
+                    editNode={editNode}
+                    componentName={componentName || ""}
+                  />
+                </div>
               )}
 
               {/* 
@@ -141,16 +138,6 @@ export default function InputListComponent({
                   canDelete={value.length > 1}
                 />
               )} */}
-
-              {value.length > 1 && (
-                <DeleteButtonInputList
-                  index={index}
-                  removeInput={(e) => removeInput(index, e)}
-                  disabled={disabled}
-                  editNode={editNode}
-                  componentName={componentName || ""}
-                />
-              )}
             </div>
           </div>
         ))}
