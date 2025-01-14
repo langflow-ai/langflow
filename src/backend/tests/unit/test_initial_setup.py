@@ -15,7 +15,7 @@ from langflow.initial_setup.setup import (
     load_starter_projects,
     update_projects_components_with_latest_component_versions,
 )
-from langflow.interface.types import aget_all_types_dict
+from langflow.interface.components import aget_all_types_dict
 from langflow.services.database.models import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service, session_scope
