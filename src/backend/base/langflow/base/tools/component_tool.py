@@ -252,6 +252,11 @@ class ComponentToolkit:
             tool.name = _format_tool_name(str(tool_name)) or tool.name
             tool.description = tool_description or tool.description
             tool.tags = [tool.name]
+        elif flow_mode_inputs and (tool_name or tool_description):
+            for tool in tools:
+                tool.name = _format_tool_name(str(tool_name + "_" + tool.name)) or tool.name
+                tool.description = tool_description + " " + tool.description or tool.description
+                tool.tags = [tool.name]
         elif tool_name or tool_description:
             msg = (
                 "When passing a tool name or description, there must be only one tool, "
@@ -299,10 +304,3 @@ class ComponentToolkit:
                     msg = f"Expected a StructuredTool or BaseTool, got {type(tool)}"
                     raise TypeError(msg)
         return tools
-
-    # async def get_flow_tools(self,flow_name_selected,callbacks):
-    #     # flow_data = await self.component.get_flow(flow_name_selected)
-    #     self.tool_mode_inputs = self.component.get_required_data(flow_name_selected)
-    #     # convert list of dicts to list of dotdicts
-    #     self.tool_mode_inputs = [dotdict(field) for field in self.tool_mode_inputs]
-    #     return self.get_tools(callbacks=callbacks,tool_mode_inputs=self.tool_mode_inputs)

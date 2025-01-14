@@ -62,10 +62,11 @@ class RunFlowBaseComponent(Component):
         ),
     ]
     outputs = [
-        Output(name="flow_outputs_data", display_name="Flow Outputs", method="data_output"),
-        Output(name="flow_outputs_dataframe", display_name="Flow Outputs", method="dataframe_output"),
-        Output(name="flow_outputs_message", display_name="Flow Message Outputs", method="message_output"),
-        Output(name="single_output", display_name="Flow Outputs", method="single_output"),
+        Output(name="flow_outputs_data", display_name="Flow Data Output", method="data_output", hidden=True),
+        Output(
+            name="flow_outputs_dataframe", display_name="Flow Dataframe Output", method="dataframe_output", hidden=True
+        ),
+        Output(name="flow_outputs_message", display_name="Flow Message Output", method="message_output"),
     ]
     default_keys = ["code", "_type", "flow_name_selected", "session_id", "flow_json", "return_direct"]
     FLOW_INPUTS: list[dotdict] = []
@@ -78,10 +79,6 @@ class RunFlowBaseComponent(Component):
     @abstractmethod
     async def data_output(self) -> list[Data]:
         """Return the data output."""
-
-    @abstractmethod
-    async def single_output(self) -> Data:
-        """Return the single output."""
 
     @abstractmethod
     async def dataframe_output(self) -> list[Data]:
