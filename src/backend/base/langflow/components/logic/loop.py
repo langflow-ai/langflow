@@ -47,7 +47,7 @@ class LoopComponent(Component):
             }
         )
 
-    def item_output(self) -> Data:
+    def item_output(self) -> Data | None:
         """Output the next item in the list."""
         self.initialize_data()
 
@@ -65,7 +65,7 @@ class LoopComponent(Component):
         self.stop("item")
         return None
 
-    def done_output(self) -> Data:
+    def done_output(self) -> Data | None:
         """Return the aggregated list once all items are processed."""
         self.initialize_data()
 
