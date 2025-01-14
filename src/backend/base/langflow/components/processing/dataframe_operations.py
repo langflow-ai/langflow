@@ -26,6 +26,7 @@ class DataFrameOperationsComponent(Component):
             name="df",
             display_name="DataFrame",
             info="The input DataFrame to operate on.",
+            required=True,
         ),
         DropdownInput(
             name="operation",
@@ -33,6 +34,7 @@ class DataFrameOperationsComponent(Component):
             options=OPERATION_CHOICES,
             info="Select the DataFrame operation to perform.",
             real_time_refresh=True,
+            required=True,
         ),
         StrInput(
             name="column_name",

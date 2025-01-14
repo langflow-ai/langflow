@@ -36,7 +36,7 @@ class RedisVectorStoreComponent(LCVectorStoreComponent):
             value=4,
             advanced=True,
         ),
-        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"],required=True,),
     ]
 
     @check_cached_vector_store

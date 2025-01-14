@@ -15,7 +15,7 @@ class AlterMetadataComponent(Component):
             name="input_value",
             display_name="Input",
             info="Object(s) to which Metadata should be added",
-            required=False,
+            required=True,
             input_types=["Message", "Data"],
             is_list=True,
         ),

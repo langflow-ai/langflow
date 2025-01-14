@@ -18,6 +18,7 @@ class MessageToDataComponent(Component):
             name="message",
             display_name="Message",
             info="The Message object to convert to a Data object",
+            required=True,
         ),
     ]
 

@@ -16,20 +16,22 @@ class DataFilterComponent(Component):
     name = "FilterDataValues"
 
     inputs = [
-        DataInput(name="input_data", display_name="Input Data", info="The list of data items to filter.", is_list=True),
+        DataInput(name="input_data", display_name="Input Data", info="The list of data items to filter.", is_list=True,required=True,),
         MessageTextInput(
             name="filter_key",
             display_name="Filter Key",
             info="The key to filter on (e.g., 'route').",
-            value="route",
+            value="",
             input_types=["Data"],
+            required=True,
         ),
         MessageTextInput(
             name="filter_value",
             display_name="Filter Value",
             info="The value to filter by (e.g., 'CMIP').",
-            value="CMIP",
+            value="",
             input_types=["Data"],
+            required=True,
         ),
         DropdownInput(
             name="operator",

@@ -103,6 +103,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             display_name="Embedding Model",
             input_types=["Embeddings"],
             info="Allows an embedding model configuration.",
+            required=True,
         ),
         *base_inputs,
         IntInput(

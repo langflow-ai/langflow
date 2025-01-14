@@ -19,7 +19,7 @@ class SupabaseVectorStoreComponent(LCVectorStoreComponent):
         StrInput(name="table_name", display_name="Table Name", advanced=True),
         StrInput(name="query_name", display_name="Query Name"),
         *LCVectorStoreComponent.inputs,
-        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"],required=True,),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",

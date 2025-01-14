@@ -31,15 +31,17 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
             display_name="OpenSearch URL",
             value="http://localhost:9200",
             info="URL for OpenSearch cluster (e.g. https://192.168.1.1:9200).",
+            required=True,
         ),
         StrInput(
             name="index_name",
             display_name="Index Name",
             value="langflow",
             info="The index name where the vectors will be stored in OpenSearch cluster.",
+            required=True,
         ),
         *LCVectorStoreComponent.inputs,
-        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"],required=True,),
         DropdownInput(
             name="search_type",
             display_name="Search Type",

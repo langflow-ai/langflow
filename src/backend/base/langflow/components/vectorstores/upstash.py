@@ -54,6 +54,7 @@ class UpstashVectorStoreComponent(LCVectorStoreComponent):
             display_name="Embedding",
             input_types=["Embeddings"],
             info="To use Upstash's embeddings, don't provide an embedding.",
+            required=True,
         ),
         IntInput(
             name="number_of_results",

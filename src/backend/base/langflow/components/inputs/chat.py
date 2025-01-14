@@ -30,6 +30,7 @@ class ChatInput(ChatComponent):
             value="",
             info="Message to be passed as input.",
             input_types=[],
+            required=True,
         ),
         BoolInput(
             name="should_store_message",

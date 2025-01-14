@@ -27,6 +27,7 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
             name="embedding",
             display_name="Embedding",
             input_types=["Embeddings"],
+            required=True,
         ),
         *LCVectorStoreComponent.inputs,
         IntInput(

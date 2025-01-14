@@ -19,6 +19,7 @@ class DirectoryComponent(Component):
             info="Path to the directory to load files from. Defaults to current directory ('.')",
             value=".",
             tool_mode=True,
+            required=True,
         ),
         MultiselectInput(
             name="types",

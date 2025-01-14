@@ -19,11 +19,13 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
             name="index_name",
             display_name="Index Name",
             value="langflow_index",
+            required=True,
         ),
         StrInput(
             name="persist_directory",
             display_name="Persist Directory",
             info="Path to save the FAISS index. It will be relative to where Langflow is running.",
+            required=True,
         ),
         *LCVectorStoreComponent.inputs,
         BoolInput(
@@ -34,7 +36,7 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
             advanced=True,
             value=True,
         ),
-        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"],required=True,),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",

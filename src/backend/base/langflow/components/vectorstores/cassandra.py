@@ -77,7 +77,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             list=True,
         ),
         *LCVectorStoreComponent.inputs,
-        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"],required=True,),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",

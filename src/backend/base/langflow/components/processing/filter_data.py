@@ -15,12 +15,14 @@ class FilterDataComponent(Component):
             name="data",
             display_name="Data",
             info="Data object to filter.",
+            required=True,
         ),
         MessageTextInput(
             name="filter_criteria",
             display_name="Filter Criteria",
             info="List of keys to filter by.",
             is_list=True,
+            required=True,
         ),
     ]
 
