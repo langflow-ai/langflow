@@ -86,15 +86,15 @@ class DatabaseService(Service):
         """Create the engine for the database."""
         url_components = self.database_url.split("://", maxsplit=1)
         if url_components[0].startswith("sqlite"):
-            database_url = "sqlite+aiosqlite://"
+            scheme = "sqlite+aiosqlite"
             kwargs = {}
         else:
             kwargs = {
                 "pool_size": self.settings_service.settings.pool_size,
                 "max_overflow": self.settings_service.settings.max_overflow,
             }
-            database_url = "postgresql+psycopg://" if url_components[0].startswith("postgresql") else url_components[0]
-        database_url += url_components[1]
+            scheme = "postgresql+psycopg" if url_components[0].startswith("postgresql") else url_components[0]
+        database_url = f"{scheme}://{url_components[1]}"
         return create_async_engine(
             database_url,
             connect_args=self._get_connect_args(),
@@ -136,7 +136,14 @@ class DatabaseService(Service):
     @asynccontextmanager
     async def with_session(self):
         async with AsyncSession(self.engine, expire_on_commit=False) as session:
-            yield session
+            try:
+                yield session
+                if session.is_active:
+                    await session.commit()
+            except Exception:
+                logger.error("An error occurred during the session scope.")
+                await session.rollback()
+                raise
 
     async def assign_orphaned_flows_to_superuser(self) -> None:
         """Assign orphaned flows to the default superuser when auto login is enabled."""
@@ -187,7 +194,8 @@ class DatabaseService(Service):
             await session.commit()
             logger.debug("Successfully assigned orphaned flows to the default superuser")
 
-    def _generate_unique_flow_name(self, original_name: str, existing_names: set[str]) -> str:
+    @staticmethod
+    def _generate_unique_flow_name(original_name: str, existing_names: set[str]) -> str:
         """Generate a unique flow name by adding or incrementing a suffix."""
         if original_name not in existing_names:
             return original_name
@@ -212,7 +220,8 @@ class DatabaseService(Service):
 
         return new_name
 
-    def _check_schema_health(self, connection) -> bool:
+    @staticmethod
+    def _check_schema_health(connection) -> bool:
         inspector = inspect(connection)
 
         model_mapping: dict[str, type[SQLModel]] = {
@@ -249,7 +258,8 @@ class DatabaseService(Service):
         async with self.with_session() as session, session.bind.connect() as conn:
             await conn.run_sync(self._check_schema_health)
 
-    def init_alembic(self, alembic_cfg) -> None:
+    @staticmethod
+    def init_alembic(alembic_cfg) -> None:
         logger.info("Initializing alembic")
         command.ensure_version(alembic_cfg)
         # alembic_cfg.attributes["connection"].commit()
@@ -317,7 +327,8 @@ class DatabaseService(Service):
                 should_initialize_alembic = True
         await asyncio.to_thread(self._run_migrations, should_initialize_alembic, fix)
 
-    def try_downgrade_upgrade_until_success(self, alembic_cfg, retries=5) -> None:
+    @staticmethod
+    def try_downgrade_upgrade_until_success(alembic_cfg, retries=5) -> None:
         # Try -1 then head, if it fails, try -2 then head, etc.
         # until we reach the number of retries
         for i in range(1, retries + 1):

@@ -25,6 +25,7 @@ from langflow.custom.tree_visitor import RequiredInputsVisitor
 from langflow.exceptions.component import StreamingError
 from langflow.field_typing import Tool  # noqa: TC001 Needed by _add_toolkit_output
 from langflow.graph.state.model import create_state_model
+from langflow.graph.utils import has_chat_output
 from langflow.helpers.custom import format_type
 from langflow.memory import astore_message, aupdate_messages, delete_message
 from langflow.schema.artifact import get_artifact_type, post_process_raw
@@ -1019,7 +1020,18 @@ class Component(CustomComponent):
                 )
             )
 
+    def _should_skip_message(self, message: Message) -> bool:
+        """Check if the message should be skipped based on vertex configuration and message type."""
+        return (
+            self._vertex is not None
+            and not (self._vertex.is_output or self._vertex.is_input)
+            and not has_chat_output(self.graph.get_vertex_neighbors(self._vertex))
+            and not isinstance(message, ErrorMessage)
+        )
+
     async def send_message(self, message: Message, id_: str | None = None):
+        if self._should_skip_message(message):
+            return message
         if (hasattr(self, "graph") and self.graph.session_id) and (message is not None and not message.session_id):
             session_id = (
                 UUID(self.graph.session_id) if isinstance(self.graph.session_id, str) else self.graph.session_id
@@ -1161,9 +1173,11 @@ class Component(CustomComponent):
         session_id: str,
         trace_name: str,
         source: Source,
-    ) -> Message:
+    ) -> Message | None:
         """Send an error message to the frontend."""
         flow_id = self.graph.flow_id if hasattr(self, "graph") else None
+        if not session_id:
+            return None
         error_message = ErrorMessage(
             flow_id=flow_id,
             exception=exception,
@@ -1197,13 +1211,13 @@ class Component(CustomComponent):
 
         return TableInput(
             name=TOOLS_METADATA_INPUT_NAME,
-            info=TOOLS_METADATA_INFO,
-            display_name="Toolset configuration",
+            display_name="Edit tools",
             real_time_refresh=True,
             table_schema=TOOL_TABLE_SCHEMA,
             value=tool_data,
+            table_icon="Hammer",
             trigger_icon="Hammer",
-            trigger_text="Open toolset",
+            trigger_text="",
             table_options=TableOptions(
                 block_add=True,
                 block_delete=True,
@@ -1213,6 +1227,10 @@ class Component(CustomComponent):
                 block_hide=True,
                 block_select=True,
                 hide_options=True,
-                field_parsers={"name": FieldParserType.SNAKE_CASE},
+                field_parsers={
+                    "name": [FieldParserType.SNAKE_CASE, FieldParserType.NO_BLANK],
+                    "commands": FieldParserType.COMMANDS,
+                },
+                description=TOOLS_METADATA_INFO,
             ),
         )
