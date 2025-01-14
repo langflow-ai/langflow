@@ -61,7 +61,12 @@ class RunFlowBaseComponent(Component):
             advanced=True,
         ),
     ]
-    outputs = [Output(name="flow_outputs", display_name="Flow Outputs", method="run_flow_with_tweaks")]
+    outputs = [
+        Output(name="flow_outputs_data", display_name="Flow Outputs", method="data_output"),
+        Output(name="flow_outputs_dataframe", display_name="Flow Outputs", method="dataframe_output"),
+        Output(name="flow_outputs_message", display_name="Flow Message Outputs", method="message_output"),
+        Output(name="single_output", display_name="Flow Outputs", method="single_output"),
+    ]
     default_keys = ["code", "_type", "flow_name_selected", "session_id", "flow_json", "return_direct"]
     FLOW_INPUTS: list[dotdict] = []
     flow_tweak_data: dict = {}
@@ -69,6 +74,22 @@ class RunFlowBaseComponent(Component):
     @abstractmethod
     async def run_flow_with_tweaks(self) -> list[Data]:
         """Run the flow with tweaks."""
+
+    @abstractmethod
+    async def data_output(self) -> list[Data]:
+        """Return the data output."""
+
+    @abstractmethod
+    async def single_output(self) -> Data:
+        """Return the single output."""
+
+    @abstractmethod
+    async def dataframe_output(self) -> list[Data]:
+        """Return the dataframe output."""
+
+    @abstractmethod
+    async def message_output(self) -> list[Data]:
+        """Return the message output."""
 
     async def get_flow_names(self) -> list[str]:
         # TODO: get flfow ID with flow name

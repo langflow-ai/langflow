@@ -1,5 +1,6 @@
 from typing import Any
 
+from langflow.schema.message import Message
 from loguru import logger
 
 from langflow.base.flow_processing.utils import build_data_from_result_data
@@ -43,7 +44,7 @@ class RunFlowComponent(RunFlowBaseComponent):
 
         return build_config
 
-    async def run_flow_with_tweaks(self) -> list[Data]:
+    async def run_flow_with_tweaks(self):
         tweaks: dict = {}
 
         flow_name_selected = self._attributes.get("flow_name_selected")
@@ -76,7 +77,17 @@ class RunFlowComponent(RunFlowBaseComponent):
             # run_id=self.graph.run_id,
             session_id=self.graph.session_id or self.session_id,
         )
-        # import pdb; pdb.set_trace()
+        import pdb
+
+        pdb.set_trace()
+        return run_outputs
+
+    # async def data_output(self) -> list[Data]:
+    #     """Return the data output."""
+
+    async def single_output(self) -> Data:
+        """Return the single output."""
+        run_outputs = await self.run_flow_with_tweaks()
         data: list[Data] = []
         if not run_outputs:
             return data
@@ -87,3 +98,23 @@ class RunFlowComponent(RunFlowBaseComponent):
                 if output:
                     data.extend(build_data_from_result_data(output))
         return Data(data=data[-1].data)
+
+    # async def dataframe_output(self) -> list[Data]:
+    #     """Return the dataframe output.""
+
+    async def data_output(self) -> list[Data]:
+        """Return the data output."""
+        run_outputs = await self.run_flow_with_tweaks()
+        data: list[Data] = []
+        if not run_outputs:
+            return data
+        run_output = run_outputs[0]
+        return data
+    
+
+    async def message_output(self) -> Message:
+        run_outputs = await self.run_flow_with_tweaks()
+        message = run_outputs[0].outputs[0].results["message"]
+        if isinstance(message, Message):
+            return message
+        return Message(content=message)
