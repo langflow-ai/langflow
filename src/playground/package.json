@@ -10,16 +10,20 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@langflow/components": "^0.1.0",
+    "@langflow/components": "file:../frontend/src/components",
     "@r2wc/react-to-web-component": "^2.0.4",
     "@radix-ui/react-tooltip": "^1.1.6",
+    "@tanstack/react-query": "^5.64.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "i": "^0.3.7",
     "lucide-react": "^0.469.0",
+    "npm": "^10.9.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tailwind-merge": "^2.6.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
