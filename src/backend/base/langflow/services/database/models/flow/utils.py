@@ -5,7 +5,7 @@ from .model import Flow
 
 def get_webhook_component_in_flow(flow_data: dict):
     """Get webhook component in flow data."""
-    if hasattr(flow_data, "nodes"):
+    if "nodes" in flow_data:
         for node in flow_data.get("nodes", []):
             if "Webhook" in node.get("id"):
                 return node
