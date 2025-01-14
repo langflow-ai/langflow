@@ -163,19 +163,33 @@ async def build_flow(
         components_count = None
         try:
             flow_id_str = str(flow_id)
-            # Create a fresh session for database operations
-            async with session_scope() as fresh_session:
+
+            # Fetch minimal required data within session scope
+            flow_data = None
+            flow_name = None
+            user_id = None
+            async with session_scope() as session:
                 if not data:
-                    graph = await build_graph_from_db(flow_id=flow_id, session=fresh_session, chat_service=chat_service)
+                    flow: Flow | None = await session.get(Flow, flow_id)
+                    if not flow or not flow.data:
+                        msg = "Invalid flow ID"
+                        raise ValueError(msg)
+                    flow_data = flow.data
+                    flow_name = flow.name
+                    user_id = str(flow.user_id)
                 else:
-                    result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
+                    result = await session.exec(select(Flow.name).where(Flow.id == flow_id))
                     flow_name = result.first()
-                    graph = await build_graph_from_data(
-                        flow_id=flow_id_str,
-                        payload=data.model_dump(),
-                        user_id=str(current_user.id),
-                        flow_name=flow_name,
-                    )
+                    flow_data = data.model_dump()
+                    user_id = str(current_user.id)
+
+            # Build graph outside session scope
+            graph = await build_graph_from_data(
+                flow_id=flow_id_str,
+                payload=flow_data,
+                user_id=user_id,
+                flow_name=flow_name,
+            )
 
             graph.validate_stream()
             if stop_component_id or start_component_id:
