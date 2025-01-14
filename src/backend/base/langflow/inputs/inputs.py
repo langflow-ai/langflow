@@ -433,7 +433,7 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeM
     options: list[str] = Field(default_factory=list)
     options_metadata: list[dict[str, Any]] = Field(default_factory=list)
     combobox: CoalesceBool = False
-    dialog_inputs: list[Any] = Field(default_factory=list)
+    dialog_inputs: dict[str, Any] = Field(default_factory=dict)
 
 
 class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):

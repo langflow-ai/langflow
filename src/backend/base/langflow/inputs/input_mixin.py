@@ -163,8 +163,8 @@ class DropDownMixin(BaseModel):
     """List of dictionaries with metadata for each option."""
     combobox: CoalesceBool = False
     """Variable that defines if the user can insert custom values in the dropdown."""
-    dialog_inputs: list[dict[str, Any]] | None = None
-    """List of dialog inputs for the field. Default is an empty list."""
+    dialog_inputs: dict[str, Any] | None = None
+    """Dictionary of dialog inputs for the field. Default is an empty object."""
 
 
 class MultilineMixin(BaseModel):
