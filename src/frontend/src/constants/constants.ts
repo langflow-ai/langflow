@@ -742,6 +742,8 @@ export const BUNDLES_SIDEBAR_FOLDER_NAMES = [
   "assemblyai",
   "LangWatch",
   "langwatch",
+  "Youtube",
+  "youtube",
 ];
 
 export const AUTHORIZED_DUPLICATE_REQUESTS = [
