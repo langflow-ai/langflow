@@ -27,7 +27,7 @@ Use the component controls to do the following:
 
 Click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> **All** to see additional options for a component.
 
-To view a component’s output and logs, click the <Icon name="View" aria-label="View icon" />**Visibility** icon.
+To view a component’s output and logs, click the <Icon name="TextSearch" aria-label="Search and filter" />**Search and filter** icon.
 
 To run a single component, click <Icon name="Play" aria-label="Play button" /> **Play**.
 

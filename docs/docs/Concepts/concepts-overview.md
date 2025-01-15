@@ -3,6 +3,8 @@ title: Langflow overview
 slug: /concepts-overview
 ---
 
+import Icon from "@site/src/components/icon";
+
 This page explores the fundamental building blocks of Langflow, beginning with the question, **"What is a flow?"**
 
 ## What is a flow?
@@ -124,7 +126,7 @@ The dropdown menu labeled with the project name offers several management and cu
 
 ## Settings
 
-Click ⚙️ **Settings** to access **Global variables**, **Langflow API**, **Shortcuts**, and **Messages**.
+Click <Icon name="Settings" aria-label="Gear icon" /> **Settings** to access **Global variables**, **Langflow API**, **Shortcuts**, and **Messages**.
 
 
 

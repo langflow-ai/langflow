@@ -25,6 +25,8 @@ A single flow can have multiple chats, and different flows can share the same ch
 
 To view messages by `session_id` within the Playground, click the <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> menu of any chat session, and then select **Message Logs**.
 
+![](/img/messages-logs.png)
+
 Individual messages in chat memory can be edited or deleted. Modifying these memories influences the behavior of the chatbot responses.
 
 To learn more about chat memories in Langflow, see [Memory components](/components-memories).

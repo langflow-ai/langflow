@@ -103,10 +103,29 @@ To embed the Chat Widget using React, insert this `<script>` tag into the Reac
 Declare your Web Component and encapsulate it in a React component.
 
 ```javascript
-declare global {  namespace JSX {    interface IntrinsicElements {      "langflow-chat": any;    }  }}export default function ChatWidget({ className }) {  return (    <div className={className}>      <langflow-chat        chat_inputs='{"your_key":"value"}'        chat_input_field="your_chat_key"        flow_id="your_flow_id"        host_url="langflow_url"      ></langflow-chat>    </div>  );}
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      "langflow-chat": any;
+    }
+  }
+}
+
+export default function ChatWidget({ className }) {
+  return (
+    <div className={className}>
+      <langflow-chat
+        chat_inputs='{"your_key":"value"}'
+        chat_input_field="your_chat_key"
+        flow_id="your_flow_id"
+        host_url="langflow_url"
+      ></langflow-chat>
+    </div>
+  );
+}
 ```
 
-Finally, you can place the component anywhere in your code to display the Chat Widget.
+Place the component anywhere in your code to display the Chat Widget.
 
 ### Embed the chat widget with Angular
 
@@ -121,12 +140,23 @@ When you use a custom web component in an Angular template, the Angular compiler
 - Open the module file (it typically ends with _.module.ts_) where you'd add the `langflow-chat` web component.
 - Import `CUSTOM_ELEMENTS_SCHEMA` at the top of the file:
 
-`import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from "@angular/core";`
+`import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';`
 
 - Add `CUSTOM_ELEMENTS_SCHEMA` to the 'schemas' array inside the '@NgModule' decorator:
 
 ```javascript
-@NgModule({  declarations: [    // ... Other components and directives ...  ],  imports: [    // ... Other imported modules ...  ],  schemas: [CUSTOM_ELEMENTS_SCHEMA], // Add the CUSTOM_ELEMENTS_SCHEMA here})export class YourModule {}
+@NgModule({
+  declarations: [
+    // ... Other components and directives ...
+  ],
+  imports: [
+    // ... Other imported modules ...
+  ],
+  schemas: [
+    CUSTOM_ELEMENTS_SCHEMA  // Add the CUSTOM_ELEMENTS_SCHEMA here
+  ]
+})
+export class YourModule { }
 ```
 
 In your Angular project, find the component belonging to the module where `CUSTOM_ELEMENTS_SCHEMA` was added. Inside the template, add the `langflow-chat` tag to include the Chat Widget in your component's view:
