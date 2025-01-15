@@ -1,55 +1,63 @@
-let globalInput: HTMLInputElement | null = null;
-let activePromiseResolve: ((files: File[]) => void) | null = null;
-let isListening = false;
-
-const setupGlobalInput = (props?: { accept?: string; multiple?: boolean }) => {
-  if (!globalInput) {
-    globalInput = document.createElement("input");
-    globalInput.type = "file";
-    globalInput.style.display = "none";
-    document.body.appendChild(globalInput);
-  }
-
-  globalInput.accept = props?.accept ?? ".json";
-  globalInput.multiple = props?.multiple ?? true;
-
-  if (!isListening) {
-    const handleChange = (e: Event) => {
-      const files = Array.from((e.target as HTMLInputElement).files || []);
-      if (activePromiseResolve) {
-        activePromiseResolve(files);
-        activePromiseResolve = null;
-      }
-      if (globalInput) {
-        globalInput.value = "";
-      }
-    };
-
-    globalInput.addEventListener("change", handleChange);
-    isListening = true;
-  }
-};
-
 export function createFileUpload(props?: {
   accept?: string;
   multiple?: boolean;
 }): Promise<File[]> {
   return new Promise((resolve) => {
-    setupGlobalInput(props);
+    // Create input element
+    const input = document.createElement("input");
+    input.type = "file";
+    input.style.position = "fixed";
+    input.style.top = "0";
+    input.style.left = "0";
+    input.style.opacity = "0.001";
+    input.style.pointerEvents = "none";
+    input.accept = props?.accept ?? ".json";
+    input.multiple = props?.multiple ?? true;
 
-    activePromiseResolve = resolve;
+    let isHandled = false;
 
-    setTimeout(() => {
-      if (globalInput && document.body.contains(globalInput)) {
-        globalInput.click();
-      } else {
-        resolve([]);
+    const cleanup = () => {
+      if (document.body.contains(input)) {
+        document.body.removeChild(input);
       }
-    }, 0);
+      input.removeEventListener("change", handleChange);
+      document.removeEventListener("focus", handleFocus);
+    };
+
+    const handleChange = (event: Event) => {
+      if (isHandled) return;
+      isHandled = true;
+
+      const files = Array.from((event.target as HTMLInputElement).files || []);
+      cleanup();
+      resolve(files);
+    };
+
+    const handleFocus = () => {
+      setTimeout(() => {
+        if (!isHandled) {
+          isHandled = true;
+          cleanup();
+          resolve([]);
+        }
+      }, 100);
+    };
+
+    input.addEventListener("change", handleChange);
+    document.addEventListener("focus", handleFocus);
+
+    document.body.appendChild(input);
+
+    requestAnimationFrame(() => {
+      if (!isHandled) {
+        input.click();
+      }
+    });
 
     setTimeout(() => {
-      if (activePromiseResolve === resolve) {
-        activePromiseResolve = null;
+      if (!isHandled) {
+        isHandled = true;
+        cleanup();
         resolve([]);
       }
     }, 30000);
