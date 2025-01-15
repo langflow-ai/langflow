@@ -1,60 +1,57 @@
+let globalInput: HTMLInputElement | null = null;
+let activePromiseResolve: ((files: File[]) => void) | null = null;
+let isListening = false;
+
+const setupGlobalInput = (props?: { accept?: string; multiple?: boolean }) => {
+  if (!globalInput) {
+    globalInput = document.createElement("input");
+    globalInput.type = "file";
+    globalInput.style.display = "none";
+    document.body.appendChild(globalInput);
+  }
+
+  globalInput.accept = props?.accept ?? ".json";
+  globalInput.multiple = props?.multiple ?? true;
+
+  if (!isListening) {
+    const handleChange = (e: Event) => {
+      const files = Array.from((e.target as HTMLInputElement).files || []);
+      if (activePromiseResolve) {
+        activePromiseResolve(files);
+        activePromiseResolve = null;
+      }
+      if (globalInput) {
+        globalInput.value = "";
+      }
+    };
+
+    globalInput.addEventListener("change", handleChange);
+    isListening = true;
+  }
+};
+
 export function createFileUpload(props?: {
   accept?: string;
   multiple?: boolean;
 }): Promise<File[]> {
   return new Promise((resolve) => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = props?.accept ?? ".json";
-    input.multiple = props?.multiple ?? true;
-    input.style.display = "none";
+    setupGlobalInput(props);
 
-    let isResolved = false;
-
-    const cleanup = () => {
-      if (input && document.body.contains(input)) {
-        try {
-          document.body.removeChild(input);
-        } catch (error) {
-          console.warn("Error removing input element:", error);
-        }
-      }
-      window.removeEventListener("focus", handleFocus);
-    };
-
-    const handleChange = (e: Event) => {
-      if (!isResolved) {
-        isResolved = true;
-        const files = Array.from((e.target as HTMLInputElement).files!);
-        cleanup();
-        resolve(files);
-      }
-    };
-
-    const handleFocus = () => {
-      setTimeout(() => {
-        if (!isResolved) {
-          isResolved = true;
-          cleanup();
-          resolve([]);
-        }
-      }, 300);
-    };
-
-    input.addEventListener("change", handleChange);
-    window.addEventListener("focus", handleFocus);
-
-    queueMicrotask(() => {
-      document.body.appendChild(input);
-      input.click();
-    });
+    activePromiseResolve = resolve;
 
     setTimeout(() => {
-      if (!isResolved) {
-        isResolved = true;
-        cleanup();
+      if (globalInput && document.body.contains(globalInput)) {
+        globalInput.click();
+      } else {
         resolve([]);
       }
-    }, 60000);
+    }, 0);
+
+    setTimeout(() => {
+      if (activePromiseResolve === resolve) {
+        activePromiseResolve = null;
+        resolve([]);
+      }
+    }, 30000);
   });
 }
