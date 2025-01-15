@@ -46,29 +46,18 @@ class GoogleSearchAPIComponent(Component):
     def search_google(self) -> DataFrame:
         """Search Google using the provided query."""
         if not self.google_api_key:
-            return DataFrame([{
-                "error": "Invalid Google API Key"
-            }])
+            return DataFrame([{"error": "Invalid Google API Key"}])
 
         if not self.google_cse_id:
-            return DataFrame([{
-                "error": "Invalid Google CSE ID"
-            }])
+            return DataFrame([{"error": "Invalid Google CSE ID"}])
 
         try:
             wrapper = GoogleSearchAPIWrapper(
-                google_api_key=self.google_api_key,
-                google_cse_id=self.google_cse_id,
-                k=self.k
+                google_api_key=self.google_api_key, google_cse_id=self.google_cse_id, k=self.k
             )
-            return wrapper.results(
-                query=self.input_value,
-                num_results=self.k
-            )
+            return wrapper.results(query=self.input_value, num_results=self.k)
         except Exception as e:
-            return DataFrame([{
-                "error": f"Error occurred while searching: {str(e)}"
-            }])
+            return DataFrame([{"error": f"Error occurred while searching: {e!s}"}])
 
     def build(self):
         return self.search_google
