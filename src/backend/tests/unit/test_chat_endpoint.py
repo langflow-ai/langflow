@@ -123,7 +123,7 @@ async def test_multiple_runs_with_no_payload_generate_max_vertex_builds(
     for i in range(num_requests):
         # Generate a random session ID for each request
         session_id = session_id_generator()
-        payload = {"inputs": {"session": session_id, "type": "chat", "input_value": f"Test message {i+1}"}}
+        payload = {"inputs": {"session": session_id, "type": "chat", "input_value": f"Test message {i + 1}"}}
 
         async with client.stream("POST", f"api/v1/build/{flow_id}/flow", json=payload, headers=logged_in_headers) as r:
             await consume_and_assert_stream(r)
@@ -144,7 +144,7 @@ async def test_multiple_runs_with_no_payload_generate_max_vertex_builds(
             for vertex_id, vertex_builds in by_vertex.items():
                 vertex_builds.sort(key=lambda x: x.get("timestamp"))
                 logger.debug(
-                    f"Request {i+1} (session={session_id}) - Vertex {vertex_id}: {len(vertex_builds)} builds "
+                    f"Request {i + 1} (session={session_id}) - Vertex {vertex_id}: {len(vertex_builds)} builds "
                     f"(max allowed: {max_vertex_builds}), "
                     f"build_ids: {[b.get('build_id') for b in vertex_builds]}"
                 )
@@ -177,15 +177,13 @@ async def test_multiple_runs_with_no_payload_generate_max_vertex_builds(
             # Log individual build details for debugging
             for build in builds:
                 logger.debug(
-                    f"  - Build {build.get('build_id')}: "
-                    f"timestamp={build.get('timestamp')}, "
-                    f"valid={build.get('valid')}"
+                    f"  - Build {build.get('build_id')}: timestamp={build.get('timestamp')}, valid={build.get('valid')}"
                 )
 
         # Verify each vertex has correct number of builds
         for vertex_id, vertex_builds_list in builds_by_vertex.items():
             assert len(vertex_builds_list) == max_vertex_builds, (
-                f"Vertex {vertex_id} has {len(vertex_builds_list)} builds, " f"expected {max_vertex_builds}"
+                f"Vertex {vertex_id} has {len(vertex_builds_list)} builds, expected {max_vertex_builds}"
             )
 
         # Verify total number of builds
