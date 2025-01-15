@@ -175,7 +175,6 @@ export default function ChatMessage({
       },
       {
         onSuccess: () => {
-          updateChat(chat, message);
           setEditMessage(false);
         },
         onError: () => {
