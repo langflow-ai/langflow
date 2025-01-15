@@ -27,7 +27,7 @@ For an example, see [Make any component a tool](/agents-tool-calling-agent-compo
 
 ## Astra DB Tool
 
-The `Astra DB Tool` allows agents to connect to and query data from Astra DB Collections.
+The `Astra DB Tool` allows agents to connect to and query data from Astra DB collections.
 
 ### Inputs
 
