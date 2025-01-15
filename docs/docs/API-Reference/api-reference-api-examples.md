@@ -150,7 +150,7 @@ curl -X 'POST' \
 
 Use the `/flows` endpoint to create, read, update, and delete flows.
 
-### Create Flow
+### Create flow
 
 Create a new flow.
 
@@ -216,7 +216,7 @@ curl -X 'POST' \
    </TabItem>
 </Tabs>
 
-### Read Flows
+### Read flows
 
 Retrieve a list of flows with pagination support.
 
@@ -262,7 +262,7 @@ A JSON object containing a list of flows.
    </TabItem>
 </Tabs>
 
-### Read Flow
+### Read flow
 
 Read a specific flow by its ID.
 
@@ -344,7 +344,7 @@ curl -X 'PATCH' \
    </TabItem>
 </Tabs>
 
-### Delete Flow
+### Delete flow
 
 Delete a specific flow by its ID.
 
@@ -544,9 +544,9 @@ A list of example flows.
 
 Use the `/monitor` endpoint to monitor and modify messages passed between Langflow components, vertex builds, and transactions.
 
-### Get Vertex Builds
+### Get Vertex builds
 
-Retrieve Vertex Builds for a specific flow.
+Retrieve Vertex builds for a specific flow.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
@@ -567,9 +567,9 @@ curl -X 'GET' \
   </TabItem>
 </Tabs>
 
-### Delete Vertex Builds
+### Delete Vertex builds
 
-Delete Vertex Builds for a specific flow.
+Delete Vertex builds for a specific flow.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
@@ -590,7 +590,7 @@ curl -X 'DELETE' \
   </TabItem>
 </Tabs>
 
-### Get Messages
+### Get messages
 
 Retrieve messages with optional filters.
 
@@ -666,11 +666,11 @@ curl -X "GET" \
   </TabItem>
 </Tabs>
 
-### Delete Messages
+### Delete messages
 
 Delete specific messages by their IDs.
 
-This example deletes the message retrieved in the previous Get Messages example.
+This example deletes the message retrieved in the previous Get messages example.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
@@ -704,7 +704,7 @@ curl -v -X 'DELETE' \
   -d '["MESSAGE_ID_1", "MESSAGE_ID_2"]'
 ```
 
-### Update Message
+### Update message
 
 Update a specific message by its ID.
 
@@ -734,7 +734,7 @@ curl -X 'PUT' \
 </Tabs>
 
 
-### Update Session ID
+### Update session ID
 
 Update the session ID for messages.
 
@@ -788,7 +788,7 @@ curl -X 'PATCH' \
   </TabItem>
 </Tabs>
 
-### Delete Messages by Session
+### Delete messages by session
 
 Delete all messages for a specific session.
 
@@ -811,7 +811,7 @@ HTTP/1.1 204 No Content
   </TabItem>
 </Tabs>
 
-### Get Transactions
+### Get transactions
 
 Retrieve all transactions (interactions between components) for a specific flow.
 
@@ -889,7 +889,7 @@ curl -X 'GET' \
   </TabItem>
 </Tabs>
 
-### Create Folder
+### Create folder
 
 Create a new folder.
 
@@ -926,7 +926,7 @@ curl -X 'POST' \
 
 To add flows and components at folder creation, retrieve the `components_list` and `flows_list` values from the [/api/v1/store/components](#get-all-components) and [/api/v1/flows/read](#read-flows) endpoints and add them to the request body.
 
-Adding a flow to a folder will move the flow from its previous location, not copy it.
+Adding a flow to a folder moves the flow from its previous location. The flow is not copied.
 
 ```curl
 curl -X 'POST' \
@@ -945,7 +945,7 @@ curl -X 'POST' \
 }'
 ```
 
-### Read Folder
+### Read folder
 
 Retrieve details of a specific folder.
 
@@ -977,11 +977,11 @@ curl -X 'GET' \
   </TabItem>
 </Tabs>
 
-### Update Folder
+### Update folder
 
 Update the information of a specific folder with a `PATCH` request.
 
-Each PATCH request will update the folder with the values you send.
+Each PATCH request updates the folder with the values you send.
 Only the fields you include in your request are updated.
 If you send the same values multiple times, the update is still processed, even if the values are unchanged.
 
@@ -1021,7 +1021,7 @@ curl -X 'PATCH' \
   </TabItem>
 </Tabs>
 
-### Delete Folder
+### Delete folder
 
 Delete a specific folder.
 
@@ -1044,7 +1044,7 @@ curl -X 'DELETE' \
   </TabItem>
 </Tabs>
 
-### Download Folder
+### Download folder
 
 Download all flows from a folder as a zip file.
 
@@ -1070,7 +1070,7 @@ The folder contents.
   </TabItem>
 </Tabs>
 
-### Upload Folder
+### Upload folder
 
 Upload a folder to Langflow.
 
@@ -1100,7 +1100,7 @@ The folder contents are uploaded to Langflow.
 
 Use the `/files` endpoint to add or delete files between your local machine and Langflow.
 
-### Upload File
+### Upload file
 
 Upload a file to an existing flow.
 
@@ -1176,7 +1176,7 @@ Your chatbot describes the image file you sent.
 ```
 
 
-### List Files
+### List files
 
 List all files associated with a specific flow.
 
@@ -1233,7 +1233,7 @@ The file contents.
   </TabItem>
 </Tabs>
 
-### Download Image
+### Download image
 
 Download an image file for a given flow.
 
@@ -1264,7 +1264,7 @@ Image file content.
 </Tabs>
 
 
-### Delete File
+### Delete file
 
 Delete a specific file from a flow.
 
@@ -1295,7 +1295,7 @@ curl -X 'DELETE' \
 
 Retrieve logs for your Langflow flow.
 
-This endpoint requires that log retrieval be enabled in your Langflow application.
+This endpoint requires log retrieval to be enabled in your Langflow application.
 
 To enable log retrieval, include these values in your `.env` file:
 
@@ -1313,7 +1313,7 @@ Start Langflow with this `.env`:
 uv run langflow run --env-file .env
 ```
 
-### Stream Logs
+### Stream logs
 
 Stream logs in real-time using Server-Sent Events (SSE).
 
@@ -1412,7 +1412,7 @@ A dictionary of all Langflow components.
   </TabItem>
 </Tabs>
 
-### Run Flow
+### Run flow
 
 Execute a specified flow by ID or name.
 
@@ -1455,7 +1455,7 @@ curl -X 'POST' \
   </TabItem>
 </Tabs>
 
-### Webhook Run Flow
+### Webhook run flow
 
 The webhook endpoint triggers flow execution with an HTTP POST request.
 
@@ -1493,7 +1493,7 @@ This endpoint is deprecated. Use the `/run` endpoint instead.
 This endpoint is deprecated. Use the `/run` endpoint instead.
 :::
 
-### Get Task Status
+### Get task status
 
 Get the status of a task.
 
@@ -1519,13 +1519,13 @@ curl -X 'GET' \
   </TabItem>
 </Tabs>
 
-### Create Upload File (Deprecated)
+### Create upload file (Deprecated)
 
 :::info
 This endpoint is deprecated. Use the `/file` endpoint instead.
 :::
 
-### Get Version
+### Get version
 
 Get the version of the Langflow API.
 
@@ -1552,7 +1552,7 @@ curl -X 'GET' \
   </TabItem>
 </Tabs>
 
-### Get Config
+### Get config
 
 Retrieve the Langflow configuration information.
 
