@@ -1206,7 +1206,7 @@ curl -X 'GET' \
   </TabItem>
 </Tabs>
 
-### Download File
+### Download file
 
 Download a specific file for a given flow.
 
@@ -1355,10 +1355,16 @@ keepalive
   </TabItem>
 </Tabs>
 
-### Logs
+### Retrieve logs with optional parameters
 
-Retrieve logs with optional parameters.
+Retrieve logs with optional query parameters.
 
+* `lines_before`: The number of logs before the timestamp or the last log.
+* `lines_after`: The number of logs after the timestamp.
+* `timestamp`: The timestamp to start getting logs from.
+
+The default values for all three parameters is `0`.
+With these values, the endpoint returns the last 10 lines of logs.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
