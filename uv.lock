@@ -4033,7 +4033,7 @@ local = [
     { name = "sentence-transformers" },
 ]
 
-[package.dependency-groups]
+[package.dev-dependencies]
 dev = [
     { name = "asgi-lifespan" },
     { name = "blockbuster" },
@@ -4175,7 +4175,7 @@ requires-dist = [
     { name = "zep-python", specifier = "==2.0.2" },
 ]
 
-[package.metadata.dependency-groups]
+[package.metadata.requires-dev]
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
     { name = "blockbuster", specifier = ">=1.5.8,<1.6" },
@@ -4220,7 +4220,9 @@ name = "langflow-base"
 version = "0.1.1"
 source = { editable = "src/backend/base" }
 dependencies = [
+    { name = "aiofile" },
     { name = "aiofiles" },
+    { name = "aiosqlite" },
     { name = "alembic" },
     { name = "assemblyai" },
     { name = "asyncer" },
@@ -4239,18 +4241,22 @@ dependencies = [
     { name = "filelock" },
     { name = "firecrawl-py" },
     { name = "grandalf" },
+    { name = "greenlet" },
     { name = "gunicorn" },
     { name = "httpx", extra = ["http2"] },
     { name = "jq", marker = "sys_platform != 'win32'" },
+    { name = "json-repair" },
     { name = "langchain" },
     { name = "langchain-community" },
     { name = "langchain-core" },
     { name = "langchain-experimental" },
     { name = "langchainhub" },
     { name = "loguru" },
+    { name = "mcp" },
     { name = "multiprocess" },
     { name = "nanoid" },
     { name = "nest-asyncio" },
+    { name = "networkx" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-prometheus" },
     { name = "opentelemetry-instrumentation-fastapi" },
@@ -4332,7 +4338,7 @@ local = [
     { name = "sentence-transformers" },
 ]
 
-[package.dependency-groups]
+[package.dev-dependencies]
 dev = [
     { name = "asgi-lifespan" },
     { name = "pytest-codspeed" },
@@ -4342,7 +4348,9 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
     { name = "aiofiles", specifier = ">=24.1.0,<25.0.0" },
+    { name = "aiosqlite", specifier = ">=0.20.0" },
     { name = "alembic", specifier = ">=1.13.0,<2.0.0" },
     { name = "assemblyai", specifier = ">=0.33.0,<1.0.0" },
     { name = "asyncer", specifier = ">=0.0.5,<1.0.0" },
@@ -4370,11 +4378,13 @@ requires-dist = [
     { name = "flower", marker = "extra == 'all'", specifier = ">=1.0.0" },
     { name = "flower", marker = "extra == 'deploy'", specifier = ">=1.0.0" },
     { name = "grandalf", specifier = ">=0.8.0,<1.0.0" },
+    { name = "greenlet", specifier = ">=3.1.1" },
     { name = "gunicorn", specifier = ">=22.0.0,<24.0.0" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.27,<1.0.0" },
     { name = "httpx", extras = ["http2"], marker = "extra == 'dev'", specifier = ">=0.27" },
     { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.29.0" },
     { name = "jq", marker = "sys_platform != 'win32'", specifier = ">=1.7.0,<2.0.0" },
+    { name = "json-repair", specifier = ">=0.30.3" },
     { name = "langchain", specifier = "~=0.3.10" },
     { name = "langchain-community", specifier = "~=0.3.10" },
     { name = "langchain-core", specifier = "~=0.3.15" },
@@ -4383,10 +4393,12 @@ requires-dist = [
     { name = "llama-cpp-python", marker = "extra == 'all'", specifier = ">=0.2.0" },
     { name = "llama-cpp-python", marker = "extra == 'local'", specifier = ">=0.2.0" },
     { name = "loguru", specifier = ">=0.7.1,<1.0.0" },
+    { name = "mcp", specifier = ">=1.1.2" },
     { name = "multiprocess", specifier = ">=0.70.14,<1.0.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11.0" },
     { name = "nanoid", specifier = ">=2.0.0,<3.0.0" },
     { name = "nest-asyncio", specifier = ">=1.6.0,<2.0.0" },
+    { name = "networkx", specifier = ">=3.4.2" },
     { name = "opentelemetry-api", specifier = ">=1.25.0,<2.0.0" },
     { name = "opentelemetry-exporter-prometheus", specifier = ">=0.46b0,<1.0.0" },
     { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.46b0,<1.0.0" },
@@ -4444,7 +4456,7 @@ requires-dist = [
     { name = "vulture", marker = "extra == 'dev'", specifier = ">=2.11" },
 ]
 
-[package.metadata.dependency-groups]
+[package.metadata.requires-dev]
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
     { name = "pytest-codspeed", specifier = ">=3.0.0" },
