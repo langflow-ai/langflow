@@ -38,7 +38,7 @@ export class EcrRepository extends Construct {
 
     // Create Docker Image Asset
     const dockerBackEndImageAsset = new DockerImageAsset(this, "DockerBackEndImageAsset", {
-      directory: backendPath,
+      directory: path.join(backendPath, "docker"),
       file:"cdk.Dockerfile",
       exclude: excludeDir,
       platform: imagePlatform,
