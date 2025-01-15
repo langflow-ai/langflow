@@ -27,7 +27,7 @@ For an example, see [Make any component a tool](/agents-tool-calling-agent-compo
 
 ## Astra DB Tool
 
-The `Astra DB Tool` allows agents to connect to and query data from Astra DB Collections.
+The `Astra DB Tool` allows agents to connect to and query data from Astra DB collections.
 
 ### Inputs
 
@@ -55,7 +55,7 @@ The Data output is primarily used when directly querying Astra DB, while the Too
 
 ## Astra DB CQL Tool
 
-The `Astra DB CQL Tool` allows agents to query data from CQL Tables in Astra DB.
+The `Astra DB CQL Tool` allows agents to query data from CQL tables in Astra DB.
 
 The main difference between this tool and the **Astra DB Tool** is that this tool is specifically designed for CQL tables and requires partition keys for querying, while also supporting clustering keys for more specific queries.
 
