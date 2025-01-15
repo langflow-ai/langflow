@@ -53,25 +53,34 @@ async def log_vertex_build(db: AsyncSession, vertex_build: VertexBuildBase) -> V
         max_global = settings.max_vertex_builds_to_keep
         max_per_vertex = settings.max_vertex_builds_per_vertex
 
-        # First delete older entries globally
-        delete_global = delete(VertexBuildTable).where(
-            VertexBuildTable.id.in_(
-                select(VertexBuildTable.id)
-                .order_by(VertexBuildTable.timestamp.desc())
-                .offset(max_global - 1)  # Keep newest max_global-1 plus the one we're adding
+        # Create a CTE for global builds ranking
+        global_ranks = select(
+            VertexBuildTable.id, func.row_number().over(order_by=VertexBuildTable.timestamp.desc()).label("rn")
+        ).cte("global_ranks")
+
+        # Create a CTE for per-vertex builds ranking
+        vertex_ranks = (
+            select(
+                VertexBuildTable.build_id,
+                func.row_number()
+                .over(
+                    partition_by=[VertexBuildTable.flow_id, VertexBuildTable.id],
+                    order_by=VertexBuildTable.timestamp.desc(),
+                )
+                .label("rn"),
             )
+            .where(VertexBuildTable.flow_id == vertex_build.flow_id, VertexBuildTable.id == vertex_build.id)
+            .cte("vertex_ranks")
         )
 
-        # Then delete older entries per vertex
+        # Delete older entries globally
+        delete_global = delete(VertexBuildTable).where(
+            VertexBuildTable.id.in_(select(global_ranks.c.id).where(global_ranks.c.rn >= max_global))
+        )
+
+        # Delete older entries per vertex
         delete_per_vertex = delete(VertexBuildTable).where(
-            VertexBuildTable.flow_id == vertex_build.flow_id,
-            VertexBuildTable.id == vertex_build.id,
-            VertexBuildTable.build_id.in_(
-                select(VertexBuildTable.build_id)
-                .where(VertexBuildTable.flow_id == vertex_build.flow_id, VertexBuildTable.id == vertex_build.id)
-                .order_by(VertexBuildTable.timestamp.desc())
-                .offset(max_per_vertex - 1)  # Keep newest max_per_vertex-1 plus the one we're adding
-            ),
+            VertexBuildTable.build_id.in_(select(vertex_ranks.c.build_id).where(vertex_ranks.c.rn >= max_per_vertex))
         )
 
         # Execute both deletes and add new entry in same transaction
