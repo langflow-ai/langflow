@@ -6,7 +6,14 @@ from langflow.base.models.aiml_constants import AimlModels
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.inputs import DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
+from langflow.inputs import (
+    DictInput,
+    DropdownInput,
+    IntInput,
+    SecretStrInput,
+    StrInput,
+    SliderInput,
+)
 
 
 class AIMLModelComponent(LCModelComponent):
@@ -46,8 +53,14 @@ class AIMLModelComponent(LCModelComponent):
             info="The AIML API Key to use for the OpenAI model.",
             advanced=False,
             value="AIML_API_KEY",
+            required=True,
         ),
-        FloatInput(name="temperature", display_name="Temperature", value=0.1),
+        SliderInput(
+            name="temperature",
+            display_name="Temperature",
+            value=0.1,
+            range_spec=RangeSpec(min=0, max=2, step=0.01)
+        ),
     ]
 
     @override
@@ -63,7 +76,7 @@ class AIMLModelComponent(LCModelComponent):
         temperature = self.temperature
         model_name: str = self.model_name
         max_tokens = self.max_tokens
-        model_kwargs = self.model_kwargs or {}
+        model_kwargs = {item["key"]: item["value"] for item in (self.model_kwargs or [])}
         aiml_api_base = self.aiml_api_base or "https://api.aimlapi.com/v2"
 
         openai_api_key = aiml_api_key.get_secret_value() if isinstance(aiml_api_key, SecretStr) else aiml_api_key
