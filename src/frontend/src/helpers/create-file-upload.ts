@@ -1,60 +1,72 @@
-export async function createFileUpload(props?: {
+export function createFileUpload(props?: {
   accept?: string;
   multiple?: boolean;
 }): Promise<File[]> {
-  return new Promise((resolve) => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = props?.accept ?? ".json";
-    input.multiple = props?.multiple ?? true;
-    input.style.display = "none";
+  // Store the input element and promise resolver at module level
+  let inputElement: HTMLInputElement | null = null;
+  let resolvePromise: ((files: File[]) => void) | null = null;
+  let isResolved = false;
 
-    let isResolved = false;
-
-    const cleanup = () => {
-      // Check if the input element still exists in the DOM before attempting to remove it
-      if (input && document.body.contains(input)) {
-        try {
-          document.body.removeChild(input);
-        } catch (error) {
-          console.warn("Error removing input element:", error);
-        }
+  const cleanup = () => {
+    if (inputElement && document.body.contains(inputElement)) {
+      try {
+        document.body.removeChild(inputElement);
+      } catch (error) {
+        console.warn("Error removing input element:", error);
       }
-      window.removeEventListener("focus", handleFocus);
-    };
+    }
+    window.removeEventListener("focus", handleFocus);
+    inputElement = null;
+    resolvePromise = null;
+  };
 
-    const handleChange = (e: Event) => {
-      if (!isResolved) {
+  const handleChange = (e: Event) => {
+    if (!isResolved && resolvePromise) {
+      isResolved = true;
+      const files = Array.from((e.target as HTMLInputElement).files!);
+      cleanup();
+      resolvePromise(files);
+    }
+  };
+
+  const handleFocus = () => {
+    setTimeout(() => {
+      if (!isResolved && resolvePromise) {
         isResolved = true;
-        const files = Array.from((e.target as HTMLInputElement).files!);
         cleanup();
-        resolve(files);
+        resolvePromise([]);
       }
-    };
+    }, 300);
+  };
 
-    const handleFocus = () => {
+  // This function creates and triggers the input element
+  const triggerFileInput = (): Promise<File[]> => {
+    return new Promise((resolve) => {
+      resolvePromise = resolve;
+
+      inputElement = document.createElement("input");
+      inputElement.type = "file";
+      inputElement.accept = props?.accept ?? ".json";
+      inputElement.multiple = props?.multiple ?? true;
+      inputElement.style.display = "none";
+
+      inputElement.addEventListener("change", handleChange);
+      window.addEventListener("focus", handleFocus);
+
+      document.body.appendChild(inputElement);
+      inputElement.click();
+
+      // Fallback timeout
       setTimeout(() => {
-        if (!isResolved) {
+        if (!isResolved && resolvePromise) {
           isResolved = true;
           cleanup();
-          resolve([]);
+          resolvePromise([]);
         }
-      }, 300);
-    };
+      }, 60000);
+    });
+  };
 
-    input.addEventListener("change", handleChange);
-    window.addEventListener("focus", handleFocus);
-
-    document.body.appendChild(input);
-    input.click();
-
-    // Fallback timeout to ensure resolution
-    setTimeout(() => {
-      if (!isResolved) {
-        isResolved = true;
-        cleanup();
-        resolve([]);
-      }
-    }, 60000);
-  });
+  // Return the trigger function instead of immediately executing it
+  return triggerFileInput();
 }
