@@ -1,0 +1,54 @@
+trigger:
+  branches:
+    include:
+      - workbench  # Replace with the branch name to trigger the pipeline
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  imageName: 'langflow-app'
+
+steps:
+  - task: SSH@0
+    displayName: 'Clean Up and Deploy Using Docker Compose'
+    inputs:
+      sshEndpoint: 'ssh'  # Use the SSH service connection name
+      runOptions: 'inline'
+      inline: |
+        # Navigate to the deployment directory
+        cd /home/azureuser/langflow
+
+        # Pull the latest changes from the repo
+        git pull origin workbench
+
+        # Stop and remove all running containers (only if there are any)
+        if [ "$(docker ps -aq)" ]; then
+          docker rm -f $(docker ps -aq) > /dev/null 2>&1 || true
+        else
+          echo "No containers to remove." > /dev/null 2>&1
+        fi
+
+        # Remove all Docker images (only if there are any)
+        if [ "$(docker images -aq)" ]; then
+          docker rmi -f $(docker images -aq) > /dev/null 2>&1 || true
+        else
+          echo "No images to remove." > /dev/null 2>&1
+        fi
+
+        # Perform a system prune to clean up unused data
+        docker system prune -f > /dev/null 2>&1 || true
+
+        # Rebuild and start the containers with Docker Compose
+        docker-compose -f docker/dev.docker-compose.yml up --build -d > /dev/null 2>&1
+
+        # Check if the containers are running properly
+        running_containers=$(docker ps -q -f name=dev-langflow)
+
+        if [ -n "$running_containers" ]; then
+          echo "Containers are running successfully."
+          exit 0  # Explicitly exit with 0 to indicate success
+        else
+          echo "Containers are not running. Exiting with error."
+          exit 1  # Force the pipeline to fail if containers are not running
+        fi
