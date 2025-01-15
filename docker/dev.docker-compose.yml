@@ -18,8 +18,8 @@ services:
       - LANGFLOW_SUPERUSER=langflow
       - LANGFLOW_SUPERUSER_PASSWORD=langflow
       - LANGFLOW_CONFIG_DIR=/var/lib/langflow
-    env_file:
-      - ../.env
+    #env_file:
+    #  - ../.env
     volumes:
       - ../:/app
     depends_on:
