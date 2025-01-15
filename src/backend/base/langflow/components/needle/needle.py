@@ -12,7 +12,7 @@ class NeedleComponent(Component):
     display_name = "Needle Retriever"
     description = "A retriever that uses the Needle API to search collections and generates responses using OpenAI."
     documentation = "https://docs.needle-ai.com"
-    icon = "search"
+    icon = "Needle"
     name = "needle"
 
     inputs = [
