@@ -257,7 +257,7 @@ async def test_get_vertices(client, added_flow_webhook_test, logged_in_headers):
     # The important part is before the - (ConversationBufferMemory, PromptTemplate, ChatOpenAI, LLMChain)
     ids = [_id.split("-")[0] for _id in response.json()["ids"]]
 
-    assert set(ids) == {"ChatInput"}
+    assert set(ids) == {"ChatInput", "Webhook"}
 
 
 async def test_build_vertex_invalid_flow_id(client, logged_in_headers):
@@ -417,9 +417,9 @@ async def test_successful_run_with_input_type_text(client, simple_api_test, crea
     assert len(text_input_outputs) == 1
     # Now we check if the input_value is correct
     # We get text key twice because the output is now a Message
-    assert all(
-        output.get("results").get("text").get("text") == "value1" for output in text_input_outputs
-    ), text_input_outputs
+    assert all(output.get("results").get("text").get("text") == "value1" for output in text_input_outputs), (
+        text_input_outputs
+    )
 
 
 @pytest.mark.api_key_required
@@ -451,9 +451,9 @@ async def test_successful_run_with_input_type_chat(client: AsyncClient, simple_a
     chat_input_outputs = [output for output in outputs_dict.get("outputs") if "ChatInput" in output.get("component_id")]
     assert len(chat_input_outputs) == 1
     # Now we check if the input_value is correct
-    assert all(
-        output.get("results").get("message").get("text") == "value1" for output in chat_input_outputs
-    ), chat_input_outputs
+    assert all(output.get("results").get("message").get("text") == "value1" for output in chat_input_outputs), (
+        chat_input_outputs
+    )
 
 
 @pytest.mark.benchmark
@@ -507,9 +507,9 @@ async def test_successful_run_with_input_type_any(client, simple_api_test, creat
     all_message_or_text_dicts = [
         result_dict.get("message", result_dict.get("text")) for result_dict in all_result_dicts
     ]
-    assert all(
-        message_or_text_dict.get("text") == "value1" for message_or_text_dict in all_message_or_text_dicts
-    ), any_input_outputs
+    assert all(message_or_text_dict.get("text") == "value1" for message_or_text_dict in all_message_or_text_dicts), (
+        any_input_outputs
+    )
 
 
 async def test_invalid_flow_id(client, created_api_key):

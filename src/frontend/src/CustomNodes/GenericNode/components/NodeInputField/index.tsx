@@ -49,7 +49,6 @@ export default function NodeInputField({
     node: data.node!,
     nodeId: data.id,
     parameterId: name,
-    tool_mode: data.node!.tool_mode ?? false,
   });
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const { handleNodeClass } = useHandleNodeClass(data.id);
@@ -109,8 +108,8 @@ export default function NodeInputField({
     <div
       ref={ref}
       className={cn(
-        "relative mt-1 flex min-h-10 w-full flex-wrap items-center justify-between px-5 py-2",
-        lastInput ? "rounded-b-[0.69rem]" : "",
+        "relative flex min-h-10 w-full flex-wrap items-center justify-between px-5 py-2",
+        lastInput ? "rounded-b-[0.69rem] pb-5" : "",
         isToolMode && "bg-primary/10",
         (name === "code" && type === "code") || (name.includes("code") && proxy)
           ? "hidden"
@@ -188,7 +187,11 @@ export default function NodeInputField({
             handleNodeClass={handleNodeClass}
             nodeClass={data.node!}
             disabled={disabled}
-            placeholder={isToolMode ? DEFAULT_TOOLSET_PLACEHOLDER : undefined}
+            placeholder={
+              isToolMode
+                ? DEFAULT_TOOLSET_PLACEHOLDER
+                : data.node?.template[name].placeholder
+            }
             isToolMode={isToolMode}
           />
         )}
