@@ -29,7 +29,7 @@ from langflow.initial_setup.setup import (
     load_bundles_from_urls,
     load_flows_from_directory,
 )
-from langflow.interface.types import get_and_cache_all_types_dict
+from langflow.interface.components import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
 from langflow.logging.logger import configure
 from langflow.middleware import ContentSizeLimitMiddleware
