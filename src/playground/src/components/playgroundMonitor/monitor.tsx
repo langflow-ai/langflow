@@ -5,8 +5,6 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
 import { getInputsAndOutputs } from "@/utils/storeUtils";
-import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import { SelectedViewField } from "./components/selected-view-field";
 import { AllNodeType } from "@/types/flow";
 import { useMessagesStore } from "src/stores/messageStore";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
@@ -16,6 +14,7 @@ import { usePlaygroundStore } from "src/stores/playgroundStore";
 import { ChatViewWrapper } from "../chatView/chatViewWrapper";
 import { cn } from "src/utils/style";
 import { SidebarOpenView } from "../sidebar/sideBarOpen";
+import { SelectedViewField } from "../selectedViewField/selectedViewField";
 
 export default function IOModal({
   children,
@@ -49,7 +48,7 @@ export default function IOModal({
   )
   const haveChat = chatInput || chatOutput;
   const deleteSession = useMessagesStore((state) => state.deleteSession);
-  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const currentFlowId = usePlaygroundStore((state) => state.currentFlowId);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { onDeleteSession, onError } = callbacks;
 
@@ -97,7 +96,7 @@ export default function IOModal({
     { type: string; id: string } | undefined
   >(startView());
 
-  const buildFlow = useFlowStore((state) => state.buildFlow);
+  const buildFlow = usePlaygroundStore((state) => state.buildFlow);
   const lockChat = usePlaygroundStore((state) => state.lockChat);
   const setLockChat = usePlaygroundStore((state) => state.setLockChat);
   const messages = useMessagesStore((state) => state.messages);
@@ -278,7 +277,7 @@ export default function IOModal({
                   outputs={outputs}
                   sessions={sessions}
                   currentFlowId={currentFlowId}
-                  nodes={nodes}
+                  nodes={nodes ?? []}
                 />
               )}
               <ChatViewWrapper
