@@ -19,8 +19,14 @@ steps:
         # Navigate to the deployment directory
         cd /home/azureuser/langflow
 
+        # Checkout the branch to ensure we are on the correct branch
+        git checkout workbench > /dev/null 2>&1 || true
+
+        # Configure Git to handle divergent branches (merge strategy)
+        git config pull.rebase false  # This configures git to perform a merge when pulling
+
         # Pull the latest changes from the repo
-        git pull origin workbench
+        git pull origin workbench > /dev/null 2>&1 || true
 
         # Stop and remove all running containers (only if there are any)
         if [ "$(docker ps -aq)" ]; then
