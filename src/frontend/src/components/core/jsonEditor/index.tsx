@@ -1,8 +1,10 @@
-import JSONEditor from "jsoneditor";
-import "jsoneditor/dist/img/jsoneditor-icons.svg";
-import "jsoneditor/dist/jsoneditor.css";
-import "jsoneditor/dist/jsoneditor.min.css";
+import { useDarkStore } from "@/stores/darkStore";
 import { useEffect, useRef } from "react";
+import {
+  Content,
+  createJSONEditor,
+  JsonEditor as VanillaJsonEditor,
+} from "vanilla-jsoneditor";
 
 interface JsonEditorProps {
   data?: object;
@@ -20,26 +22,30 @@ const JsonEditor = ({
   height = "400px",
 }: JsonEditorProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const jsonEditorRef = useRef<JSONEditor | null>(null);
+  const jsonEditorRef = useRef<VanillaJsonEditor | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Initialize the editor
-    const editor = new JSONEditor(containerRef.current, {
-      ...options,
-      onChange: () => {
-        try {
-          const updatedData = editor.get();
-          onChange?.(updatedData);
-        } catch (error) {
-          console.error("Error getting JSON:", error);
-        }
+    // Initialize the editor with proper types
+    const editor = createJSONEditor({
+      target: containerRef.current,
+      props: {
+        ...options,
+        content: data,
+
+        onChange: () => {
+          try {
+            const content = editor.get();
+            // Extract the json value from the content
+            const jsonValue = (content as { json: object }).json;
+            onChange?.(jsonValue);
+          } catch (error) {
+            console.error("Error getting JSON:", error);
+          }
+        },
       },
     });
-
-    // Set initial data
-    editor.set(data);
 
     // Store editor instance
     jsonEditorRef.current = editor;
@@ -55,9 +61,11 @@ const JsonEditor = ({
   // Update data when prop changes
   useEffect(() => {
     if (jsonEditorRef.current) {
-      jsonEditorRef.current.update(data);
+      jsonEditorRef.current.set({ json: data } as Content);
     }
   }, [data]);
+
+  const dark = useDarkStore((state) => state.dark);
 
   return <div ref={containerRef} style={{ width, height }} />;
 };
