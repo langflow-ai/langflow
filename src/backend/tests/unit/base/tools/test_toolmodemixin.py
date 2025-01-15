@@ -150,6 +150,6 @@ def test_component_inputs_toolkit():
     for input_name, expected in expected_inputs.items():
         assert input_name in properties, f"{input_name} is missing in properties."
         assert properties[input_name]["title"] == expected["title"], f"Title mismatch for {input_name}."
-        assert (
-            properties[input_name]["description"] == expected["description"]
-        ), f"Description mismatch for {input_name}."
+        assert properties[input_name]["description"] == expected["description"], (
+            f"Description mismatch for {input_name}."
+        )
