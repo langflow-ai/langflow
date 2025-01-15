@@ -22,11 +22,13 @@ const ExportModal = forwardRef(
     const [checked, setChecked] = useState(false);
     const currentFlow = useFlowStore((state) => state.currentFlow);
     useEffect(() => {
-      setName(currentFlow!.name);
-      setDescription(currentFlow!.description);
-    }, [currentFlow!.name, currentFlow!.description]);
-    const [name, setName] = useState(currentFlow!.name);
-    const [description, setDescription] = useState(currentFlow!.description);
+      setName(currentFlow?.name ?? "");
+      setDescription(currentFlow?.description ?? "");
+    }, [currentFlow?.name, currentFlow?.description]);
+    const [name, setName] = useState(currentFlow?.name ?? "");
+    const [description, setDescription] = useState(
+      currentFlow?.description ?? "",
+    );
     const [open, setOpen] = useState(false);
 
     return (
