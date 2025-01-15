@@ -3,19 +3,18 @@ import ChainLogo from "@/assets/logo.svg?react";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
 import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
-import { useMessagesStore } from "@/stores/messagesStore";
-import { useUtilityStore } from "@/stores/utilityStore";
+import { useUtilityStore } from "src/stores/utilityStore";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import useTabVisibility from "../../../../shared/hooks/use-tab-visibility";
-import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import useFlowStore from "../../../../stores/flowStore";
 import { ChatMessageType } from "../../../../types/chat";
-import { chatViewProps } from "../../../../types/components";
 import FlowRunningSqueleton from "../flow-running-squeleton";
 import ChatInput from "./chatInput/chat-input";
 import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 import { useFileHandler } from "./chatInput/hooks/use-file-handler";
 import ChatMessage from "./chatMessage/chat-message";
+import { chatViewProps } from "./types";
+import { usePlaygroundStore } from "src/stores/playgroundStore";
+import { useMessagesStore } from "src/stores/messageStore";
 
 const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
   return (
@@ -34,10 +33,11 @@ export default function ChatView({
   visibleSession,
   focusChat,
   closeChat,
+  inputs,
+  nodes,
+
 }: chatViewProps): JSX.Element {
-  const flowPool = useFlowStore((state) => state.flowPool);
-  const inputs = useFlowStore((state) => state.inputs);
-  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const currentFlowId = usePlaygroundStore((state) => state.currentFlowId);
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatMessageType[] | undefined>(
     undefined,
@@ -51,7 +51,6 @@ export default function ChatView({
   );
 
   const inputTypes = inputs.map((obj) => obj.type);
-  const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
   const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
   const isTabHidden = useTabVisibility();
 
@@ -107,7 +106,7 @@ export default function ChatView({
     }
 
     setChatHistory(finalChatHistory);
-  }, [flowPool, messages, visibleSession]);
+  }, [messages, visibleSession]);
   useEffect(() => {
     if (messagesRef.current) {
       messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
@@ -122,20 +121,6 @@ export default function ChatView({
     }
     // trigger focus on chat when new session is set
   }, [focusChat]);
-
-  function updateChat(
-    chat: ChatMessageType,
-    message: string,
-    stream_url?: string,
-  ) {
-    chat.message = message;
-    if (chat.componentId)
-      updateFlowPool(chat.componentId, {
-        message,
-        sender_name: chat.sender_name ?? "Bot",
-        sender: chat.isSend ? "User" : "Machine",
-      });
-  }
 
   const { files, setFiles, handleFiles } = useFileHandler(currentFlowId);
   const [isDragging, setIsDragging] = useState(false);
@@ -172,7 +157,6 @@ export default function ChatView({
                   chat={chat}
                   lastMessage={chatHistory.length - 1 === index}
                   key={`${chat.id}-${index}`}
-                  updateChat={updateChat}
                   closeChat={closeChat}
                 />
               ))}

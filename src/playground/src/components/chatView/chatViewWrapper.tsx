@@ -92,6 +92,7 @@ export const ChatViewWrapper = ({
             setLockChat={setLockChat}
             visibleSession={visibleSession}
             closeChat={undefined}
+            inputs={[]}
           />
         )}
       </div>
