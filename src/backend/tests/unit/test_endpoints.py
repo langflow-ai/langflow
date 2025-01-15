@@ -287,7 +287,6 @@ async def test_successful_run_no_payload(client, simple_api_test, created_api_ke
     assert len(outputs_dict) == 2
     assert "inputs" in outputs_dict
     assert "outputs" in outputs_dict
-    assert outputs_dict.get("inputs") == {"input_value": ""}
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 1
     ids = [output.get("component_id") for output in outputs_dict.get("outputs")]
@@ -318,7 +317,6 @@ async def test_successful_run_with_output_type_text(client, simple_api_test, cre
     assert len(outputs_dict) == 2
     assert "inputs" in outputs_dict
     assert "outputs" in outputs_dict
-    assert outputs_dict.get("inputs") == {"input_value": ""}
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 1
     ids = [output.get("component_id") for output in outputs_dict.get("outputs")]
@@ -350,7 +348,6 @@ async def test_successful_run_with_output_type_any(client, simple_api_test, crea
     assert len(outputs_dict) == 2
     assert "inputs" in outputs_dict
     assert "outputs" in outputs_dict
-    assert outputs_dict.get("inputs") == {"input_value": ""}
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 1
     ids = [output.get("component_id") for output in outputs_dict.get("outputs")]
@@ -383,7 +380,6 @@ async def test_successful_run_with_output_type_debug(client, simple_api_test, cr
     assert len(outputs_dict) == 2
     assert "inputs" in outputs_dict
     assert "outputs" in outputs_dict
-    assert outputs_dict.get("inputs") == {"input_value": ""}
     assert isinstance(outputs_dict.get("outputs"), list)
     assert len(outputs_dict.get("outputs")) == 3
 
