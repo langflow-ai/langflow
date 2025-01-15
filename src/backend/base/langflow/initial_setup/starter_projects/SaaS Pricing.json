@@ -780,7 +780,7 @@
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
-                "required": false,
+                "required": true,
                 "show": true,
                 "title_case": false,
                 "type": "str",
