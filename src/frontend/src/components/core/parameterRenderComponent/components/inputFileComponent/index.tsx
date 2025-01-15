@@ -1,5 +1,4 @@
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
-import { createFileUpload } from "@/helpers/create-file-upload";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import { cn } from "@/utils/utils";
 import { useEffect, useRef } from "react";
@@ -81,22 +80,9 @@ export default function InputFileComponent({
     );
   };
 
-  const handleButtonClick = async (): Promise<void> => {
-    try {
-      const files = await createFileUpload({
-        multiple: false,
-        accept: fileTypes?.join(","),
-      });
-
-      if (files?.[0]) {
-        handleFileSelection(files[0]);
-      } else {
-        fileInputRef.current?.click();
-      }
-    } catch (error) {
-      console.error("Error in file upload:", error);
-      fileInputRef.current?.click();
-    }
+  const handleButtonClick = () => {
+    // Simply trigger the native file input click
+    fileInputRef.current?.click();
   };
 
   const handleNativeInputChange = (
@@ -117,20 +103,22 @@ export default function InputFileComponent({
         <div className="flex items-center gap-2.5">
           <div className="relative flex w-full">
             <div className="w-full">
-              <input
+              <Button
+                unstyled
                 data-testid="input-file-component"
-                type="text"
                 className={cn(
-                  "primary-input h-9 w-full cursor-pointer rounded-r-none text-sm focus:border-border focus:outline-none focus:ring-0",
+                  "primary-input h-9 w-full justify-start rounded-r-none text-sm focus:border-border focus:outline-none focus:ring-0",
                   !value && "text-placeholder-foreground",
                   editNode && "h-6",
                 )}
-                value={value || "Upload a file..."}
-                readOnly
-                disabled={isDisabled}
                 onClick={handleButtonClick}
-              />
-              {/* Hidden native file input as fallback */}
+                disabled={isDisabled}
+                variant="outline"
+              >
+                <span className={cn(editNode && "relative -top-1.5")}>
+                  {value || "Upload a file..."}
+                </span>
+              </Button>
               <input
                 ref={fileInputRef}
                 type="file"
