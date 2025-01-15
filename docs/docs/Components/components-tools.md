@@ -39,7 +39,7 @@ The `Astra DB Tool` allows agents to connect to and query data from Astra DB col
 | Token             | SecretString | The authentication token for accessing Astra DB.                                                                                 |
 | API Endpoint      | String | The Astra DB API endpoint.                                                                                                       |
 | Projection Fields | String | The attributes to return, separated by commas. Default: "*".                                                                     |
-| Tool Parameters   | Dict   | Parameters the model needs to fill to execute the tool. For required parameters, use an exclamation mark (e.g., "!customer_id"). |
+| Tool Parameters   | Dict   | Parameters the model needs to fill to execute the tool. For required parameters, use an exclamation mark (for example, `!customer_id`). |
 | Static Filters    | Dict   | Attribute-value pairs used to filter query results.                                                                              |
 | Limit             | String | The number of documents to return.                                                                                               |
 
@@ -49,8 +49,8 @@ The Data output is primarily used when directly querying Astra DB, while the Too
 
 | Name | Type | Description |
 |------|------|-------------|
-| Data | List[Data] | A list of Data objects containing the query results from Astra DB. Each Data object contains the document fields specified by the projection attributes. Limited by the `number_of_results` parameter. |
-| Tool | StructuredTool | A LangChain StructuredTool object that can be used in agent workflows. Contains the tool name, description, argument schema based on tool parameters, and the query function. |
+| Data | List[`Data`] | A list of [Data](/configuration-objects) objects containing the query results from Astra DB. Each `Data` object contains the document fields specified by the projection attributes. Limited by the `number_of_results` parameter. |
+| Tool | StructuredTool | A LangChain `StructuredTool` object that can be used in agent workflows. Contains the tool name, description, argument schema based on tool parameters, and the query function. |
 
 
 ## Astra DB CQL Tool
@@ -71,7 +71,7 @@ The main difference between this tool and the **Astra DB Tool** is that this too
 | API Endpoint      | String | The Astra DB API endpoint.                                                                                                                         |
 | Projection Fields | String | The attributes to return, separated by commas. Default: "*".                                                                                       |
 | Partition Keys    | Dict   | Required parameters that the model must fill to query the tool.                                                                                    |
-| Clustering Keys   | Dict   | Optional parameters the model can fill to refine the query. Required parameters should be marked with an  exclamation mark (e.g., "!customer_id"). |
+| Clustering Keys   | Dict   | Optional parameters the model can fill to refine the query. Required parameters should be marked with an  exclamation mark (for example, `!customer_id`). |
 | Static Filters    | Dict   | Attribute-value pairs used to filter query results.                                                                                                |
 | Limit             | String | The number of records to return.                                                                                                                   |
 
@@ -79,7 +79,7 @@ The main difference between this tool and the **Astra DB Tool** is that this too
 
 | Name | Type | Description |
 |------|------|-------------|
-| Data | List[Data] | A list of Data objects containing the query results from the Astra DB CQL table. Each Data object contains the document fields specified by the projection fields. Limited by the number_of_results parameter. |
+| Data | List[Data] | A list of [Data](/configuration-objects) objects containing the query results from the Astra DB CQL table. Each Data object contains the document fields specified by the projection fields. Limited by the number_of_results parameter. |
 | Tool | StructuredTool | A LangChain StructuredTool object that can be used in agent workflows. Contains the tool name, description, argument schema based on partition and clustering keys, and the query function. |
 
 ## Bing Search API
