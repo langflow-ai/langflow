@@ -331,7 +331,7 @@ export default function Dropdown({
         ))}
       </CommandGroup>
       <CommandSeparator />
-      {dialogInputs && dialogInputs?.length > 0 && renderCustomOptionDialog()}
+      {dialogInputs && dialogInputs?.fields && renderCustomOptionDialog()}
     </CommandList>
   );
 
