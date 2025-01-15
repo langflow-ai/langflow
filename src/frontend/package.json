@@ -83,6 +83,7 @@
     "tailwind-merge": "^2.3.0",
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^10.0.0",
+    "vanilla-jsoneditor": "^2.3.3",
     "vite-plugin-svgr": "^4.2.0",
     "vite-tsconfig-paths": "^4.3.2",
     "web-vitals": "^4.1.1",
