@@ -205,9 +205,12 @@ The components merge into a single component.
 
 ## Component version
 
-A component's state is stored in a database, while sidebar components are like starter templates. As soon as you drag a component from the sidebar to the workspace, the two components are no longer in parity.
+A component's initial state is stored in a database. As soon as you drag a component from the sidebar to the workspace, the two components are no longer in parity.
 
-The component keeps the version number it is initialized to the workspace with. Click the <Icon name="AlertTriangle" aria-label="Exclamation mark" /> **Update Component** icon to bring the component up to the `latest` version. This will change the code of the component in place so you can validate that the component was updated by checking its Python code before and after updating it.
+A component keeps the version number it is initialized to the workspace with. If a component is at version `1.0` when it is dragged to the workspace, it will stay at version `1.0` until you update it.
+
+Langflow notifies you when a component's workspace version is behind the database version and an update is available.
+Click the <Icon name="AlertTriangle" aria-label="Exclamation mark" /> **Update Component** icon to update the component to the `latest` version. This will change the code of the component in place so you can validate that the component was updated by checking its Python code before and after updating it.
 
 ## Components sidebar
 
