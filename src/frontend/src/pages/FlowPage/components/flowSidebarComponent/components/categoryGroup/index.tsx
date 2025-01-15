@@ -3,10 +3,10 @@ import {
   SidebarGroupContent,
   SidebarMenu,
 } from "@/components/ui/sidebar";
+import { SIDEBAR_BUNDLES } from "@/utils/styleUtils";
 import { memo } from "react";
 import { CategoryGroupProps } from "../../types";
 import { CategoryDisclosure } from "../categoryDisclouse";
-import { SIDEBAR_BUNDLES } from "@/utils/styleUtils";
 
 export const CategoryGroup = memo(function CategoryGroup({
   dataFilter,
@@ -25,14 +25,18 @@ export const CategoryGroup = memo(function CategoryGroup({
       <SidebarGroupContent>
         <SidebarMenu>
           {Object.entries(dataFilter)
-            .filter(([categoryName, items]) =>
-              // filter out bundles
-              !SIDEBAR_BUNDLES.some(cat => cat.name === categoryName) &&
-              categoryName !== "custom_component" &&
-              Object.keys(items).length > 0
+            .filter(
+              ([categoryName, items]) =>
+                // filter out bundles
+                !SIDEBAR_BUNDLES.some((cat) => cat.name === categoryName) &&
+                categoryName !== "custom_component" &&
+                Object.keys(items).length > 0,
             )
             .sort(([aName], [bName]) => {
-              const categoryList = search !== "" ? sortedCategories : CATEGORIES.map(c => c.name);
+              const categoryList =
+                search !== ""
+                  ? sortedCategories
+                  : CATEGORIES.map((c) => c.name);
               const aIndex = categoryList.indexOf(aName);
               const bIndex = categoryList.indexOf(bName);
 
@@ -46,7 +50,13 @@ export const CategoryGroup = memo(function CategoryGroup({
               return aIndex - bIndex;
             })
             .map(([categoryName]) => {
-              const item = CATEGORIES.find(cat => cat.name === categoryName) ?? {name: categoryName, icon: "folder", display_name: categoryName};
+              const item = CATEGORIES.find(
+                (cat) => cat.name === categoryName,
+              ) ?? {
+                name: categoryName,
+                icon: "folder",
+                display_name: categoryName,
+              };
               return (
                 <CategoryDisclosure
                   key={categoryName}

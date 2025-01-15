@@ -120,13 +120,12 @@ export function FlowSidebarComponent() {
   const sortedCategories = useMemo(() => {
     if (!searchResults || !searchFilteredData) return [];
 
-    return Object.keys(searchFilteredData)
-      .toSorted((a, b) =>
-        searchResults.fuseCategories.indexOf(b) <
-        searchResults.fuseCategories.indexOf(a)
-          ? 1
-          : -1,
-      );
+    return Object.keys(searchFilteredData).toSorted((a, b) =>
+      searchResults.fuseCategories.indexOf(b) <
+      searchResults.fuseCategories.indexOf(a)
+        ? 1
+        : -1,
+    );
   }, [searchResults, searchFilteredData, CATEGORIES, BUNDLES]);
 
   const finalFilteredData = useMemo(() => {
@@ -299,7 +298,6 @@ export function FlowSidebarComponent() {
     [dataFilter],
   );
 
-
   return (
     <Sidebar
       collapsible="offcanvas"
@@ -333,12 +331,12 @@ export function FlowSidebarComponent() {
               CATEGORIES={CATEGORIES}
               openCategories={openCategories}
               setOpenCategories={setOpenCategories}
-                search={search}
-                nodeColors={nodeColors}
-                chatInputAdded={chatInputAdded}
-                onDragStart={onDragStart}
-                sensitiveSort={sensitiveSort}
-              />
+              search={search}
+              nodeColors={nodeColors}
+              chatInputAdded={chatInputAdded}
+              onDragStart={onDragStart}
+              sensitiveSort={sensitiveSort}
+            />
             {hasBundleItems && (
               <MemoizedSidebarGroup
                 BUNDLES={BUNDLES}
