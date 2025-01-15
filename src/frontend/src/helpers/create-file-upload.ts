@@ -18,7 +18,11 @@ export function createFileUpload(props?: {
 
     const cleanup = () => {
       if (document.body.contains(input)) {
-        document.body.removeChild(input);
+        try {
+          document.body.removeChild(input);
+        } catch (error) {
+          console.warn("Error removing input element:", error);
+        }
       }
       input.removeEventListener("change", handleChange);
       document.removeEventListener("focus", handleFocus);
