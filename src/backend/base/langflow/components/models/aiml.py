@@ -76,7 +76,7 @@ class AIMLModelComponent(LCModelComponent):
         temperature = self.temperature
         model_name: str = self.model_name
         max_tokens = self.max_tokens
-        model_kwargs = {item["key"]: item["value"] for item in (self.model_kwargs or [])}
+        model_kwargs = self.model_kwargs or {}
         aiml_api_base = self.aiml_api_base or "https://api.aimlapi.com/v2"
 
         openai_api_key = aiml_api_key.get_secret_value() if isinstance(aiml_api_key, SecretStr) else aiml_api_key
