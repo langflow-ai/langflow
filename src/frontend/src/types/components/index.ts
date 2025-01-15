@@ -60,7 +60,7 @@ export type DropDownComponent = {
   id?: string;
   children?: ReactNode;
   name?: string;
-  dialogInputs?: any[];
+  dialogInputs?: any;
 };
 export type ParameterComponentType = {
   selected?: boolean;
