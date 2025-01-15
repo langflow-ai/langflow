@@ -88,7 +88,6 @@ async def log_vertex_build(db: AsyncSession, vertex_build: VertexBuildBase) -> V
         await db.exec(delete_global)
         await db.exec(delete_per_vertex)
         await db.commit()
-        await db.refresh(table)
 
     except IntegrityError:
         await db.rollback()
