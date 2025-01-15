@@ -11,6 +11,8 @@ from langflow.services.deps import get_settings_service
 async def get_vertex_builds_by_flow_id(
     db: AsyncSession, flow_id: UUID, limit: int | None = 1000
 ) -> list[VertexBuildTable]:
+    if isinstance(flow_id, str):
+        flow_id = UUID(flow_id)
     subquery = (
         select(VertexBuildTable.id, func.max(VertexBuildTable.timestamp).label("max_timestamp"))
         .where(VertexBuildTable.flow_id == flow_id)
