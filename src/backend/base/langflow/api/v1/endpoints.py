@@ -58,7 +58,7 @@ router = APIRouter(tags=["Base"])
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
 async def get_all():
-    from langflow.interface.types import get_and_cache_all_types_dict
+    from langflow.interface.components import get_and_cache_all_types_dict
 
     try:
         return await get_and_cache_all_types_dict(settings_service=get_settings_service())
