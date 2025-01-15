@@ -3,7 +3,8 @@ from pydantic.v1 import SecretStr
 from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
+from langflow.field_typing.range_spec import RangeSpec
+from langflow.io import DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
 
 
 class AnthropicModelComponent(LCModelComponent):
@@ -28,8 +29,10 @@ class AnthropicModelComponent(LCModelComponent):
             info="https://python.langchain.com/docs/integrations/chat/anthropic",
             value="claude-3-5-sonnet-latest",
         ),
-        SecretStrInput(name="anthropic_api_key", display_name="Anthropic API Key", info="Your Anthropic API key."),
-        FloatInput(name="temperature", display_name="Temperature", value=0.1),
+        SecretStrInput(name="anthropic_api_key", display_name="Anthropic API Key", info="Your Anthropic API key.", required=True,),
+        SliderInput(
+            name="temperature", display_name="Temperature", value=0.1, range_spec=RangeSpec(min=0, max=2, step=0.01)
+        ),
         MessageTextInput(
             name="anthropic_api_url",
             display_name="Anthropic API URL",
