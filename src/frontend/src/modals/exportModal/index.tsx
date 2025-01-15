@@ -26,7 +26,9 @@ const ExportModal = forwardRef(
       setDescription(currentFlow?.description ?? "");
     }, [currentFlow?.name, currentFlow?.description]);
     const [name, setName] = useState(currentFlow?.name ?? "");
-    const [description, setDescription] = useState(currentFlow?.description ?? "");
+    const [description, setDescription] = useState(
+      currentFlow?.description ?? "",
+    );
     const [open, setOpen] = useState(false);
 
     return (
