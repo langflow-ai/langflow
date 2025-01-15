@@ -13,7 +13,7 @@ Flows are created in the **workspace** with components dragged from the componen
 
 ![Basic prompting flow within in the workspace](/img/workspace-basic-prompting.png)
 
-A flow can be simple as the [basic prompting flow](/get-started-quickstart), which creates an OpenAI chatbot with four components.
+A flow can be as simple as the [basic prompting flow](/get-started-quickstart), which creates an OpenAI chatbot with four components.
 
 * Each component in a flow is a **node** that performs a specific task, like an AI model or a data source.
 * Each component has a **Configuration** menu. Click the **Code** pane to see a component's underlying Python code.

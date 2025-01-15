@@ -15,7 +15,7 @@ Learn more about components and how they work on this page.
 
 ## Component menu
 
-Each component is unique, but all have a menu bar at the top that looks something like this.
+Each component is unique, but all have a menu bar at the top that looks something like the following:
 
 <img src="/img/openai-model-component.png" alt="Open AI component" style={{display: 'block', margin: 'auto', width: 300}} />
 
@@ -45,7 +45,7 @@ Handles (<Icon name="Circle" size="16" aria-label="A circle on the side of a com
 
 The following table lists the handle colors and their corresponding data types:
 
-| Data Type | Handle Color | Hex Code |
+| Data type | Handle color | Hex code |
 |-----------|--------------|----------|
 | BaseLanguageModel | Fuchsia | #c026d3 |
 | Data | Red | #dc2626 |
@@ -126,7 +126,7 @@ class RecursiveCharacterTextSplitterComponent(LCTextSplitterComponent):
 
 ```
 
-Components include definitions for inputs and outputs, which will be represented in the UI with color-coded ports.
+Components include definitions for inputs and outputs, which are represented in the UI with color-coded ports.
 
 **Input Definition:** Each input (like `IntInput` or `DataInput`) specifies an input's type, name, and display properties, which appear as configurable fields in the component's UI panel.
 
@@ -140,7 +140,7 @@ When used in a flow, this component:
 3. Processes data using the configured parameters.
 4. Passes results to the next component.
 
-## Freeze Path
+## Freeze path
 
 After a component runs, **Freeze Path** locks the component's previous output state to prevent it from re-running.
 
@@ -156,13 +156,13 @@ A <Icon name="Snowflake" aria-label="Snowflake"/> icon appears on all frozen com
 
 Click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> **All** to see additional options for a component.
 
-To modify a component's name or description, double-click in the **Name** or **Description** fields. Component descriptions accept markdown syntax.
+To modify a component's name or description, double-click in the **Name** or **Description** fields. Component descriptions accept Markdown syntax.
 
 ### Component shortcuts
 
 The following keyboard shortcuts are available when a component is selected.
 
-| Menu Item | Mac Shortcut | Description |
+| Menu item | Mac shortcut | Description |
 |-----------|----------|-------------|
 | Code | ⌘ + C | Opens the code editor for the component. |
 | Advanced | ⌘ + A | Opens advanced settings for the component. |
@@ -178,13 +178,13 @@ The following keyboard shortcuts are available when a component is selected.
 
 ## Group components in the workspace
 
-Multiple components can be grouped into a single component for reuse. This is useful when combining large flows into single components (like RAG with a vector database, for example) and saving space.
+Multiple components can be grouped into a single component for reuse. This is useful when combining large flows into single components, for example RAG with a vector database, and saving space.
 
 1. Hold **Shift** and drag to select components.
 2. Select **Group**.
 3. The components merge into a single component.
 4. Double-click the name and description to change them.
-5. Save your grouped component to in the sidebar for later use.
+5. Save your grouped component to the sidebar for later use.
 
 ## Component version
 
