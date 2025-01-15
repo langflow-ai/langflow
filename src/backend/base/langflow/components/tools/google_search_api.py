@@ -44,28 +44,31 @@ class GoogleSearchAPIComponent(Component):
     ]
 
     def search_google(self) -> DataFrame:
-        google_api_key = self.google_api_key
-        google_cse_id = self.google_cse_id
+        """Search Google using the provided query."""
+        if not self.google_api_key:
+            return DataFrame([{
+                "error": "Invalid Google API Key"
+            }])
 
-        if not google_api_key or google_api_key == "from langflow.io import Output":
-            return DataFrame({"error": ["Invalid Google API Key. Please provide a valid API key."]})
-
-        if not google_cse_id or google_cse_id == "from langflow.io import Output":
-            return DataFrame({"error": ["Invalid Google CSE ID. Please provide a valid CSE ID."]})
+        if not self.google_cse_id:
+            return DataFrame([{
+                "error": "Invalid Google CSE ID"
+            }])
 
         try:
             wrapper = GoogleSearchAPIWrapper(
-                google_api_key=google_api_key,
-                google_cse_id=google_cse_id,
-                k=self.k,
+                google_api_key=self.google_api_key,
+                google_cse_id=self.google_cse_id,
+                k=self.k
             )
-            results = wrapper.results(query=self.input_value, num_results=self.k)
-        except (ValueError, ConnectionError, RuntimeError) as e:
-            error_message = f"Error occurred while searching: {e!s}"
-            self.status = error_message
-            return DataFrame({"error": [error_message]})
-        else:
-            return results
+            return wrapper.results(
+                query=self.input_value,
+                num_results=self.k
+            )
+        except Exception as e:
+            return DataFrame([{
+                "error": f"Error occurred while searching: {str(e)}"
+            }])
 
     def build(self):
         return self.search_google
