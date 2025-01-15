@@ -11,6 +11,23 @@ from langflow.services.deps import get_settings_service
 async def get_vertex_builds_by_flow_id(
     db: AsyncSession, flow_id: UUID, limit: int | None = 1000
 ) -> list[VertexBuildTable]:
+    """Get the most recent vertex builds for a given flow ID.
+
+    This function retrieves vertex builds associated with a specific flow, ordered by timestamp.
+    It uses a subquery to get the latest timestamp for each build ID to ensure we get the most
+    recent versions.
+
+    Args:
+        db (AsyncSession): The database session for executing queries.
+        flow_id (UUID): The unique identifier of the flow to get builds for. Can be string or UUID.
+        limit (int | None, optional): Maximum number of builds to return. Defaults to 1000.
+
+    Returns:
+        list[VertexBuildTable]: List of vertex builds, ordered chronologically by timestamp.
+
+    Note:
+        If flow_id is provided as a string, it will be converted to UUID automatically.
+    """
     if isinstance(flow_id, str):
         flow_id = UUID(flow_id)
     subquery = (
@@ -33,51 +50,78 @@ async def get_vertex_builds_by_flow_id(
     return list(builds)
 
 
-async def log_vertex_build(db: AsyncSession, vertex_build: VertexBuildBase) -> VertexBuildTable:
-    """Log a vertex build and maintain maximum builds globally and per vertex.
+async def log_vertex_build(
+    db: AsyncSession,
+    vertex_build: VertexBuildBase,
+    *,
+    max_builds_to_keep: int | None = None,
+    max_builds_per_vertex: int | None = None,
+) -> VertexBuildTable:
+    """Log a vertex build and maintain build history within specified limits.
+
+    This function performs a series of operations in a single transaction:
+    1. Inserts the new build record
+    2. Enforces per-vertex build limit by removing older builds
+    3. Enforces global build limit across all vertices
+    4. Commits the transaction
 
     Args:
-        db: Database session
-        vertex_build: Vertex build data to log
+        db (AsyncSession): The database session for executing queries.
+        vertex_build (VertexBuildBase): The vertex build data to log.
+        max_builds_to_keep (int | None, optional): Maximum number of builds to keep globally.
+            If None, uses system settings.
+        max_builds_per_vertex (int | None, optional): Maximum number of builds to keep per vertex.
+            If None, uses system settings.
 
     Returns:
-        The created VertexBuildTable entry
+        VertexBuildTable: The newly created vertex build record.
 
     Raises:
-        IntegrityError: If there is a database integrity error
+        IntegrityError: If there's a database constraint violation.
+        Exception: For any other database-related errors.
+
+    Note:
+        The function uses a transaction to ensure atomicity of all operations.
+        If any operation fails, all changes are rolled back.
     """
     table = VertexBuildTable(**vertex_build.model_dump())
 
     try:
         settings = get_settings_service().settings
-        max_global = settings.max_vertex_builds_to_keep
-        max_per_vertex = settings.max_vertex_builds_per_vertex
+        max_global = max_builds_to_keep or settings.max_vertex_builds_to_keep
+        max_per_vertex = max_builds_per_vertex or settings.max_vertex_builds_per_vertex
 
-        # First delete older entries globally
-        delete_global = delete(VertexBuildTable).where(
-            VertexBuildTable.id.in_(
-                select(VertexBuildTable.id)
-                .order_by(VertexBuildTable.timestamp.desc())
-                .offset(max_global - 1)  # Keep newest max_global-1 plus the one we're adding
+        # 1) Insert and flush the new build so queries can see it
+        db.add(table)
+        await db.flush()
+
+        # 2) Delete older builds for this vertex, keeping newest max_per_vertex
+        keep_vertex_subq = (
+            select(VertexBuildTable.build_id)
+            .where(
+                VertexBuildTable.flow_id == vertex_build.flow_id,
+                VertexBuildTable.id == vertex_build.id,
             )
+            .order_by(VertexBuildTable.timestamp.desc(), VertexBuildTable.build_id.desc())
+            .limit(max_per_vertex)
         )
-
-        # Then delete older entries per vertex
-        delete_per_vertex = delete(VertexBuildTable).where(
+        delete_vertex_older = delete(VertexBuildTable).where(
             VertexBuildTable.flow_id == vertex_build.flow_id,
             VertexBuildTable.id == vertex_build.id,
-            VertexBuildTable.build_id.in_(
-                select(VertexBuildTable.build_id)
-                .where(VertexBuildTable.flow_id == vertex_build.flow_id, VertexBuildTable.id == vertex_build.id)
-                .order_by(VertexBuildTable.timestamp.desc())
-                .offset(max_per_vertex - 1)  # Keep newest max_per_vertex-1 plus the one we're adding
-            ),
+            VertexBuildTable.build_id.not_in(keep_vertex_subq),
         )
+        await db.execute(delete_vertex_older)
 
-        # Execute both deletes and add new entry in same transaction
-        db.add(table)
-        await db.exec(delete_global)
-        await db.exec(delete_per_vertex)
+        # 3) Delete older builds globally, keeping newest max_global
+        keep_global_subq = (
+            select(VertexBuildTable.build_id)
+            .order_by(VertexBuildTable.timestamp.desc(), VertexBuildTable.build_id.desc())
+            .limit(max_global)
+        )
+        delete_global_older = delete(VertexBuildTable).where(VertexBuildTable.build_id.not_in(keep_global_subq))
+        await db.execute(delete_global_older)
+
+        # 4) Commit transaction
         await db.commit()
 
     except IntegrityError:
@@ -86,10 +130,21 @@ async def log_vertex_build(db: AsyncSession, vertex_build: VertexBuildBase) -> V
     except Exception:
         await db.rollback()
         raise
+
     return table
 
 
 async def delete_vertex_builds_by_flow_id(db: AsyncSession, flow_id: UUID) -> None:
+    """Delete all vertex builds associated with a specific flow ID.
+
+    Args:
+        db (AsyncSession): The database session for executing queries.
+        flow_id (UUID): The unique identifier of the flow whose builds should be deleted.
+
+    Note:
+        This operation is permanent and cannot be undone. Use with caution.
+        The function commits the transaction automatically.
+    """
     stmt = delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id)
     await db.exec(stmt)
     await db.commit()
