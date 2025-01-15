@@ -14,7 +14,7 @@ from langflow.base.astra_assistants.util import (
     wrap_base_tool_as_tool_interface,
 )
 from langflow.custom.custom_component.component_with_cache import ComponentWithCache
-from langflow.inputs import DropdownInput, FileInput, HandleInput, MultilineInput, StrInput
+from langflow.inputs import DropdownInput, FileInput, HandleInput, MultilineInput
 from langflow.memory import delete_message
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.message import Message
@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
 class AstraAssistantManager(ComponentWithCache):
     display_name = "Astra Assistant Agent"
+    name = "Astra Assistant Agent"
     description = "Manages Assistant Interactions"
     icon = "AstraDB"
 
@@ -38,7 +39,7 @@ class AstraAssistantManager(ComponentWithCache):
             options=litellm_model_names,
             value="gpt-4o-mini",
         ),
-        StrInput(
+        MultilineInput(
             name="instructions",
             display_name="Agent Instructions",
             info="Instructions for the assistant, think of these as the system prompt.",
