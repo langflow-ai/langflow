@@ -1,6 +1,6 @@
 import os
 from collections import defaultdict
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 
 from astrapy import AstraDBAdmin, DataAPIClient, Database
 from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
@@ -138,7 +138,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             required=True,
             refresh_button=True,
             real_time_refresh=True,
-            dialog_inputs=asdict(NewDatabaseInput()),
+            # dialog_inputs=asdict(NewDatabaseInput()),
             options=[],
             options_metadata=[
                 {
@@ -154,7 +154,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             required=True,
             refresh_button=True,
             real_time_refresh=True,
-            dialog_inputs=asdict(NewCollectionInput()),
+            # dialog_inputs=asdict(NewCollectionInput()),
             options=[],
             options_metadata=[
                 {
@@ -503,6 +503,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             ]
 
             # Get list of regions for a given cloud provider
+            """
             cloud_provider = (
                 build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["cloud_provider"][
                     "value"
@@ -512,6 +513,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["region"][
                 "options"
             ] = self.map_cloud_providers()[cloud_provider]["regions"]
+            """
 
             return build_config
 
@@ -542,6 +544,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 build_config["embedding_model"]["required"] = True
 
         # For the final step, get the list of vectorize providers
+        """
         vectorize_providers = self.get_vectorize_providers()
         if not vectorize_providers:
             return build_config
@@ -568,6 +571,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
                 "embedding_generation_model"
             ]["options"] = vectorize_providers.get(embedding_provider, [[], []])[1]
+        """
 
         return build_config
 
