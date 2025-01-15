@@ -79,7 +79,7 @@ Clicking the Chat Widget HTML tab, you'll get the code to be inserted. Read belo
 
 ### Embed the chat widget into HTML
 
-To embed the Chat Widget into any HTML page, insert the code snippet. inside a `<body>` tag.
+To embed the chat widget into any HTML page, insert the code snippet. inside a `<body>` tag.
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.6/dist/build/static/js/bundle.min.js""></script>
@@ -141,7 +141,7 @@ In your Angular project, find the component belonging to the module where `CUST
 
 :::
 
-## Chat Widget Configuration
+## Chat widget configuration
 
 Use the widget API to customize your Chat Widget:
 
