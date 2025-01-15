@@ -34,8 +34,8 @@ module.exports = {
       label: "Concepts",
       items: [
         "Concepts/concepts-overview",
-        "Concepts/concepts-components",
         "Concepts/concepts-playground",
+        "Concepts/concepts-components",
         "Concepts/concepts-api",
       ],
     },
