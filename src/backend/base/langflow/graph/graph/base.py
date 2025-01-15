@@ -33,7 +33,7 @@ from langflow.graph.graph.utils import (
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.schema import NodeData, NodeTypeEnum
-from langflow.graph.vertex.types import ComponentVertex, InterfaceVertex, StateVertex
+from langflow.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
 from langflow.logging.logger import LogConfig, configure
 from langflow.schema.dotdict import dotdict
 from langflow.schema.schema import INPUT_FIELD_NAME, InputType

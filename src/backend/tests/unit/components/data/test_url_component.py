@@ -121,7 +121,7 @@ class TestURLComponent(ComponentTestBaseWithoutClient):
         component.set_attributes({"urls": urls})
 
         mock_web_load.return_value = [
-            Mock(page_content=f"content{i+1}", metadata={"source": url}) for i, url in enumerate(urls)
+            Mock(page_content=f"content{i + 1}", metadata={"source": url}) for i, url in enumerate(urls)
         ]
 
         # Test fetch_content
@@ -131,7 +131,7 @@ class TestURLComponent(ComponentTestBaseWithoutClient):
         for i, item in enumerate(content):
             url = urls[i]
             assert item.source == url, f"Expected '{url}', got '{item.source}'"
-            assert item.text == f"content{i+1}"
+            assert item.text == f"content{i + 1}"
 
     @respx.mock
     async def test_url_request_success(self, mock_web_load):

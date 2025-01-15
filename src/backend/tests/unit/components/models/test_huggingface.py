@@ -24,6 +24,6 @@ def test_huggingface_inputs():
 
     # Check if all expected inputs are present
     for name, input_type in expected_inputs.items():
-        assert any(
-            isinstance(inp, input_type) and inp.name == name for inp in inputs
-        ), f"Missing or incorrect input: {name}"
+        assert any(isinstance(inp, input_type) and inp.name == name for inp in inputs), (
+            f"Missing or incorrect input: {name}"
+        )

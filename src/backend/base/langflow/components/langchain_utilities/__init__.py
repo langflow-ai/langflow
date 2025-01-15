@@ -1,9 +1,9 @@
 from .character import CharacterTextSplitterComponent
 from .conversation import ConversationChainComponent
-from .csv import CSVAgentComponent
+from .csv_agent import CSVAgentComponent
 from .fake_embeddings import FakeEmbeddingsComponent
 from .html_link_extractor import HtmlLinkExtractorComponent
-from .json import JsonAgentComponent
+from .json_agent import JsonAgentComponent
 from .json_document_builder import JSONDocumentBuilder
 from .langchain_hub import LangChainHubPromptComponent
 from .language_recursive import LanguageRecursiveTextSplitterComponent
@@ -26,7 +26,7 @@ from .tool_calling import ToolCallingAgentComponent
 from .vector_store import VectoStoreRetrieverComponent
 from .vector_store_info import VectorStoreInfoComponent
 from .vector_store_router import VectorStoreRouterAgentComponent
-from .xml import XMLAgentComponent
+from .xml_agent import XMLAgentComponent
 
 __all__ = [
     "CSVAgentComponent",
