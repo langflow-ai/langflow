@@ -53,24 +53,3 @@ To post a message to a flow with a specific Session ID with curl, enter the foll
 
 Check your flow's **Playground**. In addition to the messages stored for the Default Session, a new session is started with your custom Session ID.
 
-**Chat Input** and **Chat Output** components can be modified to store a `session_id` parameter as a **Tweak** for specific sessions. This allows you to use the same flow for multiple sessions with different `session_id` values. 
-
-To post a message to a flow with a specific Session ID using the `session_id` parameter as a **Tweak**, enter the following command:
-
-```bash
-curl -X POST "http://127.0.0.1:7860/api/v1/run/$FLOW_ID" \
--H 'Content-Type: application/json' \
--d '{
-    "tweaks": {
-        "session_id": "custom_session_123"
-    },
-    "input_value": "message",
-    "input_type": "chat",
-    "output_type": "chat"
-}'
-```
-
-You can only have one **Chat Input** component per flow, but by using multiple `session_id` values, you maintain separate conversation histories for different users or purposes.
-
-The Playground will still display all available sessions, but the value stored in the `session_id` tweak will override the flow's `session_id` value.
-
