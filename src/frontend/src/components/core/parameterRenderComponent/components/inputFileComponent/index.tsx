@@ -81,7 +81,6 @@ export default function InputFileComponent({
   };
 
   const handleButtonClick = () => {
-    // Simply trigger the native file input click
     fileInputRef.current?.click();
   };
 
