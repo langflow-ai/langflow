@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
 import { fileURLToPath } from 'url'
 import { dirname, resolve } from 'path'
+import svgr from 'vite-plugin-svgr'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -10,7 +11,7 @@ const __dirname = dirname(__filename)
 // https://vitejs.dev/config/
 export default defineConfig(({ command }) => {
   const defaultConfig = {
-    plugins: [react()],
+    plugins: [react(), svgr()],
     resolve: {
       alias: {
         '@langflow/components': resolve(__dirname, '../frontend/src/components'),
