@@ -289,6 +289,9 @@ curl -X 'GET' \
   "data": {
     "nodes": [
      ...
+    ]
+  }
+}
 ```
 
    </TabItem>
