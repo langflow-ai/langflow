@@ -1,7 +1,8 @@
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
+import { createFileUpload } from "@/helpers/create-file-upload";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import { cn } from "@/utils/utils";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import {
   CONSOLE_ERROR_MSG,
   INVALID_FILE_ALERT,
@@ -23,75 +24,68 @@ export default function InputFileComponent({
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { validateFileSize } = useFileSizeValidator(setErrorData);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Clear component state
   useEffect(() => {
     if (disabled && value !== "") {
       handleOnNewValue({ value: "", file_path: "" }, { skipSnapshot: true });
     }
-  }, [disabled, handleOnNewValue, value]);
+  }, [disabled, handleOnNewValue]);
 
   function checkFileType(fileName: string): boolean {
-    if (!fileTypes?.length) return true;
-    return fileTypes.some((type) =>
-      fileName.toLowerCase().endsWith(type.toLowerCase()),
-    );
+    if (fileTypes === undefined) return true;
+    for (let index = 0; index < fileTypes.length; index++) {
+      if (fileName.endsWith(fileTypes[index])) {
+        return true;
+      }
+    }
+    return false;
   }
 
   const { mutate, isPending } = usePostUploadFile();
 
-  const handleFileSelection = (file: File | null) => {
-    if (!file) {
-      setErrorData({
-        title: "Error selecting file",
-        list: ["No file was selected"],
-      });
-      return;
-    }
+  const handleButtonClick = (): void => {
+    createFileUpload({ multiple: false, accept: fileTypes?.join(",") }).then(
+      (files) => {
+        const file = files[0];
+        if (file) {
+          if (!validateFileSize(file)) {
+            return;
+          }
 
-    if (!validateFileSize(file)) {
-      return;
-    }
+          if (checkFileType(file.name)) {
+            // Upload the file
+            mutate(
+              { file, id: currentFlowId },
+              {
+                onSuccess: (data) => {
+                  // Get the file name from the response
+                  const { file_path } = data;
 
-    if (!checkFileType(file.name)) {
-      setErrorData({
-        title: INVALID_FILE_ALERT,
-        list: [fileTypes?.join(", ") || ""],
-      });
-      return;
-    }
-
-    mutate(
-      { file, id: currentFlowId },
-      {
-        onSuccess: (data) => {
-          const { file_path } = data;
-          handleOnNewValue({ value: file.name, file_path });
-        },
-        onError: (error) => {
-          console.error(CONSOLE_ERROR_MSG);
-          setErrorData({
-            title: "Error uploading file",
-            list: [error.response?.data?.detail || "Unknown error occurred"],
-          });
-        },
+                  // sets the value that goes to the backend
+                  // Update the state and on with the name of the file
+                  // sets the value to the user
+                  handleOnNewValue({ value: file.name, file_path });
+                },
+                onError: (error) => {
+                  console.error(CONSOLE_ERROR_MSG);
+                  setErrorData({
+                    title: "Error uploading file",
+                    list: [error.response?.data?.detail],
+                  });
+                },
+              },
+            );
+          } else {
+            // Show an error if the file type is not allowed
+            setErrorData({
+              title: INVALID_FILE_ALERT,
+              list: [fileTypes?.join(", ") || ""],
+            });
+          }
+        }
       },
     );
-  };
-
-  const handleButtonClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleNativeInputChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = event.target.files?.[0] || null;
-    handleFileSelection(file);
-    if (event.target) {
-      event.target.value = "";
-    }
   };
 
   const isDisabled = disabled || isPending;
@@ -102,29 +96,18 @@ export default function InputFileComponent({
         <div className="flex items-center gap-2.5">
           <div className="relative flex w-full">
             <div className="w-full">
-              <Button
-                unstyled
+              <input
                 data-testid="input-file-component"
+                type="text"
                 className={cn(
-                  "primary-input h-9 w-full justify-start rounded-r-none text-sm focus:border-border focus:outline-none focus:ring-0",
+                  "primary-input h-9 w-full cursor-pointer rounded-r-none text-sm focus:border-border focus:outline-none focus:ring-0",
                   !value && "text-placeholder-foreground",
                   editNode && "h-6",
                 )}
-                onClick={handleButtonClick}
+                value={value || "Upload a file..."}
+                readOnly
                 disabled={isDisabled}
-                variant="outline"
-              >
-                <span className={cn(editNode && "relative -top-1.5")}>
-                  {value || "Upload a file..."}
-                </span>
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                accept={fileTypes?.join(",")}
-                onChange={handleNativeInputChange}
-                onClick={(e) => e.stopPropagation()}
+                onClick={handleButtonClick}
               />
             </div>
             <div>
