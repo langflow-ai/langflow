@@ -91,8 +91,12 @@ class StructuredOutputComponent(Component):
 
     outputs = [
         Output(name="structured_output", display_name="Structured Output", method="build_structured_output"),
-        Output(name="structured_output_list", display_name="Structured Output List", method="build_structured_output_list"),
-        Output(name="structured_output_df", display_name="Structured Output DataFrame", method="build_structured_output_df"),
+        Output(
+            name="structured_output_list", display_name="Structured Output List", method="build_structured_output_list"
+        ),
+        Output(
+            name="structured_output_df", display_name="Structured Output DataFrame", method="build_structured_output_df"
+        ),
     ]
 
     def _build_structured_output(self) -> dict:
