@@ -72,7 +72,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         fields: dict[str, dict] = field(
             default_factory=lambda: {
                 "data": {
-                    "id": "astra-newcl",
                     "node": {
                         "description": "Create a new collection in Astra DB.",
                         "display_name": "Create New Collection",
