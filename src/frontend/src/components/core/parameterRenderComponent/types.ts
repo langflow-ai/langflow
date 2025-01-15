@@ -16,6 +16,7 @@ export type BaseInputProps<valueType = any> = {
   placeholder?: string;
   isToolMode?: boolean;
   metadata?: any;
+  nodeId?: string;
 };
 
 // Generic type for composing input props

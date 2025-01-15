@@ -42,6 +42,8 @@ export default function Dropdown({
   dialogInputs,
   ...baseInputProps
 }: BaseInputProps & DropDownComponent): JSX.Element {
+  const nodeId = baseInputProps?.nodeId;
+
   const placeholderName = name
     ? formatPlaceholderName(name)
     : "Choose an option...";
@@ -250,6 +252,7 @@ export default function Dropdown({
         open={openDialog}
         dialogInputs={dialogInputs}
         onClose={() => setOpenDialog(false)}
+        nodeId={nodeId!}
       />
     </CommandGroup>
   );
