@@ -272,10 +272,13 @@ async def test_build_vertex_invalid_vertex_id(client, added_flow_webhook_test, l
     assert response.status_code == 500
 
 
-async def test_successful_run_no_payload(client, simple_api_test, created_api_key):
+@pytest.mark.benchmark
+@pytest.mark.parametrize("run_endpoint", ["/api/v1/run/", "/api/v1/run/upload/"], indirect=True)
+async def test_successful_run_no_payload(client, simple_api_test, created_api_key, run_endpoint):
     headers = {"x-api-key": created_api_key.api_key}
     flow_id = simple_api_test["id"]
-    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers)
+
+    response = await run_endpoint(client, flow_id, headers)
     assert response.status_code == status.HTTP_200_OK, response.text
     # Add more assertions here to validate the response content
     json_response = response.json()
@@ -363,7 +366,8 @@ async def test_successful_run_with_output_type_any(client, simple_api_test, crea
 
 
 @pytest.mark.benchmark
-async def test_successful_run_with_output_type_debug(client, simple_api_test, created_api_key):
+@pytest.mark.parametrize("run_endpoint", ["/api/v1/run/", "/api/v1/run/upload/"], indirect=True)
+async def test_successful_run_with_output_type_debug(client, simple_api_test, created_api_key, run_endpoint):
     # This one should return outputs for all components
     # Let's just check the amount of outputs(there should be 7)
     headers = {"x-api-key": created_api_key.api_key}
@@ -371,7 +375,8 @@ async def test_successful_run_with_output_type_debug(client, simple_api_test, cr
     payload = {
         "output_type": "debug",
     }
-    response = await client.post(f"/api/v1/run/{flow_id}", headers=headers, json=payload)
+
+    response = await run_endpoint(client, flow_id, headers, payload)
     assert response.status_code == status.HTTP_200_OK, response.text
     # Add more assertions here to validate the response content
     json_response = response.json()

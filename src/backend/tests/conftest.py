@@ -337,6 +337,7 @@ async def client_fixture(
     monkeypatch,
     request,
     load_flows_dir,
+    tmp_path,
 ):
     # Set the database url to a test database
     if "noclient" in request.keywords:
@@ -344,9 +345,8 @@ async def client_fixture(
     else:
 
         def init_app():
-            db_dir = tempfile.mkdtemp()
-            db_path = Path(db_dir) / "test.db"
-            monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
+            db_dir = tmp_path / "test.db"
+            monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_dir}")
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
             if "load_flows" in request.keywords:
                 shutil.copyfile(
@@ -361,9 +361,9 @@ async def client_fixture(
             service_manager.services.clear()  # Clear the services cache
             app = create_app()
             db_service = get_db_service()
-            db_service.database_url = f"sqlite:///{db_path}"
+            db_service.database_url = f"sqlite:///{db_dir}"
             db_service.reload_engine()
-            return app, db_path
+            return app, db_dir
 
         app, db_path = await asyncio.to_thread(init_app)
         # app.dependency_overrides[get_session] = get_session_override
@@ -371,6 +371,7 @@ async def client_fixture(
             LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager,
             AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/", http2=True) as client,
         ):
+            assert get_db_service().database_url == f"sqlite:///{db_path}"
             yield client
         # app.dependency_overrides.clear()
         monkeypatch.undo()
@@ -653,3 +654,27 @@ async def get_starter_project(active_user):
         # Clean up
         await session.delete(new_flow)
         await session.commit()
+
+
+@pytest.fixture
+def run_endpoint(request):
+    """Fixture to handle both /run/ and /run/upload/ endpoints.
+
+    Returns a function that takes care of the request formatting for each endpoint.
+    """
+
+    async def _run_request(client, flow_id, headers, payload=None):
+        endpoint = request.param
+        if endpoint == "/api/v1/run/":
+            return await client.post(f"{endpoint}{flow_id}", headers=headers, json=payload)
+        # /api/v1/run/upload/
+        form_data = {}
+        if payload:
+            form_data.update(payload)
+            if "tweaks" in form_data:
+                form_data["tweaks"] = json.dumps(form_data["tweaks"])
+            if "stream" in form_data:
+                form_data["stream"] = str(form_data["stream"]).lower()
+        return await client.post(f"{endpoint}{flow_id}", headers=headers, data=form_data, files=[])
+
+    return _run_request
