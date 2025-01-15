@@ -29,7 +29,9 @@ class AnthropicModelComponent(LCModelComponent):
             info="https://python.langchain.com/docs/integrations/chat/anthropic",
             value="claude-3-5-sonnet-latest",
         ),
-        SecretStrInput(name="anthropic_api_key", display_name="Anthropic API Key", info="Your Anthropic API key.", required=True,),
+        SecretStrInput(
+            name="anthropic_api_key", display_name="Anthropic API Key", info="Your Anthropic API key.", required=True
+        ),
         SliderInput(
             name="temperature", display_name="Temperature", value=0.1, range_spec=RangeSpec(min=0, max=2, step=0.01)
         ),
