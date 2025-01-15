@@ -17,7 +17,7 @@ class AllTypesDict(LazyLoadDictBase):
 
     @override
     def get_type_dict(self):
-        from langflow.interface.types import get_all_types_dict
+        from langflow.interface.components import get_all_types_dict
 
         settings_service = get_settings_service()
         return get_all_types_dict(settings_service.settings.components_path)
