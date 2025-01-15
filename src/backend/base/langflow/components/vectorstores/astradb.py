@@ -45,7 +45,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                                 display_name="New Database Name",
                                 info="Name of the new database to create in Astra DB.",
                                 required=True,
-                                load_from_db=False,
                             ),
                             "cloud_provider": DropdownInput(
                                 name="cloud_provider",
@@ -87,7 +86,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                                 display_name="New Collection Name",
                                 info="Name of the new collection to create in Astra DB.",
                                 required=True,
-                                load_from_db=False,
                             ),
                             "embedding_generation_provider": DropdownInput(
                                 name="embedding_generation_provider",
