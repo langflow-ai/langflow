@@ -19,7 +19,7 @@ Each component is unique, but all have a menu bar at the top that looks somethin
 
 <img src="/img/openai-model-component.png" alt="Open AI component" style={{display: 'block', margin: 'auto', width: 300}} />
 
-Use these controls to do the following:
+Use the component controls to do the following:
 
 - **Code** — Modify the component's Python code and save your changes.
 - **Controls** — Adjust all component parameters.
@@ -29,9 +29,9 @@ Click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> **All** to see
 
 To view a component’s output and logs, click the <Icon name="View" aria-label="View icon" />**Visibility** icon.
 
-To run a single component, click ▶️ **Play**.
+To run a single component, click <Icon name="Play" aria-label="Play button" /> **Play**.
 
-A ✅**Check** indicates that the component ran successfully.
+A <Icon name="Check" aria-label="Checkmark" />**Checkmark** indicates that the component ran successfully.
 
 Running a single component with the **Play** button is different from running the entire flow. In a single component run, the `build_vertex` function is called, which builds and runs only the single component with direct inputs provided through the UI (the `inputs_dict` parameter). The  `VertexBuildResult` data is passed to the `build_and_run` method, which calls the component's `build` method and runs it. Unlike running the full flow, running a single component does not automatically execute its upstream dependencies.
 
@@ -162,19 +162,36 @@ To modify a component's name or description, double-click in the **Name** or **D
 
 The following keyboard shortcuts are available when a component is selected.
 
-| Menu item | Mac shortcut | Description |
-|-----------|----------|-------------|
-| Code | ⌘ + C | Opens the code editor for the component. |
-| Advanced | ⌘ + A | Opens advanced settings for the component. |
-| Save | ⌘ + S | Saves the current state of the component to Saved components in the sidebar. |
-| Duplicate | ⌘ + D | Creates a duplicate of the component. |
-| Copy | ⌘ + C | Copies the selected component. Paste it in the workspace with ⌘ + V. |
-| Docs | ⌘ + D | Opens related documentation. |
-| Minimize | ⌘ + Q | Minimizes the current component. |
-| Freeze | ⌘ + F | Freezes the current component state. |
-| Freeze Path | ⌘ + Shift + F | Freezes the current component state and all upstream components. |
-| Download | ⌘ + D | Downloads the current component as a JSON file. |
-| Delete | ⌘ + ⌫ | Deletes the component. |
+| Menu item | Windows shortcut | Mac shortcut | Description |
+|-----------|-----------------|--------------|-------------|
+| Code | Space | Space | Opens the code editor for the component. |
+| Advanced Settings | Ctrl + Shift + A | ⌘ + Shift + A | Opens advanced settings for the component. |
+| Save Changes | Ctrl + S | ⌘ + S | Saves changes to the current flow. |
+| Save Component | Ctrl + Alt + S | ⌘ + Alt + S | Saves the current component to Saved components. |
+| Duplicate | Ctrl + D | ⌘ + D | Creates a duplicate of the component. |
+| Copy | Ctrl + C | ⌘ + C | Copies the selected component. |
+| Cut | Ctrl + X | ⌘ + X | Cuts the selected component. |
+| Paste | Ctrl + V | ⌘ + V | Pastes the copied/cut component. |
+| Docs | Ctrl + Shift + D | ⌘ + Shift + D | Opens related documentation. |
+| Minimize | Ctrl + . | ⌘ + . | Minimizes the current component. |
+| Freeze | Ctrl + F | ⌘ + F | Freezes the current component state. |
+| Freeze Path | Ctrl + Shift + F | ⌘ + Shift + F | Freezes component state and upstream components. |
+| Download | Ctrl + J | ⌘ + J | Downloads the component as JSON. |
+| Delete | Backspace | Backspace | Deletes the component. |
+| Group | Ctrl + G | ⌘ + G | Groups selected components. |
+| Undo | Ctrl + Z | ⌘ + Z | Undoes the last action. |
+| Redo | Ctrl + Y | ⌘ + Y | Redoes the last undone action. |
+| Redo (alternative) | Ctrl + Shift + Z | ⌘ + Shift + Z | Alternative shortcut for redo. |
+| Share Component | Ctrl + Shift + S | ⌘ + Shift + S | Shares the component. |
+| Share Flow | Ctrl + Shift + B | ⌘ + Shift + B | Shares the entire flow. |
+| Toggle Sidebar | Ctrl + B | ⌘ + B | Shows/hides the sidebar. |
+| Search Components | / | / | Focuses the component search bar. |
+| Tool Mode | Ctrl + Shift + M | ⌘ + Shift + M | Toggles tool mode. |
+| Update | Ctrl + U | ⌘ + U | Updates the component. |
+| Open Playground | Ctrl + K | ⌘ + K | Opens the playground. |
+| Output Inspection | O | O | Opens output inspection. |
+| Play | P | P | Plays/executes the flow. |
+| API | R | R | Opens the API view. |
 
 ## Group components in the workspace
 
@@ -182,15 +199,15 @@ Multiple components can be grouped into a single component for reuse. This is us
 
 1. Hold **Shift** and drag to select components.
 2. Select **Group**.
-3. The components merge into a single component.
-4. Double-click the name and description to change them.
-5. Save your grouped component to the sidebar for later use.
+The components merge into a single component.
+3. Double-click the name and description to change them.
+4. Save your grouped component to the sidebar for later use.
 
 ## Component version
 
 A component's state is stored in a database, while sidebar components are like starter templates. As soon as you drag a component from the sidebar to the workspace, the two components are no longer in parity.
 
-The component will keep the version number it was initialized to the workspace with. Click the **Update Component** icon (exclamation mark) to bring the component up to the `latest` version. This will change the code of the component in place so you can validate that the component was updated by checking its Python code before and after updating it.
+The component keeps the version number it is initialized to the workspace with. Click the <Icon name="AlertTriangle" aria-label="Exclamation mark" /> **Update Component** icon to bring the component up to the `latest` version. This will change the code of the component in place so you can validate that the component was updated by checking its Python code before and after updating it.
 
 ## Components sidebar
 
@@ -203,7 +220,3 @@ The sidebar includes a component **Search** bar, and includes flags for showing 
 **Beta** components are still being tested and are not suitable for production workloads.
 
 **Legacy** components are available to use but no longer supported.
-
-
-
-
