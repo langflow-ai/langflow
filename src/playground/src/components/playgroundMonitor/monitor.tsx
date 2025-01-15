@@ -7,7 +7,6 @@ import IconComponent from "@/components/common/genericIconComponent";
 import { getInputsAndOutputs } from "@/utils/storeUtils";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { SelectedViewField } from "./components/selected-view-field";
-import { SidebarOpenView } from "./components/sidebar-open-view";
 import { AllNodeType } from "@/types/flow";
 import { useMessagesStore } from "src/stores/messageStore";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
@@ -16,6 +15,7 @@ import BaseModal from "@/modals/baseModal";
 import { usePlaygroundStore } from "src/stores/playgroundStore";
 import { ChatViewWrapper } from "../chatView/chatViewWrapper";
 import { cn } from "src/utils/style";
+import { SidebarOpenView } from "../sidebar/sideBarOpen";
 
 export default function IOModal({
   children,
