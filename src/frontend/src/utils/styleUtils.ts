@@ -268,6 +268,7 @@ import {
 import { GroqIcon } from "../icons/Groq";
 import { HCDIcon } from "../icons/HCD";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
+import { OlivyaIcon } from "../icons/Olivya";
 import { IFixIcon } from "../icons/IFixIt";
 import { IcosaIcon } from "../icons/Icosa";
 import { LMStudioIcon } from "../icons/LMStudio";
@@ -392,6 +393,7 @@ export const nodeColors: { [char: string]: string } = {
   chains: "#FE7500",
   list: "#9AAE42",
   agents: "#903BBE",
+  Olivya: "#00413B",
   tools: "#00fbfc",
   memories: "#F5B85A",
   saved_components: "#a5B85A",
@@ -510,6 +512,7 @@ export const SIDEBAR_CATEGORIES = [
 export const SIDEBAR_BUNDLES = [
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
   { display_name: "AgentQL", name: "agentql", icon: "AgentQL" },
+  { display_name: "Olivya", name: "olivya", icon: "Olivya" },
   { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
   {
     display_name: "DataStax",
@@ -627,6 +630,7 @@ export const nodeIconsLucide: iconsType = {
   AstraDB: AstraDBIcon,
   BingSearchAPIWrapper: BingIcon,
   BingSearchRun: BingIcon,
+  Olivya: OlivyaIcon,
   Bing: BingIcon,
   Cohere: CohereIcon,
   ChevronsUpDownIcon,
