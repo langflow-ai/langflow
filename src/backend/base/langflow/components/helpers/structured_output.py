@@ -7,6 +7,7 @@ from langflow.custom import Component
 from langflow.helpers.base_model import build_model_from_schema
 from langflow.io import BoolInput, HandleInput, MessageTextInput, Output, StrInput, TableInput
 from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 
 if TYPE_CHECKING:
     from langflow.field_typing.constants import LanguageModel
@@ -90,9 +91,11 @@ class StructuredOutputComponent(Component):
 
     outputs = [
         Output(name="structured_output", display_name="Structured Output", method="build_structured_output"),
+        Output(name="structured_output_list", display_name="Structured Output List", method="build_structured_output_list"),
+        Output(name="structured_output_df", display_name="Structured Output DataFrame", method="build_structured_output_df"),
     ]
 
-    def build_structured_output(self) -> list[Data]:
+    def _build_structured_output(self) -> dict:
         schema_name = self.schema_name or "OutputModel"
 
         if not hasattr(self.llm, "with_structured_output"):
@@ -128,7 +131,25 @@ class StructuredOutputComponent(Component):
             msg = f"Output should be a Pydantic BaseModel, got {type(output)} ({output})"
             raise TypeError(msg)
 
+        return output_dict
+
+    def build_structured_output(self) -> Data:
+        output_dict = self._build_structured_output()
+
+        return Data(data=output_dict)
+
+    def build_structured_output_list(self) -> list[Data]:
+        output_dict = self._build_structured_output()
+
         if self.multiple:
             return [Data(data=item) for item in output_dict["objects"]]
         else:  # noqa: RET505
             return [Data(data=output_dict)]
+
+    def build_structured_output_df(self) -> DataFrame:
+        output_dict = self._build_structured_output()
+
+        if self.multiple:
+            return DataFrame(data=output_dict["objects"])
+        else:  # noqa: RET505
+            return DataFrame(data=[output_dict])
