@@ -2,7 +2,8 @@ from typing import Any
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
+from langflow.field_typing.range_spec import RangeSpec
+from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
 from langflow.schema.dotdict import dotdict
 
 
@@ -35,7 +36,13 @@ class AnthropicModelComponent(LCModelComponent):
             value=None,
             real_time_refresh=True,
         ),
-        FloatInput(name="temperature", display_name="Temperature", value=0.1),
+        SliderInput(
+            name="temperature",
+            display_name="Temperature",
+            value=0.1,
+            info="Run inference with this temperature. Must by in the closed interval [0.0, 1.0].",
+            range_spec=RangeSpec(min=0, max=1, step=0.01),
+        ),
         MessageTextInput(
             name="base_url",
             display_name="Anthropic API URL",
