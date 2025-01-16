@@ -1,0 +1,17 @@
+version: '3.9'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: langflow-frontend:latest
+    ports:
+      - "8080:8080" # Map the container's port 8080 to the host's port 8080
+    environment:
+      - NGINX_PORT=8080 # Set environment variables for NGINX
+    volumes:
+      - ./src/frontend:/frontend # Mount the local frontend source directory for development
+      - ./docker/frontend/default.conf.template:/etc/nginx/conf.d/default.conf.template # Mount custom nginx config
+    command: ["/start-nginx.sh"] # Use the entrypoint defined in the Dockerfile
+    restart: unless-stopped
