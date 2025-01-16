@@ -278,6 +278,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
                 ref={measureRef}
                 className="invisible absolute left-0 top-0 -z-10 whitespace-pre pl-1 font-semibold"
                 aria-hidden="true"
+                data-testid="flow_name"
               >
                 {flowName}
               </span>
