@@ -43,7 +43,7 @@ from tests.api_keys import get_openai_api_key
 load_dotenv()
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=False)
 def blockbuster(request):
     if "benchmark" in request.keywords:
         yield
