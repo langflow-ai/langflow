@@ -87,7 +87,7 @@ export const DropdownMenuInputList = ({
             <ForwardedIconComponent
               name="Ellipsis"
               aria-hidden="true"
-              className="h-5 w-5 text-muted-foreground group-hover:text-foreground"
+              className="icon-size text-muted-foreground group-hover:text-foreground"
             />
           </Button>
         </DropdownMenuTrigger>
