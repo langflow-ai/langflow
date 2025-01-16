@@ -18,7 +18,6 @@ class YouTubeTrendingComponent(Component):
     display_name: str = "YouTube Trending"
     description: str = "Retrieves trending videos from YouTube with filtering options."
     icon: str = "YouTube"
-    name = "YouTubeTrending"
 
     # Dictionary of country codes and names
     COUNTRY_CODES = {

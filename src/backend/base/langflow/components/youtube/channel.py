@@ -25,7 +25,6 @@ class YouTubeChannelComponent(Component):
     display_name: str = "YouTube Channel"
     description: str = "Retrieves detailed information and statistics about YouTube channels as a DataFrame."
     icon: str = "YouTube"
-    name = "YouTubeChannel"
 
     # Constants
     CHANNEL_ID_LENGTH = 24

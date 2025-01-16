@@ -14,7 +14,6 @@ class YouTubeSearchComponent(Component):
     display_name: str = "YouTube Search"
     description: str = "Searches YouTube and returns a list of video data based on a query."
     icon: str = "YouTube"
-    name = "YouTubeSearch"
 
     inputs = [
         MessageTextInput(

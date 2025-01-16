@@ -15,7 +15,6 @@ class YouTubeVideoDetailsComponent(Component):
     display_name: str = "YouTube Video Details"
     description: str = "Retrieves detailed information and statistics about YouTube videos."
     icon: str = "YouTube"
-    name = "YouTubeVideoDetails"
 
     inputs = [
         MessageTextInput(

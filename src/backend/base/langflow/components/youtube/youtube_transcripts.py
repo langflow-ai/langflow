@@ -13,7 +13,6 @@ class YouTubeTranscriptsComponent(Component):
     display_name: str = "YouTube Transcripts"
     description: str = "Extracts spoken content from YouTube videos as transcripts."
     icon: str = "YouTube"
-    name = "YouTubeTranscripts"
 
     inputs = [
         MultilineInput(

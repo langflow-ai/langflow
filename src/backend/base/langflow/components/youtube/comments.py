@@ -22,7 +22,6 @@ class YouTubeCommentsComponent(Component):
     display_name: str = "YouTube Comments"
     description: str = "Retrieves and analyzes comments from YouTube videos."
     icon: str = "YouTube"
-    name = "YouTubeComments"
 
     # Constants
     COMMENTS_DISABLED_STATUS = 403
