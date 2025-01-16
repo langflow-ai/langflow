@@ -19,10 +19,12 @@ from langflow.io import (
     BoolInput,
     DataInput,
     DropdownInput,
+    FloatInput,
     IntInput,
     MessageTextInput,
     MultilineInput,
     Output,
+    StrInput,
     TableInput,
 )
 from langflow.schema import Data
@@ -31,12 +33,7 @@ from langflow.schema.dotdict import dotdict
 
 class APIRequestComponent(Component):
     display_name = "API Request"
-    description = (
-        "This component allows you to make HTTP requests to one or more URLs. "
-        "You can provide headers and body as either dictionaries or Data objects. "
-        "Additionally, you can append query parameters to the URLs.\n\n"
-        "Note: Check advanced options for more settings."
-    )
+    description = "Make HTTP requests using URLs or cURL commands."
     icon = "Globe"
     name = "APIRequest"
 
@@ -48,8 +45,8 @@ class APIRequestComponent(Component):
             display_name="URLs",
             list=True,
             info="Enter one or more URLs, separated by commas.",
-            required=True,
             advanced=False,
+            tool_mode=True,
         ),
         MultilineInput(
             name="curl",
@@ -58,9 +55,9 @@ class APIRequestComponent(Component):
                 "Paste a curl command to populate the fields. "
                 "This will fill in the dictionary fields for headers and body."
             ),
-            required=True,
             advanced=True,
             real_time_refresh=True,
+            tool_mode=True,
         ),
         DropdownInput(
             name="method",
@@ -80,7 +77,6 @@ class APIRequestComponent(Component):
             name="query_params",
             display_name="Query Parameters",
             info="The query parameters to append to the URL.",
-            tool_mode=True,
             advanced=True,
         ),
         TableInput(
@@ -102,7 +98,6 @@ class APIRequestComponent(Component):
             ],
             value=[],
             input_types=["Data"],
-            tool_mode=True,
             advanced=True,
         ),
         TableInput(
@@ -126,7 +121,6 @@ class APIRequestComponent(Component):
             value=[],
             advanced=True,
             input_types=["Data"],
-            tool_mode=True,
         ),
         IntInput(
             name="timeout",
@@ -285,6 +279,29 @@ class APIRequestComponent(Component):
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         if field_name == "use_curl":
             build_config = self._update_curl_mode(build_config, use_curl=field_value)
+
+            # Fields that should not be reset
+            preserve_fields = {"timeout", "follow_redirects", "save_to_file", "include_httpx_metadata", "use_curl"}
+
+            # Mapping between input types and their reset values
+            type_reset_mapping = {
+                TableInput: [],
+                BoolInput: False,
+                IntInput: 0,
+                FloatInput: 0.0,
+                MessageTextInput: "",
+                StrInput: "",
+                MultilineInput: "",
+                DropdownInput: "GET",
+                DataInput: {},
+            }
+
+            for input_field in self.inputs:
+                # Only reset if field is not in preserve list
+                if input_field.name not in preserve_fields:
+                    reset_value = type_reset_mapping.get(type(input_field), None)
+                    build_config[input_field.name]["value"] = reset_value
+                    self.log(f"Reset field {input_field.name} to {reset_value}")
         elif field_name == "method" and not self.use_curl:
             build_config = self._update_method_fields(build_config, field_value)
         elif field_name == "curl" and self.use_curl and field_value:
@@ -305,6 +322,8 @@ class APIRequestComponent(Component):
                 elif field_name == "curl":
                     field_config["advanced"] = not use_curl
                     field_config["real_time_refresh"] = use_curl
+                elif field_name in ["body", "headers"]:
+                    field_config["advanced"] = True  # Always keep body and headers in advanced when use_curl is False
                 else:
                     field_config["advanced"] = use_curl
             else:
@@ -324,6 +343,7 @@ class APIRequestComponent(Component):
         ]
 
         always_advanced_fields = [
+            "body",
             "headers",
             "timeout",
             "follow_redirects",
