@@ -8,5 +8,5 @@ export const ENABLE_MVPS = false;
 export const ENABLE_CUSTOM_PARAM = false;
 export const ENABLE_INTEGRATIONS = false;
 export const ENABLE_NEW_LOGO = true;
-export const ENABLE_DATASTAX_LANGFLOW = false;
+export const ENABLE_DATASTAX_LANGFLOW = true;
 export const ENABLE_HOMEPAGE = true;

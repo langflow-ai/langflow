@@ -1,7 +1,6 @@
-import LangflowLogo from "@/assets/LangflowLogo.svg?react";
+import Logo from "@/components/common/kendraLabsLogo";
 import { useLoginUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
-import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
 import * as Form from "@radix-ui/react-form";
 import { useContext, useState } from "react";
 import InputComponent from "../../components/core/parameterRenderComponent/components/inputComponent";
@@ -67,14 +66,11 @@ export default function LoginPage(): JSX.Element {
     >
       <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
         <div className="flex w-72 flex-col items-center justify-center gap-2">
-          {ENABLE_NEW_LOGO ? (
-            <LangflowLogo
-              title="Langflow logo"
-              className="mb-4 h-10 w-10 scale-[1.5]"
-            />
-          ) : (
-            <span className="mb-4 text-5xl">⛓️</span>
-          )}
+          <Logo
+            className="mb-4 h-10 w-10 scale-[1.5]"
+            chainClassName="mb-4 text-5xl"
+          />
+
           <span className="mb-6 text-2xl font-semibold text-primary">
             Sign in to Langflow
           </span>

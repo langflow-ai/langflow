@@ -1,16 +1,12 @@
 import AlertDropdown from "@/alerts/alertDropDown";
-import DataStaxLogo from "@/assets/DataStaxLogo.svg?react";
-import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import Logo from "@/components/common/kendraLabsLogo";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { CustomOrgSelector } from "@/customization/components/custom-org-selector";
 import { CustomProductSelector } from "@/customization/components/custom-product-selector";
-import {
-  ENABLE_DATASTAX_LANGFLOW,
-  ENABLE_NEW_LOGO,
-} from "@/customization/feature-flags";
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import useAlertStore from "@/stores/alertStore";
@@ -56,13 +52,7 @@ export default function AppHeader(): JSX.Element {
           className="mr-1 flex h-8 w-8 items-center"
           data-testid="icon-ChevronLeft"
         >
-          {ENABLE_DATASTAX_LANGFLOW ? (
-            <DataStaxLogo className="fill-black dark:fill-[white]" />
-          ) : ENABLE_NEW_LOGO ? (
-            <LangflowLogo className="h-5 w-6" />
-          ) : (
-            <span className="fill-black text-2xl dark:fill-white">⛓️</span>
-          )}
+          <Logo className="h-6 w-6" chainClassName="text-2xl" />
         </Button>
         {ENABLE_DATASTAX_LANGFLOW && (
           <>

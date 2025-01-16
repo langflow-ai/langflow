@@ -1,6 +1,5 @@
-import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { useLoginUser } from "@/controllers/API/queries/auth";
-import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
+
 import { useContext, useState } from "react";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
@@ -13,6 +12,8 @@ import {
   inputHandlerEventType,
   loginInputStateType,
 } from "../../../types/components";
+import Logo from "@/components/common/kendraLabsLogo";
+
 
 export default function LoginAdminPage() {
   const [inputState, setInputState] =
@@ -51,14 +52,9 @@ export default function LoginAdminPage() {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
       <div className="flex w-72 flex-col items-center justify-center gap-2">
-        {ENABLE_NEW_LOGO ? (
-          <LangflowLogo
-            title="Langflow logo"
-            className="h-10 w-10 scale-[1.5]"
-          />
-        ) : (
-          <span className="mb-4 text-5xl">⛓️</span>
-        )}
+
+        <Logo className="mb-4 h-10 w-10 scale-[1.5]" chainClassName="mb-4 text-5xl" />
+
         <span className="mb-6 text-2xl font-semibold text-primary">Admin</span>
         <Input
           onChange={({ target: { value } }) => {
