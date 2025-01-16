@@ -94,6 +94,19 @@ export default function InputListComponent({
       <div className="mt-2 flex w-full flex-col gap-3">
         {value.map((singleValue, index) => (
           <div key={index} className="flex w-full items-center">
+            {focusedIndex !== index && !disabled && (
+              <div
+                className={cn(
+                  "absolute z-50 h-6 w-16",
+                  editNode ? "translate-x-[12rem]" : "translate-x-[11.1rem]",
+                )}
+                style={{
+                  pointerEvents: "none",
+                  background: GRADIENT_CLASS,
+                }}
+                aria-hidden="true"
+              />
+            )}
             <div className="group relative flex-1">
               <Input
                 ref={index === 0 ? inputRef : null}
@@ -113,6 +126,7 @@ export default function InputListComponent({
                 onFocus={() => setFocusedIndex(index)}
                 onBlur={() => setFocusedIndex(null)}
               />
+
               {value.length > 1 && (
                 <div className="absolute right-2 top-1/2 -translate-y-1/2">
                   <DeleteButtonInputList
