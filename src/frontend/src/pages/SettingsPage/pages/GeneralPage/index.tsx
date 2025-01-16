@@ -24,7 +24,6 @@ import {
   patchUserInputStateType,
 } from "../../../../types/components";
 import useScrollToElement from "../hooks/use-scroll-to-element";
-import StoreApiKeyFormComponent from "../StoreApiKeyPage/components/StoreApiKeyForm";
 import GeneralPageHeaderComponent from "./components/GeneralPageHeader";
 import PasswordFormComponent from "./components/PasswordForm";
 import ProfilePictureFormComponent from "./components/ProfilePictureForm";
@@ -39,11 +38,7 @@ export const GeneralPage = () => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData, setUserData } = useContext(AuthContext);
-  const hasStore = useStoreStore((state) => state.hasStore);
-  const validApiKey = useStoreStore((state) => state.validApiKey);
-  const hasApiKey = useStoreStore((state) => state.hasApiKey);
-  const loadingApiKey = useStoreStore((state) => state.loadingApiKey);
-  const { password, cnfPassword, profilePicture, apikey } = inputState;
+  const { password, cnfPassword, profilePicture } = inputState;
   const autoLogin = useAuthStore((state) => state.autoLogin);
 
   const { storeApiKey } = useContext(AuthContext);
