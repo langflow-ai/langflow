@@ -1,19 +1,11 @@
-from typing import Any, cast
+from typing import Any
 
-from langchain.retrievers import ContextualCompressionRetriever
+from langchain.schema import Document
 
-from langflow.base.vectorstores.model import (
-    LCVectorStoreComponent,
-    check_cached_vector_store,
-)
-from langflow.field_typing import Retriever, VectorStore
-from langflow.io import (
-    DropdownInput,
-    HandleInput,
-    MultilineInput,
-    SecretStrInput,
-    StrInput,
-)
+from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
+from langflow.field_typing import VectorStore
+from langflow.inputs.inputs import DataInput
+from langflow.io import DropdownInput, MultilineInput, SecretStrInput, StrInput
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import Output
@@ -44,7 +36,12 @@ class NvidiaRerankComponent(LCVectorStoreComponent):
             value="nv-rerank-qa-mistral-4b:1",
         ),
         SecretStrInput(name="api_key", display_name="API Key"),
-        HandleInput(name="retriever", display_name="Retriever", input_types=["Retriever"]),
+        DataInput(
+            name="search_results",
+            display_name="Search Results",
+            info="Search Results from a Vector Store.",
+            is_list=True,
+        ),
     ]
 
     outputs = [
@@ -80,14 +77,11 @@ class NvidiaRerankComponent(LCVectorStoreComponent):
             raise ImportError(msg) from e
         return NVIDIARerank(api_key=self.api_key, model=self.model, base_url=self.base_url)
 
-    def build_base_retriever(self) -> Retriever:  # type: ignore[type-var]
-        nvidia_reranker = self.build_model()
-        retriever = ContextualCompressionRetriever(base_compressor=nvidia_reranker, base_retriever=self.retriever)
-        return cast("Retriever", retriever)
-
-    async def search_documents(self) -> list[Data]:  # type: ignore[override]
-        retriever = self.build_base_retriever()
-        documents = await retriever.ainvoke(self.search_query, config={"callbacks": self.get_langchain_callbacks()})
+    async def rerank_documents(self) -> list[Data]:  # type: ignore[override]
+        reranker = self.build_reranker()
+        documents = reranker.compress_documents(
+            query=self.search_query, documents=[Document(page_content=passage.text) for passage in self.search_results]
+        )
         data = self.to_data(documents)
         self.status = data
         return data
