@@ -9,6 +9,6 @@ COPY --from=backend_build /app/dist/*.whl /app/
 RUN pip install langflow-*.whl
 RUN rm *.whl
 
-EXPOSE 80
+EXPOSE 7860
 
 CMD [ "uvicorn", "--host", "0.0.0.0", "--port", "7860", "--factory", "langflow.main:create_app" ]

@@ -72,9 +72,9 @@ export class Network extends Construct {
         path: '/health',
         healthyThresholdCount: 2,
         unhealthyThresholdCount: 4,
-        interval: Duration.seconds(100),
-        timeout: Duration.seconds(30),
-        healthyHttpCodes: '200',
+        interval: Duration.seconds(30),
+        timeout: Duration.seconds(10),
+        healthyHttpCodes: '200,302,404',
       },
     });
 

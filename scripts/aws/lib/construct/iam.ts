@@ -1,20 +1,35 @@
 import { RemovalPolicy, Duration } from 'aws-cdk-lib'
 import { Construct } from 'constructs'
 import {
-  aws_rds as rds,
   aws_iam as iam,
+  aws_secretsmanager as secretsmanager,
 } from 'aws-cdk-lib';
 
 interface IAMProps {
-  rdsCluster:rds.DatabaseCluster
 }
 
 export class EcsIAM extends Construct {
   readonly backendTaskRole: iam.Role;
   readonly backendTaskExecutionRole: iam.Role;
+  readonly dbSecret: secretsmanager.Secret;
 
   constructor(scope: Construct, id: string, props:IAMProps) {
     super(scope, id)
+
+    // Create database credentials secret
+    this.dbSecret = new secretsmanager.Secret(this, 'DatabaseSecret', {
+      secretName: 'langflow/database',
+      generateSecretString: {
+        secretStringTemplate: JSON.stringify({
+          username: 'langflow',
+          host: 'localhost',
+          port: '5432',
+          dbname: 'langflow'
+        }),
+        generateStringKey: 'password',
+        excludeCharacters: '"@/\\',
+      },
+    });
 
     // Policy Statements
     // ECS Policy State
@@ -48,13 +63,18 @@ export class EcsIAM extends Construct {
     const RagAccessPolicy = new iam.Policy(this, 'RAGFullAccess', {
       statements: [KendraPolicyStatement,BedrockPolicyStatement],
     })
-    // Secrets ManagerからDB認証情報を取ってくるためのPolicy
-    const SecretsManagerPolicy = new iam.Policy(this, 'SMGetPolicy', {
-      statements: [new iam.PolicyStatement({
-        actions: ['secretsmanager:GetSecretValue'],
-        resources: [props.rdsCluster.secret!.secretArn],
-      })],
-    })
+
+    // Secrets Manager Policy
+    const SecretsManagerPolicy = new iam.Policy(this, 'SecretsManagerPolicy', {
+      statements: [
+        new iam.PolicyStatement({
+          sid: 'AllowSecretsManagerAccess',
+          effect: iam.Effect.ALLOW,
+          actions: ['secretsmanager:GetSecretValue'],
+          resources: [this.dbSecret.secretArn],
+        }),
+      ],
+    });
 
     // BackEnd Task Role
     this.backendTaskRole = new iam.Role(this, 'BackendTaskRole', {
@@ -76,7 +96,7 @@ export class EcsIAM extends Construct {
       ],
     });
   
-    this.backendTaskExecutionRole.attachInlinePolicy(SecretsManagerPolicy);
     this.backendTaskExecutionRole.attachInlinePolicy(RagAccessPolicy);
+    this.backendTaskExecutionRole.attachInlinePolicy(SecretsManagerPolicy);
   }
 }
