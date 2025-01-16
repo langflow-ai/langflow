@@ -28,7 +28,7 @@ def process_inputs(component_data):
     if isinstance(component_data, SecretStrInput):
         component_data.value = ""
         component_data.load_from_db = False
-    elif component_data.name in ("temperature", "tool_model_enabled", "base_url"):
+    elif component_data.name in {"temperature", "tool_model_enabled", "base_url"}:
         component_data = set_advanced_true(component_data)
     return component_data
 
