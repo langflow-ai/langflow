@@ -15,7 +15,11 @@ export const HeaderMenu = ({ children }) => (
 );
 
 export const HeaderMenuToggle = ({ children }) => (
-  <DropdownMenuTrigger className="group inline-flex w-full items-center justify-center gap-1 rounded-md pr-0">
+  <DropdownMenuTrigger
+    className="group inline-flex w-full items-center justify-center gap-1 rounded-md pr-0"
+    data-testid="user_menu_button"
+    id="user_menu_button"
+  >
     <div className="flex items-center gap-1 rounded-lg px-2 py-1.5 group-hover:bg-muted">
       {children}
       <ChevronsUpDown

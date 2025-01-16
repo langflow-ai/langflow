@@ -57,6 +57,8 @@ export const ThemeButtons = () => {
             : "text-foreground hover:bg-amber-400 hover:text-background"
         }`}
         onClick={() => handleThemeChange("light")}
+        data-testid="menu_light_button"
+        id="menu_light_button"
       >
         <ForwardedIconComponent name="Sun" className="w-4" />
       </Button>
@@ -70,6 +72,8 @@ export const ThemeButtons = () => {
             : "text-foreground hover:bg-purple-400 hover:text-background"
         }`}
         onClick={() => handleThemeChange("dark")}
+        data-testid="menu_dark_button"
+        id="menu_dark_button"
       >
         <ForwardedIconComponent name="Moon" className="w-4" />
       </Button>
@@ -83,6 +87,8 @@ export const ThemeButtons = () => {
             : "hover:bg-foreground hover:text-background"
         }`}
         onClick={() => handleThemeChange("system")}
+        data-testid="menu_system_button"
+        id="menu_system_button"
       >
         <ForwardedIconComponent name="Monitor" className="w-4" />
       </Button>
