@@ -2,7 +2,6 @@ from urllib.parse import urlparse
 
 import requests
 from langchain_community.embeddings.huggingface import HuggingFaceInferenceAPIEmbeddings
-from pydantic.v1.types import SecretStr
 from tenacity import retry, stop_after_attempt, wait_fixed
 
 from langflow.base.embeddings.model import LCEmbeddingsModel
@@ -75,7 +74,7 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(2))
     def create_huggingface_embeddings(
-        self, api_key: SecretStr, api_url: str, model_name: str
+        self, api_key: str, api_url: str, model_name: str
     ) -> HuggingFaceInferenceAPIEmbeddings:
         return HuggingFaceInferenceAPIEmbeddings(api_key=api_key, api_url=api_url, model_name=model_name)
 
@@ -86,12 +85,12 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
 
         if not self.api_key and is_local_url:
             self.validate_inference_endpoint(api_url)
-            api_key = SecretStr("DummyAPIKeyForLocalDeployment")
+            api_key = "DummyAPIKeyForLocalDeployment"
         elif not self.api_key:
             msg = "API Key is required for non-local inference endpoints"
             raise ValueError(msg)
         else:
-            api_key = SecretStr(self.api_key).get_secret_value()
+            api_key = str(self.api_key)
 
         try:
             return self.create_huggingface_embeddings(api_key, api_url, self.model_name)
