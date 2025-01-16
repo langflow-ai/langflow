@@ -5,7 +5,8 @@ from typing_extensions import override
 from langflow.base.models.groq_constants import GROQ_MODELS
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
+from langflow.field_typing.range_spec import RangeSpec
+from langflow.io import DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
 
 
 class GroqModel(LCModelComponent):
@@ -16,7 +17,9 @@ class GroqModel(LCModelComponent):
 
     inputs = [
         *LCModelComponent._base_inputs,
-        SecretStrInput(name="groq_api_key", display_name="Groq API Key", info="API key for the Groq API."),
+        SecretStrInput(
+            name="groq_api_key", display_name="Groq API Key", info="API key for the Groq API.", required=True
+        ),
         MessageTextInput(
             name="groq_api_base",
             display_name="Groq API Base",
@@ -30,11 +33,12 @@ class GroqModel(LCModelComponent):
             info="The maximum number of tokens to generate.",
             advanced=True,
         ),
-        FloatInput(
+        SliderInput(
             name="temperature",
             display_name="Temperature",
-            info="Run inference with this temperature. Must by in the closed interval [0.0, 1.0].",
             value=0.1,
+            range_spec=RangeSpec(min=0.0, max=1, step=0.01),
+            info="Run inference with this temperature. Must by in the closed interval [0.0, 1.0].",
         ),
         IntInput(
             name="n",
