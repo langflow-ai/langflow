@@ -1,24 +1,16 @@
-from langchain_gigachat import GigaChat
 from pydantic.v1 import SecretStr
 
 from langflow.base.models.gigachat_constants import GIGACHAT_MODEL_NAMES
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.inputs import (
-    DropdownInput,
-    IntInput,
-    SecretStrInput,
-    SliderInput,
-    StrInput,
-)
+from langflow.inputs import DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
 
 
 class GigaChatComponent(LCModelComponent):
     display_name = "GigaChat"
     description = "Generates text using LLM GigaChat"
     icon = "GigaChat"
-    name = "GigaChat"
 
     inputs = [
         *LCModelComponent._base_inputs,
@@ -71,6 +63,11 @@ class GigaChatComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
+        try:
+            from langchain_gigachat import GigaChat
+        except ImportError:
+            msg = "GigaChat is not installed. Please install it with `pip install langchain-gigachat`."
+            raise ImportError(msg) from None
         gigachat_credentials = self.gigachat_credentials
         temperature = self.temperature
         model_name: str = self.model_name
