@@ -37,12 +37,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=pyproject.toml,target=/app/pyproject.toml \
     uv sync --frozen --no-dev 
 
-# RUN --mount=type=cache,target=/root/.cache/uv \
-#     --mount=type=bind,source=src/backend/base/uv.lock,target=/app/src/backend/base/uv.lock \
-#     --mount=type=bind,source=src/backend/base/README.md,target=/app/src/backend/base/README.md \
-#     --mount=type=bind,source=src/backend/base/pyproject.toml,target=/app/src/backend/base/pyproject.toml \
-#     uv sync --frozen --no-install-project --no-dev /app/src/backend/base/uv.lock
-
 
 ENV PATH="${PATH}:/root/.local/bin"
 
