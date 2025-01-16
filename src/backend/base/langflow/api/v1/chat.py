@@ -161,6 +161,7 @@ async def build_flow(
     async def build_graph_and_get_order() -> tuple[list[str], list[str], Graph]:
         start_time = time.perf_counter()
         components_count = None
+        graph = None
         try:
             flow_id_str = str(flow_id)
             # Create a fresh session for database operations
@@ -168,14 +169,7 @@ async def build_flow(
                 graph = await create_graph(fresh_session, flow_id_str)
 
             graph.validate_stream()
-            if stop_component_id or start_component_id:
-                try:
-                    first_layer = graph.sort_vertices(stop_component_id, start_component_id)
-                except Exception:  # noqa: BLE001
-                    logger.exception("Error sorting vertices")
-                    first_layer = graph.sort_vertices()
-            else:
-                first_layer = graph.sort_vertices()
+            first_layer = sort_vertices(graph)
 
             if inputs is not None and hasattr(inputs, "session") and inputs.session is not None:
                 graph.session_id = inputs.session
@@ -226,6 +220,13 @@ async def build_flow(
             user_id=str(current_user.id),
             flow_name=flow_name,
         )
+
+    def sort_vertices(graph: Graph) -> list[str]:
+        try:
+            return graph.sort_vertices(stop_component_id, start_component_id)
+        except Exception:  # noqa: BLE001
+            logger.exception("Error sorting vertices")
+            return graph.sort_vertices()
 
     async def _build_vertex(vertex_id: str, graph: Graph, event_manager: EventManager) -> VertexBuildResponse:
         flow_id_str = str(flow_id)
