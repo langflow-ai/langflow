@@ -116,8 +116,9 @@ const config = {
             ],
           },
           {
-            to: "/workspace-overview",
+            to: "concepts-overview",
             from: [
+              "/workspace-overview",
               "/365085a8-a90a-43f9-a779-f8769ec7eca1",
               "/My-Collection",
               "/workspace",
@@ -125,16 +126,23 @@ const config = {
             ],
           },
           {
-            to: "/components-overview",
-            from: "/components",
-          },
+            to: "/concepts-components",
+            from: [
+              "/components",
+              "/components-overview"
+            ],
+            },
           {
             to: "/configuration-global-variables",
             from: "/settings-global-variables",
           },
           {
-            to: "/workspace-playground",
-            from: "/guides-chat-memory",
+            to: "/concepts-playground",
+            from: [
+              "/workspace-playground",
+              "/workspace-logs",
+              "/guides-chat-memory",
+            ],
           },
           {
             to: "/configuration-objects",
@@ -159,6 +167,10 @@ const config = {
           {
             to: "/components-vector-stores",
             from: "/components-rag",
+          },
+          {
+            to: "/concepts-api",
+            from: "/workspace-api",
           },
           // add more redirects like this
           // {

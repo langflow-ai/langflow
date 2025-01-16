@@ -51,7 +51,7 @@ With no connections between them, the components won't interact with each other.
 You want data to flow from **Chat Input** to **Chat Output** via the connectors between the components.
 Each component accepts inputs on its left side, and sends outputs on its right side.
 Hover over the connection ports to see the data types that the component accepts.
-For more on component inputs and outputs, see [Components overview](/components-overview).
+For more on component inputs and outputs, see [Components overview](/concepts-components).
 
 5. To connect the **Chat Input** component to the OpenAI model component, click and drag a line from the blue **Message** port to the OpenAI model component's **Input** port.
 6. To connect the **Prompt** component to the OpenAI model component, click and drag a line from the blue **Prompt Message** port to the OpenAI model component's **System Message** port.
@@ -169,6 +169,6 @@ This example used movie data, but the RAG pattern can be used with any data you 
 
 Make the **Astra DB** database the brain that [Agents](/agents-overview) use to make decisions.
 
-Expose this flow as an [API](/workspace-api) and call it from your external applications.
+Expose this flow as an [API](/concepts-api) and call it from your external applications.
 
 For more on the **Astra DB** component, see [Astra DB vector store](/components-vector-stores#astra-db-vector-store).
