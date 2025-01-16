@@ -13,7 +13,6 @@ class NvidiaRerankComponent(LCVectorStoreComponent):
     display_name = "NVIDIA Rerank"
     description = "Rerank documents using the NVIDIA API and a retriever."
     icon = "NVIDIA"
-    legacy: bool = True
 
     inputs = [
         MultilineInput(
