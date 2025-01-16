@@ -1,7 +1,6 @@
 import math
 
 import pytest
-
 from langflow.utils.constants import MAX_TEXT_LENGTH
 from langflow.utils.util_strings import truncate_long_strings
 

@@ -5,7 +5,6 @@ from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
-
 from langflow.custom.custom_component.component import Component
 from langflow.events.event_manager import EventManager
 from langflow.schema.content_block import ContentBlock
