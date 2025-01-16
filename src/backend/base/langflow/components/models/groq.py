@@ -83,7 +83,7 @@ class GroqModel(LCModelComponent):
             response.raise_for_status()
             model_list = response.json()
             model_ids = [model["id"] for model in model_list.get("data", [])]
-        except Exception as e:
+        except (ImportError, ValueError, requests.exceptions.RequestException) as e:
             logger.exception(f"Error getting model names: {e}")
             model_ids = GROQ_MODELS
         if tool_model_enabled:

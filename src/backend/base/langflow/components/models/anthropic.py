@@ -1,7 +1,6 @@
 from typing import Any
 
 import requests
-
 from loguru import logger
 
 from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS
@@ -98,7 +97,7 @@ class AnthropicModelComponent(LCModelComponent):
             client = anthropic.Anthropic(api_key=self.api_key)
             models = client.models.list(limit=20).data
             model_ids = [model.id for model in models]
-        except Exception as e:
+        except (ImportError, ValueError, requests.exceptions.RequestException) as e:
             logger.exception(f"Error getting model names: {e}")
             model_ids = ANTHROPIC_MODELS
         if tool_model_enabled:
