@@ -1,5 +1,6 @@
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 ENV TZ=UTC
+ENV UV_LOCKFILE=/app/uv.lock
 
 WORKDIR /app
 
@@ -8,7 +9,7 @@ RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install -y \
     gcc \
-    g++ \ 
+    g++ \
     curl \
     build-essential \
     postgresql \
@@ -28,15 +29,23 @@ USER root
 
 # Install dependencies using uv
 RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=README.md,target=README.md \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
-    --mount=type=bind,source=src/backend/base/uv.lock,target=src/backend/base/uv.lock \
-    --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
-    uv sync --frozen --no-install-project --no-dev
+    --mount=type=bind,source=uv.lock,target=/app/uv.lock \
+    --mount=type=bind,source=README.md,target=/app/README.md \
+    --mount=type=bind,source=src/backend/base/uv.lock,target=/app/src/backend/base/uv.lock \
+    --mount=type=bind,source=src/backend/base/README.md,target=/app/src/backend/base/README.md \
+    --mount=type=bind,source=src/backend/base/pyproject.toml,target=/app/src/backend/base/pyproject.toml  \
+    --mount=type=bind,source=pyproject.toml,target=/app/pyproject.toml \
+    uv sync --frozen --no-dev 
+
+# RUN --mount=type=cache,target=/root/.cache/uv \
+#     --mount=type=bind,source=src/backend/base/uv.lock,target=/app/src/backend/base/uv.lock \
+#     --mount=type=bind,source=src/backend/base/README.md,target=/app/src/backend/base/README.md \
+#     --mount=type=bind,source=src/backend/base/pyproject.toml,target=/app/src/backend/base/pyproject.toml \
+#     uv sync --frozen --no-install-project --no-dev /app/src/backend/base/uv.lock
+
 
 ENV PATH="${PATH}:/root/.local/bin"
+
 # Copy the application code
 COPY ./ ./
 
@@ -44,6 +53,6 @@ COPY ./ ./
 RUN echo '#!/bin/bash\n\
 service postgresql start\n\
 python src/backend/base/langflow/main.py' > /app/start.sh && \
-chmod +x /app/start.sh
+    chmod +x /app/start.sh
 
 CMD ["/app/start.sh"]
