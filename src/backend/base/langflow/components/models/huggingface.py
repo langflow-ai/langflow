@@ -7,7 +7,8 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 #  Need to update to langchain_huggingface, but have dependency with langchain_core 0.3.0
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
+from langflow.field_typing.range_spec import RangeSpec
+from langflow.io import DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, SliderInput, StrInput
 
 
 class HuggingFaceEndpointsComponent(LCModelComponent):
@@ -18,7 +19,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
 
     inputs = [
         *LCModelComponent._base_inputs,
-        StrInput(name="model_id", display_name="Model ID", value="openai-community/gpt2"),
+        StrInput(name="model_id", display_name="Model ID", value="openai-community/gpt2", required=True),
         IntInput(
             name="max_new_tokens", display_name="Max New Tokens", value=512, info="Maximum number of generated tokens"
         ),
@@ -45,12 +46,13 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
             advanced=True,
             info="Typical Decoding mass.",
         ),
-        FloatInput(
+        SliderInput(
             name="temperature",
             display_name="Temperature",
             value=0.8,
-            advanced=True,
+            range_spec=RangeSpec(min=0, max=2, step=0.01),
             info="The value used to module the logits distribution",
+            advanced=True,
         ),
         FloatInput(
             name="repetition_penalty",
@@ -63,6 +65,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
             display_name="Inference Endpoint",
             value="https://api-inference.huggingface.co/models/",
             info="Custom inference endpoint URL.",
+            required=True,
         ),
         DropdownInput(
             name="task",
@@ -71,7 +74,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
             advanced=True,
             info="The task to call the model with. Should be a task that returns `generated_text` or `summary_text`.",
         ),
-        SecretStrInput(name="huggingfacehub_api_token", display_name="API Token", password=True),
+        SecretStrInput(name="huggingfacehub_api_token", display_name="API Token", password=True, required=True),
         DictInput(name="model_kwargs", display_name="Model Keyword Arguments", advanced=True),
         IntInput(name="retry_attempts", display_name="Retry Attempts", value=1, advanced=True),
     ]
