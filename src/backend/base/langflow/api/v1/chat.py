@@ -160,7 +160,7 @@ async def build_flow(
 
     async def build_graph_and_get_order() -> tuple[list[str], list[str], Graph]:
         start_time = time.perf_counter()
-        components_count = None
+        components_count = 0
         graph = None
         try:
             flow_id_str = str(flow_id)
@@ -182,30 +182,31 @@ async def build_flow(
             # and return the same structure but only with the ids
             components_count = len(graph.vertices)
             vertices_to_run = list(graph.vertices_to_run.union(get_top_level_vertices(graph, graph.vertices_to_run)))
+
             await chat_service.set_cache(flow_id_str, graph)
-            background_tasks.add_task(
-                telemetry_service.log_package_playground,
-                PlaygroundPayload(
-                    playground_seconds=int(time.perf_counter() - start_time),
-                    playground_component_count=components_count,
-                    playground_success=True,
-                ),
-            )
+            await log_telemetry(start_time, components_count, success=True)
+
         except Exception as exc:
-            background_tasks.add_task(
-                telemetry_service.log_package_playground,
-                PlaygroundPayload(
-                    playground_seconds=int(time.perf_counter() - start_time),
-                    playground_component_count=components_count,
-                    playground_success=False,
-                    playground_error_message=str(exc),
-                ),
-            )
+            await log_telemetry(start_time, components_count, success=False, error_message=str(exc))
+
             if "stream or streaming set to True" in str(exc):
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
             logger.exception("Error checking build status")
             raise HTTPException(status_code=500, detail=str(exc)) from exc
         return first_layer, vertices_to_run, graph
+
+    async def log_telemetry(
+        start_time: float, components_count: int, *, success: bool, error_message: str | None = None
+    ):
+        background_tasks.add_task(
+            telemetry_service.log_package_playground,
+            PlaygroundPayload(
+                playground_seconds=int(time.perf_counter() - start_time),
+                playground_component_count=components_count,
+                playground_success=success,
+                playground_error_message=str(error_message) if error_message else "",
+            ),
+        )
 
     async def create_graph(fresh_session, flow_id_str: str) -> Graph:
         if not data:
