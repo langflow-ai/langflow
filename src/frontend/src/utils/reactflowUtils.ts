@@ -2,9 +2,11 @@ import {
   getLeftHandleId,
   getRightHandleId,
 } from "@/CustomNodes/utils/get-handle-id";
+import { INCOMPLETE_LOOP_ERROR_ALERT } from "@/constants/alerts_constants";
 import {
   Connection,
   Edge,
+  getOutgoers,
   Node,
   OnSelectionChangeParams,
   ReactFlowJsonObject,
@@ -206,7 +208,6 @@ export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
           id.proxy = targetNode.data.node!.template[field]?.proxy;
         }
       }
-      console.log(id, targetHandle, targetNode);
       if (scapedJSONStringfy(id) !== targetHandle) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
         BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
@@ -535,7 +536,49 @@ Array<{ id: string; errors: Array<string> }> {
     id: n.id,
     errors: validateNode(n, edges),
   }));
+
   return nodeMap.filter((n) => n.errors?.length);
+}
+
+export function validateEdge(
+  e: EdgeType,
+  nodes: AllNodeType[],
+  edges: EdgeType[],
+): Array<string> {
+  const targetHandleObject: targetHandleType = scapeJSONParse(e.targetHandle!);
+
+  const loop = hasLoop(e, nodes, edges);
+  if (targetHandleObject.output_types && !loop) {
+    return [INCOMPLETE_LOOP_ERROR_ALERT];
+  }
+  return [];
+}
+
+function hasLoop(
+  e: EdgeType,
+  nodes: AllNodeType[],
+  edges: EdgeType[],
+): boolean {
+  const source = e.source;
+  const target = e.target;
+
+  // Check if this connection would create a cycle
+  const targetNode = nodes.find((n) => n.id === target);
+
+  const hasCycle = (node, visited = new Set()): boolean => {
+    if (visited.has(node.id)) return false;
+
+    visited.add(node.id);
+
+    for (const outgoer of getOutgoers(node, nodes, edges)) {
+      if (outgoer.id === source) return true;
+      if (hasCycle(outgoer, visited)) return true;
+    }
+    return false;
+  };
+
+  if (targetNode?.id === source) return false;
+  return hasCycle(targetNode);
 }
 
 export function updateEdges(edges: EdgeType[]) {
