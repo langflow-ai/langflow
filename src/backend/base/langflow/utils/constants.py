@@ -63,6 +63,7 @@ DIRECT_TYPES = [
     "code",
     "NestedDict",
     "table",
+    "slider"
 ]
 
 
