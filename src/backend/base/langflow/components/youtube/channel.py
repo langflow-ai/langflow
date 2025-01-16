@@ -30,6 +30,7 @@ class YouTubeChannelComponent(Component):
             display_name="Channel URL or ID",
             info="The URL or ID of the YouTube channel.",
             tool_mode=True,
+            required=True,
         ),
         SecretStrInput(
             name="api_key",

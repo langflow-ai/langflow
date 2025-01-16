@@ -23,6 +23,7 @@ class YouTubeTranscriptsComponent(Component):
             display_name="Video URL",
             info="Enter the YouTube video URL to get transcripts from.",
             tool_mode=True,
+            required=True,
         ),
         IntInput(
             name="chunk_size_seconds",

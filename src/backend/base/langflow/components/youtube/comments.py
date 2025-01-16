@@ -28,6 +28,7 @@ class YouTubeCommentsComponent(Component):
             display_name="Video URL",
             info="The URL of the YouTube video to get comments from.",
             tool_mode=True,
+            required=True,
         ),
         SecretStrInput(
             name="api_key",

@@ -24,6 +24,7 @@ class YouTubeVideoDetailsComponent(Component):
             display_name="Video URL",
             info="The URL of the YouTube video.",
             tool_mode=True,
+            required=True,
         ),
         SecretStrInput(
             name="api_key",

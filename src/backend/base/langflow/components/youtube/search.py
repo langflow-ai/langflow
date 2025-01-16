@@ -23,6 +23,7 @@ class YouTubeSearchComponent(Component):
             display_name="Search Query",
             info="The search query to look for on YouTube.",
             tool_mode=True,
+            required=True,
         ),
         SecretStrInput(
             name="api_key",

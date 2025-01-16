@@ -16,6 +16,7 @@ class YouTubePlaylistComponent(Component):
             name="playlist_url",
             display_name="Playlist URL",
             info="URL of the YouTube playlist.",
+            required=True,
         ),
     ]
 
