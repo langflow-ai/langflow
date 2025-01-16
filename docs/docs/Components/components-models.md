@@ -299,6 +299,30 @@ This component generates text using Qianfan's language models.
 
 For more information, see [Qianfan documentation](https://github.com/baidubce/bce-qianfan-sdk).
 
+## OpenRouter
+
+This component generates text using OpenRouter's unified API for multiple AI models from different providers.
+
+For more information, see [OpenRouter documentation](https://openrouter.ai/docs).
+
+### Inputs
+
+| Name         | Type          | Description                                                      |
+|-------------|---------------|------------------------------------------------------------------|
+| api_key      | SecretString  | Your OpenRouter API key for authentication.                      |
+| site_url     | String        | Your site URL for OpenRouter rankings (advanced).                |
+| app_name     | String        | Your app name for OpenRouter rankings (advanced).                |
+| provider     | String        | The AI model provider to use.                                    |
+| model_name   | String        | The specific model to use for chat completion.                   |
+| temperature  | Float         | Controls randomness in the output. Range: [0.0, 2.0]. Default: 0.7. |
+| max_tokens   | Integer       | The maximum number of tokens to generate (advanced).             |
+
+### Outputs
+
+| Name  | Type          | Description                                                      |
+|-------|---------------|------------------------------------------------------------------|
+| model | LanguageModel | An instance of ChatOpenAI configured with the specified parameters. |
+
 ## Perplexity
 
 This component generates text using Perplexity's language models.
