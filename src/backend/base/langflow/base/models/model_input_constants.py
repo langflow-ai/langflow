@@ -181,7 +181,7 @@ except ImportError:
 MODEL_PROVIDERS = list(MODEL_PROVIDERS_DICT.keys())
 ALL_PROVIDER_FIELDS: list[str] = [field for provider in MODEL_PROVIDERS_DICT.values() for field in provider["fields"]]
 
-MODEL_DYANMIC_UPDATE_FIELDS = [
+MODEL_DYNAMIC_UPDATE_FIELDS = [
     "api_key",
     "model",
     "tool_model_enabled",
