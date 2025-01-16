@@ -57,7 +57,12 @@ export const AccountMenu = () => {
           <HeaderMenuItemsSection>
             <div className="flex h-[46px] w-full items-center justify-between px-3">
               <div className="pl-1 text-xs text-zinc-500">
-                Version {version}
+                <span
+                  data-testid="menu_version_button"
+                  id="menu_version_button"
+                >
+                  Version {version}
+                </span>
               </div>
               {!ENABLE_DATASTAX_LANGFLOW && <ThemeButtons />}
             </div>
@@ -72,25 +77,42 @@ export const AccountMenu = () => {
                   navigate("/settings");
                 }}
               >
-                Settings
+                <span
+                  data-testid="menu_settings_button"
+                  id="menu_settings_button"
+                >
+                  Settings
+                </span>
               </HeaderMenuItemButton>
             )}
             {!ENABLE_DATASTAX_LANGFLOW && (
               <>
                 {isAdmin && !autoLogin && (
                   <HeaderMenuItemButton onClick={() => navigate("/admin")}>
-                    Admin Page
+                    <span
+                      data-testid="menu_admin_button"
+                      id="menu_admin_button"
+                    >
+                      Admin Page
+                    </span>
                   </HeaderMenuItemButton>
                 )}
               </>
             )}
             {ENABLE_DATASTAX_LANGFLOW ? (
               <HeaderMenuItemButton onClick={() => setIsFeedbackOpen(true)}>
-                Feedback
+                <span
+                  data-testid="menu_feedback_button"
+                  id="menu_feedback_button"
+                >
+                  Feedback
+                </span>
               </HeaderMenuItemButton>
             ) : (
               <HeaderMenuItemLink newPage href="https://docs.langflow.org">
-                Docs
+                <span data-testid="menu_docs_button" id="menu_docs_button">
+                  Docs
+                </span>
               </HeaderMenuItemLink>
             )}
           </HeaderMenuItemsSection>
@@ -110,14 +132,20 @@ export const AccountMenu = () => {
                 newPage
                 href="https://github.com/langflow-ai/langflow/discussions"
               >
-                Share Feedback on Github
+                <span data-testid="menu_github_button" id="menu_github_button">
+                  Share Feedback on Github
+                </span>
               </HeaderMenuItemLink>
             )}
             <HeaderMenuItemLink newPage href="https://twitter.com/langflow_ai">
-              Follow Langflow on X
+              <span data-testid="menu_twitter_button" id="menu_twitter_button">
+                Follow Langflow on X
+              </span>
             </HeaderMenuItemLink>
             <HeaderMenuItemLink newPage href="https://discord.gg/EqksyE2EX9">
-              Join the Langflow Discord
+              <span data-testid="menu_discord_button" id="menu_discord_button">
+                Join the Langflow Discord
+              </span>
             </HeaderMenuItemLink>
           </HeaderMenuItemsSection>
           {ENABLE_DATASTAX_LANGFLOW ? (

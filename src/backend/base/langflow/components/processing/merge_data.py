@@ -8,50 +8,48 @@ from langflow.io import DataInput, DropdownInput, Output
 from langflow.schema import DataFrame
 
 
-class MergeOperation(str, Enum):
-    CONCATENATE = "concatenate"
-    APPEND = "append"
-    MERGE = "merge"
-    JOIN = "join"
+class DataOperation(str, Enum):
+    CONCATENATE = "Concatenate"
+    APPEND = "Append"
+    MERGE = "Merge"
+    JOIN = "Join"
 
 
 class MergeDataComponent(Component):
-    display_name = "Merge Data"
-    description = "Combines data using merge operations"
+    display_name = "Data Combiner"
+    description = "Combines data using different operations"
     icon = "merge"
-
     MIN_INPUTS_REQUIRED = 2
 
     inputs = [
-        DataInput(name="data_inputs", display_name="Data Inputs", info="Dados para combinar", is_list=True),
+        DataInput(name="data_inputs", display_name="Data Inputs", info="Data to combine", is_list=True, required=True),
         DropdownInput(
             name="operation",
-            display_name="Merge Operation",
-            options=[op.value for op in MergeOperation],
-            value=MergeOperation.CONCATENATE.value,
+            display_name="Operation Type",
+            options=[op.value for op in DataOperation],
+            value=DataOperation.CONCATENATE.value,
         ),
     ]
+    outputs = [Output(display_name="DataFrame", name="combined_data", method="combine_data")]
 
-    outputs = [Output(display_name="DataFrame", name="merged_data", method="merge_data")]
-
-    def merge_data(self) -> DataFrame:
+    def combine_data(self) -> DataFrame:
         if not self.data_inputs or len(self.data_inputs) < self.MIN_INPUTS_REQUIRED:
             empty_dataframe = DataFrame()
             self.status = empty_dataframe
             return empty_dataframe
 
-        operation = MergeOperation(self.operation)
+        operation = DataOperation(self.operation)
         try:
-            merged_dataframe = self._process_operation(operation)
-            self.status = merged_dataframe
+            combined_dataframe = self._process_operation(operation)
+            self.status = combined_dataframe
         except Exception as e:
-            logger.error(f"Erro durante operação {operation}: {e!s}")
+            logger.error(f"Error during operation {operation}: {e!s}")
             raise
         else:
-            return merged_dataframe
+            return combined_dataframe
 
-    def _process_operation(self, operation: MergeOperation) -> DataFrame:
-        if operation == MergeOperation.CONCATENATE:
+    def _process_operation(self, operation: DataOperation) -> DataFrame:
+        if operation == DataOperation.CONCATENATE:
             combined_data: dict[str, str | object] = {}
             for data_input in self.data_inputs:
                 for key, value in data_input.data.items():
@@ -64,11 +62,11 @@ class MergeDataComponent(Component):
                         combined_data[key] = value
             return DataFrame([combined_data])
 
-        if operation == MergeOperation.APPEND:
+        if operation == DataOperation.APPEND:
             rows = [data_input.data for data_input in self.data_inputs]
             return DataFrame(rows)
 
-        if operation == MergeOperation.MERGE:
+        if operation == DataOperation.MERGE:
             result_data: dict[str, str | list[str] | object] = {}
             for data_input in self.data_inputs:
                 for key, value in data_input.data.items():
@@ -81,7 +79,7 @@ class MergeDataComponent(Component):
                         result_data[key] = value
             return DataFrame([result_data])
 
-        if operation == MergeOperation.JOIN:
+        if operation == DataOperation.JOIN:
             combined_data = {}
             for idx, data_input in enumerate(self.data_inputs, 1):
                 for key, value in data_input.data.items():

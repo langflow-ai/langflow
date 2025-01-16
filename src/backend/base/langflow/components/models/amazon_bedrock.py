@@ -26,6 +26,7 @@ class AmazonBedrockComponent(LCModelComponent):
             info="The access key for your AWS account."
             "Usually set in Python code as the environment variable 'AWS_ACCESS_KEY_ID'.",
             value="AWS_ACCESS_KEY_ID",
+            required=True,
         ),
         SecretStrInput(
             name="aws_secret_access_key",
@@ -33,6 +34,7 @@ class AmazonBedrockComponent(LCModelComponent):
             info="The secret key for your AWS account. "
             "Usually set in Python code as the environment variable 'AWS_SECRET_ACCESS_KEY'.",
             value="AWS_SECRET_ACCESS_KEY",
+            required=True,
         ),
         SecretStrInput(
             name="aws_session_token",
