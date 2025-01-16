@@ -44,11 +44,6 @@ class NvidiaRerankComponent(LCVectorStoreComponent):
 
     outputs = [
         Output(
-            display_name="Retriever",
-            name="base_retriever",
-            method="build_base_retriever",
-        ),
-        Output(
             display_name="Search Results",
             name="search_results",
             method="search_documents",
