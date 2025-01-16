@@ -30,6 +30,7 @@ class AssemblyAILeMUR(Component):
             name="prompt",
             display_name="Input Prompt",
             info="The text to prompt the model",
+            required=True
         ),
         DropdownInput(
             name="final_model",
