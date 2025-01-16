@@ -1,5 +1,5 @@
 ---
-title: Memory Chatbot
+title: Memory chatbot
 slug: /tutorials-memory-chatbot
 ---
 

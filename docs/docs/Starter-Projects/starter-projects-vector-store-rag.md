@@ -1,5 +1,5 @@
 ---
-title: Vector Store RAG
+title: Vector store RAG
 slug: /starter-projects-vector-store-rag
 ---
 

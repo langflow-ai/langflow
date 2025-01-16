@@ -3,7 +3,7 @@ module.exports = {
     "Get-Started/welcome-to-langflow",
     {
       type: "category",
-      label: "Get Started",
+      label: "Get started",
       items: [
         "Get-Started/get-started-installation",
         "Get-Started/get-started-quickstart",
@@ -11,7 +11,7 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Starter Projects",
+      label: "Starter projects",
       items: [
         'Starter-Projects/starter-projects-basic-prompting',
         'Starter-Projects/starter-projects-vector-store-rag',
@@ -137,7 +137,7 @@ module.exports = {
     },
     {
       type: "category",
-      label: "API Reference",
+      label: "API reference",
       items: [
         {
           type: "doc",

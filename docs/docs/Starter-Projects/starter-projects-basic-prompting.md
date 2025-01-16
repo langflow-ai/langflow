@@ -1,5 +1,5 @@
 ---
-title: Basic Prompting
+title: Basic prompting
 slug: /starter-projects-basic-prompting
 ---
 
