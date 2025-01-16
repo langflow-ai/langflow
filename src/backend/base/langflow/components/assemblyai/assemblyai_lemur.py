@@ -26,12 +26,7 @@ class AssemblyAILeMUR(Component):
             info="The transcription result from AssemblyAI",
             required=True,
         ),
-        MultilineInput(
-            name="prompt",
-            display_name="Input Prompt",
-            info="The text to prompt the model",
-            required=True
-        ),
+        MultilineInput(name="prompt", display_name="Input Prompt", info="The text to prompt the model", required=True),
         DropdownInput(
             name="final_model",
             display_name="Final Model",
