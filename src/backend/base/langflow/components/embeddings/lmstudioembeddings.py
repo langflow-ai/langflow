@@ -49,12 +49,14 @@ class LMStudioEmbeddingsComponent(LCEmbeddingsModel):
             display_name="Model",
             advanced=False,
             refresh_button=True,
+            required=True,
         ),
         MessageTextInput(
             name="base_url",
             display_name="LM Studio Base URL",
             refresh_button=True,
             value="http://localhost:1234/v1",
+            required=True,
         ),
         SecretStrInput(
             name="api_key",

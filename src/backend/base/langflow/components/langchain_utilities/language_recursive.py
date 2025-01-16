@@ -31,6 +31,7 @@ class LanguageRecursiveTextSplitterComponent(LCTextSplitterComponent):
             display_name="Input",
             info="The texts to split.",
             input_types=["Document", "Data"],
+            required=True,
         ),
         DropdownInput(
             name="code_language", display_name="Code Language", options=[x.value for x in Language], value="python"

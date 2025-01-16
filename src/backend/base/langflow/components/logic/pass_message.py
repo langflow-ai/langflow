@@ -15,6 +15,7 @@ class PassMessageComponent(Component):
             name="input_message",
             display_name="Input Message",
             info="The message to be passed forward.",
+            required=True,
         ),
         MessageInput(
             name="ignored_message",
