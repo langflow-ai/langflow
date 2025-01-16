@@ -255,7 +255,7 @@ class ComponentToolkit:
         elif flow_mode_inputs and (tool_name or tool_description):
             for tool in tools:
                 tool.name = _format_tool_name(str(tool_name) + "_" + str(tool.name)) or tool.name
-                tool.description = str(tool_description) + " " + str(tool.description) or tool.description
+                tool.description = str(tool_description) + " Output details: " + str(tool.description) or tool.description
                 tool.tags = [tool.name]
         elif tool_name or tool_description:
             msg = (
