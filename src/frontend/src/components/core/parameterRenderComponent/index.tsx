@@ -65,6 +65,7 @@ export function ParameterRenderComponent({
       placeholder,
       isToolMode,
     };
+
     if (TEXT_FIELD_TYPES.includes(templateData.type ?? "")) {
       if (templateData.list) {
         if (!templateData.options) {
@@ -73,6 +74,7 @@ export function ParameterRenderComponent({
               {...baseInputProps}
               componentName={name}
               id={`inputlist_${id}`}
+              listAddLabel={templateData?.list_add_label}
             />
           );
         }
@@ -180,6 +182,7 @@ export function ParameterRenderComponent({
             table_options={templateData?.table_options}
             trigger_icon={templateData?.trigger_icon}
             trigger_text={templateData?.trigger_text}
+            table_icon={templateData?.table_icon}
           />
         );
       case "slider":
