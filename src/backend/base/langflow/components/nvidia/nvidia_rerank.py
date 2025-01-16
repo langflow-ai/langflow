@@ -18,6 +18,7 @@ class NvidiaRerankComponent(LCVectorStoreComponent):
         MultilineInput(
             name="search_query",
             display_name="Search Query",
+            tool_mode=True,
         ),
         StrInput(
             name="base_url",
