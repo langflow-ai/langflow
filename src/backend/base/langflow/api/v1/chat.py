@@ -372,33 +372,15 @@ async def build_flow(
                 return
 
     async def event_generator(event_manager: EventManager, client_consumed_queue: asyncio.Queue) -> None:
-        if not data:
-            # using another task since the build_graph_and_get_order is now an async function
-            vertices_task = asyncio.create_task(build_graph_and_get_order())
-            try:
-                await vertices_task
-            except asyncio.CancelledError:
-                vertices_task.cancel()
-                return
-            except Exception as e:
-                error_message = ErrorMessage(
-                    flow_id=flow_id,
-                    exception=e,
-                )
-                event_manager.on_error(data=error_message.data)
-                raise
-
-            ids, vertices_to_run, graph = vertices_task.result()
-        else:
-            try:
-                ids, vertices_to_run, graph = await build_graph_and_get_order()
-            except Exception as e:
-                error_message = ErrorMessage(
-                    flow_id=flow_id,
-                    exception=e,
-                )
-                event_manager.on_error(data=error_message.data)
-                raise
+        try:
+            ids, vertices_to_run, graph = await build_graph_and_get_order()
+        except Exception as e:
+            error_message = ErrorMessage(
+                flow_id=flow_id,
+                exception=e,
+            )
+            event_manager.on_error(data=error_message.data)
+            raise
         event_manager.on_vertices_sorted(data={"ids": ids, "to_run": vertices_to_run})
         await client_consumed_queue.get()
 
