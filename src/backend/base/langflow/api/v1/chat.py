@@ -165,17 +165,7 @@ async def build_flow(
             flow_id_str = str(flow_id)
             # Create a fresh session for database operations
             async with session_scope() as fresh_session:
-                if not data:
-                    graph = await build_graph_from_db(flow_id=flow_id, session=fresh_session, chat_service=chat_service)
-                else:
-                    result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
-                    flow_name = result.first()
-                    graph = await build_graph_from_data(
-                        flow_id=flow_id_str,
-                        payload=data.model_dump(),
-                        user_id=str(current_user.id),
-                        flow_name=flow_name,
-                    )
+                graph = await create_graph(fresh_session, flow_id_str)
 
             graph.validate_stream()
             if stop_component_id or start_component_id:
@@ -222,6 +212,20 @@ async def build_flow(
             logger.exception("Error checking build status")
             raise HTTPException(status_code=500, detail=str(exc)) from exc
         return first_layer, vertices_to_run, graph
+
+    async def create_graph(fresh_session, flow_id_str: str) -> Graph:
+        if not data:
+            return await build_graph_from_db(flow_id=flow_id, session=fresh_session, chat_service=chat_service)
+
+        result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
+        flow_name = result.first()
+
+        return await build_graph_from_data(
+            flow_id=flow_id_str,
+            payload=data.model_dump(),
+            user_id=str(current_user.id),
+            flow_name=flow_name,
+        )
 
     async def _build_vertex(vertex_id: str, graph: Graph, event_manager: EventManager) -> VertexBuildResponse:
         flow_id_str = str(flow_id)
