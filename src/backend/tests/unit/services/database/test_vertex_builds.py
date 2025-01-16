@@ -34,7 +34,7 @@ def vertex_build_data():
 @pytest.fixture
 async def mock_settings():
     """Fixture to mock settings."""
-    return asyncio.to_thread(
+    return await asyncio.to_thread(
         Settings,
         max_vertex_builds_to_keep=5,
         max_vertex_builds_per_vertex=3,
