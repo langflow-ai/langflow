@@ -205,7 +205,7 @@ class RunFlowBaseComponent(Component):
         tools = component_toolkit(component=self).get_tools(
             tool_name=f"{self.flow_name_selected}_tool",
             tool_description=(
-                f"Tool designed to execute the flow '{self.flow_name_selected}'. " f"Flow details: {flow_description}."
+                f"Tool designed to execute the flow '{self.flow_name_selected}'. Flow details: {flow_description}."
             ),
             callbacks=self.get_langchain_callbacks(),
             flow_mode_inputs=tool_mode_inputs,
