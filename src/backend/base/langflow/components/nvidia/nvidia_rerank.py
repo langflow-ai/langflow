@@ -61,7 +61,7 @@ class NvidiaRerankComponent(LCVectorStoreComponent):
                 raise ValueError(msg) from e
         return build_config
 
-    def build_model(self):
+    def build_reranker(self):
         try:
             from langchain_nvidia_ai_endpoints import NVIDIARerank
         except ImportError as e:
