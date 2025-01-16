@@ -1,14 +1,9 @@
 import pytest
-
+from langchain_community.graph_vectorstores.links import Link
 from langflow.components.langchain_utilities.html_link_extractor import HtmlLinkExtractorComponent
 from langflow.schema import Data
-
-from langchain_core.documents import Document
-from langchain_community.graph_vectorstores.extractors.html_link_extractor import HtmlInput
-from langchain_community.graph_vectorstores.links import Link
-
 from tests.base import ComponentTestBaseWithClient
-from loguru import logger
+
 
 @pytest.mark.usefixtures("client")
 class TestHtmlLinkExtractorComponent(ComponentTestBaseWithClient):
@@ -18,11 +13,11 @@ class TestHtmlLinkExtractorComponent(ComponentTestBaseWithClient):
 
     @pytest.fixture
     def default_kwargs(self, html):
-        return {"data_input": html,  "_session_id": "123"}
+        return {"data_input": html, "_session_id": "123"}
 
     @pytest.fixture
     def file_names_mapping(self):
-        return [      
+        return [
             {"version": "1.1.1", "module": "langchain_utilities", "file_name": "html_link_extractor"},
         ]
 
@@ -52,22 +47,26 @@ class TestHtmlLinkExtractorComponent(ComponentTestBaseWithClient):
 
         </html>
         """
-        return [Data(text_key='text', 
-                     data={ 'text': source,
-                            'source':'https://pedrocassalpacheco.github.io/historical_figures_website/Alexander_Graham_Bell.html', 
-                            'title': 'Alexander Graham Bell',
-                            'language': 'en'},
-                     default_value='')
+        return [
+            Data(
+                text_key="text",
+                data={
+                    "text": source,
+                    "source": "https://pedrocassalpacheco.github.io/historical_figures_website/Alexander_Graham_Bell.html",
+                    "title": "Alexander Graham Bell",
+                    "language": "en",
+                },
+                default_value="",
+            )
         ]
-        
+
     @pytest.fixture
     def all_tags(self):
         return [
-            'https://pedrocassalpacheco.github.io/historical_figures_website/Alexander_Graham_Bell.html',
-            'https://pedrocassalpacheco.github.io/historical_figures_website/thomas_edison.html',
-            'https://pedrocassalpacheco.github.io/historical_figures_website/nikola_tesla.html'
+            "https://pedrocassalpacheco.github.io/historical_figures_website/Alexander_Graham_Bell.html",
+            "https://pedrocassalpacheco.github.io/historical_figures_website/thomas_edison.html",
+            "https://pedrocassalpacheco.github.io/historical_figures_website/nikola_tesla.html",
         ]
-        
 
     def test_link_extraction(self, component_class, default_kwargs, all_tags):
         component = component_class(**default_kwargs)
@@ -77,17 +76,17 @@ class TestHtmlLinkExtractorComponent(ComponentTestBaseWithClient):
         assert len(data) == 1
         for datum in data:
             assert isinstance(datum, Data)
-            links = datum.data['links']
+            links = datum.data["links"]
             assert links is not None
             for link in links:
                 assert isinstance(link, Link)
                 assert link.tag in all_tags
-                
+
     def test_post_code_processing(self, component_class, default_kwargs):
-        """
-        Test the post-processing of code in the component class.
-        This test verifies that the component class correctly processes the code 
+        """Test the post-processing of code in the component class.
+        This test verifies that the component class correctly processes the code
         and converts it to a frontend node with the expected structure and values.
+
         Args:
             component_class (class): The class of the component to be tested.
             default_kwargs (dict): The default keyword arguments to initialize the component.
@@ -96,7 +95,6 @@ class TestHtmlLinkExtractorComponent(ComponentTestBaseWithClient):
             - The 'value' of 'labels' in the 'template' of node data is "people, places, dates, events".
             - The string "alexander" is present in the 'page_content' of the first item in 'data_input' of 'template'.
         """
-        
         component = component_class(**default_kwargs)
         frontend_node = component.to_frontend_node()
         node_data = frontend_node["data"]["node"]

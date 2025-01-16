@@ -1,12 +1,9 @@
 import pytest
-
+from langchain_community.graph_vectorstores.links import Link
+from langchain_core.documents import Document
 from langflow.components.langchain_utilities.gliner_link_extractor import GLiNERLinkExtractorComponent
 from langflow.schema import Data
 from langflow.services.cache.utils import CacheMiss
-
-from langchain_community.graph_vectorstores.links import Link
-from langchain_core.documents import Document
-
 from tests.base import ComponentTestBaseWithClient
 
 
@@ -24,12 +21,12 @@ class TestGlinerLinkExtractorComponent(ComponentTestBaseWithClient):
             "labels": "people, places, dates, events",
             "model_name": "urchade/gliner_mediumv2.1",
             "extract_kwargs": {},
-            "data_input":test_text
+            "data_input": test_text,
         }
-        
+
     @pytest.fixture
     def file_names_mapping(self):
-        return [      
+        return [
             {"version": "1.0.19", "module": "langchain_utilities", "file_name": "gliner_link_extractor"},
             {"version": "1.1.0", "module": "langchain_utilities", "file_name": "gliner_link_extractor"},
             {"version": "1.1.1", "module": "langchain_utilities", "file_name": "gliner_link_extractor"},
@@ -70,38 +67,76 @@ class TestGlinerLinkExtractorComponent(ComponentTestBaseWithClient):
         Alexander was deified by many cultures during and after his reign. In Islamic tradition, he is often associated with "Iskandar Dhul-Qarnayn" (Alexander the Two-Horned) and linked to legends such as the building of the iron wall against Gog and Magog.
         His death spurred the fragmentation of his empire among his generals, the Diadochi, who divided it into the Ptolemaic, Seleucid, and Antigonid kingdoms.
         Tomb and Mysteries
-        Alexander's burial site remains a mystery. Historical sources suggest it was in Alexandria, Egypt, but the exact location is unknown. His sarcophagus and associated treasures have been sought by archaeologists and explorers for centuries​
+        Alexander's burial site remains a mystery. Historical sources suggest it was in Alexandria, Egypt, but the exact location is unknown. His sarcophagus and associated treasures have been sought by archaeologists and explorers for centuries\u200b
 
         Alexander’s conquests reshaped the ancient world, blending cultures and setting the stage for the Hellenistic period, marked by advancements in art, science, and philosophy
         """
-        
-        paragraphs = text.strip().split('\n\n')
+
+        paragraphs = text.strip().split("\n\n")
         documents = [Document(page_content=paragraph) for paragraph in paragraphs if paragraph]
         return documents
-    
+
     @pytest.fixture
     def all_tags(self):
         return [
-            "Pella", "Macedonia", "356 BCE", "356 BCE",
-            "Pella", "Macedonia", "July 20", "Greek city-states",
-            "340 BCE", "rebellion", "Alexandropolis", "Thebes",
-            "335 BCE", "336 BCE", "334–330 BCE", "Persians",
-            "Alexandria", "Egypt", "332 BCE", "Battle of Granicus",
-            "334 BCE", "Asia Minor", "Battle of Issus", "331 BCE",
-            "Tyre", "Battle of Gaugamela", "333 BCE", "Hellespont",
-            "Indian subcontinent", "330 BCE", "324–323 BCE", "Babylon",
-            "327 BCE", "Battle of Hydaspes River", "326 BCE", "Persians",
-            "Alexandria", "Greece", "Egypt", "Babylon",
-            "323 BCE", "Hellenization", "June 10 or 11", "Gedrosian Desert",
-            "India", "Persia", "Macedonians", "Alexandria, Egypt",
-            "Diadochi", "Hellenistic period", "ancient world"
+            "Pella",
+            "Macedonia",
+            "356 BCE",
+            "356 BCE",
+            "Pella",
+            "Macedonia",
+            "July 20",
+            "Greek city-states",
+            "340 BCE",
+            "rebellion",
+            "Alexandropolis",
+            "Thebes",
+            "335 BCE",
+            "336 BCE",
+            "334–330 BCE",
+            "Persians",
+            "Alexandria",
+            "Egypt",
+            "332 BCE",
+            "Battle of Granicus",
+            "334 BCE",
+            "Asia Minor",
+            "Battle of Issus",
+            "331 BCE",
+            "Tyre",
+            "Battle of Gaugamela",
+            "333 BCE",
+            "Hellespont",
+            "Indian subcontinent",
+            "330 BCE",
+            "324–323 BCE",
+            "Babylon",
+            "327 BCE",
+            "Battle of Hydaspes River",
+            "326 BCE",
+            "Persians",
+            "Alexandria",
+            "Greece",
+            "Egypt",
+            "Babylon",
+            "323 BCE",
+            "Hellenization",
+            "June 10 or 11",
+            "Gedrosian Desert",
+            "India",
+            "Persia",
+            "Macedonians",
+            "Alexandria, Egypt",
+            "Diadochi",
+            "Hellenistic period",
+            "ancient world",
         ]
 
     def test_link_extraction(self, component_class, default_kwargs, all_tags):
-        """
-        Test the post-processing of code using the GLiNERLinkExtractorComponent.
+        """Test the post-processing of code using the GLiNERLinkExtractorComponent.
         This test verifies that the component correctly processes data and extracts
         links with the expected tags.
+
         Args:
             component_class (type): The class of the component to be tested.
             default_kwargs (dict): The default keyword arguments to initialize the component.
@@ -114,7 +149,6 @@ class TestGlinerLinkExtractorComponent(ComponentTestBaseWithClient):
             - Each link in the 'links' list is an instance of Link.
             - Each link's tag matches the expected tag from all_tags.
         """
-        
         component = component_class(**default_kwargs)
         assert isinstance(component, GLiNERLinkExtractorComponent)
         data = component.transform_data()
@@ -122,17 +156,17 @@ class TestGlinerLinkExtractorComponent(ComponentTestBaseWithClient):
         assert len(data) == 10
         for datum in data:
             assert isinstance(datum, Data)
-            links = datum.data['links']
+            links = datum.data["links"]
             assert links is not None
             for link in links:
                 assert isinstance(link, Link)
                 assert link.tag in all_tags
 
     def test_post_code_processing(self, component_class, default_kwargs):
-        """
-        Test the post-processing of code in the component class.
-        This test verifies that the component class correctly processes the code 
+        """Test the post-processing of code in the component class.
+        This test verifies that the component class correctly processes the code
         and converts it to a frontend node with the expected structure and values.
+
         Args:
             component_class (class): The class of the component to be tested.
             default_kwargs (dict): The default keyword arguments to initialize the component.
@@ -141,7 +175,6 @@ class TestGlinerLinkExtractorComponent(ComponentTestBaseWithClient):
             - The 'value' of 'labels' in the 'template' of node data is "people, places, dates, events".
             - The string "alexander" is present in the 'page_content' of the first item in 'data_input' of 'template'.
         """
-        
         component = component_class(**default_kwargs)
         frontend_node = component.to_frontend_node()
         node_data = frontend_node["data"]["node"]
@@ -150,35 +183,33 @@ class TestGlinerLinkExtractorComponent(ComponentTestBaseWithClient):
         assert "alexander" in node_data["template"]["data_input"]["value"][0]["page_content"].lower()
 
     def test_model_caching(self, test_text):
-        """
-        Test the model caching in the GLiNERLinkExtractorComponent.
+        """Test the model caching in the GLiNERLinkExtractorComponent.
         This test verifies that the model is cached and loaded correctly.
         Asserts:
             - The model is loaded and cached.
             - The model is loaded from cache.
         """
-        
         component = GLiNERLinkExtractorComponent(
             _session_id="123",
             kind="entity",
             labels="people, places, dates, events",
             embedding_model="urchade/gliner_mediumv2.1",
             extract_kwargs={},
-            data_input=test_text
+            data_input=test_text,
         )
-        
+
         model = component._shared_component_cache.get("gliner_model")
         assert isinstance(model, CacheMiss)
         assert component.load_model() is not None
-        
+
         another_component = GLiNERLinkExtractorComponent(
             _session_id="123",
             kind="entity",
             labels="people, places, dates, events",
             embedding_model="urchade/gliner_mediumv2.1",
             extract_kwargs={},
-            data_input=test_text
+            data_input=test_text,
         )
-        
+
         model = component._shared_component_cache.get("gliner_model")
         assert not isinstance(model, CacheMiss)

@@ -6,7 +6,6 @@ from langchain_core.documents import BaseDocumentTransformer
 from langflow.base.document_transformers.model import LCDocumentTransformerComponent
 from langflow.inputs import BoolInput, DataInput, StrInput
 
-from loguru import logger
 
 class HtmlLinkExtractorComponent(LCDocumentTransformerComponent):
     display_name = "HTML Link Extractor"
