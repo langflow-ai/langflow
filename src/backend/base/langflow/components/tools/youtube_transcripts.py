@@ -21,6 +21,7 @@ class YouTubeTranscriptsComponent(Component):
             display_name="Video URL",
             info="Enter the YouTube video URL to get transcripts from.",
             tool_mode=True,
+            required=True,
         ),
         DropdownInput(
             name="transcript_format",
