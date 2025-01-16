@@ -1,7 +1,5 @@
 from typing import Any
 
-from langchain.schema import Document
-
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.field_typing import VectorStore
 from langflow.inputs.inputs import DataInput
@@ -80,7 +78,8 @@ class NvidiaRerankComponent(LCVectorStoreComponent):
     async def rerank_documents(self) -> list[Data]:  # type: ignore[override]
         reranker = self.build_reranker()
         documents = reranker.compress_documents(
-            query=self.search_query, documents=[Document(page_content=passage.text) for passage in self.search_results]
+            query=self.search_query,
+            documents=[passage.to_lc_document() for passage in self.search_results if isinstance(passage, Data)],
         )
         data = self.to_data(documents)
         self.status = data
