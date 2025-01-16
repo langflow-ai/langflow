@@ -25,7 +25,7 @@ export function DefaultEdge({
   const targetXNew = targetNode?.position.x ?? 0;
 
   const distance = 200 + 0.1 * (Math.abs(sourceXNew - targetXNew) / 2);
-  const distanceY = 200 + 0.2 * Math.abs(sourceY - targetY);
+  const distanceY = 200 + 0.3 * Math.abs(sourceY - targetY);
 
   const edgePathLoop = `M ${sourceXNew} ${sourceY} C ${sourceXNew + distance} ${sourceY + distanceY}, ${targetXNew - distance} ${targetY + distanceY}, ${targetXNew} ${targetY}`;
 
