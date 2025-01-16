@@ -217,7 +217,10 @@ export const MenuBar = ({}: {}): JSX.Element => {
   ]);
 
   return currentFlow && onFlowPage ? (
-    <div className="flex items-center justify-center gap-2 truncate">
+    <div
+      className="flex items-center justify-center gap-2 truncate"
+      data-testid="menu_bar_wrapper"
+    >
       <div
         className="header-menu-bar hidden w-20 max-w-fit grow justify-end truncate md:flex"
         data-testid="menu_flow_bar"
@@ -240,12 +243,21 @@ export const MenuBar = ({}: {}): JSX.Element => {
           </div>
         )}
       </div>
-      <div className="hidden w-fit shrink-0 select-none font-normal text-muted-foreground md:flex">
+      <div
+        className="hidden w-fit shrink-0 select-none font-normal text-muted-foreground md:flex"
+        data-testid="menu_bar_separator"
+      >
         /
       </div>
 
-      <div className="overflow-hidden truncate text-sm sm:whitespace-normal">
-        <div className="header-menu-bar-display-2 truncate">
+      <div
+        className="overflow-hidden truncate text-sm sm:whitespace-normal"
+        data-testid="menu_bar_display"
+      >
+        <div
+          className="header-menu-bar-display-2 truncate"
+          data-testid="menu_bar_display_wrapper"
+        >
           <div
             className="header-menu-flow-name-2 truncate"
             data-testid="flow-configuration-button"
