@@ -112,7 +112,7 @@ def wrap_base_tool_as_tool_interface(base_tool: BaseTool) -> ToolInterface:
         raise TypeError(msg)
 
     # --- 3) Build our dynamic Pydantic model from the JSON schema ---
-    InputSchema = create_input_schema_from_json_schema(schema_dict)  # noqa: N806
+    InputSchema: type[BaseModel] = create_input_schema_from_json_schema(schema_dict)  # noqa: N806
 
     # --- 4) Define a wrapper class that uses composition ---
     class WrappedDynamicTool(ToolInterface):
@@ -125,8 +125,8 @@ def wrap_base_tool_as_tool_interface(base_tool: BaseTool) -> ToolInterface:
         def __init__(self, tool: BaseTool):
             self._tool = tool
 
-        def call(self, arguments: InputSchema) -> dict:
-            output = self._tool.invoke(arguments.dict())
+        def call(self, arguments: InputSchema) -> dict:  # type: ignore # noqa: PGH003
+            output = self._tool.invoke(arguments.dict())  # type: ignore # noqa: PGH003
             result = ""
             if "error" in output[0].data:
                 result = output[0].data["error"]

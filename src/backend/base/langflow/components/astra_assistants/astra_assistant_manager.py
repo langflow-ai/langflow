@@ -1,6 +1,6 @@
 import asyncio
 from asyncio import to_thread
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from astra_assistants.astra_assistants_manager import AssistantManager
 from langchain_core.agents import AgentFinish
@@ -152,6 +152,7 @@ class AstraAssistantManager(ComponentWithCache):
         self._assistant_id: Message = None  # type: ignore[assignment]
         self._vs_id: Message = None  # type: ignore[assignment]
         self.client = get_patched_openai_client(self._shared_component_cache)
+        self.input_tools: list[Any]
 
     async def get_assistant_response(self) -> Message:
         await self.initialize()
