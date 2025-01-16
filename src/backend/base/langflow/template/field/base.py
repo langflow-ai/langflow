@@ -151,11 +151,7 @@ class Input(BaseModel):
             msg = "file_types must be a list"
             raise ValueError(msg)  # noqa: TRY004
         return [
-            (
-                f".{file_type}"
-                if isinstance(file_type, str) and not file_type.startswith(".")
-                else file_type
-            )
+            (f".{file_type}" if isinstance(file_type, str) and not file_type.startswith(".") else file_type)
             for file_type in value
         ]
 
