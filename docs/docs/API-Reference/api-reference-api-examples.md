@@ -22,7 +22,7 @@ export LANGFLOW_URL="http://127.0.0.1:7860"
 ```
 
 * Export the `flow-id` in your terminal.
-The `flow-id` is found in the [API pane](/workspace-api) or in the flow's URL.
+The `flow-id` is found in the [API pane](/concepts-api) or in the flow's URL.
 ```plain
 export FLOW_ID="359cd752-07ea-46f2-9d3b-a4407ef618da"
 ```
