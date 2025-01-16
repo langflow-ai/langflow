@@ -1,16 +1,12 @@
-import { InputOutput } from "@/constants/enums";
 import { cn } from "@/utils/utils";
 import IconComponent from "@/components/common/genericIconComponent";
-import IOFieldView from "@/components/IOFieldView/io-field-view";
-import SessionView from "@/components/session-view";
 import { SelectedViewFieldProps } from "./types";
+import SessionView from "../SessionView/sessionView";
 
 export const SelectedViewField = ({
   selectedViewField,
   setSelectedViewField,
   haveChat,
-  inputs,
-  outputs,
   sessions,
   currentFlowId,
   nodes,
@@ -38,7 +34,7 @@ export const SelectedViewField = ({
           }
         </div>
         <div className="h-full w-full">
-          {inputs.some((input) => input.id === selectedViewField?.id) && (
+          {/* {inputs.some((input) => input.id === selectedViewField?.id) && (
             <IOFieldView
               type={InputOutput.INPUT}
               left={false}
@@ -53,7 +49,7 @@ export const SelectedViewField = ({
               fieldType={selectedViewField?.type!}
               fieldId={selectedViewField?.id!}
             />
-          )}
+          )} */}
           {sessions.some((session) => session === selectedViewField?.id) && (
             <SessionView session={selectedViewField?.id} id={currentFlowId} />
           )}
