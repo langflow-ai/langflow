@@ -1,6 +1,5 @@
 from uuid import UUID
 
-from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -124,9 +123,6 @@ async def log_vertex_build(
         # 4) Commit transaction
         await db.commit()
 
-    except IntegrityError:
-        await db.rollback()
-        raise
     except Exception:
         await db.rollback()
         raise

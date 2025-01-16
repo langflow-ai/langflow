@@ -1,6 +1,5 @@
 from uuid import UUID
 
-from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -66,9 +65,6 @@ async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> Tra
         await db.commit()
         await db.refresh(table)
 
-    except IntegrityError:
-        await db.rollback()
-        raise
     except Exception:
         await db.rollback()
         raise
