@@ -1,11 +1,10 @@
 import requests
 from pydantic.v1 import SecretStr
-from typing_extensions import override
 
-from langflow.base.models.groq_constants import GROQ_MODELS
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.io import DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
+from langflow.field_typing.range_spec import RangeSpec
+from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
 
 
 class GroqModel(LCModelComponent):
@@ -16,13 +15,16 @@ class GroqModel(LCModelComponent):
 
     inputs = [
         *LCModelComponent._base_inputs,
-        SecretStrInput(name="groq_api_key", display_name="Groq API Key", info="API key for the Groq API."),
+        SecretStrInput(
+            name="api_key", display_name="Groq API Key", info="API key for the Groq API.", real_time_refresh=True
+        ),
         MessageTextInput(
-            name="groq_api_base",
+            name="base_url",
             display_name="Groq API Base",
             info="Base URL path for API requests, leave blank if not using a proxy or service emulator.",
             advanced=True,
             value="https://api.groq.com",
+            real_time_refresh=True,
         ),
         IntInput(
             name="max_tokens",
@@ -36,6 +38,13 @@ class GroqModel(LCModelComponent):
             info="Run inference with this temperature. Must by in the closed interval [0.0, 1.0].",
             value=0.1,
         ),
+        SliderInput(
+            name="temperature",
+            display_name="Temperature",
+            value=0.1,
+            info="Run inference with this temperature. Must by in the closed interval [0.0, 1.0].",
+            range_spec=RangeSpec(min=0, max=1, step=0.01),
+        ),
         IntInput(
             name="n",
             display_name="N",
@@ -47,33 +56,57 @@ class GroqModel(LCModelComponent):
             name="model_name",
             display_name="Model",
             info="The name of the model to use.",
-            options=GROQ_MODELS,
-            value="llama-3.1-8b-instant",
+            options=[],
             refresh_button=True,
+            real_time_refresh=True,
+        ),
+        BoolInput(
+            name="tool_model_enabled",
+            display_name="Enable Tool Models",
+            info=(
+                "Select if you want to use models that can work with tools. If yes, only those models will be shown."
+            ),
+            advanced=False,
+            value=True,
+            real_time_refresh=True,
         ),
     ]
 
-    def get_models(self) -> list[str]:
-        api_key = self.groq_api_key
-        base_url = self.groq_api_base or "https://api.groq.com"
-        url = f"{base_url}/openai/v1/models"
+    def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:
+        url = f"{self.base_url}/openai/v1/models"
+        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
 
-        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        model_list = response.json()
+        model_ids = [model["id"] for model in model_list.get("data", [])]
+        if tool_model_enabled:
+            try:
+                from langchain_groq import ChatGroq
+            except ImportError as e:
+                msg = "langchain_groq is not installed. Please install it with `pip install langchain_groq`."
+                raise ImportError(msg) from e
+            for model in model_ids:
+                model_with_tool = ChatGroq(
+                    model=model,
+                    api_key=self.api_key,
+                    base_url=self.base_url,
+                )
+                if not self.supports_tool_calling(model_with_tool):
+                    model_ids.remove(model)
+            return model_ids
+        return model_ids
 
-        try:
-            response = requests.get(url, headers=headers, timeout=10)
-            response.raise_for_status()
-            model_list = response.json()
-            return [model["id"] for model in model_list.get("data", [])]
-        except requests.RequestException as e:
-            self.status = f"Error fetching models: {e}"
-            return GROQ_MODELS
-
-    @override
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
-        if field_name in {"groq_api_key", "groq_api_base", "model_name"}:
-            models = self.get_models()
-            build_config["model_name"]["options"] = models
+        if field_name in ("base_url", "model_name", "tool_model_enabled", "api_key") and field_value:
+            try:
+                if len(self.api_key) != 0:
+                    ids = self.get_models(tool_model_enabled=self.tool_model_enabled)
+                    build_config["model_name"]["options"] = ids
+                    build_config["model_name"]["value"] = ids[0]
+            except Exception as e:
+                msg = f"Error getting model names: {e}"
+                raise ValueError(msg) from e
         return build_config
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
@@ -83,20 +116,12 @@ class GroqModel(LCModelComponent):
             msg = "langchain-groq is not installed. Please install it with `pip install langchain-groq`."
             raise ImportError(msg) from e
 
-        groq_api_key = self.groq_api_key
-        model_name = self.model_name
-        max_tokens = self.max_tokens
-        temperature = self.temperature
-        groq_api_base = self.groq_api_base
-        n = self.n
-        stream = self.stream
-
         return ChatGroq(
-            model=model_name,
-            max_tokens=max_tokens or None,
-            temperature=temperature,
-            base_url=groq_api_base,
-            n=n or 1,
-            api_key=SecretStr(groq_api_key).get_secret_value(),
-            streaming=stream,
+            model=self.model_name,
+            max_tokens=self.max_tokens or None,
+            temperature=self.temperature,
+            base_url=self.base_url,
+            n=self.n or 1,
+            api_key=SecretStr(self.api_key).get_secret_value(),
+            streaming=self.stream,
         )

@@ -43,6 +43,19 @@ class LCModelComponent(Component):
     def _get_exception_message(self, e: Exception):
         return str(e)
 
+    def supports_tool_calling(self, model: LanguageModel) -> bool:
+        try:
+            if not hasattr(model, "bind_tools"):
+                return False
+
+            def test_tool(x: int) -> int:
+                return x
+
+            model_with_tool = model.bind_tools([test_tool])
+            return hasattr(model_with_tool, "tools") and len(model_with_tool.tools) > 0
+        except (AttributeError, TypeError, ValueError):
+            return False
+
     def _validate_outputs(self) -> None:
         # At least these two outputs must be defined
         required_output_methods = ["text_response", "build_model"]
