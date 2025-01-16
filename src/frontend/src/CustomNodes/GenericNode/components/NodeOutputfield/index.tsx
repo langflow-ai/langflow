@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
+import { targetHandleType } from "@/types/flow";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
@@ -14,6 +15,7 @@ import { NodeOutputFieldComponentType } from "../../../../types/components";
 import {
   getGroupOutputNodeId,
   scapedJSONStringfy,
+  scapeJSONParse,
 } from "../../../../utils/reactflowUtils";
 import {
   cn,
@@ -203,6 +205,18 @@ function NodeOutputField({
     [edges, id],
   );
 
+  const looping = useMemo(() => {
+    return edges.some((edge) => {
+      const targetHandleObject: targetHandleType = scapeJSONParse(
+        edge.targetHandle!,
+      );
+      return (
+        targetHandleObject.output_types &&
+        edge.sourceHandle === scapedJSONStringfy(id)
+      );
+    });
+  }, [edges, id]);
+
   const handleUpdateOutputHide = useCallback(
     (value?: boolean) => {
       setNode(data.id, (oldNode) => {
@@ -363,7 +377,7 @@ function NodeOutputField({
                 : "Please build the component first"
             }
           >
-            <div className="flex">
+            <div className="flex items-center gap-2">
               <OutputModal
                 disabled={!displayOutputPreview || unknownOutput}
                 nodeId={flowPoolId}
@@ -381,6 +395,11 @@ function NodeOutputField({
                   }}
                 />
               </OutputModal>
+              {looping && (
+                <Badge variant="pinkStatic" size="xq" className="px-1">
+                  Looping
+                </Badge>
+              )}
             </div>
           </ShadTooltip>
         </div>
