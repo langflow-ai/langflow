@@ -37,6 +37,7 @@ module.exports = {
         "Concepts/concepts-playground",
         "Concepts/concepts-components",
         "Concepts/concepts-flows",
+        "Concepts/concepts-objects",
         "Concepts/concepts-api",
       ],
     },
@@ -79,7 +80,6 @@ module.exports = {
         "Configuration/configuration-cli",
         "Configuration/configuration-global-variables",
         "Configuration/environment-variables",
-        "Configuration/configuration-objects",
         "Configuration/configuration-security-best-practices"
       ],
     },

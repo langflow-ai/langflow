@@ -145,7 +145,7 @@ const config = {
             ],
           },
           {
-            to: "/configuration-objects",
+            to: "/concepts-objects",
             from: "/guides-data-message",
           },
           {
