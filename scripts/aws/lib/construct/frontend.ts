@@ -116,11 +116,15 @@ export class Web extends Construct {
         ],
       },
     ],
-    nodejsVersion:20,
+    nodejsVersion: 20,
     destinationBucket: websiteBucket,
     distribution: cloudFrontWebDistribution,
     outputSourceDirectory: 'build',
-    buildCommands: ['npm install', 'npm run build'],
+    buildCommands: [
+      'export NODE_OPTIONS="--max-old-space-size=8048"',
+      'npm install',
+      'npm run build'
+    ],
     buildEnvironment: {
       // VITE_AXIOS_BASE_URL: `https://${this.distribution.domainName}`
     },

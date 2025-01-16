@@ -3,6 +3,7 @@ import { Construct } from 'constructs'
 import {
   aws_iam as iam,
   aws_secretsmanager as secretsmanager,
+  SecretValue
 } from 'aws-cdk-lib';
 
 interface IAMProps {
@@ -19,16 +20,13 @@ export class EcsIAM extends Construct {
     // Create database credentials secret
     this.dbSecret = new secretsmanager.Secret(this, 'DatabaseSecret', {
       secretName: 'langflow/database',
-      generateSecretString: {
-        secretStringTemplate: JSON.stringify({
-          username: 'langflow',
-          host: 'localhost',
-          port: '5432',
-          dbname: 'langflow'
-        }),
-        generateStringKey: 'password',
-        excludeCharacters: '"@/\\',
-      },
+      secretStringValue: SecretValue.unsafePlainText(JSON.stringify({
+        username: 'langflow',
+        host: 'localhost',
+        port: '5432',
+        dbname: 'langflow',
+        password: 'langflow'
+      })),
     });
 
     // Policy Statements
