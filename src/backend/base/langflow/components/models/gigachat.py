@@ -87,22 +87,3 @@ class GigaChatComponent(LCModelComponent):
             temperature=temperature if temperature is not None else 1.0,
             verify_ssl_certs=False,
         )
-
-    def _get_exception_message(self, e: Exception):
-        """Get a message from an GigaChat exception.
-
-        Args:
-            e (Exception): The exception to get the message from.
-
-        Returns:
-            str: The message from the exception.
-        """
-        try:
-            from openai import BadRequestError
-        except ImportError:
-            return None
-        if isinstance(e, BadRequestError):
-            message = e.body.get("message")
-            if message:
-                return message
-        return None
