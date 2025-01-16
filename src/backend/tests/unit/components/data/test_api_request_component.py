@@ -2,11 +2,11 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock
 
+import aiofiles
 import aiofiles.os
 import httpx
 import pytest
 import respx
-from aiofile import async_open
 from httpx import Response
 from langflow.components import data
 
@@ -78,9 +78,9 @@ async def test_httpx_metadata_behavior(api_request, include_metadata, expected_p
         assert metadata["response_headers"]["custom-header"] == "HeaderValue"
 
         # Validate redirection history
-        assert metadata["redirection_history"] == [
-            {"url": redirected_url, "status_code": 303}
-        ], "Redirection history is incorrect"
+        assert metadata["redirection_history"] == [{"url": redirected_url, "status_code": 303}], (
+            "Redirection history is incorrect"
+        )
 
         # Validate result
         assert metadata["result"] == response_content, "Response content mismatch"
@@ -111,7 +111,9 @@ async def test_save_to_file_behavior(api_request, save_to_file, expected_propert
 
     # Check returned metadata
     metadata = result.data
-    assert set(metadata.keys()) == expected_properties, f"Unexpected properties: {set(metadata.keys())}"
+    assert set(metadata.keys()) == expected_properties, (
+        f"Unexpected properties: {set(metadata.keys())}. Raw result: {result.data}"
+    )
 
     if save_to_file:
         # Validate that file_path exists in metadata
@@ -120,7 +122,7 @@ async def test_save_to_file_behavior(api_request, save_to_file, expected_propert
 
         # Validate that the file exists and its content matches the response
         assert await aiofiles.os.path.exists(file_path), "Saved file does not exist"
-        async with async_open(file_path, "r") as f:
+        async with aiofiles.open(file_path) as f:
             file_content = await f.read()
         assert file_content == response_content, "File content does not match response content"
 
@@ -132,23 +134,23 @@ async def test_save_to_file_behavior(api_request, save_to_file, expected_propert
         assert metadata["result"] == response_content.encode("utf-8"), "Response content mismatch in metadata"
 
 
-def test_response_info_binary_content(api_request):
+async def test_response_info_binary_content(api_request):
     response = Mock()
     response.headers = {"Content-Type": "application/octet-stream"}
-    is_binary, file_path = api_request._response_info(response, with_file_path=False)
+    is_binary, file_path = await api_request._response_info(response, with_file_path=False)
     assert is_binary is True
     assert file_path is None
 
 
-def test_response_info_non_binary_content(api_request):
+async def test_response_info_non_binary_content(api_request):
     response = Mock()
     response.headers = {"Content-Type": "text/plain"}
-    is_binary, file_path = api_request._response_info(response, with_file_path=False)
+    is_binary, file_path = await api_request._response_info(response, with_file_path=False)
     assert is_binary is False
     assert file_path is None
 
 
-def test_response_info_filename_from_content_disposition(api_request):
+async def test_response_info_filename_from_content_disposition(api_request):
     response = Mock()
     response.headers = {
         "Content-Disposition": 'attachment; filename="thisfile.txt"',
@@ -157,20 +159,20 @@ def test_response_info_filename_from_content_disposition(api_request):
     response.request = Mock()
     response.request.url = "https://example.com/testfile"
 
-    is_binary, file_path = api_request._response_info(response, with_file_path=True)
+    is_binary, file_path = await api_request._response_info(response, with_file_path=True)
 
     assert is_binary is False
     assert file_path.parent == Path(tempfile.gettempdir()) / "APIRequestComponent"
     assert file_path.name.endswith("thisfile.txt")
 
 
-def test_response_info_default_filename(api_request):
+async def test_response_info_default_filename(api_request):
     response = Mock()
     response.headers = {"Content-Type": "text/plain"}
     response.request = Mock()
     response.request.url = "https://example.com/testfile"
 
-    is_binary, file_path = api_request._response_info(response, with_file_path=True)
+    is_binary, file_path = await api_request._response_info(response, with_file_path=True)
 
     assert is_binary is False
     assert file_path.parent == Path(tempfile.gettempdir()) / "APIRequestComponent"
