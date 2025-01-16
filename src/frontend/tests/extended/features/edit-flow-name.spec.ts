@@ -21,7 +21,7 @@ test(
 
     await page.keyboard.press("Enter");
 
-    let flowName = await page.getByTestId("flow_name").textContent();
+    let flowName = await page.getByTestId("input-flow-name").inputValue();
 
     expect(flowName).toBe(randomName);
 
