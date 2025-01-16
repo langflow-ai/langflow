@@ -1,4 +1,3 @@
-import asyncio
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 from uuid import uuid4
@@ -32,10 +31,9 @@ def vertex_build_data():
 
 
 @pytest.fixture
-async def mock_settings():
+def mock_settings():
     """Fixture to mock settings."""
-    return await asyncio.to_thread(
-        Settings,
+    return Settings(
         max_vertex_builds_to_keep=5,
         max_vertex_builds_per_vertex=3,
         max_transactions_to_keep=3000,
@@ -211,8 +209,7 @@ async def test_log_vertex_build_with_different_limits(
     async_session: AsyncSession, vertex_build_data, max_global: int, max_per_vertex: int, timestamp_generator
 ):
     """Test build logging with different limit configurations."""
-    settings = asyncio.to_thread(
-        Settings,
+    settings = Settings(
         max_vertex_builds_to_keep=max_global,
         max_vertex_builds_per_vertex=max_per_vertex,
         max_transactions_to_keep=3000,
