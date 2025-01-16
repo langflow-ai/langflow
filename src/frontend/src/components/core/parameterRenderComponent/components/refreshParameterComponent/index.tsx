@@ -55,18 +55,19 @@ export function RefreshParameterComponent({
         )}
       >
         {children}
-        {templateData.refresh_button && !templateData.dialog_inputs && (
-          <div className="shrink-0 flex-col">
-            <RefreshButton
-              isLoading={postTemplateValue.isPending}
-              disabled={disabled}
-              editNode={editNode}
-              button_text={templateData.refresh_button_text}
-              handleUpdateValues={handleRefreshButtonPress}
-              id={"refresh-button-" + name}
-            />
-          </div>
-        )}
+        {templateData.refresh_button &&
+          !templateData.dialog_inputs?.fields?.data?.node?.template && (
+            <div className="shrink-0 flex-col">
+              <RefreshButton
+                isLoading={postTemplateValue.isPending}
+                disabled={disabled}
+                editNode={editNode}
+                button_text={templateData.refresh_button_text}
+                handleUpdateValues={handleRefreshButtonPress}
+                id={"refresh-button-" + name}
+              />
+            </div>
+          )}
       </div>
     )
   );

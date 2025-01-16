@@ -112,7 +112,12 @@ export default function Dropdown({
   const renderTriggerButton = () => (
     <PopoverTrigger asChild>
       <Button
-        disabled={disabled}
+        disabled={
+          disabled ||
+          (Object.keys(options).length === 0 &&
+            !combobox &&
+            !dialogInputs?.fields?.data?.node?.template)
+        }
         variant="primary"
         size="xs"
         role="combobox"
@@ -174,39 +179,6 @@ export default function Dropdown({
         autoComplete="off"
       />
     </div>
-  );
-
-  const oldRenderOptionsList = () => (
-    <CommandList>
-      <CommandEmpty>No values found.</CommandEmpty>
-      <CommandGroup defaultChecked={false}>
-        {filteredOptions?.map((option, index) => (
-          <div>
-            <CommandItem
-              value={option}
-              onSelect={(currentValue) => {
-                onSelect(currentValue);
-                setOpen(false);
-              }}
-              className="items-center overflow-hidden truncate hover:cursor-pointer"
-              data-testid={`${option}-${index}-option`}
-            >
-              {customValue === option && (
-                <span className="text-muted-foreground">Text:&nbsp;</span>
-              )}
-              <span className="truncate">{option}</span>
-              <ForwardedIconComponent
-                name="Check"
-                className={cn(
-                  "ml-auto h-4 w-4 shrink-0 text-primary",
-                  value === option ? "opacity-100" : "opacity-0",
-                )}
-              />
-            </CommandItem>
-          </div>
-        ))}
-      </CommandGroup>
-    </CommandList>
   );
 
   const renderCustomOptionDialog = () => (
@@ -354,16 +326,10 @@ export default function Dropdown({
     </PopoverContentDropdown>
   );
 
-  if (Object.keys(options).length === 0 && !combobox) {
-    return isLoading ? (
+  if (Object.keys(options).length === 0 && !combobox && isLoading) {
+    return (
       <div>
         <span className="text-sm italic">Loading...</span>
-      </div>
-    ) : (
-      <div>
-        <span className="text-sm italic">
-          No parameters are available for display.
-        </span>
       </div>
     );
   }
