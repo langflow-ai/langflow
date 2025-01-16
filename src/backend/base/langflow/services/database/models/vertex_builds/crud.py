@@ -102,24 +102,24 @@ async def log_vertex_build(
                 VertexBuildTable.flow_id == vertex_build.flow_id,
                 VertexBuildTable.id == vertex_build.id,
             )
-            .order_by(VertexBuildTable.timestamp.desc(), VertexBuildTable.build_id.desc())
+            .order_by(col(VertexBuildTable.timestamp).desc(), col(VertexBuildTable.build_id).desc())
             .limit(max_per_vertex)
         )
         delete_vertex_older = delete(VertexBuildTable).where(
             VertexBuildTable.flow_id == vertex_build.flow_id,
             VertexBuildTable.id == vertex_build.id,
-            VertexBuildTable.build_id.not_in(keep_vertex_subq),
+            col(VertexBuildTable.build_id).not_in(keep_vertex_subq),
         )
-        await db.execute(delete_vertex_older)
+        await db.exec(delete_vertex_older)
 
         # 3) Delete older builds globally, keeping newest max_global
         keep_global_subq = (
             select(VertexBuildTable.build_id)
-            .order_by(VertexBuildTable.timestamp.desc(), VertexBuildTable.build_id.desc())
+            .order_by(col(VertexBuildTable.timestamp).desc(), col(VertexBuildTable.build_id).desc())
             .limit(max_global)
         )
-        delete_global_older = delete(VertexBuildTable).where(VertexBuildTable.build_id.not_in(keep_global_subq))
-        await db.execute(delete_global_older)
+        delete_global_older = delete(VertexBuildTable).where(col(VertexBuildTable.build_id).not_in(keep_global_subq))
+        await db.exec(delete_global_older)
 
         # 4) Commit transaction
         await db.commit()

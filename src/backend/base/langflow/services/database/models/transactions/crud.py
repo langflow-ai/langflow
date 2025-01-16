@@ -52,10 +52,10 @@ async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> Tra
         # Delete older entries in a single transaction
         delete_older = delete(TransactionTable).where(
             TransactionTable.flow_id == transaction.flow_id,
-            TransactionTable.id.in_(
+            col(TransactionTable.id).in_(
                 select(TransactionTable.id)
                 .where(TransactionTable.flow_id == transaction.flow_id)
-                .order_by(TransactionTable.timestamp.desc())
+                .order_by(col(TransactionTable.timestamp).desc())
                 .offset(max_entries - 1)  # Keep newest max_entries-1 plus the one we're adding
             ),
         )
