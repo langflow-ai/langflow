@@ -1746,3 +1746,11 @@ export function someFlowTemplateFields(
 export function checkHasToolMode(template: APITemplateType) {
   return template && Object.values(template).some((field) => field.tool_mode);
 }
+
+export function buildPositionDictionary(nodes: AllNodeType[]) {
+  const positionDictionary = {};
+  nodes.forEach((node) => {
+    positionDictionary[node.position.x] = node.position.y;
+  });
+  return positionDictionary;
+}

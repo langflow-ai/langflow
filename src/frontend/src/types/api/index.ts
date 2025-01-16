@@ -104,16 +104,6 @@ export type OutputFieldType = {
   hidden?: boolean;
   proxy?: OutputFieldProxyType;
 };
-export type sendAllProps = {
-  nodes: Node[];
-  edges: Edge[];
-  name: string;
-  description: string;
-  viewport: Viewport;
-  inputs: { text?: string };
-  chatKey: string;
-  chatHistory: { message: string | object; isSend: boolean }[];
-};
 export type errorsTypeAPI = {
   function: { errors: Array<string> };
   imports: { errors: Array<string> };
@@ -311,7 +301,10 @@ export type FieldParserType =
   | "pascal_case"
   | "kebab_case"
   | "lowercase"
-  | "uppercase";
+  | "uppercase"
+  | "no_blank"
+  | "valid_csv"
+  | "commands";
 
 export type TableOptionsTypeAPI = {
   block_add?: boolean;
@@ -326,4 +319,5 @@ export type TableOptionsTypeAPI = {
     FieldValidatorType | { [key: string]: FieldValidatorType }
   >;
   field_parsers?: Array<FieldParserType | { [key: string]: FieldParserType }>;
+  description?: string;
 };

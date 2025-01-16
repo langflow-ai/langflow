@@ -104,7 +104,7 @@ export const EXPORT_DIALOG_SUBTITLE = "Export flow as JSON file.";
  * @constant
  */
 export const SETTINGS_DIALOG_SUBTITLE =
-  "Customize workspace settings and preferences.";
+  "Customize your flow details and settings.";
 
 /**
  * The base text for subtitle of Flow Logs (Menubar)
@@ -629,7 +629,7 @@ export const TIMEOUT_ERROR_DESCRIPION = "Server is busy.";
 export const SIGN_UP_SUCCESS = "Account created! Await admin activation. ";
 
 export const API_PAGE_PARAGRAPH =
-  "Your secret API keys are listed below. Do not share your API key with others, or expose it in the browser or other client-side code.";
+  "Your secret Langflow API keys are listed below. Do not share your API key with others, or expose it in the browser or other client-side code.";
 
 export const API_PAGE_USER_KEYS =
   "This user does not have any keys assigned at the moment.";
@@ -686,8 +686,8 @@ export const TOOLTIP_OUTDATED_NODE =
 
 export const CHAT_SECOND_INITIAL_TEXT = "to inspect previous messages.";
 
-export const TOOLTIP_OPEN_HIDDEN_OUTPUTS = "Show hidden outputs";
-export const TOOLTIP_HIDDEN_OUTPUTS = "Hide outputs";
+export const TOOLTIP_OPEN_HIDDEN_OUTPUTS = "Expand hidden outputs";
+export const TOOLTIP_HIDDEN_OUTPUTS = "Collapse hidden outputs";
 
 export const ZERO_NOTIFICATIONS = "No new notifications";
 
@@ -830,6 +830,11 @@ export const defaultShortcuts = [
     display_name: "Redo",
     name: "Redo",
     shortcut: "mod+y",
+  },
+  {
+    display_name: "Redo (alternative)",
+    name: "Redo Alt",
+    shortcut: "mod+shift+z",
   },
   {
     display_name: "Group",

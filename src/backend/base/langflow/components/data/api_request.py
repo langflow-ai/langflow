@@ -1,17 +1,16 @@
 import asyncio
 import json
-import mimetypes
 import re
 import tempfile
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
-from zoneinfo import ZoneInfo
 
+import aiofiles
+import aiofiles.os as aiofiles_os
 import httpx
 import validators
-from aiofile import async_open
 
 from langflow.base.curl.parse import parse_context
 from langflow.custom import Component
@@ -177,13 +176,14 @@ class APIRequestComponent(Component):
             )
 
             redirection_history = [
-                {"url": str(redirect.url), "status_code": redirect.status_code} for redirect in response.history
+                {
+                    "url": redirect.headers.get("Location", str(redirect.url)),
+                    "status_code": redirect.status_code,
+                }
+                for redirect in response.history
             ]
 
-            if response.is_redirect:
-                redirection_history.append({"url": str(response.url), "status_code": response.status_code})
-
-            is_binary, file_path = self._response_info(response, with_file_path=save_to_file)
+            is_binary, file_path = await self._response_info(response, with_file_path=save_to_file)
             response_headers = self._headers_to_dict(response.headers)
 
             metadata: dict[str, Any] = {
@@ -194,13 +194,21 @@ class APIRequestComponent(Component):
                 mode = "wb" if is_binary else "w"
                 encoding = response.encoding if mode == "w" else None
                 if file_path:
-                    async with async_open(file_path, mode, encoding=encoding) as f:
-                        await f.write(response.content if is_binary else response.text)
+                    # Ensure parent directory exists
+                    await aiofiles_os.makedirs(file_path.parent, exist_ok=True)
+                    if is_binary:
+                        async with aiofiles.open(file_path, "wb") as f:
+                            await f.write(response.content)
+                            await f.flush()
+                    else:
+                        async with aiofiles.open(file_path, "w", encoding=encoding) as f:
+                            await f.write(response.text)
+                            await f.flush()
+                    metadata["file_path"] = str(file_path)
 
                 if include_httpx_metadata:
                     metadata.update(
                         {
-                            "file_path": str(file_path),
                             "headers": headers,
                             "status_code": response.status_code,
                             "response_headers": response_headers,
@@ -314,7 +322,9 @@ class APIRequestComponent(Component):
         self.status = results
         return results
 
-    def _response_info(self, response: httpx.Response, *, with_file_path: bool = False) -> tuple[bool, Path | None]:
+    async def _response_info(
+        self, response: httpx.Response, *, with_file_path: bool = False
+    ) -> tuple[bool, Path | None]:
         """Determine the file path and whether the response content is binary.
 
         Args:
@@ -334,43 +344,50 @@ class APIRequestComponent(Component):
 
         # Step 1: Set up a subdirectory for the component in the OS temp directory
         component_temp_dir = Path(tempfile.gettempdir()) / self.__class__.__name__
-        component_temp_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create directory asynchronously
+        await aiofiles_os.makedirs(component_temp_dir, exist_ok=True)
 
         # Step 2: Extract filename from Content-Disposition
         filename = None
         if "Content-Disposition" in response.headers:
             content_disposition = response.headers["Content-Disposition"]
             filename_match = re.search(r'filename="(.+?)"', content_disposition)
-            if not filename_match:  # Try to match RFC 5987 style
-                filename_match = re.search(r"filename\*=(?:UTF-8'')?(.+)", content_disposition)
             if filename_match:
                 extracted_filename = filename_match.group(1)
-                # Ensure the filename is unique
-                if (component_temp_dir / extracted_filename).exists():
-                    timestamp = datetime.now(ZoneInfo("UTC")).strftime("%Y%m%d%H%M%S%f")
-                    filename = f"{timestamp}-{extracted_filename}"
-                else:
-                    filename = extracted_filename
+                filename = extracted_filename
 
         # Step 3: Infer file extension or use part of the request URL if no filename
         if not filename:
             # Extract the last segment of the URL path
-            url_path = urlparse(str(response.request.url)).path
+            url_path = urlparse(str(response.request.url) if response.request else "").path
             base_name = Path(url_path).name  # Get the last segment of the path
             if not base_name:  # If the path ends with a slash or is empty
                 base_name = "response"
 
             # Infer file extension
-            extension = mimetypes.guess_extension(content_type.split(";")[0]) if content_type else None
-            if not extension:
-                extension = ".bin" if is_binary else ".txt"  # Default extensions
-
-            # Combine the base name with timestamp and extension
-            timestamp = datetime.now(ZoneInfo("UTC")).strftime("%Y%m%d%H%M%S%f")
-            filename = f"{timestamp}-{base_name}{extension}"
+            content_type_to_extension = {
+                "text/plain": ".txt",
+                "application/json": ".json",
+                "image/jpeg": ".jpg",
+                "image/png": ".png",
+                "application/octet-stream": ".bin",
+            }
+            extension = content_type_to_extension.get(content_type, ".bin" if is_binary else ".txt")
+            filename = f"{base_name}{extension}"
 
         # Step 4: Define the full file path
         file_path = component_temp_dir / filename
+
+        # Step 5: Check if file exists asynchronously and handle accordingly
+        try:
+            # Try to create the file exclusively (x mode) to check existence
+            async with aiofiles.open(file_path, "x") as _:
+                pass  # File created successfully, we can use this path
+        except FileExistsError:
+            # If file exists, append a timestamp to the filename
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+            file_path = component_temp_dir / f"{timestamp}-{filename}"
 
         return is_binary, file_path
 
