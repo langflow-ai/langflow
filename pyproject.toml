@@ -154,7 +154,7 @@ dev-dependencies = [
     "types-redis>=4.6.0.5",
     "ipykernel>=6.29.0",
     "mypy>=1.11.0",
-    "ruff>=0.8.4,<0.9.0",
+    "ruff>=0.9.1,<0.10",
     "httpx>=0.27.0",
     "pytest>=8.2.0",
     "types-requests>=2.32.0",
@@ -186,6 +186,7 @@ dev-dependencies = [
     "blockbuster>=1.5.8,<1.6",
     "types-aiofiles>=24.1.0.20240626",
     "codeflash>=0.8.4",
+    "hypothesis>=6.123.17",
 ]
 
 
