@@ -47,7 +47,7 @@ jobs:
         with:
           timeout_minutes: 12
           max_attempts: 2
-          command: uv run pytest src/backend/tests --durations-path src/backend/tests/.test_durations --splitting-algorithm least_duration --store-durations
+          command: uv run pytest src/backend/tests/unit --durations-path src/backend/tests/.test_durations --splitting-algorithm least_duration --store-durations
       - name: Minimize uv cache
         run: uv cache prune --ci
 
