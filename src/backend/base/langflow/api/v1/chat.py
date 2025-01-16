@@ -174,6 +174,7 @@ async def build_flow(
                     if not flow or not flow.data:
                         msg = "Invalid flow ID"
                         raise ValueError(msg)
+
                     flow_data = flow.data
                     flow_name = flow.name
                     user_id = str(flow.user_id)
@@ -183,6 +184,12 @@ async def build_flow(
                     flow_data = data.model_dump()
                     user_id = str(current_user.id)
 
+            if not flow:
+                msg = "Flow not found"
+                raise ValueError(msg)
+            if not flow_data:
+                msg = "Flow data is empty"
+                raise ValueError(msg)
             # Build graph outside session scope
             graph = await build_graph_from_data(
                 flow_id=flow_id_str,
