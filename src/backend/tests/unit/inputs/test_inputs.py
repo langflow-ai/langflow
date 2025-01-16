@@ -17,9 +17,9 @@ from langflow.inputs.inputs import (
     NestedDictInput,
     PromptInput,
     SecretStrInput,
+    SliderInput,
     StrInput,
     TableInput,
-    SliderInput
 )
 from langflow.inputs.utils import instantiate_input
 from langflow.schema.message import Message
