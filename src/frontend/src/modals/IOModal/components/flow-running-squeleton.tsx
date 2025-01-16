@@ -1,5 +1,5 @@
 import { TextShimmer } from "@/components/ui/TextShimmer";
-import LogoIcon from "./chatView/chatMessage/components/chat-logo-icon";
+import LogoIcon from "../../../components/core/lfIcon/chat-logo-icon";
 
 export default function FlowRunningSqueleton() {
   return (
