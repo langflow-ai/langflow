@@ -4,6 +4,14 @@ interface PlaygroundStore {
   lockChat: boolean;
   setLockChat: (lock: boolean) => void;
   onLockChange?: (lock: boolean) => void;
+  onMessageUpdate?: (message: string) => void;
+  onMessageUpdateError?: (error: string) => void;
+  onMessageDelete?: (message: string) => void;
+  onMessageDeleteError?: (error: string) => void;
+  setOnMessageUpdate: (callback: (message: string) => void) => void;
+  setOnMessageUpdateError: (callback: (error: string) => void) => void;
+  setOnMessageDelete: (callback: (message: string) => void) => void;
+  setOnMessageDeleteError: (callback: (error: string) => void) => void;
   chatValueStore: string;
   setChatValueStore: (value: string) => void;
   currentFlowId: string;
@@ -31,6 +39,10 @@ interface PlaygroundStore {
 export const usePlaygroundStore = create<PlaygroundStore>((set) => ({
   lockChat: false,
   onLockChange: undefined,
+  onMessageUpdate: undefined,
+  onMessageUpdateError: undefined,
+  onMessageDelete: undefined,
+  onMessageDeleteError: undefined,
   chatValueStore: "",
   currentFlowId: "",
   setLockChat: (lock) => {
@@ -41,6 +53,10 @@ export const usePlaygroundStore = create<PlaygroundStore>((set) => ({
       return { lockChat: lock };
     });
   },
+  setOnMessageUpdate: (callback) => set({ onMessageUpdate: callback }),
+  setOnMessageUpdateError: (callback) => set({ onMessageUpdateError: callback }),
+  setOnMessageDelete: (callback) => set({ onMessageDelete: callback }),
+  setOnMessageDeleteError: (callback) => set({ onMessageDeleteError: callback }),
   setChatValueStore: (value: string) => set({ chatValueStore: value }),
   setCurrentFlowId: (id) => set({ currentFlowId: id }),
   buildFlow: async ({
