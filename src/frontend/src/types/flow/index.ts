@@ -104,6 +104,7 @@ export type targetHandleType = {
   output_types?: string[];
   type: string;
   fieldName: string;
+  name?: string;
   id: string;
   proxy?: { field: string; id: string };
 };
