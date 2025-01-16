@@ -48,7 +48,7 @@ from langflow.services.deps import get_chat_service, get_session, get_telemetry_
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
 if TYPE_CHECKING:
-    from langflow.graph.vertex.types import InterfaceVertex
+    from langflow.graph.vertex.vertex_types import InterfaceVertex
 
 router = APIRouter(tags=["Chat"])
 
