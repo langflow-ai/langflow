@@ -10,64 +10,11 @@ from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInpu
 
 
 class ChatOllamaComponent(LCModelComponent):
+    HTTP_STATUS_OK = 200
     display_name = "Ollama"
     description = "Generate text using Ollama Local LLMs."
     icon = "Ollama"
     name = "OllamaModel"
-
-    async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
-        if field_name == "mirostat":
-            if field_value == "Disabled":
-                build_config["mirostat_eta"]["advanced"] = True
-                build_config["mirostat_tau"]["advanced"] = True
-                build_config["mirostat_eta"]["value"] = None
-                build_config["mirostat_tau"]["value"] = None
-
-            else:
-                build_config["mirostat_eta"]["advanced"] = False
-                build_config["mirostat_tau"]["advanced"] = False
-
-                if field_value == "Mirostat 2.0":
-                    build_config["mirostat_eta"]["value"] = 0.2
-                    build_config["mirostat_tau"]["value"] = 10
-                else:
-                    build_config["mirostat_eta"]["value"] = 0.1
-                    build_config["mirostat_tau"]["value"] = 5
-
-        if field_name == "model_name":
-            base_url_dict = build_config.get("base_url", {})
-            base_url_load_from_db = base_url_dict.get("load_from_db", False)
-            base_url_value = base_url_dict.get("value")
-            if base_url_load_from_db:
-                base_url_value = await self.get_variables(base_url_value, field_name)
-            elif not base_url_value:
-                base_url_value = "http://localhost:11434"
-            build_config["model_name"]["options"] = await self.get_model(base_url_value)
-        if field_name == "keep_alive_flag":
-            if field_value == "Keep":
-                build_config["keep_alive"]["value"] = "-1"
-                build_config["keep_alive"]["advanced"] = True
-            elif field_value == "Immediately":
-                build_config["keep_alive"]["value"] = "0"
-                build_config["keep_alive"]["advanced"] = True
-            else:
-                build_config["keep_alive"]["advanced"] = False
-
-        return build_config
-
-    @staticmethod
-    async def get_model(base_url_value: str) -> list[str]:
-        try:
-            url = urljoin(base_url_value, "/api/tags")
-            async with httpx.AsyncClient() as client:
-                response = await client.get(url)
-                response.raise_for_status()
-                data = response.json()
-
-                return [model["name"] for model in data.get("models", [])]
-        except Exception as e:
-            msg = "Could not retrieve models. Please, make sure Ollama is running."
-            raise ValueError(msg) from e
 
     inputs = [
         StrInput(
@@ -219,3 +166,79 @@ class ChatOllamaComponent(LCModelComponent):
             raise ValueError(msg) from e
 
         return output
+
+
+    def is_valid_ollama_url(self, url: str) -> bool:
+        try:
+            with httpx.Client() as client:
+                return client.get(f"{url}/api/tags").status_code == self.HTTP_STATUS_OK
+        except httpx.RequestError:
+            return False
+
+    async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
+        if field_name == "mirostat":
+            if field_value == "Disabled":
+                build_config["mirostat_eta"]["advanced"] = True
+                build_config["mirostat_tau"]["advanced"] = True
+                build_config["mirostat_eta"]["value"] = None
+                build_config["mirostat_tau"]["value"] = None
+
+            else:
+                build_config["mirostat_eta"]["advanced"] = False
+                build_config["mirostat_tau"]["advanced"] = False
+
+                if field_value == "Mirostat 2.0":
+                    build_config["mirostat_eta"]["value"] = 0.2
+                    build_config["mirostat_tau"]["value"] = 10
+                else:
+                    build_config["mirostat_eta"]["value"] = 0.1
+                    build_config["mirostat_tau"]["value"] = 5
+
+        if field_name == "model_name":
+            base_url_dict = build_config.get("base_url", {})
+            base_url_load_from_db = base_url_dict.get("load_from_db", False)
+            base_url_value = base_url_dict.get("value")
+            if base_url_load_from_db:
+                base_url_value = await self.get_variables(base_url_value, field_name)
+            elif not base_url_value:
+                base_url_value = "http://localhost:11434"
+            build_config["model_name"]["options"] = await self.get_model(base_url_value)
+        if field_name == "base_url" and field_value:
+            if len(field_value) > 0 and not self.is_valid_ollama_url(field_value):
+                URL_LIST = ["http://localhost:11434", "http://host.docker.internal:11434", "http://127.0.0.1:11434", "http://0.0.0.0:11434"]
+                # check if the url is valid
+                valid_url = None
+                for url in URL_LIST:
+                    if self.is_valid_ollama_url(url):
+                        valid_url = url
+                        break
+                if valid_url:
+                    build_config["base_url"]["value"] = valid_url
+                else:
+                    build_config["base_url"]["value"] = ""
+
+        if field_name == "keep_alive_flag":
+            if field_value == "Keep":
+                build_config["keep_alive"]["value"] = "-1"
+                build_config["keep_alive"]["advanced"] = True
+            elif field_value == "Immediately":
+                build_config["keep_alive"]["value"] = "0"
+                build_config["keep_alive"]["advanced"] = True
+            else:
+                build_config["keep_alive"]["advanced"] = False
+
+        return build_config
+
+    @staticmethod
+    async def get_model(base_url_value: str) -> list[str]:
+        try:
+            url = urljoin(base_url_value, "/api/tags")
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url)
+                response.raise_for_status()
+                data = response.json()
+
+                return [model["name"] for model in data.get("models", [])]
+        except Exception as e:
+            msg = "Could not retrieve models. Please, make sure Ollama is running."
+            raise ValueError(msg) from e
