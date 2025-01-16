@@ -395,7 +395,7 @@ class Vertex:
                         params[field_name] = int(val)
                     except ValueError:
                         params[field_name] = val
-                elif field.get("type") == "float" and val is not None:
+                elif field.get("type") in {"float", "slider"} and val is not None:
                     try:
                         params[field_name] = float(val)
                     except ValueError:
