@@ -37,8 +37,7 @@ class NVIDIAModelComponent(LCModelComponent):
             name="tool_model_enabled",
             display_name="Enable Tool Models",
             info=(
-                "Select if you want to use models that can work with tools. "
-                "If yes, only those models will be shown."
+                "Select if you want to use models that can work with tools. If yes, only those models will be shown."
             ),
             advanced=False,
             value=True,
