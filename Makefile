@@ -72,10 +72,17 @@ install_frontend: ## install the frontend dependencies
 	@cd src/frontend && npm install > /dev/null 2>&1
 
 build_frontend: ## build the frontend static files
-	@echo 'Building frontend static files'
-	@cd src/frontend && CI='' npm run build > /dev/null 2>&1
+	@echo '==== Starting frontend build ===='
+	@echo 'Current directory: $$(pwd)'
+	@echo 'Checking if src/frontend exists...'
+	@ls -la src/frontend || true
+	@echo 'Building frontend static files...'
+	@cd src/frontend && CI='' npm run build 2>&1 || { echo "\nBuild failed! Error output above ☝️"; exit 1; }
+	@echo 'Clearing destination directory...'
 	$(call CLEAR_DIRS,src/backend/base/langflow/frontend)
+	@echo 'Copying build files...'
 	@cp -r src/frontend/build/. src/backend/base/langflow/frontend
+	@echo '==== Frontend build complete ===='
 
 init: check_tools clean_python_cache clean_npm_cache ## initialize the project
 	@make install_backend
@@ -146,7 +153,11 @@ unit_tests: ## run unit tests
 	if [ "$(ff)" = "true" ]; then \
 		EXTRA_ARGS="$$EXTRA_ARGS --ff"; \
 	fi; \
-	uv run pytest src/backend/tests --ignore=src/backend/tests/integration $$EXTRA_ARGS --instafail -ra -m 'not api_key_required' --durations-path src/backend/tests/.test_durations --splitting-algorithm least_duration $(args)
+	uv run pytest src/backend/tests/unit \
+	--ignore=src/backend/tests/integration $$EXTRA_ARGS \
+	--instafail -ra -m 'not api_key_required' \
+	--durations-path src/backend/tests/.test_durations \
+	--splitting-algorithm least_duration $(args)
 
 unit_tests_looponfail:
 	@make unit_tests args="-f"

@@ -48,11 +48,11 @@ const HiddenOutputsButton = memo(
   }) => (
     <Button
       unstyled
-      className="group flex h-6 w-6 items-center justify-center rounded-full border bg-background hover:border-foreground hover:text-foreground"
+      className="group flex h-[1.75rem] w-[1.75rem] items-center justify-center rounded-full border bg-muted hover:text-foreground"
       onClick={onClick}
     >
       <ForwardedIconComponent
-        name={showHiddenOutputs ? "EyeOff" : "Eye"}
+        name={showHiddenOutputs ? "ChevronsDownUp" : "ChevronsUpDown"}
         strokeWidth={1.5}
         className="h-4 w-4 text-placeholder-foreground group-hover:text-foreground"
       />
@@ -181,8 +181,10 @@ function GenericNode({
     () =>
       data.node?.outputs?.some(
         (output) => output.name === "component_as_tool",
-      ) ?? false,
-    [data.node?.outputs],
+      ) ??
+      data.node?.tool_mode ??
+      false,
+    [data.node?.outputs, data.node?.tool_mode],
   );
 
   const hasToolMode = useMemo(
@@ -412,7 +414,7 @@ function GenericNode({
               {renderNodeIcon()}
               <div className="generic-node-tooltip-div">{renderNodeName()}</div>
             </div>
-            <div>
+            <div data-testid={`${showNode ? "show" : "hide"}-node-content`}>
               {!showNode && (
                 <>
                   {renderInputParameters()}
@@ -453,13 +455,13 @@ function GenericNode({
                 <ShadTooltip
                   content={
                     showHiddenOutputs
-                      ? TOOLTIP_HIDDEN_OUTPUTS
-                      : TOOLTIP_OPEN_HIDDEN_OUTPUTS
+                      ? `${TOOLTIP_HIDDEN_OUTPUTS} (${hiddenOutputs?.length})`
+                      : `${TOOLTIP_OPEN_HIDDEN_OUTPUTS} (${hiddenOutputs?.length})`
                   }
                 >
                   <div
                     className={cn(
-                      "absolute left-0 right-0 flex justify-center",
+                      "absolute left-1/2 flex -translate-x-1/2 justify-center",
                       (shownOutputs && shownOutputs.length > 0) ||
                         showHiddenOutputs
                         ? "bottom-[-0.8rem]"

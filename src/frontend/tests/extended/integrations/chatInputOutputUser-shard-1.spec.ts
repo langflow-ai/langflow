@@ -34,11 +34,11 @@ test(
       timeout: 15000,
     });
 
-    await page.waitForSelector('[data-testid="icon-ScanEye"]', {
+    await page.waitForSelector('[data-testid="icon-TextSearchIcon"]', {
       timeout: 30000,
     });
 
-    await page.getByTestId("icon-ScanEye").nth(4).click();
+    await page.getByTestId("icon-TextSearchIcon").nth(4).click();
 
     await page.getByText("Sender", { exact: true }).isVisible();
     await page.getByText("Type", { exact: true }).isVisible();
