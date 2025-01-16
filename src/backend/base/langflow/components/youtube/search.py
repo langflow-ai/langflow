@@ -1,117 +1,119 @@
+from contextlib import contextmanager
+
 import pandas as pd
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from langflow.custom import Component
-from langflow.inputs import IntInput, MessageTextInput, SecretStrInput
+from langflow.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput
 from langflow.schema import DataFrame
 from langflow.template import Output
 
 
 class YouTubeSearchComponent(Component):
-    """A component that searches YouTube and returns a list of video data."""
+    """A component that searches YouTube videos."""
 
     display_name: str = "YouTube Search"
-    description: str = "Searches YouTube and returns a list of video data based on a query."
+    description: str = "Searches YouTube videos based on query."
     icon: str = "YouTube"
 
     inputs = [
         MessageTextInput(
             name="query",
             display_name="Search Query",
-            info="Enter the search query for YouTube videos.",
+            info="The search query to look for on YouTube.",
             tool_mode=True,
-        ),
-        IntInput(
-            name="max_results",
-            display_name="Max Results",
-            value=5,
-            info="The maximum number of video results to return.",
         ),
         SecretStrInput(
             name="api_key",
             display_name="YouTube API Key",
             info="Your YouTube Data API key.",
+            required=True,
+        ),
+        IntInput(
+            name="max_results",
+            display_name="Max Results",
+            value=10,
+            info="The maximum number of results to return.",
+        ),
+        DropdownInput(
+            name="order",
+            display_name="Sort Order",
+            options=["relevance", "date", "rating", "title", "viewCount"],
+            value="relevance",
+            info="Sort order for the search results.",
+        ),
+        BoolInput(
+            name="include_metadata",
+            display_name="Include Metadata",
+            value=True,
+            info="Include video metadata like description and statistics.",
+            advanced=True,
         ),
     ]
 
     outputs = [
-        Output(name="video_data", display_name="Video Data", method="search_youtube"),
+        Output(name="results", display_name="Search Results", method="search_videos"),
     ]
 
-    def search_youtube(self) -> DataFrame:
-        """Searches YouTube and returns video data as a DataFrame."""
+    @contextmanager
+    def youtube_client(self):
+        """Context manager for YouTube API client."""
+        client = build("youtube", "v3", developerKey=self.api_key)
         try:
-            # Initialize YouTube API client
-            youtube = build("youtube", "v3", developerKey=self.api_key)
+            yield client
+        finally:
+            client.close()
 
-            # Perform initial search
-            search_response = (
-                youtube.search()
-                .list(q=self.query, type="video", part="id,snippet", maxResults=self.max_results)
-                .execute()
-            )
+    def search_videos(self) -> DataFrame:
+        """Searches YouTube videos and returns results as DataFrame."""
+        try:
+            with self.youtube_client() as youtube:
+                search_response = (
+                    youtube.search()
+                    .list(
+                        q=self.query,
+                        part="id,snippet",
+                        maxResults=self.max_results,
+                        order=self.order,
+                        type="video",
+                    )
+                    .execute()
+                )
 
-            # Prepare data for DataFrame
-            video_data_list = []
-            for search_result in search_response.get("items", []):
-                video_id = search_result["id"]["videoId"]
-                snippet = search_result["snippet"]
+                results = []
+                for search_result in search_response.get("items", []):
+                    video_id = search_result["id"]["videoId"]
+                    snippet = search_result["snippet"]
 
-                video_data = {
-                    "video_id": video_id,
-                    "url": f"https://www.youtube.com/watch?v={video_id}",
-                    "title": snippet["title"],
-                    "description": snippet["description"],
-                    "channel_id": snippet["channelId"],
-                    "channel_title": snippet["channelTitle"],
-                    "published_at": snippet["publishedAt"],
-                    "search_query": self.query,
-                }
+                    result = {
+                        "video_id": video_id,
+                        "title": snippet["title"],
+                        "description": snippet["description"],
+                        "published_at": snippet["publishedAt"],
+                        "channel_title": snippet["channelTitle"],
+                        "thumbnail_url": snippet["thumbnails"]["default"]["url"],
+                    }
 
-                # Add thumbnails
-                thumbnails = snippet["thumbnails"]
-                for size, thumb in thumbnails.items():
-                    video_data[f"thumbnail_{size}_url"] = thumb["url"]
-                    video_data[f"thumbnail_{size}_width"] = thumb.get("width", 0)
-                    video_data[f"thumbnail_{size}_height"] = thumb.get("height", 0)
+                    if self.include_metadata:
+                        # Get video details for additional metadata
+                        video_response = youtube.videos().list(part="statistics,contentDetails", id=video_id).execute()
 
-                video_data_list.append(video_data)
+                        if video_response.get("items"):
+                            video_details = video_response["items"][0]
+                            result.update(
+                                {
+                                    "view_count": int(video_details["statistics"]["viewCount"]),
+                                    "like_count": int(video_details["statistics"].get("likeCount", 0)),
+                                    "comment_count": int(video_details["statistics"].get("commentCount", 0)),
+                                    "duration": video_details["contentDetails"]["duration"],
+                                }
+                            )
 
-            if not video_data_list:
-                return DataFrame(pd.DataFrame({"error": ["No results found"]}))
+                    results.append(result)
 
-            # Create DataFrame
-            video_df = pd.DataFrame(video_data_list)
-
-            # Organize columns in logical groups
-            base_cols = [
-                "video_id",
-                "title",
-                "url",
-                "channel_id",
-                "channel_title",
-                "published_at",
-                "search_query",
-                "description",
-            ]
-
-            thumb_cols = sorted([col for col in video_df.columns if col.startswith("thumbnail_")])
-
-            # Get remaining columns that don't fit in any category
-            all_defined_cols = base_cols + thumb_cols
-            other_cols = [col for col in video_df.columns if col not in all_defined_cols]
-
-            # Combine all columns in desired order
-            ordered_cols = base_cols + thumb_cols + other_cols
-
-            # Reorder DataFrame columns
-            video_df = video_df[ordered_cols]
-
-            return DataFrame(video_df)
+                return DataFrame(pd.DataFrame(results))
 
         except HttpError as e:
-            return DataFrame(pd.DataFrame({"error": [f"An HTTP error occurred: {e!s}"]}))
-
-        except (KeyError, pd.errors.EmptyDataError) as e:
-            return DataFrame(pd.DataFrame({"error": [f"An unexpected error occurred: {e!s}"]}))
+            error_message = f"YouTube API error: {e!s}"
+            return DataFrame(pd.DataFrame({"error": [error_message]}))

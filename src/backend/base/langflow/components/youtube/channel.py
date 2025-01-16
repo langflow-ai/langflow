@@ -11,14 +11,6 @@ from langflow.schema import DataFrame
 from langflow.template import Output
 
 
-class YouTubeError(Exception):
-    """Base exception class for YouTube-related errors."""
-
-
-class YouTubeAPIError(YouTubeError):
-    """Exception raised for YouTube API-related errors."""
-
-
 class YouTubeChannelComponent(Component):
     """A component that retrieves detailed information about YouTube channels."""
 
@@ -96,6 +88,7 @@ class YouTubeChannelComponent(Component):
 
     def _get_channel_id_by_name(self, channel_name: str, identifier_type: str) -> str:
         """Gets the channel ID using the channel name or custom URL."""
+        youtube = None
         try:
             youtube = build("youtube", "v3", developerKey=self.api_key)
 
@@ -109,14 +102,17 @@ class YouTubeChannelComponent(Component):
                 return response["items"][0]["id"]["channelId"]
 
             error_msg = f"Could not find channel ID for: {channel_name}"
-            raise YouTubeError(error_msg)
+            raise ValueError(error_msg)
 
         except (HttpError, HTTPError) as e:
             error_msg = f"YouTube API error while getting channel ID: {e!s}"
-            raise YouTubeAPIError(error_msg) from e
+            raise RuntimeError(error_msg) from e
         except Exception as e:
             error_msg = f"Unexpected error while getting channel ID: {e!s}"
-            raise YouTubeError(error_msg) from e
+            raise ValueError(error_msg) from e
+        finally:
+            if youtube:
+                youtube.close()
 
     def _get_channel_playlists(self, youtube: Any, channel_id: str) -> list[dict[str, Any]]:
         """Gets the public playlists for a channel."""
@@ -148,6 +144,7 @@ class YouTubeChannelComponent(Component):
 
     def get_channel_info(self) -> DataFrame:
         """Retrieves channel information and returns it as a DataFrame."""
+        youtube = None
         try:
             # Get channel ID and initialize YouTube API client
             channel_id = self._extract_channel_id(self.channel_url)
@@ -224,3 +221,6 @@ class YouTubeChannelComponent(Component):
 
         except (HttpError, HTTPError, Exception) as e:
             return DataFrame(pd.DataFrame({"error": [str(e)]}))
+        finally:
+            if youtube:
+                youtube.close()
