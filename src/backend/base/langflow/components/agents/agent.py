@@ -3,7 +3,7 @@ from langchain_core.tools import StructuredTool
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.base.models.model_input_constants import (
     ALL_PROVIDER_FIELDS,
-    MODEL_DYANMIC_UPDATE_FIELDS,
+    MODEL_DYNAMIC_UPDATE_FIELDS,
     MODEL_PROVIDERS_DICT,
 )
 from langflow.base.models.model_utils import get_model_name
@@ -247,7 +247,7 @@ class AgentComponent(ToolCallingAgentComponent):
         if (
             isinstance(self.agent_llm, str)
             and self.agent_llm in MODEL_PROVIDERS_DICT
-            and field_name in MODEL_DYANMIC_UPDATE_FIELDS
+            and field_name in MODEL_DYNAMIC_UPDATE_FIELDS
         ):
             provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)
             if provider_info:

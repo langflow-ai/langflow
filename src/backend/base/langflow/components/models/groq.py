@@ -1,6 +1,8 @@
 import requests
+from loguru import logger
 from pydantic.v1 import SecretStr
 
+from langflow.base.models.groq_constants import GROQ_MODELS
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
@@ -73,13 +75,17 @@ class GroqModel(LCModelComponent):
     ]
 
     def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:
-        url = f"{self.base_url}/openai/v1/models"
-        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+        try:
+            url = f"{self.base_url}/openai/v1/models"
+            headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
 
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
-        model_list = response.json()
-        model_ids = [model["id"] for model in model_list.get("data", [])]
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+            model_list = response.json()
+            model_ids = [model["id"] for model in model_list.get("data", [])]
+        except Exception as e:
+            logger.exception(f"Error getting model names: {e}")
+            model_ids = GROQ_MODELS
         if tool_model_enabled:
             try:
                 from langchain_groq import ChatGroq
@@ -101,7 +107,11 @@ class GroqModel(LCModelComponent):
         if field_name in ("base_url", "model_name", "tool_model_enabled", "api_key") and field_value:
             try:
                 if len(self.api_key) != 0:
-                    ids = self.get_models(tool_model_enabled=self.tool_model_enabled)
+                    try:
+                        ids = self.get_models(tool_model_enabled=self.tool_model_enabled)
+                    except (ImportError, ValueError, requests.exceptions.RequestException) as e:
+                        logger.exception(f"Error getting model names: {e}")
+                        ids = GROQ_MODELS
                     build_config["model_name"]["options"] = ids
                     build_config["model_name"]["value"] = ids[0]
             except Exception as e:

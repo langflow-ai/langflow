@@ -1,5 +1,10 @@
 from typing import Any
 
+import requests
+
+from loguru import logger
+
+from langflow.base.models.anthropic_constants import ANTHROPIC_MODELS
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
@@ -87,11 +92,15 @@ class AnthropicModelComponent(LCModelComponent):
         return output
 
     def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:
-        import anthropic
+        try:
+            import anthropic
 
-        client = anthropic.Anthropic(api_key=self.api_key)
-        models = client.models.list(limit=20).data
-        model_ids = [model.id for model in models]
+            client = anthropic.Anthropic(api_key=self.api_key)
+            models = client.models.list(limit=20).data
+            model_ids = [model.id for model in models]
+        except Exception as e:
+            logger.exception(f"Error getting model names: {e}")
+            model_ids = ANTHROPIC_MODELS
         if tool_model_enabled:
             try:
                 from langchain_anthropic.chat_models import ChatAnthropic
@@ -131,7 +140,11 @@ class AnthropicModelComponent(LCModelComponent):
         if field_name in ("base_url", "model_name", "tool_model_enabled", "api_key") and field_value:
             try:
                 if len(self.api_key) != 0:
-                    ids = self.get_models(tool_model_enabled=self.tool_model_enabled)
+                    try:
+                        ids = self.get_models(tool_model_enabled=self.tool_model_enabled)
+                    except (ImportError, ValueError, requests.exceptions.RequestException) as e:
+                        logger.exception(f"Error getting model names: {e}")
+                        ids = ANTHROPIC_MODELS
                     build_config["model_name"]["options"] = ids
                     build_config["model_name"]["value"] = ids[0]
             except Exception as e:
