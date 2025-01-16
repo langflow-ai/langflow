@@ -3,6 +3,7 @@ import json
 import warnings
 from abc import abstractmethod
 
+from langchain_core.language_models import BaseChatModel
 from langchain_core.language_models.llms import LLM
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.output_parsers import BaseOutputParser
@@ -45,7 +46,8 @@ class LCModelComponent(Component):
 
     def supports_tool_calling(self, model: LanguageModel) -> bool:
         try:
-            if not hasattr(model, "bind_tools"):
+            # Check if the bind_tools method is the same as the base class's method
+            if model.bind_tools is BaseChatModel.bind_tools:
                 return False
 
             def test_tool(x: int) -> int:
