@@ -18,11 +18,13 @@ class AssemblyAILeMUR(Component):
             display_name="Assembly API Key",
             info="Your AssemblyAI API key. You can get one from https://www.assemblyai.com/",
             advanced=False,
+            required=True,
         ),
         DataInput(
             name="transcription_result",
             display_name="Transcription Result",
             info="The transcription result from AssemblyAI",
+            required=True,
         ),
         MultilineInput(
             name="prompt",
