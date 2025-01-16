@@ -1616,9 +1616,7 @@
             "icon": "bot",
             "legacy": false,
             "metadata": {},
-            "output_types": [
-              "agent"
-            ],
+            "output_types": [],
             "outputs": [
               {
                 "cache": true,
