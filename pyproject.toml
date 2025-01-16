@@ -187,6 +187,7 @@ dev-dependencies = [
     "blockbuster>=1.5.8,<1.6",
     "types-aiofiles>=24.1.0.20240626",
     "codeflash>=0.8.4",
+    "hypothesis>=6.123.17",
 ]
 
 
