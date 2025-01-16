@@ -86,6 +86,9 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   const templates = useTypesStore((state) => state.templates);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const setPositionDictionary = useFlowStore(
+    (state) => state.setPositionDictionary,
+  );
 
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const setReactFlowInstance = useFlowStore(
@@ -185,7 +188,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
 
   useEffect(() => {
     useFlowStore.setState({ autoSaveFlow });
-  });
+  }, [autoSaveFlow]);
 
   function handleUndo(e: KeyboardEvent) {
     if (!isWrappedWithClass(e, "noflow")) {
@@ -338,7 +341,15 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     // 👇 make moving the canvas undoable
     autoSaveFlow();
     updateCurrentFlow({ nodes });
-  }, [takeSnapshot, autoSaveFlow, nodes, edges, reactFlowInstance]);
+    setPositionDictionary({});
+  }, [
+    takeSnapshot,
+    autoSaveFlow,
+    nodes,
+    edges,
+    reactFlowInstance,
+    setPositionDictionary,
+  ]);
 
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
     // 👇 make dragging a selection undoable
