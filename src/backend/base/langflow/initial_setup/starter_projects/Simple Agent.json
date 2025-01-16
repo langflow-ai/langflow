@@ -156,7 +156,9 @@
             "legacy": false,
             "lf_version": "1.1.0.dev4",
             "metadata": {},
-            "output_types": [],
+            "output_types": [
+              "agent"
+            ],
             "outputs": [
               {
                 "cache": true,

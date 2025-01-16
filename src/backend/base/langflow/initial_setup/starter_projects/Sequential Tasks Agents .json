@@ -628,7 +628,9 @@
             "legacy": false,
             "lf_version": "1.0.19.post2",
             "metadata": {},
-            "output_types": [],
+            "output_types": [
+              "agent"
+            ],
             "outputs": [
               {
                 "cache": true,
@@ -1204,7 +1206,9 @@
             "legacy": false,
             "lf_version": "1.0.19.post2",
             "metadata": {},
-            "output_types": [],
+            "output_types": [
+              "agent"
+            ],
             "outputs": [
               {
                 "cache": true,
@@ -3093,7 +3097,9 @@
             "legacy": false,
             "lf_version": "1.0.19.post2",
             "metadata": {},
-            "output_types": [],
+            "output_types": [
+              "agent"
+            ],
             "outputs": [
               {
                 "cache": true,
