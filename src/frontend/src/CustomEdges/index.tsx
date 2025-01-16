@@ -24,7 +24,10 @@ export function DefaultEdge({
     (sourceNode?.position.x ?? 0) + (sourceNode?.measured?.width ?? 0);
   const targetXNew = targetNode?.position.x ?? 0;
 
-  const edgePathLoop = `M ${sourceXNew} ${sourceY} C ${sourceXNew + 200} ${sourceY + 200}, ${targetXNew - 200} ${targetY + 200}, ${targetXNew} ${targetY}`;
+  const distance = 200 + 0.1 * (Math.abs(sourceXNew - targetXNew) / 2);
+  const distanceY = 200 + 0.2 * Math.abs(sourceY - targetY);
+
+  const edgePathLoop = `M ${sourceXNew} ${sourceY} C ${sourceXNew + distance} ${sourceY + distanceY}, ${targetXNew - distance} ${targetY + distanceY}, ${targetXNew} ${targetY}`;
 
   const [edgePath] = getBezierPath({
     sourceX: sourceXNew,
