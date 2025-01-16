@@ -125,6 +125,12 @@ For more information, see the [Cohere documentation](https://cohere.ai/).
 | Temperature         | Temperature        | Specifies the sampling temperature. Defaults to `0.75`. |
 | Input Value         | Input Value        | Specifies the input text for text generation.           |
 
+### Outputs
+
+| Name  | Type          | Description                                                      |
+|-------|---------------|------------------------------------------------------------------|
+| model | LanguageModel | An instance of the Cohere model configured with the specified parameters. |
+
 ## Google Generative AI
 
 This component generates text using Google's Generative AI models.
@@ -268,6 +274,12 @@ For more information, see [Ollama documentation](https://ollama.com/).
 | Base URL            | Base URL      | Endpoint of the Ollama API.                 |
 | Model Name          | Model Name    | The model name to use.                     |
 | Temperature         | Temperature   | Controls the creativity of model responses. |
+
+### Outputs
+
+| Name  | Type          | Description                                                      |
+|-------|---------------|------------------------------------------------------------------|
+| model | LanguageModel | An instance of an Ollama model configured with the specified parameters. |
 
 ## OpenAI
 
