@@ -2,7 +2,8 @@ from typing import Any
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.inputs import BoolInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
+from langflow.field_typing.range_spec import RangeSpec
+from langflow.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
 from langflow.schema.dotdict import dotdict
 
 
@@ -23,15 +24,17 @@ class NVIDIAModelComponent(LCModelComponent):
             name="model_name",
             display_name="Model Name",
             advanced=False,
-            options=["mistralai/mixtral-8x7b-instruct-v0.1"],
-            value="mistralai/mixtral-8x7b-instruct-v0.1",
+            options=[],
+            real_time_refresh=True,
+            refresh_button=True,
         ),
-        StrInput(
+        MessageTextInput(
             name="base_url",
             display_name="NVIDIA Base URL",
             value="https://integrate.api.nvidia.com/v1",
             refresh_button=True,
             info="The base URL of the NVIDIA API. Defaults to https://integrate.api.nvidia.com/v1.",
+            real_time_refresh=True,
         ),
         BoolInput(
             name="tool_model_enabled",
@@ -41,15 +44,23 @@ class NVIDIAModelComponent(LCModelComponent):
             ),
             advanced=False,
             value=True,
+            real_time_refresh=True,
         ),
         SecretStrInput(
-            name="nvidia_api_key",
+            name="api_key",
             display_name="NVIDIA API Key",
             info="The NVIDIA API Key.",
             advanced=False,
             value="NVIDIA_API_KEY",
+            real_time_refresh=True,
         ),
-        FloatInput(name="temperature", display_name="Temperature", value=0.1),
+        SliderInput(
+            name="temperature",
+            display_name="Temperature",
+            value=0.1,
+            info="Run inference with this temperature. Must by in the closed interval [0.0, 1.0].",
+            range_spec=RangeSpec(min=0, max=1, step=0.01),
+        ),
         IntInput(
             name="seed",
             display_name="Seed",
@@ -67,7 +78,7 @@ class NVIDIAModelComponent(LCModelComponent):
         return [model.id for model in build_model.available_models]
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
-        if field_name == "base_url" and field_value:
+        if field_name in ("base_url", "model_name", "tool_model_enabled", "api_key") and field_value:
             try:
                 ids = self.get_models(self.tool_model_enabled)
                 build_config["model_name"]["options"] = ids
@@ -83,7 +94,7 @@ class NVIDIAModelComponent(LCModelComponent):
         except ImportError as e:
             msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
             raise ImportError(msg) from e
-        nvidia_api_key = self.nvidia_api_key
+        api_key = self.api_key
         temperature = self.temperature
         model_name: str = self.model_name
         max_tokens = self.max_tokens
@@ -92,7 +103,7 @@ class NVIDIAModelComponent(LCModelComponent):
             max_tokens=max_tokens or None,
             model=model_name,
             base_url=self.base_url,
-            api_key=nvidia_api_key,
+            api_key=api_key,
             temperature=temperature or 0.1,
             seed=seed,
         )

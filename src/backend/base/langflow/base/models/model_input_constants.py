@@ -28,7 +28,7 @@ def process_inputs(component_data):
     if isinstance(component_data, SecretStrInput):
         component_data.value = ""
         component_data.load_from_db = False
-    elif component_data.name == "temperature":
+    elif component_data.name in {"temperature", "tool_model_enabled", "base_url"}:
         component_data = set_advanced_true(component_data)
     return component_data
 
@@ -180,3 +180,11 @@ except ImportError:
 
 MODEL_PROVIDERS = list(MODEL_PROVIDERS_DICT.keys())
 ALL_PROVIDER_FIELDS: list[str] = [field for provider in MODEL_PROVIDERS_DICT.values() for field in provider["fields"]]
+
+MODEL_DYNAMIC_UPDATE_FIELDS = [
+    "api_key",
+    "model",
+    "tool_model_enabled",
+    "base_url",
+    "model_name",
+]
