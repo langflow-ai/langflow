@@ -22,7 +22,7 @@ The [Unstructured.io](https://unstructured.io/) loader component loads files fro
 
 The Confluence component integrates with the Confluence wiki collaboration platform to load and process documents. It utilizes the ConfluenceLoader from LangChain to fetch content from a specified Confluence space.
 
-### Inputs:
+### Inputs
 
 | Name | Display Name | Info |
 | --- | --- | --- |
@@ -34,7 +34,7 @@ The Confluence component integrates with the Confluence wiki collaboration platf
 | content_format | Content Format | Specify content format (default: STORAGE) |
 | max_pages | Max Pages | Maximum number of pages to retrieve (default: 1000) |
 
-### Outputs:
+### Outputs
 
 | Name | Display Name | Info |
 | --- | --- | --- |
@@ -44,7 +44,7 @@ The Confluence component integrates with the Confluence wiki collaboration platf
 
 The GitLoader component uses the GitLoader from LangChain to fetch and load documents from a specified Git repository.
 
-### Inputs:
+### Inputs
 
 | Name | Display Name | Info |
 | --- | --- | --- |
@@ -54,7 +54,7 @@ The GitLoader component uses the GitLoader from LangChain to fetch and load docu
 | file_filter | File Filter | Patterns to filter files (e.g., '.py' to include only .py files, '!.py' to exclude .py files) |
 | content_filter | Content Filter | A regex pattern to filter files based on their content |
 
-### Outputs:
+### Outputs
 
 | Name | Display Name | Info |
 | --- | --- | --- |
@@ -64,7 +64,7 @@ The GitLoader component uses the GitLoader from LangChain to fetch and load docu
 
 This component uses the [Unstructured.io](https://unstructured.io/) Serverless API to load and parse files into a list of structured [Data](/configuration-objects) objects.
 
-### Inputs:
+### Inputs
 
 | Name | Display Name | Info |
 | --- | --- | --- |
@@ -74,7 +74,7 @@ This component uses the [Unstructured.io](https://unstructured.io/) Serverless A
 | chunking_strategy | Chunking Strategy | Strategy for chunking the document (options: "", "basic", "by_title", "by_page", "by_similarity") |
 | unstructured_args | Additional Arguments | Optional dictionary of additional arguments for the Unstructured.io API |
 
-### Outputs:
+### Outputs
 
 | Name | Display Name | Info |
 | --- | --- | --- |
