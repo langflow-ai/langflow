@@ -119,9 +119,7 @@
             "dataType": "File",
             "id": "File-jTMwG",
             "name": "data",
-            "output_types": [
-              "Data"
-            ]
+            "output_types": []
           },
           "targetHandle": {
             "fieldName": "data_inputs",
@@ -134,7 +132,7 @@
         },
         "id": "reactflow__edge-File-jTMwG{œdataTypeœ:œFileœ,œidœ:œFile-jTMwGœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-bByhd{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-bByhdœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "source": "File-jTMwG",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-jTMwGœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-jTMwGœ, œnameœ: œdataœ, œoutput_typesœ: []}",
         "target": "SplitText-bByhd",
         "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-bByhdœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
@@ -2725,13 +2723,34 @@
             "outputs": [
               {
                 "cache": true,
-                "display_name": "Data",
-                "method": "load_files",
-                "name": "data",
-                "required_inputs": [],
-                "selected": "Data",
+                "display_name": "DataFrame",
+                "method": "get_dataframe",
+                "name": "dataframe",
+                "selected": "DataFrame",
                 "types": [
-                  "Data"
+                  "DataFrame"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "cache": true,
+                "display_name": "Raw Text",
+                "method": "get_raw_text",
+                "name": "raw_text",
+                "selected": "Message",
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "cache": true,
+                "display_name": "File Paths",
+                "method": "get_file_paths",
+                "name": "file_paths",
+                "selected": "Message",
+                "types": [
+                  "Message"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -2755,11 +2774,11 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.data import BaseFileComponent\nfrom langflow.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data\nfrom langflow.io import BoolInput, IntInput\nfrom langflow.schema import Data\n\n\nclass FileComponent(BaseFileComponent):\n    \"\"\"Handles loading and processing of individual or zipped text files.\n\n    This component supports processing multiple valid files within a zip archive,\n    resolving paths, validating file types, and optionally using multithreading for processing.\n    \"\"\"\n\n    display_name = \"File\"\n    description = \"Load a file to be used in your project.\"\n    icon = \"file-text\"\n    name = \"File\"\n\n    VALID_EXTENSIONS = TEXT_FILE_TYPES\n\n    inputs = [\n        *BaseFileComponent._base_inputs,\n        BoolInput(\n            name=\"use_multithreading\",\n            display_name=\"[Deprecated] Use Multithreading\",\n            advanced=True,\n            value=True,\n            info=\"Set 'Processing Concurrency' greater than 1 to enable multithreading.\",\n        ),\n        IntInput(\n            name=\"concurrency_multithreading\",\n            display_name=\"Processing Concurrency\",\n            advanced=False,\n            info=\"When multiple files are being processed, the number of files to process concurrently.\",\n            value=1,\n        ),\n    ]\n\n    outputs = [\n        *BaseFileComponent._base_outputs,\n    ]\n\n    def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:\n        \"\"\"Processes files either sequentially or in parallel, depending on concurrency settings.\n\n        Args:\n            file_list (list[BaseFileComponent.BaseFile]): List of files to process.\n\n        Returns:\n            list[BaseFileComponent.BaseFile]: Updated list of files with merged data.\n        \"\"\"\n\n        def process_file(file_path: str, *, silent_errors: bool = False) -> Data | None:\n            \"\"\"Processes a single file and returns its Data object.\"\"\"\n            try:\n                return parse_text_file_to_data(file_path, silent_errors=silent_errors)\n            except FileNotFoundError as e:\n                msg = f\"File not found: {file_path}. Error: {e}\"\n                self.log(msg)\n                if not silent_errors:\n                    raise\n                return None\n            except Exception as e:\n                msg = f\"Unexpected error processing {file_path}: {e}\"\n                self.log(msg)\n                if not silent_errors:\n                    raise\n                return None\n\n        if not file_list:\n            msg = \"No files to process.\"\n            raise ValueError(msg)\n\n        concurrency = 1 if not self.use_multithreading else max(1, self.concurrency_multithreading)\n        file_count = len(file_list)\n\n        parallel_processing_threshold = 2\n        if concurrency < parallel_processing_threshold or file_count < parallel_processing_threshold:\n            if file_count > 1:\n                self.log(f\"Processing {file_count} files sequentially.\")\n            processed_data = [process_file(str(file.path), silent_errors=self.silent_errors) for file in file_list]\n        else:\n            self.log(f\"Starting parallel processing of {file_count} files with concurrency: {concurrency}.\")\n            file_paths = [str(file.path) for file in file_list]\n            processed_data = parallel_load_data(\n                file_paths,\n                silent_errors=self.silent_errors,\n                load_function=process_file,\n                max_concurrency=concurrency,\n            )\n\n        # Use rollup_basefile_data to merge processed data with BaseFile objects\n        return self.rollup_data(file_list, processed_data)\n"
+                "value": "import io\nimport json\nimport os\nimport tempfile\nimport xml.etree.ElementTree as ET\nfrom pathlib import Path\nfrom typing import Any\nfrom zipfile import ZipFile, is_zipfile\n\nimport pandas as pd\nfrom defusedxml import ElementTree\n\nfrom langflow.base.data.utils import TEXT_FILE_TYPES, parse_text_file_to_data\nfrom langflow.custom import Component\nfrom langflow.io import BoolInput, FileInput, IntInput, Output\nfrom langflow.schema import Data, DataFrame\nfrom langflow.schema.message import Message\n\nSUPPORTED_FILE_TYPES = [\n    \"json\",\n    \"csv\",\n    \"yaml\",\n    \"yml\",\n    \"txt\",\n    \"md\",\n    \"mdx\",\n    \"xml\",\n    \"html\",\n    \"htm\",\n    \"pdf\",\n    \"docx\",\n    \"py\",\n    \"sh\",\n    \"sql\",\n    \"js\",\n    \"ts\",\n    \"tsx\",\n    \"zip\",\n]\n\n\nclass FileComponent(Component):\n    display_name = \"File\"\n    description = \"Load and process various file types with support for multiple formats and structured outputs.\"\n    icon = \"file-text\"\n    name = \"File\"\n    VALID_EXTENSIONS = SUPPORTED_FILE_TYPES\n\n    inputs = [\n        FileInput(\n            name=\"path\",\n            display_name=\"File\",\n            file_types=SUPPORTED_FILE_TYPES,\n            required=True,\n        ),\n        BoolInput(\n            name=\"silent_errors\",\n            display_name=\"Silent Errors\",\n            info=\"If true, errors will not raise an exception.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"use_multithreading\",\n            display_name=\"[Deprecated] Use Multithreading\",\n            advanced=True,\n            value=True,\n            info=\"Set 'Processing Concurrency' greater than 1 to enable multithreading.\",\n        ),\n        IntInput(\n            name=\"concurrency_multithreading\",\n            display_name=\"Processing Concurrency\",\n            advanced=True,\n            info=\"When multiple files are being processed, the number of files to process concurrently.\",\n            value=1,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"DataFrame\", name=\"dataframe\", method=\"get_dataframe\"),\n        Output(display_name=\"Raw Text\", name=\"raw_text\", method=\"get_raw_text\"),\n        Output(display_name=\"File Paths\", name=\"file_paths\", method=\"get_file_paths\"),\n    ]\n\n    @staticmethod\n    def resolve_path(path: str) -> str:\n        if not path:\n            return \"\"\n        path_obj = Path(path)\n        if path_obj.is_absolute():\n            return path\n        current_dir = Path.cwd()\n        resolved_path = str(current_dir / path)\n        return Path(resolved_path).resolve().as_posix()\n\n    def _flatten_dict(self, d: dict[str, Any], parent_key: str = \"\", sep: str = \"_\") -> dict[str, Any]:\n        items: list = []\n        for k, v in d.items():\n            new_key = f\"{parent_key}{sep}{k}\" if parent_key else k\n            if isinstance(v, dict):\n                items.extend(self._flatten_dict(v, new_key, sep=sep).items())\n            else:\n                items.append((new_key, v))\n        return dict(items)\n\n    def _normalize_data(self, data: dict[str, Any] | Data) -> dict[str, Any]:\n        if isinstance(data, Data):\n            data = data.data\n\n        if isinstance(data, dict):\n            return self._flatten_dict(data)\n        if isinstance(data, str):\n            return {\"content\": data}\n        return {\"content\": str(data)}\n\n    def _to_dataframe(self, data: Data | list[Data]) -> DataFrame:\n        if isinstance(data, list):\n            normalized_data = [self._normalize_data(d) for d in data]\n            if not normalized_data:\n                return DataFrame(pd.DataFrame())\n\n            df_data = pd.DataFrame(normalized_data)\n\n        elif isinstance(data, Data):\n            normalized_data = self._normalize_data(data)\n            df_data = pd.DataFrame([normalized_data])\n        else:\n            df_data = pd.DataFrame()\n\n        for col in df_data.columns:\n            if df_data[col].apply(lambda x: isinstance(x, dict | list)).any():\n                df_data[col] = df_data[col].apply(json.dumps)\n\n        return DataFrame(df_data)\n\n    def get_dataframe(self) -> DataFrame:\n        self.log(\"Getting DataFrame\")\n        result = self._process_file(structured=True)\n        dataframe = self._to_dataframe(result)\n        self.status = dataframe\n        return dataframe\n\n    def get_raw_text(self) -> Message:\n        self.log(\"Getting Raw Text\")\n        result = self._process_file(structured=False)\n        raw_string = self._to_raw_string(result)\n        self.status = raw_string\n        return Message(text=raw_string)\n\n    def _to_raw_string(self, data: Data | list[Data] | str) -> str:\n        if isinstance(data, str):\n            return data\n        if isinstance(data, Data):\n            if isinstance(data.data, dict):\n                if \"text_content\" in data.data:\n                    return str(data.data[\"text_content\"])\n                if \"zip_contents\" in data.data:\n                    return \"\\n\".join(self._to_raw_string(content) for content in data.data[\"zip_contents\"])\n                return json.dumps(data.data, indent=2)\n            return str(data.data)\n        if isinstance(data, list):\n            return \"\\n\".join(self._to_raw_string(item) for item in data)\n        return str(data)\n\n    def get_file_paths(self) -> Message:\n        path = Path(self.resolve_path(self.path))\n        paths = self._extract_zip_paths(path) if is_zipfile(path) else [str(path)]\n        file_paths_string = \"\\n\".join(paths)\n        self.status = file_paths_string\n        return Message(text=file_paths_string)\n\n    def _extract_zip_paths(self, zip_path: Path) -> list[str]:\n        extracted_paths = []\n        with tempfile.TemporaryDirectory() as tmpdirname, ZipFile(zip_path, \"r\") as zip_ref:\n            zip_ref.extractall(tmpdirname)\n            for root, _, files in os.walk(tmpdirname):\n                for file in files:\n                    full_path = Path(root) / file\n                    relative_path = Path(full_path).relative_to(tmpdirname)\n                    extracted_paths.append(f\"{zip_path.name}/{relative_path}\")\n        return extracted_paths\n\n    def _process_file(self, *, structured: bool = True) -> Data | list[Data]:\n        if not self.path:\n            msg = \"Please upload a file for processing.\"\n            raise ValueError(msg)\n\n        path = Path(self.resolve_path(self.path))\n        self.log(f\"Processing file: {path}\")\n\n        if is_zipfile(path):\n            return self._process_zip_file(zip_path=path, structured=structured)\n        return self._process_single_file(file_path=path, structured=structured)\n\n    def _process_zip_file(self, zip_path: Path, *, structured: bool) -> list[Data]:\n        self.log(\"Processing ZIP file\")\n        data: list[Data] = []\n        with tempfile.TemporaryDirectory() as tmpdirname, ZipFile(zip_path, \"r\") as zip_file:\n            zip_file.extractall(tmpdirname)\n            for root, _, files in os.walk(tmpdirname):\n                for file_name in files:\n                    file_path = Path(root) / file_name\n                    if file_path.suffix.lower() == \".pdf\":\n                        self.log(f\"Processing PDF in ZIP: {file_name}\")\n                        result = parse_text_file_to_data(str(file_path), silent_errors=self.silent_errors)\n                        parsed_content = Data(data={\"text_content\": result.text if result else None})\n                    elif any(file_name.endswith(ext) for ext in [*TEXT_FILE_TYPES, \".docx\"]):\n                        self.log(f\"Processing ZIP content: {file_name}\")\n                        with file_path.open(\"rb\") as file:\n                            content = file.read()\n                            parsed_content = self._parse_file_content(file_name, content, structured=structured)\n                    else:\n                        continue\n\n                    if isinstance(parsed_content, Data):\n                        data.append(parsed_content)\n                    elif isinstance(parsed_content, list):\n                        data.extend(parsed_content)\n\n        if structured:\n            return data\n        return [Data(data={\"zip_contents\": [d.data if isinstance(d, Data) else d for d in data]})]\n\n    def _process_single_file(self, file_path: Path, *, structured: bool) -> Data | list[Data]:\n        try:\n            if file_path.suffix.lower() == \".pdf\":\n                self.log(\"Processing PDF file\")\n                result = parse_text_file_to_data(str(file_path), silent_errors=self.silent_errors)\n                parsed_data = Data(data={\"text_content\": result.text if result else None})\n                return [parsed_data]  # Return as list to match return type\n            with file_path.open(\"rb\") as f:\n                content = f.read()\n                return self._parse_file_content(file_path.name, content, structured=structured)\n        except Exception as e:\n            msg = f\"Error processing file: {e!s}\"\n            self.log(msg)\n            if self.silent_errors:\n                return [Data(data={\"error\": msg})]  # Return as list to match return type\n            raise\n\n    def _parse_file_content(self, file_name: str, content: bytes, *, structured: bool = True) -> Data | list[Data]:\n        file_extension = Path(file_name).suffix.lower()\n        self.log(f\"Parsing file content: {file_extension}\")\n\n        parser_map = {\n            \".json\": self._parse_json,\n            \".csv\": self._parse_csv,\n            \".yaml\": self._parse_yaml,\n            \".yml\": self._parse_yaml,\n            \".xml\": self._parse_xml,\n            \".html\": self._parse_html,\n            \".htm\": self._parse_html,\n            \".docx\": self._parse_docx,\n        }\n\n        parser = parser_map.get(file_extension, self._parse_text)\n        result = parser(content, structured=structured)\n        if isinstance(result, Data):\n            return [result]\n        return result\n\n    def _parse_json(self, content: bytes, *, structured: bool) -> Data | list[Data]:\n        self.log(\"Parsing JSON content\")\n        try:\n            parsed_data = json.loads(content.decode(\"utf-8\"))\n            if structured:\n                if isinstance(parsed_data, list):\n                    return [Data(data=item) for item in parsed_data]\n                return Data(data=parsed_data)\n            return Data(data={\"json_content\": json.dumps(parsed_data, indent=2)})\n        except json.JSONDecodeError as e:\n            msg = f\"JSON parsing error: {e!s}\"\n            self.log(msg)\n            if self.silent_errors:\n                return Data(data={\"error\": msg})\n            raise\n\n    def _parse_csv(self, content: bytes, *, structured: bool) -> list[Data]:\n        self.log(\"Parsing CSV content\")\n        try:\n            df_csv = pd.read_csv(\n                io.StringIO(content.decode(\"utf-8\")),\n                dtype_backend=\"numpy_nullable\",\n                parse_dates=True,\n                infer_datetime_format=True,\n            )\n\n            if structured:\n                column_types = {}\n                for column in df_csv.columns:\n                    if df_csv[column].dtype.name.startswith((\"int\", \"uint\")):\n                        column_types[column] = \"integer\"\n                    elif df_csv[column].dtype.name.startswith(\"float\"):\n                        column_types[column] = \"float\"\n                    elif df_csv[column].dtype.name == \"boolean\":\n                        column_types[column] = \"boolean\"\n                    elif df_csv[column].dtype.name == \"datetime64[ns]\":\n                        column_types[column] = \"datetime\"\n                    else:\n                        column_types[column] = \"string\"\n\n                data = []\n                for _, row in df_csv.iterrows():\n                    processed_row: dict[str, Any] = {}\n                    for column in df_csv.columns:\n                        value = row[column]\n\n                        if pd.isna(value):\n                            processed_row[column] = None\n                            continue\n\n                        if column_types[column] == \"integer\":\n                            processed_row[column] = int(value)\n                        elif column_types[column] == \"float\":\n                            processed_row[column] = float(value)\n                        elif column_types[column] == \"boolean\":\n                            processed_row[column] = bool(value)\n                        elif column_types[column] == \"datetime\":\n                            processed_row[column] = pd.Timestamp(str(value)).isoformat() if not pd.isna(value) else None\n                        elif isinstance(value, str):\n                            try:\n                                processed_row[column] = json.loads(value)\n                            except (json.JSONDecodeError, TypeError):\n                                processed_row[column] = str(value)\n                        else:\n                            processed_row[column] = str(value)\n\n                    data.append(Data(data={\"values\": processed_row, \"column_types\": column_types}))\n                return data\n            return [Data(data={\"csv_content\": df_csv.to_csv(index=False)})]\n\n        except Exception as e:\n            msg = f\"CSV parsing error: {e!s}\"\n            self.log(msg)\n            if self.silent_errors:\n                return Data(data={\"error\": msg})\n            raise\n\n    def _parse_yaml(self, content: bytes, *, structured: bool) -> Data | list[Data] | str:\n        try:\n            import yaml\n\n            yaml_content = content.decode(\"utf-8\")\n            if structured:\n                parsed_data = yaml.safe_load(yaml_content)\n                if isinstance(parsed_data, list):\n                    return [Data(data=item) for item in parsed_data]\n                if isinstance(parsed_data, dict):\n                    return Data(data=parsed_data)\n                return Data(data={\"content\": parsed_data})\n            if not structured:\n                return yaml_content\n        except Exception as e:\n            msg = f\"YAML parsing error: {e!s}\"\n            self.log(msg)\n            if self.silent_errors:\n                return Data(data={\"error\": msg})\n            raise\n\n    def _parse_xml(self, content: bytes, *, structured: bool) -> list[Data] | str:\n        try:\n            root = ElementTree.fromstring(content)\n            if structured:\n                return self._xml_to_list_data(root)\n            return ElementTree.tostring(root, encoding=\"unicode\", method=\"xml\")\n        except ElementTree.ParseError as e:\n            msg = f\"XML parsing error: {e!s}\"\n            self.log(msg)\n            if self.silent_errors:\n                return Data(data={\"error\": msg})\n            raise\n\n    def _xml_to_list_data(self, element: ET.Element) -> list[Data]:\n        result = []\n        for child in element:\n            data = {}\n            for subchild in child:\n                if len(subchild) == 0:\n                    data[subchild.tag] = subchild.text\n                else:\n                    data[subchild.tag] = self._xml_to_dict(subchild)\n            result.append(Data(data=data))\n        return result\n\n    def _xml_to_dict(self, element: ET.Element) -> dict:\n        result = {}\n        for child in element:\n            if len(child) == 0:\n                result[child.tag] = child.text\n            else:\n                result[child.tag] = self._xml_to_dict(child)\n        return result\n\n    def _parse_html(self, content: bytes, *, structured: bool) -> Data | str:\n        html_content = content.decode(\"utf-8\")\n        if not structured:\n            return html_content\n\n        try:\n            root = ElementTree.fromstring(html_content)\n\n            title = None\n            title_elem = root.find(\".//title\")\n            if title_elem is not None:\n                title = title_elem.text\n\n            def extract_text(element, exclude_tags=None):\n                if exclude_tags is None:\n                    exclude_tags = {\"script\", \"style\"}\n                if element.tag in exclude_tags:\n                    return \"\"\n                text = (element.text or \"\").strip()\n                for child in element:\n                    text += \" \" + extract_text(child, exclude_tags)\n                    if child.tail:\n                        text += \" \" + child.tail.strip()\n                return text.strip()\n\n            def extract_dataframe(element):\n                data = {\"tag\": element.tag, \"attributes\": dict(element.attrib), \"text\": (element.text or \"\").strip()}\n\n                children = []\n                for child in element:\n                    child_data = extract_dataframe(child)\n                    if child_data:\n                        children.append(child_data)\n\n                if children:\n                    data[\"children\"] = children\n\n                if element.tail:\n                    data[\"tail\"] = element.tail.strip()\n\n                return data\n\n            dataframe = {\n                \"title\": title,\n                \"text\": extract_text(root),\n                \"structure\": extract_dataframe(root),\n                \"metadata\": {\n                    \"links\": [a.get(\"href\") for a in root.findall(\".//a\") if a.get(\"href\")],\n                    \"images\": [img.get(\"src\") for img in root.findall(\".//img\") if img.get(\"src\")],\n                    \"headers\": [\n                        h.text.strip()\n                        for h in root.findall(\".//*\")\n                        if h.tag in {\"h1\", \"h2\", \"h3\", \"h4\", \"h5\", \"h6\"} and h.text\n                    ],\n                },\n            }\n\n            return Data(data=dataframe)\n\n        except ElementTree.ParseError:\n            return Data(data={\"text\": html_content})\n\n    def _parse_docx(self, content: bytes, *, structured: bool) -> Data | str:\n        if not structured:\n            return content.decode(\"utf-8\", errors=\"ignore\")\n\n        try:\n            with tempfile.NamedTemporaryFile(suffix=\".docx\", delete=False) as temp_file:\n                temp_file.write(content)\n                temp_path = temp_file.name\n\n            dataframe = {\n                \"metadata\": {},\n                \"styles\": {},\n                \"content\": [],\n                \"relationships\": {},\n                \"numbering\": {},\n                \"comments\": [],\n            }\n\n            with ZipFile(temp_path, \"r\") as docx:\n                # Parse core properties\n                if \"docProps/core.xml\" in docx.namelist():\n                    core_xml = docx.read(\"docProps/core.xml\")\n                    root = ElementTree.fromstring(core_xml)\n                    for child in root:\n                        tag = child.tag.split(\"}\")[-1]\n                        dataframe[\"metadata\"][tag] = child.text\n\n                # Parse styles\n                if \"word/styles.xml\" in docx.namelist():\n                    styles_xml = docx.read(\"word/styles.xml\")\n                    root = ElementTree.fromstring(styles_xml)\n                    for style in root.findall(\".//{*}style\"):\n                        style_id = style.get(\"{*}styleId\", \"\")\n                        style_name = style.find(\".//{*}name\")\n                        if style_name is not None:\n                            dataframe[\"styles\"][style_id] = style_name.get(\"{*}val\", \"\")\n\n                # Parse document content\n                if \"word/document.xml\" in docx.namelist():\n                    doc_xml = docx.read(\"word/document.xml\")\n                    root = ElementTree.fromstring(doc_xml)\n                    body = root.find(\".//{*}body\")\n\n                    for elem in body:\n                        elem_data = self._process_docx_element(elem)\n                        if elem_data:\n                            dataframe[\"content\"].append(elem_data)\n\n                # Parse comments\n                if \"word/comments.xml\" in docx.namelist():\n                    comments_xml = docx.read(\"word/comments.xml\")\n                    root = ElementTree.fromstring(comments_xml)\n                    for comment in root.findall(\".//{*}comment\"):\n                        comment_data = {\n                            \"id\": comment.get(\"{*}id\"),\n                            \"author\": comment.get(\"{*}author\"),\n                            \"date\": comment.get(\"{*}date\"),\n                            \"text\": \"\".join(t.text or \"\" for t in comment.findall(\".//{*}t\")),\n                        }\n                        dataframe[\"comments\"].append(comment_data)\n\n            Path(temp_path).unlink()\n            return Data(data=dataframe)\n\n        except Exception as e:\n            msg = f\"DOCX parsing error: {e!s}\"\n            self.log(msg)\n            if self.silent_errors:\n                return Data(data={\"error\": msg})\n            raise\n\n    def _process_docx_element(self, elem: ET.Element) -> dict[str, Any] | None:\n        tag = elem.tag.split(\"}\")[-1]\n        dataframe: dict[str, Any] = {}\n\n        if tag == \"p\":\n            dataframe = self._process_docx_paragraph(elem)\n        elif tag == \"tbl\":\n            dataframe = self._process_docx_table(elem)\n\n        return dataframe if dataframe else None\n\n    def _process_docx_paragraph(self, p_elem: ET.Element) -> dict[str, Any]:\n        p_data = {\n            \"type\": \"paragraph\",\n            \"style\": None,  # Initialize as None\n            \"content\": [],\n        }\n\n        # Get style properly\n        p_style = p_elem.find(\".//{*}pStyle\")\n        if p_style is not None:\n            p_data[\"style\"] = p_style.get(\"{*}val\", \"normal\")\n        else:\n            p_data[\"style\"] = \"normal\"\n\n        for r in p_elem.findall(\".//{*}r\"):\n            run_data = {\"text\": \"\", \"formatting\": {}, \"properties\": {}}\n\n            r_pr = r.find(\".//{*}rPr\")\n            if r_pr is not None:\n                for prop in r_pr:\n                    prop_name = prop.tag.split(\"}\")[-1]\n                    run_data[\"formatting\"][prop_name] = True\n\n            for t in r.findall(\".//{*}t\"):\n                preserve = t.get(\"{http://www.w3.org/XML/1998/namespace}space\") == \"preserve\"\n                text = t.text or \"\"\n                run_data[\"text\"] += text if preserve else text.strip()\n\n            if run_data[\"text\"] or run_data[\"formatting\"]:\n                p_data[\"content\"].append(run_data)\n\n        return p_data\n\n    def _process_docx_table(self, tbl_elem: ET.Element) -> dict[str, Any]:\n        table_data: dict[str, Any] = {\n            \"type\": \"table\",\n            \"properties\": {},\n            \"rows\": [],  # Initialize as proper list\n        }\n\n        tbl_pr = tbl_elem.find(\".//{*}tblPr\")\n        if tbl_pr is not None:\n            for prop in tbl_pr:\n                prop_name = prop.tag.split(\"}\")[-1]\n                table_data[\"properties\"][prop_name] = True\n\n        for tr in tbl_elem.findall(\".//{*}tr\"):\n            row = []\n            for tc in tr.findall(\".//{*}tc\"):\n                cell_content = []\n                for p in tc.findall(\".//{*}p\"):\n                    p_data = self._process_docx_paragraph(p)\n                    if p_data[\"content\"]:\n                        cell_content.append(p_data)\n                row.append(cell_content)\n            table_data[\"rows\"].append(row)\n\n        return table_data\n\n    def _parse_text(self, content: bytes, *, structured: bool) -> Data | str:\n        text_content = content.decode(\"utf-8\", errors=\"ignore\")\n        if structured:\n            return Data(data={\"text\": text_content})\n        return text_content\n\n    def log(\n        self, message: str | dict[Any, Any] | list[Any] | float | bool | Any | None | list[str], name: str | None = None\n    ) -> None:\n        if name:\n            super().log(message, name)\n        else:\n            super().log(message)\n"
               },
               "concurrency_multithreading": {
                 "_input_type": "IntInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Processing Concurrency",
                 "dynamic": false,
                 "info": "When multiple files are being processed, the number of files to process concurrently.",
@@ -2773,87 +2792,19 @@
                 "type": "int",
                 "value": 4
               },
-              "delete_server_file_after_processing": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Delete Server File After Processing",
-                "dynamic": false,
-                "info": "If true, the Server File Path will be deleted after processing.",
-                "list": false,
-                "name": "delete_server_file_after_processing",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "file_path": {
-                "_input_type": "HandleInput",
-                "advanced": false,
-                "display_name": "Server File Path",
-                "dynamic": false,
-                "info": "Data object with a 'file_path' property pointing to server file or a Message object with a path to the file. Supercedes 'Path' but supports same file types.",
-                "input_types": [
-                  "Data",
-                  "Message"
-                ],
-                "list": true,
-                "name": "file_path",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "ignore_unspecified_files": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Ignore Unspecified Files",
-                "dynamic": false,
-                "info": "If true, Data with no 'file_path' property will be ignored.",
-                "list": false,
-                "name": "ignore_unspecified_files",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "ignore_unsupported_extensions": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Ignore Unsupported Extensions",
-                "dynamic": false,
-                "info": "If true, files with unsupported extensions will not be processed.",
-                "list": false,
-                "name": "ignore_unsupported_extensions",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
               "path": {
                 "_input_type": "FileInput",
                 "advanced": false,
-                "display_name": "Path",
+                "display_name": "File",
                 "dynamic": false,
                 "fileTypes": [
+                  "json",
+                  "csv",
+                  "yaml",
+                  "yml",
                   "txt",
                   "md",
                   "mdx",
-                  "csv",
-                  "json",
-                  "yaml",
-                  "yml",
                   "xml",
                   "html",
                   "htm",
@@ -2865,18 +2816,14 @@
                   "js",
                   "ts",
                   "tsx",
-                  "zip",
-                  "tar",
-                  "tgz",
-                  "bz2",
-                  "gz"
+                  "zip"
                 ],
                 "file_path": "",
-                "info": "Supported file extensions: txt, md, mdx, csv, json, yaml, yml, xml, html, htm, pdf, docx, py, sh, sql, js, ts, tsx; optionally bundled in file extensions: zip, tar, tgz, bz2, gz",
+                "info": "",
                 "list": false,
                 "name": "path",
                 "placeholder": "",
-                "required": false,
+                "required": true,
                 "show": true,
                 "title_case": false,
                 "trace_as_metadata": true,
