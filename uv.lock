@@ -324,7 +324,7 @@ wheels = [
 
 [[package]]
 name = "astra-assistants"
-version = "2.2.7"
+version = "2.2.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -339,9 +339,9 @@ dependencies = [
     { name = "tree-sitter" },
     { name = "tree-sitter-python" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/81/e2/c440ba3fe475088537c7c258b2f7689b1c9724bf46cd62d7de77e3ddc79f/astra_assistants-2.2.7.tar.gz", hash = "sha256:dd88adad9a74c9839c6faade1ccdfb47b827c82f2ed2a6da92731b4190506774", size = 67687 }
+sdist = { url = "https://files.pythonhosted.org/packages/05/88/37b7ba47e7e639588a9068bfc90b4f3cbd964a8a2f4153e69b40e2165648/astra_assistants-2.2.9.tar.gz", hash = "sha256:b33e6a31d08155917e6b5413f986c278efcaa8e1c5a03ca1563e92ca0130a807", size = 67838 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/25/61/8a165e4ed492dae66d278d485eb505689273f2a266e34e2a21bac0bec4a6/astra_assistants-2.2.7-py3-none-any.whl", hash = "sha256:2d12999f97f57a45f24c3236af7b8792de317584e58cc7eaf771e5a440a26f2d", size = 78374 },
+    { url = "https://files.pythonhosted.org/packages/f3/32/30a69010077a71ef5fd80c71296b2976946b140e8274ff37b44552c54ef4/astra_assistants-2.2.9-py3-none-any.whl", hash = "sha256:b5b2713cd32ac2050e4f28b1d748cb4701c021d802912837b943c65861699a4e", size = 78527 },
 ]
 
 [package.optional-dependencies]
@@ -3001,6 +3001,20 @@ wheels = [
 ]
 
 [[package]]
+name = "hypothesis"
+version = "6.123.17"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "attrs" },
+    { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
+    { name = "sortedcontainers" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/15/a7/695b2bcb4e8438e1d4683efa6877fc95be293a11251471d4552d6dd08259/hypothesis-6.123.17.tar.gz", hash = "sha256:5850893975b4f08e893ddc10f1d468bc7e011d59703f70fe06a10161e426e602", size = 418572 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/11/8a/f1c166f048df4b314d0d38e9530b7af516a16160873d724bb416084d6990/hypothesis-6.123.17-py3-none-any.whl", hash = "sha256:5c949fb44935e32c61c64abfcc3975eec41f8205ade2223073ba074c1e078ead", size = 480880 },
+]
+
+[[package]]
 name = "identify"
 version = "2.6.3"
 source = { registry = "https://pypi.org/simple" }
@@ -4040,6 +4054,7 @@ dev = [
     { name = "codeflash" },
     { name = "dictdiffer" },
     { name = "httpx" },
+    { name = "hypothesis" },
     { name = "ipykernel" },
     { name = "mypy" },
     { name = "packaging" },
@@ -4079,7 +4094,7 @@ requires-dist = [
     { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
     { name = "arize-phoenix-otel", specifier = ">=0.6.1" },
     { name = "assemblyai", specifier = "==0.35.1" },
-    { name = "astra-assistants", extras = ["tools"], specifier = "~=2.2.6" },
+    { name = "astra-assistants", extras = ["tools"], specifier = "~=2.2.9" },
     { name = "atlassian-python-api", specifier = "==3.41.16" },
     { name = "beautifulsoup4", specifier = "==4.12.3" },
     { name = "boto3", specifier = "==1.34.162" },
@@ -4182,6 +4197,7 @@ dev = [
     { name = "codeflash", specifier = ">=0.8.4" },
     { name = "dictdiffer", specifier = ">=0.9.0" },
     { name = "httpx", specifier = ">=0.27.0" },
+    { name = "hypothesis", specifier = ">=6.123.17" },
     { name = "ipykernel", specifier = ">=6.29.0" },
     { name = "mypy", specifier = ">=1.11.0" },
     { name = "packaging", specifier = ">=24.1,<25.0" },
