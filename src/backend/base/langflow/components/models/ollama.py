@@ -25,7 +25,6 @@ class ChatOllamaComponent(LCModelComponent):
             display_name="Base URL",
             info="Endpoint of the Ollama API. Defaults to 'http://localhost:11434' if not specified.",
             value="",
-            real_time_refresh=True,
         ),
         DropdownInput(
             name="model_name",
@@ -175,7 +174,10 @@ class ChatOllamaComponent(LCModelComponent):
         try:
             output = ChatOllama(**llm_params)
         except Exception as e:
-            msg = "Could not initialize Ollama LLM."
+            msg = (
+                "Unable to connect to the Ollama API. ",
+                "Please verify the base URL, ensure the relevant Ollama model is pulled, and try again."
+            )
             raise ValueError(msg) from e
 
         return output
