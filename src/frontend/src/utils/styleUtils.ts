@@ -36,6 +36,7 @@ import {
   Boxes,
   Braces,
   BrainCircuit,
+  ChartNetwork,
   Check,
   CheckCheck,
   CheckCircle2,
@@ -431,6 +432,7 @@ export const nodeColors: { [char: string]: string } = {
 };
 
 export const nodeColorsName: { [char: string]: string } = {
+  // custom_components: "#ab11ab",
   inputs: "emerald",
   outputs: "red",
   data: "sky",
@@ -452,17 +454,16 @@ export const nodeColorsName: { [char: string]: string } = {
   vectorsearch: "yellow",
   textsplitters: "fuchsia",
   toolkits: "red",
-  wrappers: "pink",
+  wrappers: "rose",
   notion: "slate",
   Notion: "slate",
   AssemblyAI: "blue",
   assemblyai: "blue",
   helpers: "cyan",
-  prototypes: "pink",
+  prototypes: "rose",
   astra_assistants: "indigo",
   langchain_utilities: "sky",
   output_parsers: "yellow",
-  // custom_components: "#ab11ab",
   retrievers: "yellow",
   str: "indigo",
   Text: "indigo",
@@ -479,6 +480,7 @@ export const nodeColorsName: { [char: string]: string } = {
   BaseChatMemory: "cyan",
   BaseChatMessageHistory: "orange",
   Memory: "orange",
+  DataFrame: "pink",
 };
 
 export const SIDEBAR_CATEGORIES = [
@@ -921,6 +923,7 @@ export const nodeIconsLucide: iconsType = {
   CornerDownLeft,
   ChevronsDownUp,
   OptionIcon,
+  ChartNetwork,
   Option: OptionIcon,
   FreezeAll: freezeAllIcon,
   Table,

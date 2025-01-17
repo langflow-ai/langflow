@@ -31,6 +31,7 @@ export type shortcutsStoreType = {
   openPlayground: string;
   undo: string;
   redo: string;
+  redoAlt: string;
   advancedSettings: string;
   minimize: string;
   code: string;
