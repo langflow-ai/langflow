@@ -8,11 +8,10 @@ from langflow.io import Output
 from langflow.schema import Data
 
 
-class CalculatorToolComponent(Component):
+class CalculatorComponent(Component):
     display_name = "Calculator"
     description = "Perform basic arithmetic operations on a given expression."
     icon = "calculator"
-    name = "Calculator"
 
     # Cache operators dictionary as a class variable
     OPERATORS: dict[type[ast.operator], Callable] = {
