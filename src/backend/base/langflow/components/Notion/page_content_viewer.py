@@ -20,7 +20,7 @@ class NotionPageContent(LCToolComponent):
             name="page_id",
             display_name="Page ID",
             info="The ID of the Notion page to retrieve.",
-            required = True,
+            required=True,
         ),
         SecretStrInput(
             name="notion_secret",

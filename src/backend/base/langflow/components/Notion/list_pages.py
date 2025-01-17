@@ -35,7 +35,7 @@ class NotionListPages(LCToolComponent):
             name="database_id",
             display_name="Database ID",
             info="The ID of the Notion database to query.",
-            required = True,
+            required=True,
         ),
         MultilineInput(
             name="query_json",

@@ -23,7 +23,7 @@ class NotionPageUpdate(LCToolComponent):
             name="page_id",
             display_name="Page ID",
             info="The ID of the Notion page to update.",
-            required = True,
+            required=True,
         ),
         MultilineInput(
             name="properties",

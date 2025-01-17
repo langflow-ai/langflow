@@ -22,7 +22,7 @@ class NotionPageCreator(LCToolComponent):
             name="database_id",
             display_name="Database ID",
             info="The ID of the Notion database.",
-            required = True,
+            required=True,
         ),
         SecretStrInput(
             name="notion_secret",
