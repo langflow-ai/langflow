@@ -176,7 +176,7 @@ class ChatOllamaComponent(LCModelComponent):
         except Exception as e:
             msg = (
                 "Unable to connect to the Ollama API. ",
-                "Please verify the base URL, ensure the relevant Ollama model is pulled, and try again."
+                "Please verify the base URL, ensure the relevant Ollama model is pulled, and try again.",
             )
             raise ValueError(msg) from e
 

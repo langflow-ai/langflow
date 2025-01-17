@@ -5,7 +5,7 @@ import httpx
 from langchain_ollama import OllamaEmbeddings
 
 from langflow.base.models.model import LCModelComponent
-from langflow.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS, OLLAMA_TOOL_MODELS_BASE, URL_LIST
+from langflow.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS, URL_LIST
 from langflow.field_typing import Embeddings
 from langflow.io import DropdownInput, MessageTextInput, Output
 
@@ -45,7 +45,7 @@ class OllamaEmbeddingsComponent(LCModelComponent):
         except Exception as e:
             msg = (
                 "Unable to connect to the Ollama API. ",
-                "Please verify the base URL, ensure the relevant Ollama model is pulled, and try again."
+                "Please verify the base URL, ensure the relevant Ollama model is pulled, and try again.",
             )
             raise ValueError(msg) from e
         return output
