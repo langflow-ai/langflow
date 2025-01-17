@@ -994,7 +994,7 @@ class Component(CustomComponent):
     def _get_fallback_input(self, **kwargs):
         return Input(**kwargs)
 
-    def to_toolkit(self) -> list[Tool]:
+    async def to_toolkit(self) -> list[Tool]:
         component_toolkit = _get_component_toolkit()
         tools = component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
