@@ -29,7 +29,7 @@ class SerpAPISchema(BaseModel):
     max_snippet_length: int = Field(100, description="Maximum length of each result snippet")
 
 
-class SerpAPIComponent(Component):
+class SerpAPIComponent(LCToolComponent):
     display_name = "Serp Search API [DEPRECATED]"
     description = "Call Serp Search API with result limiting"
     name = "SerpAPI"
