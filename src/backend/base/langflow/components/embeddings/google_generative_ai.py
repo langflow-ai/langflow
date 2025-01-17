@@ -9,6 +9,13 @@ from langchain_google_genai._common import GoogleGenerativeAIError
 from langflow.custom import Component
 from langflow.io import MessageTextInput, Output, SecretStrInput
 
+MIN_DIMENSION_ERROR = "Output dimensionality must be at least 1"
+MAX_DIMENSION_ERROR = (
+    "Output dimensionality cannot exceed 768. "
+    "Google's embedding models only support dimensions up to 768. "
+    "Received: {}"
+)
+MAX_DIMENSION = 768
 
 class GoogleGenerativeAIEmbeddingsComponent(Component):
     display_name = "Google Generative AI Embeddings"
@@ -64,14 +71,11 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                 """
                 
                 if output_dimensionality < 1:
-                    raise ValueError("Output dimensionality must be at least 1")
-                if output_dimensionality > 768:
-                    raise ValueError(
-                        "Output dimensionality cannot exceed 768. "
-                        "Google's embedding models only support dimensions up to 768. "
-                        f"Received: {output_dimensionality}"
-                )
-                
+                    raise ValueError(MIN_DIMENSION_ERROR)
+                if output_dimensionality > MAX_DIMENSION:
+                    error_msg = MAX_DIMENSION_ERROR.format(output_dimensionality)
+                    raise ValueError(error_msg)
+
                 embeddings: list[list[float]] = []
                 batch_start_index = 0
                 for batch in GoogleGenerativeAIEmbeddings._prepare_batches(texts, batch_size):
@@ -121,15 +125,11 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                 Returns:
                     Embedding for the text.
                 """
-
                 if output_dimensionality < 1:
-                    raise ValueError("Output dimensionality must be at least 1")
-                if output_dimensionality > 768:
-                    raise ValueError(
-                        "Output dimensionality cannot exceed 768. "
-                        "Google's embedding models only support dimensions up to 768. "
-                        f"Received: {output_dimensionality}"
-                )
+                    raise ValueError(MIN_DIMENSION_ERROR)
+                if output_dimensionality > MAX_DIMENSION:
+                    error_msg = MAX_DIMENSION_ERROR.format(output_dimensionality)
+                    raise ValueError(error_msg)
 
                 task_type = task_type or "RETRIEVAL_QUERY"
                 return self.embed_documents(
