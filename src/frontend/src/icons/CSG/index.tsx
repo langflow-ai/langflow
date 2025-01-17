@@ -1,5 +1,5 @@
 import React, { forwardRef } from "react";
-import SvgCsgLogo from "./Csg";
+import SvgCsgLogo from "./Csg"
 
 export const CsgIcon = forwardRef<
   SVGSVGElement,
