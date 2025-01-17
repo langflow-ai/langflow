@@ -78,16 +78,28 @@ def update_frontend_node_with_template_values(frontend_node, raw_frontend_node):
     old_code = raw_frontend_node["template"]["code"]["value"]
     new_code = frontend_node["template"]["code"]["value"]
     frontend_node["edited"] = raw_frontend_node["edited"] or (old_code != new_code)
+    frontend_node["tool_mode"] = raw_frontend_node.get("tool_mode", False)
 
-    frontend_node["tool_mode"] = False
-    if "tool_mode" in raw_frontend_node:
-        frontend_node["tool_mode"] = raw_frontend_node["tool_mode"]
+    if any(extract_tool_modes(raw_frontend_node["template"])):
+        frontend_node["tool_mode"] = False
 
-    if frontend_node["tool_mode"]:
-        frontend_node["outputs"] = raw_frontend_node["outputs"]
-
-    if not frontend_node["edited"]:
+    if not frontend_node.get("edited", False):
         frontend_node["display_name"] = raw_frontend_node["display_name"]
         frontend_node["description"] = raw_frontend_node["description"]
 
     return frontend_node
+
+
+def extract_tool_modes(data: dict | list) -> list[bool | None]:
+    tool_models = []
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if key == "tool_mode":
+                tool_models.append(value)
+            else:
+                tool_models.extend(extract_tool_modes(value))
+    elif isinstance(data, list):
+        for item in data:
+            tool_models.extend(extract_tool_modes(item))
+
+    return tool_models
