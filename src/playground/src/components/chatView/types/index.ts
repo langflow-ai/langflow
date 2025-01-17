@@ -15,7 +15,7 @@ export type ChatViewWrapperProps = {
     sessionId: string;
     sendMessage: (options: { repeat: number; files?: string[] }) => Promise<void>;
     lockChat: boolean;
-    setLockChat: (locked: boolean) => void;
+    initialChatValue?: string;
   };
 
   export type chatViewProps = {
@@ -27,11 +27,11 @@ export type ChatViewWrapperProps = {
       files?: string[];
     }) => void;
     lockChat: boolean;
-    setLockChat: (lock: boolean) => void;
     visibleSession?: string;
     focusChat?: string;
     closeChat?: () => void;
     inputs: any[];
+    initialChatValue?: string;
   };
 
   export type SourceType = {
@@ -143,4 +143,32 @@ component: string;
     category?: string;
     properties?: PropertiesType;
     content_blocks?: ContentBlock[];
+  };
+
+  export type ChatInputType = {
+    isDragging: boolean;
+    files: FilePreviewType[];
+    setFiles: (
+      files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[]),
+    ) => void;
+    inputRef: {
+      current: any;
+    };
+    lockChat: boolean;
+    noInput: boolean;
+    sendMessage: ({
+      repeat,
+      files,
+    }: {
+      repeat: number;
+      files?: string[];
+    }) => void;
+  };
+
+  export type FilePreviewType = {
+    loading: boolean;
+    file: File;
+    error: boolean;
+    id: string;
+    path?: string;
   };
