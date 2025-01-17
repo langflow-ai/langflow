@@ -71,28 +71,36 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle);
       const field = targetHandleObject.fieldName;
       let id: targetHandleType | sourceHandleType;
+
+      const templateFieldType = targetNode.data.node!.template[field]?.type;
+      const inputTypes = targetNode.data.node!.template[field]?.input_types;
+      const hasProxy = targetNode.data.node!.template[field]?.proxy;
+
       if (
         !field &&
         targetHandleObject.name &&
         targetNode.type === "genericNode"
       ) {
+        const dataType = targetNode.data.type;
+        const outputTypes =
+          targetNode.data.node!.outputs?.find(
+            (output) => output.name === targetHandleObject.name,
+          )?.types ?? [];
+
         id = {
-          dataType: targetNode.data.type ?? "",
+          dataType: dataType ?? "",
           name: targetHandleObject.name,
           id: targetNode.data.id,
-          output_types:
-            targetNode.data.node!.outputs?.find(
-              (output) => output.name === targetHandleObject.name,
-            )?.types ?? [],
+          output_types: outputTypes,
         };
       } else {
         id = {
-          type: targetNode.data.node!.template[field]?.type,
+          type: templateFieldType,
           fieldName: field,
           id: targetNode.data.id,
-          inputTypes: targetNode.data.node!.template[field]?.input_types,
+          inputTypes: inputTypes,
         };
-        if (targetNode.data.node!.template[field]?.proxy) {
+        if (hasProxy) {
           id.proxy = targetNode.data.node!.template[field]?.proxy;
         }
       }
@@ -183,28 +191,36 @@ export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
       const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle);
       const field = targetHandleObject.fieldName;
       let id: sourceHandleType | targetHandleType;
+
+      const templateFieldType = targetNode.data.node!.template[field]?.type;
+      const inputTypes = targetNode.data.node!.template[field]?.input_types;
+      const hasProxy = targetNode.data.node!.template[field]?.proxy;
+
       if (
         !field &&
         targetHandleObject.name &&
         targetNode.type === "genericNode"
       ) {
+        const dataType = targetNode.data.type;
+        const outputTypes =
+          targetNode.data.node!.outputs?.find(
+            (output) => output.name === targetHandleObject.name,
+          )?.types ?? [];
+
         id = {
-          dataType: targetNode.data.type ?? "",
+          dataType: dataType ?? "",
           name: targetHandleObject.name,
           id: targetNode.data.id,
-          output_types:
-            targetNode.data.node!.outputs?.find(
-              (output) => output.name === targetHandleObject.name,
-            )?.types ?? [],
+          output_types: outputTypes,
         };
       } else {
         id = {
-          type: targetNode.data.node!.template[field]?.type,
+          type: templateFieldType,
           fieldName: field,
           id: targetNode.data.id,
-          inputTypes: targetNode.data.node!.template[field]?.input_types,
+          inputTypes: inputTypes,
         };
-        if (targetNode.data.node!.template[field]?.proxy) {
+        if (hasProxy) {
           id.proxy = targetNode.data.node!.template[field]?.proxy;
         }
       }
