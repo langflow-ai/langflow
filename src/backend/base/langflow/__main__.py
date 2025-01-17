@@ -162,7 +162,7 @@ def run(
 
     if env_file:
         load_dotenv(env_file, override=True)
-    
+
     configure(log_level=log_level, log_file=log_file)
     logger.debug(f"Loading config from file: '{env_file}'" if env_file else "No env_file provided.")
     set_var_for_macos_issue()
