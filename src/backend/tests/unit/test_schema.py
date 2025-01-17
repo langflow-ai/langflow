@@ -64,7 +64,7 @@ class TestInput:
         # Empty lists and edge cases
         assert set(post_process_type(list)) == {list}
         assert set(post_process_type(Union[int, None])) == {int, NoneType}  # noqa: UP007
-        assert set(post_process_type(Union[None, list[None]])) == {None, NoneType}  # noqa: UP007
+        assert set(post_process_type(Union[list[None], None])) == {None, NoneType}  # noqa: UP007
 
         # Handling complex nested structures
         assert set(post_process_type(Union[SequenceABC[int | str], list[float]])) == {int, str, float}  # noqa: UP007

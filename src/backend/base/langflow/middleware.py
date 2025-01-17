@@ -26,7 +26,8 @@ class ContentSizeLimitMiddleware:
         self.app = app
         self.logger = logger
 
-    def receive_wrapper(self, receive):
+    @staticmethod
+    def receive_wrapper(receive):
         received = 0
 
         async def inner():

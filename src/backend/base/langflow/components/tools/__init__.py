@@ -9,6 +9,7 @@ from .exa_search import ExaSearchToolkit
 from .glean_search_api import GleanSearchAPIComponent
 from .google_search_api import GoogleSearchAPIComponent
 from .google_serper_api import GoogleSerperAPIComponent
+from .mcp_stdio import MCPStdio
 from .python_code_structured_tool import PythonCodeStructuredTool
 from .python_repl import PythonREPLToolComponent
 from .search import SearchComponent
@@ -37,6 +38,7 @@ __all__ = [
     "GleanSearchAPIComponent",
     "GoogleSearchAPIComponent",
     "GoogleSerperAPIComponent",
+    "MCPStdio",
     "PythonCodeStructuredTool",
     "PythonREPLToolComponent",
     "SearXNGToolComponent",

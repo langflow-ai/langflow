@@ -31,6 +31,7 @@ import {
 import { FlowStoreType, VertexLayerElementType } from "../types/zustand/flow";
 import { buildFlowVerticesWithFallback } from "../utils/buildUtils";
 import {
+  buildPositionDictionary,
   checkChatInput,
   cleanEdges,
   detectBrokenEdgesEdges,
@@ -52,6 +53,19 @@ import { useTypesStore } from "./typesStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
+  positionDictionary: {},
+  setPositionDictionary: (positionDictionary) => {
+    set({ positionDictionary });
+  },
+  isPositionAvailable: (position: { x: number; y: number }) => {
+    if (
+      get().positionDictionary[position.x] &&
+      get().positionDictionary[position.x] === position.y
+    ) {
+      return false;
+    }
+    return true;
+  },
   fitViewNode: (nodeId) => {
     if (get().reactFlowInstance && get().nodes.find((n) => n.id === nodeId)) {
       get().reactFlowInstance?.fitView({ nodes: [{ id: nodeId }] });
@@ -211,6 +225,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       hasIO: inputs.length > 0 || outputs.length > 0,
       flowPool: {},
       currentFlow: flow,
+      positionDictionary: {},
     });
   },
   setIsBuilding: (isBuilding) => {
@@ -279,32 +294,35 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         ? change(get().nodes.find((node) => node.id === id)!)
         : change;
 
-    set((state) => {
-      const newNodes = state.nodes.map((node) => {
-        if (node.id === id) {
-          if (isUserChange) {
-            if ((node.data as NodeDataType).node?.frozen) {
-              (newChange.data as NodeDataType).node!.frozen = false;
-            }
+    const newNodes = get().nodes.map((node) => {
+      if (node.id === id) {
+        if (isUserChange) {
+          if ((node.data as NodeDataType).node?.frozen) {
+            (newChange.data as NodeDataType).node!.frozen = false;
           }
-          return newChange;
         }
-        return node;
-      });
+        return newChange;
+      }
+      return node;
+    });
 
-      const newEdges = cleanEdges(newNodes, get().edges);
+    const newEdges = cleanEdges(newNodes, get().edges);
 
+    set((state) => {
       if (callback) {
         // Defer the callback execution to ensure it runs after state updates are fully applied.
         queueMicrotask(callback);
       }
-
       return {
         ...state,
         nodes: newNodes,
         edges: newEdges,
       };
     });
+    get().updateCurrentFlow({ nodes: newNodes, edges: newEdges });
+    if (get().autoSaveFlow) {
+      get().autoSaveFlow!();
+    }
   },
   getNode: (id: string) => {
     return get().nodes.find((node) => node.id === id);
@@ -385,6 +403,17 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           x: position.x,
           y: position.y,
         });
+
+    let internalPostionDictionary = get().positionDictionary;
+    if (Object.keys(internalPostionDictionary).length === 0) {
+      internalPostionDictionary = buildPositionDictionary(get().nodes);
+    }
+    while (!get().isPositionAvailable(insidePosition)) {
+      insidePosition.x += 10;
+      insidePosition.y += 10;
+    }
+    internalPostionDictionary[insidePosition.x] = insidePosition.y;
+    get().setPositionDictionary(internalPostionDictionary);
 
     selection.nodes.forEach((node: AllNodeType) => {
       // Generate a unique node ID

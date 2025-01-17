@@ -1,3 +1,4 @@
+import copy
 import operator
 import re
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -83,7 +84,8 @@ class BaseComponent:
             if hasattr(component, attribute):
                 value = getattr(component, attribute)
                 if value is not None:
-                    template_config[attribute] = func(value=value)
+                    value_copy = copy.deepcopy(value)
+                    template_config[attribute] = func(value=value_copy)
 
         for key in template_config.copy():
             if key not in ATTR_FUNC_MAPPING:

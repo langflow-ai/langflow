@@ -46,6 +46,7 @@ export type InputComponentType = {
   onChangeFolderName?: (e: any) => void;
   nodeStyle?: boolean;
   isToolMode?: boolean;
+  popoverWidth?: string;
 };
 export type DropDownComponent = {
   disabled?: boolean;
@@ -499,7 +500,6 @@ export type ChatInputType = {
   setFiles: (
     files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[]),
   ) => void;
-  chatValue: string;
   inputRef: {
     current: any;
   };
@@ -512,7 +512,6 @@ export type ChatInputType = {
     repeat: number;
     files?: string[];
   }) => void;
-  setChatValue: (value: string) => void;
 };
 
 export type editNodeToggleType = {
@@ -673,6 +672,8 @@ export type buttonBoxPropsType = {
 export type FlowSettingsPropsType = {
   open: boolean;
   setOpen: (open: boolean) => void;
+  details?: boolean;
+  flowData?: FlowType;
 };
 
 export type groupDataType = {
@@ -769,8 +770,6 @@ export type chatViewProps = {
     repeat: number;
     files?: string[];
   }) => void;
-  chatValue: string;
-  setChatValue: (value: string) => void;
   lockChat: boolean;
   setLockChat: (lock: boolean) => void;
   visibleSession?: string;
@@ -787,7 +786,7 @@ export type toolbarSelectItemProps = {
   value: string;
   icon: string;
   style?: string;
-  dataTestId: string;
+  dataTestId?: string;
   ping?: boolean;
   shortcut: string;
 };
