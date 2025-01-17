@@ -7,6 +7,7 @@ import { MilvusIcon } from "@/icons/Milvus";
 import Perplexity from "@/icons/Perplexity/Perplexity";
 import { SearchAPIIcon } from "@/icons/SearchAPI";
 import { SerpSearchIcon } from "@/icons/SerpSearch";
+import { SolanaIcon } from "@/icons/Solana";
 import { TavilyIcon } from "@/icons/Tavily";
 import { UnstructuredIcon } from "@/icons/Unstructured";
 import { WikipediaIcon } from "@/icons/Wikipedia";
@@ -702,6 +703,7 @@ export const nodeIconsLucide: iconsType = {
   GitLoader: GitLoaderIcon,
   athenaIcon: AthenaIcon,
   DuckDuckGo: DuckDuckGoIcon,
+  Solana: SolanaIcon,
   Perplexity,
   TavilyIcon,
   OpenSearch,

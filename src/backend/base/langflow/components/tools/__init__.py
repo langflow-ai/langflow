@@ -15,6 +15,7 @@ from .python_repl import PythonREPLToolComponent
 from .search_api import SearchAPIComponent
 from .searxng import SearXNGToolComponent
 from .serp_api import SerpAPIComponent
+from .solana_interactor import SolanaDAppInteractor
 from .tavily_search import TavilySearchToolComponent
 from .wikidata_api import WikidataAPIComponent
 from .wikipedia_api import WikipediaAPIComponent
@@ -43,6 +44,7 @@ __all__ = [
     "SearXNGToolComponent",
     "SearchAPIComponent",
     "SerpAPIComponent",
+    "SolanaDAppInteractor",
     "TavilySearchToolComponent",
     "WikidataAPIComponent",
     "WikipediaAPIComponent",
