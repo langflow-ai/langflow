@@ -17,6 +17,7 @@ MAX_DIMENSION_ERROR = (
 MAX_DIMENSION = 768
 MIN_DIMENSION = 1
 
+
 class GoogleGenerativeAIEmbeddingsComponent(Component):
     display_name = "Google Generative AI Embeddings"
     description = (
