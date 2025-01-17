@@ -84,7 +84,7 @@ dependencies = [
     "composio-core==0.6.13",
     "spider-client==0.1.24",
     "nltk==3.9.1",
-    "lark==1.2.2",
+    "lark>=1.1.7,<1.2.0",
     "jq==1.8.0",
     "pydantic-settings==2.4.0",
     "ragstack-ai-knowledge-store==0.2.1",
@@ -126,6 +126,8 @@ dependencies = [
     "nv-ingest-client @ git+https://github.com/jdye64/nv-ingest.git@pydantic_2_update#egg=nv-ingest-client&subdirectory=client",
     "python-pptx==0.6.23",
     "arize[Datasets]>=1.0.0",
+    "annoy>=1.17.3",
+    "nemoguardrails>=0.11.1",
 ]
 
 [project.urls]
