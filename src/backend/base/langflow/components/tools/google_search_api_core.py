@@ -55,7 +55,8 @@ class GoogleSearchAPICore(Component):
             wrapper = GoogleSearchAPIWrapper(
                 google_api_key=self.google_api_key, google_cse_id=self.google_cse_id, k=self.k
             )
-            return wrapper.results(query=self.input_value, num_results=self.k)
+            results = wrapper.results(query=self.input_value, num_results=self.k)
+            return DataFrame(results)
         except (ValueError, KeyError) as e:
             return DataFrame([{"error": f"Invalid configuration: {e!s}"}])
         except ConnectionError as e:
