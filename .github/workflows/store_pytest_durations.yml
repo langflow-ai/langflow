@@ -43,11 +43,9 @@ jobs:
       - name: Install the project
         run: uv sync --dev
       - name: Run unit tests
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 12
-          max_attempts: 2
-          command: uv run pytest src/backend/tests --durations-path src/backend/tests/.test_durations --splitting-algorithm least_duration --store-durations
+        id: run_tests
+        continue-on-error: true
+        run: uv run pytest src/backend/tests/unit --durations-path src/backend/tests/.test_durations --splitting-algorithm least_duration --store-durations
       - name: Minimize uv cache
         run: uv cache prune --ci
 
