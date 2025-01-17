@@ -4,11 +4,10 @@ import {
     aws_ec2 as ec2,
     aws_ecs as ecs,
     aws_ecr as ecr,
-    aws_rds as rds,
-    aws_servicediscovery as servicediscovery,
     aws_iam as iam,
     aws_logs as logs,
     aws_elasticloadbalancingv2 as elb,
+    aws_secretsmanager as secretsmanager,
 } from 'aws-cdk-lib';
 import * as dotenv from 'dotenv';
 const path = require('path');
@@ -21,9 +20,9 @@ interface BackEndProps {
   backendTaskRole: iam.Role;
   backendTaskExecutionRole: iam.Role;
   backendLogGroup: logs.LogGroup;
-  rdsCluster:rds.DatabaseCluster
   arch:ecs.CpuArchitecture
   albTG: elb.ApplicationTargetGroup;
+  dbSecret: secretsmanager.Secret;
 }
 
 export class BackEndCluster extends Construct {
@@ -32,8 +31,6 @@ export class BackEndCluster extends Construct {
     super(scope, id)
     const backendServiceName = 'backend'
     const backendServicePort = 7860
-    // Secrets ManagerからDB認証情報を取ってくる
-    const secretsDB = props.rdsCluster.secret!;
 
     // Create Backend Fargate Service
     const backendTaskDefinition = new ecs.FargateTaskDefinition(
@@ -58,9 +55,12 @@ export class BackEndCluster extends Construct {
         logGroup: props.backendLogGroup,
       }),
       environment:{
-        "LANGFLOW_AUTO_LOGIN" : process.env.LANGFLOW_AUTO_LOGIN ?? 'false',
-        "LANGFLOW_SUPERUSER" : process.env.LANGFLOW_SUPERUSER ?? "admin",
-        "LANGFLOW_SUPERUSER_PASSWORD" : process.env.LANGFLOW_SUPERUSER_PASSWORD ?? "123456"
+        "LANGFLOW_AUTO_LOGIN": process.env.LANGFLOW_AUTO_LOGIN ?? 'false',
+        "LANGFLOW_SUPERUSER": process.env.LANGFLOW_SUPERUSER ?? "admin",
+        "LANGFLOW_SUPERUSER_PASSWORD": process.env.LANGFLOW_SUPERUSER_PASSWORD ?? "123456",
+      },
+      secrets: {
+        "LANGFLOW_DATABASE_URL": ecs.Secret.fromSecretsManager(props.dbSecret),
       },
       portMappings: [
           {
@@ -68,13 +68,6 @@ export class BackEndCluster extends Construct {
               protocol: ecs.Protocol.TCP,
           },
       ],
-      // Secretの設定
-      secrets: {
-        "dbname": ecs.Secret.fromSecretsManager(secretsDB, 'dbname'),
-        "username": ecs.Secret.fromSecretsManager(secretsDB, 'username'),
-        "host": ecs.Secret.fromSecretsManager(secretsDB, 'host'),
-        "password": ecs.Secret.fromSecretsManager(secretsDB, 'password'),
-      },
     });
     
     const backendService = new ecs.FargateService(this, 'BackEndService', {

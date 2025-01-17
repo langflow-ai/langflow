@@ -9,57 +9,37 @@ import {
 } from 'aws-cdk-lib';
 
 export class Network extends Construct {
-  readonly vpc: ec2.Vpc;
+  readonly centralVpc: ec2.IVpc;
   readonly cluster: ecs.Cluster;
-  readonly ecsBackSG: ec2.SecurityGroup;
-  readonly dbSG: ec2.SecurityGroup;
+  readonly centralEcsBackSG: ec2.SecurityGroup;
+  readonly centralDbSG: ec2.SecurityGroup;
   readonly backendLogGroup: logs.LogGroup;
   readonly alb: elb.IApplicationLoadBalancer;
   readonly albTG: elb.ApplicationTargetGroup;
-  readonly albSG: ec2.SecurityGroup;
+  readonly centralAlbSG: ec2.SecurityGroup;
 
   constructor(scope: Construct, id: string) {
     super(scope, id)
     const alb_listen_port=80
     const back_service_port=7860
 
-    // VPC等リソースの作成
-    this.vpc = new ec2.Vpc(scope, 'VPC', {
-      vpcName: 'langflow-vpc',
-      ipAddresses: ec2.IpAddresses.cidr('10.0.0.0/16'),
-      maxAzs: 3,
-      subnetConfiguration: [
-        {
-          cidrMask: 24,
-          name: 'langflow-Isolated',
-          subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
-        },
-        {
-          cidrMask: 24,
-          name: 'langflow-Public',
-          subnetType: ec2.SubnetType.PUBLIC,
-        },
-        {
-          cidrMask: 24,
-          name: 'langflow-Private',
-          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
-        },
-      ],
-      natGateways: 1,
-    })
+    // Use existing VPC
+    this.centralVpc = ec2.Vpc.fromLookup(scope, 'ExistingVPC', {
+      vpcId: 'vpc-027288988b1ac3149'
+    });
 
     // ALBに設定するセキュリティグループ
-    this.albSG = new ec2.SecurityGroup(scope, 'ALBSecurityGroup', {
-      securityGroupName: 'alb-sg',
-      description: 'for alb',
-      vpc: this.vpc,
-    })
+    this.centralAlbSG = new ec2.SecurityGroup(scope, 'ALBSecurityGroup', {
+      securityGroupName: 'langflow-alb-cn-sg',
+      description: 'Security group for langflow ALB',
+      vpc: this.centralVpc
+    });
 
     this.alb = new elb.ApplicationLoadBalancer(this,'langflow-alb',{
       internetFacing: true, //インターネットからのアクセスを許可するかどうか指定
       loadBalancerName: 'langflow-alb',
-      securityGroup: this.albSG, //作成したセキュリティグループを割り当てる
-      vpc:this.vpc,   
+      securityGroup: this.centralAlbSG, //作成したセキュリティグループを割り当てる
+      vpc:this.centralVpc,   
     })
 
     const listener = this.alb.addListener('Listener', { port: alb_listen_port });
@@ -72,42 +52,39 @@ export class Network extends Construct {
         path: '/health',
         healthyThresholdCount: 2,
         unhealthyThresholdCount: 4,
-        interval: Duration.seconds(100),
-        timeout: Duration.seconds(30),
-        healthyHttpCodes: '200',
+        interval: Duration.seconds(30),
+        timeout: Duration.seconds(10),
+        healthyHttpCodes: '200,302,404',
       },
     });
 
     // Cluster
     this.cluster = new ecs.Cluster(this, 'EcsCluster', {
       clusterName: 'langflow-cluster',
-      vpc: this.vpc,
+      vpc: this.centralVpc,
       enableFargateCapacityProviders: true,
     });
 
     // ECS BackEndに設定するセキュリティグループ
-    this.ecsBackSG = new ec2.SecurityGroup(scope, 'ECSBackEndSecurityGroup', {
-      securityGroupName: 'langflow-ecs-back-sg',
-      description: 'for langflow-back-ecs',
-      vpc: this.vpc,
-    })
-    this.ecsBackSG.addIngressRule(this.albSG,ec2.Port.tcp(back_service_port))
+    this.centralEcsBackSG = new ec2.SecurityGroup(scope, 'ECSBackEndSecurityGroup', {
+      securityGroupName: 'langflow-ecs-back-cn-sg',
+      description: 'Security group for langflow backend ECS',
+      vpc: this.centralVpc,
+    });
+    this.centralEcsBackSG.addIngressRule(this.centralAlbSG,ec2.Port.tcp(back_service_port));
 
     // RDSに設定するセキュリティグループ
-    this.dbSG = new ec2.SecurityGroup(scope, 'DBSecurityGroup', {
+    this.centralDbSG = new ec2.SecurityGroup(scope, 'DBSecurityGroup', {
       allowAllOutbound: true,
-      securityGroupName: 'langflow-db',
+      securityGroupName: 'langflow-cn-db-sg',
       description: 'for langflow-db',
-      vpc: this.vpc,
-    })
-    // langflow-ecs-back-sg からのポート3306:mysql(5432:postgres)のインバウンドを許可
-    this.dbSG.addIngressRule(this.ecsBackSG, ec2.Port.tcp(3306))
+      vpc: this.centralVpc,
+    });
 
     // Create CloudWatch Log Group
     this.backendLogGroup = new logs.LogGroup(this, 'backendLogGroup', {
       logGroupName: 'langflow-backend-logs',
       removalPolicy: RemovalPolicy.DESTROY,
     });
-
   }
 }

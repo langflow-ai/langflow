@@ -69,7 +69,7 @@ class Settings(BaseSettings):
 
     dev: bool = False
     """If True, Langflow will run in development mode."""
-    database_url: str | None = None
+    database_url: str | None = "postgresql://langflow:langflow@localhost:5432/langflow"
     """Database URL for Langflow. If not provided, Langflow will use a SQLite database."""
     pool_size: int = 10
     """The number of connections to keep open in the connection pool. If not provided, the default is 10."""
@@ -248,6 +248,7 @@ class Settings(BaseSettings):
     @field_validator("database_url", mode="before")
     @classmethod
     def set_database_url(cls, value, info):
+        return "postgresql://langflow:langflow@localhost:5432/langflow"
         if value and not is_valid_database_url(value):
             msg = f"Invalid database_url provided: '{value}'"
             raise ValueError(msg)

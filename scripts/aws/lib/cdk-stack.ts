@@ -2,20 +2,28 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as ecs from 'aws-cdk-lib/aws-ecs'
 
-import { Network, EcrRepository, Web, BackEndCluster, Rds, EcsIAM, Rag} from './construct';
+import { Network, EcrRepository, Web, BackEndCluster, Db, EcsIAM, Rag} from './construct';
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
 
 const errorMessageForBooleanContext = (key: string) => {
   return `There was an error setting $ {key}. Possible causes are as follows.
   - Trying to set it with the -c option instead of changing cdk.json
-  - cdk.json is set to a value that is not a boolean (e.g. “true” double quotes are not required)
+  - cdk.json is set to a value that is not a boolean (e.g. "true" double quotes are not required)
   - no items in cdk.json (unset) `;
 };
 
-
 export class LangflowAppStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
-    super(scope, id, props);
+    const stackProps = {
+      ...props,
+      env: {
+        account: process.env.CDK_DEFAULT_ACCOUNT,
+        region: process.env.CDK_DEFAULT_REGION
+      }
+    };
+    
+    super(scope, id, stackProps);
+    
     // Kendra Enable
     const ragEnabled: boolean = this.node.tryGetContext('ragEnabled')!;
     if (typeof ragEnabled !== 'boolean') {
@@ -30,21 +38,23 @@ export class LangflowAppStack extends cdk.Stack {
     const arch = ecs.CpuArchitecture.X86_64
 
     // VPC
-    const { vpc, cluster, ecsBackSG, dbSG, backendLogGroup, alb, albTG, albSG} = new Network(this, 'Network')
+    const { centralVpc, cluster, centralEcsBackSG, centralDbSG, backendLogGroup, alb, albTG, centralAlbSG} = new Network(this, 'Network')
+
+    const vpc = centralVpc
+    const dbSG = centralDbSG
+    const ecsBackSG = centralEcsBackSG
+    const albSG = centralAlbSG
 
     // ECR
     const { ecrBackEndRepository } = new EcrRepository(this, 'Ecr', {
       arch:arch
     })
 
-    // RDS
-    // VPCとSGのリソース情報をPropsとして引き渡す
-    const { rdsCluster } = new Rds(this, 'Rds', { vpc, dbSG })
+    // Database placeholder (no RDS)
+    new Db(this, 'Db', { vpc, dbSG })
 
     // IAM
-    const { backendTaskRole, backendTaskExecutionRole } = new EcsIAM(this, 'EcsIAM',{
-      rdsCluster:rdsCluster
-    })
+    const { backendTaskRole, backendTaskExecutionRole, dbSecret } = new EcsIAM(this, 'EcsIAM', {})
 
     const backendService = new BackEndCluster(this, 'backend', {
       cluster:cluster,
@@ -53,11 +63,10 @@ export class LangflowAppStack extends cdk.Stack {
       backendTaskRole:backendTaskRole,
       backendTaskExecutionRole:backendTaskExecutionRole,
       backendLogGroup:backendLogGroup,
-      rdsCluster:rdsCluster,
       arch:arch,
-      albTG:albTG
+      albTG:albTG,
+      dbSecret:dbSecret
     })
-    backendService.node.addDependency(rdsCluster);
 
     const frontendService = new Web(this, 'frontend',{
       cluster:cluster,
@@ -65,6 +74,5 @@ export class LangflowAppStack extends cdk.Stack {
       albSG:albSG
     })
     frontendService.node.addDependency(backendService);
-
   }
 }
