@@ -1,8 +1,6 @@
 from typing import Any
 
 import pytest
-from typing_extensions import override
-
 from langflow.components.agents import AgentComponent
 from langflow.components.crewai import CrewAIAgentComponent, SequentialTaskComponent
 from langflow.components.custom_component import CustomComponent
@@ -12,6 +10,7 @@ from langflow.components.outputs import ChatOutput
 from langflow.custom.utils import update_component_build_config
 from langflow.schema import dotdict
 from langflow.template import Output
+from typing_extensions import override
 
 
 def test_set_invalid_output():
