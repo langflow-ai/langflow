@@ -5,38 +5,40 @@ import httpx
 from langchain_ollama import ChatOllama
 
 from langflow.base.models.model import LCModelComponent
+from langflow.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS, OLLAMA_TOOL_MODELS_BASE, URL_LIST
 from langflow.field_typing import LanguageModel
-from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, StrInput
+from langflow.field_typing.range_spec import RangeSpec
+from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SliderInput
+
+HTTP_STATUS_OK = 200
 
 
 class ChatOllamaComponent(LCModelComponent):
-    HTTP_STATUS_OK = 200
     display_name = "Ollama"
     description = "Generate text using Ollama Local LLMs."
     icon = "Ollama"
     name = "OllamaModel"
 
     inputs = [
-        StrInput(
+        MessageTextInput(
             name="base_url",
             display_name="Base URL",
             info="Endpoint of the Ollama API. Defaults to 'http://localhost:11434' if not specified.",
-            value="http://localhost:11434",
+            value="",
+            real_time_refresh=True,
         ),
         DropdownInput(
             name="model_name",
             display_name="Model Name",
-            value="llama3.1",
+            options=[],
             info="Refer to https://ollama.com/library for more models.",
             refresh_button=True,
+            real_time_refresh=True,
         ),
-        FloatInput(
-            name="temperature",
-            display_name="Temperature",
-            value=0.2,
-            info="Controls the creativity of model responses.",
+        SliderInput(
+            name="temperature", display_name="Temperature", value=0.1, range_spec=RangeSpec(min=0, max=1, step=0.01)
         ),
-        StrInput(
+        MessageTextInput(
             name="format", display_name="Format", info="Specify the format of the output (e.g., json).", advanced=True
         ),
         DictInput(name="metadata", display_name="Metadata", info="Metadata to add to the run trace.", advanced=True),
@@ -98,20 +100,31 @@ class ChatOllamaComponent(LCModelComponent):
         ),
         FloatInput(name="top_p", display_name="Top P", info="Works together with top-k. (Default: 0.9)", advanced=True),
         BoolInput(name="verbose", display_name="Verbose", info="Whether to print out response text.", advanced=True),
-        StrInput(
+        MessageTextInput(
             name="tags",
             display_name="Tags",
             info="Comma-separated list of tags to add to the run trace.",
             advanced=True,
         ),
-        StrInput(
+        MessageTextInput(
             name="stop_tokens",
             display_name="Stop Tokens",
             info="Comma-separated list of tokens to signal the model to stop generating text.",
             advanced=True,
         ),
-        StrInput(name="system", display_name="System", info="System to use for generating text.", advanced=True),
-        StrInput(name="template", display_name="Template", info="Template to use for generating text.", advanced=True),
+        MessageTextInput(
+            name="system", display_name="System", info="System to use for generating text.", advanced=True
+        ),
+        MessageTextInput(
+            name="template", display_name="Template", info="Template to use for generating text.", advanced=True
+        ),
+        BoolInput(
+            name="tool_model_enabled",
+            display_name="Tool Model Enabled",
+            info="Whether to enable tool calling in the model.",
+            value=True,
+            real_time_refresh=True,
+        ),
         *LCModelComponent._base_inputs,
     ]
 
@@ -167,11 +180,10 @@ class ChatOllamaComponent(LCModelComponent):
 
         return output
 
-
     def is_valid_ollama_url(self, url: str) -> bool:
         try:
             with httpx.Client() as client:
-                return client.get(f"{url}/api/tags").status_code == self.HTTP_STATUS_OK
+                return client.get(f"{url}/api/tags").status_code == HTTP_STATUS_OK
         except httpx.RequestError:
             return False
 
@@ -194,29 +206,21 @@ class ChatOllamaComponent(LCModelComponent):
                     build_config["mirostat_eta"]["value"] = 0.1
                     build_config["mirostat_tau"]["value"] = 5
 
-        if field_name == "model_name":
-            base_url_dict = build_config.get("base_url", {})
-            base_url_load_from_db = base_url_dict.get("load_from_db", False)
-            base_url_value = base_url_dict.get("value")
-            if base_url_load_from_db:
-                base_url_value = await self.get_variables(base_url_value, field_name)
-            elif not base_url_value:
-                base_url_value = "http://localhost:11434"
-            build_config["model_name"]["options"] = await self.get_model(base_url_value)
-        if field_name == "base_url" and field_value:
-            if len(field_value) > 0 and not self.is_valid_ollama_url(field_value):
-                URL_LIST = ["http://localhost:11434", "http://host.docker.internal:11434", "http://127.0.0.1:11434", "http://0.0.0.0:11434"]
-                # check if the url is valid
-                valid_url = None
-                for url in URL_LIST:
-                    if self.is_valid_ollama_url(url):
-                        valid_url = url
-                        break
-                if valid_url:
-                    build_config["base_url"]["value"] = valid_url
-                else:
-                    build_config["base_url"]["value"] = ""
-
+        if field_name in {"base_url", "model_name"} and not self.is_valid_ollama_url(field_value):
+            # Check if any URL in the list is valid
+            valid_url = next((url for url in URL_LIST if self.is_valid_ollama_url(url)), "")
+            build_config["base_url"]["value"] = valid_url
+        if field_name in {"model_name", "base_url", "tool_model_enabled"}:
+            if self.is_valid_ollama_url(self.base_url):
+                tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
+                build_config["model_name"]["options"] = await self.get_model(self.base_url, tool_model_enabled)
+            elif self.is_valid_ollama_url(build_config["base_url"].get("value", "")):
+                tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
+                build_config["model_name"]["options"] = await self.get_model(
+                    build_config["base_url"].get("value", ""), tool_model_enabled
+                )
+            else:
+                build_config["model_name"]["options"] = []
         if field_name == "keep_alive_flag":
             if field_value == "Keep":
                 build_config["keep_alive"]["value"] = "-1"
@@ -229,8 +233,7 @@ class ChatOllamaComponent(LCModelComponent):
 
         return build_config
 
-    @staticmethod
-    async def get_model(base_url_value: str) -> list[str]:
+    async def get_model(self, base_url_value: str, tool_model_enabled: bool | None = None) -> list[str]:
         try:
             url = urljoin(base_url_value, "/api/tags")
             async with httpx.AsyncClient() as client:
@@ -238,7 +241,26 @@ class ChatOllamaComponent(LCModelComponent):
                 response.raise_for_status()
                 data = response.json()
 
-                return [model["name"] for model in data.get("models", [])]
-        except Exception as e:
-            msg = "Could not retrieve models. Please, make sure Ollama is running."
+            model_ids = [model["name"] for model in data.get("models", [])]
+            # this to ensure that not embedding models are included.
+            # not even the base models since models can have 1b 2b etc
+            # handles cases when embeddings models have tags like :latest - etc.
+            model_ids = [
+                model
+                for model in model_ids
+                if not any(
+                    model == embedding_model or model.startswith(embedding_model.split("-")[0])
+                    for embedding_model in OLLAMA_EMBEDDING_MODELS
+                )
+            ]
+
+        except (ImportError, ValueError, httpx.RequestError) as e:
+            msg = "Could not get model names from Ollama."
             raise ValueError(msg) from e
+        return (
+            model_ids if not tool_model_enabled else [model for model in model_ids if self.supports_tool_calling(model)]
+        )
+
+    def supports_tool_calling(self, model: str) -> bool:
+        """Check if model name is in the base of any models example llama3.3 can have 1b and 2b."""
+        return any(model.startswith(f"{tool_model}") for tool_model in OLLAMA_TOOL_MODELS_BASE)
