@@ -47,11 +47,12 @@ class SambaNovaComponent(LCModelComponent):
             value=2048,
             info="The maximum number of tokens to generate.",
         ),
-        FloatInput(
+        SliderInput(
             name="top_p",
             display_name="top_p",
             advanced=True,
             value=1.0,
+            range_spec=RangeSpec(min=0, max=1, step=0.01),
             info="Model top_p",
         ),
         SliderInput(
