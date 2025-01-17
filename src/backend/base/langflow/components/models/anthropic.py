@@ -40,7 +40,6 @@ class AnthropicModelComponent(LCModelComponent):
             value=None,
             required=True,
             real_time_refresh=True,
-            required=True,
         ),
         SliderInput(
             name="temperature",
