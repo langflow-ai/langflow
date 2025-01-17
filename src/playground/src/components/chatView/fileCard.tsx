@@ -1,11 +1,10 @@
 import { useGetDownloadFileMutation } from "@/controllers/API/queries/files";
 import { useState } from "react";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
-import { fileCardPropsType } from "../../../../../../types/components";
-import getClasses from "../utils/get-classes";
-import DownloadButton from "./download-button";
 import { usePlaygroundStore } from "src/stores/playgroundStore";
 import formatFileName from "src/utils/strings";
+import { fileCardPropsType } from "./types";
+import DownloadButton from "../DownloadButton/download-button";
 
 const imgTypes = new Set(["png", "jpg", "jpeg", "gif", "webp", "image"]);
 
@@ -26,6 +25,12 @@ export default function FileCard({
   }
   function handleMouseLeave(): void {
     setIsHovered(false);
+  }
+
+  function getClasses(isHovered: boolean): string {
+    return `relative cursor-pointer rounded-lg border h-20 w-80 border-ring bg-muted shadow transition duration-300 hover:drop-shadow-lg ${
+      isHovered ? "shadow-md" : ""
+    }`;
   }
 
   const fileWrapperClasses = getClasses(isHovered);
