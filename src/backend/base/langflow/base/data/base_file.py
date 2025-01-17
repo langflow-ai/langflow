@@ -128,7 +128,6 @@ class BaseFileComponent(Component, ABC):
             input_types=["Data", "Message"],
             is_list=True,
             advanced=True,
-
         ),
         BoolInput(
             name="silent_errors",
