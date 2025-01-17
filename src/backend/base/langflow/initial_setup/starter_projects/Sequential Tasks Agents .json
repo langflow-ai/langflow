@@ -700,6 +700,7 @@
                   "Groq",
                   "NVIDIA",
                   "OpenAI",
+                  "SambaNova",
                   "Custom"
                 ],
                 "placeholder": "",
@@ -1276,6 +1277,7 @@
                   "Groq",
                   "NVIDIA",
                   "OpenAI",
+                  "SambaNova",
                   "Custom"
                 ],
                 "placeholder": "",
@@ -3165,6 +3167,7 @@
                   "Groq",
                   "NVIDIA",
                   "OpenAI",
+                  "SambaNova",
                   "Custom"
                 ],
                 "placeholder": "",
@@ -3657,7 +3660,7 @@
         "data": {
           "id": "note-ynS9s",
           "node": {
-            "description": "## Configure the agent by obtaining your OpenAI API key from [platform.openai.com](https://platform.openai.com). Under \"Model Provider\", choose:\n- OpenAI: Default, requires only API key\n- Anthropic/Azure/Groq/NVIDIA: Each requires their own API keys\n- Custom: Use your own model endpoint + authentication\n\nSelect model and input API key before running the flow.",
+            "description": "## Configure the agent by obtaining your OpenAI API key from [platform.openai.com](https://platform.openai.com). Under \"Model Provider\", choose:\n- OpenAI: Default, requires only API key\n- Anthropic/Azure/Groq/NVIDIA/SambaNova: Each requires their own API keys\n- Custom: Use your own model endpoint + authentication\n\nSelect model and input API key before running the flow.",
             "display_name": "",
             "documentation": "",
             "template": {

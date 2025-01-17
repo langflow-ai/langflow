@@ -105,6 +105,7 @@ dependencies = [
     "langchain-google-community==2.0.3",
     "langchain-elasticsearch==0.3.0",
     "langchain-ollama==0.2.1",
+    "langchain-sambanova==0.1.0",
     "langchain-community~=0.3.10",
     "sqlalchemy[aiosqlite,postgresql_psycopg2binary,postgresql_psycopgbinary]>=2.0.36,<3.0.0",
     "atlassian-python-api==3.41.16",

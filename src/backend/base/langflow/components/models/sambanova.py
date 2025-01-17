@@ -1,4 +1,4 @@
-from langchain_community.chat_models.sambanova import ChatSambaNovaCloud
+from langchain_sambanova import ChatSambaNovaCloud
 from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
@@ -42,8 +42,15 @@ class SambaNovaComponent(LCModelComponent):
             name="max_tokens",
             display_name="Max Tokens",
             advanced=True,
-            value=4096,
-            info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+            value=2048,
+            info="The maximum number of tokens to generate.",
+        ),
+        FloatInput(
+            name="top_p",
+            display_name="top_p",
+            advanced=True,
+            value=1.0,
+            info="Model top_p",
         ),
         FloatInput(name="temperature", display_name="Temperature", value=0.07),
     ]
@@ -54,6 +61,7 @@ class SambaNovaComponent(LCModelComponent):
         model_name = self.model_name
         max_tokens = self.max_tokens
         temperature = self.temperature
+        top_p = self.top_p
 
         api_key = SecretStr(sambanova_api_key).get_secret_value() if sambanova_api_key else None
 
@@ -61,6 +69,7 @@ class SambaNovaComponent(LCModelComponent):
             model=model_name,
             max_tokens=max_tokens or 1024,
             temperature=temperature or 0.07,
+            top_p=top_p,
             sambanova_url=sambanova_url,
             sambanova_api_key=api_key,
         )
