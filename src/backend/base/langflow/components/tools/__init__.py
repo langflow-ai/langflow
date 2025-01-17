@@ -4,6 +4,7 @@ from langchain_core._api.deprecation import LangChainDeprecationWarning
 
 from .bing_search_api import BingSearchAPIComponent
 from .calculator import CalculatorToolComponent
+from .calculator_core import CalculatorComponent
 from .duck_duck_go_search_run import DuckDuckGoSearchComponent
 from .exa_search import ExaSearchToolkit
 from .glean_search_api import GleanSearchAPIComponent
@@ -15,6 +16,7 @@ from .python_repl import PythonREPLToolComponent
 from .search_api import SearchAPIComponent
 from .searxng import SearXNGToolComponent
 from .serp_api import SerpAPIComponent
+from .tavily import TavilySearchComponent
 from .tavily_search import TavilySearchToolComponent
 from .wikidata_api import WikidataAPIComponent
 from .wikipedia_api import WikipediaAPIComponent
@@ -31,6 +33,7 @@ __all__ = [
     "AstraDBCQLToolComponent",
     "AstraDBToolComponent",
     "BingSearchAPIComponent",
+    "CalculatorComponent",
     "CalculatorToolComponent",
     "DuckDuckGoSearchComponent",
     "ExaSearchToolkit",
@@ -43,6 +46,7 @@ __all__ = [
     "SearXNGToolComponent",
     "SearchAPIComponent",
     "SerpAPIComponent",
+    "TavilySearchComponent",
     "TavilySearchToolComponent",
     "WikidataAPIComponent",
     "WikipediaAPIComponent",
