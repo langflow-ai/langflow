@@ -177,10 +177,8 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     };
   }, [lastCopiedSelection, lastSelection, takeSnapshot, selectionMenuVisible]);
 
-
   const showCanvas =
-    Object.keys(templates).length > 0 &&
-    Object.keys(types).length > 0
+    Object.keys(templates).length > 0 && Object.keys(types).length > 0;
 
   useEffect(() => {
     useFlowStore.setState({ autoSaveFlow });
