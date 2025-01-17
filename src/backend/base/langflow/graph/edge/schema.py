@@ -45,7 +45,22 @@ class TargetHandle(BaseModel):
     input_types: list[str] = Field(
         default_factory=list, alias="inputTypes", description="List of input types for the target handle."
     )
-    type: str = Field(..., description="Type of the target handle.")
+    type: str = Field(None, description="Type of the target handle.")
+
+    @classmethod
+    def from_loop_target_handle(cls, target_handle: dict) -> "TargetHandle":
+        # The target handle is a loop edge
+        # The target handle is a dict with the following keys:
+        # - name: str
+        # - id: str
+        # - inputTypes: list[str]
+        # - type: str
+        # It is built from an Output, which is why it has a different structure
+        return cls(
+            field_name=target_handle.get("name"),
+            id=target_handle.get("id"),
+            input_types=target_handle.get("output_types"),
+        )
 
 
 class SourceHandle(BaseModel):
