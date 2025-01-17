@@ -5,7 +5,9 @@ from langflow.schema import Data
 
 class LoopComponent(Component):
     display_name = "Loop"
-    description = "Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs."
+    description = (
+        "Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs."
+    )
     icon = "infinity"
 
     inputs = [
@@ -17,9 +19,7 @@ class LoopComponent(Component):
     ]
 
     outputs = [
-        Output(
-            display_name="Item", name="item", method="item_output", allows_loop=True
-        ),
+        Output(display_name="Item", name="item", method="item_output", allows_loop=True),
         Output(display_name="Done", name="done", method="done_output"),
     ]
 
@@ -105,11 +105,7 @@ class LoopComponent(Component):
         aggregated = self.ctx.get(f"{self._id}_aggregated", [])
 
         # Check if loop input is provided and append to aggregated list
-        if (
-            self.item is not None
-            and not isinstance(self.item, str)
-            and len(aggregated) <= len(data_list)
-        ):
+        if self.item is not None and not isinstance(self.item, str) and len(aggregated) <= len(data_list):
             aggregated.append(self.item)
             self.update_ctx({f"{self._id}_aggregated": aggregated})
         return aggregated
