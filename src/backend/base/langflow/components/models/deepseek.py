@@ -51,7 +51,7 @@ class DeepSeekModelComponent(LCModelComponent):
             info="Base URL for API requests. Defaults to https://api.deepseek.com",
             value="https://api.deepseek.com",
         ),
-        SecretStrInput(name="api_key", display_name="DeepSeek API Key", info="The DeepSeek API Key", advanced=False),
+        SecretStrInput(name="api_key", display_name="DeepSeek API Key", info="The DeepSeek API Key", advanced=False, required=True),
         SliderInput(
             name="temperature",
             display_name="Temperature",
