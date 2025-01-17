@@ -39,7 +39,8 @@ test(
     cleanCode = cleanCode.replace("FloatInput(", "SliderInput(");
     cleanCode = cleanCode.replace(
       "from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, StrInput",
-      "from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, StrInput, SliderInput",
+      "from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, StrInput, SliderInput\n" +
+        "from langflow.field_typing.range_spec import RangeSpec",
     );
 
     cleanCode = cleanCode.replace(
