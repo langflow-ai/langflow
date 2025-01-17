@@ -9,6 +9,8 @@ from loguru import logger
 
 from langflow.custom import Component
 
+MAX_DEPTH = 2
+
 
 class CustomComponentPathValueError(ValueError):
     pass
@@ -135,7 +137,11 @@ class DirectoryReader:
             if "deactivated" in file_path.parent.name:
                 continue
 
-            if file_path.is_file() and not file_path.name.startswith("__"):
+            # Calculate the depth of the file relative to the safe path
+            relative_depth = len(file_path.relative_to(safe_path_obj).parts)
+
+            # Only include files that are one or two levels deep
+            if relative_depth <= MAX_DEPTH and file_path.is_file() and not file_path.name.startswith("__"):
                 file_list.append(str(file_path))
         return file_list
 
