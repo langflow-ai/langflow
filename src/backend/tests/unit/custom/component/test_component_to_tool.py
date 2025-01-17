@@ -6,7 +6,7 @@ from langflow.components.tools.calculator import CalculatorToolComponent
 
 
 async def test_component_to_toolkit():
-    calculator_component =  CalculatorToolComponent()
+    calculator_component = CalculatorToolComponent()
     agent_component = AgentComponent().set(tools=[calculator_component])
 
     tools = await agent_component.to_toolkit()

@@ -414,9 +414,7 @@ class Component(CustomComponent):
             if is_tool_mode:
                 frontend_node.setdefault("template", {})
                 tools_metadata_input = await self._build_tools_metadata_input()
-                frontend_node["template"][
-                    TOOLS_METADATA_INPUT_NAME
-                ] = tools_metadata_input.to_dict()
+                frontend_node["template"][TOOLS_METADATA_INPUT_NAME] = tools_metadata_input.to_dict()
             elif "template" in frontend_node:
                 frontend_node["template"].pop(TOOLS_METADATA_INPUT_NAME, None)
         self.tools_metadata = frontend_node.get("template", {}).get(TOOLS_METADATA_INPUT_NAME, {}).get("value")
