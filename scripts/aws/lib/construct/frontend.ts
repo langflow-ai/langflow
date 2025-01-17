@@ -93,6 +93,7 @@ export class Web extends Construct {
     additionalBehaviors: {
       '/api/v1/*': albBehaviorOptions,
       '/health' : albBehaviorOptions,
+      '/health_check' : albBehaviorOptions
     },
     enableLogging: true, // ログ出力設定
     logBucket: new s3.Bucket(this, 'LogBucket',commonBucketProps),

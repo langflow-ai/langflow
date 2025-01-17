@@ -12,10 +12,18 @@ const errorMessageForBooleanContext = (key: string) => {
   - no items in cdk.json (unset) `;
 };
 
-
 export class LangflowAppStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
-    super(scope, id, props);
+    const stackProps = {
+      ...props,
+      env: {
+        account: process.env.CDK_DEFAULT_ACCOUNT,
+        region: process.env.CDK_DEFAULT_REGION
+      }
+    };
+    
+    super(scope, id, stackProps);
+    
     // Kendra Enable
     const ragEnabled: boolean = this.node.tryGetContext('ragEnabled')!;
     if (typeof ragEnabled !== 'boolean') {
@@ -30,7 +38,12 @@ export class LangflowAppStack extends cdk.Stack {
     const arch = ecs.CpuArchitecture.X86_64
 
     // VPC
-    const { vpc, cluster, ecsBackSG, dbSG, backendLogGroup, alb, albTG, albSG} = new Network(this, 'Network')
+    const { centralVpc, cluster, centralEcsBackSG, centralDbSG, backendLogGroup, alb, albTG, centralAlbSG} = new Network(this, 'Network')
+
+    const vpc = centralVpc
+    const dbSG = centralDbSG
+    const ecsBackSG = centralEcsBackSG
+    const albSG = centralAlbSG
 
     // ECR
     const { ecrBackEndRepository } = new EcrRepository(this, 'Ecr', {
