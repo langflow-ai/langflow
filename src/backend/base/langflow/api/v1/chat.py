@@ -48,7 +48,7 @@ from langflow.services.deps import get_chat_service, get_session, get_telemetry_
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
 if TYPE_CHECKING:
-    from langflow.graph.vertex.types import InterfaceVertex
+    from langflow.graph.vertex.vertex_types import InterfaceVertex
 
 router = APIRouter(tags=["Chat"])
 
@@ -152,7 +152,6 @@ async def build_flow(
     start_component_id: str | None = None,
     log_builds: bool | None = True,
     current_user: CurrentActiveUser,
-    session: DbSession,
 ):
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
@@ -164,15 +163,20 @@ async def build_flow(
         components_count = None
         try:
             flow_id_str = str(flow_id)
-            if not data:
-                graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
-            else:
-                async with session_scope() as new_session:
-                    result = await new_session.exec(select(Flow.name).where(Flow.id == flow_id))
+            # Create a fresh session for database operations
+            async with session_scope() as fresh_session:
+                if not data:
+                    graph = await build_graph_from_db(flow_id=flow_id, session=fresh_session, chat_service=chat_service)
+                else:
+                    result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
                     flow_name = result.first()
-                graph = await build_graph_from_data(
-                    flow_id=flow_id_str, payload=data.model_dump(), user_id=str(current_user.id), flow_name=flow_name
-                )
+                    graph = await build_graph_from_data(
+                        flow_id=flow_id_str,
+                        payload=data.model_dump(),
+                        user_id=str(current_user.id),
+                        flow_name=flow_name,
+                    )
+
             graph.validate_stream()
             if stop_component_id or start_component_id:
                 try:
