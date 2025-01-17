@@ -574,6 +574,7 @@ export const SIDEBAR_BUNDLES = [
   { category: "Security", display_name: "Identity", name: "security_identity", icon: "Totogi" },
   { category: "Security", display_name: "Permissions", name: "security_permissions", icon: "Totogi" },
   { category: "Security", display_name: "Audit", name: "security_audit", icon: "Totogi" },
+  { category: "Product", display_name: "Usage Consumption", name: "usage_consumption", icon: "Totogi" },
 ];
 
 
