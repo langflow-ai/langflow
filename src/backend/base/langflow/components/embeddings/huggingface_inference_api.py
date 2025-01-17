@@ -36,6 +36,7 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
             display_name="Model Name",
             value="BAAI/bge-large-en-v1.5",
             info="The name of the model to use for text embeddings.",
+            required=True,
         ),
     ]
 
