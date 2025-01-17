@@ -85,9 +85,9 @@ def test_input_types(wool_ball_component):
     for input_field in inputs:
         if input_field.name in expected_input_types:
             assert hasattr(input_field, "input_types"), f"{input_field.name} deve ter input_types"
-            assert (
-                input_field.input_types == expected_input_types[input_field.name]
-            ), f"input_types incorretos para {input_field.name}"
+            assert input_field.input_types == expected_input_types[input_field.name], (
+                f"input_types incorretos para {input_field.name}"
+            )
 
 
 @patch("requests.get")
