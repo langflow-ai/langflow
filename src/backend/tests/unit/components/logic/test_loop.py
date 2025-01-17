@@ -62,6 +62,7 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
         assert len(messages[1].text) > 0
 
     async def test_build_flow_loop(self, client, json_loop_test, logged_in_headers):
+        # TODO: Add a test for the loop where the loop component gets updated even the component in json
         flow_id = await self._create_flow(client, json_loop_test, logged_in_headers)
 
         async with client.stream("POST", f"api/v1/build/{flow_id}/flow", json={}, headers=logged_in_headers) as r:
