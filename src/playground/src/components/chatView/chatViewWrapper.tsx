@@ -18,7 +18,7 @@ export const ChatViewWrapper = ({
   sessionId,
   sendMessage,
   lockChat,
-  setLockChat,
+  initialChatValue,
 }: ChatViewWrapperProps) => {
   return (
     <div
@@ -86,10 +86,10 @@ export const ChatViewWrapper = ({
       >
         {messagesFetched && (
           <ChatView
+            initialChatValue={initialChatValue}
             focusChat={sessionId}
             sendMessage={sendMessage}
             lockChat={lockChat}
-            setLockChat={setLockChat}
             visibleSession={visibleSession}
             closeChat={undefined}
             inputs={[]}
