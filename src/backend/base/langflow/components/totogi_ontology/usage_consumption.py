@@ -19,6 +19,7 @@ from langflow.custom import Component
 from langflow.io import BoolInput, DataInput, DropdownInput, IntInput, MessageTextInput, NestedDictInput, Output
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
+from langflow.io import Output
 
 
 class TotogiOntologyUsageConsumption(LCToolComponent):
@@ -52,6 +53,7 @@ class TotogiOntologyUsageConsumption(LCToolComponent):
 
     outputs = [
         Output(display_name="Usage Consumption Data", name="usage_consumption_data", method="make_request"),
+        Output(name="usage_consumption_tool", display_name="Tool", method="build_tool"),
     ]
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):

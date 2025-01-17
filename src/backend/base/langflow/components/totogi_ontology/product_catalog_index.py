@@ -20,6 +20,7 @@ from langflow.io import BoolInput, DataInput, DropdownInput, IntInput, MessageTe
 from langflow.schema import Data
 from langflow.schema.dotdict import dotdict
 
+from langflow.io import Output
 
 class TotogiOntologyProductCatalogIndex(LCToolComponent):
     display_name = "Product Catalog Index - GET"
@@ -52,6 +53,7 @@ class TotogiOntologyProductCatalogIndex(LCToolComponent):
 
     outputs = [
         Output(display_name="Product Catalog Index Data", name="product_catalog_index_data", method="make_request"),
+        Output(name="product_catalog_index_tool", display_name="Tool", method="build_tool"),
     ]
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
