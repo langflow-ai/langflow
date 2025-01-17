@@ -11,7 +11,9 @@ from langflow.schema import Data
 
 class ScrapeGraphMarkdownifyApi(Component):
     display_name: str = "ScrapeGraphMarkdownifyApi"
-    description: str = "ScrapeGraph Markdownify API."
+    description: str = """ScrapeGraph Markdownify API. 
+    Given a URL, it will return the markdownified content of the website.
+    More info at https://docs.scrapegraphai.com/services/markdownify"""
     name = "ScrapeGraphMarkdownifyApi"
 
     output_types: list[str] = ["Document"]

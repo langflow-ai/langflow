@@ -11,7 +11,9 @@ from langflow.schema import Data
 
 class ScrapeGraphSmartScraperApi(Component):
     display_name: str = "ScrapeGraphSmartScraperApi"
-    description: str = "ScrapeGraph Smart Scraper API."
+    description: str = """ScrapeGraph Smart Scraper API.
+    Given a URL, it will return the structured data of the website.
+    More info at https://docs.scrapegraphai.com/services/smartscraper"""
     name = "ScrapeGraphSmartScraperApi"
 
     output_types: list[str] = ["Document"]
