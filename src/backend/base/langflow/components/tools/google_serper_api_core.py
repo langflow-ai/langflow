@@ -9,7 +9,7 @@ from langflow.schema.message import Message
 class GoogleSerperAPICore(Component):
     display_name = "Google Serper API"
     description = "Call the Serper.dev Google Search API."
-    icon = "Google"
+    icon = "Serper"
 
     inputs = [
         SecretStrInput(
