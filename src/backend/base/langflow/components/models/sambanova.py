@@ -4,7 +4,8 @@ from pydantic.v1 import SecretStr
 from langflow.base.models.model import LCModelComponent
 from langflow.base.models.sambanova_constants import SAMBANOVA_MODEL_NAMES
 from langflow.field_typing import LanguageModel
-from langflow.io import DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
+from langflow.field_typing.range_spec import RangeSpec
+from langflow.io import DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
 
 
 class SambaNovaComponent(LCModelComponent):
@@ -37,6 +38,7 @@ class SambaNovaComponent(LCModelComponent):
             info="The Sambanova API Key to use for the Sambanova model.",
             advanced=False,
             value="SAMBANOVA_API_KEY",
+            required=True,
         ),
         IntInput(
             name="max_tokens",
@@ -52,7 +54,9 @@ class SambaNovaComponent(LCModelComponent):
             value=1.0,
             info="Model top_p",
         ),
-        FloatInput(name="temperature", display_name="Temperature", value=0.07),
+        SliderInput(
+            name="temperature", display_name="Temperature", value=0.1, range_spec=RangeSpec(min=0, max=2, step=0.01)
+        ),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
