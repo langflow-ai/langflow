@@ -21,7 +21,8 @@ export default function IOModal({
   disable,
   nodes,
   callbacks,
-  mode
+  mode,
+  initialChatValue
 }: {
     children: React.ReactNode;
     disable: boolean;
@@ -37,7 +38,8 @@ export default function IOModal({
     getLockChat: () => boolean;
     setLockChat: (lock: boolean) => void;
     }
-    mode: "modal" | "full-screen"
+    mode: "modal" | "full-screen",
+    initialChatValue?: string
 }): JSX.Element {
   const { inputs, outputs } = getInputsAndOutputs(nodes ?? []);
   const chatInput = inputs.find(
@@ -281,6 +283,7 @@ export default function IOModal({
                 />
               )}
               <ChatViewWrapper
+                initialChatValue={initialChatValue}
                 selectedViewField={selectedViewField}
                 visibleSession={visibleSession}
                 sessions={sessions}
@@ -294,7 +297,6 @@ export default function IOModal({
                 sessionId={sessionId}
                 sendMessage={sendMessage}
                 lockChat={lockChat}
-                setLockChat={setLockChat}
               />
             </div>
           </div>
