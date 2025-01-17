@@ -117,14 +117,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             real_time_refresh=True,
             input_types=[],
         ),
-        SecretStrInput(
-            name="api_endpoint",
-            display_name="API Endpoint",
-            info="The Astra DB API Endpoint to use. Overrides selection of database.",
-            refresh_button=True,
-            real_time_refresh=True,
-            advanced=True,
-        ),
         StrInput(
             name="environment",
             display_name="Environment",
@@ -146,6 +138,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 }
             ],
             value="",
+            combobox=True,
         ),
         DropdownInput(
             name="collection_name",
@@ -280,13 +273,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         token: str,
         database_name: str,
         new_collection_name: str,
-        api_endpoint: str | None = None,
         dimension: int | None = None,
         embedding_generation_provider: str | None = None,
         embedding_generation_model: str | None = None,
     ):
         client = DataAPIClient(token=token)
-        api_endpoint = cls.get_api_endpoint_static(token=token, database_name=database_name, api_endpoint=api_endpoint)
+        api_endpoint = cls.get_api_endpoint_static(token=token, database_name=database_name)
 
         # Get the database object
         database = client.get_database(api_endpoint=api_endpoint, token=token)
@@ -341,12 +333,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         cls,
         token: str,
         environment: str | None = None,
-        api_endpoint: str | None = None,
         database_name: str | None = None,
     ):
-        # If the API endpoint is set, return it
-        if api_endpoint:
-            return api_endpoint
+        # Check if the database_name is like a url
+        if database_name and database_name.startswith("https://"):
+            return database_name
 
         # If the database is not set, nothing we can do.
         if not database_name:
@@ -359,7 +350,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return self.get_api_endpoint_static(
             token=self.token,
             environment=self.environment,
-            api_endpoint=self.api_endpoint,
             database_name=self.database_name,
         )
 
@@ -488,12 +478,17 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return []
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
+        if not self.token or not self.token.startswith("AstraCS:"):
+            build_config["database_name"]["info"] = "Add a Valid Token to Select a Database"
+        else:
+            build_config["database_name"]["info"] = "Select a Database from Astra DB"
+
         # Refresh the database name options
         if field_name in ["token", "environment"] or not build_config["database_name"]["options"]:
             # Reset the list of collections
             build_config["collection_name"]["options"] = []
             build_config["collection_name"]["options_metadata"] = []
-            build_config["database_name"]["value"] = None
+            build_config["database_name"]["value"] = []
 
             # Get the list of databases
             database_options = self._initialize_database_options()
