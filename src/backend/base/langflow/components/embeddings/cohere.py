@@ -12,11 +12,11 @@ class CohereEmbeddingsComponent(LCModelComponent):
     name = "CohereEmbeddings"
 
     inputs = [
-        SecretStrInput(name="cohere_api_key", display_name="Cohere API Key"),
+        SecretStrInput(name="cohere_api_key", display_name="Cohere API Key", required=True),
         DropdownInput(
             name="model",
             display_name="Model",
-            advanced=True,
+            advanced=False,
             options=[
                 "embed-english-v2.0",
                 "embed-multilingual-v2.0",
