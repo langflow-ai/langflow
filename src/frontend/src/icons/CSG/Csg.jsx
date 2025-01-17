@@ -1,5 +1,5 @@
 import * as React from "react"
-function SvgComponent(props) {
+function SvgCsgLogo(props) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -15,4 +15,4 @@ function SvgComponent(props) {
     </svg>
   )
 }
-export default SvgComponent
+export default SvgCsgLogo
