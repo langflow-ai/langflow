@@ -13,6 +13,7 @@ from .python_code_structured_tool import PythonCodeStructuredTool
 from .python_repl import PythonREPLToolComponent
 from .search_api import SearchAPIComponent
 from .searxng import SearXNGToolComponent
+from .serp import SerpComponent
 from .serp_api import SerpAPIComponent
 from .tavily_search import TavilySearchToolComponent
 from .wikidata_api import WikidataAPIComponent
@@ -40,6 +41,7 @@ __all__ = [
     "PythonREPLToolComponent",
     "SearXNGToolComponent",
     "SearchAPIComponent",
+    "SerpComponent",
     "SerpAPIComponent",
     "TavilySearchToolComponent",
     "WikidataAPIComponent",
