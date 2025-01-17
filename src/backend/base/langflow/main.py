@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from urllib.parse import urlencode
 
 import anyio
+import httpx
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
@@ -94,6 +95,14 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
         return response
 
 
+async def load_bundles_with_error_handling():
+    try:
+        return await load_bundles_from_urls()
+    except (httpx.TimeoutException, httpx.HTTPError, httpx.RequestError) as exc:
+        logger.error(f"Error loading bundles from URLs: {exc}")
+        return [], []
+
+
 def get_lifespan(*, fix_migration=False, version=None):
     telemetry_service = get_telemetry_service()
 
@@ -112,7 +121,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             await initialize_services(fix_migration=fix_migration)
             setup_llm_caching()
             await initialize_super_user_if_needed()
-            temp_dirs, bundles_components_paths = await load_bundles_from_urls()
+            temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
             get_settings_service().settings.components_path.extend(bundles_components_paths)
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
             await create_or_update_starter_projects(all_types_dict)
