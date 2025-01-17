@@ -11,12 +11,11 @@ from langflow.io import MessageTextInput, Output, SecretStrInput
 
 MIN_DIMENSION_ERROR = "Output dimensionality must be at least 1"
 MAX_DIMENSION_ERROR = (
-    "Output dimensionality cannot exceed 768. "
-    "Google's embedding models only support dimensions up to 768. "
-    "Received: {}"
+    "Output dimensionality cannot exceed 768. Google's embedding models only support dimensions up to 768. Received: {}"
 )
 MAX_DIMENSION = 768
 MIN_DIMENSION = 1
+
 
 class GoogleGenerativeAIEmbeddingsComponent(Component):
     display_name = "Google Generative AI Embeddings"
