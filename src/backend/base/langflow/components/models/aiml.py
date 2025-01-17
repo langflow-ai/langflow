@@ -6,8 +6,14 @@ from langflow.base.models.aiml_constants import AimlModels
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.inputs import DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
-from langflow.inputs.inputs import HandleInput
+from langflow.inputs import (
+    DictInput,
+    DropdownInput,
+    IntInput,
+    SecretStrInput,
+    SliderInput,
+    StrInput,
+)
 
 
 class AIMLModelComponent(LCModelComponent):
@@ -47,14 +53,10 @@ class AIMLModelComponent(LCModelComponent):
             info="The AIML API Key to use for the OpenAI model.",
             advanced=False,
             value="AIML_API_KEY",
+            required=True,
         ),
-        FloatInput(name="temperature", display_name="Temperature", value=0.1),
-        HandleInput(
-            name="output_parser",
-            display_name="Output Parser",
-            info="The parser to use to parse the output of the model",
-            advanced=True,
-            input_types=["OutputParser"],
+        SliderInput(
+            name="temperature", display_name="Temperature", value=0.1, range_spec=RangeSpec(min=0, max=2, step=0.01)
         ),
     ]
 

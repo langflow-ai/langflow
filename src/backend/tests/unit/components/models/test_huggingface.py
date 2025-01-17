@@ -1,5 +1,5 @@
 from langflow.components.models.huggingface import HuggingFaceEndpointsComponent
-from langflow.inputs.inputs import DictInput, DropdownInput, FloatInput, HandleInput, IntInput, SecretStrInput, StrInput
+from langflow.inputs.inputs import DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
 
 
 def test_huggingface_inputs():
@@ -20,11 +20,10 @@ def test_huggingface_inputs():
         "huggingfacehub_api_token": SecretStrInput,
         "model_kwargs": DictInput,
         "retry_attempts": IntInput,
-        "output_parser": HandleInput,
     }
 
     # Check if all expected inputs are present
     for name, input_type in expected_inputs.items():
-        assert any(
-            isinstance(inp, input_type) and inp.name == name for inp in inputs
-        ), f"Missing or incorrect input: {name}"
+        assert any(isinstance(inp, input_type) and inp.name == name for inp in inputs), (
+            f"Missing or incorrect input: {name}"
+        )

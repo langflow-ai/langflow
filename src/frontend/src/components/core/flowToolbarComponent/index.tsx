@@ -5,9 +5,9 @@ import {
   ENABLE_LANGFLOW_STORE,
 } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
+import { Panel } from "@xyflow/react";
 import { useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { Panel } from "reactflow";
 import ApiModal from "../../../modals/apiModal";
 import ShareModal from "../../../modals/shareModal";
 import useFlowStore from "../../../stores/flowStore";
@@ -134,7 +134,11 @@ export default function FlowToolbar(): JSX.Element {
             </div>
             {ENABLE_API && (
               <>
-                <div className="flex cursor-pointer items-center gap-2">
+                <div
+                  className="flex cursor-pointer items-center gap-2"
+                  data-testid="api_button_modal"
+                  id="api_button_modal"
+                >
                   {currentFlow && currentFlow.data && (
                     <ApiModal
                       flow={currentFlow}

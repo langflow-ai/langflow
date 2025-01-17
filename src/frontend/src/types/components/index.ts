@@ -1,5 +1,5 @@
+import { ReactFlowJsonObject } from "@xyflow/react";
 import { ReactElement, ReactNode } from "react";
-import { ReactFlowJsonObject } from "reactflow";
 import { InputOutput } from "../../constants/enums";
 import {
   APIClassType,
@@ -8,7 +8,12 @@ import {
   OutputFieldProxyType,
 } from "../api";
 import { ChatMessageType } from "../chat";
-import { FlowStyleType, FlowType, NodeDataType, NodeType } from "../flow/index";
+import {
+  AllNodeType,
+  FlowStyleType,
+  FlowType,
+  NodeDataType,
+} from "../flow/index";
 import { sourceHandleType, targetHandleType } from "./../flow/index";
 export type InputComponentType = {
   name?: string;
@@ -41,6 +46,7 @@ export type InputComponentType = {
   onChangeFolderName?: (e: any) => void;
   nodeStyle?: boolean;
   isToolMode?: boolean;
+  popoverWidth?: string;
 };
 export type DropDownComponent = {
   disabled?: boolean;
@@ -494,7 +500,6 @@ export type ChatInputType = {
   setFiles: (
     files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[]),
   ) => void;
-  chatValue: string;
   inputRef: {
     current: any;
   };
@@ -507,7 +512,6 @@ export type ChatInputType = {
     repeat: number;
     files?: string[];
   }) => void;
-  setChatValue: (value: string) => void;
 };
 
 export type editNodeToggleType = {
@@ -668,6 +672,8 @@ export type buttonBoxPropsType = {
 export type FlowSettingsPropsType = {
   open: boolean;
   setOpen: (open: boolean) => void;
+  details?: boolean;
+  flowData?: FlowType;
 };
 
 export type groupDataType = {
@@ -692,11 +698,11 @@ export type tabsArrayType = {
 
 export type codeTabsPropsType = {
   open?: boolean;
-  tabs: Array<tabsArrayType>;
+  tabs: tabsArrayType[];
   activeTab: string;
   setActiveTab: (value: string) => void;
   isMessage?: boolean;
-  tweaksNodes?: Array<NodeType>;
+  tweaksNodes?: AllNodeType[];
   activeTweaks?: boolean;
   setActiveTweaks?: (value: boolean) => void;
 };
@@ -764,8 +770,6 @@ export type chatViewProps = {
     repeat: number;
     files?: string[];
   }) => void;
-  chatValue: string;
-  setChatValue: (value: string) => void;
   lockChat: boolean;
   setLockChat: (lock: boolean) => void;
   visibleSession?: string;
@@ -782,7 +786,7 @@ export type toolbarSelectItemProps = {
   value: string;
   icon: string;
   style?: string;
-  dataTestId: string;
+  dataTestId?: string;
   ping?: boolean;
   shortcut: string;
 };

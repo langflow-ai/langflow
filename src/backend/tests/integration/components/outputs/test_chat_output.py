@@ -1,5 +1,5 @@
 from langflow.components.outputs import ChatOutput
-from langflow.memory import get_messages
+from langflow.memory import aget_messages
 from langflow.schema.message import Message
 
 from tests.integration.utils import run_single_component
@@ -29,7 +29,7 @@ async def test_do_not_store_message():
     assert isinstance(outputs["message"], Message)
     assert outputs["message"].text == "hello"
 
-    assert len(get_messages(session_id=session_id)) == 1
+    assert len(await aget_messages(session_id=session_id)) == 1
     session_id = "test-session-id-another"
 
     outputs = await run_single_component(
@@ -38,4 +38,4 @@ async def test_do_not_store_message():
     assert isinstance(outputs["message"], Message)
     assert outputs["message"].text == "hello"
 
-    assert len(get_messages(session_id=session_id)) == 0
+    assert len(await aget_messages(session_id=session_id)) == 0

@@ -15,6 +15,7 @@ import { ZepMemoryIcon } from "@/icons/ZepMemory";
 import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import { GlobeOkIcon } from "@/icons/globe-ok";
+import { ThumbDownIconCustom, ThumbUpIconCustom } from "@/icons/thumbs";
 import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import {
   AlertCircle,
@@ -35,6 +36,7 @@ import {
   Boxes,
   Braces,
   BrainCircuit,
+  ChartNetwork,
   Check,
   CheckCheck,
   CheckCircle2,
@@ -64,7 +66,6 @@ import {
   CopyPlus,
   CornerDownLeft,
   Cpu,
-  CpuIcon,
   Database,
   DatabaseZap,
   Delete,
@@ -205,6 +206,8 @@ import {
   TextCursorInput,
   TextSearch,
   TextSearchIcon,
+  ThumbsDown,
+  ThumbsUp,
   ToyBrick,
   Trash2,
   Type,
@@ -231,8 +234,10 @@ import {
 } from "lucide-react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
+import { AgentQLIcon } from "../icons/AgentQL";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
+import { ArizeIcon } from "../icons/Arize";
 import { AssemblyAIIcon } from "../icons/AssemblyAI";
 import { AstraDBIcon } from "../icons/AstraDB";
 import { AzureIcon } from "../icons/Azure";
@@ -247,6 +252,7 @@ import { ComposioIcon } from "../icons/Composio";
 import { ConfluenceIcon } from "../icons/Confluence";
 import { CouchbaseIcon } from "../icons/Couchbase";
 import { CrewAiIcon } from "../icons/CrewAI";
+import { DeepSeekIcon } from "../icons/DeepSeek";
 import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
 import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
@@ -272,11 +278,13 @@ import { Mem0 } from "../icons/Mem0";
 import { MetaIcon } from "../icons/Meta";
 import { MidjourneyIcon } from "../icons/Midjorney";
 import { MongoDBIcon } from "../icons/MongoDB";
+import { NeedleIcon } from "../icons/Needle";
 import { NotDiamondIcon } from "../icons/NotDiamond";
 import { NotionIcon } from "../icons/Notion";
 import { NvidiaIcon } from "../icons/Nvidia";
 import { OllamaIcon } from "../icons/Ollama";
 import { OpenAiIcon } from "../icons/OpenAi";
+import { OpenRouterIcon } from "../icons/OpenRouter";
 import { OpenSearch } from "../icons/OpenSearch";
 import { PineconeIcon } from "../icons/Pinecone";
 import { PostgresIcon } from "../icons/Postgres";
@@ -424,6 +432,7 @@ export const nodeColors: { [char: string]: string } = {
 };
 
 export const nodeColorsName: { [char: string]: string } = {
+  // custom_components: "#ab11ab",
   inputs: "emerald",
   outputs: "red",
   data: "sky",
@@ -445,17 +454,16 @@ export const nodeColorsName: { [char: string]: string } = {
   vectorsearch: "yellow",
   textsplitters: "fuchsia",
   toolkits: "red",
-  wrappers: "pink",
+  wrappers: "rose",
   notion: "slate",
   Notion: "slate",
   AssemblyAI: "blue",
   assemblyai: "blue",
   helpers: "cyan",
-  prototypes: "pink",
+  prototypes: "rose",
   astra_assistants: "indigo",
   langchain_utilities: "sky",
   output_parsers: "yellow",
-  // custom_components: "#ab11ab",
   retrievers: "yellow",
   str: "indigo",
   Text: "indigo",
@@ -471,6 +479,8 @@ export const nodeColorsName: { [char: string]: string } = {
   Tool: "cyan",
   BaseChatMemory: "cyan",
   BaseChatMessageHistory: "orange",
+  Memory: "orange",
+  DataFrame: "pink",
 };
 
 export const SIDEBAR_CATEGORIES = [
@@ -500,13 +510,16 @@ export const SIDEBAR_CATEGORIES = [
 
 export const SIDEBAR_BUNDLES = [
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
+  { display_name: "AgentQL", name: "agentql", icon: "AgentQL" },
   { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
   {
     display_name: "DataStax",
     name: "astra_assistants",
     icon: "AstraDB",
   },
+  { display_name: "LangWatch", name: "langwatch", icon: "Langwatch" },
   { display_name: "Notion", name: "Notion", icon: "Notion" },
+  { display_name: "Needle", name: "needle", icon: "Needle" },
   { display_name: "NVIDIA", name: "nvidia", icon: "NVIDIA" },
   { display_name: "Vectara", name: "vectara", icon: "Vectara" },
   { display_name: "Icosa Computing", name: "icosacomputing", icon: "Icosa" },
@@ -610,6 +623,7 @@ export const nodeIconsLucide: iconsType = {
   Anthropic: AnthropicIcon,
   ChatAnthropic: AnthropicIcon,
   assemblyai: AssemblyAIIcon,
+  AgentQL: AgentQLIcon,
   AssemblyAI: AssemblyAIIcon,
   AstraDB: AstraDBIcon,
   BingSearchAPIWrapper: BingIcon,
@@ -651,10 +665,13 @@ export const nodeIconsLucide: iconsType = {
   notion: NotionIcon,
   Notion: NotionIcon,
   NotionDirectoryLoader: NotionIcon,
+  Needle: NeedleIcon,
   NVIDIA: NvidiaIcon,
   ChatOpenAI: OpenAiIcon,
   AzureChatOpenAI: OpenAiIcon,
   OpenAI: OpenAiIcon,
+  OpenRouter: OpenRouterIcon,
+  DeepSeek: DeepSeekIcon,
   OpenAIEmbeddings: OpenAiIcon,
   Pinecone: PineconeIcon,
   Qdrant: QDrantIcon,
@@ -704,6 +721,7 @@ export const nodeIconsLucide: iconsType = {
   SerpSearch: SerpSearchIcon,
   SearchAPI: SearchAPIIcon,
   Wikipedia: WikipediaIcon,
+  Arize: ArizeIcon,
 
   //Node Icons
   model_specs: FileSliders,
@@ -905,6 +923,7 @@ export const nodeIconsLucide: iconsType = {
   CornerDownLeft,
   ChevronsDownUp,
   OptionIcon,
+  ChartNetwork,
   Option: OptionIcon,
   FreezeAll: freezeAllIcon,
   Table,
@@ -919,4 +938,8 @@ export const nodeIconsLucide: iconsType = {
   Cog,
   ArrowRightLeft,
   FolderSync,
+  ThumbsUp,
+  ThumbsDown,
+  ThumbDownIconCustom,
+  ThumbUpIconCustom,
 };

@@ -1,31 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
-  "user should be able to connect RetrieverTool to another components",
+  "user should be able to connect RetrieverTool into another components",
   { tag: ["@release"] },
   async ({ page }) => {
-    await page.goto("/");
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
-
-    await page.waitForSelector('[id="new-project-btn"]', {
-      timeout: 30000,
-    });
-
-    let modalCount = 0;
-    try {
-      const modalTitleElement = await page.getByTestId("modal-title");
-      modalCount = await modalTitleElement.count();
-    } catch (error) {
-      modalCount = 0;
-    }
-
-    while (modalCount === 0) {
-      await page.getByText("New Flow", { exact: true }).click();
-      await page.waitForTimeout(3000);
-      modalCount = await page.getByTestId("modal-title").count();
-    }
+    await awaitBootstrapTest(page);
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
       timeout: 30000,
@@ -34,9 +14,21 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("retriever");
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector('[data-testid="sidebar-options-trigger"]', {
+      timeout: 30000,
+    });
 
-    let modelElement = await page.getByTestId("toolsRetrieverTool");
+    await page.getByTestId("sidebar-options-trigger").click();
+    await page
+      .getByTestId("sidebar-legacy-switch")
+      .isVisible({ timeout: 5000 });
+    await page.getByTestId("sidebar-legacy-switch").click();
+    await expect(page.getByTestId("sidebar-legacy-switch")).toBeChecked();
+    await page.getByTestId("sidebar-options-trigger").click();
+
+    let modelElement = await page.getByTestId(
+      "langchain_utilitiesRetrieverTool",
+    );
     let targetElement = await page.locator('//*[@id="react-flow-id"]');
     await modelElement.dragTo(targetElement);
 
@@ -46,49 +38,58 @@ test(
     await page.getByTestId("fit_view").click();
     await page.getByTestId("zoom_out").click();
 
-    await page.waitForTimeout(1000);
-
     await page.getByTestId("zoom_out").click();
     await page
       .locator('//*[@id="react-flow-id"]')
       .hover()
       .then(async () => {
         await page.mouse.down();
-        await page.mouse.move(-300, 300);
+        await page.mouse.move(-300, 100);
       });
 
     await page.mouse.up();
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chroma");
+    await page.getByTestId("sidebar-search-input").fill("Vectara");
 
-    await page.waitForTimeout(1000);
+    await page.waitForSelector(
+      '[data-testid="vectorstoresVectara Self Query Retriever for Vectara Vector Store"]',
+      {
+        timeout: 30000,
+      },
+    );
 
-    modelElement = await page.getByTestId("vectorstoresChroma DB");
-    targetElement = await page.locator('//*[@id="react-flow-id"]');
-    await modelElement.dragTo(targetElement);
+    await page
+      .getByTestId(
+        "vectorstoresVectara Self Query Retriever for Vectara Vector Store",
+      )
+      .hover()
+      .then(async () => {
+        await page
+          .getByTestId(
+            "add-component-button-vectara-self-query-retriever-for-vectara-vector-store",
+          )
+          .click();
+      });
 
-    await page.mouse.up();
-    await page.mouse.down();
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 5000,
+      state: "visible",
+    });
 
-    await page.waitForTimeout(1000);
-
-    await page.getByTestId("fit_view").click();
     await page.getByTestId("fit_view").click();
 
     //connection
-    const chromaDbOutput = await page
-      .getByTestId("handle-chroma-shownode-retriever-right")
+    const vectaraOutput = page
+      .getByTestId("handle-vectaraselfqueryretriver-shownode-retriever-right")
       .nth(0);
-    await chromaDbOutput.hover();
+    await vectaraOutput.hover();
     await page.mouse.down();
     const retrieverToolInput = await page
       .getByTestId("handle-retrievertool-shownode-retriever-left")
       .nth(0);
     await retrieverToolInput.hover();
     await page.mouse.up();
-
-    await page.waitForTimeout(1000);
 
     expect(await page.locator(".react-flow__edge-interaction").count()).toBe(1);
   },

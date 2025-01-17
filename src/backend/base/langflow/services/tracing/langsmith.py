@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
+from typing_extensions import override
 
 from langflow.schema.data import Data
 from langflow.services.tracing.base import BaseTracer
@@ -96,9 +97,7 @@ class LangSmithTracer(BaseTracer):
         from langflow.schema.message import Message
 
         if isinstance(value, dict):
-            for key, _value in value.copy().items():
-                _value = self._convert_to_langchain_type(_value)
-                value[key] = _value
+            value = {key: self._convert_to_langchain_type(val) for key, val in value.items()}
         elif isinstance(value, list):
             value = [self._convert_to_langchain_type(v) for v in value]
         elif isinstance(value, Message):
@@ -142,7 +141,8 @@ class LangSmithTracer(BaseTracer):
             child.post()
         self._child_link[trace_name] = child.get_url()
 
-    def _error_to_string(self, error: Exception | None):
+    @staticmethod
+    def _error_to_string(error: Exception | None):
         error_message = None
         if error:
             string_stacktrace = traceback.format_exception(error)
@@ -165,5 +165,6 @@ class LangSmithTracer(BaseTracer):
         self._run_tree.post()
         self._run_link = self._run_tree.get_url()
 
+    @override
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
         return None

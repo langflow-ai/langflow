@@ -3,12 +3,16 @@ from uuid import UUID, uuid4
 
 import pytest
 from langflow.memory import (
+    aadd_messages,
+    aadd_messagetables,
     add_messages,
-    add_messagetables,
+    adelete_messages,
+    aget_messages,
+    astore_message,
+    aupdate_messages,
     delete_messages,
     get_messages,
     store_message,
-    update_messages,
 )
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.content_types import TextContent, ToolContent
@@ -23,24 +27,24 @@ from langflow.services.tracing.utils import convert_to_langchain_type
 
 
 @pytest.fixture
-def created_message():
-    with session_scope() as session:
+async def created_message():
+    async with session_scope() as session:
         message = MessageCreate(text="Test message", sender="User", sender_name="User", session_id="session_id")
         messagetable = MessageTable.model_validate(message, from_attributes=True)
-        messagetables = add_messagetables([messagetable], session)
+        messagetables = await aadd_messagetables([messagetable], session)
         return MessageRead.model_validate(messagetables[0], from_attributes=True)
 
 
 @pytest.fixture
-def created_messages(session):  # noqa: ARG001
-    with session_scope() as _session:
+async def created_messages(async_session):  # noqa: ARG001
+    async with session_scope() as _session:
         messages = [
             MessageCreate(text="Test message 1", sender="User", sender_name="User", session_id="session_id2"),
             MessageCreate(text="Test message 2", sender="User", sender_name="User", session_id="session_id2"),
             MessageCreate(text="Test message 3", sender="User", sender_name="User", session_id="session_id2"),
         ]
         messagetables = [MessageTable.model_validate(message, from_attributes=True) for message in messages]
-        messagetables = add_messagetables(messagetables, _session)
+        messagetables = await aadd_messagetables(messagetables, _session)
         return [MessageRead.model_validate(messagetable, from_attributes=True) for messagetable in messagetables]
 
 
@@ -59,6 +63,20 @@ def test_get_messages():
 
 
 @pytest.mark.usefixtures("client")
+async def test_aget_messages():
+    await aadd_messages(
+        [
+            Message(text="Test message 1", sender="User", sender_name="User", session_id="session_id2"),
+            Message(text="Test message 2", sender="User", sender_name="User", session_id="session_id2"),
+        ]
+    )
+    messages = await aget_messages(sender="User", session_id="session_id2", limit=2)
+    assert len(messages) == 2
+    assert messages[0].text == "Test message 1"
+    assert messages[1].text == "Test message 2"
+
+
+@pytest.mark.usefixtures("client")
 def test_add_messages():
     message = Message(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")
     messages = add_messages(message)
@@ -67,25 +85,61 @@ def test_add_messages():
 
 
 @pytest.mark.usefixtures("client")
-def test_add_messagetables(session):
+async def test_aadd_messages():
+    message = Message(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")
+    messages = await aadd_messages(message)
+    assert len(messages) == 1
+    assert messages[0].text == "New Test message"
+
+
+@pytest.mark.usefixtures("client")
+async def test_aadd_messagetables(async_session):
     messages = [MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")]
-    added_messages = add_messagetables(messages, session)
+    added_messages = await aadd_messagetables(messages, async_session)
     assert len(added_messages) == 1
     assert added_messages[0].text == "New Test message"
 
 
 @pytest.mark.usefixtures("client")
-def test_delete_messages(session):
-    session_id = "session_id2"
+def test_delete_messages():
+    session_id = "new_session_id"
+    message = Message(text="New Test message", sender="User", sender_name="User", session_id=session_id)
+    add_messages([message])
+    messages = get_messages(sender="User", session_id=session_id)
+    assert len(messages) == 1
     delete_messages(session_id)
-    messages = session.query(MessageTable).filter(MessageTable.session_id == session_id).all()
+    messages = get_messages(sender="User", session_id=session_id)
+    assert len(messages) == 0
+
+
+@pytest.mark.usefixtures("client")
+async def test_adelete_messages():
+    session_id = "new_session_id"
+    message = Message(text="New Test message", sender="User", sender_name="User", session_id=session_id)
+    await aadd_messages([message])
+    messages = await aget_messages(sender="User", session_id=session_id)
+    assert len(messages) == 1
+    await adelete_messages(session_id)
+    messages = await aget_messages(sender="User", session_id=session_id)
     assert len(messages) == 0
 
 
 @pytest.mark.usefixtures("client")
 def test_store_message():
-    message = Message(text="Stored message", sender="User", sender_name="User", session_id="stored_session_id")
-    stored_messages = store_message(message)
+    session_id = "stored_session_id"
+    message = Message(text="Stored message", sender="User", sender_name="User", session_id=session_id)
+    store_message(message)
+    stored_messages = get_messages(sender="User", session_id=session_id)
+    assert len(stored_messages) == 1
+    assert stored_messages[0].text == "Stored message"
+
+
+@pytest.mark.usefixtures("client")
+async def test_astore_message():
+    session_id = "stored_session_id"
+    message = Message(text="Stored message", sender="User", sender_name="User", session_id=session_id)
+    await astore_message(message)
+    stored_messages = await aget_messages(sender="User", session_id=session_id)
     assert len(stored_messages) == 1
     assert stored_messages[0].text == "Stored message"
 
@@ -116,10 +170,10 @@ def test_convert_to_langchain(method_name):
 
 
 @pytest.mark.usefixtures("client")
-def test_update_single_message(created_message):
+async def test_aupdate_single_message(created_message):
     # Modify the message
     created_message.text = "Updated message"
-    updated = update_messages(created_message)
+    updated = await aupdate_messages(created_message)
 
     assert len(updated) == 1
     assert updated[0].text == "Updated message"
@@ -127,12 +181,12 @@ def test_update_single_message(created_message):
 
 
 @pytest.mark.usefixtures("client")
-def test_update_multiple_messages(created_messages):
+async def test_aupdate_multiple_messages(created_messages):
     # Modify the messages
     for i, message in enumerate(created_messages):
         message.text = f"Updated message {i}"
 
-    updated = update_messages(created_messages)
+    updated = await aupdate_messages(created_messages)
 
     assert len(updated) == len(created_messages)
     for i, message in enumerate(updated):
@@ -141,7 +195,7 @@ def test_update_multiple_messages(created_messages):
 
 
 @pytest.mark.usefixtures("client")
-def test_update_nonexistent_message():
+async def test_aupdate_nonexistent_message():
     # Create a message with a non-existent UUID
     message = MessageRead(
         id=uuid4(),  # Generate a random UUID that won't exist in the database
@@ -152,12 +206,12 @@ def test_update_nonexistent_message():
         flow_id=uuid4(),
     )
 
-    updated = update_messages(message)
+    updated = await aupdate_messages(message)
     assert len(updated) == 0
 
 
 @pytest.mark.usefixtures("client")
-def test_update_mixed_messages(created_messages):
+async def test_aupdate_mixed_messages(created_messages):
     # Create a mix of existing and non-existing messages
     nonexistent_message = MessageRead(
         id=uuid4(),  # Generate a random UUID that won't exist in the database
@@ -171,7 +225,7 @@ def test_update_mixed_messages(created_messages):
     messages_to_update = created_messages[:1] + [nonexistent_message]
     created_messages[0].text = "Updated existing message"
 
-    updated = update_messages(messages_to_update)
+    updated = await aupdate_messages(messages_to_update)
 
     assert len(updated) == 1
     assert updated[0].text == "Updated existing message"
@@ -180,13 +234,13 @@ def test_update_mixed_messages(created_messages):
 
 
 @pytest.mark.usefixtures("client")
-def test_update_message_with_timestamp(created_message):
+async def test_aupdate_message_with_timestamp(created_message):
     # Set a specific timestamp
     new_timestamp = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
     created_message.timestamp = new_timestamp
     created_message.text = "Updated message with timestamp"
 
-    updated = update_messages(created_message)
+    updated = await aupdate_messages(created_message)
 
     assert len(updated) == 1
     assert updated[0].text == "Updated message with timestamp"
@@ -197,13 +251,13 @@ def test_update_message_with_timestamp(created_message):
 
 
 @pytest.mark.usefixtures("client")
-def test_update_multiple_messages_with_timestamps(created_messages):
+async def test_aupdate_multiple_messages_with_timestamps(created_messages):
     # Modify messages with different timestamps
     for i, message in enumerate(created_messages):
         message.text = f"Updated message {i}"
         message.timestamp = datetime(2024, 1, 1, i, 0, 0, tzinfo=timezone.utc)
 
-    updated = update_messages(created_messages)
+    updated = await aupdate_messages(created_messages)
 
     assert len(updated) == len(created_messages)
     for i, message in enumerate(updated):
@@ -215,7 +269,7 @@ def test_update_multiple_messages_with_timestamps(created_messages):
 
 
 @pytest.mark.usefixtures("client")
-def test_update_message_with_content_blocks(created_message):
+async def test_aupdate_message_with_content_blocks(created_message):
     # Create a content block using proper models
     text_content = TextContent(
         type="text", text="Test content", duration=5, header={"title": "Test Header", "icon": "TestIcon"}
@@ -228,7 +282,7 @@ def test_update_message_with_content_blocks(created_message):
     created_message.content_blocks = [content_block]
     created_message.text = "Message with content blocks"
 
-    updated = update_messages(created_message)
+    updated = await aupdate_messages(created_message)
 
     assert len(updated) == 1
     assert updated[0].text == "Message with content blocks"
@@ -255,7 +309,7 @@ def test_update_message_with_content_blocks(created_message):
 
 
 @pytest.mark.usefixtures("client")
-def test_update_message_with_nested_properties(created_message):
+async def test_aupdate_message_with_nested_properties(created_message):
     # Create a text content with nested properties
     text_content = TextContent(
         type="text", text="Test content", header={"title": "Test Header", "icon": "TestIcon"}, duration=15
@@ -282,7 +336,7 @@ def test_update_message_with_nested_properties(created_message):
     created_message.text = "Message with nested properties"
     created_message.content_blocks = [content_block]
 
-    updated = update_messages(created_message)
+    updated = await aupdate_messages(created_message)
 
     assert len(updated) == 1
     assert updated[0].text == "Message with nested properties"

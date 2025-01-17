@@ -3,72 +3,60 @@ import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import useAlertStore from "@/stores/alertStore";
 import { FlowType } from "@/types/flow";
 import { downloadFlow } from "@/utils/reactflowUtils";
-import useDuplicateFlows from "../../oldComponents/componentsComponent/hooks/use-handle-duplicate";
-import useSelectOptionsChange from "../../oldComponents/componentsComponent/hooks/use-select-options-change";
+import useDuplicateFlows from "../../hooks/use-handle-duplicate";
+import useSelectOptionsChange from "../../hooks/use-select-options-change";
 
 type DropdownComponentProps = {
   flowData: FlowType;
   setOpenDelete: (open: boolean) => void;
   handlePlaygroundClick?: () => void;
+  handleEdit: () => void;
 };
 
 const DropdownComponent = ({
   flowData,
   setOpenDelete,
-  handlePlaygroundClick,
+  handleEdit,
 }: DropdownComponentProps) => {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
-  const { handleDuplicate } = useDuplicateFlows(
-    [flowData.id],
-    [flowData],
-    () => {},
+  const { handleDuplicate } = useDuplicateFlows({
+    selectedFlowsComponentsCards: [flowData.id],
+    allFlows: [flowData],
     setSuccessData,
-    () => {},
-    () => {},
-    "flow",
-  );
+  });
 
   const handleExport = () => {
     downloadFlow(flowData, flowData.name, flowData.description);
     setSuccessData({ title: `${flowData.name} exported successfully` });
   };
-
   const { handleSelectOptionsChange } = useSelectOptionsChange(
     [flowData.id],
     setErrorData,
     setOpenDelete,
     handleDuplicate,
     handleExport,
+    handleEdit,
   );
 
   return (
     <>
-      {/* <DropdownMenuItem onClick={() => {}} className="cursor-pointer">
+      <DropdownMenuItem
+        onClick={(e) => {
+          e.stopPropagation();
+          handleSelectOptionsChange("edit");
+        }}
+        className="cursor-pointer"
+        data-testid="btn-edit-flow"
+      >
         <ForwardedIconComponent
-          name="square-pen"
+          name="SquarePen"
           aria-hidden="true"
           className="mr-2 h-4 w-4"
         />
         Edit details
-      </DropdownMenuItem> */}
-      {/* {handlePlaygroundClick && (
-        <DropdownMenuItem
-          onClick={(e) => {
-            e.stopPropagation();
-            handlePlaygroundClick();
-          }}
-          className="cursor-pointer sm:hidden"
-        >
-          <ForwardedIconComponent
-            name="play"
-            aria-hidden="true"
-            className="mr-2 h-4 w-4"
-          />
-          Playground
-        </DropdownMenuItem>
-      )} */}
+      </DropdownMenuItem>
       <DropdownMenuItem
         onClick={(e) => {
           e.stopPropagation();

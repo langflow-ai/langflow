@@ -31,6 +31,7 @@ export type shortcutsStoreType = {
   openPlayground: string;
   undo: string;
   redo: string;
+  redoAlt: string;
   advancedSettings: string;
   minimize: string;
   code: string;
@@ -38,6 +39,7 @@ export type shortcutsStoreType = {
   duplicate: string;
   componentShare: string;
   docs: string;
+  searchComponentsSidebar: string;
   changesSave: string;
   saveComponent: string;
   delete: string;
@@ -49,10 +51,15 @@ export type shortcutsStoreType = {
   toolMode: string;
   shortcuts: Array<{
     name: string;
+    display_name: string;
     shortcut: string;
   }>;
   setShortcuts: (
-    newShortcuts: Array<{ name: string; shortcut: string }>,
+    newShortcuts: Array<{
+      name: string;
+      display_name: string;
+      shortcut: string;
+    }>,
   ) => void;
   getShortcutsFromStorage: () => void;
 };

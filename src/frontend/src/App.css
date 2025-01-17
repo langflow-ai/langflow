@@ -137,6 +137,9 @@ body {
   stroke: var(--selected) !important;
   stroke-width: 2px !important;
 }
+.react-flow__controls-button svg {
+  fill: none !important;
+}
 
 .react-flow__edge .react-flow__edge-path {
   transition: color;
@@ -190,4 +193,30 @@ code {
 
 .ag-cell-wrapper > *:not(.ag-cell-value):not(.ag-group-value) {
   --ag-internal-calculated-line-height: none !important;
+}
+
+.arrow-hide::-webkit-inner-spin-button,
+.arrow-hide::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.ag-large-text-input.ag-text-area.ag-input-field {
+  background-color: hsl(var(--background)) !important;
+}
+
+.ag-large-text-input.ag-text-area.ag-input-field textarea {
+  resize: none !important;
+  height: 100% !important;
+}
+
+.cell-disable-edit {
+  cursor: not-allowed;
+}
+
+.cell-disable-edit.ag-cell-focus {
+  outline: none !important;
+  border: 0px !important;
+  box-shadow: none !important;
+  border-radius: 0px !important;
 }

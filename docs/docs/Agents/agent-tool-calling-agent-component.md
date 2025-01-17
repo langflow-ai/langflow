@@ -1,6 +1,5 @@
 ---
 title: Create a problem-solving agent
-sidebar_position: 2
 slug: /agents-tool-calling-agent-component
 ---
 
@@ -157,11 +156,18 @@ These components support **Tool Mode**:
 * **Calculator**
 * **Current date**
 
-If the component you want to use as a tool doesn't have a **Tool Mode** button, add `tool_mode=True` to the component's code under `MessageTextInput`.
+If the component you want to use as a tool doesn't have a **Tool Mode** button, add `tool_mode=True` to one of the component's inputs.
 
-For example, in the [components as tools](#components-as-tools) example above, `tool_mode=True,` is added so the custom component can be used as a tool.
+Langflow supports **Tool Mode** for the following data types:
 
-**Tool Mode** supports the `MessageTextInput` type.
+* `DataInput`
+* `DataFrameInput`
+* `PromptInput`
+* `MessageTextInput`
+* `MultilineInput`
+* `DropdownInput`
+
+For example, in the [components as tools](#components-as-tools) example above, `tool_mode=True,` is added to the `MultilineInput` input so the custom component can be used as a tool.
 
 ```python
 inputs = [

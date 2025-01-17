@@ -32,7 +32,7 @@ class DataFrame(pandas_DataFrame):
         >>> dataset = DataFrame({"name": ["John", "Jane"], "age": [30, 25]})
     """
 
-    def __init__(self, data: None | list[dict | Data] | dict | pd.DataFrame = None, **kwargs):
+    def __init__(self, data: list[dict] | list[Data] | pd.DataFrame | None = None, **kwargs):
         if data is None:
             super().__init__(**kwargs)
             return
@@ -70,7 +70,7 @@ class DataFrame(pandas_DataFrame):
         if isinstance(data, Data):
             data = data.data
         new_df = self._constructor([data])
-        return cast(DataFrame, pd.concat([self, new_df], ignore_index=True))
+        return cast("DataFrame", pd.concat([self, new_df], ignore_index=True))
 
     def add_rows(self, data: list[dict | Data]) -> "DataFrame":
         """Adds multiple rows to the dataset.
@@ -88,7 +88,7 @@ class DataFrame(pandas_DataFrame):
             else:
                 processed_data.append(item)
         new_df = self._constructor(processed_data)
-        return cast(DataFrame, pd.concat([self, new_df], ignore_index=True))
+        return cast("DataFrame", pd.concat([self, new_df], ignore_index=True))
 
     @property
     def _constructor(self):
