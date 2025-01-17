@@ -221,7 +221,7 @@ class ComponentToolkit:
             else:
                 args_schema = create_input_schema(self.component.inputs)
 
-            name = f"{self.component.name or self.component.display_name or ''}.{output.method}".strip(".")
+            name = f"{self.component.name or self.component.__class__.__name__ or ''}.{output.method}".strip(".")
             formatted_name = _format_tool_name(name)
             event_manager = self.component._event_manager
             if asyncio.iscoroutinefunction(output_method):
