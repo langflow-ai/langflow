@@ -13,10 +13,11 @@ from langflow.schema import Data
 
 
 class CalculatorToolComponent(LCToolComponent):
-    display_name = "Calculator"
+    display_name = "Calculator [DEPRECATED]"
     description = "Perform basic arithmetic operations on a given expression."
     icon = "calculator"
     name = "CalculatorTool"
+    legacy = True
 
     inputs = [
         MessageTextInput(
