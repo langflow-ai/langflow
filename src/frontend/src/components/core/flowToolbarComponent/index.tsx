@@ -134,7 +134,11 @@ export default function FlowToolbar(): JSX.Element {
             </div>
             {ENABLE_API && (
               <>
-                <div className="flex cursor-pointer items-center gap-2">
+                <div
+                  className="flex cursor-pointer items-center gap-2"
+                  data-testid="api_button_modal"
+                  id="api_button_modal"
+                >
                   {currentFlow && currentFlow.data && (
                     <ApiModal
                       flow={currentFlow}
