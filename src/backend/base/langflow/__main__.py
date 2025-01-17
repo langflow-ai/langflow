@@ -1,5 +1,6 @@
 import asyncio
 import inspect
+import os
 import platform
 import signal
 import socket
@@ -161,11 +162,16 @@ def run(
 
     if env_file:
         load_dotenv(env_file, override=True)
-
+    
     configure(log_level=log_level, log_file=log_file)
     logger.debug(f"Loading config from file: '{env_file}'" if env_file else "No env_file provided.")
     set_var_for_macos_issue()
     settings_service = get_settings_service()
+
+    for key, value in os.environ.items():
+        new_key = key.replace("LANGFLOW_", "")
+        if hasattr(settings_service.auth_settings, new_key):
+            setattr(settings_service.auth_settings, new_key, value)
 
     frame = inspect.currentframe()
     valid_args: list = []
@@ -179,6 +185,8 @@ def run(
             settings_service.settings.update_settings(components_path=components_path)
         elif hasattr(settings_service.settings, arg):
             settings_service.set(arg, values[arg])
+        elif hasattr(settings_service.auth_settings, arg):
+            settings_service.auth_settings.set(arg, values[arg])
         logger.debug(f"Loading config from cli parameter '{arg}': '{values[arg]}'")
 
     host = settings_service.settings.host
