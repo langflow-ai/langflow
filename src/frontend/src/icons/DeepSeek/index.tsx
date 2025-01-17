@@ -1,11 +1,11 @@
+import { useDarkStore } from "@/stores/darkStore";
 import React, { forwardRef } from "react";
-import SvgDeepSeekIcon from "./DeepSeekIcon";
+import DeepSeekSVG from "./DeepSeekIcon";
 
 export const DeepSeekIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  return <SvgDeepSeekIcon ref={ref} {...props} />;
+  const isdark = useDarkStore((state) => state.dark).toString();
+  return <DeepSeekSVG ref={ref} isdark={isdark} {...props} />;
 });
-
-export default DeepSeekIcon;
