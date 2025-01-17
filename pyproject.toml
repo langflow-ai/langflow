@@ -119,6 +119,7 @@ dependencies = [
     "uv>=0.5.7",
     "ag2",
     "pydantic-ai>=0.0.12",
+    "apify-client>=1.8.1",
 ]
 
 [project.urls]
