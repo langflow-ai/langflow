@@ -13,7 +13,6 @@ import {
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
-import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
 import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
@@ -178,12 +177,10 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     };
   }, [lastCopiedSelection, lastSelection, takeSnapshot, selectionMenuVisible]);
 
-  const { isFetching } = useGetBuildsQuery({ flowId: currentFlowId });
 
   const showCanvas =
     Object.keys(templates).length > 0 &&
-    Object.keys(types).length > 0 &&
-    !isFetching;
+    Object.keys(types).length > 0
 
   useEffect(() => {
     useFlowStore.setState({ autoSaveFlow });
