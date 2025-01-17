@@ -16,6 +16,7 @@ MAX_DIMENSION_ERROR = (
     "Received: {}"
 )
 MAX_DIMENSION = 768
+MIN_DIMENSION = 1
 
 class GoogleGenerativeAIEmbeddingsComponent(Component):
     display_name = "Google Generative AI Embeddings"
@@ -69,8 +70,7 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                 Returns:
                     List of embeddings, one for each text.
                 """
-                
-                if output_dimensionality < 1:
+                if output_dimensionality < MIN_DIMENSION:
                     raise ValueError(MIN_DIMENSION_ERROR)
                 if output_dimensionality > MAX_DIMENSION:
                     error_msg = MAX_DIMENSION_ERROR.format(output_dimensionality)
@@ -125,7 +125,7 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                 Returns:
                     Embedding for the text.
                 """
-                if output_dimensionality < 1:
+                if output_dimensionality < MIN_DIMENSION:
                     raise ValueError(MIN_DIMENSION_ERROR)
                 if output_dimensionality > MAX_DIMENSION:
                     error_msg = MAX_DIMENSION_ERROR.format(output_dimensionality)
