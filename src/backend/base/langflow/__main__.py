@@ -173,6 +173,11 @@ def run(
         if hasattr(settings_service.auth_settings, new_key):
             setattr(settings_service.auth_settings, new_key, value)
 
+    for key, value in os.environ.items():
+        new_key = key.replace("LANGFLOW_", "")
+        if hasattr(settings_service.settings, new_key):
+            setattr(settings_service.settings, new_key, value)
+
     frame = inspect.currentframe()
     valid_args: list = []
     values: dict = {}
