@@ -43,6 +43,7 @@ class CSVAgentComponent(LCAgentComponent):
             name="input_value",
             display_name="Text",
             info="Text to be passed as input and extract info from the CSV File.",
+            required=True,
         ),
         DictInput(
             name="pandas_kwargs",
