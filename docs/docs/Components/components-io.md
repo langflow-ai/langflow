@@ -9,7 +9,7 @@ This category of components defines where data enters and exits your flow. They 
 
 The difference between Chat Input and Text Input components is the output format, the number of configurable fields, and the way they are displayed in the Playground.
 
-### Chat Input
+## Chat Input
 
 This component collects user input from the chat.
 
@@ -83,13 +83,13 @@ The Chat Output component creates a [Message](/configuration-objects) object tha
 
 The TextOutputComponent displays text output in the **Playground**. It takes a single input of text and returns a [Message](/configuration-objects) object containing that text. The component is simpler compared to the Chat Output, but focuses solely on displaying text without additional chat-specific features or customizations.
 
-## Inputs
+### Inputs
 
 | Name | Display Name | Info | Type |
 |------|--------------|------|------|
 |input_value|Text|Text to be passed as output.|MultilineInput|
 
-## Outputs
+### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
