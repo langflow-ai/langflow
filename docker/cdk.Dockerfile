@@ -12,18 +12,8 @@ RUN apt-get update \
     g++ \
     curl \
     build-essential \
-    postgresql \
-    postgresql-contrib \
-    postgresql-server-dev-all \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-
-# Create PostgreSQL user and database
-USER postgres
-RUN /etc/init.d/postgresql start && \
-    psql --command "CREATE USER langflow WITH SUPERUSER PASSWORD 'langflow';" && \
-    createdb -O langflow langflow && \
-    /etc/init.d/postgresql stop
 
 USER root
 
@@ -49,7 +39,6 @@ COPY ./ ./
 
 # Create startup script
 RUN echo '#!/bin/bash\n\
-service postgresql start\n\
 uv run uvicorn --factory langflow.main:create_app --host 0.0.0.0 --port 7860 --reload --env-file .env --loop asyncio --workers 1' > /app/start.sh && \
     chmod +x /app/start.sh
 
