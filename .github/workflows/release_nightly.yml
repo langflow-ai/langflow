@@ -95,7 +95,10 @@ jobs:
           echo "version=$version" >> $GITHUB_OUTPUT
 
       - name: Build project for distribution
-        run: make build base=true args="--wheel"
+        run: |
+          rm -rf src/backend/base/dist
+          rm -rf dist
+          make build base=true args="--wheel"
 
       - name: Test CLI
         run: |
