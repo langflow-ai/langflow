@@ -11,6 +11,8 @@ import aiofiles
 import aiofiles.os as aiofiles_os
 import httpx
 import validators
+from langchain.tools import StructuredTool
+from langflow.field_typing import Tool
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 
@@ -43,16 +45,9 @@ class TotogiOntologyProductCatalogIndex(LCToolComponent):
             display_name="Adapter Endpoint",
             info="Enter the Adapter Endpoint for the Totogi Ontology Product Catalog Index.",
         ),
-        DataInput(
-            name="query_params",
-            display_name="Query Parameters",
-            info="The query parameters to append to the URL.",
-            tool_mode=True,
-        ),
     ]
 
     outputs = [
-        Output(display_name="Product Catalog Index Data", name="product_catalog_index_data", method="make_request"),
         Output(name="product_catalog_index_tool", display_name="Tool", method="build_tool"),
     ]
 
@@ -61,7 +56,27 @@ class TotogiOntologyProductCatalogIndex(LCToolComponent):
             build_config = self.parse_curl(field_value, build_config)
         return build_config
 
-    async def make_request(
+    def build_tool(self) -> Tool:
+        self.log(f"Building Totogi Ontology tool: {self.display_name}")
+        
+        def sync_make_request(*args, **kwargs):
+            # Create event loop if one doesn't exist
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            
+            # Run the async function synchronously
+            return loop.run_until_complete(self._make_request(*args, **kwargs))
+        
+        return StructuredTool.from_function(
+            name="totogi_ontology_product_catalog_index_get",
+            description="Retrieve product catalog index from the Totogi Ontology.",
+            func=sync_make_request
+        )
+
+    async def _make_request(
         self,
         query_params: dict={},
         timeout: int = 40,
