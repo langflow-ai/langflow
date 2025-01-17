@@ -484,9 +484,10 @@ def test_chat_inputs_at_start():
 
     result = utils.sort_chat_inputs_first(vertices_layers, get_vertex_predecessors)
     assert len(result) == 3  # [chat_input] + original 3 layers
-    assert result[0] == ["ChatInput1", "B"]
-    assert result[1] == ["C"]  # Original second layer
-    assert result[2] == ["D"]  # Original third layer
+    assert result[0] == ["ChatInput1"]  # First layer contains only ChatInput1
+    assert result[1] == ["B"]  # Second layer contains B
+    assert result[2] == ["C"]  # Original second layer
+    assert result[3] == ["D"]  # Original third layer
 
     # Test that multiple chat inputs raise an error
     vertices_layers_multiple = [["ChatInput1", "B"], ["ChatInput2", "C"], ["D"]]
@@ -672,13 +673,13 @@ def test_get_sorted_vertices_with_complex_cycle(graph_with_loop):
     # When is_cyclic is True and start_vertex_id is provided:
     # 1. The first layer will contain vertices with no predecessors and vertices that are part of the cycle
     # 2. This is because the cycle vertices are treated as having no dependencies in the initial sort
-    assert "OpenAI Embeddings" in first_layer, (
-        "Vertex with no predecessors 'OpenAI Embeddings' should be in first layer"
-    )
+    assert (
+        "OpenAI Embeddings" in first_layer
+    ), "Vertex with no predecessors 'OpenAI Embeddings' should be in first layer"
     assert "Playlist Extractor" in first_layer, "Input vertex 'Playlist Extractor' should be in first layer"
-    assert len(first_layer) == 2, (
-        f"First layer should contain exactly 4 vertices, got {len(first_layer)}: {first_layer}"
-    )
+    assert (
+        len(first_layer) == 2
+    ), f"First layer should contain exactly 4 vertices, got {len(first_layer)}: {first_layer}"
 
     # Verify that the remaining layers contain the rest of the vertices in the correct order
     # The graph structure shows:
@@ -747,14 +748,14 @@ def test_get_sorted_vertices_with_stop_at_chroma(graph_with_loop):
     # When is_cyclic is True and we have a stop component:
     # 1. The first layer will contain vertices with no predecessors and vertices that are part of the cycle
     # 2. This is because the cycle vertices are treated as having no dependencies in the initial sort
-    assert "OpenAI Embeddings" in first_layer, (
-        "Vertex with no predecessors 'OpenAI Embeddings' should be in first layer"
-    )
+    assert (
+        "OpenAI Embeddings" in first_layer
+    ), "Vertex with no predecessors 'OpenAI Embeddings' should be in first layer"
     assert "Playlist Extractor" in first_layer, "Input vertex 'Playlist Extractor' should be in first layer"
 
-    assert len(first_layer) == 2, (
-        f"First layer should contain exactly 4 vertices, got {len(first_layer)}: {first_layer}"
-    )
+    assert (
+        len(first_layer) == 2
+    ), f"First layer should contain exactly 4 vertices, got {len(first_layer)}: {first_layer}"
 
     # Verify that the remaining layers contain the rest of the vertices in the correct order
     # The graph structure shows:
@@ -847,6 +848,6 @@ def test_get_sorted_vertices_exact_sequence(graph_with_loop):
     # Check each vertex appears in the correct order
     assert sequence == expected_sequence, f"Sequence: {sequence}"
     # Verify the exact sequence
-    assert len(sequence) == len(expected_sequence), (
-        f"Expected sequence length {len(expected_sequence)}, but got {len(sequence)}"
-    )
+    assert len(sequence) == len(
+        expected_sequence
+    ), f"Expected sequence length {len(expected_sequence)}, but got {len(sequence)}"
