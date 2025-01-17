@@ -69,14 +69,14 @@ export default function LoginPage(): JSX.Element {
         <div className="flex w-72 flex-col items-center justify-center gap-2">
           {ENABLE_NEW_LOGO ? (
             <LangflowLogo
-              title="Langflow logo"
+              title="BSS Magic logo"
               className="mb-4 h-10 w-10 scale-[1.5]"
             />
           ) : (
             <span className="mb-4 text-5xl">⛓️</span>
           )}
           <span className="mb-6 text-2xl font-semibold text-primary">
-            Sign in to Langflow
+            Sign in to BSS Magic Studio
           </span>
           <div className="mb-3 w-full">
             <Form.Field name="username">

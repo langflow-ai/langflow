@@ -53,7 +53,7 @@ export default function LoginAdminPage() {
       <div className="flex w-72 flex-col items-center justify-center gap-2">
         {ENABLE_NEW_LOGO ? (
           <LangflowLogo
-            title="Langflow logo"
+            title="BSS Magic logo"
             className="h-10 w-10 scale-[1.5]"
           />
         ) : (

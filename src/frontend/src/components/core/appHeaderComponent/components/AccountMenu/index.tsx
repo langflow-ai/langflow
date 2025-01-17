@@ -139,12 +139,12 @@ export const AccountMenu = () => {
             )}
             <HeaderMenuItemLink newPage href="https://twitter.com/langflow_ai">
               <span data-testid="menu_twitter_button" id="menu_twitter_button">
-                Follow Langflow on X
+                Follow BSS Magic on X
               </span>
             </HeaderMenuItemLink>
             <HeaderMenuItemLink newPage href="https://discord.gg/EqksyE2EX9">
               <span data-testid="menu_discord_button" id="menu_discord_button">
-                Join the Langflow Discord
+                Join the BSS Magic Discord
               </span>
             </HeaderMenuItemLink>
           </HeaderMenuItemsSection>

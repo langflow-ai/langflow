@@ -89,7 +89,7 @@ export default function SecretKeyModal({
               new one.
             </>
           ) : (
-            <>Create a secret API Key to use Langflow API.</>
+            <>Create a secret API Key to use BSS Magic API.</>
           )
         }
       >

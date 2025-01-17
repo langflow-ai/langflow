@@ -182,12 +182,12 @@ export default function ChatView({
               <div className="flex flex-col items-center justify-center gap-4 p-8">
                 {ENABLE_NEW_LOGO ? (
                   <LangflowLogo
-                    title="Langflow logo"
+                    title="BSS Magic logo"
                     className="h-10 w-10 scale-[1.5]"
                   />
                 ) : (
                   <ChainLogo
-                    title="Langflow logo"
+                    title="BSS Magic logo"
                     className="h-10 w-10 scale-[1.5]"
                   />
                 )}

@@ -21,7 +21,7 @@ export default function DeleteAccountPage() {
       <div className="flex w-72 flex-col items-center justify-center gap-2">
         {ENABLE_NEW_LOGO ? (
           <LangflowLogo
-            title="Langflow logo"
+            title="BSS Magic logo"
             className="mb-4 h-10 w-10 scale-[1.5]"
           />
         ) : (
