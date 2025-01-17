@@ -644,10 +644,7 @@ class Graph:
         if run_id is None:
             run_id = uuid.uuid4()
 
-        run_id_str = str(run_id)
-        for vertex in self.vertices:
-            self.state_manager.subscribe(run_id_str, vertex.update_graph_state)
-        self._run_id = run_id_str
+        self._run_id = str(run_id)
         if self.tracing_service:
             self.tracing_service.set_run_id(run_id)
 
@@ -1430,6 +1427,7 @@ class Graph:
                         vertex.results = cached_vertex_dict["results"]
                         try:
                             vertex.finalize_build()
+
                             if vertex.result is not None:
                                 vertex.result.used_frozen_result = True
                         except Exception:  # noqa: BLE001
@@ -1517,11 +1515,10 @@ class Graph:
         to_process = deque(first_layer)
         layer_index = 0
         chat_service = get_chat_service()
-        run_id = uuid.uuid4()
-        self.set_run_id(run_id)
+        self.set_run_id()
         self.set_run_name()
         await self.initialize_run()
-        lock = chat_service.async_cache_locks[self.run_id]
+        lock = asyncio.Lock()
         while to_process:
             current_batch = list(to_process)  # Copy current deque items to a list
             to_process.clear()  # Clear the deque for new items

@@ -1,4 +1,5 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
 import {
   Command,
@@ -69,15 +70,21 @@ const CommandItemContent = ({
   option,
   isSelected,
   optionButton,
+  nodeStyle,
 }: {
   option: string;
   isSelected: boolean;
   optionButton: (option: string) => ReactNode;
+  nodeStyle?: string;
 }) => (
   <div className="group flex w-full items-center justify-between">
     <div className="flex items-center justify-between">
       <SelectionIndicator isSelected={isSelected} />
-      <span className="max-w-52 truncate pr-2">{option}</span>
+      <ShadTooltip content={option} side="left">
+        <div className={cn("truncate pr-2", nodeStyle ? "max-w-52" : "w-full")}>
+          <span>{option}</span>
+        </div>
+      </ShadTooltip>
     </div>
     {optionButton && optionButton(option)}
   </div>
@@ -170,6 +177,8 @@ const CustomInputPopover = ({
   const [isFocused, setIsFocused] = useState(false);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
 
+  console.log(nodeStyle);
+
   const PopoverContentInput = editNode
     ? PopoverContent
     : PopoverContentWithoutPortal;
@@ -222,15 +231,21 @@ const CustomInputPopover = ({
               ))}
             </div>
           ) : selectedOption?.length > 0 ? (
-            <OptionBadge
-              option={selectedOption}
-              onRemove={(e) => handleRemoveOption(selectedOption, e)}
-              variant={nodeStyle ? "emerald" : "secondary"}
-              className={cn(
-                editNode && "text-xs",
-                nodeStyle ? "rounded-[3px] px-1 font-mono" : "bg-muted",
-              )}
-            />
+            <ShadTooltip content={selectedOption} side="left">
+              <div>
+                <OptionBadge
+                  option={selectedOption}
+                  onRemove={(e) => handleRemoveOption(selectedOption, e)}
+                  variant={nodeStyle ? "emerald" : "secondary"}
+                  className={cn(
+                    editNode && "text-xs",
+                    nodeStyle
+                      ? "max-w-60 rounded-[3px] px-1 font-mono"
+                      : "bg-muted",
+                  )}
+                />
+              </div>
+            </ShadTooltip>
           ) : null}
 
           {!selectedOption?.length && !selectedOptions?.length && (
@@ -304,6 +319,7 @@ const CustomInputPopover = ({
                       selectedOptions?.includes(option)
                     }
                     optionButton={optionButton}
+                    nodeStyle={nodeStyle}
                   />
                 </CommandItem>
               ))}

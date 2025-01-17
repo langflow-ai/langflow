@@ -17,11 +17,13 @@ class OllamaEmbeddingsComponent(LCModelComponent):
             name="model",
             display_name="Ollama Model",
             value="nomic-embed-text",
+            required=True,
         ),
         MessageTextInput(
             name="base_url",
             display_name="Ollama Base URL",
             value="http://localhost:11434",
+            required=True,
         ),
     ]
 
