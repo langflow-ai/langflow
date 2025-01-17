@@ -38,6 +38,7 @@ const TextAreaWrapper = ({
     if (!lockChat && !noInput) {
       inputRef.current?.focus();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lockChat, noInput]);
 
   return (

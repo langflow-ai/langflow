@@ -172,3 +172,17 @@ component: string;
     id: string;
     path?: string;
   };
+
+  export type chatMessagePropsType = {
+    chat: ChatMessageType;
+    lockChat: boolean;
+    lastMessage: boolean;
+    closeChat?: () => void;
+  };
+
+  export type fileCardPropsType = {
+    fileName: string;
+    path: string;
+    fileType: string;
+    showFile?: boolean;
+  };

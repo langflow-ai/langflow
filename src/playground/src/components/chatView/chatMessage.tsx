@@ -14,14 +14,14 @@ import IconComponent, {
 import { EMPTY_INPUT_SEND_MESSAGE } from "@/constants/constants";
 import useTabVisibility from "@/shared/hooks/use-tab-visibility";
 import useAlertStore from "@/stores/alertStore";
-import { chatMessagePropsType } from "@/types/components";
-import FileCardWrapper from "./components/file-card-wrapper";
-import { EditMessageButton } from "./components/message-options";
+import FileCardWrapper from "./fileCardWrapper";
 import { cn } from "src/utils/style";
 import { ErrorView } from "./errorView";
 import { MarkdownField } from "./markdownField";
 import EditMessageField from "./editMessageField";
 import { convertFiles } from "src/utils/utils";
+import { chatMessagePropsType } from "./types";
+import { EditMessageButton } from "./edit-message-button";
 
 export default function ChatMessage({
   chat,
