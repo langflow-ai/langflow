@@ -1,13 +1,13 @@
 import pytest
-from langflow.components.tools.calculator import CalculatorToolComponent
+from langflow.components.tools.calculator_core import CalculatorComponent
 
 from tests.base import ComponentTestBaseWithoutClient
 
 
-class TestCalculatorToolComponent(ComponentTestBaseWithoutClient):
+class TestCalculatorComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self):
-        return CalculatorToolComponent
+        return CalculatorComponent
 
     @pytest.fixture
     def default_kwargs(self):
@@ -15,7 +15,6 @@ class TestCalculatorToolComponent(ComponentTestBaseWithoutClient):
 
     @pytest.fixture
     def file_names_mapping(self):
-        # If this is a new component, we can return an empty list
         return []
 
     def test_basic_calculation(self, component_class, default_kwargs):
@@ -60,7 +59,7 @@ class TestCalculatorToolComponent(ComponentTestBaseWithoutClient):
         assert "error" in result.data
         assert "Invalid expression" in result.data["error"]
 
-    def test_unsupported_function(self, component_class):
+    def test_unsupported_operation(self, component_class):
         # Arrange
         component = component_class(expression="sqrt(16)", _session_id="test_session")
 
@@ -69,27 +68,7 @@ class TestCalculatorToolComponent(ComponentTestBaseWithoutClient):
 
         # Assert
         assert "error" in result.data
-        assert "Function calls" in result.data["error"]
-
-    def test_text_output_success(self, component_class):
-        # Arrange
-        component = component_class(expression="2 * 3", _session_id="test_session")
-
-        # Act
-        message = component.text_output()
-
-        # Assert
-        assert message.text == "6"
-
-    def test_text_output_error(self, component_class):
-        # Arrange
-        component = component_class(expression="1/0", _session_id="test_session")
-
-        # Act
-        message = component.text_output()
-
-        # Assert
-        assert "Error: Division by zero" in message.text
+        assert "Unsupported operation" in result.data["error"]
 
     def test_component_frontend_node(self, component_class, default_kwargs):
         # Arrange
