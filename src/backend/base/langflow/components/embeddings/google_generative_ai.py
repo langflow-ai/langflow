@@ -62,6 +62,16 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                 Returns:
                     List of embeddings, one for each text.
                 """
+                
+                if output_dimensionality < 1:
+                    raise ValueError("Output dimensionality must be at least 1")
+                if output_dimensionality > 768:
+                    raise ValueError(
+                        "Output dimensionality cannot exceed 768. "
+                        "Google's embedding models only support dimensions up to 768. "
+                        f"Received: {output_dimensionality}"
+                )
+                
                 embeddings: list[list[float]] = []
                 batch_start_index = 0
                 for batch in GoogleGenerativeAIEmbeddings._prepare_batches(texts, batch_size):
@@ -111,6 +121,16 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                 Returns:
                     Embedding for the text.
                 """
+
+                if output_dimensionality < 1:
+                    raise ValueError("Output dimensionality must be at least 1")
+                if output_dimensionality > 768:
+                    raise ValueError(
+                        "Output dimensionality cannot exceed 768. "
+                        "Google's embedding models only support dimensions up to 768. "
+                        f"Received: {output_dimensionality}"
+                )
+
                 task_type = task_type or "RETRIEVAL_QUERY"
                 return self.embed_documents(
                     [text],
