@@ -358,14 +358,6 @@ function GenericNode({
     );
   }, [data, types, isToolMode, showNode, shownOutputs, showHiddenOutputs]);
 
-  useEffect(() => {
-    // Find and update ReactFlow node element to fit the component wrapper
-    const reactFlowNode = document.querySelector(`[data-id="${data.id}"]`);
-    if (reactFlowNode) {
-      (reactFlowNode as HTMLElement).style.width = "fit-content";
-    }
-  }, [data.id]);
-
   return (
     <div className={cn(isOutdated && !isUserEdited ? "relative -mt-10" : "")}>
       <div
