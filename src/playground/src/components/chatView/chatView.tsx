@@ -1,20 +1,16 @@
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
-import ChainLogo from "@/assets/logo.svg?react";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
-import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
-import { useUtilityStore } from "src/stores/utilityStore";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import useTabVisibility from "../../../../shared/hooks/use-tab-visibility";
-import { ChatMessageType } from "../../../../types/chat";
-import FlowRunningSqueleton from "../flow-running-squeleton";
-import ChatInput from "./chatInput/chat-input";
-import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
-import { useFileHandler } from "./chatInput/hooks/use-file-handler";
-import ChatMessage from "./chatMessage/chat-message";
-import { chatViewProps } from "./types";
+import { ChatMessageType, chatViewProps } from "./types";
 import { usePlaygroundStore } from "src/stores/playgroundStore";
 import { useMessagesStore } from "src/stores/messageStore";
+import ChatInput from "./chatInput";
+import ChatMessage from "./chatMessage";
+import { useFileHandler } from "src/hooks/use-file-handler";
+import useDragAndDrop from "src/hooks/use-drag-and-drop";
+import FlowRunningSqueleton from "../flowRunningSqueleton/flowRunningSqueleton";
+import useTabVisibility from "src/hooks/use-tab-visibility";
 
 const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
   return (
@@ -29,13 +25,11 @@ const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
 export default function ChatView({
   sendMessage,
   lockChat,
-  setLockChat,
   visibleSession,
   focusChat,
   closeChat,
   inputs,
-  nodes,
-
+  initialChatValue,
 }: chatViewProps): JSX.Element {
   const currentFlowId = usePlaygroundStore((state) => state.currentFlowId);
   const messagesRef = useRef<HTMLDivElement | null>(null);
@@ -43,15 +37,12 @@ export default function ChatView({
     undefined,
   );
   const messages = useMessagesStore((state) => state.messages);
-  const nodes = useFlowStore((state) => state.nodes);
-  const chatInput = inputs.find((input) => input.type === "ChatInput");
-  const chatInputNode = nodes.find((node) => node.id === chatInput?.id);
   const displayLoadingMessage = useMessagesStore(
     (state) => state.displayLoadingMessage,
   );
 
   const inputTypes = inputs.map((obj) => obj.type);
-  const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
+  const setChatValueStore = usePlaygroundStore((state) => state.setChatValueStore);
   const isTabHidden = useTabVisibility();
 
   //build chat history
@@ -97,16 +88,16 @@ export default function ChatView({
       return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
     });
 
-    if (messages.length === 0 && !lockChat && chatInputNode && isTabHidden) {
-      setChatValueStore(
-        chatInputNode.data.node.template["input_value"].value ?? "",
-      );
+    if (messages.length === 0 && !lockChat && isTabHidden) {
+      setChatValueStore(initialChatValue ?? "");
     } else {
-      isTabHidden ? setChatValueStore("") : null;
+      if(isTabHidden) {
+        setChatValueStore("");
+      }
     }
 
     setChatHistory(finalChatHistory);
-  }, [messages, visibleSession]);
+  }, [messages, visibleSession, initialChatValue, lockChat, isTabHidden, currentFlowId, setChatValueStore]);
   useEffect(() => {
     if (messagesRef.current) {
       messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
@@ -152,7 +143,6 @@ export default function ChatView({
             <>
               {chatHistory?.map((chat, index) => (
                 <MemoizedChatMessage
-                  setLockChat={setLockChat}
                   lockChat={lockChat}
                   chat={chat}
                   lastMessage={chatHistory.length - 1 === index}
@@ -164,17 +154,10 @@ export default function ChatView({
           ) : (
             <div className="flex h-full w-full flex-col items-center justify-center">
               <div className="flex flex-col items-center justify-center gap-4 p-8">
-                {ENABLE_NEW_LOGO ? (
                   <LangflowLogo
                     title="Langflow logo"
                     className="h-10 w-10 scale-[1.5]"
                   />
-                ) : (
-                  <ChainLogo
-                    title="Langflow logo"
-                    className="h-10 w-10 scale-[1.5]"
-                  />
-                )}
                 <div className="flex flex-col items-center justify-center">
                   <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
                     New chat
