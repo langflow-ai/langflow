@@ -27,11 +27,13 @@ class OllamaEmbeddingsComponent(LCModelComponent):
             options=[],
             real_time_refresh=True,
             refresh_button=True,
+            required=True,
         ),
         MessageTextInput(
             name="base_url",
             display_name="Ollama Base URL",
             value="",
+            required=True,
         ),
     ]
 
