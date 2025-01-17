@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from langflow.components.processing import UpdateDataComponent
 from langflow.schema import Data
@@ -48,7 +50,7 @@ def test_update_build_config_exceed_limit(update_data_component):
             "value": False,
         },
     }
-    with pytest.raises(ValueError, match="Number of fields cannot exceed 15."):
+    with pytest.raises(ValueError, match=re.escape("Number of fields cannot exceed 15.")):
         update_data_component.update_build_config(build_config, 16, "number_of_fields")
 
 

@@ -1,7 +1,6 @@
 ---
-title: 'Integrate Google Cloud Vertex AI with Langflow'
+title: Integrate Google Cloud Vertex AI with Langflow
 slug: /integrations-setup-google-cloud-vertex-ai-langflow
-sidebar_position: 2
 description: "A comprehensive guide on creating a Google OAuth app, obtaining tokens, and integrating them with Langflow's Google components."
 ---
 

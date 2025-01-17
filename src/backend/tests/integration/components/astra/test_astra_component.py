@@ -2,6 +2,7 @@ import os
 
 import pytest
 from astrapy.db import AstraDB
+from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
 from langchain_core.documents import Document
 from langflow.components.embeddings import OpenAIEmbeddingsComponent
 from langflow.components.vectorstores import AstraDBVectorStoreComponent
@@ -37,8 +38,6 @@ def astradb_client():
 
 @pytest.mark.api_key_required
 async def test_base(astradb_client: AstraDB):
-    from langflow.components.embeddings import OpenAIEmbeddingsComponent
-
     application_token = get_astradb_application_token()
     api_endpoint = get_astradb_api_endpoint()
 
@@ -88,8 +87,6 @@ async def test_astra_embeds_and_search():
 
 @pytest.mark.api_key_required
 def test_astra_vectorize():
-    from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
-
     application_token = get_astradb_application_token()
     api_endpoint = get_astradb_api_endpoint()
 
@@ -132,8 +129,6 @@ def test_astra_vectorize():
 @pytest.mark.api_key_required
 def test_astra_vectorize_with_provider_api_key():
     """Tests vectorize using an openai api key."""
-    from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
-
     application_token = get_astradb_application_token()
     api_endpoint = get_astradb_api_endpoint()
 
@@ -189,8 +184,6 @@ def test_astra_vectorize_with_provider_api_key():
 @pytest.mark.api_key_required
 def test_astra_vectorize_passes_authentication():
     """Tests vectorize using the authentication parameter."""
-    from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
-
     store = None
     try:
         application_token = get_astradb_application_token()
