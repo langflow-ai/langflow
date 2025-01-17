@@ -25,13 +25,13 @@ export default function FlowSettingsModal({
   const flows = useFlowsManagerStore((state) => state.flows);
   const flow = flowData ?? currentFlow;
   useEffect(() => {
-    setName(flow!.name);
-    setDescription(flow!.description);
+    setName(flow?.name ?? "");
+    setDescription(flow?.description ?? "");
   }, [flow?.name, flow?.description, open]);
 
-  const [name, setName] = useState(flow!.name);
-  const [description, setDescription] = useState(flow!.description);
-  const [endpoint_name, setEndpointName] = useState(flow!.endpoint_name ?? "");
+  const [name, setName] = useState(flow?.name ?? "");
+  const [description, setDescription] = useState(flow?.description ?? "");
+  const [endpoint_name, setEndpointName] = useState(flow?.endpoint_name ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const [disableSave, setDisableSave] = useState(true);
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);

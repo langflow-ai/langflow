@@ -49,7 +49,10 @@ export default function AppHeader(): JSX.Element {
   return (
     <div className="flex h-[62px] w-full items-center justify-between gap-2 border-b px-5 py-2.5 dark:bg-background">
       {/* Left Section */}
-      <div className={`flex items-center gap-2`}>
+      <div
+        className={`flex items-center gap-2`}
+        data-testid="header_left_section_wrapper"
+      >
         <Button
           unstyled
           onClick={() => navigate("/")}
@@ -78,7 +81,10 @@ export default function AppHeader(): JSX.Element {
       </div>
 
       {/* Right Section */}
-      <div className={`flex items-center gap-2`}>
+      <div
+        className={`flex items-center gap-2`}
+        data-testid="header_right_section_wrapper"
+      >
         {!ENABLE_DATASTAX_LANGFLOW && (
           <>
             <Button
