@@ -21,7 +21,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlmodel import SQLModel, select, text
 from sqlmodel.ext.asyncio.session import AsyncSession
-from tenacity import retry, wait_fixed, stop_after_attempt
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.base import Service
