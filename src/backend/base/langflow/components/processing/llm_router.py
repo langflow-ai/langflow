@@ -1,3 +1,5 @@
+import json
+
 import requests
 
 from langflow.base.models.chat_result import get_chat_result
@@ -60,31 +62,40 @@ class LLMRouterComponent(Component):
     def _get_model_specs(self, model_name: str) -> str:
         """Fetch specific model information from OpenRouter API."""
         http_success = 200
+        base_info = f"Model: {model_name}\n"
+
+        # Remove any special characters and spaces, keep only alphanumeric
+        clean_name = "".join(c.lower() for c in model_name if c.isalnum())
+        url = f"https://openrouter.ai/api/v1/models/{clean_name}/endpoints"
+
         try:
-            # Remove any special characters and spaces, keep only alphanumeric
-            clean_name = "".join(c.lower() for c in model_name if c.isalnum())
-
-            url = f"https://openrouter.ai/api/v1/models/{clean_name}/endpoints"
             response = requests.get(url, timeout=10)
+        except requests.exceptions.RequestException as e:
+            return base_info + f"Error fetching specs: {e!s}"
 
-            if response.status_code == http_success:
-                data = response.json().get("data", {})
+        if response.status_code != http_success:
+            return base_info + "No specifications available"
 
-                # Extract relevant information
-                context_length = data.get("context_length", "Unknown")
-                max_completion_tokens = data.get("max_completion_tokens", "Unknown")
-                architecture = data.get("architecture", {})
-                tokenizer = architecture.get("tokenizer", "Unknown")
-                instruct_type = architecture.get("instruct_type", "Unknown")
+        try:
+            data = response.json().get("data", {})
+        except (json.JSONDecodeError, requests.exceptions.JSONDecodeError):
+            return base_info + "Error parsing response data"
 
-                pricing = data.get("pricing", {})
-                prompt_price = pricing.get("prompt", "Unknown")
-                completion_price = pricing.get("completion", "Unknown")
+        # Extract relevant information
+        context_length = data.get("context_length", "Unknown")
+        max_completion_tokens = data.get("max_completion_tokens", "Unknown")
+        architecture = data.get("architecture", {})
+        tokenizer = architecture.get("tokenizer", "Unknown")
+        instruct_type = architecture.get("instruct_type", "Unknown")
 
-                description = data.get("description", "No description available")
-                created = data.get("created", "Unknown")
+        pricing = data.get("pricing", {})
+        prompt_price = pricing.get("prompt", "Unknown")
+        completion_price = pricing.get("completion", "Unknown")
 
-                return f"""
+        description = data.get("description", "No description available")
+        created = data.get("created", "Unknown")
+
+        return f"""
 Model: {model_name}
 Description: {description}
 Context Length: {context_length} tokens
@@ -94,10 +105,6 @@ Instruct Type: {instruct_type}
 Pricing: ${prompt_price}/1k tokens (prompt), ${completion_price}/1k tokens (completion)
 Created: {created}
 """
-            return f"Model: {model_name}\nNo specifications available"
-
-        except requests.exceptions.RequestException as e:
-            return f"Model: {model_name}\nError fetching specs: {e!s}"
 
     MISSING_INPUTS_MSG = "Missing required inputs: models, input_value, or judge_llm"
 
@@ -132,10 +139,10 @@ Created: {created}
         user_message = {
             "role": "user",
             "content": f"""Available Models with Specifications:\n{models_str}\n
-           Optimization Preference: {self.optimization}\n
-           Input Query: "{self.input_value.text}"\n
-           Based on the model specifications and optimization preference,
-           select the most appropriate model (return only the index number):""",
+            Optimization Preference: {self.optimization}\n
+            Input Query: "{self.input_value.text}"\n
+            Based on the model specifications and optimization preference,
+            select the most appropriate model (return only the index number):""",
         }
 
         try:
