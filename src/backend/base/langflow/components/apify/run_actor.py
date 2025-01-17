@@ -76,41 +76,20 @@ class ApifyRunActorComponent(LCToolComponent):
         super().__init__(*args, **kwargs)
         self._apify_client: ApifyClient | None = None
 
-    #def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
-
-    #    print("ApifyRunActorComponent update_build_config", field_name, field_value)
-    #    print("actor_id", self.actor_id)
-    #    #pprint.pprint(build_config)
-    #    #build_config[field_name]['value'] = field_value
-
-    #    build = self._get_actor_latest_build(self.actor_id)
-    #    pprint.pprint(build)
-
-    #    return build_config
-
     def run_model(self) -> list[Data]:
         """Run the actor and return node output."""
-        print("ApifyRunActorComponent build_output")
-        print("ApifyRunActorComponent build_output actor_input", self.actor_input)
-        print("actor_id", self.actor_id)
-
         input = json.loads(self.actor_input)
         fields = self._parse_dataset_fields(self.dataset_fields) if self.dataset_fields else None
-        print('fields', fields)
         res = self._run_actor(self.actor_id, input, fields=fields)
-        print("ApifyRunActorComponent run_model res", res)
         if self.do_flatten_dataset:
             res = [self._flatten(item) for item in res]
-        #data = [Data(value=doc) for doc in res]
         data = [Data(data=item) for item in res]
 
-        #data = Data(value='\n\n'.join(res))
         self.status = data
         return data
 
     def build_tool(self) -> Tool:
         """Build a tool for agent that runs the Apify actor."""
-        #wrapper = self._build_wrapper()
         client = self._get_apify_client()
         actor_id = self.actor_id
         _run_actor = lambda actor_id, input: self._run_actor(actor_id, input)
@@ -119,36 +98,6 @@ class ApifyRunActorComponent(LCToolComponent):
         readme = build.get("readme", "")[:250] + "..."
         properties, required = self._get_actor_input_schema_from_build(build)
         properties = {"actor_input": properties}
-        #example_input = {"actor_input": self._get_example_input_from_build(build)}
-
-
-        #info = [(
-        #    "`actor_input` is a JSON string that needs to be strictly followed otherwise the actor call will fail."
-        #    "schema:\n\n"
-        #    f"{properties_minified}"
-        #)]
-        #if required:
-        #    info.append("\n\nRequired fields:\n" + "\n".join(required))
-        #if example_input:
-        #    info.append("\n\nExample input properties inside `actor_input`:\n" + json.dumps(example_input, separators=(',', ":")))
-        #
-        #info.append((
-        #    "\n\nExample tool input (STRICTLY FOLOW THIS OTHERWISE THE TOOL WILL FAIL):\n"
-        #    "actor_input = '{\"property\": \"value\"}'"
-        #    "\n or passed as kwargs dict `{'actor_input': '{\"property\": \"value\"}'}`"
-        #))
-
-        # WORKING IF EXAMPLE IS CORRECT
-        #info = []
-        #if example_input:
-        #    info.append("Example input JSON string encoded as str datatype (FOLLOW THIS STRICTLY):\n" + json.dumps(example_input, separators=(',', ":")))
-        #else:
-        #    info.append((
-        #        "`actor_input` is a JSON string with schema (FOLLOW THIS STRICTLY):\n\n"
-        #        f"{json.dumps(properties, separators=(',', ":"))}"
-        #    ))
-        #    if required:
-        #        info.append("\n\nRequired fields:\n" + "\n".join(required))
 
         # works from input schema
         info = [(
@@ -157,13 +106,10 @@ class ApifyRunActorComponent(LCToolComponent):
         )]
         if required:
             info.append("\n\nRequired fields:\n" + "\n".join(required))
-        #if example_input:
-        #    info.append("\n\nExample input properties inside `actor_input`:\n" + json.dumps(example_input, separators=(',', ":")))
 
         info = "".join(info)
 
         input_model_cls = self._create_input_model_class(info)
-        #print(input_model_cls.schema_json())
         tool_cls = self._create_tool_class(self, readme, input_model_cls, actor_id)
 
         return cast("Tool", tool_cls())
@@ -189,7 +135,6 @@ class ApifyRunActorComponent(LCToolComponent):
                 run_manager: CallbackManagerForToolRun | None = None,
             ) -> str:
                 """Use the Apify actor."""
-                print("ApifyActorRun _run actor_input", actor_input)
                 if isinstance(actor_input, str):
                     input_dict = json.loads(actor_input)
                 else:
@@ -198,7 +143,6 @@ class ApifyRunActorComponent(LCToolComponent):
                 # retrieve if nested, just in case
                 input_dict = input_dict.get("actor_input", input_dict)
 
-                print("ApifyActorRun _run input_dict", input_dict)
                 res = parent._run_actor(actor_id, input_dict)
                 return '\n\n'.join([parent._dict_to_json_str(item) for item in res])
 
@@ -214,12 +158,11 @@ class ApifyRunActorComponent(LCToolComponent):
         return ActorInput
 
     def _get_apify_client(self) -> ApifyClient:
-        """Get the Apify client."""
+        """Get the Apify client. Is created if not exists or token changes."""
         if not self.apify_token:
             raise ValueError("API token is required.")
         # when token changes, create a new client
         if self._apify_client is None or self._apify_client.token != self.apify_token:
-            print("ApifyRunActorComponent Creating new ApifyClient")
             self._apify_client = ApifyClient(self.apify_token)
         return self._apify_client
 
@@ -276,18 +219,6 @@ class ApifyRunActorComponent(LCToolComponent):
             del properties[item][k]
 
         return properties, required
-
-    def _get_example_input_from_build(self, build: dict) -> dict:
-        properties = build.get('actorDefinition',
-                            {}).get('input',
-                            {}).get('properties', {})
-
-        example_input = {}
-        for item in properties:
-            value = properties[item].get('default') or properties[item].get('prefill')
-            if value is not None:
-                example_input[item] = value
-        return example_input
 
     def _get_run_dataset_id(self, run_id: str) -> str:
         """Get the dataset id from the run id."""
