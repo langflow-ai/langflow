@@ -6,9 +6,6 @@ from pathlib import Path
 import anyio
 import pytest
 from aiofile import async_open
-from sqlalchemy.orm import selectinload
-from sqlmodel import select
-
 from langflow.custom.directory_reader.utils import abuild_custom_component_list_from_path
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.initial_setup.setup import (
@@ -22,6 +19,8 @@ from langflow.interface.components import aget_all_types_dict
 from langflow.services.database.models import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service, session_scope
+from sqlalchemy.orm import selectinload
+from sqlmodel import select
 
 
 async def test_load_starter_projects():

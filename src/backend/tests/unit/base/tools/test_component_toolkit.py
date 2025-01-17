@@ -1,8 +1,6 @@
 import os
 
 import pytest
-from pydantic import BaseModel
-
 from langflow.base.tools.component_tool import ComponentToolkit
 from langflow.components.langchain_utilities import ToolCallingAgentComponent
 from langflow.components.models import OpenAIModelComponent
@@ -10,6 +8,7 @@ from langflow.components.outputs import ChatOutput
 from langflow.components.tools.calculator import CalculatorToolComponent
 from langflow.graph import Graph
 from langflow.schema.data import Data
+from pydantic import BaseModel
 
 
 def test_component_tool():
