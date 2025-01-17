@@ -31,20 +31,21 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Workspace",
+      label: "Concepts",
       items: [
-        "Workspace/workspace-overview",
-        "Workspace/workspace-api",
-        "Workspace/workspace-logs",
-        "Workspace/workspace-playground",
+        "Concepts/concepts-overview",
+        "Concepts/concepts-playground",
+        "Concepts/concepts-components",
+        "Concepts/concepts-flows",
+        "Concepts/concepts-api",
       ],
     },
     {
       type: "category",
       label: "Components",
       items: [
-        "Components/components-overview",
         "Components/components-agents",
+        "Components/components-custom-components",
         "Components/components-data",
         "Components/components-embedding-models",
         "Components/components-helpers",
@@ -57,7 +58,6 @@ module.exports = {
         "Components/components-prompts",
         "Components/components-tools",
         "Components/components-vector-stores",
-        "Components/components-custom-components",
       ],
     },
     {
@@ -140,8 +140,13 @@ module.exports = {
       label: "API Reference",
       items: [
         {
+          type: "doc",
+          id: "API-Reference/api-reference-api-examples",
+          label: "API examples",
+        },
+        {
           type: "link",
-          label: "API Documentation",
+          label: "API documentation",
           href: "/api",
         },
       ],
