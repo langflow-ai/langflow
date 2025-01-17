@@ -262,7 +262,7 @@ async def astore_message(
         try:
             return await aupdate_messages([message])
         except ValueError as e:
-            logger.exception(e)
+            logger.error(e)
     if flow_id and not isinstance(flow_id, UUID):
         flow_id = UUID(flow_id)
     return await aadd_messages([message], flow_id=flow_id)
