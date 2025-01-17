@@ -8,14 +8,20 @@ interface PlaygroundStore {
   onMessageUpdateError?: (error: string) => void;
   onMessageDelete?: (message: string) => void;
   onMessageDeleteError?: (error: string) => void;
+  onFileUploadError?: (error: string) => void;
   setOnMessageUpdate: (callback: (message: string) => void) => void;
   setOnMessageUpdateError: (callback: (error: string) => void) => void;
   setOnMessageDelete: (callback: (message: string) => void) => void;
   setOnMessageDeleteError: (callback: (error: string) => void) => void;
+  setOnFileUploadError: (callback: (error: string) => void) => void;
   chatValueStore: string;
   setChatValueStore: (value: string) => void;
   currentFlowId: string;
   setCurrentFlowId: (id: string) => void;
+  maxFileSizeUpload: number;
+  setMaxFileSizeUpload: (maxFileSizeUpload: number) => void;
+  baseUrl: string;
+  setBaseUrl: (url: string) => void;
   buildFlow: ({
     startNodeId,
     stopNodeId,
@@ -33,7 +39,6 @@ interface PlaygroundStore {
     silent?: boolean;
     session?: string;
   }) => Promise<void>;
-
 }
 
 export const usePlaygroundStore = create<PlaygroundStore>((set) => ({
@@ -43,8 +48,14 @@ export const usePlaygroundStore = create<PlaygroundStore>((set) => ({
   onMessageUpdateError: undefined,
   onMessageDelete: undefined,
   onMessageDeleteError: undefined,
+  onFileUploadError: undefined,
   chatValueStore: "",
   currentFlowId: "",
+  maxFileSizeUpload: 100 * 1024 * 1024, // 100MB in bytes
+  baseUrl: "",
+  setBaseUrl: (url: string) => set({ baseUrl: url }),
+  setMaxFileSizeUpload: (maxFileSizeUpload: number) =>
+    set({ maxFileSizeUpload: maxFileSizeUpload * 1024 * 1024 }),
   setLockChat: (lock) => {
     set((state) => {
       if (state.onLockChange && state.lockChat !== lock) {
@@ -57,6 +68,7 @@ export const usePlaygroundStore = create<PlaygroundStore>((set) => ({
   setOnMessageUpdateError: (callback) => set({ onMessageUpdateError: callback }),
   setOnMessageDelete: (callback) => set({ onMessageDelete: callback }),
   setOnMessageDeleteError: (callback) => set({ onMessageDeleteError: callback }),
+  setOnFileUploadError: (callback) => set({ onFileUploadError: callback }),
   setChatValueStore: (value: string) => set({ chatValueStore: value }),
   setCurrentFlowId: (id) => set({ currentFlowId: id }),
   buildFlow: async ({
