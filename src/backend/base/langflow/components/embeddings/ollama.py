@@ -27,6 +27,7 @@ class OllamaEmbeddingsComponent(LCModelComponent):
             options=[],
             real_time_refresh=True,
             refresh_button=True,
+            combobox=True,
             required=True,
         ),
         MessageTextInput(
