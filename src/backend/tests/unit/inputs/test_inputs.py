@@ -17,6 +17,7 @@ from langflow.inputs.inputs import (
     NestedDictInput,
     PromptInput,
     SecretStrInput,
+    SliderInput,
     StrInput,
     TableInput,
 )
@@ -28,6 +29,11 @@ from pydantic import ValidationError
 def test_table_input_valid():
     data = TableInput(name="valid_table", value=[{"key": "value"}, {"key2": "value2"}])
     assert data.value == [{"key": "value"}, {"key2": "value2"}]
+
+
+def test_slider_input_valid():
+    data = SliderInput(name="valid_slider", value=10)
+    assert data.value == 10
 
 
 def test_table_input_invalid():

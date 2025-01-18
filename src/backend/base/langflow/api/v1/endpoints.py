@@ -2,13 +2,24 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections.abc import AsyncGenerator
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
 import sqlalchemy as sa
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Body,
+    Depends,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
 from fastapi.encoders import jsonable_encoder
+from fastapi.responses import StreamingResponse
 from loguru import logger
 from sqlmodel import select
 
@@ -25,7 +36,12 @@ from langflow.api.v1.schemas import (
     UploadFileResponse,
 )
 from langflow.custom.custom_component.component import Component
-from langflow.custom.utils import build_custom_component_template, get_instance_name, update_component_build_config
+from langflow.custom.utils import (
+    build_custom_component_template,
+    get_instance_name,
+    update_component_build_config,
+)
+from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.exceptions.api import APIException, InvalidChatInputError
 from langflow.exceptions.serialization import SerializationError
 from langflow.graph.graph.base import Graph
@@ -39,14 +55,22 @@ from langflow.services.auth.utils import api_key_security, get_current_active_us
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.flow.model import FlowRead
-from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
+from langflow.services.database.models.flow.utils import (
+    get_all_webhook_components_in_flow,
+)
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_session_service, get_settings_service, get_task_service, get_telemetry_service
+from langflow.services.deps import (
+    get_session_service,
+    get_settings_service,
+    get_task_service,
+    get_telemetry_service,
+)
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
+    from langflow.services.event_manager import EventManager
     from langflow.services.settings.service import SettingsService
 
 router = APIRouter(tags=["Base"])
@@ -54,7 +78,7 @@ router = APIRouter(tags=["Base"])
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
 async def get_all():
-    from langflow.interface.types import get_and_cache_all_types_dict
+    from langflow.interface.components import get_and_cache_all_types_dict
 
     try:
         return await get_and_cache_all_types_dict(settings_service=get_settings_service())
@@ -68,22 +92,31 @@ def validate_input_and_tweaks(input_request: SimplifiedAPIRequest) -> None:
     # then we need to check the tweaks if the ChatInput component is present
     # and if its input_value is not None
     # if so, we raise an error
-    if input_request.tweaks is None:
+    if not input_request.tweaks:
         return
+
     for key, value in input_request.tweaks.items():
-        if "ChatInput" in key or "Chat Input" in key:
-            if isinstance(value, dict):
-                has_input_value = value.get("input_value") is not None
-                input_value_is_chat = input_request.input_value is not None and input_request.input_type == "chat"
-                if has_input_value and input_value_is_chat:
-                    msg = "If you pass an input_value to the chat input, you cannot pass a tweak with the same name."
-                    raise InvalidChatInputError(msg)
-        elif ("Text Input" in key or "TextInput" in key) and isinstance(value, dict):
-            has_input_value = value.get("input_value") is not None
-            input_value_is_text = input_request.input_value is not None and input_request.input_type == "text"
-            if has_input_value and input_value_is_text:
-                msg = "If you pass an input_value to the text input, you cannot pass a tweak with the same name."
+        if not isinstance(value, dict):
+            continue
+
+        input_value = value.get("input_value")
+        if input_value is None:
+            continue
+
+        request_has_input = input_request.input_value is not None
+
+        if any(chat_key in key for chat_key in ("ChatInput", "Chat Input")):
+            if request_has_input and input_request.input_type == "chat":
+                msg = "If you pass an input_value to the chat input, you cannot pass a tweak with the same name."
                 raise InvalidChatInputError(msg)
+
+        elif (
+            any(text_key in key for text_key in ("TextInput", "Text Input"))
+            and request_has_input
+            and input_request.input_type == "text"
+        ):
+            msg = "If you pass an input_value to the text input, you cannot pass a tweak with the same name."
+            raise InvalidChatInputError(msg)
 
 
 async def simple_run_flow(
@@ -92,9 +125,9 @@ async def simple_run_flow(
     *,
     stream: bool = False,
     api_key_user: User | None = None,
+    event_manager: EventManager | None = None,
 ):
-    if input_request.input_value is not None and input_request.tweaks is not None:
-        validate_input_and_tweaks(input_request)
+    validate_input_and_tweaks(input_request)
     try:
         task_result: list[RunOutputs] = []
         user_id = api_key_user.id if api_key_user else None
@@ -105,13 +138,15 @@ async def simple_run_flow(
         graph_data = flow.data.copy()
         graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
         graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name)
-        inputs = [
-            InputValueRequest(
-                components=[],
-                input_value=input_request.input_value,
-                type=input_request.input_type,
-            )
-        ]
+        inputs = None
+        if input_request.input_value is not None:
+            inputs = [
+                InputValueRequest(
+                    components=[],
+                    input_value=input_request.input_value,
+                    type=input_request.input_type,
+                )
+            ]
         if input_request.output_component:
             outputs = [input_request.output_component]
         else:
@@ -131,6 +166,7 @@ async def simple_run_flow(
             inputs=inputs,
             outputs=outputs,
             stream=stream,
+            event_manager=event_manager,
         )
 
         return RunResponse(outputs=task_result, session_id=session_id)
@@ -145,6 +181,7 @@ async def simple_run_flow_task(
     *,
     stream: bool = False,
     api_key_user: User | None = None,
+    event_manager: EventManager | None = None,
 ):
     """Run a flow task as a BackgroundTask, therefore it should not throw exceptions."""
     try:
@@ -153,10 +190,94 @@ async def simple_run_flow_task(
             input_request=input_request,
             stream=stream,
             api_key_user=api_key_user,
+            event_manager=event_manager,
         )
 
     except Exception:  # noqa: BLE001
         logger.exception(f"Error running flow {flow.id} task")
+
+
+async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio.Queue) -> AsyncGenerator:
+    """Consumes events from a queue and yields them to the client while tracking timing metrics.
+
+    This coroutine continuously pulls events from the input queue and yields them to the client.
+    It tracks timing metrics for how long events spend in the queue and how long the client takes
+    to process them.
+
+    Args:
+        queue (asyncio.Queue): The queue containing events to be consumed and yielded
+        client_consumed_queue (asyncio.Queue): A queue for tracking when the client has consumed events
+
+    Yields:
+        The value from each event in the queue
+
+    Notes:
+        - Events are tuples of (event_id, value, put_time)
+        - Breaks the loop when receiving a None value, signaling completion
+        - Tracks and logs timing metrics for queue time and client processing time
+        - Notifies client consumption via client_consumed_queue
+    """
+    while True:
+        event_id, value, put_time = await queue.get()
+        if value is None:
+            break
+        get_time = time.time()
+        yield value
+        get_time_yield = time.time()
+        client_consumed_queue.put_nowait(event_id)
+        logger.debug(
+            f"consumed event {event_id} "
+            f"(time in queue, {get_time - put_time:.4f}, "
+            f"client {get_time_yield - get_time:.4f})"
+        )
+
+
+async def run_flow_generator(
+    flow: Flow,
+    input_request: SimplifiedAPIRequest,
+    api_key_user: User | None,
+    event_manager: EventManager,
+    client_consumed_queue: asyncio.Queue,
+) -> None:
+    """Executes a flow asynchronously and manages event streaming to the client.
+
+    This coroutine runs a flow with streaming enabled and handles the event lifecycle,
+    including success completion and error scenarios.
+
+    Args:
+        flow (Flow): The flow to execute
+        input_request (SimplifiedAPIRequest): The input parameters for the flow
+        api_key_user (User | None): Optional authenticated user running the flow
+        event_manager (EventManager): Manages the streaming of events to the client
+        client_consumed_queue (asyncio.Queue): Tracks client consumption of events
+
+    Events Generated:
+        - "add_message": Sent when new messages are added during flow execution
+        - "token": Sent for each token generated during streaming
+        - "end": Sent when flow execution completes, includes final result
+        - "error": Sent if an error occurs during execution
+
+    Notes:
+        - Runs the flow with streaming enabled via simple_run_flow()
+        - On success, sends the final result via event_manager.on_end()
+        - On error, logs the error and sends it via event_manager.on_error()
+        - Always sends a final None event to signal completion
+    """
+    try:
+        result = await simple_run_flow(
+            flow=flow,
+            input_request=input_request,
+            stream=True,
+            api_key_user=api_key_user,
+            event_manager=event_manager,
+        )
+        event_manager.on_end(data={"result": result.model_dump()})
+        await client_consumed_queue.get()
+    except (ValueError, InvalidChatInputError, SerializationError) as e:
+        logger.error(f"Error running flow: {e}")
+        event_manager.on_error(data={"error": str(e)})
+    finally:
+        await event_manager.queue.put((None, None, time.time))
 
 
 @router.post("/run/{flow_id_or_name}", response_model_exclude_none=True)  # noqa: RUF100, FAST003
@@ -167,76 +288,68 @@ async def simplified_run_flow(
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
-) -> RunResponse:
-    """Executes a specified flow by ID.
+):
+    """Executes a specified flow by ID with support for streaming and telemetry.
 
-    Executes a specified flow by ID with input customization, performance enhancements through caching,
-    and optional data streaming.
+    This endpoint executes a flow identified by ID or name, with options for streaming the response
+    and tracking execution metrics. It handles both streaming and non-streaming execution modes.
 
-    ### Parameters:
-    - `db` (Session): Database session for executing queries.
-    - `flow_id_or_name` (str): ID or endpoint name of the flow to run.
-    - `input_request` (SimplifiedAPIRequest): Request object containing input values, types, output selection, tweaks,
-      and session ID.
-    - `api_key_user` (User): User object derived from the provided API key, used for authentication.
-    - `session_service` (SessionService): Service for managing flow sessions, essential for session reuse and caching.
+    Args:
+        background_tasks (BackgroundTasks): FastAPI background task manager
+        flow (FlowRead | None): The flow to execute, loaded via dependency
+        input_request (SimplifiedAPIRequest | None): Input parameters for the flow
+        stream (bool): Whether to stream the response
+        api_key_user (UserRead): Authenticated user from API key
+        request (Request): The incoming HTTP request
 
-    ### SimplifiedAPIRequest:
-    - `input_value` (Optional[str], default=""): Input value to pass to the flow.
-    - `input_type` (Optional[Literal["chat", "text", "any"]], default="chat"): Type of the input value,
-      determining how the input is interpreted.
-    - `output_type` (Optional[Literal["chat", "text", "any", "debug"]], default="chat"): Desired type of output,
-      affecting which components' outputs are included in the response. If set to "debug", all outputs are returned.
-    - `output_component` (Optional[str], default=None): Specific component output to retrieve. If provided,
-      only the output of the specified component is returned. This overrides the `output_type` parameter.
-    - `tweaks` (Optional[Tweaks], default=None): Adjustments to the flow's behavior, allowing for custom execution
-      parameters.
-    - `session_id` (Optional[str], default=None): An identifier for reusing session data, aiding in performance for
-      subsequent requests.
+    Returns:
+        Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results
+        or a RunResponse with the complete execution results
 
+    Raises:
+        HTTPException: For flow not found (404) or invalid input (400)
+        APIException: For internal execution errors (500)
 
-    ### Tweaks
-    A dictionary of tweaks to customize the flow execution.
-    The tweaks can be used to modify the flow's parameters and components.
-    Tweaks can be overridden by the input values.
-    You can use Component's `id` or Display Name as key to tweak a specific component
-    (e.g., `{"Component Name": {"parameter_name": "value"}}`).
-    You can also use the parameter name as key to tweak all components with that parameter
-    (e.g., `{"parameter_name": "value"}`).
-
-    ### Returns:
-    - A `RunResponse` object containing the execution results, including selected (or all, based on `output_type`)
-      outputs of the flow and the session ID, facilitating result retrieval and further interactions in a session
-      context.
-
-    ### Raises:
-    - HTTPException: 404 if the specified flow ID curl -X 'POST' \
-
-    ### Example:
-    ```bash
-    curl -X 'POST' \
-      'http://<your_server>/run/{flow_id}' \
-      -H 'accept: application/json' \
-      -H 'Content-Type: application/json' \
-      -H 'x-api-key: YOU_API_KEY' \
-      -H '
-      -d '{
-            "input_value": "Sample input",
-            "input_type": "chat",
-            "output_type": "chat",
-            "tweaks": {},
-          }'
-    ```
-
-    This endpoint provides a powerful interface for executing flows with enhanced flexibility and efficiency,
-    supporting a wide range of applications by allowing for dynamic input and output configuration along with
-    performance optimizations through session management and caching.
+    Notes:
+        - Supports both streaming and non-streaming execution modes
+        - Tracks execution time and success/failure via telemetry
+        - Handles graceful client disconnection in streaming mode
+        - Provides detailed error handling with appropriate HTTP status codes
+        - In streaming mode, uses EventManager to handle events:
+            - "add_message": New messages during execution
+            - "token": Individual tokens during streaming
+            - "end": Final execution result
     """
     telemetry_service = get_telemetry_service()
     input_request = input_request if input_request is not None else SimplifiedAPIRequest()
     if flow is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
     start_time = time.perf_counter()
+
+    if stream:
+        asyncio_queue: asyncio.Queue = asyncio.Queue()
+        asyncio_queue_client_consumed: asyncio.Queue = asyncio.Queue()
+        event_manager = create_stream_tokens_event_manager(queue=asyncio_queue)
+        main_task = asyncio.create_task(
+            run_flow_generator(
+                flow=flow,
+                input_request=input_request,
+                api_key_user=api_key_user,
+                event_manager=event_manager,
+                client_consumed_queue=asyncio_queue_client_consumed,
+            )
+        )
+
+        async def on_disconnect() -> None:
+            logger.debug("Client disconnected, closing tasks")
+            main_task.cancel()
+
+        return StreamingResponse(
+            consume_and_yield(asyncio_queue, asyncio_queue_client_consumed),
+            background=on_disconnect,
+            media_type="text/event-stream",
+        )
+
     try:
         result = await simple_run_flow(
             flow=flow,
@@ -635,7 +748,7 @@ async def custom_component_update(
         )
         component_node["template"] = updated_build_config
         if isinstance(cc_instance, Component):
-            cc_instance.run_and_validate_update_outputs(
+            await cc_instance.run_and_validate_update_outputs(
                 frontend_node=component_node,
                 field_name=code_request.field,
                 field_value=code_request.field_value,
