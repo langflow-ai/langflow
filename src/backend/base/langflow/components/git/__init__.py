@@ -1,5 +1,5 @@
 from .git import GitLoaderComponent
-from .gitfile import GitFileComponent
 from .gitextractor import GitExtractorComponent
+from .gitfile import GitFileComponent
 
-__all__ = ["GitLoaderComponent", "GitFileComponent", "GitExtractorComponent"]
+__all__ = ["GitExtractorComponent", "GitFileComponent", "GitLoaderComponent"]
