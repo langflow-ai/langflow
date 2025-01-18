@@ -6,35 +6,8 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "CalculatorTool",
-            "id": "CalculatorTool-DF8xQ",
-            "name": "api_build_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-5e01q",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-CalculatorTool-DF8xQ{œdataTypeœ:œCalculatorToolœ,œidœ:œCalculatorTool-DF8xQœ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-Agent-5e01q{œfieldNameœ:œtoolsœ,œidœ:œAgent-5e01qœ,œinputTypesœ:[œToolœ,œBaseToolœ,œStructuredToolœ],œtypeœ:œotherœ}",
-        "source": "CalculatorTool-DF8xQ",
-        "sourceHandle": "{œdataTypeœ: œCalculatorToolœ, œidœ: œCalculatorTool-DF8xQœ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-5e01q",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-5e01qœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-5e01q",
+            "id": "Agent-HoULP",
             "name": "response",
             "output_types": [
               "Message"
@@ -42,18 +15,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-s1eJK",
+            "id": "ChatOutput-60t7m",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-5e01q{œdataTypeœ:œAgentœ,œidœ:œAgent-5e01qœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-s1eJK{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-s1eJKœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Agent-5e01q",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-5e01qœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-s1eJK",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-s1eJKœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Agent-HoULP{œdataTypeœ:œAgentœ,œidœ:œAgent-HoULPœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-60t7m{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-60t7mœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Agent-HoULP",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-HoULPœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-60t7m",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-60t7mœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -61,7 +34,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-KkcsZ",
+            "id": "Prompt-nzVmM",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -69,18 +42,43 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-5e01q",
+            "id": "Agent-HoULP",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-KkcsZ{œdataTypeœ:œPromptœ,œidœ:œPrompt-KkcsZœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-5e01q{œfieldNameœ:œinput_valueœ,œidœ:œAgent-5e01qœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-KkcsZ",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-KkcsZœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-5e01q",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-5e01qœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-nzVmM{œdataTypeœ:œPromptœ,œidœ:œPrompt-nzVmMœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-HoULP{œfieldNameœ:œinput_valueœ,œidœ:œAgent-HoULPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-nzVmM",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-nzVmMœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-HoULP",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-HoULPœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "CalculatorComponent",
+            "id": "CalculatorComponent-A0PBx",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-HoULP",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__CalculatorComponent-A0PBx{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-A0PBxœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-HoULP{œfieldNameœ:œtoolsœ,œidœ:œAgent-HoULPœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "CalculatorComponent-A0PBx",
+        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-A0PBxœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-HoULP",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-HoULPœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -88,7 +86,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-KkcsZ",
+          "id": "Prompt-nzVmM",
           "node": {
             "base_classes": [
               "Message"
@@ -313,7 +311,11 @@
         },
         "dragging": false,
         "height": 693,
-        "id": "Prompt-KkcsZ",
+        "id": "Prompt-nzVmM",
+        "measured": {
+          "height": 693,
+          "width": 360
+        },
         "position": {
           "x": 1349.861745038984,
           "y": 347.90475109976467
@@ -330,7 +332,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-s1eJK",
+          "id": "ChatOutput-60t7m",
           "node": {
             "base_classes": [
               "Message"
@@ -590,7 +592,11 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-s1eJK",
+        "id": "ChatOutput-60t7m",
+        "measured": {
+          "height": 234,
+          "width": 360
+        },
         "position": {
           "x": 2240.3625274769397,
           "y": 355.16302699218204
@@ -605,7 +611,7 @@
       },
       {
         "data": {
-          "id": "note-H6OpG",
+          "id": "note-BnQHz",
           "node": {
             "description": "# SaaS Pricing Calculator\n\nWelcome to the SaaS Pricing Calculator! This flow helps you determine the optimal monthly subscription price for your software service.\n\n## Instructions\n\n1. Prepare Your Data\n   - Gather information on monthly infrastructure costs\n   - Calculate customer support expenses\n   - Estimate continuous development costs\n   - Decide on your desired profit margin\n   - Determine the estimated number of subscribers\n\n2. Input Values\n   - Enter the gathered data into the respective fields in the Prompt node\n   - Double-check the accuracy of your inputs\n\n3. Run the Flow\n   - Click the \"Run\" button to start the calculation process\n   - The flow will use Chain-of-Thought prompting to guide the AI through the steps\n\n4. Review the Results\n   - Examine the output in the Chat Output node\n   - The result will show a breakdown of costs and the final subscription price\n\n5. Adjust and Refine\n   - If needed, modify your inputs to explore different pricing scenarios\n   - Re-run the flow to see how changes affect the final price\n\nRemember: Regularly update your costs and subscriber estimates to keep your pricing model accurate and competitive! 💼📊",
             "display_name": "",
@@ -616,7 +622,11 @@
         },
         "dragging": false,
         "height": 800,
-        "id": "note-H6OpG",
+        "id": "note-BnQHz",
+        "measured": {
+          "height": 800,
+          "width": 328
+        },
         "position": {
           "x": 689.7659055360411,
           "y": 68.95847391680593
@@ -638,7 +648,7 @@
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Agent",
-          "id": "Agent-5e01q",
+          "id": "Agent-HoULP",
           "node": {
             "base_classes": [
               "Message"
@@ -784,7 +794,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1197,7 +1207,11 @@
         },
         "dragging": false,
         "height": 650,
-        "id": "Agent-5e01q",
+        "id": "Agent-HoULP",
+        "measured": {
+          "height": 650,
+          "width": 360
+        },
         "position": {
           "x": 1819.2633856623966,
           "y": 138.32023808479687
@@ -1212,13 +1226,13 @@
       },
       {
         "data": {
-          "id": "CalculatorTool-DF8xQ",
+          "id": "CalculatorComponent-A0PBx",
           "node": {
             "base_classes": [
-              "Data",
-              "Tool"
+              "Data"
             ],
             "beta": false,
+            "category": "tools",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Perform basic arithmetic operations on a given expression.",
@@ -1230,29 +1244,19 @@
             ],
             "frozen": false,
             "icon": "calculator",
+            "key": "CalculatorComponent",
             "legacy": false,
-            "lf_version": "1.0.19.post2",
             "metadata": {},
+            "minimized": false,
             "output_types": [],
             "outputs": [
               {
                 "cache": true,
-                "display_name": "Data",
-                "method": "run_model",
-                "name": "api_run_model",
-                "required_inputs": [],
-                "selected": "Data",
-                "types": [
-                  "Data"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "cache": true,
-                "display_name": "Tool",
-                "method": "build_tool",
-                "name": "api_build_tool",
-                "required_inputs": [],
+                "display_name": "Toolset",
+                "hidden": null,
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "required_inputs": null,
                 "selected": "Tool",
                 "types": [
                   "Tool"
@@ -1261,6 +1265,7 @@
               }
             ],
             "pinned": false,
+            "score": 0.001,
             "template": {
               "_type": "Component",
               "code": {
@@ -1279,7 +1284,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import ast\nimport operator\n\nfrom langchain.tools import StructuredTool\nfrom langchain_core.tools import ToolException\nfrom loguru import logger\nfrom pydantic import BaseModel, Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import MessageTextInput\nfrom langflow.schema import Data\n\n\nclass CalculatorToolComponent(LCToolComponent):\n    display_name = \"Calculator\"\n    description = \"Perform basic arithmetic operations on a given expression.\"\n    icon = \"calculator\"\n    name = \"CalculatorTool\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"expression\",\n            display_name=\"Expression\",\n            info=\"The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').\",\n        ),\n    ]\n\n    class CalculatorToolSchema(BaseModel):\n        expression: str = Field(..., description=\"The arithmetic expression to evaluate.\")\n\n    def run_model(self) -> list[Data]:\n        return self._evaluate_expression(self.expression)\n\n    def build_tool(self) -> Tool:\n        return StructuredTool.from_function(\n            name=\"calculator\",\n            description=\"Evaluate basic arithmetic expressions. Input should be a string containing the expression.\",\n            func=self._eval_expr_with_error,\n            args_schema=self.CalculatorToolSchema,\n        )\n\n    def _eval_expr(self, node):\n        # Define the allowed operators\n        operators = {\n            ast.Add: operator.add,\n            ast.Sub: operator.sub,\n            ast.Mult: operator.mul,\n            ast.Div: operator.truediv,\n            ast.Pow: operator.pow,\n        }\n        if isinstance(node, ast.Num):\n            return node.n\n        if isinstance(node, ast.BinOp):\n            return operators[type(node.op)](self._eval_expr(node.left), self._eval_expr(node.right))\n        if isinstance(node, ast.UnaryOp):\n            return operators[type(node.op)](self._eval_expr(node.operand))\n        if isinstance(node, ast.Call):\n            msg = (\n                \"Function calls like sqrt(), sin(), cos() etc. are not supported. \"\n                \"Only basic arithmetic operations (+, -, *, /, **) are allowed.\"\n            )\n            raise TypeError(msg)\n        msg = f\"Unsupported operation or expression type: {type(node).__name__}\"\n        raise TypeError(msg)\n\n    def _eval_expr_with_error(self, expression: str) -> list[Data]:\n        try:\n            return self._evaluate_expression(expression)\n        except Exception as e:\n            raise ToolException(str(e)) from e\n\n    def _evaluate_expression(self, expression: str) -> list[Data]:\n        try:\n            # Parse the expression and evaluate it\n            tree = ast.parse(expression, mode=\"eval\")\n            result = self._eval_expr(tree.body)\n\n            # Format the result to a reasonable number of decimal places\n            formatted_result = f\"{result:.6f}\".rstrip(\"0\").rstrip(\".\")\n\n            self.status = formatted_result\n            return [Data(data={\"result\": formatted_result})]\n\n        except (SyntaxError, TypeError, KeyError) as e:\n            error_message = f\"Invalid expression: {e}\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n        except ZeroDivisionError:\n            error_message = \"Error: Division by zero\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n        except Exception as e:  # noqa: BLE001\n            logger.opt(exception=True).debug(\"Error evaluating expression\")\n            error_message = f\"Error: {e}\"\n            self.status = error_message\n            return [Data(data={\"error\": error_message, \"input\": expression})]\n"
+                "value": "import ast\nimport operator\nfrom collections.abc import Callable\n\nfrom langflow.custom import Component\nfrom langflow.inputs import MessageTextInput\nfrom langflow.io import Output\nfrom langflow.schema import Data\n\n\nclass CalculatorComponent(Component):\n    display_name = \"Calculator\"\n    description = \"Perform basic arithmetic operations on a given expression.\"\n    icon = \"calculator\"\n\n    # Cache operators dictionary as a class variable\n    OPERATORS: dict[type[ast.operator], Callable] = {\n        ast.Add: operator.add,\n        ast.Sub: operator.sub,\n        ast.Mult: operator.mul,\n        ast.Div: operator.truediv,\n        ast.Pow: operator.pow,\n    }\n\n    inputs = [\n        MessageTextInput(\n            name=\"expression\",\n            display_name=\"Expression\",\n            info=\"The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').\",\n            tool_mode=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"result\", type_=Data, method=\"evaluate_expression\"),\n    ]\n\n    def _eval_expr(self, node: ast.AST) -> float:\n        \"\"\"Evaluate an AST node recursively.\"\"\"\n        if isinstance(node, ast.Constant):\n            if isinstance(node.value, int | float):\n                return float(node.value)\n            error_msg = f\"Unsupported constant type: {type(node.value).__name__}\"\n            raise TypeError(error_msg)\n        if isinstance(node, ast.Num):  # For backwards compatibility\n            if isinstance(node.n, int | float):\n                return float(node.n)\n            error_msg = f\"Unsupported number type: {type(node.n).__name__}\"\n            raise TypeError(error_msg)\n\n        if isinstance(node, ast.BinOp):\n            op_type = type(node.op)\n            if op_type not in self.OPERATORS:\n                error_msg = f\"Unsupported binary operator: {op_type.__name__}\"\n                raise TypeError(error_msg)\n\n            left = self._eval_expr(node.left)\n            right = self._eval_expr(node.right)\n            return self.OPERATORS[op_type](left, right)\n\n        error_msg = f\"Unsupported operation or expression type: {type(node).__name__}\"\n        raise TypeError(error_msg)\n\n    def evaluate_expression(self) -> Data:\n        \"\"\"Evaluate the mathematical expression and return the result.\"\"\"\n        try:\n            tree = ast.parse(self.expression, mode=\"eval\")\n            result = self._eval_expr(tree.body)\n\n            formatted_result = f\"{float(result):.6f}\".rstrip(\"0\").rstrip(\".\")\n            self.log(f\"Calculation result: {formatted_result}\")\n\n            self.status = formatted_result\n            return Data(data={\"result\": formatted_result})\n\n        except ZeroDivisionError:\n            error_message = \"Error: Division by zero\"\n            self.status = error_message\n            return Data(data={\"error\": error_message, \"input\": self.expression})\n\n        except (SyntaxError, TypeError, KeyError, ValueError, AttributeError, OverflowError) as e:\n            error_message = f\"Invalid expression: {e!s}\"\n            self.status = error_message\n            return Data(data={\"error\": error_message, \"input\": self.expression})\n\n    def build(self):\n        \"\"\"Return the main evaluation function.\"\"\"\n        return self.evaluate_expression\n"
               },
               "expression": {
                 "_input_type": "MessageTextInput",
@@ -1291,6 +1296,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "expression",
                 "placeholder": "",
@@ -1302,32 +1308,126 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
+              },
+              "tools_metadata": {
+                "_input_type": "TableInput",
+                "advanced": false,
+                "display_name": "Edit tools",
+                "dynamic": false,
+                "info": "",
+                "is_list": true,
+                "list_add_label": "Add More",
+                "name": "tools_metadata",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "table_icon": "Hammer",
+                "table_options": {
+                  "block_add": true,
+                  "block_delete": true,
+                  "block_edit": true,
+                  "block_filter": true,
+                  "block_hide": true,
+                  "block_select": true,
+                  "block_sort": true,
+                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
+                  "field_parsers": {
+                    "commands": "commands",
+                    "name": [
+                      "snake_case",
+                      "no_blank"
+                    ]
+                  },
+                  "hide_options": true
+                },
+                "table_schema": {
+                  "columns": [
+                    {
+                      "description": "Specify the name of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Name",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "name": "name",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "Describe the purpose of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Description",
+                      "edit_mode": "popover",
+                      "filterable": false,
+                      "formatter": "text",
+                      "name": "description",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "The default identifiers for the tools and cannot be changed.",
+                      "disable_edit": true,
+                      "display_name": "Tool Identifiers",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "name": "tags",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "Add commands to the tool. These commands will be used to run the tool. Start all commands with a `/`. You can add multiple commands separated by a comma.\nExample: `/command1`, `/command2`, `/command3`",
+                      "disable_edit": false,
+                      "display_name": "Commands",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "name": "commands",
+                      "sortable": false,
+                      "type": "text"
+                    }
+                  ]
+                },
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "trigger_icon": "Hammer",
+                "trigger_text": "",
+                "type": "table",
+                "value": [
+                  {
+                    "description": "evaluate_expression() - Perform basic arithmetic operations on a given expression.",
+                    "name": "None-evaluate_expression",
+                    "tags": [
+                      "None-evaluate_expression"
+                    ]
+                  }
+                ]
               }
-            },
-            "tool_mode": false
+            }
           },
-          "type": "CalculatorTool"
+          "showNode": true,
+          "type": "CalculatorComponent"
         },
         "dragging": false,
-        "height": 167,
-        "id": "CalculatorTool-DF8xQ",
+        "id": "CalculatorComponent-A0PBx",
+        "measured": {
+          "height": 374,
+          "width": 360
+        },
         "position": {
-          "x": 1347.154214046272,
-          "y": 28.770424745017564
+          "x": 1350.9477037257504,
+          "y": -45.351578570289234
         },
-        "positionAbsolute": {
-          "x": 1347.154214046272,
-          "y": 28.770424745017564
-        },
-        "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "selected": true,
+        "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -251.17743782763955,
-      "y": 134.52045967838717,
-      "zoom": 0.6368650431844803
+      "x": -453.80822100847854,
+      "y": 40.05341665740133,
+      "zoom": 0.7636833920540887
     }
   },
   "description": "Calculate SaaS subscription price based on costs, profit margin, and subscribers using step-by-step method and Chain-of-Thought prompting. ",
