@@ -80,6 +80,7 @@ export const EditFlowSettings: React.FC<InputProps> = ({
             onDoubleClickCapture={(event) => {
               handleFocus(event);
             }}
+            data-testid="input-flow-name"
           />
         ) : (
           <span className="font-normal text-muted-foreground word-break-break-word">

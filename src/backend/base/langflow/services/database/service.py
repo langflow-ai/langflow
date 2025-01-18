@@ -86,15 +86,15 @@ class DatabaseService(Service):
         """Create the engine for the database."""
         url_components = self.database_url.split("://", maxsplit=1)
         if url_components[0].startswith("sqlite"):
-            database_url = "sqlite+aiosqlite://"
+            scheme = "sqlite+aiosqlite"
             kwargs = {}
         else:
             kwargs = {
                 "pool_size": self.settings_service.settings.pool_size,
                 "max_overflow": self.settings_service.settings.max_overflow,
             }
-            database_url = "postgresql+psycopg://" if url_components[0].startswith("postgresql") else url_components[0]
-        database_url += url_components[1]
+            scheme = "postgresql+psycopg" if url_components[0].startswith("postgresql") else url_components[0]
+        database_url = f"{scheme}://{url_components[1]}"
         return create_async_engine(
             database_url,
             connect_args=self._get_connect_args(),
@@ -136,7 +136,14 @@ class DatabaseService(Service):
     @asynccontextmanager
     async def with_session(self):
         async with AsyncSession(self.engine, expire_on_commit=False) as session:
-            yield session
+            try:
+                yield session
+                if session.is_active:
+                    await session.commit()
+            except Exception:
+                logger.error("An error occurred during the session scope.")
+                await session.rollback()
+                raise
 
     async def assign_orphaned_flows_to_superuser(self) -> None:
         """Assign orphaned flows to the default superuser when auto login is enabled."""

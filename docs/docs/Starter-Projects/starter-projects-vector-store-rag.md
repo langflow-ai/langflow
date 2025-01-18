@@ -1,6 +1,5 @@
 ---
 title: Vector Store RAG
-sidebar_position: 4
 slug: /starter-projects-vector-store-rag
 ---
 
