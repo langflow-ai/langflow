@@ -18,17 +18,15 @@ class AssemblyAILeMUR(Component):
             display_name="Assembly API Key",
             info="Your AssemblyAI API key. You can get one from https://www.assemblyai.com/",
             advanced=False,
+            required=True,
         ),
         DataInput(
             name="transcription_result",
             display_name="Transcription Result",
             info="The transcription result from AssemblyAI",
+            required=True,
         ),
-        MultilineInput(
-            name="prompt",
-            display_name="Input Prompt",
-            info="The text to prompt the model",
-        ),
+        MultilineInput(name="prompt", display_name="Input Prompt", info="The text to prompt the model", required=True),
         DropdownInput(
             name="final_model",
             display_name="Final Model",

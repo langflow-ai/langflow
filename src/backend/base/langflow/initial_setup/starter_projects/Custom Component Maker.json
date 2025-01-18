@@ -1364,7 +1364,9 @@
                 "display_name": "Language Model",
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [],
+                "required_inputs": [
+                  "api_key"
+                ],
                 "selected": "LanguageModel",
                 "types": [
                   "LanguageModel"
@@ -1375,7 +1377,7 @@
             "pinned": false,
             "template": {
               "_type": "Component",
-              "anthropic_api_key": {
+              "api_key": {
                 "_input_type": "SecretStrInput",
                 "advanced": false,
                 "display_name": "Anthropic API Key",
@@ -1384,19 +1386,19 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
-                "name": "anthropic_api_key",
+                "load_from_db": true,
+                "name": "api_key",
                 "password": true,
                 "placeholder": "",
-                "required": false,
+                "real_time_refresh": true,
+                "required": true,
                 "show": true,
                 "title_case": false,
-                "type": "str",
-                "value": ""
+                "type": "str"
               },
-              "anthropic_api_url": {
+              "base_url": {
                 "_input_type": "MessageTextInput",
-                "advanced": true,
+                "advanced": false,
                 "display_name": "Anthropic API URL",
                 "dynamic": false,
                 "info": "Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.",
@@ -1404,16 +1406,19 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
-                "name": "anthropic_api_url",
+                "name": "base_url",
                 "placeholder": "",
+                "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": ""
+                "value": "https://api.anthropic.com"
               },
               "code": {
                 "advanced": true,
@@ -1431,7 +1436,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from pydantic.v1 import SecretStr\n\nfrom langflow.base.models.anthropic_constants import ANTHROPIC_MODELS\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.field_typing import LanguageModel\nfrom langflow.io import DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput\n\n\nclass AnthropicModelComponent(LCModelComponent):\n    display_name = \"Anthropic\"\n    description = \"Generate text using Anthropic Chat&Completion LLMs with prefill support.\"\n    icon = \"Anthropic\"\n    name = \"AnthropicModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            value=4096,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n        ),\n        DropdownInput(\n            name=\"model\",\n            display_name=\"Model Name\",\n            options=ANTHROPIC_MODELS,\n            info=\"https://python.langchain.com/docs/integrations/chat/anthropic\",\n            value=\"claude-3-5-sonnet-latest\",\n        ),\n        SecretStrInput(name=\"anthropic_api_key\", display_name=\"Anthropic API Key\", info=\"Your Anthropic API key.\"),\n        FloatInput(name=\"temperature\", display_name=\"Temperature\", value=0.1),\n        MessageTextInput(\n            name=\"anthropic_api_url\",\n            display_name=\"Anthropic API URL\",\n            advanced=True,\n            info=\"Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.\",\n        ),\n        MessageTextInput(\n            name=\"prefill\", display_name=\"Prefill\", info=\"Prefill text to guide the model's response.\", advanced=True\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        try:\n            from langchain_anthropic.chat_models import ChatAnthropic\n        except ImportError as e:\n            msg = \"langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`.\"\n            raise ImportError(msg) from e\n        model = self.model\n        anthropic_api_key = self.anthropic_api_key\n        max_tokens = self.max_tokens\n        temperature = self.temperature\n        anthropic_api_url = self.anthropic_api_url or \"https://api.anthropic.com\"\n\n        try:\n            output = ChatAnthropic(\n                model=model,\n                anthropic_api_key=(SecretStr(anthropic_api_key).get_secret_value() if anthropic_api_key else None),\n                max_tokens_to_sample=max_tokens,\n                temperature=temperature,\n                anthropic_api_url=anthropic_api_url,\n                streaming=self.stream,\n            )\n        except Exception as e:\n            msg = \"Could not connect to Anthropic API.\"\n            raise ValueError(msg) from e\n\n        return output\n\n    def _get_exception_message(self, exception: Exception) -> str | None:\n        \"\"\"Get a message from an Anthropic exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from anthropic import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(exception, BadRequestError):\n            message = exception.body.get(\"error\", {}).get(\"message\")\n            if message:\n                return message\n        return None\n"
+                "value": "from typing import Any\n\nimport requests\nfrom loguru import logger\n\nfrom langflow.base.models.anthropic_constants import ANTHROPIC_MODELS\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput\nfrom langflow.schema.dotdict import dotdict\n\n\nclass AnthropicModelComponent(LCModelComponent):\n    display_name = \"Anthropic\"\n    description = \"Generate text using Anthropic Chat&Completion LLMs with prefill support.\"\n    icon = \"Anthropic\"\n    name = \"AnthropicModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            value=4096,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            options=[],\n            refresh_button=True,\n            real_time_refresh=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Anthropic API Key\",\n            info=\"Your Anthropic API key.\",\n            value=None,\n            required=True,\n            real_time_refresh=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Run inference with this temperature. Must by in the closed interval [0.0, 1.0].\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n        ),\n        MessageTextInput(\n            name=\"base_url\",\n            display_name=\"Anthropic API URL\",\n            info=\"Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.\",\n            value=\"https://api.anthropic.com\",\n            real_time_refresh=True,\n        ),\n        BoolInput(\n            name=\"tool_model_enabled\",\n            display_name=\"Enable Tool Models\",\n            info=(\n                \"Select if you want to use models that can work with tools. If yes, only those models will be shown.\"\n            ),\n            advanced=False,\n            value=True,\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"prefill\", display_name=\"Prefill\", info=\"Prefill text to guide the model's response.\", advanced=True\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        try:\n            from langchain_anthropic.chat_models import ChatAnthropic\n        except ImportError as e:\n            msg = \"langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`.\"\n            raise ImportError(msg) from e\n        try:\n            output = ChatAnthropic(\n                model=self.model_name,\n                anthropic_api_key=self.api_key,\n                max_tokens_to_sample=self.max_tokens,\n                temperature=self.temperature,\n                anthropic_api_url=self.base_url,\n                streaming=self.stream,\n            )\n        except Exception as e:\n            msg = \"Could not connect to Anthropic API.\"\n            raise ValueError(msg) from e\n\n        return output\n\n    def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:\n        try:\n            import anthropic\n\n            client = anthropic.Anthropic(api_key=self.api_key)\n            models = client.models.list(limit=20).data\n            model_ids = [model.id for model in models]\n        except (ImportError, ValueError, requests.exceptions.RequestException) as e:\n            logger.exception(f\"Error getting model names: {e}\")\n            model_ids = ANTHROPIC_MODELS\n        if tool_model_enabled:\n            try:\n                from langchain_anthropic.chat_models import ChatAnthropic\n            except ImportError as e:\n                msg = \"langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`.\"\n                raise ImportError(msg) from e\n            for model in model_ids:\n                model_with_tool = ChatAnthropic(\n                    model=self.model_name,\n                    anthropic_api_key=self.api_key,\n                    anthropic_api_url=self.base_url,\n                )\n                if not self.supports_tool_calling(model_with_tool):\n                    model_ids.remove(model)\n        return model_ids\n\n    def _get_exception_message(self, exception: Exception) -> str | None:\n        \"\"\"Get a message from an Anthropic exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from anthropic import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(exception, BadRequestError):\n            message = exception.body.get(\"error\", {}).get(\"message\")\n            if message:\n                return message\n        return None\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):\n        if field_name in (\"base_url\", \"model_name\", \"tool_model_enabled\", \"api_key\") and field_value:\n            try:\n                if len(self.api_key) != 0:\n                    try:\n                        ids = self.get_models(tool_model_enabled=self.tool_model_enabled)\n                    except (ImportError, ValueError, requests.exceptions.RequestException) as e:\n                        logger.exception(f\"Error getting model names: {e}\")\n                        ids = ANTHROPIC_MODELS\n                    build_config[\"model_name\"][\"options\"] = ids\n                    build_config[\"model_name\"][\"value\"] = ids[0]\n            except Exception as e:\n                msg = f\"Error getting model names: {e}\"\n                raise ValueError(msg) from e\n        return build_config\n"
               },
               "input_value": {
                 "_input_type": "MessageInput",
@@ -1470,31 +1475,25 @@
                 "type": "int",
                 "value": 4096
               },
-              "model": {
+              "model_name": {
                 "_input_type": "DropdownInput",
                 "advanced": false,
                 "combobox": false,
                 "display_name": "Model Name",
                 "dynamic": false,
-                "info": "https://python.langchain.com/docs/integrations/chat/anthropic",
-                "name": "model",
-                "options": [
-                  "claude-3-5-sonnet-latest",
-                  "claude-3-5-haiku-latest",
-                  "claude-3-opus-latest",
-                  "claude-3-5-sonnet-20240620",
-                  "claude-3-5-sonnet-20241022",
-                  "claude-3-5-haiku-20241022",
-                  "claude-3-sonnet-20240229",
-                  "claude-3-haiku-20240307"
-                ],
+                "info": "",
+                "name": "model_name",
+                "options": [],
                 "placeholder": "",
+                "real_time_refresh": true,
+                "refresh_button": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "claude-3-5-sonnet-20240620"
+                "value": ""
               },
               "prefill": {
                 "_input_type": "MessageTextInput",
@@ -1559,7 +1558,7 @@
                 "advanced": false,
                 "display_name": "Temperature",
                 "dynamic": false,
-                "info": "",
+                "info": "Run inference with this temperature. Must by in the closed interval [0.0, 1.0].",
                 "list": false,
                 "name": "temperature",
                 "placeholder": "",
@@ -1569,6 +1568,25 @@
                 "trace_as_metadata": true,
                 "type": "float",
                 "value": 0.1
+              },
+              "tool_model_enabled": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Enable Tool Models",
+                "dynamic": false,
+                "info": "Select if you want to use models that can work with tools. If yes, only those models will be shown.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "tool_model_enabled",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
               }
             }
           },
