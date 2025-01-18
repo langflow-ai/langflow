@@ -14,6 +14,7 @@ qdrant_storage
 .DS_Store
 
 # VSCode
+.vscode/
 .vscode/settings.json
 .chroma
 .ruff_cache
