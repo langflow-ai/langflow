@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_core.tools import ToolException
-from langflow.components.tools import SerpAPIComponent
+from langflow.components.tools import SerpComponent
 from langflow.custom import Component
 from langflow.custom.utils import build_custom_component_template
 from langflow.schema import Data
@@ -10,14 +10,14 @@ from langflow.schema.message import Message
 
 
 def test_serpapi_initialization():
-    component = SerpAPIComponent()
+    component = SerpComponent()
     assert component.display_name == "Serp Search API"
     assert component.description == "Call Serp Search API with result limiting"
     assert component.icon == "SerpSearch"
 
 
 def test_serpapi_template():
-    serpapi = SerpAPIComponent()
+    serpapi = SerpComponent()
     component = Component(_code=serpapi._code)
     frontend_node, _ = build_custom_component_template(component)
 
@@ -34,9 +34,9 @@ def test_serpapi_template():
         assert input_name in input_names
 
 
-@patch("langflow.components.tools.serp_api.SerpAPIWrapper")
+@patch("langflow.components.tools.serp.SerpAPIWrapper")
 def test_fetch_content(mock_serpapi_wrapper):
-    component = SerpAPIComponent()
+    component = SerpComponent()
     component.serpapi_api_key = "test-key"
     component.input_value = "test query"
     component.max_results = 3
@@ -62,7 +62,7 @@ def test_fetch_content(mock_serpapi_wrapper):
 
 
 def test_fetch_content_text():
-    component = SerpAPIComponent()
+    component = SerpComponent()
     component.fetch_content = MagicMock(
         return_value=[
             Data(text="First result", data={"title": "Title 1"}),
@@ -77,11 +77,11 @@ def test_fetch_content_text():
 
 
 def test_error_handling():
-    component = SerpAPIComponent()
+    component = SerpComponent()
     component.serpapi_api_key = "test-key"
     component.input_value = "test query"
 
-    with patch("langflow.components.tools.serp_api.SerpAPIWrapper") as mock_serpapi:
+    with patch("langflow.components.tools.serp.SerpAPIWrapper") as mock_serpapi:
         mock_instance = MagicMock()
         mock_serpapi.return_value = mock_instance
         mock_instance.results.side_effect = Exception("API Error")
