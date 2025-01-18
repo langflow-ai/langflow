@@ -294,6 +294,7 @@ import { QianFanChatIcon } from "../icons/QianFanChat";
 import { RedisIcon } from "../icons/Redis";
 import { SambaNovaIcon } from "../icons/SambaNova";
 import { SearxIcon } from "../icons/Searx";
+import { SerperIcon } from "../icons/Serper";
 import { ShareIcon } from "../icons/Share";
 import { Share2Icon } from "../icons/Share2";
 import SvgSlackIcon from "../icons/Slack/SlackIcon";
@@ -942,4 +943,5 @@ export const nodeIconsLucide: iconsType = {
   ThumbsDown,
   ThumbDownIconCustom,
   ThumbUpIconCustom,
+  Serper: SerperIcon,
 };
