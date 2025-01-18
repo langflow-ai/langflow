@@ -11,9 +11,9 @@ class Finish:
 
 
 def _import_vertex_types():
-    from langflow.graph.vertex import types
+    from langflow.graph.vertex import vertex_types
 
-    return types
+    return vertex_types
 
 
 class VertexTypesDict(LazyLoadDictBase):

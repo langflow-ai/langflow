@@ -20,11 +20,13 @@ class TextEmbedderComponent(Component):
             display_name="Embedding Model",
             info="The embedding model to use for generating embeddings.",
             input_types=["Embeddings"],
+            required=True,
         ),
         MessageInput(
             name="message",
             display_name="Message",
             info="The message to generate embeddings for.",
+            required=True,
         ),
     ]
     outputs = [

@@ -34,6 +34,7 @@ class StructuredOutputComponent(Component):
             display_name="Input Message",
             info="The input message to the language model.",
             tool_mode=True,
+            required=True,
         ),
         StrInput(
             name="schema_name",
