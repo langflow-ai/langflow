@@ -1,4 +1,4 @@
-import LangflowLogo from "@/assets/LangflowLogo.svg?react";
+import KendraLabsLogo from "@/assets/kendraLabsLogo200x200.png";
 import ChainLogo from "@/assets/logo.svg?react";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
 import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
@@ -181,7 +181,7 @@ export default function ChatView({
             <div className="flex h-full w-full flex-col items-center justify-center">
               <div className="flex flex-col items-center justify-center gap-4 p-8">
                 {ENABLE_NEW_LOGO ? (
-                  <LangflowLogo
+                  <img src={KendraLabsLogo} 
                     title="Langflow logo"
                     className="h-10 w-10 scale-[1.5]"
                   />

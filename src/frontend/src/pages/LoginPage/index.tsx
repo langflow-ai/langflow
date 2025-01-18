@@ -1,4 +1,4 @@
-import LangflowLogo from "@/assets/LangflowLogo.svg?react";
+import KendraLabsLogo from "@/assets/kendraLabsLogo200x200.png";
 import { useLoginUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
 import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
@@ -68,7 +68,8 @@ export default function LoginPage(): JSX.Element {
       <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
         <div className="flex w-72 flex-col items-center justify-center gap-2">
           {ENABLE_NEW_LOGO ? (
-            <LangflowLogo
+            <img
+              src={KendraLabsLogo}
               title="Langflow logo"
               className="mb-4 h-10 w-10 scale-[1.5]"
             />
