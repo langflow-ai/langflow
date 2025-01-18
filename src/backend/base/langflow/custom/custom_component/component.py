@@ -413,6 +413,7 @@ class Component(CustomComponent):
             frontend_node["outputs"] = [self._build_tool_output()] if is_tool_mode else frontend_node["outputs"]
             if is_tool_mode:
                 frontend_node.setdefault("template", {})
+                frontend_node["tool_mode"] = True
                 tools_metadata_input = await self._build_tools_metadata_input()
                 frontend_node["template"][TOOLS_METADATA_INPUT_NAME] = tools_metadata_input.to_dict()
             elif "template" in frontend_node:
