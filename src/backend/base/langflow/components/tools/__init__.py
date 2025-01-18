@@ -11,6 +11,7 @@ from .glean_search_api import GleanSearchAPIComponent
 from .google_search_api import GoogleSearchAPIComponent
 from .google_search_api_core import GoogleSearchAPICore
 from .google_serper_api import GoogleSerperAPIComponent
+from .google_serper_api_core import GoogleSerperAPICore
 from .mcp_stdio import MCPStdio
 from .python_code_structured_tool import PythonCodeStructuredTool
 from .python_repl import PythonREPLToolComponent
@@ -42,6 +43,7 @@ __all__ = [
     "GoogleSearchAPIComponent",
     "GoogleSearchAPICore",
     "GoogleSerperAPIComponent",
+    "GoogleSerperAPICore",
     "MCPStdio",
     "PythonCodeStructuredTool",
     "PythonREPLToolComponent",
