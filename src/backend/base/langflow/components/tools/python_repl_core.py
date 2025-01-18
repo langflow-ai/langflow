@@ -9,15 +9,15 @@ from langflow.schema import Data
 
 class PythonREPLComponent(Component):
     display_name = "Python REPL"
-    description = "A tool for running Python code in a REPL environment with restricted imports."
+    description = "A Python code executor that lets you run Python code with specific imported modules. Remember to always use print() to see your results. Example: print(df.head())"
     icon = "Python"
 
     inputs = [
         StrInput(
             name="global_imports",
             display_name="Global Imports",
-            info="A comma-separated list of modules to import globally, e.g. 'math,numpy'.",
-            value="math",
+            info="A comma-separated list of modules to import globally, e.g. 'math,numpy,pandas'.",
+            value="math,pandas",
             required=True,
         ),
         CodeInput(
