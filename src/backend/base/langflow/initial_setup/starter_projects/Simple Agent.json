@@ -1,5 +1,117 @@
 {
   "data": {
+    "edges": [
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-8EBqM",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Agent-rl4Nb",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-8EBqM{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8EBqMœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-rl4Nb{œfieldNameœ:œinput_valueœ,œidœ:œAgent-rl4Nbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-8EBqM",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-8EBqMœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-rl4Nb",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-rl4Nbœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-rl4Nb",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-f5pzU",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Agent-rl4Nb{œdataTypeœ:œAgentœ,œidœ:œAgent-rl4Nbœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-f5pzU{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-f5pzUœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Agent-rl4Nb",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-rl4Nbœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-f5pzU",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-f5pzUœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "CalculatorComponent",
+            "id": "CalculatorComponent-lHyX4",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-rl4Nb",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__CalculatorComponent-lHyX4{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-lHyX4œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-rl4Nb{œfieldNameœ:œtoolsœ,œidœ:œAgent-rl4Nbœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "CalculatorComponent-lHyX4",
+        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-lHyX4œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-rl4Nb",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-rl4Nbœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "URL",
+            "id": "URL-vRJK9",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-rl4Nb",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__URL-vRJK9{œdataTypeœ:œURLœ,œidœ:œURL-vRJK9œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-rl4Nb{œfieldNameœ:œtoolsœ,œidœ:œAgent-rl4Nbœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "URL-vRJK9",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-vRJK9œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-rl4Nb",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-rl4Nbœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      }
+    ],
     "nodes": [
       {
         "data": {
@@ -562,6 +674,7 @@
           },
           "type": "Agent"
         },
+        "dragging": false,
         "id": "Agent-rl4Nb",
         "measured": {
           "height": 698,
@@ -572,8 +685,7 @@
           "y": 297.9085084144251
         },
         "selected": false,
-        "type": "genericNode",
-        "dragging": false
+        "type": "genericNode"
       },
       {
         "data": {
@@ -855,6 +967,7 @@
           },
           "type": "ChatInput"
         },
+        "dragging": false,
         "id": "ChatInput-8EBqM",
         "measured": {
           "height": 257,
@@ -865,8 +978,7 @@
           "y": 930.7462715570136
         },
         "selected": false,
-        "type": "genericNode",
-        "dragging": false
+        "type": "genericNode"
       },
       {
         "data": {
@@ -1144,228 +1256,229 @@
       },
       {
         "data": {
+          "description": "Load and retrive data from specified URLs.",
+          "display_name": "URL",
           "id": "URL-vRJK9",
           "node": {
-            "template": {
-              "_type": "Component",
-              "code": {
-                "type": "code",
-                "required": true,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "import re\n\nfrom langchain_community.document_loaders import AsyncHtmlLoader, WebBaseLoader\n\nfrom langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\n\n\nclass URLComponent(Component):\n    display_name = \"URL\"\n    description = \"Load and retrive data from specified URLs.\"\n    icon = \"layout-template\"\n    name = \"URL\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"urls\",\n            display_name=\"URLs\",\n            is_list=True,\n            tool_mode=True,\n            placeholder=\"Enter a URL...\",\n            list_add_label=\"Add URL\",\n        ),\n        DropdownInput(\n            name=\"format\",\n            display_name=\"Output Format\",\n            info=\"Output Format. Use 'Text' to extract the text from the HTML or 'Raw HTML' for the raw HTML content.\",\n            options=[\"Text\", \"Raw HTML\"],\n            value=\"Text\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"fetch_content_text\"),\n        Output(display_name=\"DataFrame\", name=\"dataframe\", method=\"as_dataframe\"),\n    ]\n\n    def ensure_url(self, string: str) -> str:\n        \"\"\"Ensures the given string is a URL by adding 'http://' if it doesn't start with 'http://' or 'https://'.\n\n        Raises an error if the string is not a valid URL.\n\n        Parameters:\n            string (str): The string to be checked and possibly modified.\n\n        Returns:\n            str: The modified string that is ensured to be a URL.\n\n        Raises:\n            ValueError: If the string is not a valid URL.\n        \"\"\"\n        if not string.startswith((\"http://\", \"https://\")):\n            string = \"http://\" + string\n\n        # Basic URL validation regex\n        url_regex = re.compile(\n            r\"^(https?:\\/\\/)?\"  # optional protocol\n            r\"(www\\.)?\"  # optional www\n            r\"([a-zA-Z0-9.-]+)\"  # domain\n            r\"(\\.[a-zA-Z]{2,})?\"  # top-level domain\n            r\"(:\\d+)?\"  # optional port\n            r\"(\\/[^\\s]*)?$\",  # optional path\n            re.IGNORECASE,\n        )\n\n        if not url_regex.match(string):\n            msg = f\"Invalid URL: {string}\"\n            raise ValueError(msg)\n\n        return string\n\n    def fetch_content(self) -> list[Data]:\n        urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]\n        if self.format == \"Raw HTML\":\n            loader = AsyncHtmlLoader(web_path=urls, encoding=\"utf-8\")\n        else:\n            loader = WebBaseLoader(web_paths=urls, encoding=\"utf-8\")\n        docs = loader.load()\n        data = [Data(text=doc.page_content, **doc.metadata) for doc in docs]\n        self.status = data\n        return data\n\n    def fetch_content_text(self) -> Message:\n        data = self.fetch_content()\n\n        result_string = data_to_text(\"{text}\", data)\n        self.status = result_string\n        return Message(text=result_string)\n\n    def as_dataframe(self) -> DataFrame:\n        return DataFrame(self.fetch_content())\n",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "code",
-                "advanced": true,
-                "dynamic": true,
-                "info": "",
-                "load_from_db": false,
-                "title_case": false
-              },
-              "format": {
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "options": [
-                  "Text",
-                  "Raw HTML"
-                ],
-                "combobox": false,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "format",
-                "value": "Text",
-                "display_name": "Output Format",
-                "advanced": false,
-                "dynamic": false,
-                "info": "Output Format. Use 'Text' to extract the text from the HTML or 'Raw HTML' for the raw HTML content.",
-                "title_case": false,
-                "type": "str",
-                "_input_type": "DropdownInput"
-              },
-              "urls": {
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "load_from_db": false,
-                "list": true,
-                "list_add_label": "Add URL",
-                "required": false,
-                "placeholder": "Enter a URL...",
-                "show": true,
-                "name": "urls",
-                "value": "",
-                "display_name": "URLs",
-                "advanced": false,
-                "input_types": [
-                  "Message"
-                ],
-                "dynamic": false,
-                "info": "",
-                "title_case": false,
-                "type": "str",
-                "_input_type": "MessageTextInput"
-              },
-              "tools_metadata": {
-                "tool_mode": false,
-                "is_list": true,
-                "list_add_label": "Add More",
-                "table_schema": {
-                  "columns": [
-                    {
-                      "name": "name",
-                      "display_name": "Tool Name",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "edit_mode": "inline",
-                      "formatter": "text"
-                    },
-                    {
-                      "name": "description",
-                      "display_name": "Tool Description",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "edit_mode": "popover",
-                      "formatter": "text"
-                    },
-                    {
-                      "name": "tags",
-                      "display_name": "Tool Identifiers",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "edit_mode": "inline",
-                      "formatter": "text"
-                    },
-                    {
-                      "name": "commands",
-                      "display_name": "Commands",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "Add commands to the tool. These commands will be used to run the tool. Start all commands with a `/`. You can add multiple commands separated by a comma.\nExample: `/command1`, `/command2`, `/command3`",
-                      "disable_edit": false,
-                      "edit_mode": "inline",
-                      "formatter": "text"
-                    }
-                  ]
-                },
-                "trigger_text": "",
-                "trigger_icon": "Hammer",
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_sort": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "hide_options": true,
-                  "field_parsers": {
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ],
-                    "commands": "commands"
-                  },
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool."
-                },
-                "trace_as_metadata": true,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "tools_metadata",
-                "value": [
-                  {
-                    "name": "URL-fetch_content",
-                    "description": "fetch_content() - Load and retrive data from specified URLs.",
-                    "tags": [
-                      "URL-fetch_content"
-                    ]
-                  },
-                  {
-                    "name": "URL-fetch_content_text",
-                    "description": "fetch_content_text() - Load and retrive data from specified URLs.",
-                    "tags": [
-                      "URL-fetch_content_text"
-                    ]
-                  },
-                  {
-                    "name": "URL-as_dataframe",
-                    "description": "as_dataframe() - Load and retrive data from specified URLs.",
-                    "tags": [
-                      "URL-as_dataframe"
-                    ]
-                  }
-                ],
-                "display_name": "Edit tools",
-                "advanced": false,
-                "dynamic": false,
-                "info": "",
-                "real_time_refresh": true,
-                "title_case": false,
-                "type": "table",
-                "_input_type": "TableInput"
-              }
-            },
-            "description": "Load and retrive data from specified URLs.",
-            "icon": "layout-template",
             "base_classes": [
               "Data",
               "DataFrame",
               "Message"
             ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Load and retrive data from specified URLs.",
             "display_name": "URL",
             "documentation": "",
-            "minimized": false,
-            "custom_fields": {},
-            "output_types": [],
-            "pinned": false,
-            "conditional_paths": [],
-            "frozen": false,
-            "outputs": [
-              {
-                "types": [
-                  "Tool"
-                ],
-                "selected": "Tool",
-                "name": "component_as_tool",
-                "hidden": null,
-                "display_name": "Toolset",
-                "method": "to_toolkit",
-                "value": "__UNDEFINED__",
-                "cache": true,
-                "required_inputs": null
-              }
-            ],
+            "edited": false,
             "field_order": [
               "urls",
               "format"
             ],
-            "beta": false,
+            "frozen": false,
+            "icon": "layout-template",
             "legacy": false,
-            "edited": false,
-            "metadata": {},
             "lf_version": "1.1.1",
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Toolset",
+                "hidden": null,
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "required_inputs": null,
+                "selected": "Tool",
+                "types": [
+                  "Tool"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "import re\n\nfrom langchain_community.document_loaders import AsyncHtmlLoader, WebBaseLoader\n\nfrom langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\n\n\nclass URLComponent(Component):\n    display_name = \"URL\"\n    description = \"Load and retrive data from specified URLs.\"\n    icon = \"layout-template\"\n    name = \"URL\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"urls\",\n            display_name=\"URLs\",\n            is_list=True,\n            tool_mode=True,\n            placeholder=\"Enter a URL...\",\n            list_add_label=\"Add URL\",\n        ),\n        DropdownInput(\n            name=\"format\",\n            display_name=\"Output Format\",\n            info=\"Output Format. Use 'Text' to extract the text from the HTML or 'Raw HTML' for the raw HTML content.\",\n            options=[\"Text\", \"Raw HTML\"],\n            value=\"Text\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"fetch_content_text\"),\n        Output(display_name=\"DataFrame\", name=\"dataframe\", method=\"as_dataframe\"),\n    ]\n\n    def ensure_url(self, string: str) -> str:\n        \"\"\"Ensures the given string is a URL by adding 'http://' if it doesn't start with 'http://' or 'https://'.\n\n        Raises an error if the string is not a valid URL.\n\n        Parameters:\n            string (str): The string to be checked and possibly modified.\n\n        Returns:\n            str: The modified string that is ensured to be a URL.\n\n        Raises:\n            ValueError: If the string is not a valid URL.\n        \"\"\"\n        if not string.startswith((\"http://\", \"https://\")):\n            string = \"http://\" + string\n\n        # Basic URL validation regex\n        url_regex = re.compile(\n            r\"^(https?:\\/\\/)?\"  # optional protocol\n            r\"(www\\.)?\"  # optional www\n            r\"([a-zA-Z0-9.-]+)\"  # domain\n            r\"(\\.[a-zA-Z]{2,})?\"  # top-level domain\n            r\"(:\\d+)?\"  # optional port\n            r\"(\\/[^\\s]*)?$\",  # optional path\n            re.IGNORECASE,\n        )\n\n        if not url_regex.match(string):\n            msg = f\"Invalid URL: {string}\"\n            raise ValueError(msg)\n\n        return string\n\n    def fetch_content(self) -> list[Data]:\n        urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]\n        if self.format == \"Raw HTML\":\n            loader = AsyncHtmlLoader(web_path=urls, encoding=\"utf-8\")\n        else:\n            loader = WebBaseLoader(web_paths=urls, encoding=\"utf-8\")\n        docs = loader.load()\n        data = [Data(text=doc.page_content, **doc.metadata) for doc in docs]\n        self.status = data\n        return data\n\n    def fetch_content_text(self) -> Message:\n        data = self.fetch_content()\n\n        result_string = data_to_text(\"{text}\", data)\n        self.status = result_string\n        return Message(text=result_string)\n\n    def as_dataframe(self) -> DataFrame:\n        return DataFrame(self.fetch_content())\n"
+              },
+              "format": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "display_name": "Output Format",
+                "dynamic": false,
+                "info": "Output Format. Use 'Text' to extract the text from the HTML or 'Raw HTML' for the raw HTML content.",
+                "name": "format",
+                "options": [
+                  "Text",
+                  "Raw HTML"
+                ],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Text"
+              },
+              "tools_metadata": {
+                "_input_type": "TableInput",
+                "advanced": false,
+                "display_name": "Edit tools",
+                "dynamic": false,
+                "info": "",
+                "is_list": true,
+                "list_add_label": "Add More",
+                "name": "tools_metadata",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "table_icon": "Hammer",
+                "table_options": {
+                  "block_add": true,
+                  "block_delete": true,
+                  "block_edit": true,
+                  "block_filter": true,
+                  "block_hide": true,
+                  "block_select": true,
+                  "block_sort": true,
+                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
+                  "field_parsers": {
+                    "commands": "commands",
+                    "name": [
+                      "snake_case",
+                      "no_blank"
+                    ]
+                  },
+                  "hide_options": true
+                },
+                "table_schema": {
+                  "columns": [
+                    {
+                      "description": "Specify the name of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Name",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "name": "name",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "Describe the purpose of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Description",
+                      "edit_mode": "popover",
+                      "filterable": false,
+                      "formatter": "text",
+                      "name": "description",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "The default identifiers for the tools and cannot be changed.",
+                      "disable_edit": true,
+                      "display_name": "Tool Identifiers",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "name": "tags",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "Add commands to the tool. These commands will be used to run the tool. Start all commands with a `/`. You can add multiple commands separated by a comma.\nExample: `/command1`, `/command2`, `/command3`",
+                      "disable_edit": false,
+                      "display_name": "Commands",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "name": "commands",
+                      "sortable": false,
+                      "type": "text"
+                    }
+                  ]
+                },
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "trigger_icon": "Hammer",
+                "trigger_text": "",
+                "type": "table",
+                "value": [
+                  {
+                    "description": "fetch_content() - Load and retrive data from specified URLs.",
+                    "name": "URL-fetch_content",
+                    "tags": [
+                      "URL-fetch_content"
+                    ]
+                  },
+                  {
+                    "description": "fetch_content_text() - Load and retrive data from specified URLs.",
+                    "name": "URL-fetch_content_text",
+                    "tags": [
+                      "URL-fetch_content_text"
+                    ]
+                  },
+                  {
+                    "description": "as_dataframe() - Load and retrive data from specified URLs.",
+                    "name": "URL-as_dataframe",
+                    "tags": [
+                      "URL-as_dataframe"
+                    ]
+                  }
+                ]
+              },
+              "urls": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "URLs",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": true,
+                "list_add_label": "Add URL",
+                "load_from_db": false,
+                "name": "urls",
+                "placeholder": "Enter a URL...",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
             "tool_mode": true
           },
-          "type": "URL",
-          "description": "Load and retrive data from specified URLs.",
-          "display_name": "URL"
+          "type": "URL"
         },
+        "dragging": false,
         "id": "URL-vRJK9",
         "measured": {
           "height": 453,
@@ -1376,8 +1489,7 @@
           "y": 27.333577318641687
         },
         "selected": true,
-        "type": "genericNode",
-        "dragging": false
+        "type": "genericNode"
       },
       {
         "data": {
@@ -1430,316 +1542,204 @@
         "type": "noteNode"
       },
       {
-        "id": "CalculatorComponent-lHyX4",
-        "type": "genericNode",
-        "position": {
-          "x": 1233.166256931297,
-          "y": 514.7544001650839
-        },
         "data": {
+          "id": "CalculatorComponent-lHyX4",
           "node": {
+            "base_classes": [
+              "Data"
+            ],
+            "beta": false,
+            "category": "tools",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Perform basic arithmetic operations on a given expression.",
+            "display_name": "Calculator",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "expression"
+            ],
+            "frozen": false,
+            "icon": "calculator",
+            "key": "CalculatorComponent",
+            "legacy": false,
+            "lf_version": "1.1.1",
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Toolset",
+                "hidden": null,
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "required_inputs": null,
+                "selected": "Tool",
+                "types": [
+                  "Tool"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "score": 0.001,
             "template": {
               "_type": "Component",
               "code": {
-                "type": "code",
-                "required": true,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "import ast\nimport operator\nfrom collections.abc import Callable\n\nfrom langflow.custom import Component\nfrom langflow.inputs import MessageTextInput\nfrom langflow.io import Output\nfrom langflow.schema import Data\n\n\nclass CalculatorComponent(Component):\n    display_name = \"Calculator\"\n    description = \"Perform basic arithmetic operations on a given expression.\"\n    icon = \"calculator\"\n\n    # Cache operators dictionary as a class variable\n    OPERATORS: dict[type[ast.operator], Callable] = {\n        ast.Add: operator.add,\n        ast.Sub: operator.sub,\n        ast.Mult: operator.mul,\n        ast.Div: operator.truediv,\n        ast.Pow: operator.pow,\n    }\n\n    inputs = [\n        MessageTextInput(\n            name=\"expression\",\n            display_name=\"Expression\",\n            info=\"The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').\",\n            tool_mode=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"result\", type_=Data, method=\"evaluate_expression\"),\n    ]\n\n    def _eval_expr(self, node: ast.AST) -> float:\n        \"\"\"Evaluate an AST node recursively.\"\"\"\n        if isinstance(node, ast.Constant):\n            if isinstance(node.value, int | float):\n                return float(node.value)\n            error_msg = f\"Unsupported constant type: {type(node.value).__name__}\"\n            raise TypeError(error_msg)\n        if isinstance(node, ast.Num):  # For backwards compatibility\n            if isinstance(node.n, int | float):\n                return float(node.n)\n            error_msg = f\"Unsupported number type: {type(node.n).__name__}\"\n            raise TypeError(error_msg)\n\n        if isinstance(node, ast.BinOp):\n            op_type = type(node.op)\n            if op_type not in self.OPERATORS:\n                error_msg = f\"Unsupported binary operator: {op_type.__name__}\"\n                raise TypeError(error_msg)\n\n            left = self._eval_expr(node.left)\n            right = self._eval_expr(node.right)\n            return self.OPERATORS[op_type](left, right)\n\n        error_msg = f\"Unsupported operation or expression type: {type(node).__name__}\"\n        raise TypeError(error_msg)\n\n    def evaluate_expression(self) -> Data:\n        \"\"\"Evaluate the mathematical expression and return the result.\"\"\"\n        try:\n            tree = ast.parse(self.expression, mode=\"eval\")\n            result = self._eval_expr(tree.body)\n\n            formatted_result = f\"{float(result):.6f}\".rstrip(\"0\").rstrip(\".\")\n            self.log(f\"Calculation result: {formatted_result}\")\n\n            self.status = formatted_result\n            return Data(data={\"result\": formatted_result})\n\n        except ZeroDivisionError:\n            error_message = \"Error: Division by zero\"\n            self.status = error_message\n            return Data(data={\"error\": error_message, \"input\": self.expression})\n\n        except (SyntaxError, TypeError, KeyError, ValueError, AttributeError, OverflowError) as e:\n            error_message = f\"Invalid expression: {e!s}\"\n            self.status = error_message\n            return Data(data={\"error\": error_message, \"input\": self.expression})\n\n    def build(self):\n        \"\"\"Return the main evaluation function.\"\"\"\n        return self.evaluate_expression\n",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "code",
                 "advanced": true,
                 "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
                 "info": "",
+                "list": false,
                 "load_from_db": false,
-                "title_case": false
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "import ast\nimport operator\nfrom collections.abc import Callable\n\nfrom langflow.custom import Component\nfrom langflow.inputs import MessageTextInput\nfrom langflow.io import Output\nfrom langflow.schema import Data\n\n\nclass CalculatorComponent(Component):\n    display_name = \"Calculator\"\n    description = \"Perform basic arithmetic operations on a given expression.\"\n    icon = \"calculator\"\n\n    # Cache operators dictionary as a class variable\n    OPERATORS: dict[type[ast.operator], Callable] = {\n        ast.Add: operator.add,\n        ast.Sub: operator.sub,\n        ast.Mult: operator.mul,\n        ast.Div: operator.truediv,\n        ast.Pow: operator.pow,\n    }\n\n    inputs = [\n        MessageTextInput(\n            name=\"expression\",\n            display_name=\"Expression\",\n            info=\"The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').\",\n            tool_mode=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"result\", type_=Data, method=\"evaluate_expression\"),\n    ]\n\n    def _eval_expr(self, node: ast.AST) -> float:\n        \"\"\"Evaluate an AST node recursively.\"\"\"\n        if isinstance(node, ast.Constant):\n            if isinstance(node.value, int | float):\n                return float(node.value)\n            error_msg = f\"Unsupported constant type: {type(node.value).__name__}\"\n            raise TypeError(error_msg)\n        if isinstance(node, ast.Num):  # For backwards compatibility\n            if isinstance(node.n, int | float):\n                return float(node.n)\n            error_msg = f\"Unsupported number type: {type(node.n).__name__}\"\n            raise TypeError(error_msg)\n\n        if isinstance(node, ast.BinOp):\n            op_type = type(node.op)\n            if op_type not in self.OPERATORS:\n                error_msg = f\"Unsupported binary operator: {op_type.__name__}\"\n                raise TypeError(error_msg)\n\n            left = self._eval_expr(node.left)\n            right = self._eval_expr(node.right)\n            return self.OPERATORS[op_type](left, right)\n\n        error_msg = f\"Unsupported operation or expression type: {type(node).__name__}\"\n        raise TypeError(error_msg)\n\n    def evaluate_expression(self) -> Data:\n        \"\"\"Evaluate the mathematical expression and return the result.\"\"\"\n        try:\n            tree = ast.parse(self.expression, mode=\"eval\")\n            result = self._eval_expr(tree.body)\n\n            formatted_result = f\"{float(result):.6f}\".rstrip(\"0\").rstrip(\".\")\n            self.log(f\"Calculation result: {formatted_result}\")\n\n            self.status = formatted_result\n            return Data(data={\"result\": formatted_result})\n\n        except ZeroDivisionError:\n            error_message = \"Error: Division by zero\"\n            self.status = error_message\n            return Data(data={\"error\": error_message, \"input\": self.expression})\n\n        except (SyntaxError, TypeError, KeyError, ValueError, AttributeError, OverflowError) as e:\n            error_message = f\"Invalid expression: {e!s}\"\n            self.status = error_message\n            return Data(data={\"error\": error_message, \"input\": self.expression})\n\n    def build(self):\n        \"\"\"Return the main evaluation function.\"\"\"\n        return self.evaluate_expression\n"
               },
               "expression": {
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "load_from_db": false,
-                "list": false,
-                "list_add_label": "Add More",
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "expression",
-                "value": "",
-                "display_name": "Expression",
+                "_input_type": "MessageTextInput",
                 "advanced": false,
+                "display_name": "Expression",
+                "dynamic": false,
+                "info": "The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').",
                 "input_types": [
                   "Message"
                 ],
-                "dynamic": false,
-                "info": "The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "expression",
+                "placeholder": "",
+                "required": false,
+                "show": true,
                 "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
                 "type": "str",
-                "_input_type": "MessageTextInput"
+                "value": ""
               },
               "tools_metadata": {
-                "tool_mode": false,
+                "_input_type": "TableInput",
+                "advanced": false,
+                "display_name": "Edit tools",
+                "dynamic": false,
+                "info": "",
                 "is_list": true,
                 "list_add_label": "Add More",
-                "table_schema": {
-                  "columns": [
-                    {
-                      "name": "name",
-                      "display_name": "Tool Name",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "edit_mode": "inline",
-                      "formatter": "text"
-                    },
-                    {
-                      "name": "description",
-                      "display_name": "Tool Description",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "edit_mode": "popover",
-                      "formatter": "text"
-                    },
-                    {
-                      "name": "tags",
-                      "display_name": "Tool Identifiers",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "edit_mode": "inline",
-                      "formatter": "text"
-                    },
-                    {
-                      "name": "commands",
-                      "display_name": "Commands",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "Add commands to the tool. These commands will be used to run the tool. Start all commands with a `/`. You can add multiple commands separated by a comma.\nExample: `/command1`, `/command2`, `/command3`",
-                      "disable_edit": false,
-                      "edit_mode": "inline",
-                      "formatter": "text"
-                    }
-                  ]
-                },
-                "trigger_text": "",
-                "trigger_icon": "Hammer",
+                "name": "tools_metadata",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
                 "table_icon": "Hammer",
                 "table_options": {
                   "block_add": true,
                   "block_delete": true,
                   "block_edit": true,
-                  "block_sort": true,
                   "block_filter": true,
                   "block_hide": true,
                   "block_select": true,
-                  "hide_options": true,
+                  "block_sort": true,
+                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
                   "field_parsers": {
+                    "commands": "commands",
                     "name": [
                       "snake_case",
                       "no_blank"
-                    ],
-                    "commands": "commands"
+                    ]
                   },
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool."
+                  "hide_options": true
                 },
+                "table_schema": {
+                  "columns": [
+                    {
+                      "description": "Specify the name of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Name",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "name": "name",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "Describe the purpose of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Description",
+                      "edit_mode": "popover",
+                      "filterable": false,
+                      "formatter": "text",
+                      "name": "description",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "The default identifiers for the tools and cannot be changed.",
+                      "disable_edit": true,
+                      "display_name": "Tool Identifiers",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "name": "tags",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "Add commands to the tool. These commands will be used to run the tool. Start all commands with a `/`. You can add multiple commands separated by a comma.\nExample: `/command1`, `/command2`, `/command3`",
+                      "disable_edit": false,
+                      "display_name": "Commands",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "name": "commands",
+                      "sortable": false,
+                      "type": "text"
+                    }
+                  ]
+                },
+                "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "tools_metadata",
+                "trigger_icon": "Hammer",
+                "trigger_text": "",
+                "type": "table",
                 "value": [
                   {
-                    "name": "None-evaluate_expression",
                     "description": "evaluate_expression() - Perform basic arithmetic operations on a given expression.",
+                    "name": "None-evaluate_expression",
                     "tags": [
                       "None-evaluate_expression"
                     ]
                   }
-                ],
-                "display_name": "Edit tools",
-                "advanced": false,
-                "dynamic": false,
-                "info": "",
-                "real_time_refresh": true,
-                "title_case": false,
-                "type": "table",
-                "_input_type": "TableInput"
+                ]
               }
-            },
-            "description": "Perform basic arithmetic operations on a given expression.",
-            "icon": "calculator",
-            "base_classes": [
-              "Data"
-            ],
-            "display_name": "Calculator",
-            "documentation": "",
-            "minimized": false,
-            "custom_fields": {},
-            "output_types": [],
-            "pinned": false,
-            "conditional_paths": [],
-            "frozen": false,
-            "outputs": [
-              {
-                "types": [
-                  "Tool"
-                ],
-                "selected": "Tool",
-                "name": "component_as_tool",
-                "hidden": null,
-                "display_name": "Toolset",
-                "method": "to_toolkit",
-                "value": "__UNDEFINED__",
-                "cache": true,
-                "required_inputs": null
-              }
-            ],
-            "field_order": [
-              "expression"
-            ],
-            "beta": false,
-            "legacy": false,
-            "edited": false,
-            "metadata": {},
-            "category": "tools",
-            "key": "CalculatorComponent",
-            "score": 0.001,
-            "lf_version": "1.1.1"
+            }
           },
           "showNode": true,
-          "type": "CalculatorComponent",
-          "id": "CalculatorComponent-lHyX4"
+          "type": "CalculatorComponent"
         },
-        "selected": false,
+        "dragging": false,
+        "id": "CalculatorComponent-lHyX4",
         "measured": {
-          "width": 360,
-          "height": 374
+          "height": 374,
+          "width": 360
         },
-        "dragging": false
-      }
-    ],
-    "edges": [
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-8EBqM",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "Agent-rl4Nb",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
+        "position": {
+          "x": 1233.166256931297,
+          "y": 514.7544001650839
         },
-        "id": "reactflow__edge-ChatInput-8EBqM{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8EBqMœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-rl4Nb{œfieldNameœ:œinput_valueœ,œidœ:œAgent-rl4Nbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-8EBqM",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8EBqMœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Agent-rl4Nb",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-rl4Nbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "className": "",
-        "animated": false
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-rl4Nb",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-f5pzU",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Agent-rl4Nb{œdataTypeœ:œAgentœ,œidœ:œAgent-rl4Nbœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-f5pzU{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-f5pzUœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Agent-rl4Nb",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-rl4Nbœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "ChatOutput-f5pzU",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-f5pzUœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "className": "",
-        "animated": false
-      },
-      {
-        "source": "CalculatorComponent-lHyX4",
-        "sourceHandle": "{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-lHyX4œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "Agent-rl4Nb",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-rl4Nbœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "data": {
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-rl4Nb",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          },
-          "sourceHandle": {
-            "dataType": "CalculatorComponent",
-            "id": "CalculatorComponent-lHyX4",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          }
-        },
-        "id": "xy-edge__CalculatorComponent-lHyX4{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-lHyX4œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-rl4Nb{œfieldNameœ:œtoolsœ,œidœ:œAgent-rl4Nbœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "animated": false,
-        "className": ""
-      },
-      {
-        "source": "URL-vRJK9",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-vRJK9œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "Agent-rl4Nb",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-rl4Nbœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "data": {
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-rl4Nb",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          },
-          "sourceHandle": {
-            "dataType": "URL",
-            "id": "URL-vRJK9",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          }
-        },
-        "id": "xy-edge__URL-vRJK9{œdataTypeœ:œURLœ,œidœ:œURL-vRJK9œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-rl4Nb{œfieldNameœ:œtoolsœ,œidœ:œAgent-rl4Nbœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "animated": false,
-        "className": ""
+        "type": "genericNode"
       }
     ],
     "viewport": {
