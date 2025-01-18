@@ -167,7 +167,7 @@ class Component(CustomComponent):
             set[str]: Set of names that overlap between inputs and outputs.
         """
         # Create sets of input and output names for O(1) lookup
-        input_names = {input_.name for input_ in self.inputs}
+        input_names = {input_.name for input_ in self.inputs if input_.name is not None}
         output_names = {output.name for output in self.outputs}
 
         # Return the intersection of the sets

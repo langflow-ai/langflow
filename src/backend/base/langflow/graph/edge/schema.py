@@ -6,6 +6,32 @@ from typing_extensions import TypedDict
 from langflow.helpers.base_model import BaseModel
 
 
+class SourceHandleDict(TypedDict, total=False):
+    baseClasses: list[str]
+    dataType: str
+    id: str
+    name: str | None
+    output_types: list[str]
+
+
+class TargetHandleDict(TypedDict):
+    fieldName: str
+    id: str
+    inputTypes: list[str] | None
+    type: str
+
+
+class EdgeDataDetails(TypedDict):
+    sourceHandle: SourceHandleDict
+    targetHandle: TargetHandleDict
+
+
+class EdgeData(TypedDict, total=False):
+    source: str
+    target: str
+    data: EdgeDataDetails
+
+
 class ResultPair(BaseModel):
     result: Any
     extra: Any
@@ -48,7 +74,7 @@ class TargetHandle(BaseModel):
     type: str = Field(None, description="Type of the target handle.")
 
     @classmethod
-    def from_loop_target_handle(cls, target_handle: dict) -> "TargetHandle":
+    def from_loop_target_handle(cls, target_handle: TargetHandleDict) -> "TargetHandle":
         # The target handle is a loop edge
         # The target handle is a dict with the following keys:
         # - name: str
@@ -84,29 +110,3 @@ class SourceHandle(BaseModel):
                 raise ValueError(msg)
             v = splits[1]
         return v
-
-
-class SourceHandleDict(TypedDict, total=False):
-    baseClasses: list[str]
-    dataType: str
-    id: str
-    name: str | None
-    output_types: list[str]
-
-
-class TargetHandleDict(TypedDict):
-    fieldName: str
-    id: str
-    inputTypes: list[str] | None
-    type: str
-
-
-class EdgeDataDetails(TypedDict):
-    sourceHandle: SourceHandleDict
-    targetHandle: TargetHandleDict
-
-
-class EdgeData(TypedDict, total=False):
-    source: str
-    target: str
-    data: EdgeDataDetails

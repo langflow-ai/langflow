@@ -97,7 +97,7 @@ class ComponentVertex(Vertex):
         """
         flow_id = self.graph.flow_id
         if not self.built:
-            default_value = UNDEFINED
+            default_value: Any = UNDEFINED
             for edge in self.get_edge_with_target(requester.id):
                 # We need to check if the edge is a normal edge
                 if edge.is_cycle and edge.target_param:

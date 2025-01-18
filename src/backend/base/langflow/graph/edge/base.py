@@ -27,9 +27,9 @@ class Edge:
             if isinstance(self._target_handle, dict):
                 try:
                     if "name" in self._target_handle:
-                        self.target_handle = TargetHandle.from_loop_target_handle(self._target_handle)
+                        self.target_handle: TargetHandle = TargetHandle.from_loop_target_handle(self._target_handle)
                     else:
-                        self.target_handle: TargetHandle = TargetHandle(**self._target_handle)
+                        self.target_handle = TargetHandle(**self._target_handle)
                 except Exception as e:
                     if "inputTypes" in self._target_handle and self._target_handle["inputTypes"] is None:
                         # Check if self._target_handle['fieldName']

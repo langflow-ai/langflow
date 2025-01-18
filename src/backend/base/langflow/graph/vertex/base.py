@@ -105,7 +105,9 @@ class Vertex:
         self.build_times: list[float] = []
         self.state = VertexStates.ACTIVE
         self.log_transaction_tasks: set[asyncio.Task] = set()
-        self.output_names: list[str] = [output.get("name") for output in self.outputs]
+        self.output_names: list[str] = [
+            output["name"] for output in self.outputs if isinstance(output, dict) and "name" in output
+        ]
 
     def set_input_value(self, name: str, value: Any) -> None:
         if self.custom_component is None:
