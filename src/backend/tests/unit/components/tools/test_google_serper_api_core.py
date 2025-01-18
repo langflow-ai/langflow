@@ -30,7 +30,7 @@ def mock_search_results():
 
 def test_component_initialization(google_serper_component):
     assert google_serper_component.display_name == "Google Serper API"
-    assert google_serper_component.icon == "Google"
+    assert google_serper_component.icon == "Serper"
 
     input_names = [input_.name for input_ in google_serper_component.inputs]
     assert "serper_api_key" in input_names
