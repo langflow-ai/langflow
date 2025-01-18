@@ -3,7 +3,8 @@ from pydantic.v1 import SecretStr
 from langflow.base.models.google_generative_ai_constants import GOOGLE_GENERATIVE_AI_MODELS
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.inputs import DropdownInput, FloatInput, IntInput, SecretStrInput
+from langflow.field_typing.range_spec import RangeSpec
+from langflow.inputs import DropdownInput, FloatInput, IntInput, SecretStrInput, SliderInput
 
 
 class GoogleGenerativeAIComponent(LCModelComponent):
@@ -28,6 +29,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             name="google_api_key",
             display_name="Google API Key",
             info="The Google API Key to use for the Google Generative AI.",
+            required=True,
         ),
         FloatInput(
             name="top_p",
@@ -35,7 +37,13 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             info="The maximum cumulative probability of tokens to consider when sampling.",
             advanced=True,
         ),
-        FloatInput(name="temperature", display_name="Temperature", value=0.1),
+        SliderInput(
+            name="temperature",
+            display_name="Temperature",
+            value=0.1,
+            range_spec=RangeSpec(min=0, max=2, step=0.01),
+            info="Controls randomness. Lower values are more deterministic, higher values are more creative.",
+        ),
         IntInput(
             name="n",
             display_name="N",
